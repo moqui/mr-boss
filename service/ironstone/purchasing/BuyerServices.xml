@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing Home (design-purchasing §3 Home): the buyer's counters and work. Each count comes from the phase that builds
+    its records (P3 unacknowledged and late, P4 approvals, P5 late receipts, P6 held bills, P10 unsourced requests, P11 RFQs
+    due and quotes expiring, P14 shortfall suggestions with the plan's freshness); until then it is null, which Home shows as
+    unavailable, never as zero. BuyerWork's sources come the same way. Each phase appends its block. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Home" allow-remote="false">
+        <description>The buyer's counters, each null where it is not counted yet: unsourced requests, RFQs due, quotes to
+            compare, quotes expiring, shortfall suggestions (with the plan's run date), approvals waiting, unacknowledged
+            orders, late receipts and held bills. Refuses a user without Purchasing.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="counters" type="Map"><description>unsourcedCount, quoteDueCount, quoteCompareCount,
+                quoteExpiringCount, shortfallCount, approvalCount, unacknowledgedCount, lateCount and heldCount, each null
+                where not counted.</description></parameter>
+            <parameter name="planRunText"><description>The run date of the supply plan the shortfall counts, when there is
+                one.</description></parameter>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                    out-map="shared"/>
+            <set field="can" from="shared.capabilities"/>
+            <set field="counters" from="{unsourcedCount: null, quoteDueCount: null, quoteCompareCount: null,
+                    quoteExpiringCount: null, shortfallCount: null, approvalCount: null, unacknowledgedCount: null,
+                    lateCount: null, heldCount: null}"/>
+            <set field="planRunText" from="null"/>
+            <!-- later phases: each counts its records here, by the capability that reads them -->
+        </actions>
+    </service>
+    <service verb="find" noun="BuyerWork" allow-remote="false">
+        <description>The buyer's assigned demand and follow-ups, by due date: each row's document, supplier, owner, due
+            date, amount and next action, from the sources the phases add (none yet). Refuses a user without
+            Purchasing.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="limit" type="Integer" default="20"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="workRows" type="List"><description>Each row's documentText, url, supplierName, ownerName,
+                dueText, amountText and nextAction.</description></parameter>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                    out-map="shared"/>
+            <set field="workRows" from="[]"/>
+            <!-- later phases: P3 open orders to send, P10 requests to source, P11 quotes due, ... -->
+        </actions>
+    </service>
+</services>

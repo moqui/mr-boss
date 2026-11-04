@@ -12,11 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Supplier returns section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Supplier returns area of IronStone Purchasing (design-purchasing §1, §9): Returns and the shared ReturnDetail
+    (impl-purchasing P8), for the buying lists' groups (BOSS_PUR_LISTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Supplier returns" default-menu-index="7" menu-image="sym_o_replay" menu-image-type="icon">
+        default-menu-title="Supplier returns" default-menu-index="10" menu-image="sym_o_replay" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Supplier returns." type="p"/>
+        <label text="Placeholder: Supplier return authorizations and their settlement." type="p"/>
     </widgets>
 </screen>

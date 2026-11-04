@@ -12,9 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Purchasing: root of the app for buyers (initial-design.md app table); its sections follow
-    design-purchasing.md when that file is written. Not yet implemented: its BOSS_PURCHASING
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Purchasing (design-purchasing §1): the root of the app for buyers, requesters, planners, purchase approvers,
+    readers and the purchasing administrator. The root user group BOSS_PURCHASING and the administrator group
+    BOSS_PURCHASING_ADMIN open it (data/BossSetupData.xml); its areas are the files of screen/Purchasing/, in the menu order
+    of design §1 by their default-menu-index:
+    1 Home; 2 Suppliers; 3 Purchase requests (Requests); 4 RFQs (Sourcing); 5 Purchase orders (Orders); 6 Approvals;
+    7 Agreements; 8 Replenishment; 9 Receiving; 10 Supplier returns (Returns); 11 Bills &amp; matching (Bills);
+    12 Performance; 13 Settings; and Products, out of the menu (Product360 opened from the palette and product links).
+    Home and Requests are every Purchasing user's; the buying lists are the capability groups' but the requester's
+    (BOSS_PUR_LISTS), Replenishment, Approvals and Settings their groups' (BOSS_PUR_<Area>).
+    ironstone.purchasing.AccessServices.get#SharedContext checks the user and resolves their organizations and capabilities
+    for every subscreen; each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Purchasing" menu-image="sym_o_shopping_cart" menu-image-type="icon">
 
@@ -22,6 +30,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Purchasing"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.purchasing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                out-map="purchasing"/>
+        <set field="sharedLinks" from="purchasing.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +40,21 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- later phases: the shared screens mounted at the root, hidden from the menu -->
     </subscreens>
+
+    <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
+        (PUR-SHELL): quick create of a request (P10), an RFQ (P11) and a purchase order (P3), each for the groups that may
+        create it; Today's due requests, quotes and acknowledgements; the approval, supplier response, late receipt and
+        match-exception topics -->
+    <shell-providers>
+        <!-- P1: purchase orders, quotes and suppliers in the palette (search#Records) -->
+        <palette-source group="Purchasing" label="Purchasing records" icon="sym_o_shopping_cart"
+                service="ironstone.purchasing.AccessServices.search#Records" sequence="48"/>
+        <keymap scope="purchasing">
+            <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="purchasing-panel" type="popup"/></widgets>
 </screen>

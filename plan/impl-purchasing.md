@@ -251,7 +251,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | partly done Oct 28 (§6 F1–F23) |
-| P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | — |
+| P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | built Nov 4, 2026 |
 | P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | — |
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | — |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
@@ -354,6 +354,69 @@ check:
 - **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
   group may create. A reader sees their organization's POs and suppliers but not another organization's, in lists, the
   palette and record links, and sees shared suppliers too. A forged order or supplier ID is refused.
+
+**Built Nov 4 (P1).**
+- Mantle: `MantleSetupData.xml` seeds `PURCHASE_APPROVE`, `PURCHASE_ORDER_APPROVE`, `PURCHASE_HOLD_RELEASE`,
+  `PURCHASE_POLICY_EDIT` and `SUPPLIER_SCORECARD_EDIT` beside `ORDER_APPROVE`, each with its ADMIN grant;
+  `OrderHoldEntities.xml`'s OhtPurchase takes `PURCHASE_HOLD_RELEASE` (X4). Spec `test/order/PurchaseHoldPermission`.
+- BOSS access (`data/BossSetupData.xml`): the groups `BOSS_PURCHASING` (root user group), `_REQUESTER`, `_APPROVE` and
+  `_READ`; the root authz `BOSS_PURCHASING_ROOT` (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`) and the
+  `ironstone\.purchasing\..*` service pattern on the `BOSS_PURCHASING` artifact group; `purchasing` in the client deny
+  pattern; the area groups `BOSS_PUR_LISTS` (Suppliers, Sourcing, Orders, Agreements, Receiving, Returns, Bills,
+  Performance, Products: buyer, planner, approver, reader, admin), `BOSS_PUR_REPLENISHMENT` (planner, buyer, reader,
+  admin), `BOSS_PUR_APPROVALS` (approver, admin) and `BOSS_PUR_SETTINGS` (admin), each denying the root user group; the
+  record link group `BOSS_PUR_RECORD_LINK`; the grants of the Access list above. No authz for the raw Mantle mutators,
+  their REST paths or `change#OrderPartsStatus`.
+- `ironstone.purchasing.AccessServices` (`get#SharedContext`, `check#Record`, `get#Choices`, `search#Records`) over
+  `Purchasing.js`, whose tables later phases extend: `capabilityPermissions`, `areas` (the area authorizations as the
+  `listRead`, `replenishment`, `approvals` and `settings` capabilities), `recordKinds` (order, quote, request, rfq,
+  agreement, supplierReturn, supplier; a `destination` once a screen is built), `searchFinds` (orders and quotes,
+  suppliers), `choiceSources` (suppliers, organizations) and `linkPaths`. `BuyerServices.get#Home` (all counters null)
+  and `find#BuyerWork` (no sources).
+- The root: the menu of design §1 (Quotes.xml renamed Sourcing.xml, titled RFQs; the placeholders retitled and
+  re-indexed; Approvals, Agreements, Receiving, Bills and the hidden Products added as placeholders, each file's comment
+  naming its phase and groups), `<shell-providers>` with the palette source and the `purchasing` keymap; Home
+  (BuyerCounters with each card for the groups that read it, My work's empty state, Spend unavailable, record lookup);
+  `get#RecordLink` opens purchase orders, quotes and agreements under Purchasing (Home's lookup until P3 and P13 set their
+  destinations), and requests, RFQs and supplier returns once their Purchasing screens are built (until then their
+  Commons, Projects and Warehouse links stand).
+- Demo: `BossPurchasingDemoData.xml` (ZiddlemanInc given the shared owner `_NA_` and an EmailOrder address, F43; the
+  suppliers `BOSS_PUR_SUP_B` (Retail's, with an EmailOrder address), `_C` (shared), `_SERVICE`, `_PENDING` and `_BLOCKED`
+  (Retail's; P2 sets the last two's states), `_SVC_ORG` (Ziziwork Services'); the draft POs `BOSS_PUR_PO_A` (Retail) and
+  `BOSS_PUR_PO_SVC` (Services)). BossUsersDemoData's `purchasing.*` users: requester, buyer, planner, approve, read,
+  admin (in `BOSS_PURCHASING_ADMIN` alone), buymatch (with `BOSS_ACCOUNTING_MATCH`), buyreceive (with Warehouse's receive
+  group) and services (Ziziwork Services' reader); the buyer's Buyer-to-Supplier PartyRelationships (`PrtSupplier`) to
+  Brightline and Ziddleman. The drop-ship supplier and its facility are P7's.
+- Specs: `test/Purchasing/PurchasingSpecLib.js` (ids, users, `shell`, `routeFixtures`), `PurchasingShell` (3 features:
+  the menu and providers per group, the launcher, Home's one qvt render) and `PurchasingAccess` (8: the context, the
+  capabilities per group, supplier scope in choices and palette, the record check with the requester's own requests, a
+  capability on a record, record links, the guarded areas, REST and bulk refused). Acceptance:
+  `acceptance/Purchasing/PurchasingFoundationWalk` (the usable-when: every area per group, the reader's and the other
+  organization's orders and suppliers, forged ids) and `AppStructure` renders Purchasing's built screens
+  (PurchasingSpecLib.routeFixtures; the placeholder count is now 66, the floor stays 62).
+- Tests run: PurchasingShell, PurchasingAccess, ManufacturingAccess, ManufacturingSubcontracting, ProductsCatalog,
+  AccountingPayables, AccountingAccess, WarehouseReceiving, WarehouseReturns, AppOrganizationFilters (BOSS, 69 features,
+  all pass; Purchasing's two 2.6 s); PurchaseHoldPermission, OrderProcureToPayBasicFlow, AccountingCredit, OrderBulk,
+  OrderLifecycle (Mantle, 47, all pass); acceptance PurchasingFoundationWalk and AppStructure (21, all pass). `moqui lint
+  --screens`: no idiom or hazard site in the Purchasing screens.
+- Decisions:
+  - The areas by group: Home and Requests for every Purchasing user; the buying lists for every group but the
+    requester's; Replenishment for the planner, buyer, reader and administrator; Approvals for the approver and
+    administrator; Settings for the administrator. A requester's narrower read is the lists' authorization, read by
+    `Purchasing.js` as `listRead`, so it comes from data and not from group names (the requester and reader hold no
+    permission, §4).
+  - A supplier is in scope when its owner is one of the user's organizations (the active one for the administrator, every
+    one with none active) or `_NA_`; an unowned supplier passes no organization filter and is no one's (F43).
+  - The buyer relationship is `PrtSupplier`, from the buyer in the Buyer role to the supplier in the Supplier role.
+  - No quick create, Today source or notification topic in P1: the phases that build their records add them.
+- Findings (provisional):
+  - **F-P1-1** The per-app Shell specs were deleted from the regression suite in mr-moqui's test reduction (step 1);
+    PurchasingShell is kept to the menu-per-group rule and Home's one render, and the launcher's other checks stay with
+    the acceptance walk. The plan's "Specs." block still names it; the lead may fold it into PurchasingAccess.
+  - **F-P1-2** `get#PartyOrganizationInfo`'s organizations for a Retail agent include `BOSS_WH_RETURNS` (Warehouse's demo
+    organization under Retail), so the organizations choice lists it beside ORG_ZIZI_RETAIL.
+  - **F-P1-3** `get#RecordLink` answered no link for any OrderHeader or Agreement before P1; a sales order still gets
+    none (Sales has no order screen).
 
 ### P2 — Suppliers and buying policy
 

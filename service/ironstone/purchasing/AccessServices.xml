@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Purchasing app's access (impl-purchasing §2, §4, P1; Purchasing.js): the user's buying organizations, capabilities and
+    supplier scope, and the record check every Purchasing screen, mount and shared mount calls before the Mantle purchasing
+    service. A user may open Purchasing through an authorization of their groups on its root (BOSS_PURCHASING, the root user
+    group, or BOSS_PURCHASING_ADMIN); MANTLE_USER_ORG's organizations limit their records, and MANTLE_ACTIVE_ORG (the
+    administrator's) leaves the active organization, or every one with none active. Capabilities are the Mantle permissions
+    the services check, and the menu areas' authorizations. Disabled artifact authorization widens nothing here. No entity
+    filter covers OrderHeader, Request or Agreement (F2), so a purchase record is checked by its buyer and supplier here, and
+    by the Mantle service again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="Parameters" type="interface">
+        <description>The in-parameters the Purchasing app services share; each service declares what it returns.</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="SharedContext" allow-remote="false">
+        <description>Check that the user may open Purchasing and resolve their scope and the app's routes: capabilities (the
+            permissions and the areas), the organizations and whether they work in every one. Refuses a user without
+            Purchasing (PURCHASING_UNAVAILABLE) and another app root (PURCHASING_CONTEXT).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase" type="String"/>
+            <parameter name="webBase" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Purchasing.js"/>
+            <set field="shared" from="ec.resource.script(module).execute('sharedContext', context)"/>
+            <set field="capabilities" from="shared.capabilities"/>
+            <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
+            <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="allOrganizations" from="shared.allOrganizations"/>
+            <set field="appRoot" from="shared.appRoot"/>
+            <set field="sharedLinks" from="shared.sharedLinks"/>
+            <set field="linkBase" from="shared.linkBase"/>
+            <set field="webBase" from="shared.webBase"/>
+        </actions>
+    </service>
+    <service verb="check" noun="Record" allow-remote="false">
+        <description>A record a Purchasing screen or mount was given: a purchase order, a supplier quote, a purchase request, an
+            RFQ, an agreement, a supplier return or a supplier. Answers its kind's name, a label and a short detail. Refuses a
+            record that does not exist and one outside the scope alike (RECORD_UNAVAILABLE): a record whose buyer is not one of
+            the user's organizations or whose supplier is not in their supplier scope, a supplier of another organization, any
+            record but their own and assigned requests for a requester. With a capability named (buy, approve, ...), refuses a
+            user without its permission (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="recordType" required="true"><description>order, quote, request, rfq, agreement, supplierReturn or
+                supplier (Purchasing.js recordKinds)</description></parameter>
+            <parameter name="recordId" required="true"/>
+            <parameter name="capability"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="kindName"/>
+            <parameter name="label"/>
+            <parameter name="detail"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Purchasing.js"/>
+            <set field="record" from="ec.resource.script(module).execute('checkRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+            <set field="recordId" from="record.recordId"/>
+            <set field="kindName" from="record.kindName"/>
+            <set field="label" from="record.label"/>
+            <set field="detail" from="record.detail"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Choices" allow-remote="false">
+        <description>The options of a Purchasing drop-down the user may choose, searched by term in the query, with the
+            selected value's label: suppliers (the user's organizations' and the shared ones) and organizations (the user's
+            buying organizations). Refuses an unknown choice.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Purchasing.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false">
+        <description>The palette's Purchasing records: the purchase orders and quotes of the user's organizations (by id, name
+            or reference) and the suppliers in their scope (by id or name), ignoring case, limited in the query and checked
+            again, with their Purchasing links. No rows for a user without Purchasing or for a requester.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Purchasing.js"/>
+            <set field="found" from="ec.resource.script(module).execute('search', context)"/>
+            <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+</services>

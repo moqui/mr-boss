@@ -12,10 +12,132 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Purchasing landing page (initial-design.md); design-purchasing.md designs it. -->
+<!-- Purchasing Home (design-purchasing §3 Home; style-guide §3.1 Landing): BuyerCounters (a number card per count: unsourced
+    requests, RFQs due, quotes to compare, quotes expiring, shortfall suggestions, approvals, unacknowledged orders, late
+    receipts and held bills, each unavailable until its phase counts it; ironstone.purchasing.BuyerServices.get#Home),
+    BuyerWork (find#BuyerWork, no sources until the phases add them), SpendSummary (unavailable until P15's
+    ReportServices.get#PurchaseSpend), and the lookup of a record (lookupType and lookupId, through
+    ironstone.purchasing.AccessServices.check#Record): record links of kinds whose Purchasing screen is not built yet open
+    it here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <actions>
+        <service-call name="ironstone.purchasing.BuyerServices.get#Home" in-map="{appRoot:appRoot}" out-map="home"/>
+        <set field="counters" from="home.counters || {}"/>
+        <set field="counterText" from="Object.fromEntries(Object.entries(counters).map(([name, value]) =&gt;
+                [name, value == null ? 'Unavailable' : String(value)]))"/>
+        <service-call name="ironstone.purchasing.BuyerServices.find#BuyerWork" in-map="{appRoot:appRoot}" out-map="work"/>
+        <set field="workRows" from="work.workRows || []"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <if condition="lookupId">
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
+                    out-map="lookup"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="lookupFound" from="!!lookup?.recordId"/>
+        </if>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Purchasing landing page for buyers." type="p"/>
+        <label text="Purchasing" type="h5"/>
+        <section name="LookupResult" condition="lookupId">
+            <widgets>
+                <container-box>
+                    <box-header title="Record"/>
+                    <box-body>
+                        <label text="${lookup.kindName} ${lookup.recordId}" type="strong" condition="lookupFound"/>
+                        <label text="${lookup.label}" type="p"
+                                condition="lookupFound &amp;&amp; lookup.label &amp;&amp; lookup.label != lookup.recordId"/>
+                        <label text="${lookup.detail}" type="p" style="text-caption m-muted"
+                                condition="lookupFound &amp;&amp; lookup.detail"/>
+                        <label text="${lookupId} is not available to you." type="p" condition="!lookupFound"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <dashboard min-width="170">
+            <number-card title="Unsourced requests" value="${counterText.unsourcedCount}" icon="sym_o_add_task" size="sm"
+                    link="/qapps/Purchasing/Requests"/>
+            <number-card title="RFQs due" value="${counterText.quoteDueCount}" icon="sym_o_request_quote" size="sm"
+                    link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+            <number-card title="Quotes to compare" value="${counterText.quoteCompareCount}" icon="sym_o_compare_arrows"
+                    size="sm" link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+            <number-card title="Quotes expiring" value="${counterText.quoteExpiringCount}" icon="sym_o_timer" size="sm"
+                    link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+            <number-card title="Shortfalls" value="${counterText.shortfallCount}" icon="sym_o_production_quantity_limits"
+                    size="sm" link="/qapps/Purchasing/Replenishment" condition="can.replenishment"/>
+            <number-card title="Approvals waiting" value="${counterText.approvalCount}" icon="sym_o_approval" size="sm"
+                    link="/qapps/Purchasing/Approvals" condition="can.approvals"/>
+            <number-card title="Unacknowledged orders" value="${counterText.unacknowledgedCount}" icon="sym_o_mark_email_unread"
+                    size="sm" link="/qapps/Purchasing/Orders" condition="can.listRead"/>
+            <number-card title="Late receipts" value="${counterText.lateCount}" icon="sym_o_schedule" size="sm"
+                    link="/qapps/Purchasing/Receiving" condition="can.listRead"/>
+            <number-card title="Held bills" value="${counterText.heldCount}" icon="sym_o_block" size="sm"
+                    link="/qapps/Purchasing/Bills" condition="can.listRead"/>
+        </dashboard>
+        <container-box>
+            <box-header title="My work"/>
+            <box-body>
+                <label text="Nothing is waiting for you." type="p" condition="!workRows.length"/>
+                <section name="WorkList" condition="workRows.length">
+                    <widgets>
+                        <form-list name="WorkRows" list="workRows" skip-form="true" paginate="false">
+                            <field name="documentText">
+                                <default-field title="Document">
+                                    <link url="${url}" text="${documentText}" link-type="anchor" url-type="plain"/>
+                                </default-field>
+                            </field>
+                            <field name="supplierName">
+                                <default-field title="Supplier">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="ownerName">
+                                <default-field title="Owner">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dueText">
+                                <default-field title="Due">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="amountText">
+                                <default-field title="Amount">
+                                    <display align="right"/>
+                                </default-field>
+                            </field>
+                            <field name="nextAction">
+                                <default-field title="Next">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="documentText"/>
+                                    <field-ref name="supplierName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueText"/>
+                                    <field-ref name="nextAction"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
+        <section name="SpendSummary" condition="can.listRead">
+            <widgets>
+                <container-box>
+                    <box-header title="Spend"/>
+                    <box-body>
+                        <label text="Committed and billed spend is unavailable." type="p"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

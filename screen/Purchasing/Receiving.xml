@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the RFQs & supplier quotes section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Receiving area of IronStone Purchasing (design-purchasing §1, §9): Receipts (the default), the shared ShipmentDetail,
+    Inspections, QualityInspection and InspectionTemplates (impl-purchasing P5), for the buying lists' groups
+    (BOSS_PUR_LISTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="RFQs &amp; supplier quotes" default-menu-index="4" menu-image="sym_o_request_quote" menu-image-type="icon">
+        default-menu-title="Receiving" default-menu-index="9" menu-image="sym_o_local_shipping" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: RFQs and supplier quotes." type="p"/>
+        <label text="Placeholder: Expected and late supplier receipts and their inspections." type="p"/>
     </widgets>
 </screen>

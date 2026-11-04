@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- The Purchasing demo (impl-purchasing P1) over Mantle's ZiddlemanInc supplier, ORG_ZIZI_RETAIL as the buyer, ZIRET_WH
+        (owned by Retail) and the DEMO_* purchase offers of ZcaProductDemoData.xml, and the Warehouse demo's approved
+        purchase order BOSS_WH_PO (Retail from Ziddleman, BossWarehouseDemoData.xml). Suppliers by owner (§4): Ziddleman and
+        Common Fasteners are shared (_NA_), the others Retail's, and a supplier of Ziziwork Services that Retail's users never
+        reach (isolation). The buyers' PartyRelationship rows and the demo users are in BossUsersDemoData.xml. Later phases
+        give the suppliers what their walks need, each in a block named for its phase: P2 the approval and block states of
+        the awaiting-approval and blocked suppliers (SupplierProfile), P7 the drop-ship supplier and its facility. -->
+
+    <!-- P1: Ziddleman, which Mantle's demo leaves unowned (no organization filter passes it, F43), as a shared supplier, with
+        an order email (EmailOrder, the address a purchase order is sent to, P3) -->
+    <mantle.party.Party partyId="ZiddlemanInc" ownerPartyId="_NA_"/>
+    <mantle.party.contact.ContactMech contactMechId="ZiddlemanIncOrderEmail" contactMechTypeEnumId="CmtEmailAddress"
+            infoString="orders@ziddleman.example.com"/>
+    <mantle.party.contact.PartyContactMech partyId="ZiddlemanInc" contactMechId="ZiddlemanIncOrderEmail"
+            contactMechPurposeId="EmailOrder" fromDate="1265184000000"/>
+
+    <!-- P1: Retail's second supplier, a shared third, a service supplier, one awaiting approval and one blocked (P2 sets
+        their states), and the other organization's supplier -->
+    <mantle.party.Party partyId="BOSS_PUR_SUP_B" pseudoId="BRIGHTLINE" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_B" organizationName="Brightline Components"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_B" roleTypeId="Supplier"/>
+    <mantle.party.contact.ContactMech contactMechId="BOSS_PUR_SUP_B_EMAIL" contactMechTypeEnumId="CmtEmailAddress"
+            infoString="orders@brightline.example.com"/>
+    <mantle.party.contact.PartyContactMech partyId="BOSS_PUR_SUP_B" contactMechId="BOSS_PUR_SUP_B_EMAIL"
+            contactMechPurposeId="EmailOrder" fromDate="1265184000000"/>
+    <mantle.party.Party partyId="BOSS_PUR_SUP_C" pseudoId="COMMONFAST" partyTypeEnumId="PtyOrganization" ownerPartyId="_NA_"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_C" organizationName="Common Fasteners Co"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_C" roleTypeId="Supplier"/>
+    <mantle.party.Party partyId="BOSS_PUR_SUP_SERVICE" pseudoId="PRECISECAL" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_SERVICE" organizationName="Precision Calibration Services"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_SERVICE" roleTypeId="Supplier"/>
+    <mantle.party.Party partyId="BOSS_PUR_SUP_PENDING" pseudoId="NORTHWIND" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_PENDING" organizationName="Northwind Packaging"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_PENDING" roleTypeId="Supplier"/>
+    <mantle.party.Party partyId="BOSS_PUR_SUP_BLOCKED" pseudoId="HALVORSEN" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_BLOCKED" organizationName="Halvorsen Metals"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_BLOCKED" roleTypeId="Supplier"/>
+    <mantle.party.Party partyId="BOSS_PUR_SUP_SVC_ORG" pseudoId="SVCSUPPLY" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_PUR_SUP_SVC_ORG" organizationName="Services Office Supply"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_SUP_SVC_ORG" roleTypeId="Supplier"/>
+
+    <!-- P1: a draft purchase order of Retail's from Brightline for ZIRET_WH, and one of Ziziwork Services' from its own
+        supplier, which Retail's users never reach -->
+    <mantle.order.OrderHeader orderId="BOSS_PUR_PO_A" orderName="Brightline restock" statusId="OrderOpen"
+            entryDate="2026-11-02 00:00:00" currencyUomId="USD" grandTotal="250"/>
+    <mantle.order.OrderPart orderId="BOSS_PUR_PO_A" orderPartSeqId="01" statusId="OrderOpen" vendorPartyId="BOSS_PUR_SUP_B"
+            customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" partTotal="250"/>
+    <mantle.order.OrderItem orderId="BOSS_PUR_PO_A" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="DEMO_1_1" itemDescription="Demo product one-one" quantity="25" unitAmount="10"/>
+    <mantle.order.OrderHeader orderId="BOSS_PUR_PO_SVC" orderName="Services office restock" statusId="OrderOpen"
+            entryDate="2026-11-02 00:00:00" currencyUomId="USD" grandTotal="40"/>
+    <mantle.order.OrderPart orderId="BOSS_PUR_PO_SVC" orderPartSeqId="01" statusId="OrderOpen"
+            vendorPartyId="BOSS_PUR_SUP_SVC_ORG" customerPartyId="ORG_ZIZI_SERVICES" partTotal="40"/>
+    <mantle.order.OrderItem orderId="BOSS_PUR_PO_SVC" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemExpense"
+            itemDescription="Printer paper" quantity="4" unitAmount="10"/>
+</entity-facade-xml>

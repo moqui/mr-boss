@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Purchase requests section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Purchase requests area of IronStone Purchasing (design-purchasing §1, §4): Requests, the shared
+    RequestDetail and RequestSourcing (impl-purchasing P10). Open to every Purchasing user; a requester sees their own and
+    assigned requests only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Purchase requests" default-menu-index="3" menu-image="sym_o_add_task" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Purchase requests." type="p"/>
+        <label text="Placeholder: Internal purchase requests and their sourcing." type="p"/>
     </widgets>
 </screen>

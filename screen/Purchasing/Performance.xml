@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Supplier performance section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Performance area of IronStone Purchasing (design-purchasing §1, §11): Scorecards (the default), ScorecardDetail,
+    Spend, Commitments, ProcurementTracker, PurchaseHistory and SupplierStatement (impl-purchasing P15), for the buying
+    lists' groups (BOSS_PUR_LISTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Supplier performance" default-menu-index="8" menu-image="sym_o_trending_up" menu-image-type="icon">
+        default-menu-title="Performance" default-menu-index="12" menu-image="sym_o_trending_up" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Supplier performance." type="p"/>
+        <label text="Placeholder: Supplier scorecards, spend and commitments." type="p"/>
     </widgets>
 </screen>

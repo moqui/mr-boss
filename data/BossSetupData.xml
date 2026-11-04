@@ -82,6 +82,11 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_PLANNER" description="Purchasing planner"/>
     <!-- Manufacturing P14: Purchasing's buyer group, seeded here without Purchasing's launcher (impl-manufacturing §4) -->
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_BUYER" description="Purchasing buyer"/>
+    <!-- Purchasing P1 (design-purchasing §1): the root user group and the capability groups not seeded yet -->
+    <moqui.security.UserGroup userGroupId="BOSS_PURCHASING" description="Purchasing app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_REQUESTER" description="Purchase requester"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_APPROVE" description="Purchase approver"/>
+    <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_READ" description="Purchasing reader"/>
 
     <!-- Ordinary users carry MANTLE_USER_ORG and private-contact filters. App administrators carry
         MANTLE_ACTIVE_ORG and private-contact filters; framework ADMIN records retain their grants.
@@ -138,6 +143,15 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_PURCHASING" description="IronStone Purchasing App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Purchasing.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <!-- the app's access, context and choices; the Mantle order, request, agreement and return services check their own
+            permissions and are not here, nor are the raw Mantle mutators, change#OrderPartsStatus or the /mantle REST
+            paths (impl-purchasing F9) -->
+        <artifacts artifactName="ironstone\.purchasing\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- the root user group (impl-purchasing §4) -->
+        <authz artifactAuthzId="BOSS_PURCHASING_ROOT" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_PURCHASING_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -392,7 +406,7 @@ along with this software (see the LICENSE.md file). If not, see
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare|confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish|follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place|post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|refuse|release|remove|rename|reopen|replace|reply|request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start|stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare|confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish|follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place|post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|refuse|release|remove|rename|reopen|replace|reply|request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start|stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees|projects\.ProjectRequestServices\.search#WorkItemOptions|projects\.WorkItemServices\.search#ParentOptions|projects\.PlanningServices\.search#PlanItemCandidates)"
@@ -1315,4 +1329,135 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/Planning/ProductionSchedule?scheduleChangeId=${scheduleChangeId}"/>
     <moqui.security.user.NotificationTopic topic="ProductionScheduleChange"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Operations?workEffortId=${workEffortId}&amp;selectedOperationId=${operationWorkEffortId}"/>
+    <!-- Purchasing areas for their capability groups only (impl-purchasing P1, design-purchasing §1), as Manufacturing's
+        (BOSS_MFG_<Area>): each denies the root user group BOSS_PURCHASING and allows its groups, with the root's filter sets.
+        Home and Requests are open to every Purchasing user (a requester reads their own requests there); the buying lists
+        (BOSS_PUR_LISTS) to every group but the requester's; Replenishment, Approvals and Settings to their groups.
+        Purchasing.js reads these authorizations as the listRead, replenishment, approvals and settings capabilities. Each
+        service still checks its own permission and organization. A later phase that opens an area to another group (a
+        borrowed one) adds its authz row here. -->
+    <artifactGroups artifactGroupId="BOSS_PUR_LISTS">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Suppliers.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Sourcing.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Orders.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Agreements.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Receiving.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Returns.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Bills.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Performance.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Products.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_BUYER" userGroupId="BOSS_PURCHASING_BUYER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_PLANNER" userGroupId="BOSS_PURCHASING_PLANNER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_APPROVE" userGroupId="BOSS_PURCHASING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_READ" userGroupId="BOSS_PURCHASING_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_LISTS_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PUR_REPLENISHMENT">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Replenishment.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_REPLENISHMENT_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_REPLENISHMENT_PLANNER" userGroupId="BOSS_PURCHASING_PLANNER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_REPLENISHMENT_BUYER" userGroupId="BOSS_PURCHASING_BUYER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_REPLENISHMENT_READ" userGroupId="BOSS_PURCHASING_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_REPLENISHMENT_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PUR_APPROVALS">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Approvals.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_APPROVALS_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_APPROVALS_APPROVE" userGroupId="BOSS_PURCHASING_APPROVE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_APPROVALS_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_PUR_SETTINGS">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_SETTINGS_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_SETTINGS_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the record links of the palette, Today and notifications for Purchasing users (purchase orders, quotes and
+        agreements route through ironstone.purchasing's scope; requests, RFQs and supplier returns once their screens are
+        built) -->
+    <artifactGroups artifactGroupId="BOSS_PUR_RECORD_LINK">
+        <artifacts artifactName="ironstone.commons.PaletteServices.get#RecordLink" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_RECORD_LINK" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_RECORD_LINK_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Purchasing P1 (impl-purchasing §4, X4): the Mantle permissions of the purchase approver, the planner's supply plan
+        run, the buyer's scorecard edit (Manufacturing P14 granted the buyer's other four), and all of them with the policy
+        edit to the administrator. The requester and reader groups hold none. Later phases append their grants below. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_ORDER_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_HOLD_RELEASE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_SCORECARD_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_ORDER_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_HOLD_RELEASE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLY_PLAN_RUN" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_SCORECARD_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_POLICY_EDIT"
+            fromDate="0"/>
 </entity-facade-xml>

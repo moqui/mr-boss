@@ -12,10 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Purchasing settings (initial-design.md); design-purchasing.md decides them. -->
+<!-- The Settings area of IronStone Purchasing (design-purchasing §1, §12): Settings, PurchasePolicy, ApprovalPolicies and
+    ScorecardPolicies (impl-purchasing P2, P4, P15), with InspectionTemplates' menu entry, for the purchasing
+    administrator only (BOSS_PUR_SETTINGS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="9" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="13" menu-image="sym_o_settings" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Purchasing settings." type="p"/>
+        <label text="Placeholder: Buying, approval and scorecard policies." type="p"/>
     </widgets>
 </screen>
