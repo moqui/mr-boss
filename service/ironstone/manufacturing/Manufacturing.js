@@ -1392,6 +1392,8 @@ recordKinds.scheduleChange = {
     read: readScheduleChange
 }
 linkPaths.push("Planning/ProductionSchedule", "Planning/ProductionScheduleTui", "Planning/ScheduleSnapshot", "Planning/Capacity")
+// P17: the supply plan's snapshot print (design-manufacturing §11), linked from Shared/SupplyPlanning's header
+linkPaths.push("Planning/PlanSnapshot")
 
 // ===== P9: controlled changes =====
 // WorkOrderDetail's Changes tab (amendments and the cancellation of a run with postings) and SplitWorkOrder, and the

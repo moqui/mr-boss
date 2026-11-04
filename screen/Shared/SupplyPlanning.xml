@@ -331,6 +331,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field-layout>
                                 </form-single>
                             </container-dialog>
+                            <!-- the plan snapshot print and CSV (design-manufacturing §11), on a mount that has one -->
+                            <link url="${appLinks['Planning/PlanSnapshot']}" text="Snapshot" icon="sym_o_print" target-window="_blank"
+                                    btn-type="default" parameter-map="{plantId:plantId, renderMode:'html-print', lastStandalone:'true'}"
+                                    condition="run &amp;&amp; appLinks['Planning/PlanSnapshot']"/>
                         </container>
                     </container>
                 </container>

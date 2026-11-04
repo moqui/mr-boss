@@ -113,6 +113,9 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <label text="${load.utilizationFormula} Calendar-adjusted hours are the slots over the work hours less holidays, at the center's efficiency; downtime is the work hours it is offline (stops and outages); booked hours prorate each released operation's standard hours over the work hours of its dates."
                         type="p" style="text-caption m-muted"/>
+                <!-- the load as a print (design-manufacturing §11 "Reports and plan snapshots"), its rows also as CSV -->
+                <link url="." text="Print" icon="sym_o_print" link-type="anchor" target-window="_blank"
+                        parameter-map="{renderMode:'html-print', lastStandalone:'true', pageNoLimit:'true'}"/>
                 <!-- Load -->
                 <form-list name="CapacityLoadList" list="loadRows" skip-form="true" paginate="true"
                         show-csv-button="true" select-columns="true">

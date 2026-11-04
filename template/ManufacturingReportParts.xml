@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     section-include. ReportStatus: what a report read (report is the mantle.work.ProductionReportServices answer): its
     as-of time, organizations, facility and period, the units of its quantities and the currencies of its amounts, the money
     columns left out without financial read, and the partitions it could not read, which leave the report incomplete (its
-    totals leave them out, never counting them as zero). -->
+    totals leave them out, never counting them as zero); and Print, the report as html-print with the same parameters. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
@@ -29,6 +29,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="${report.withheldText}." type="p" style="text-caption m-muted q-mb-none" condition="report.withheldText"/>
                 <label text="Incomplete: ${report.partitionsText}. The totals leave these out." type="p" style="text-warning"
                         condition="!report.complete"/>
+                <!-- the report as a print with the same filters (design-manufacturing §11), its lists also as CSV -->
+                <link url="." text="Print" icon="sym_o_print" link-type="anchor" target-window="_blank"
+                        parameter-map="{renderMode:'html-print', lastStandalone:'true', pageNoLimit:'true'}"/>
             </widgets>
         </section>
     </widgets>

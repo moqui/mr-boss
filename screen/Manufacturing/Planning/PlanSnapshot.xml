@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The plan snapshot of SupplyPlanning (design-manufacturing §11 "Reports and plan snapshots", impl-manufacturing P17): the
+    plant's current supply plan as the planner reads it (mantle.product.SupplyPlanningServices.get#SupplyPlan after the plant's
+    check#Record): its version (the planning run, its revision, when and by whom it was calculated, the plan date, the horizon
+    and whether it is stale), every suggestion with its method, quantity and unit, what is left to convert, the dates, its state
+    and what covers it, and the stock held for inspection; the suggestions export as CSV. A print (html-print) opened from the
+    plan's Snapshot; it renders in every mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Plan snapshot" default-menu-include="false">
+    <parameter name="plantId"/>
+    <actions>
+        <set field="plant" from="plantId || manufacturing.plantId || null"/>
+        <if condition="plant">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="plantChecked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'facility', recordId:plant}"/>
+        </if>
+        <set field="snapshot" from="null"/>
+        <if condition="plantChecked?.recordId">
+            <service-call name="mantle.product.SupplyPlanningServices.get#SupplyPlan" out-map="snapshot" transaction="force-new"
+                    ignore-error="true" in-map="{facilityIds:[plant]}"/>
+        </if>
+        <set field="planRun" from="snapshot?.run || null"/>
+        <set field="snapshotRows" from="(snapshot?.suggestions || []).map((row) =&gt; ({product: row.pseudoId,
+                productName: row.productName, method: row.methodText, quantity: row.quantity, unit: row.uomText,
+                remaining: row.remainingQuantity, facility: row.facilityName, requiredBy: row.requiredByText,
+                release: row.releaseText, source: row.sourceText, state: row.stateText,
+                note: row.exceptionMessage || row.warningText || '',
+                coveredBy: (row.supplies || []).map((supply) =&gt; supply.workEffortId ? 'Work order ' + supply.workEffortId
+                    : supply.orderId ? 'Purchase order ' + supply.orderId : '').filter(Boolean).join(', ')}))"/>
+        <set field="heldRows" from="snapshot?.pendingRelease || []"/>
+    </actions>
+    <widgets>
+        <section name="PlanSnapshotFound" condition="snapshot">
+            <widgets>
+                <label text="Supply plan snapshot" type="h5"/>
+                <label text="${snapshot.facilityNames}${snapshot.organizationName ? ' · ' + snapshot.organizationName : ''} · printed ${ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')} (${ec.user.timeZone || 'server time'})"
+                        type="p"/>
+                <label text="Plan ${planRun?.planningRunId} revision ${planRun?.revision}, calculated ${planRun?.ageText}${planRun?.startedByName ? ' by ' + planRun.startedByName : ''}; as of ${planRun?.planDateText}, horizon to ${planRun?.horizonText}; ${planRun?.stale ? 'stale: ' + planRun.staleReason : 'current'}"
+                        type="p" condition="planRun"/>
+                <label text="${snapshotRows.length} suggestions, ${planRun?.exceptionCount || 0} with an exception" type="p"
+                        style="m-muted" condition="planRun"/>
+                <label text="No plan has been calculated for this plant yet." type="p" style="m-muted" condition="!planRun"/>
+                <form-list name="PlanSnapshotSuggestions" list="snapshotRows" skip-form="true" paginate="false"
+                        show-csv-button="true">
+                    <field name="product"><default-field title="Product"><display/></default-field></field>
+                    <field name="productName"><default-field title="Name"><display/></default-field></field>
+                    <field name="method"><default-field title="Method"><display/></default-field></field>
+                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="unit"><default-field title="Unit"><display/></default-field></field>
+                    <field name="remaining"><default-field title="Remaining"><display align="right"/></default-field></field>
+                    <field name="facility"><default-field title="For"><display/></default-field></field>
+                    <field name="requiredBy"><default-field title="Required by"><display/></default-field></field>
+                    <field name="release"><default-field title="Release"><display/></default-field></field>
+                    <field name="source"><default-field title="Source"><display/></default-field></field>
+                    <field name="state"><default-field title="State"><display/></default-field></field>
+                    <field name="coveredBy"><default-field title="Covered by"><display/></default-field></field>
+                    <field name="note"><default-field title="Note"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="product"/><field-ref name="productName"/></column>
+                        <column><field-ref name="method"/><field-ref name="quantity"/><field-ref name="state"/></column>
+                    </columns>
+                </form-list>
+                <section name="PlanSnapshotHeld" condition="heldRows.length">
+                    <widgets>
+                        <label text="Held for inspection" type="h6"/>
+                        <form-list name="PlanSnapshotHeldList" list="heldRows" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                            <field name="dueText"><default-field title="Inspection due"><display/></default-field></field>
+                            <field name="nettedText"><default-field title="Netted"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/></column>
+                                <column><field-ref name="quantity"/><field-ref name="dueText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+            <fail-widgets>
+                <label text="This plan is not available: the plant is not one of yours." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>
