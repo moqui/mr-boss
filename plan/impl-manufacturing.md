@@ -1404,22 +1404,22 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
   get#SourceInspectionStatus's `startAllowed` name the inspection now); a gauge on a reading (later, Gauges); the
   Purchasing and Customer Service contexts of the shared screens.
 - Findings (provisional):
-  - **F-P8-1** There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is
+  - **F104** There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is
     the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. The spec
     marks an operation done directly, as P10 would (F90).
-  - **F-P8-2** (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
+  - **F105** (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
     production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. The topic could
     carry the app in its message, or Manufacturing could seed its own decision topic.
-  - **F-P8-3** RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads
+  - **F106** RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads
     OrderItemWorkEffort and the run's own demand fields. A make suggestion converted from an order's demand should carry it
     to the run (P13's conversion).
-  - **F-P8-4** P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the
+  - **F107** P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the
     released units off and leaves the receipt's asset quarantined, so they counted held. An inspected receipt is now held by
     its inspections' heldQuantity (bounded by what is left after scrap).
-  - **F-P8-5** store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the
+  - **F108** store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the
     production fields are taken only with `productionApplicability`, so Warehouse's form, which does not show them, never
     clears them (the template revision spec checks it).
-  - **F-P8-6** For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output
+  - **F109** For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output
     through `outputInspections`, which now takes a gate argument), Production.js (`release`, `outputPlan`, `postOutput`, the
     export list), ProductionOrders.js (releaseGate, check, apply, factsOf, operations), ProductionQuantities.js
     (completeCheck, outputFigures, exports), ProductionServices.xml (two descriptions, the appended section),
@@ -1432,7 +1432,7 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
     booked a run's scrap to shrinkage, and Warehouse's own scrap (receipts, returns, a closed run's stock) is unchanged (WarehouseQuality and
     WarehouseReturns pass). A flag off would also need outputFigures to subtract a disposition's scrap, which only the loss
     path records. The loss is approved by the disposer (QUALITY_DISPOSE after a verified rejection), not a supervisor.
-  - F-P8-2 fixed: Mantle's decision notice carries the inspection's context, and BOSS's QualityInspectionDecision link
+  - F105 fixed: Mantle's decision notice carries the inspection's context, and BOSS's QualityInspectionDecision link
     opens a production inspection at Manufacturing/Quality/QualityInspection and any other in Warehouse; the Manufacturing
     shell lists the topic. The submit notice still goes to every QUALITY_VERIFY holder of the organization, Warehouse's
     quality managers too, who get the Manufacturing link.
@@ -1690,7 +1690,7 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
 - Mantle services (`ProductionPlanningServices.xml`): `ProductionCalendar.js` (new) is a center's time: work hours from its
   calendar's WetAvailable efforts expanded by `get#EventInstances`, less the holidays of its calendar and organization; offline
   intervals from its stops (not corrected; an open stop until now) and the ResourceUnavailability of the center or equipment
-  located at it (an open outage to the range's end, F-P11-4); slots, efficiency, an operation's standard hours, the open
+  located at it (an open outage to the range's end, F101); slots, efficiency, an operation's standard hours, the open
   operations, the end of given hours over free time and the next free time. `get#WorkCenterLoad` (`ProductionPlanning.js`)
   completed: per center and period (range, day or week) nominal, calendar-adjusted, downtime, available and booked hours
   (prorated over the work hours of each operation's dates: P3's open item), overload, utilization, missing data, next
@@ -1709,7 +1709,7 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
   `Planning/Capacity` (Parameters, Load by period with CSV, missing data); `template/ManufacturingSchedule.xml` (the move
   transitions and the MovePreview section); WorkOrderDetail Operations' Reschedule (a row dialog that previews; the preview
   box applies, requests or unschedules); FacilityDetail's Work center tab (the completed load, Offline times, Take offline
-  with its preview, Withdraw); Centers' Available hours, Next available and Offline reason (F57, F-P11-6). Manufacturing.js P12
+  with its preview, Withdraw); Centers' Available hours, Next available and Offline reason (F57, F103). Manufacturing.js P12
   block (the `scheduleChange` record kind and the routes); the topics on the root and in Approvals, with their links
   (BossSetupData).
 - Specs: Mantle `test/work/ProductionSchedule.spec.js` (6 features, about 1.5 s: the load by day, the override request and
@@ -1731,35 +1731,35 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
     requests and the administrator may override at once.
   - "Quantity and version" are the run's revision (its quantity and method) and the operation's schedule revision.
   - A stop or outage takes the whole center; an open stop counts until now, an open outage until the range's end; a stop
-    awaiting approval counts as downtime and is named (F-P11-3).
+    awaiting approval counts as downtime and is named (F100).
   - An operation with no dates counts whole in the load's first period, named; Unschedule clears its dates.
   - A planned offline block is a ResourceUnavailability RukPlanned of the facility, written by store#WorkCenterOffline (the
     minimal record; Maintenance MT-07 adopts it); recording needs PRODUCTION_SCHEDULE or METHOD_RESOURCES, the moves
     PRODUCTION_SCHEDULE, each its own schedule#ProductionOperation.
   - The schedule-change notice goes to the run's people, else the organization's supervisors; a refusal notifies no one.
 - Findings (provisional):
-  - **F-P12-1** A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has
+  - **F110** A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has
     no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's
     start in the scheduler's zone. A plant calendar should carry its zone (WorkEffortRecurrence.timeZone, or a plant zone).
     Review: holidays now start in `Calendar.timeZone`; the demo data's zone is still open.
-  - **F-P12-2** A transition that answers JSON must call a Mantle verb that may refuse in a new transaction
+  - **F111** A transition that answers JSON must call a Mantle verb that may refuse in a new transaction
     (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an
     exception, not the JSON.
-  - **F-P12-3** Release still copies the run's dates to every operation (F55), so a released run's operations overlap and
+  - **F112** Release still copies the run's dates to every operation (F55), so a released run's operations overlap and
     show predecessor conflicts until they are scheduled; release places nothing forward by the center's scheduling policy.
     The offline change's forward placement is the only automatic one; a finite proposal is FiniteSchedule's (later).
-  - **F-P12-4** A refused override request leaves the requester no notice (it leaves the schedule's request list);
+  - **F113** A refused override request leaves the requester no notice (it leaves the schedule's request list);
     Capacity's list pages by work center (the service's center paging set on its rows); "include tentative" is not offered
     (drafts have no operations); the terminal Move was verified by server renders and transition posts, not in the
     `moqui tui` client.
-  - F57 and F-P11-6 (Centers' columns), F-P11-4 (the load reads stops and outages) and F82 (lead time on work days) are done.
+  - F57 and F103 (Centers' columns), F101 (the load reads stops and outages) and F82 (lead time on work days) are done.
 - Review (Nov 3): checked the commit's rechecks (refusals never overridden; conflicts only with PRODUCTION_SUPERVISE and a
   reason, recorded on the change, no capacity written), both revisions and the operation key on every write, the request,
   approve and refuse flow and its topics and recipients (F40), the offline block as a RukPlanned ResourceUnavailability of
-  the facility, the JSON transitions' new transactions (F-P12-2, used throughout) and the Timeline's work-item modes.
+  the facility, the JSON transitions' new transactions (F111, used throughout) and the Timeline's work-item modes.
   Fixed in Mantle: get#WorkCenterLoad prorated an operation that runs past the range over only its work hours inside the
   range (the calendar was read for the range alone), so it counted whole; the calendar is now read over the operation's
-  dates. F-P12-1 partly fixed: a holiday's day now starts in the calendar's zone (`Calendar.timeZone`, else the user's); a
+  dates. F110 partly fixed: a holiday's day now starts in the calendar's zone (`Calendar.timeZone`, else the user's); a
   recurring shift already expands in its recurrence's zone, which the calendar services write. The BOSS demo shift and
   calendar still carry no zone (seed data), so they read in the viewer's zone; giving them a plant zone needs
   ManufacturingSchedule's clock reads in that zone. New Mantle feature (7 now): the part of an operation inside the range
@@ -2048,16 +2048,16 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
   - The Supplier360 tab and the Subcontracting area are for the planner, supervisor, administrator and buyer groups
     (BOSS_MFG_SUBCONTRACTING); a production reader reads the same records through Mantle, not the screens.
 - Findings (provisional):
-  - **F-P14-1** BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row
+  - **F114** BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row
     on a Warehouse demo product fails its foreign key and skips the whole file, and the user file after it; the coating price
     is at the end of BossWarehouseDemoData.
-  - **F-P14-2** `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close
+  - **F115** `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close
     should reverse a variance whose match line is reversed (the event names its match line).
-  - **F-P14-3** ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take
+  - **F116** ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take
     `find#PartyAcctgPreference`'s ancestor walk.
-  - **F-P14-4** `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order
+  - **F117** `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order
     is placed and approved in Purchasing (and the bill match needs an approved order).
-  - **F-P14-5** Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the
+  - **F118** Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the
     Subcontract orders tab is checked by ManufacturingSubcontracting's html render.
 - **Review (Nov 3).** Findings and fixes:
   - (medium, fixed) The service-acceptance rule, Y by default, took over every PtService line, also one received with an
@@ -2068,7 +2068,7 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
     rule feature now checks the default's refusal (MISSING_RECEIPT with nothing accepted) before the rule is turned off.
   - (medium, fixed) BOSS_PURCHASING_BUYER alone could not convert: the resolver withheld the supplier price, so every
     conversion the mount offered it was refused. SUPPLIER_PRICE_VIEW is granted to the buyer and Purchasing admin groups,
-    and the demo buyer's borrowed Products group is dropped (F-P14-6).
+    and the demo buyer's borrowed Products group is dropped (F119).
   - Checked and left: the accrual is written once per acceptance (a retry answers the first through the operation key);
     the variance only on `apply#InvoiceMatch` for a line with an OrderItemWorkEffort to a run; the conversion makes one
     draft PO per supplier, never places or approves it, answers EXISTING the second time and refuses the planner;
@@ -2076,7 +2076,7 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
     and ShipmentDetail branches leave the Products, Projects, Accounting and Warehouse paths as they were;
     `run#SupplyPlan` carries open requests forward and supersede never rejects them. `outsideRequirements` reads every
     OrgInternal requirement id of the organization before filtering; fine at demo scale, a candidate for a join later.
-  - **F-P14-6** A group whose mount offers an action must hold every permission the action's Mantle service checks; here
+  - **F119** A group whose mount offers an action must hold every permission the action's Mantle service checks; here
     the conversion's supplier-price read. Purchasing P1 keeps SUPPLIER_PRICE_VIEW on its buyer group.
 
 ### P15 — Cost close
@@ -2295,6 +2295,22 @@ is written there too.
 | F101 | P11: A correction does not move or end the outage it carries: MT-07's `correct#` and `end#ResourceUnavailability` own that. | P11 Built note |
 | F102 | P11: The maintenance request's RequestWorkEffort link to the stopped operation makes the operation a row of the Commons and Projects request's Tasks or Work tab; F38's guards refuse its changes there, and the Manufacturing context links it to its work order … | P11 Built note |
 | F103 | P11: F57's Centers columns (next available, offline reason) are not built; P12 adds them with the load. | P11 Built note |
+| F104 | P8: There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. | P8 Built note |
+| F105 | P8: (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. | P8 Built note |
+| F106 | P8: RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads OrderItemWorkEffort and the run's own demand fields. | P8 Built note |
+| F107 | P8: P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the released units off and leaves the receipt's asset quarantined, so they counted held. | P8 Built note |
+| F108 | P8: store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the production fields are taken only with `productionApplicability`, so Warehouse's form, which does not show them, never clears them (the template … | P8 Built note |
+| F109 | P8: For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output through `outputInspections`, which now takes a gate argument), Production.js (`release`, `outputPlan`, `postOutput`, the export list), … | P8 Built note |
+| F110 | P12: A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's start in the scheduler's zone. | P12 Built note |
+| F111 | P12: A transition that answers JSON must call a Mantle verb that may refuse in a new transaction (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an exception, not the JSON. | P12 Built note |
+| F112 | P12: Release still copies the run's dates to every operation (F55), so a released run's operations overlap and show predecessor conflicts until they are scheduled; release places nothing forward by the center's scheduling policy. | P12 Built note |
+| F113 | P12: A refused override request leaves the requester no notice (it leaves the schedule's request list); Capacity's list pages by work center (the service's center paging set on its rows); "include tentative" is not offered (drafts have no operations); the … | P12 Built note |
+| F114 | P14: BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row on a Warehouse demo product fails its foreign key and skips the whole file, and the user file after it; the coating price is at the end of … | P14 Built note |
+| F115 | P14: `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close should reverse a variance whose match line is reversed (the event names its match line). | P14 Built note |
+| F116 | P14: ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take `find#PartyAcctgPreference`'s ancestor walk. | P14 Built note |
+| F117 | P14: `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order is placed and approved in Purchasing (and the bill match needs an approved order). | P14 Built note |
+| F118 | P14: Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the Subcontract orders tab is checked by ManufacturingSubcontracting's html render. | P14 Built note |
+| F119 | P14: A group whose mount offers an action must hold every permission the action's Mantle service checks; here the conversion's supplier-price read. | P14 Built note |
 
 ## 7. Later
 
