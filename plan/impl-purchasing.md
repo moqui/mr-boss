@@ -675,7 +675,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   - `entity/PurchaseOrderEntities.xml`: `mantle.order.purchase.PurchaseApprovalDecision` (source entity, id and revision,
     organization, decision PadApproved/PadRefused, date, user and party, reason, the PurchasePolicy row's `policyFromDate`,
     the approval policy and step for P4, operation key); the audit log on `OrderHeader.orderRevision` and OrderItem's
-    `itemDescription`, `quantityUomId` and `quantityCancelled` (create and update, F-P3-1); `PurchasePolicy.commercialRevisionOnly`;
+    `itemDescription`, `quantityUomId` and `quantityCancelled` (create and update, F57); `PurchasePolicy.commercialRevisionOnly`;
     the content type `OctPurchaseOrderIssued`. `data/PurchaseOrderSetupData.xml`: the `MANTLE_PURCHASE_ORDER_EMAIL` template.
   - `service/mantle/order/PurchaseServices.xml` (appended) over the new `PurchaseOrders.js`: `create#PurchaseOrder` (one
     purchase part, the supplier's profile currency else the policy's, the policy's receiving facility; the supplier check's
@@ -725,7 +725,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     line, Edit, Remove and Record acceptance of a service line through `accept#ServiceItem`, Documents and emails, History);
     Home's Draft orders and Approved, not sent cards. `Purchasing.xml`: the purchase order quick create.
   - Data: BossSetupData's `BOSS_PUR_NEW_ORDER`; BossPurchasingDemoData: Retail's policy with `commercialRevisionOnly`, the
-    demo sink server for `MANTLE_PURCHASE_ORDER_EMAIL` (F-P3-5).
+    demo sink server for `MANTLE_PURCHASE_ORDER_EMAIL` (F61).
   - Specs: `PurchasingOrders` (4: the list's views, amounts and its html render; OrderDetail's html render and a reader's
     detail; the bulk approval's named refusal; Home's counts and work); PurchasingAccess gains the quick create per group,
     the order record link to OrderDetail, the palette's order link and a feature for the detail's record scope (13
@@ -761,31 +761,31 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     whatever its status.
   - Amounts in Purchasing's order reads show to a buyer, an approver, a supplier-price reader or a finance reader, and are
     "Withheld" for the reader group (§2).
-  - The quick create is the root's NewPurchaseOrder, not a screen under Orders (F-P3-7). The PO palette type is
-    Purchasing's own palette source, which now opens OrderDetail (F-P3-6).
+  - The quick create is the root's NewPurchaseOrder, not a screen under Orders (F63). The PO palette type is
+    Purchasing's own palette source, which now opens OrderDetail (F62).
 - Left for later phases: OrderDetail's Create draft bill (Accounting's InvoiceFromSource) and Money's supplier prepayment
   (`add#OrderPartPayment`, R-PUR-36) are P6's with Bills; the addresses and terms tab and changes after placing are P9's
   (OrderChanges); a refusal decision and the Approvals list are P4's; the late, received-not-billed and drop-ship views come
   with P5, P6 and P7.
 - Findings (provisional):
-  - **F-P3-1** The framework's `enable-audit-log="update"` does not log the first value set on an empty field (the
+  - **F57** The framework's `enable-audit-log="update"` does not log the first value set on an empty field (the
     initial set), so a line's first cancelled quantity was not logged and an as-of read would show it before it happened.
     P3 logs `orderRevision`, the unit, the cancelled quantity and the description on create and update ("true").
     Accounting P6's `OrderItem.costCenterId` is "update": its first set is not in the log (P9 may change it to "true").
-  - **F-P3-2** Under Mantle's counting a line's quantity or price change never moved `orderRevision`
+  - **F58** Under Mantle's counting a line's quantity or price change never moved `orderRevision`
     (`handle#OrderItemChange` leaves it to the part update, and `handle#OrderPartChange` returns early on a `partTotal`
     change), while a file, a note or a status change did. With `commercialRevisionOnly` the line change counts.
-  - **F-P3-3** OrderContent has no immutable flag (F42's "immutable OrderContent"): the issued PDF is stored once per
+  - **F59** OrderContent has no immutable flag (F42's "immutable OrderContent"): the issued PDF is stored once per
     print and typed `OctPurchaseOrderIssued`, but nothing refuses its change.
-  - **F-P3-4** `check#OrderPreApprove` warns every purchase order without authorized payments (payments low), so
+  - **F60** `check#OrderPreApprove` warns every purchase order without authorized payments (payments low), so
     approve#Order cannot refuse on its warnings in general; it refuses on the purchase approval's warning only.
-  - **F-P3-5** Mantle's SYSTEM EmailServer has no SMTP host, so `MANTLE_PURCHASE_ORDER_EMAIL` sends nothing on a plain
+  - **F61** Mantle's SYSTEM EmailServer has no SMTP host, so `MANTLE_PURCHASE_ORDER_EMAIL` sends nothing on a plain
     install (the send names each recipient failed); BOSS's demo points the template to a local sink server, as Accounting's
     demo delivery does, and the Mantle spec uses a server and template of its own.
-  - **F-P3-6** The MantleOrder search index holds sales orders and every organization's orders, and Commons' Records
+  - **F62** The MantleOrder search index holds sales orders and every organization's orders, and Commons' Records
     source falls back to the search's own link when `get#RecordLink` answers none, so a MantleOrder palette type would list
     them; the purchase order palette type is Purchasing's own source (P1's `search#Records`).
-  - **F-P3-7** BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create screen there
+  - **F63** BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create screen there
     was offered to the reader, planner and approver; it is the root's `NewPurchaseOrder` with its own group.
 
 **Review Nov 4 (P3).**
@@ -794,11 +794,11 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   change#OrderPartsStatus and createOrders' place-and-approve keep working; the SECA adds nothing with the gate off, so
   autoApprove#Order is unchanged; hold#Order only widens, and un-sends a Sent order only when every part is a purchase part);
   increment#OrderRevision's revisionKind (content, note and status still count and item returns early unless the order's
-  buyer sets commercialRevisionOnly, so F-P3-2 holds); decide#PurchaseApproval (PURCHASE_APPROVE, the buying organization
+  buyer sets commercialRevisionOnly, so F58 holds); decide#PurchaseApproval (PURCHASE_APPROVE, the buying organization
   through FacilityScope, Placed only, STALE_REVISION naming the current revision, SELF_APPROVAL by enteredByPartyId or the
   logged OrderPlaced change, operation replay); send#PurchaseOrder (Approved or Sent only, the revision checked, recipients
   EmailOrder then EmailPrimary, ALREADY_SENT per recipient of the revision, the PDF stored once per print hash, the
-  OrderEmailMessage with its revision); the amounts in find#PurchaseOrders and get#OrderDetail (Withheld, not zero); F-P3-1
+  OrderEmailMessage with its revision); the amounts in find#PurchaseOrders and get#OrderDetail (Withheld, not zero); F57
   against the framework.
 - **R1 (high, BOSS)** OrderDetail's History showed each price change's old and new value, and Documents opened the issued
   PDF (with its prices), to a reader whose amounts are withheld. The history's price rows say Withheld for that reader, the
@@ -809,7 +809,7 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   revision). The replay now comes first, its request naming the revision asked for; PurchaseOrders retries the first send
   after the revision moved.
 - For the lead:
-  - F-P3-1 is a framework divergence: `crates/moqui-entity/src/entity/field_rw.rs:349-352` skips an update whose old value
+  - F57 is a framework divergence: `crates/moqui-entity/src/entity/field_rw.rs:349-352` skips an update whose old value
     is null when the flag is "update" ("does not log the first non-null value. That is the initial set."). The XSD
     (`entity-definition-3.xsd:197-202`) and Moqui Java's `EntityValueBase.handleAuditLog` leave out only the create under
     "update"; an update from null to a value is logged. With it fixed, "update" would do for the P3 fields (the as-of read
@@ -1508,6 +1508,13 @@ is written there too.
 | F54 | P14a: a draft purchase order was no supply to the plan, so a converted buy would be suggested again | The lines of a draft order with an active RequirementSupply (a conversion's) count |
 | F55 | P14a: Shared/SupplyPlanning included Manufacturing's `choices`, which refuses a Purchasing user | It dispatches by app root; at the W2 merge one Purchasing context in SharedContext.js serves both Product360 and InventoryAvailability |
 | F56 | P14a: a tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu, so AppStructure checks those routes for errors only | None; their content is PurchasingReplenishment's |
+| F57 | P3: the framework's `enable-audit-log="update"` skips an update from an empty field (`crates/moqui-entity/src/entity/field_rw.rs:349-352`), where the XSD leaves out only the initial create; so Accounting's first `costCenterId` on a line is never logged | P3 logs its fields with "true"; the framework divergence goes to the user (framework work) |
+| F58 | P3: under Mantle's counting a line's quantity or price change never moved `orderRevision`, while content, notes and status did | `PurchasePolicy.commercialRevisionOnly` counts only commercial changes; off by default, on in Retail's demo |
+| F59 | P3: OrderContent has no immutable flag, so the issued PDF, stored once per print hash, is not protected from change | Open; an OrderContent immutable flag with Accounting's InvoiceContent rule, later |
+| F60 | P3: `check#OrderPreApprove` warns every PO without authorized payments, so `approve#Order` refuses only on the purchase-approval warning | As built |
+| F61 | P3: Mantle's SYSTEM EmailServer has no SMTP host, so a plain install sends no PO email | The BOSS demo uses a local mail sink; deployment sets the host |
+| F62 | P3: the MantleOrder search index holds sales orders and every organization's orders | The PO palette type is Purchasing's own source |
+| F63 | P3: BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create there was offered to readers | Quick create is the root's NewPurchaseOrder with its own group BOSS_PUR_NEW_ORDER |
 
 ## 7. Later
 
