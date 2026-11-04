@@ -913,10 +913,18 @@ Object.assign(choiceSources, {
                 methodId: row.productBomId
             }).count() > 0
         const label = row => [row.methodCode, row.bomName].filter(Boolean).join(" · ") || row.productBomId
-        return rowOptions(query, "productBomId", label, ["productBomId", "methodCode", "bomName"], term, selected, productBomId => {
-            const row = one("mantle.product.bom.ProductBom", {productBomId})
-            return row && owns(userScope, row.organizationPartyId) && row.productId === p.productId ? row : null
-        }).filter(option => released(one("mantle.product.bom.ProductBom", {productBomId: option.value})))
+        return rowOptions(
+            query,
+            "productBomId",
+            label,
+            ["productBomId", "methodCode", "bomName"],
+            term,
+            selected,
+            productBomId => {
+                const row = one("mantle.product.bom.ProductBom", {productBomId})
+                return row && owns(userScope, row.organizationPartyId) && row.productId === p.productId ? row : null
+            }
+        ).filter(option => released(one("mantle.product.bom.ProductBom", {productBomId: option.value})))
     },
     // where a run is made: the user's work centers (lines) and plants
     runFacilities: (userScope, term, selected) => {
@@ -926,11 +934,8 @@ Object.assign(choiceSources, {
         if (centerIds.length) kinds.push(factory.makeCondition("facilityId", "in", centerIds))
         const parentIds = plantIdsAbove(centerIds)
         if (parentIds.length) kinds.push(factory.makeCondition("facilityId", "in", parentIds))
-        return facilityOptions(
-            facilityFind(userScope).condition(factory.makeCondition(kinds, "or")),
-            term,
-            selected,
-            facility => inScope(userScope, facility)
+        return facilityOptions(facilityFind(userScope).condition(factory.makeCondition(kinds, "or")), term, selected, facility =>
+            inScope(userScope, facility)
         )
     },
     // equipment at the user's facilities (not stock)

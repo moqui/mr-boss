@@ -990,3 +990,146 @@ feature("the cost estimator requests a work order's cost review; a reader is ref
         !after.output.includes("Request cost review")
     }
 })
+
+// ===== P5a: work orders =====
+// the Mantle run verbs as the screens run them (artifact authorization off, F-P3-2), and the screens with it enabled
+const P5 = {
+    draft: user =>
+        asService(user, () =>
+            refusal("mantle.work.ProductionServices.create#ProductionOrder", {
+                operationKey: "spec-p5-" + user + "-" + Date.now(),
+                organizationPartyId: "ORG_ZIZI_RETAIL",
+                productId: ids.productId,
+                productBomId: ids.methodId,
+                quantity: 1,
+                facilityId: ids.lineId
+            })
+        ),
+    transition: (user, workEffortId, action) =>
+        asService(user, () =>
+            refusal("mantle.work.ProductionServices.transition#ProductionOrder", {
+                operationKey: "spec-p5-" + action + "-" + Date.now(),
+                workEffortId,
+                action,
+                expectedRevision: Number(
+                    system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one())
+                        .productionRevision || 0
+                )
+            })
+        )
+}
+feature("a run's actions check their own permission: the supervisor cannot release, the planner cannot start, a reader neither", {
+    when() {
+        const created = asService(users.plan, () =>
+            invoke("mantle.work.ProductionServices.create#ProductionOrder", {
+                operationKey: "spec-p5-perm-" + Date.now(),
+                organizationPartyId: "ORG_ZIZI_RETAIL",
+                productId: ids.productId,
+                productBomId: ids.methodId,
+                quantity: 1,
+                facilityId: ids.lineId
+            })
+        )
+        const workEffortId = created.workEffortId
+        return {
+            readerDraft: P5.draft(users.read),
+            supervisorRelease: P5.transition(users.supervise, workEffortId, "release"),
+            readerRelease: P5.transition(users.read, workEffortId, "release"),
+            plannerRelease: P5.transition(users.plan, workEffortId, "release"),
+            plannerStart: P5.transition(users.plan, workEffortId, "start"),
+            supervisorStart: P5.transition(users.supervise, workEffortId, "start")
+        }
+    },
+    then(r) {
+        r.readerDraft.includes("PERMISSION_DENIED")
+        r.supervisorRelease.includes("PERMISSION_DENIED")
+        r.readerRelease.includes("PERMISSION_DENIED")
+        r.plannerRelease == ""
+        r.plannerStart.includes("PERMISSION_DENIED")
+        r.supervisorStart == ""
+    }
+})
+feature("another organization's reader reaches none of Retail's runs, and Retail's none of its", {
+    when() {
+        return {
+            check: asUser(users.services, () =>
+                refusal(access + "check#Record", {recordType: "run", recordId: ids.runId})
+            ),
+            lifecycle: asService(users.services, () =>
+                refusal("mantle.work.ProductionServices.get#ProductionLifecycle", {workEffortId: ids.runId})
+            ),
+            servicesList: asService(users.services, () =>
+                invoke("mantle.work.ProductionServices.find#ProductionOrders", {statusId: "all", pageSize: 100})
+            ),
+            retailList: asService(users.read, () =>
+                invoke("mantle.work.ProductionServices.find#ProductionOrders", {statusId: "all", pageSize: 100})
+            ),
+            page: asUser(users.services, () => lib.page("WorkOrders/WorkOrderDetail", {workEffortId: ids.runId}, "html"))
+        }
+    },
+    then({check, lifecycle, servicesList, retailList, page}) {
+        check.includes("RECORD_UNAVAILABLE")
+        lifecycle.includes("RECORD_UNAVAILABLE")
+        !servicesList.orderRows.some(row => row.workEffortId === ids.runId)
+        servicesList.orderRows.some(row => row.workEffortId === ids.otherRunId)
+        !retailList.orderRows.some(row => row.workEffortId === ids.otherRunId)
+        page.output.includes("is not available")
+    }
+})
+feature("New work order and its quick create open for a planner only; a reader's work order shows no lifecycle form", {
+    when() {
+        const open = (user, path) => asUser(user, () => lib.page(path, {}, "html")).status
+        return {
+            plannerNew: open(users.plan, "WorkOrders/NewWorkOrder"),
+            plannerQuick: open(users.plan, "WorkOrders/QuickCreate"),
+            readerNew: open(users.read, "WorkOrders/NewWorkOrder"),
+            supervisorQuick: open(users.supervise, "WorkOrders/QuickCreate"),
+            readerDetail: asUser(users.read, () => lib.page("WorkOrders/WorkOrderDetail", {workEffortId: ids.runId}, "html")),
+            plannerDetail: asUser(users.plan, () => lib.page("WorkOrders/WorkOrderDetail", {workEffortId: ids.runId}, "html")),
+            readerList: asUser(users.read, () => lib.page("WorkOrders/Find", {}, "html")),
+            plannerList: asUser(users.plan, () => lib.page("WorkOrders/Find", {}, "html"))
+        }
+    },
+    then(r) {
+        r.plannerNew == 200
+        r.plannerQuick == 200
+        r.readerNew != 200
+        r.supervisorQuick != 200
+        r.readerDetail.errors.length == 0
+        r.readerDetail.output.includes("Demo assemblies")
+        !r.readerDetail.output.includes("PrimaryLifecycle")
+        r.plannerDetail.output.includes("PrimaryLifecycle")
+        !r.readerList.output.includes("New work order")
+        r.plannerList.output.includes("New work order")
+    }
+})
+feature("each work order drop-down answers the user's options and a selected value of theirs, and not another organization's", {
+    when() {
+        const options = (user, choice, extra = {}) =>
+            asUser(user, () => invoke(access + "get#Choices", Object.assign({choice}, extra)).options.map(row => row.value))
+        return {
+            products: options(users.plan, "madeProducts"),
+            selectedProduct: options(users.plan, "madeProducts", {term: "zzz-none", selected: ids.productId}),
+            otherProducts: options(users.services, "madeProducts"),
+            boms: options(users.plan, "releasedBoms", {productId: ids.productId}),
+            otherBoms: options(users.services, "releasedBoms", {productId: ids.productId}),
+            facilities: options(users.plan, "runFacilities"),
+            otherFacilities: options(users.services, "runFacilities"),
+            equipment: options(users.plan, "runEquipment", {term: "zzz-none", selected: ids.equipmentId}),
+            people: options(users.plan, "runPeople"),
+            reasons: options(users.supervise, "holdReasons")
+        }
+    },
+    then(r) {
+        r.products.includes(ids.productId)
+        r.selectedProduct.includes(ids.productId)
+        !r.otherProducts.includes(ids.productId)
+        r.boms.includes(ids.methodId)
+        r.otherBoms.length == 0
+        r.facilities.includes(ids.lineId)
+        !r.otherFacilities.includes(ids.lineId)
+        r.equipment.includes(ids.equipmentId)
+        r.people.length > 0
+        r.reasons.includes("MATERIAL_HOLD")
+    }
+})

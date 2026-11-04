@@ -346,17 +346,15 @@ along with this software (see the LICENSE.md file). If not, see
                                     </columns>
                                 </form-list>
                             </box-body-nopad>
-                            <box-body>
-                                <container style="row items-center q-gutter-sm">
-                                    <link url="createDraft" text="Create draft" link-type="hidden-form" btn-type="primary"
-                                            icon="sym_o_add_task" condition="methodReady"
-                                            parameter-map="Object.assign({}, carried, {productBomId:chosenBomId,
-                                                organizationPartyId:organizationPartyId})"/>
-                                    <link url="toStep" text="Back" link-type="hidden-form-link" icon="sym_o_arrow_back"
-                                            parameter-map="Object.assign({}, carried, {nextStep:'method'})"/>
-                                </container>
-                            </box-body>
                         </container-box>
+                        <container style="row items-center q-gutter-sm q-mt-sm">
+                            <link url="createDraft" text="Create draft" link-type="hidden-form" btn-type="primary"
+                                    icon="sym_o_add_task" condition="methodReady"
+                                    parameter-map="Object.assign({}, carried, {productBomId:chosenBomId,
+                                        organizationPartyId:organizationPartyId})"/>
+                            <link url="toStep" text="Back" link-type="hidden-form-link" icon="sym_o_arrow_back"
+                                    parameter-map="Object.assign({}, carried, {nextStep:'method'})"/>
+                        </container>
                     </widgets>
                 </section>
             </widgets>
