@@ -955,8 +955,8 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   - **F-P4-5** A line changed on a placed order before any decision left the approvers' notice at the old revision, which the
     handler then refuses as stale; the SECA also resends where an approval notice exists, not only after a decision.
   - **F-P4-6** PurchaseOrders' row selection posts order ids only, so the list's bulk approval decides each order's current
-    revision; `bulk#PurchaseOrderActions` takes `orderRevisions` for a caller that kept the revisions reviewed, which the list
-    does not send yet.
+    revision; `bulk#PurchaseOrderActions` takes `orderRevisions` for a caller that kept the revisions reviewed; the list now posts
+    the revisions shown (review R3).
   - **F-P4-7** An error of a service called through `EntityLib.call` reaches the framework's approve#NotificationMessage as
     "Error: Error: CODE: …" (the inner error text is wrapped again); callers test the code with includes, and
     `lib.reasonCode` would not parse it.
@@ -967,6 +967,29 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     section of their own template, included in place of P3's Approvals box (one line in `PurchasingOrderDetail.xml`).
   - **F-P4-10** Approvals is no longer a placeholder: AppStructure's count is 60 against its floor of 59, which P5 and P6's
     screens may cross at the merge.
+
+**Review Nov 4 (P4).** Checked the Mantle and BOSS diffs against this section, §2 and design ApprovalPolicies, Approvals and
+D10. Mantle defaults: `place#` and `cancel#PurchaseOrder` are Purchasing's own services (Mantle's flows call `place#Order` and
+`cancel#Order`), their notice and release refuse nothing (the notice is logged on failure, `release#ClosedSourceCommitments`
+needs no permission and releases nothing where no budget is held), the gate's `approvalComplete` runs only with the gate on;
+OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk, CrmMiscServices and OrderToCashBasicFlow pass. Steps: separation,
+ALREADY_DECIDED, the stale revision through the topic handler and the bulk with one stale are covered; Stop refuses and Warn
+passes (acceptance). F-P4-2 is not a bypass: `storeDecision` is a script export (no service), writes only the decided
+status, and still runs `store#SupplierProfile`'s organization scope and `buyingSupplier`'s owner check; only the permission
+names move to `decide#SupplierApproval`'s own PURCHASE_APPROVE check (P2 R2's clearing to no status is not reachable through
+it). Budgets.js's PURCHASE_APPROVE is a widening only, each service still scoped by `wf.organization`. The topic handlers
+check PURCHASE_APPROVE, and the decide services the organization (`purchaseOrder`, `supplierOf`).
+- **R1** (medium, performance) `handle#PurchaseApprovalRevision` runs on every order's revision and counted NotificationMessage
+  rows by topic and record (no index) before knowing the order was a purchase; it now reads the order's parts first and
+  returns for a sales order. `notify` read the step in a default parameter outside its failure guard (a failure would have
+  refused `place#PurchaseOrder`); moved inside.
+- **R2** (low, test) PurchaseApprovals: a decision retried with its operation key answers the first, with one decision and one
+  commitment.
+- **R3** (low, F-P4-6) PurchaseOrders' rows carry their revision and the bulk Approve posts them (`orderRevisionsText`), so an
+  order changed since the list was shown is refused; PurchasingOrders posts the transition with a stale revision.
+- Specs: Mantle PurchaseApprovals, PurchaseOrders, AccountingBudgets, OrderProcureToPayBasicFlow, OrderLifecycle, OrderBulk,
+  CrmMiscServices, OrderToCashBasicFlow (86 features, pass); BOSS PurchasingApprovals, PurchasingAccess, PurchasingOrders,
+  PurchasingSuppliers, AccountingBudgets (27, pass); `lint --screens` unchanged.
 
 ### P5 — Receiving and inspection
 
