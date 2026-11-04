@@ -506,9 +506,9 @@ is unchanged.
 | RunConsumed | IssuedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (Posted issues and receipts, Unused returns, P16) |
 | RunProduced | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (Output Receive: receive#ProductionOutput; Warehouse/Transfers/SubcontractShipmentDetail Output receipt: receive#SubcontractOutput, P16) |
 | RunProduced | ReceivedAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (Tracking, P16) |
-| RunProducts | AddProduceForm | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
+| RunProducts | AddProduceForm | Manufacturing/WorkOrders/WorkOrderDetail/Quantities | Manufacturing/WorkOrders/WorkOrderDetail/Quantities AddOutput and ByProducts (a draft's secondary output or by-product: store#ProductionOutput, P7) |
 | RunProducts | ReceiveAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (Output Receive: receive#ProductionOutput; Warehouse/Transfers/SubcontractShipmentDetail Output receipt: receive#SubcontractOutput, P16) |
-| RunProducts | ProduceList | Manufacturing/WorkOrders/WorkOrderDetail/Quantities |  |
+| RunProducts | ProduceList | Manufacturing/WorkOrders/WorkOrderDetail/Quantities | Manufacturing/WorkOrders/WorkOrderDetail/Quantities OutputPlan (get#ProductionQuantities: target, good, held, loss, remaining, P7) |
 | RunProducts | AddConsumeForm | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |
 | RunProducts | IssueAssetForm | Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt; Maintenance/WorkOrders/MaterialIssueReceipt | Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue: issue#ProductionMaterial, P16) |
 | RunProducts | ConsumeList | Manufacturing/WorkOrders/WorkOrderDetail/Components; Maintenance/WorkOrders/WorkOrderDetail |  |

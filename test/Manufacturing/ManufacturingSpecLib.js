@@ -200,6 +200,16 @@ function routeFixtures() {
         ["WorkCenters/RequestDetail", shared + "RequestDetail.xml"],
         ["WorkCenters/WorkItemDetail", shared + "WorkItemDetail.xml"]
     )
+    // P7: the Quantities and By-products tabs and the labels of the Warehouse demo's released run (a tab shows its header's
+    // text, F63), and Quality's ScrapLoss
+    const released = {workEffortId: ids.releasedRunId}
+    Object.assign(routes, {
+        "WorkOrders/WorkOrderDetail/Quantities": {parameters: released, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/ByProducts": {parameters: released, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/OutputLabels": {parameters: released, text: "Coated filters"},
+        Quality: {text: "Scrap and loss"},
+        "Quality/ScrapLoss": {text: "Scrap and loss"}
+    })
     return {routes, mounts}
 }
 

@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A work order's by-products (design-manufacturing §3 ByProducts; impl-manufacturing P7), WorkOrderDetail's By-products tab:
+    ByProducts, the secondary output and by-product lines with their planned, received and lost quantities
+    (mantle.work.ProductionServices.get#ProductionQuantities), changed, added or removed on a draft by the planner
+    (store#ProductionOutput, after ironstone.manufacturing.AccessServices.check#Record with plan); and AllocationReview, the
+    frozen estimate shared by quantity across the outputs (the default co-product rule), with Products' cost read only. The
+    actual allocation, and receiving a by-product, wait for Accounting's cost close (P15): a by-product is not received until
+    then (BYPRODUCT_NOT_COSTED). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="By-products" default-menu-index="7">
+    <parameter name="workEffortId"/>
+    <transition name="storeOutput">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'plan'}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionOutput" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        productionRunLineId:productionRunLineId || null, lineRoleEnumId:lineRoleEnumId || null,
+                        productId:productId || null, quantity:quantity || null, quantityUomId:quantityUomId || null,
+                        remove:remove == 'true'}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Output removed' : 'Output saved', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <actions>
+        <set field="quantities" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionQuantities" out-map="quantities"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="found" from="!!quantities?.run"/>
+        <set field="runInfo" from="quantities?.run || {}"/>
+        <set field="can" from="quantities?.can || {}"/>
+        <set field="allocation" from="quantities?.allocation || null"/>
+        <set field="keyBase" from="'wo-b-' + ec.user.randomString(20)"/>
+        <set field="byproductRows" from="(quantities?.outputRows || []).filter((row) =&gt; !row.primary).map((row) =&gt;
+                Object.assign({}, row, {workEffortId: workEffortId, expectedRevision: runInfo.revision,
+                    operationKey: keyBase + '-' + row.productionRunLineId, quantity: row.target}))"/>
+        <set field="outputForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision, lineRoleEnumId:'PrlrByproduct',
+                operationKey:keyBase + '-new'}"/>
+        <set field="allocationRows" from="allocation?.rows || []"/>
+        <set field="labelParameters" from="{workEffortId:workEffortId, kind:'secondary', renderMode:'html-print', lastStandalone:'true'}"/>
+    </actions>
+    <widgets>
+        <section name="ByProductsNotAvailable" condition="!found">
+            <widgets>
+                <label text="This work order is not available." type="p"/>
+                <link url="${sharedLinks.WorkOrders}" text="Work orders" link-type="anchor" icon="sym_o_arrow_back"/>
+            </widgets>
+        </section>
+        <section name="ByProductsFound" condition="found">
+            <widgets>
+                <container style="row items-center q-gutter-x-xs q-mb-md">
+                    <container-dialog id="AddByProductDialog" condition="can.storeOutput" button-text="Add by-product" type="primary"
+                            icon="sym_o_add" width="560" title="Add a by-product to the draft work order ${workEffortId}">
+                        <form-single name="AddByProduct" transition="storeOutput" map="outputForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="lineRoleEnumId">
+                                <default-field title="Kind">
+                                    <drop-down allow-empty="false">
+                                        <option key="PrlrByproduct" text="By-product"/>
+                                        <option key="PrlrOutput" text="Secondary output"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId"><default-field title="Product"><text-line size="16" required="true"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="quantityUomId"><default-field title="Unit" tooltip="The product's stock unit when empty"><text-line size="8"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Add"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <link url="../OutputLabels" text="Secondary labels" icon="sym_o_label" target-window="_blank"
+                            parameter-map="labelParameters"/>
+                </container>
+                <label text="A by-product is good secondary stock, received once Accounting's cost close allocates its cost; scrap is disposed explicitly, never turned into a by-product to balance cost."
+                        type="p" style="text-caption m-muted"/>
+
+                <container-box>
+                    <box-header title="By-products and secondary outputs"/>
+                    <box-body-nopad>
+                        <label text="This work order has no by-product or secondary output." type="p" style="q-pa-md"
+                                condition="!byproductRows.length"/>
+                        <section name="ByProductRowsReadOnly" condition="byproductRows.length &amp;&amp; !can.storeOutput">
+                            <widgets>
+                                <form-list name="ByProductList" list="byproductRows" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Product"><display text="${productName} · ${roleText}"/></default-field></field>
+                                    <field name="target"><default-field title="Planned"><display align="right"/></default-field></field>
+                                    <field name="received"><default-field title="Received"><display align="right"/></default-field></field>
+                                    <field name="scrap"><default-field title="Loss"><display align="right"/></default-field></field>
+                                    <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/></column>
+                                        <column><field-ref name="target"/><field-ref name="received"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="ByProductRowsEdit" condition="byproductRows.length &amp;&amp; can.storeOutput">
+                            <widgets>
+                                <form-list name="ByProducts" list="byproductRows" transition="storeOutput">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display text="${productName} · ${roleText}"/></default-field></field>
+                                    <field name="quantity"><default-field title="Planned"><text-line size="8" input-type="number"/></default-field></field>
+                                    <field name="remove">
+                                        <default-field title="Remove"><check><option key="true" text=" "/></check></default-field>
+                                    </field>
+                                    <field name="submit"><default-field title=""><submit text="Save"/></default-field></field>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="AllocationReview" condition="allocation">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Allocation estimate"/>
+                            <box-body>
+                                <label text="No approved estimate was frozen on this work order." type="p" style="m-muted"
+                                        condition="!allocation.available"/>
+                                <section name="AllocationRows" condition="allocation.available">
+                                    <widgets>
+                                        <label text="${allocation.method}: the frozen estimate of ${allocation.totalCost} ${allocation.currencyUomId || ''} shared across the outputs. Accounting's cost close makes the actual allocation."
+                                                type="p" style="text-caption"/>
+                                        <form-list name="AllocationEstimate" list="allocationRows" skip-form="true" paginate="false">
+                                            <field name="productName"><default-field title="Product"><display text="${productName} · ${roleText}"/></default-field></field>
+                                            <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                                            <field name="sharePercent"><default-field title="Share %"><display text="${sharePercent || note || ''}" align="right"/></default-field></field>
+                                            <field name="amount"><default-field title="Estimate"><display currency-unit-field="allocation.currencyUomId" align="right"/></default-field></field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

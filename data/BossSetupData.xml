@@ -1263,4 +1263,10 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <moqui.security.user.NotificationTopic topic="ProductionStagedRelease"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P7: a loss above its reason's threshold and output beyond the overproduction tolerance, decided on the
+        work order's Quantities tab -->
+    <moqui.security.user.NotificationTopic topic="ProductionLossApproval"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
+    <moqui.security.user.NotificationTopic topic="ProductionOverproduction"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

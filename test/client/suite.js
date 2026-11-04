@@ -59,7 +59,8 @@ suite(
         "ManufacturingCostsWalk",
         "ManufacturingWorkOrdersWalk",
         "ManufacturingPlanningWalk",
-        "ManufacturingDowntimeWalk"
+        "ManufacturingDowntimeWalk",
+        "ManufacturingQuantitiesWalk"
     ],
     {
         server: {

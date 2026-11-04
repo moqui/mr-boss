@@ -213,7 +213,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b — |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
-| P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
+| P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
@@ -1057,6 +1057,128 @@ Design §3 Quantities and ByProducts, §6 ScrapLoss and §12.2; M2, M4, M6 and M
   - a target cut below the good quantity is refused, and a cut to 9 writes a delta;
   - overproduction above the tolerance waits for a supervisor;
   - complete is refused until the quantities reconcile, then succeeds; a retry posts nothing twice.
+
+**Built Nov 3 (P7).**
+- Mantle records (`entity/ProductionQuantityEntities.xml`, a new file): `ProductionQuantityEvent` (good, produced-held,
+  process loss, scrap, rework, target change with the targets before and after, and an overproduction request with its
+  approval), `ProductionLoss` (its type, line, product, asset and lot, quantity, the reason's code, name and category as
+  recorded, whether the output was held, its status PlsPending/PlsApproved/PlsRefused with the approver, the issuance of an
+  output scrapped back, the rework order), `AssetIssuance.productionLossId` and the output line's audit-logged
+  overproduction approval (`overApprovedQuantity`, by, date). `data/ProductionQuantityData.xml`: the event, loss type and
+  approval enumerations, the loss status flow (its two transitions carry PRODUCTION_SUPERVISE), the cost event types
+  PcetMaterialScrap and PcetOutputScrap, and the ProductionLossApproval and ProductionOverproduction topics.
+- Mantle services (`ProductionQuantities.js`, seven services appended to `ProductionServices.xml`):
+  - `get#ProductionQuantities` (PRODUCTION_VIEW or _OPERATE): per output line target, received, accepted good and
+    produced-held (each receipt's asset by its status now, less what was scrapped back), approved process loss, scrap,
+    rework, losses waiting, remaining, over, the policy's tolerance, the supervisor's approval and what it may still take;
+    per material line required, issued, returned, net, scrapped and to issue; the events and losses (cost with
+    ACCOUNTING_VIEW only); the reconciliation; the by-products' allocation estimate by quantity (Products' cost read only);
+    what the user may do;
+  - `store#ProductionOutput` (PLAN): a draft's secondary output or by-product line, never the run's own product
+    (OUTPUT_PRIMARY);
+  - `record#ProductionQuantity` (OPERATE): process loss, scrap and rework through their losses, then good and pending output
+    through `receive#ProductionOutput` (pending with the new `hold`: quarantine and an inspection), each under a sub-key of
+    the operation, with its event; beyond the target, tolerance and approval it records only an overproduction request
+    (APPROVAL_REQUESTED) and notifies the supervisors;
+  - `change#ProductionQuantity` (PLAN): the target delta event, never below good + held + loss + losses waiting
+    (TARGET_BELOW_FACTS); materials and by-products scale, never below what each issued or received; `writeProducts`
+    rewrites the Wept rows; the revision counts up; `set#ProducedProductQuantity` is never called (F8);
+  - `record#ProductionLoss` (OPERATE) by R-MFG-20's paths: PltComponentScrap (no stock moves; `record#ProductionCostEvent`
+    from the loss, PcetMaterialScrap at the asset's or the line's issued unit cost, PclAwaitingClose), PltOutputScrap of an
+    output asset of the open run (STOCK_ISSUE; `issue#AssetToWorkEffort` with `productionLossId`, so the hook posts it back
+    into WIP and its event is PcetOutputScrap/PrcOutput) or before receipt (no asset), PltProcessLoss and PltRework; above
+    the reason's `approvalThreshold` (percent of the line) it waits (PlsPending, ProductionLossApproval) unless a supervisor
+    records it;
+  - `approve#ProductionException` (SUPERVISE): a pending loss approved (applied then) or refused with a reason, an
+    overproduction request approved (the line's approval grows) or refused; marks the notices read;
+  - `find#ProductionLosses` (VIEW or OPERATE, paged, each run checked) and `get#ProductionLabels` (VIEW or STOCK_ISSUE).
+- The edits to shared files: `transition#ProductionOrder` complete (ProductionOrders.js `check`/`apply`): each output line
+  reconciled (QUANTITIES_UNRECONCILED, with `finishRemainder` writing the rest as an approved PltProcessLoss), nothing held
+  (OUTPUT_HELD), no loss waiting (LOSS_PENDING), no operation running or held (OPERATION_OPEN; the operations not reported
+  are completed with the run), material issued (MATERIAL_UNISSUED unless `acceptMaterialVariance`), then WeComplete at the
+  next revision; `factsOf` counts quantity events and losses. `receive#ProductionOutput` (Production.js `outputPlan`): its
+  limit is the line's target + tolerance + approval − what it accounts for (OVER_RECEIPT, unchanged with no policy and no
+  loss), `hold`, and after the receipt `afterReceipt` completes a running run that reconciles under
+  `completeOnFinalReceipt` (`completed` in the result). ProductionCosts.js: the ProductionLoss source, the output scrap's
+  issuance event, and actuals that show `scrapped` apart from the WIP balance.
+- BOSS: WorkOrderDetail's Quantities tab (index 5: the reconciliation line, Record quantities (primary), Record loss,
+  Change quantity, Add output on a draft, Complete with Finish remainder and the material variance, the supervisor's
+  decisions, Output plan, Materials, Losses, Quantity events) and By-products tab (index 7: the lines, editable on a draft,
+  and the allocation estimate); OutputLabels (html-print: finished, secondary and WIP labels, a held one "HELD: not
+  accepted"); Quality now a parent with ScrapLoss (Find, Losses, RecordLoss, the decisions; its placeholder replaced);
+  Manufacturing.js's P7 block (links, `lossTypes`, `lossReasons`); the two topics in the root, Approvals and BossSetupData's
+  links to the Quantities tab.
+- Specs: Mantle `test/work/ProductionQuantities.spec.js` (9 features, about 5 s: the run for 10 with 6 good, 1 process loss and
+  a component scrap with its event and no stock movement, 3 remaining; a received and a held output asset scrapped back to
+  the run, with the labels; the target cut refused below the facts and to 9 as a delta with the lines and Wept rows; the
+  overproduction within and beyond tolerance with the supervisor's approval; the threshold loss approved and refused;
+  complete refused then done, a retry posting nothing; Finish remainder and the material variance; the completeOnFinalReceipt
+  flag and its default; the draft by-product, its refused receipt and the allocation estimate); ProductionOrders' preview
+  expects QUANTITIES_UNRECONCILED. BOSS ManufacturingAccess P7 (2: each verb's permission and the other organization; the
+  tabs and ScrapLoss with authz enabled), the route fixtures, AppStructure's floor 65; client walk
+  `ManufacturingQuantitiesWalk` (3, with 390 px).
+- Tests run: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction, ManufacturingServices,
+  ProductionPolicy, ProductMethods (57, pass); BOSS ManufacturingAccess, AppStructure, TuiRender (94, pass),
+  ManufacturingWorkOrders, ManufacturingShell, ManufacturingPlanning, WarehouseAccess, Notifications (174, pass); walk
+  ManufacturingQuantitiesWalk (3, pass). `moqui lint --screens`: only informational anchor rows for the P7 screens.
+- Decisions:
+  - Quantities derive from the receipts and losses, never a stored counter: good and held by each receipt asset's status now,
+    so an inspection's disposition (P8) moves held to good or loss without a quantity write.
+  - Complete needs nothing held, no loss waiting and no operation running; operations never reported (no P10 yet) are
+    completed with the run; unissued material blocks unless the supervisor accepts the variance; by-products do not block
+    (received only after P15).
+  - A component scrap's event carries its value awaiting the close and is left out of the WIP balance (the issue already put
+    it in WIP); an output scrap's issuance is the event, so WIP rises by what the receipt relieved.
+  - An exceptional loss is one above its reason's `approvalThreshold` as a percent of the line's quantity; a supervisor's own
+    loss is approved as recorded. Overproduction approval is a quantity on the output line, so later receipts use it.
+  - record#ProductionQuantity's expected revision is optional (a station scan has none); its receipts and losses do not
+    count the revision up, change and store#ProductionOutput do.
+  - Labels use Products P11's 50 x 30 template and a Code 128 of the asset id; `prepare#ProductLabels` is not called, since
+    its items carry no lot, run or hold state (F-P7-4).
+- Deferred: the backorder (P9); a by-product's receipt and the actual allocation (P15); an inspection's scrap disposition
+  calling record#ProductionLoss (P8); operation-level quantity reporting (P10's complete#ProductionOperation); a handheld
+  mount of Reconcile (P10's shop floor).
+- Findings (provisional):
+  - **F-P7-1** A status field on a new record needs its StatusFlowTransition rows: the framework's status check refused
+    PlsPending → PlsApproved until `ProductionLoss`'s flow was seeded.
+  - **F-P7-2** receive#ProductionOutput's limit now counts losses (a process loss or a loss waiting lowers what may be
+    received; an output scrapped back stays counted, as scrap in place of good, so it frees nothing); with no policy row and
+    no loss it is the old target − received (WarehouseProduction's over-receipt case, which has no policy row).
+  - **F-P7-3** Nothing completes an operation before P10, so complete closes the untouched operations with the run; P10's
+    `complete#ProductionOperation` should make OPERATION_OPEN the usual refusal.
+  - **F-P7-4** Products' label contract (`prepare#ProductLabels`) labels a product by its identifier for catalog scope; a
+    production label needs the asset, lot, run and hold state, so `get#ProductionLabels` follows its template and barcode and
+    Products could add an item `caption` to share the print.
+  - **F-P7-5** `find#ProductionLosses` checks each loss's run (no WorkEffort filter, F3) and pages in memory, capped at 2000.
+  - **F-P7-6** For the merge: Production.js (`outputPlan`'s limit and `hold`, the `writeProducts` export), ProductionCosts.js
+    (sources, `issuanceEvent`, `actualsOf`), ProductionOrders.js (complete, `factsOf`, `blockedReasons`, the request fields),
+    ProductionServices.xml (`receive#ProductionOutput`, `transition#ProductionOrder`'s two parameters, the appended section),
+    Quality.xml (now a parent: P8's Inspections and P11's Downtime add files under `Quality/`), Approvals.xml, the root's
+    topics, BossSetupData's topic links, ManufacturingSpecLib, AppStructure's floor (65) and suite.js.
+  - **F-P7-7** ManufacturingAccess's P7 tab feature reads the process loss its first P7 feature records.
+- **Review (Nov 3).** Verified against the "usable when" items, R-MFG-20's three paths, F8 (no
+  set#ProducedProductQuantity), the change floor and its Wept delta, the §12.2 refusals, the completeOnFinalReceipt flag (one
+  transaction, off by default, both tested), the tolerance and approval, BYPRODUCT_NOT_COSTED and the permissions. Fixed:
+  approve#ProductionException takes the `workEffortId` the screen checked and refuses a loss or overproduction request of
+  another work order (RECORD_UNAVAILABLE; Quantities and ScrapLoss pass it), so the record check and the decision are of the
+  same run (low: Mantle still checked the organization). Specs added: a retry of record#ProductionLoss writes no second loss
+  or cost event; record#ProductionQuantity refused for a reader and another organization; the overproduction notice reaches
+  the supervisor and not the operator or the other organization; a decision naming another work order is refused;
+  WarehouseProduction's over-receipt case named as F-P7-2's no-policy test. F-P7-2's wording corrected. Left, for later
+  phases:
+  - **F-P7-8** (P10) Complete marks operations never reported WeComplete with no time, which reports (P16) and scheduling
+    (P12) would read as done work. Once complete#ProductionOperation exists, completeCheck should refuse an operation not
+    complete (or offer an explicit "close unreported operations" the supervisor accepts, as with the material variance)
+    rather than closing them silently.
+  - **F-P7-9** Good and pending output need STOCK_ISSUE (Warehouse's grant, §2 P1), which BOSS_MFG_OPERATOR lacks: an
+    operator alone can record losses but not receive output; the Quantities dialog still offers good and pending. Either the
+    operator holds the Warehouse issue group or the dialog hides the receipt fields without `can.issue` (P10's shop floor).
+  - **F-P7-10** (P5b merge) change#ProductionQuantity scales every PrlrMaterial line, so P5b's manual material lines scale
+    too; the merge should decide whether a manual line keeps its quantity. The Mantle collisions with P5b are append-only
+    (Production.js's export list, ProductionServices.xml's appended sections); BOSS collides with master (P11) only in
+    appended blocks (Manufacturing.js, ManufacturingAccess, ManufacturingSpecLib, suite.js).
+  - Review specs: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction (32, then the two
+    touched again, 17, pass); BOSS ManufacturingAccess (73, pass); `moqui lint --screens` informational anchors only.
 
 ### P8 — Quality
 

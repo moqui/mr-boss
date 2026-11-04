@@ -1135,6 +1135,46 @@ Object.assign(choiceSources, {
     }
 })
 
+// ===== P7: quantities, by-products and loss =====
+// WorkOrderDetail's Quantities and By-products tabs, its output labels and Quality's ScrapLoss (impl-manufacturing P7), whose
+// routes are in sharedLinks; and the drop-downs of their loss forms: the loss types and the active loss reasons (scrap,
+// process loss and rework) of the user's organizations, by category.
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Quantities",
+    "WorkOrders/WorkOrderDetail/ByProducts",
+    "WorkOrders/WorkOrderDetail/OutputLabels",
+    "Quality/ScrapLoss"
+)
+Object.assign(choiceSources, {
+    lossTypes: (userScope, term, selected) => enumOptions("ProductionLossType", term, selected),
+    lossReasons: (userScope, term, selected) => {
+        const now = ec.user.nowTimestamp
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", ["PrcScrap", "PrcProcessLoss", "PrcRework"])
+            .condition("fromDate", "less-equals", now)
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("thruDate", "is-null", null), factory.makeCondition("thruDate", "greater-than", now)],
+                    "or"
+                )
+            )
+            .orderBy("reasonCategoryEnumId")
+            .orderBy("sequenceNum")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        const category = {PrcScrap: "Scrap", PrcProcessLoss: "Process loss", PrcRework: "Rework"}
+        return rowOptions(
+            query,
+            "reasonCode",
+            row => (row.reasonName || row.reasonCode) + " · " + (category[row.reasonCategoryEnumId] || ""),
+            ["reasonCode", "reasonName"],
+            term,
+            selected,
+            () => null
+        )
+    }
+})
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

@@ -59,6 +59,9 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="Manufacturing/WorkOrders/QuickCreate" sequence="85"/>
         <notification-topic topic="ProductionRelease"/>
         <notification-topic topic="ProductionStagedRelease"/>
+        <!-- P7: a loss and an overproduction waiting for a supervisor -->
+        <notification-topic topic="ProductionLossApproval"/>
+        <notification-topic topic="ProductionOverproduction"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>
