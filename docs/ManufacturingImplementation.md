@@ -19,7 +19,8 @@ equipment), P4 (policy and reasons), P6 (cost evidence), P11 (downtime and maint
 | Settings | `Settings/ProductionSettings` (the organization default and plant overrides) and `Settings/ReasonCodes`, for the settings group (below) |
 | Planning | `Planning/SupplyPlanning` (the default tab), the shared supply plan with the Manufacturing context; for the planner, scheduler and supervisor groups |
 | Work orders, Reports | Placeholders, open to every Manufacturing user |
-| Shop floor, Quality, Subcontracting | Placeholders, for their groups only (below) |
+| Quality | `Quality/Inspections` (the default), `Quality/InspectionTemplates`, `Quality/ScrapLoss` (P7); hidden `Quality/QualityInspection`, `Quality/InspectionStation` and `Quality/QualityCertificate` (P8); for the quality groups and the supervisor (below) |
+| Shop floor, Subcontracting | Placeholders, for their groups only (below) |
 
 All routes are under `/qapps/Manufacturing`, in design §1.2's order by `default-menu-index`. The root
 (`screen/Manufacturing.xml`) runs `get#SharedContext` in its always-actions into `manufacturing` (capabilities, the
@@ -175,6 +176,27 @@ service). RequestDetail and WorkItemDetail take the Commons context with a Produ
 `get#WorkItemContext`): a maintenance request of the user's plants, and a follow-up task of one; any other request or
 task, and a production operation, are not available there.
 
+## Quality (P8)
+
+A release keeps the run's quality gates (`mantle.work.production.ProductionQualityGate`, Mantle's `ProductionQuality.js`):
+an operation's in-process gate and an output line's final gate, each with its template as of the release and its sample
+plan. `mantle.product.QualityServices.get#SourceInspectionStatus` answers a run, operation or output line with each gate's
+state (required, pending, failed, passed) and the inspection that decides it; the run's start and resume, its completion
+and the operations' readiness read the same. Output of a line with a final gate is received held with its inspection;
+`dispose#Inspection` releases it (reserving the pegged order item first) and scraps an open run's output through the loss
+path.
+
+WorkOrderDetail's Quality tab (`WorkOrders/WorkOrderDetail/Quality.xml`) reads
+`ironstone.manufacturing.QualityServices.get#QualityGates`; Inspect (an in-process gate) checks the run with `check#Record`
+(`inspect`) and calls `mantle.work.ProductionServices.create#ProductionInspection`; Checklist prints
+`WorkOrderDetail/QualityChecklist`. The Quality area: `Inspections` (the default), `InspectionTemplates`
+(`Shared/InspectionTemplates`), and hidden `QualityInspection` (`Shared/QualityInspection`), `InspectionStation` (density
+handheld; its `Inspection` mount sets `operatorMode`) and `QualityCertificate`. The shared screens' Manufacturing branches
+read `ironstone.manufacturing.QualityServices`; `template/WarehouseInspectionParts.xml`'s transitions check the record with
+Manufacturing's `check#Record` (the `inspection` kind: a production inspection of the user's organizations) under the
+Manufacturing root and call the same Mantle verbs. The quality-block notice is ProductionQualityBlock, linked to the
+Quality tab.
+
 ## Verification
 
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters,ManufacturingPlanning,
@@ -182,6 +204,7 @@ ManufacturingDowntime`, `./moq test mr-mantle --spec WorkCenters,ProductionCosts
 `ManufacturingWorkCentersWalk`, `ManufacturingCostsWalk`, `ManufacturingPlanningWalk` and `ManufacturingDowntimeWalk`; AppStructure
 and TuiRender cover the built screens and the area
 placeholders.
+`./moq test mr-mantle --spec ProductionQuality` and the walk `ManufacturingQualityWalk` (P8).
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingMethods`; AppStructure and TuiRender cover
 the built routes (ManufacturingSpecLib's `routeFixtures`) and the area placeholders; `./moq test mr-mantle --spec
 MethodTemplates`; the walk `./moq test-client mr-boss --serve -- --spec ManufacturingMethodsWalk`.

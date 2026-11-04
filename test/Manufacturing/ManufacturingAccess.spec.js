@@ -1252,7 +1252,9 @@ feature("reporting a stop needs PRODUCTION_OPERATE or PRODUCTION_SUPERVISE; a co
             reader: reportOn(users.read),
             // the other organization's reader is refused the line by the screens' check (Mantle's spec refuses an operator of
             // another organization the same way)
-            services: asUser(users.services, () => refusal(access + "check#Record", {recordType: "workCenter", recordId: ids.lineBId})),
+            services: asUser(users.services, () =>
+                refusal(access + "check#Record", {recordType: "workCenter", recordId: ids.lineBId})
+            ),
             operatorCorrect: correct(users.operate),
             operatorCheck: check(users.operate),
             supervisorCheck: check(users.supervise),
@@ -1626,3 +1628,143 @@ feature("the Materials and Components tabs and Planning's availability open by r
         r.readerStock.status != 200 || !r.readerStock.output.includes("Coated filter")
     }
 })
+
+// ===== P8: quality =====
+// The demo's running work order with its in-process weld gate and the gate's draft inspection (BossManufacturingDemoData.xml),
+// read and refused without changing them: each refusal against a user whose permission passes on the same parameters (and
+// meets the record's own state); the Mantle verbs as the screens run them (artifact authorization off, F-P3-2), and the
+// quality screens with it enabled.
+const Q = "mantle.product.QualityServices."
+const mfgQuality = "ironstone.manufacturing.QualityServices."
+feature(
+    "the quality verbs check their own permission and organization: an inspector inspects and cannot verify, a reader neither",
+    {
+        when() {
+            const gate = {workEffortId: ids.qualityRunId, productionQualityGateId: ids.qualityGateId}
+            const inspection = {qualityInspectionId: ids.inspectionId}
+            return {
+                readerCreate: asService(users.read, () => refusal(production + "create#ProductionInspection", gate)),
+                inspectorCreate: asService(users.inspect, () => refusal(production + "create#ProductionInspection", gate)),
+                otherCreate: asService(users.services, () => refusal(production + "create#ProductionInspection", gate)),
+                inspectorVerify: asService(users.inspect, () => refusal(Q + "verify#Inspection", inspection)),
+                verifierVerify: asService(users.verify, () => refusal(Q + "verify#Inspection", inspection)),
+                readerStatus: asService(users.read, () =>
+                    invoke(Q + "get#SourceInspectionStatus", {workEffortId: ids.qualityRunId})
+                ),
+                packStatus: asService(users.supervise, () =>
+                    invoke(Q + "get#SourceInspectionStatus", {operationWorkEffortId: ids.qualityOperationIds[1]})
+                ),
+                otherStatus: asService(users.services, () =>
+                    refusal(Q + "get#SourceInspectionStatus", {workEffortId: ids.qualityRunId})
+                ),
+                inspectorCheck: asUser(users.inspect, () =>
+                    refusal(access + "check#Record", {
+                        recordType: "inspection",
+                        recordId: ids.inspectionId,
+                        capability: "inspect"
+                    })
+                ),
+                readerCheck: asUser(users.read, () =>
+                    refusal(access + "check#Record", {
+                        recordType: "inspection",
+                        recordId: ids.inspectionId,
+                        capability: "inspect"
+                    })
+                ),
+                otherCheck: asUser(users.services, () =>
+                    refusal(access + "check#Record", {recordType: "inspection", recordId: ids.inspectionId})
+                ),
+                warehouseInspection: asUser(users.inspect, () =>
+                    refusal(access + "check#Record", {recordType: "inspection", recordId: "BOSS_WH_INSP"})
+                ),
+                readerGates: asService(users.read, () =>
+                    invoke(mfgQuality + "get#QualityGates", {workEffortId: ids.qualityRunId})
+                ),
+                otherList: asService(users.services, () => invoke(mfgQuality + "get#InspectionList", {})),
+                operations: asService(users.supervise, () =>
+                    invoke(production + "get#ProductionOperations", {workEffortId: ids.qualityRunId})
+                )
+            }
+        },
+        then(r) {
+            r.readerCreate.includes("PERMISSION_DENIED")
+            r.inspectorCreate.includes("INSPECTION_EXISTS")
+            r.otherCreate.includes("PERMISSION_DENIED") || r.otherCreate.includes("RECORD_UNAVAILABLE")
+            r.inspectorVerify.includes("PERMISSION_DENIED")
+            r.verifierVerify.includes("INSPECTION_NOT_SUBMITTED")
+            r.readerStatus.gateRows.length == 1
+            r.readerStatus.gateStatus == "pending"
+            r.readerStatus.blockingInspectionId == ids.inspectionId
+            r.packStatus.startAllowed == false
+            r.packStatus.startBlockInspectionId == ids.inspectionId
+            r.otherStatus.includes("RECORD_UNAVAILABLE")
+            r.inspectorCheck == ""
+            r.readerCheck.includes("PERMISSION_DENIED")
+            r.otherCheck.includes("RECORD_UNAVAILABLE")
+            // a receipt inspection is Warehouse's, not a Manufacturing record
+            r.warehouseInspection.includes("RECORD_UNAVAILABLE")
+            r.readerGates.gateRows[0].canCreate == false
+            r.otherList.inspections.length == 0
+            r.operations.operationRows.find(row => row.workEffortId == ids.qualityOperationIds[1]).blockingInspectionId ==
+                ids.inspectionId
+        }
+    }
+)
+feature(
+    "the quality screens open by role with each user's actions, and another organization's user reaches none, with authz enabled",
+    {
+        when() {
+            const inspection = {qualityInspectionId: ids.inspectionId}
+            const detail = user => asUser(user, () => lib.page("Quality/QualityInspection", inspection))
+            return {
+                gatesReader: asUser(users.read, () =>
+                    lib.page("WorkOrders/WorkOrderDetail/Quality", {workEffortId: ids.qualityRunId, lastStandalone: "true"})
+                ),
+                gatesOther: asUser(users.services, () =>
+                    lib.page("WorkOrders/WorkOrderDetail/Quality", {workEffortId: ids.qualityRunId, lastStandalone: "true"})
+                ),
+                inspectorList: asUser(users.inspect, () => lib.page("Quality/Inspections")),
+                operatorList: asUser(users.operate, () => lib.page("Quality/Inspections")),
+                inspector: detail(users.inspect),
+                verifier: detail(users.verify),
+                station: asUser(users.inspect, () =>
+                    lib.page("Quality/InspectionStation/Inspection", Object.assign({lastStandalone: "true"}, inspection))
+                ),
+                adminTemplates: asUser(users.qualityAdmin, () =>
+                    lib.page("Quality/InspectionTemplates", {inspectionTemplateId: ids.qualityTemplateId})
+                ),
+                inspectorTemplates: asUser(users.inspect, () =>
+                    lib.page("Quality/InspectionTemplates", {inspectionTemplateId: ids.qualityTemplateId})
+                ),
+                certificate: asUser(users.verify, () =>
+                    lib.page("Quality/QualityCertificate", {qualityInspectionId: ids.inspectionId, lastStandalone: "true"})
+                )
+            }
+        },
+        then(r) {
+            r.gatesReader.errors.length == 0
+            r.gatesReader.output.includes("Weld check")
+            !r.gatesReader.output.includes("Open inspection")
+            r.gatesOther.output.includes("This work order is not available.")
+            r.inspectorList.status == 200
+            r.inspectorList.errors.length == 0
+            r.inspectorList.output.includes(ids.inspectionId)
+            r.operatorList.status != 200 || !r.operatorList.output.includes(ids.inspectionId)
+            r.inspector.errors.length == 0
+            r.inspector.output.includes("Submit result")
+            r.inspector.output.includes("Weld bead even")
+            !r.inspector.output.includes("Record decision")
+            r.verifier.errors.length == 0
+            !r.verifier.output.includes("Submit result")
+            r.station.errors.length == 0
+            r.station.output.includes("Step 1")
+            r.station.output.includes("Pass")
+            r.adminTemplates.errors.length == 0
+            r.adminTemplates.output.includes("New template")
+            r.adminTemplates.output.includes("In-process")
+            !r.inspectorTemplates.output.includes("New template")
+            r.certificate.errors.length == 0
+            r.certificate.output.includes("Inspection evidence (not verified)")
+        }
+    }
+)

@@ -19,7 +19,11 @@ along with this software (see the LICENSE.md file). If not, see
     one by default) and, for the chosen template, its Characteristics as of a date (Add, Change and End; a published
     characteristic is never edited in place: a change ends it and starts a new row), Sampling, Applicability and Revision
     history (every characteristic row with its dates, and the header's audit-logged changes); Publish, Retire and Print
-    as of a date. Edits for qualityTemplateEdit (the quality manager); others read. -->
+    as of a date. Edits for qualityTemplateEdit (the quality manager); others read.
+    Manufacturing (impl-manufacturing P8) mounts it at Manufacturing/Quality/InspectionTemplates with its production templates
+    (ironstone.manufacturing.QualityServices.get#TemplateList and get#TemplateDetail): a new template is a production one,
+    and the editor adds its stage (in-process or final), sample basis (each receipt or the run's quantity) and the method or
+    operation it attaches to; publishing never changes what a released run's gate reads as of its release. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Templates"
@@ -37,6 +41,18 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="warehouseContext" from="appRoot == 'Warehouse'"/>
+        <set field="manufacturingContext" from="appRoot == 'Manufacturing'"/>
+        <set field="templatesContext" from="warehouseContext || manufacturingContext"/>
+        <if condition="manufacturingContext">
+            <service-call name="ironstone.manufacturing.QualityServices.get#TemplateList" out-map="list"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{statusId:statusId, templateName:templateName, pageIndex:pageIndex, pageSize:pageSize}"/>
+            <if condition="inspectionTemplateId">
+                <service-call name="ironstone.manufacturing.QualityServices.get#TemplateDetail" out-map="detail"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{inspectionTemplateId:inspectionTemplateId, asOfDate:asOfDate || null}"/>
+            </if>
+        </if>
         <if condition="warehouseContext">
             <service-call name="ironstone.warehouse.InspectionServices.get#TemplateList" out-map="list"
                     transaction="force-new" ignore-error="true"
@@ -60,18 +76,23 @@ along with this software (see the LICENSE.md file). If not, see
                 inspectionContextEnumId:template.inspectionContextEnumId, productId:template.productId,
                 productCategoryId:template.productCategoryId, templateFacilityId:template.facilityId,
                 samplePolicyEnumId:template.samplePolicyEnumId, sampleSize:template.sampleSize,
-                samplePercent:template.samplePercent}"/>
-        <set field="newTemplateDefaults" from="{inspectionContextEnumId:'QicReceipt', samplePolicyEnumId:'QspAll',
-                organizationPartyId:warehouse?.activeOrganizationPartyId ||
-                    (warehouse?.organizationPartyIds?.length === 1 ? warehouse.organizationPartyIds[0] : null)}"/>
+                samplePercent:template.samplePercent, productionStageEnumId:template.productionStageEnumId,
+                sampleBasisEnumId:template.sampleBasisEnumId, productBomId:template.productBomId,
+                templateOperationId:template.operationWorkEffortId}"/>
+        <set field="appScope" from="manufacturingContext ? manufacturing : warehouse"/>
+        <set field="newTemplateDefaults" from="{inspectionContextEnumId:manufacturingContext ? 'QicProduction' : 'QicReceipt',
+                samplePolicyEnumId:'QspAll', productionStageEnumId:manufacturingContext ? 'QpsFinal' : null,
+                sampleBasisEnumId:manufacturingContext ? 'QsbReceipt' : null,
+                organizationPartyId:appScope?.activeOrganizationPartyId ||
+                    (appScope?.organizationPartyIds?.length === 1 ? appScope.organizationPartyIds[0] : null)}"/>
     </actions>
     <widgets>
-        <section name="TemplatesNotAvailable" condition="!warehouseContext">
+        <section name="TemplatesNotAvailable" condition="!templatesContext">
             <widgets>
                 <label text="Inspection templates are not available in this app." type="p"/>
             </widgets>
         </section>
-        <section name="TemplateList" condition="warehouseContext">
+        <section name="TemplateList" condition="templatesContext">
             <widgets>
                 <container style="row items-center q-gutter-sm q-mb-sm">
                     <label text="Inspection templates" type="h5"/>
@@ -114,6 +135,26 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
+                            <field name="productionStageEnumId">
+                                <conditional-field condition="!manufacturingContext" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="Stage" tooltip="In-process gates an operation; final holds the output">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inspectionChoices" parameter-map="{choice:'stages'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sampleBasisEnumId">
+                                <conditional-field condition="!manufacturingContext" title="">
+                                    <ignored/>
+                                </conditional-field>
+                                <default-field title="Sample basis">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="inspectionChoices" parameter-map="{choice:'sampleBases'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
                             <field name="samplePolicyEnumId">
                                 <default-field title="Sample">
                                     <drop-down allow-empty="false">
@@ -145,6 +186,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field-row>
                                     <field-ref name="samplePolicyEnumId"/>
                                     <field-ref name="sampleSize"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="productionStageEnumId"/>
+                                    <field-ref name="sampleBasisEnumId"/>
                                 </field-row>
                                 <field-ref name="submit"/>
                             </field-layout>
@@ -221,7 +266,7 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
 
-        <section name="TemplateDetail" condition="warehouseContext &amp;&amp; recordFound">
+        <section name="TemplateDetail" condition="templatesContext &amp;&amp; recordFound">
             <widgets>
                 <container style="m-record-header q-mt-md">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
@@ -386,6 +431,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="templateFacilityId">
+                                        <conditional-field condition="manufacturingContext" title="Facility"
+                                                tooltip="Empty applies at every facility">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'facilities', selected:templateFacilityId}"/>
+                                            </drop-down>
+                                        </conditional-field>
                                         <default-field title="Facility" tooltip="Empty applies at every facility">
                                             <drop-down allow-empty="true">
                                                 <dynamic-options transition="choices" server-search="true" min-length="0"
@@ -409,6 +462,54 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="samplePercent">
                                         <default-field title="Percent to sample">
                                             <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productionStageEnumId">
+                                        <conditional-field condition="!manufacturingContext" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Stage"
+                                                tooltip="In-process gates an operation and those after it; final holds the output">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'stages'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="sampleBasisEnumId">
+                                        <conditional-field condition="!manufacturingContext" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Sample basis">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="inspectionChoices"
+                                                        parameter-map="{choice:'sampleBases'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="productBomId">
+                                        <conditional-field condition="!manufacturingContext" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Method"
+                                                tooltip="Attach to a BOM: its final check; it then applies through the method only">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0" parameter-map="{choice:'methods', selected:productBomId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="templateOperationId">
+                                        <conditional-field condition="!manufacturingContext" title="">
+                                            <ignored/>
+                                        </conditional-field>
+                                        <default-field title="Operation"
+                                                tooltip="Attach to an operation template or routing operation: its in-process check">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="inspectionChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'operations', selected:templateOperationId}"/>
+                                            </drop-down>
                                         </default-field>
                                     </field>
                                     <field name="description">
@@ -442,6 +543,14 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field-row>
                                             <field-ref name="sampleSize"/>
                                             <field-ref name="samplePercent"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="productionStageEnumId"/>
+                                            <field-ref name="sampleBasisEnumId"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="productBomId"/>
+                                            <field-ref name="templateOperationId"/>
                                         </field-row>
                                         <field-ref name="description"/>
                                         <field-ref name="changeReason"/>
@@ -639,6 +748,10 @@ along with this software (see the LICENSE.md file). If not, see
                                 template.categoryName ? 'category ' + template.categoryName : '', template.facilityName ?
                                 'at ' + template.facilityName : ''].filter(Boolean).join(' · ') || 'any product'} in ${
                                 template.contextText}" type="p"/>
+                        <label text="${template.stageText} inspection, sample on ${template.sampleBasisText.toLowerCase()}${
+                                template.attachedText ? ', attached to the ' + template.attachedText : ''}. A released work
+                                order's gate keeps the template as of its release." type="p"
+                                condition="manufacturingContext"/>
                     </box-body>
                 </container-box>
 
@@ -723,7 +836,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section name="TemplateMissing" condition="warehouseContext &amp;&amp; inspectionTemplateId &amp;&amp; !recordFound">
+        <section name="TemplateMissing" condition="templatesContext &amp;&amp; inspectionTemplateId &amp;&amp; !recordFound">
             <widgets>
                 <label text="Template ${inspectionTemplateId} is not available." type="p"/>
             </widgets>

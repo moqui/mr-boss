@@ -64,6 +64,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P7: a loss and an overproduction waiting for a supervisor -->
         <notification-topic topic="ProductionLossApproval"/>
         <notification-topic topic="ProductionOverproduction"/>
+        <!-- P8: a production inspection verified with a rejection blocks its gate -->
+        <notification-topic topic="ProductionQualityBlock"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

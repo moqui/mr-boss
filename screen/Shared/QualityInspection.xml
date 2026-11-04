@@ -21,7 +21,12 @@ along with this software (see the LICENSE.md file). If not, see
     stock, sample, template as of the inspection's creation), Readings (each characteristic with its limits and readings;
     Record reading while it is a draft), Result (accepted, rejected, verification), Disposition (each disposition and what is
     left), History (changes, readings and dispositions, with the evidence files and the conversation). Other apps add their
-    contexts when they are built. -->
+    contexts when they are built.
+    Manufacturing (impl-manufacturing P8) mounts it at Manufacturing/Quality/QualityInspection for its production inspections
+    (ironstone.manufacturing.QualityServices.get#InspectionDetail: the run and operation links, the gate and its template as
+    of the release, the quality certificate), and at Quality/InspectionStation/Inspection in operator mode (operatorMode, at
+    handheld density): the scan field and one step at a time, each characteristic for each sample with large pass and fail
+    controls or the measured value, then Submit result. The same records, transitions and Mantle verbs as Warehouse's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspection"
@@ -44,6 +49,17 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <if condition="appRoot == 'Manufacturing'">
+            <service-call name="ironstone.manufacturing.QualityServices.get#InspectionDetail"
+                    in-map="{qualityInspectionId:qualityInspectionId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <set field="operatorMode" from="appRoot == 'Manufacturing' &amp;&amp; !!operatorMode"/>
+        <set field="nextStep" from="detail?.operator?.next || null"/>
+        <set field="stepProgress" from="detail?.operator ? detail.operator.doneCount + ' of ' + detail.operator.stepCount +
+                ' read' : ''"/>
         <set field="recordFound" from="!!detail?.recordFound"/>
         <set field="inspection" from="detail?.inspection || {}"/>
         <set field="actions" from="detail?.actions || {}"/>
@@ -71,6 +87,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="This inspection is not available in this app." type="p"/>
                         <link url="${sharedLinks['Home']}" text="Warehouse home" link-type="anchor" icon="arrow_back"
                                 condition="appRoot == 'Warehouse'"/>
+                        <link url="${sharedLinks['Quality/Inspections']}" text="Inspections" link-type="anchor"
+                                icon="arrow_back" condition="appRoot == 'Manufacturing'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -79,6 +97,89 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <context record-entity="mantle.product.quality.QualityInspection" record-id="${qualityInspectionId}"
                         title="Inspection ${qualityInspectionId}"/>
+                <!-- Manufacturing's operator mode: one characteristic and sample at a time with large controls (P8) -->
+                <section name="OperatorSteps" condition="operatorMode">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${inspection.productName} · ${inspection.statusText}"/>
+                            <box-body>
+                                <label text="${[inspection.gateText, stepProgress].filter(Boolean).join(' · ')}" type="p"/>
+                                <section name="OperatorStep" condition="nextStep &amp;&amp; actions.canSaveReadings">
+                                    <widgets>
+                                        <label text="Step ${nextStep.stepNumber}: ${nextStep.characteristicName}, sample ${
+                                                nextStep.sampleNumber}${nextStep.limitsText ? ' (' + nextStep.limitsText + ')' :
+                                                ''}" type="h6"/>
+                                        <section name="OperatorPassFail" condition="nextStep.readingTypeEnumId == 'QrtPassFail'">
+                                            <widgets>
+                                                <container style="row q-gutter-md">
+                                                    <form-single name="OperatorPass" transition="saveReading"
+                                                            map="{qualityInspectionId:qualityInspectionId,
+                                                                inspectionTemplateItemId:nextStep.inspectionTemplateItemId,
+                                                                sampleNumber:nextStep.sampleNumber, passIndicator:'Y'}">
+                                                        <field name="qualityInspectionId"><default-field><hidden/></default-field></field>
+                                                        <field name="inspectionTemplateItemId"><default-field><hidden/></default-field></field>
+                                                        <field name="sampleNumber"><default-field><hidden/></default-field></field>
+                                                        <field name="passIndicator"><default-field><hidden/></default-field></field>
+                                                        <field name="submit">
+                                                            <default-field title=""><submit text="Pass" icon="sym_o_check"/></default-field>
+                                                        </field>
+                                                    </form-single>
+                                                    <form-single name="OperatorFail" transition="saveReading"
+                                                            map="{qualityInspectionId:qualityInspectionId,
+                                                                inspectionTemplateItemId:nextStep.inspectionTemplateItemId,
+                                                                sampleNumber:nextStep.sampleNumber, passIndicator:'N'}">
+                                                        <field name="qualityInspectionId"><default-field><hidden/></default-field></field>
+                                                        <field name="inspectionTemplateItemId"><default-field><hidden/></default-field></field>
+                                                        <field name="sampleNumber"><default-field><hidden/></default-field></field>
+                                                        <field name="passIndicator"><default-field><hidden/></default-field></field>
+                                                        <field name="submit">
+                                                            <default-field title="">
+                                                                <submit text="Fail" icon="sym_o_close" btn-type="danger"/>
+                                                            </default-field>
+                                                        </field>
+                                                    </form-single>
+                                                </container>
+                                            </widgets>
+                                        </section>
+                                        <section name="OperatorValue" condition="nextStep.readingTypeEnumId != 'QrtPassFail'">
+                                            <widgets>
+                                                <form-single name="OperatorValueForm" transition="saveReading"
+                                                        map="{qualityInspectionId:qualityInspectionId,
+                                                            inspectionTemplateItemId:nextStep.inspectionTemplateItemId,
+                                                            sampleNumber:nextStep.sampleNumber}">
+                                                    <field name="qualityInspectionId"><default-field><hidden/></default-field></field>
+                                                    <field name="inspectionTemplateItemId"><default-field><hidden/></default-field></field>
+                                                    <field name="sampleNumber"><default-field><hidden/></default-field></field>
+                                                    <field name="numericValue">
+                                                        <conditional-field condition="nextStep.readingTypeEnumId != 'QrtNumeric'" title="">
+                                                            <ignored/>
+                                                        </conditional-field>
+                                                        <default-field title="Measured value">
+                                                            <text-line size="10" input-type="number" required="true"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="textValue">
+                                                        <conditional-field condition="nextStep.readingTypeEnumId != 'QrtText'" title="">
+                                                            <ignored/>
+                                                        </conditional-field>
+                                                        <default-field title="Observation">
+                                                            <text-line required="true"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title=""><submit text="Save and next"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </widgets>
+                                        </section>
+                                    </widgets>
+                                </section>
+                                <label text="Every step is read; submit the result." type="p"
+                                        condition="!nextStep &amp;&amp; actions.canSubmit"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <container style="m-record-header">
                     <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
                         <container style="col-12 col-md m-record-title">
@@ -340,8 +441,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <link url="../InspectionCertificate" text="Print certificate" icon="sym_o_print"
-                                        link-type="anchor" target-window="_blank"
+                                        link-type="anchor" target-window="_blank" condition="appRoot == 'Warehouse'"
                                         parameter-map="{qualityInspectionId:qualityInspectionId, renderMode:'html-print'}"/>
+                                <link url="${sharedLinks['Quality/QualityCertificate']}" text="Print certificate"
+                                        icon="sym_o_print" link-type="anchor" target-window="_blank"
+                                        condition="appRoot == 'Manufacturing'"
+                                        parameter-map="{qualityInspectionId:qualityInspectionId, renderMode:'html-print',
+                                            lastStandalone:'true'}"/>
                             </button-menu>
                         </container>
                     </container>
@@ -363,7 +469,12 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="links.asset"/>
                             <link url="${links.shipment}" text="Open the receipt" link-type="anchor" icon="sym_o_inbox"
                                     condition="links.shipment"/>
+                            <link url="${links.run}" text="Open the work order" link-type="anchor"
+                                    icon="sym_o_precision_manufacturing" condition="links.run"/>
+                            <link url="${links.operation}" text="Open the operation" link-type="anchor" icon="sym_o_task_alt"
+                                    condition="links.operation"/>
                         </container>
+                        <label text="${inspection.gateText}" type="p" condition="inspection.gateText"/>
                         <label text="Created by ${inspection.createdByName || 'the system'} on ${inspection.createdDateText}"
                                 type="p" style="text-caption"/>
                     </box-body>

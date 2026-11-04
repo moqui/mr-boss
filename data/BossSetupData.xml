@@ -1272,4 +1272,8 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
     <moqui.security.user.NotificationTopic topic="ProductionOverproduction"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P8: the quality-block notice (a production inspection verified with a rejection) opens the work order's
+        Quality tab -->
+    <moqui.security.user.NotificationTopic topic="ProductionQualityBlock"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quality?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

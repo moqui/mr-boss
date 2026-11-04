@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Quality tab, QualityGates (design-manufacturing §3 QualityGates; impl-manufacturing P8): the run's gates
+    as its release kept them (ironstone.manufacturing.QualityServices.get#QualityGates over Mantle's
+    get#SourceInspectionStatus, the reading the start and complete guards use): each in-process gate on its operation and
+    final gate on its output, with its template as of the release, sample, state (required, pending, failed, passed), the
+    inspection that decides it, the held quantity and the dispositions; what blocks the operations after a gate or the
+    completion; Inspect (an in-process gate's inspection, create#ProductionInspection after
+    ironstone.manufacturing.AccessServices.check#Record with inspect), which opens the shared QualityInspection; the gate's
+    checklist print; and every inspection of the run, a failed one kept in history beside its reinspection. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quality" default-menu-index="8">
+    <parameter name="workEffortId"/>
+    <transition name="createInspection">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'inspect'}"/>
+            <service-call name="mantle.work.ProductionServices.create#ProductionInspection" out-map="created"
+                    in-map="{workEffortId:workEffortId, productionQualityGateId:productionQualityGateId,
+                        quantity:quantity || null, comments:comments || null}"/>
+            <set field="qualityInspectionId" from="created.qualityInspectionId"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Inspection ' + qualityInspectionId + ' opened', 'success')</script>
+        </actions>
+        <default-response url="//Manufacturing/Quality/QualityInspection">
+            <parameter name="qualityInspectionId"/>
+        </default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <actions>
+        <set field="gatesFound" from="null"/>
+        <if condition="recordFound">
+            <service-call name="ironstone.manufacturing.QualityServices.get#QualityGates" out-map="gatesFound"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="found" from="!!gatesFound?.gateRows"/>
+        <set field="gateRows" from="(gatesFound?.gateRows || []).map((row) =&gt; Object.assign({}, row, {
+                workEffortId: workEffortId, checklistParameters: {workEffortId: workEffortId,
+                    productionQualityGateId: row.productionQualityGateId, renderMode: 'html-print', lastStandalone: 'true'}}))"/>
+        <set field="inspectionRows" from="gatesFound?.inspections || []"/>
+    </actions>
+    <widgets>
+        <section name="QualityNotAvailable" condition="!found">
+            <widgets>
+                <label text="This work order is not available." type="p"/>
+                <link url="${sharedLinks.WorkOrders}" text="Work orders" link-type="anchor" icon="sym_o_arrow_back"/>
+            </widgets>
+        </section>
+        <section name="QualityFound" condition="found">
+            <widgets>
+                <container style="row items-center q-gutter-sm q-mb-md">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                            gatesFound.gateStatusColor}">${WebUtilities.encodeHtml(gatesFound.gateStatusText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "GateState", style: "strong",
+                            text: gatesFound.gateStatusText})}]]></text>
+                        <text type="html">${gatesFound.gateStatusText}</text>
+                    </render-mode>
+                    <label text="${gatesFound.blockingText}" type="span" condition="gatesFound.blockingText"/>
+                    <label text="${gatesFound.heldQuantity} held for inspection" type="span"
+                            condition="gatesFound.heldQuantity &amp;&amp; gatesFound.heldQuantity != '0'"/>
+                </container>
+                <label text="${gatesFound.gated ? 'This work order has no quality gate: no template applied when it was released.'
+                        : 'This work order keeps no quality gates: it is a draft, or it was released before they were kept.'}"
+                        type="p" style="m-muted" condition="!gateRows.length"/>
+
+                <container-box>
+                    <box-header title="Gates"/>
+                    <box-body-nopad>
+                        <form-list name="Gates" list="gateRows" skip-form="true" paginate="false">
+                            <field name="stageText">
+                                <default-field title="Gate"><display text="${stageText} · ${whereText}"/></default-field>
+                            </field>
+                            <field name="templateName">
+                                <default-field title="Template">
+                                    <display text="${templateName}, as of ${templateAsOfText}"/>
+                                </default-field>
+                            </field>
+                            <field name="sampleText"><default-field title="Sample"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="qualityInspectionId">
+                                <default-field title="Inspection">
+                                    <link url="${inspectionUrl}" text="${qualityInspectionId} · ${inspectionStatusText}${
+                                            resultText ? ' · ' + resultText : ''}" link-type="anchor"
+                                            condition="qualityInspectionId"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held"><display/></default-field>
+                            </field>
+                            <field name="dispositionText"><default-field title="Disposition"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="Inspect_${productionQualityGateId}" button-text="Inspect"
+                                            icon="sym_o_fact_check" condition="canCreate"
+                                            title="Inspect ${whereText} with ${templateName}">
+                                        <label text="The inspection reads the template as of the release and samples ${sampleText}."
+                                                type="p"/>
+                                        <form-single name="CreateInspection_${productionQualityGateId}"
+                                                transition="createInspection"
+                                                map="{workEffortId:workEffortId, productionQualityGateId:productionQualityGateId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="productionQualityGateId"><default-field><hidden/></default-field></field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity inspected"
+                                                        tooltip="The output line's quantity when empty">
+                                                    <text-line size="8" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="comments"><default-field title="Note"><text-line/></default-field></field>
+                                            <field name="submit">
+                                                <default-field title=""><submit text="Open inspection"/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="../QualityChecklist" text="Checklist" icon="sym_o_print" link-type="anchor"
+                                            target-window="_blank" parameter-map="checklistParameters"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="stageText"/>
+                                    <field-ref name="qualityInspectionId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Inspections of this work order"/>
+                    <box-body-nopad>
+                        <label text="No inspection yet." type="p" style="q-pa-md" condition="!inspectionRows.length"/>
+                        <form-list name="RunInspections" list="inspectionRows" skip-form="true" paginate="false">
+                            <field name="qualityInspectionId">
+                                <default-field title="Inspection">
+                                    <link url="${inspectionUrl}" text="${qualityInspectionId}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="operationName"><default-field title="Operation"><display/></default-field></field>
+                            <field name="quantityText"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <display text="${statusText}${resultText ? ' · ' + resultText : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="createdDateText"><default-field title="Created"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="qualityInspectionId"/>
+                                    <field-ref name="operationName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

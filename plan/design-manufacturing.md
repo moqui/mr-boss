@@ -409,6 +409,8 @@ There is no baseline form, so the full field lists follow the parameters of `bre
 
 **Actions.** Create/Open inspection uses QualityInspection; each released operation keeps its template as of its release time, so a template change never changes an existing gate. `get#SourceInspectionStatus` returns required, pending, passed or failed for a source type, ID and line; the Start and Complete guards call the same service. Failed inspection holds affected material/output and downstream operations; reinspection or approved rework keeps the failed result in history. A supervisor cannot use Complete to bypass a required verifier or disposition permission.
 
+As built (impl-manufacturing P8): the gates are `mantle.work.production.ProductionQualityGate` rows written at release (the template, the release time its items are read as of, and the sample plan of then), and `get#SourceInspectionStatus` takes the run, operation or output line as `workEffortId`, `operationWorkEffortId` or `productionRunLineId`. An in-process failure holds the run's start and resume and the operations after the gate (the routing's predecessors, else the sequence); a final failure holds the output and the completion. The operation start itself is P10's, which reads the same gate.
+
 **Source.** research §8; ERPNext `erpnext/manufacturing/doctype/job_card/job_card.json`; Carbon `apps/mes/app/components/JobOperation/JobOperation.tsx`.
 
 **Needs.** M1, M4, M6.

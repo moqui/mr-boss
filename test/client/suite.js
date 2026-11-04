@@ -61,7 +61,8 @@ suite(
         "ManufacturingPlanningWalk",
         "ManufacturingMaterialsWalk",
         "ManufacturingDowntimeWalk",
-        "ManufacturingQuantitiesWalk"
+        "ManufacturingQuantitiesWalk",
+        "ManufacturingQualityWalk"
     ],
     {
         server: {

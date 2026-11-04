@@ -25,20 +25,41 @@ along with this software (see the LICENSE.md file). If not, see
       page's operation key);
     - reinspectInspection (inspect): a disposed inspection's still-held stock inspected again; cancelInspection: a draft
       or submitted inspection, with the reason;
-    - storeTemplate: a template's header, a characteristic, publish or retire (qualityTemplateEdit). -->
+    - storeTemplate: a template's header, a characteristic, publish or retire (qualityTemplateEdit); in Manufacturing a
+      production template's stage, sample basis and the method or operation it attaches to.
+    Under the Manufacturing root (impl-manufacturing P8) the record check is ironstone.manufacturing.AccessServices'
+    (a production inspection) and the choices are Manufacturing's; the Mantle verbs are the same. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="inspectionChoices" read-only="true">
         <actions>
-            <service-call name="ironstone.warehouse.InspectionServices.get#InspectionChoices" in-map="context" out-map="found"/>
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.QualityServices.get#InspectionChoices" in-map="context"
+                            out-map="found"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.InspectionServices.get#InspectionChoices" in-map="context"
+                            out-map="found"/>
+                </else>
+            </if>
             <script>ec.web.sendJsonResponse(found.options)</script>
         </actions>
         <default-response type="none"/>
     </transition>
     <transition name="assignInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.assign#Inspection"
                     in-map="{qualityInspectionId:qualityInspectionId, inspectorPartyId:inspectorPartyId || '',
                         dueDate:dueDate || null, inspectionTemplateId:inspectionTemplateId || null}"/>
@@ -54,8 +75,17 @@ along with this software (see the LICENSE.md file). If not, see
                         verifying or disposing the inspection"/>
                 <return error="true" message="${moveRefused}"/>
             </if>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.assign#Inspection"
                     in-map="{qualityInspectionId:qualityInspectionId, inspectorPartyId:inspectorPartyId || ''}"/>
             <message type="success">Inspection ${qualityInspectionId} assigned</message>
@@ -86,8 +116,17 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="saveReading">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.save#InspectionReading" out-map="saved"
                     in-map="{qualityInspectionId:qualityInspectionId, inspectionTemplateItemId:inspectionTemplateItemId,
                         sampleNumber:sampleNumber || null, numericValue:numericValue || null,
@@ -99,8 +138,17 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="submitInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.submit#Inspection"
                     in-map="{qualityInspectionId:qualityInspectionId, quantityAccepted:quantityAccepted,
                         quantityRejected:quantityRejected, resultReason:resultReason || null}"/>
@@ -111,8 +159,17 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="verifyInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'qualityVerify'}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'qualityVerify'}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'qualityVerify'}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.verify#Inspection" out-map="verified"
                     in-map="{qualityInspectionId:qualityInspectionId, approve:approve || 'true',
                         verificationComments:verificationComments || null}"/>
@@ -124,15 +181,24 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="disposeInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'qualityDispose'}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'qualityDispose'}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'qualityDispose'}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.dispose#Inspection" out-map="disposed"
                     in-map="{operationKey:operationKey, qualityInspectionId:qualityInspectionId,
                         dispositionEnumId:dispositionEnumId, quantity:quantity, toLocationSeqId:toLocationSeqId || null,
                         varianceReasonEnumId:varianceReasonEnumId || null, reason:reason || null}"/>
             <message type="success">${disposed.result.quantity} of inspection ${qualityInspectionId} disposed:
-                ${disposed.result.statusId == 'AstAvailable' ? 'released' : disposed.result.statusId == 'AstMorgue'
-                    ? 'scrapped' : 'kept in quarantine'}${disposed.result.reservedOrderId ? ', reserved to order '
+                ${disposed.result.productionLossId ? 'scrapped back to its work order' : disposed.result.statusId ==
+                    'AstAvailable' ? 'released' : disposed.result.statusId == 'AstMorgue' ? 'scrapped' : 'kept in quarantine'}${disposed.result.reservedOrderId ? ', reserved to order '
                     + disposed.result.reservedOrderId : ''}</message>
         </actions>
         <default-response url="."/>
@@ -141,8 +207,17 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a disposed inspection's still-held stock inspected again (a new inspection of the same receipt and asset) -->
     <transition name="reinspectInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.create#Inspection" out-map="reinspection"
                     in-map="{reinspectQualityInspectionId:qualityInspectionId}"/>
             <message type="success">Inspection ${reinspection.qualityInspectionId} opened for the held stock</message>
@@ -155,8 +230,17 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="cancelInspection">
         <actions>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+            <!-- Manufacturing's production inspections (impl-manufacturing P8), else Warehouse's -->
+            <if condition="appRoot == 'Manufacturing'">
+                <then>
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId}"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:'inspection', recordId:qualityInspectionId}"/>
+                </else>
+            </if>
             <service-call name="mantle.product.QualityServices.cancel#Inspection"
                     in-map="{qualityInspectionId:qualityInspectionId, reason:reason || null}"/>
             <message type="success">Inspection ${qualityInspectionId} cancelled</message>
@@ -178,7 +262,10 @@ along with this software (see the LICENSE.md file). If not, see
                         facilityId:templateFacilityId || null, samplePolicyEnumId:samplePolicyEnumId || null,
                         sampleSize:sampleSize || null, samplePercent:samplePercent || null, itemList:itemChange,
                         action:templateAction || null, changeReason:changeReason || null,
-                        organizationPartyId:organizationPartyId || null}"/>
+                        organizationPartyId:organizationPartyId || null,
+                        productionApplicability:appRoot == 'Manufacturing' &amp;&amp; templateName ? 'Y' : null,
+                        productionStageEnumId:productionStageEnumId || null, sampleBasisEnumId:sampleBasisEnumId || null,
+                        productBomId:productBomId || null, operationWorkEffortId:templateOperationId || null}"/>
             <set field="inspectionTemplateId" from="stored.inspectionTemplateId"/>
             <message type="success">Template ${inspectionTemplateId} saved${templateAction == 'publish' ? ' and published'
                 : templateAction == 'retire' ? ' and retired' : ''}</message>

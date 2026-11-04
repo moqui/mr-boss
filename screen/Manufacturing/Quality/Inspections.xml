@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Inspections (design-manufacturing §6 Inspections; impl-manufacturing P8), the Quality area's default: Find, the in-process
+    and final inspections of the user's organizations by plant, work order, product, lot, inspector, state and due date, open
+    by default (ironstone.manufacturing.QualityServices.get#InspectionList over Mantle's find#Inspections); Inspections, each
+    with its work order and operation, sample, due, inspector, state and result, held quantity and its link to the shared
+    QualityInspection, where it is recorded, submitted, verified (never by its submitter) and disposed. Queue assignment
+    grants no verifier authority. The operator mode opens at InspectionStation. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Inspections" default-menu-index="1">
+    <parameter name="statusId"/>
+    <parameter name="workEffortId"/>
+    <transition-include name="inspectionChoices" location="component://mr-boss/template/WarehouseInspectionParts.xml"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.QualityServices.get#InspectionList" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{plantId:plantId || null, qualityInspectionId:qualityInspectionId || null, statusId:statusId || null,
+                    openOnly:openOnly || null, workEffortId:workEffortId || null, productId:productId || null,
+                    lotId:lotId || null, inspectorPartyId:inspectorPartyId || null, assignedOnly:assignedOnly || null,
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="inspections" from="found?.inspections || []"/>
+        <set field="inspectionsCount" from="found?.inspectionsCount"/>
+        <set field="inspectionsPageIndex" from="found?.inspectionsPageIndex"/>
+        <set field="inspectionsPageSize" from="found?.inspectionsPageSize"/>
+        <set field="inspectionsPageMaxIndex" from="found?.inspectionsPageMaxIndex"/>
+        <set field="inspectionsPageRangeLow" from="found?.inspectionsPageRangeLow"/>
+        <set field="inspectionsPageRangeHigh" from="found?.inspectionsPageRangeHigh"/>
+    </actions>
+    <widgets>
+        <context title="Inspections"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Inspections" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="${sharedLinks['Quality/InspectionStation']}" text="Inspection station" icon="sym_o_barcode_reader"
+                        link-type="anchor" condition="manufacturing.capabilities.inspect"/>
+            </container>
+        </container>
+        <label text="In-process inspections gate the operations after them; final inspections hold the output until their disposition releases it. A failed result stays in history when the work is inspected again."
+                type="p" style="text-caption m-muted"/>
+        <form-list name="InspectionList" list="inspections" skip-form="true" header-dialog="true" paginate="true">
+            <field name="qualityInspectionId">
+                <header-field title="Inspection"><text-find size="12" hide-options="true"/></header-field>
+                <default-field title="Inspection">
+                    <link url="${inspectionUrl}" text="${qualityInspectionId}" link-type="anchor"/>
+                </default-field>
+            </field>
+            <field name="workEffortId">
+                <header-field title="Work order"><text-find size="12" hide-options="true"/></header-field>
+                <default-field title="Work order">
+                    <display text="${workEffortId || ''}${operationName ? ' · ' + operationName : ''}"/>
+                </default-field>
+            </field>
+            <field name="productId">
+                <header-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="inspectionChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'products', selected:productId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Product">
+                    <display text="${productName}${lotNumber ? ' · lot ' + lotNumber : ''}"/>
+                </default-field>
+            </field>
+            <field name="quantityText">
+                <default-field title="Quantity"><display text="${quantityText} (sample ${sampleSize})"/></default-field>
+            </field>
+            <field name="inspectorPartyId">
+                <header-field title="Inspector">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="inspectionChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'inspectors', selected:inspectorPartyId}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="Inspector"><display text="${inspectorName || 'Not assigned'}"/></default-field>
+            </field>
+            <field name="dueText">
+                <default-field title="Due"><display/></default-field>
+            </field>
+            <field name="statusId">
+                <header-field title="State">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="inspectionChoices" parameter-map="{choice:'statuses'}"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="State">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                            WebUtilities.encodeHtml(statusText)}${resultText ? ' · ' + WebUtilities.encodeHtml(resultText) :
+                            ''}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText +
+                            (resultText ? ' · ' + resultText : '')})}]]></text>
+                        <text type="html">${statusText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="assignedOnly">
+                <header-field title="Mine">
+                    <check><option key="Y" text=" "/></check>
+                </header-field>
+                <default-field><ignored/></default-field>
+            </field>
+            <field name="submitButton">
+                <header-field title="Find"><submit/></header-field>
+                <default-field><ignored/></default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="qualityInspectionId"/>
+                    <field-ref name="productId"/>
+                </column>
+                <column>
+                    <field-ref name="statusId"/>
+                    <field-ref name="dueText"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No production inspection matches. A released work order's final gate opens one with each output receipt; an in-process gate's opens from the work order's Quality tab."
+                type="p" style="m-muted" condition="!inspections.length"/>
+    </widgets>
+</screen>

@@ -1213,6 +1213,61 @@ Object.assign(choiceSources, {
         facilityOptions(facilityFind(userScope), term, selected, facility => inScope(userScope, facility))
 })
 
+// ===== P8: quality =====
+// The Quality area's Inspections, InspectionStation (the operator mode) and the shared QualityInspection and
+// InspectionTemplates with the Manufacturing context, WorkOrderDetail's Quality tab and the quality prints
+// (impl-manufacturing P8), whose routes are in sharedLinks; a production inspection and template are records of their own:
+// an inspection of the production context or of a run, by its organization and facility; a template of the production
+// context (or a new one's), by its organization.
+function readInspection(qualityInspectionId) {
+    const inspection = one("mantle.product.quality.QualityInspection", {qualityInspectionId})
+    if (!inspection) return null
+    const run = inspection.workEffortId ? one("mantle.work.effort.WorkEffort", {workEffortId: inspection.workEffortId}) : null
+    if (inspection.inspectionContextEnumId !== "QicProduction" && run?.purposeEnumId !== runPurpose) return null
+    const facility = facilityById(inspection.facilityId)
+    const product = inspection.productId ? one("mantle.product.Product", {productId: inspection.productId}) : null
+    return {
+        owners: [inspection.organizationPartyId],
+        facilities: facility ? [facility] : [],
+        label: "Inspection " + qualityInspectionId,
+        detail: [product?.productName || inspection.productId, statusText(inspection.statusId), facilityName(facility)]
+            .filter(Boolean)
+            .join(" · "),
+        facility
+    }
+}
+function readInspectionTemplate(inspectionTemplateId) {
+    const template = one("mantle.product.quality.InspectionTemplate", {inspectionTemplateId})
+    if (!template || (template.inspectionContextEnumId && template.inspectionContextEnumId !== "QicProduction")) return null
+    return {
+        owners: [template.organizationPartyId],
+        facilities: [],
+        label: template.templateName || inspectionTemplateId,
+        detail: statusText(template.statusId)
+    }
+}
+recordKinds.inspection = {
+    name: "Inspection",
+    icon: "sym_o_fact_check",
+    destination: "Quality/QualityInspection?qualityInspectionId=",
+    read: readInspection
+}
+recordKinds.inspectionTemplate = {
+    name: "Inspection template",
+    icon: "sym_o_checklist",
+    destination: "Quality/InspectionTemplates?inspectionTemplateId=",
+    read: readInspectionTemplate
+}
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Quality",
+    "Quality/Inspections",
+    "Quality/QualityInspection",
+    "Quality/InspectionTemplates",
+    "Quality/InspectionStation",
+    "WorkOrders/WorkOrderDetail/QualityChecklist",
+    "Quality/QualityCertificate"
+)
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

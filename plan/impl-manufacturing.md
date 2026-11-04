@@ -214,7 +214,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b built Nov 3 (materials and stock) |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
-| P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
+| P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | built Nov 3 |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
@@ -1319,6 +1319,109 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
   - a disposition releases five units and scraps one through the loss path; held quantity never counts as good;
   - an in-process failure blocks the dependent operation's start, naming the inspection;
   - a template revision leaves the released run's gate as it was.
+
+**Built Nov 3 (P8).**
+- Mantle records (`entity/ProductionQualityEntities.xml`, a new file): `ProductionQualityGate` (a released run's gate: the
+  operation (in-process) or output line (final), the template and `templateAsOfDate` = the release time, the sample policy,
+  size, percent and basis as of then, where the template came from, ended by an unrelease); `InspectionTemplate` gains
+  `productionStageEnumId` (QpsInProcess, QpsFinal), `sampleBasisEnumId` (QsbReceipt, QsbRun), `productBomId` and
+  `operationWorkEffortId` (attachment); `QualityInspection` gains the operation, output line and gate;
+  `QualityInspectionDisposition.productionLossId`; `WorkEffort.productionGatesDate`. `data/ProductionQualityData.xml`: the
+  stage, basis and gate source enumerations and the ProductionQualityBlock topic.
+- Mantle logic (`ProductionQuality.js`, new): at release the gates (an operation's from its routing operation's
+  `methodInspectionTemplateId`, copied from P2's operation template, or a production template attached to the operation; an
+  output line's final gate from a template attached to the run's BOM, else one that applies by product, category and
+  facility), refusing a named template that is not published (TEMPLATE_UNAVAILABLE, in the release gate's preview too); each
+  gate's state from its inspections (required, pending, failed, passed; an in-process gate by its latest inspection, a
+  reinspection superseding with the failure kept in history; a final gate by the worst of its receipts'); the guards: start and
+  resume refuse a failed in-process gate (QUALITY_BLOCKED, naming the inspection), complete refuses a final inspection pending
+  or failed and an in-process gate not passed (INSPECTION_PENDING, INSPECTION_FAILED, QUALITY_GATE_OPEN; first in
+  completeCheck, so the completeOnFinalReceipt path obeys it too), and an operation after an in-process gate not passed is not
+  ready, naming the inspection (`operationBlocks`; `operationGate` for P10's start); `create#ProductionInspection`
+  (QUALITY_INSPECT) for an in-process gate; the output receipt's gate (`outputInspection`, `inspectionPlan`); the
+  quality-block notice to the run's supervisors when a production inspection is verified with a rejection; and a scrap
+  disposition of an open run's output through P7's loss path (`scrapToRun`: an approved PltOutputScrap loss, `applyLoss`).
+- Edits to shared Mantle files: `Quality.js` (applicableTemplate leaves out in-process and attached templates; createInspection
+  takes a gate: its template as of the release, sample and links, and the run's own `demandOrderId` as the peg when no
+  OrderItemWorkEffort; a reinspection keeps the gate; outputInspections passes the gate; verify calls `afterVerify`; Scrap of an
+  open run's output takes `scrapToRun` instead of the morgue and `scrap#Asset`; get#SourceInspectionStatus answers a run,
+  operation or output line; find#Inspections filters by run, operation, gate and context; store#InspectionTemplate takes the
+  production fields only with `productionApplicability`); `QualityServices.xml` (the parameters, descriptions);
+  `Production.js` (release writes the gates; outputPlan holds a gated line's output; `operationsOf` exported);
+  `ProductionOrders.js` (release gate, start and resume, unrelease ends the gates, inspections count as facts, operations
+  readiness); `ProductionQuantities.js` (completeCheck's gate first; outputFigures: an inspected receipt is held by its
+  inspections' heldQuantity, so a part released from a held asset counts good at once; `applyLoss` exported);
+  `ProductionServices.xml` (release and transition descriptions, the appended `create#ProductionInspection`).
+- BOSS: WorkOrderDetail's Quality tab (index 8; Gates with state, template as of the release, sample, inspection, held,
+  disposition, Inspect, Checklist; the run's inspections) and `WorkOrderDetail/QualityChecklist` (html-print, open to the
+  floor); the Quality area now defaults to Inspections (Find and list; the station link), with Templates (`Shared/
+  InspectionTemplates`, index 2) and, hidden, `Shared/QualityInspection`, `InspectionStation` (density handheld, a scan-input
+  over `resolve#InspectionScan`, the assigned inspections, and the shared inspection in operator mode: one characteristic and
+  sample at a time with Pass and Fail or the value) and `QualityCertificate` (html-print; "evidence, not verified" until
+  verified). `ironstone.manufacturing.QualityServices` (`Quality.js`): get#QualityGates, get#InspectionList,
+  get#InspectionDetail, get#QualityChecklist, get#QualityCertificate, get#TemplateList, get#TemplateDetail,
+  get#InspectionChoices, resolve#InspectionScan. Manufacturing.js's P8 block (record kinds inspection and inspectionTemplate,
+  links). The shared screens' Manufacturing context: `Shared/QualityInspection` (detail, run and operation links, gate text,
+  the certificate, operator steps), `Shared/InspectionTemplates` (list and detail, the stage, basis, method and operation
+  fields, a production new template); `template/WarehouseInspectionParts.xml`'s transitions check the record through
+  Manufacturing's check#Record under the Manufacturing root (Warehouse's otherwise) and take its choices. The root's
+  ProductionQualityBlock topic and BossSetupData's link to the Quality tab. Demo: the weld template `BOSS_MFG_QTMPL`, the
+  running work order `BOSS_MFG_RUN_Q` (Weld then Pack) with its gate and the draft inspection `BOSS_MFG_INSP`.
+- Specs: Mantle `test/work/ProductionQuality.spec.js` (6 features, about 5 s: the held receipt with its gate's inspection and
+  INSPECTION_PENDING, held never good; the inspector submits and cannot verify, the verifier verifies, the block notice; Release
+  of 5 reserved to the pegged order item and Scrap of 1 through the loss path, good 5, scrap 1, complete; the in-process
+  failure blocking Assemble's readiness and start status, the resume and the completion, cleared by Rework; the template
+  revision leaving the released gate's items and sample; the unpublished template blocking the release). BOSS
+  ManufacturingAccess P8 (2: each verb's permission and organization on the demo gate; the screens by role with authz on),
+  the route fixtures (AppStructure, TuiRender), client walk `ManufacturingQualityWalk` (3, 390 px).
+- Tests run: Mantle ProductionQuality, ProductionQuantities, ProductionOrders, WarehouseProduction, WarehouseQuality,
+  ManufacturingServices, ProductionPolicy, ProductMethods, ProductionCosts, MethodTemplates (74, pass); BOSS ManufacturingAccess,
+  AppStructure, TuiRender, WarehouseInspections, WarehouseAccess, ManufacturingWorkOrders, ManufacturingShell, Notifications
+  (276, pass); walks ManufacturingQualityWalk, ManufacturingQuantitiesWalk, WarehouseInspectionWalk (9, pass). `moqui lint
+  --screens`: only informational anchor rows for the P8 screens. No new Shared screen (ClientIsolation unchanged).
+- Decisions:
+  - A gate is a snapshot record (`ProductionQualityGate`) written at release with the template id, the release time as the
+    items' as-of and the header's sample plan, rather than reading the template's audit log: the header fields are not
+    effective-dated, so a later sample change would otherwise reach a released run.
+  - A run released under P8 reads its gates only (`productionGatesDate`), so a template published after its release adds no
+    gate; the tracking policy's `inspectionRequired` still holds output (a facility rule, not a template). A run released
+    before P8 keeps P16's rule (a production template that applies now).
+  - In-process failure holds the run (start, resume) and the operations after the gate; a final failure holds the output
+    only (it is received held) and the completion. "After" is the routing's predecessors when the routing names any, else
+    the sequence.
+  - A verified rejection is failed until its rejected quantity is disposed (scrapped, reworked, used as is) or a later
+    inspection passes; a final inspection is pending while any of its stock is still held.
+  - The dispose#Inspection change (Scrap through the loss path) is behind its condition, a production run's open output
+    (the asset is a receipt of the run's output line), not a ProductionPolicy flag: the plan's P8 makes it the rule, and stock
+    of a closed run or any other source still scraps as before (WarehouseQuality unchanged).
+  - The pegged order item is the run's OrderItemWorkEffort, else its own demand (`demandOrderId`, create#ProductionOrder's
+    sourceOrderId).
+- Deferred: the operation start itself (P10's start#ProductionOperation calls `operationGate`; the readiness and
+  get#SourceInspectionStatus's `startAllowed` name the inspection now); a gauge on a reading (later, Gauges); the
+  Purchasing and Customer Service contexts of the shared screens.
+- Findings (provisional):
+  - **F-P8-1** There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is
+    the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. The spec
+    marks an operation done directly, as P10 would (F90).
+  - **F-P8-2** QualityInspectionDecision has one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
+    production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. The topic could
+    carry the app in its message, or Manufacturing could seed its own decision topic.
+  - **F-P8-3** RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads
+    OrderItemWorkEffort and the run's own demand fields. A make suggestion converted from an order's demand should carry it
+    to the run (P13's conversion).
+  - **F-P8-4** P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the
+    released units off and leaves the receipt's asset quarantined, so they counted held. An inspected receipt is now held by
+    its inspections' heldQuantity (bounded by what is left after scrap).
+  - **F-P8-5** store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the
+    production fields are taken only with `productionApplicability`, so Warehouse's form, which does not show them, never
+    clears them (the template revision spec checks it).
+  - **F-P8-6** For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output
+    through `outputInspections`, which now takes a gate argument), Production.js (`release`, `outputPlan`, `postOutput`, the
+    export list), ProductionOrders.js (releaseGate, check, apply, factsOf, operations), ProductionQuantities.js
+    (completeCheck, outputFigures, exports), ProductionServices.xml (two descriptions, the appended section),
+    WarehouseInspectionParts.xml, Shared/QualityInspection and Shared/InspectionTemplates, Quality.xml (default item
+    Inspections), Manufacturing.js, Manufacturing.xml, BossSetupData's topic link, BossManufacturingDemoData, ManufacturingSpecLib,
+    ManufacturingAccess and suite.js. P12's scheduling reads operations; the readiness text now can name an inspection.
 
 ### P9 — Controlled changes
 
