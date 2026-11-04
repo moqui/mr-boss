@@ -1824,7 +1824,7 @@ because services moved from script modules into XML Actions.
 
 **Verification.** Before the rework, with a Chromium for PDF: `./moq test mr-boss` 1,187 passed, 0 failed, 5 skipped;
 standalone `./moq test mr-mantle` 1,195 passed and 9 failed, all in guard and archive specs since deleted. Without a
-Chromium for PDF (`pdf_chromium_path`; docs/Run-Deploy.md, docs/dev/Client-Testing.md), every PDF spec fails.
+Chromium for PDF (`moqui_chromium_path`; docs/Run-Deploy.md, docs/dev/Client-Testing.md), every PDF spec fails.
 
 Verification after the rework, Oct 30, 2026, with a Chromium for PDF: `./moq test mr-boss` 1,161 passed, 0 failed, 5
 skipped; standalone `./moq test mr-mantle` 991 passed, 1 failed, 1 skipped. The failure is InboxThreads' search

@@ -26,7 +26,7 @@ spec({
             ec.resource.xslFoTransform("<html><body>Standard estimate approval</body></html>", null, null, "application/pdf")
         } catch (e) {
             if (String(e).includes("PDF is not available"))
-                skip("Cost approval integration needs Chromium: configure pdf_chromium_path")
+                skip("Cost approval integration needs Chromium: configure moqui_chromium_path")
             throw e
         }
     },
