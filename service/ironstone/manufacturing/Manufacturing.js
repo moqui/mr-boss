@@ -1135,6 +1135,84 @@ Object.assign(choiceSources, {
     }
 })
 
+// ===== P7: quantities, by-products and loss =====
+// WorkOrderDetail's Quantities and By-products tabs, its output labels and Quality's ScrapLoss (impl-manufacturing P7), whose
+// routes are in sharedLinks; and the drop-downs of their loss forms: the loss types and the active loss reasons (scrap,
+// process loss and rework) of the user's organizations, by category.
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Quantities",
+    "WorkOrders/WorkOrderDetail/ByProducts",
+    "WorkOrders/WorkOrderDetail/OutputLabels",
+    "Quality/ScrapLoss"
+)
+Object.assign(choiceSources, {
+    lossTypes: (userScope, term, selected) => enumOptions("ProductionLossType", term, selected),
+    lossReasons: (userScope, term, selected) => {
+        const now = ec.user.nowTimestamp
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", ["PrcScrap", "PrcProcessLoss", "PrcRework"])
+            .condition("fromDate", "less-equals", now)
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("thruDate", "is-null", null), factory.makeCondition("thruDate", "greater-than", now)],
+                    "or"
+                )
+            )
+            .orderBy("reasonCategoryEnumId")
+            .orderBy("sequenceNum")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        const category = {PrcScrap: "Scrap", PrcProcessLoss: "Process loss", PrcRework: "Rework"}
+        return rowOptions(
+            query,
+            "reasonCode",
+            row => (row.reasonName || row.reasonCode) + " · " + (category[row.reasonCategoryEnumId] || ""),
+            ["reasonCode", "reasonName"],
+            term,
+            selected,
+            () => null
+        )
+    }
+})
+
+// ===== P5b: materials and stock =====
+// WorkOrderDetail's Components and Materials (Shared/MaterialIssueReceipt) tabs and the Planning area's shared
+// InventoryAvailability (impl-manufacturing P5b), whose routes are in sharedLinks; Stage opens Warehouse's Move for those
+// who move stock (STOCK_MOVE, Warehouse's grant); and the drop-downs of Add material.
+capabilityPermissions.move = "STOCK_MOVE"
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Components",
+    "WorkOrders/WorkOrderDetail/MaterialIssueReceipt",
+    "Planning/InventoryAvailability"
+)
+Object.assign(choiceSources, {
+    // the stocked products of the user's organizations and the shared ones (owner _NA_ or none) a manual material line may
+    // take (not kits), as store#ProductionMaterial allows
+    materialProducts: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product", {productTypeEnumId: "PtAsset"}).orderBy("productName")
+        if (userScope.ownerIds)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("ownerPartyId", "in", userScope.ownerIds.concat(["_NA_"])),
+                        factory.makeCondition("ownerPartyId", "is-null", null)
+                    ],
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        return rowOptions(query, "productId", label, ["productId", "pseudoId", "productName"], term, selected, productId => {
+            const row = one("mantle.product.Product", {productId})
+            const shared = !row?.ownerPartyId || row.ownerPartyId === "_NA_"
+            return row && row.productTypeEnumId === "PtAsset" && (shared || owns(userScope, row.ownerPartyId)) ? row : null
+        })
+    },
+    // the facilities of the user's organizations a material line's stock is staged from
+    stockFacilities: (userScope, term, selected) =>
+        facilityOptions(facilityFind(userScope), term, selected, facility => inScope(userScope, facility))
+})
+
 // ===== P14: subcontracting =====
 // The Subcontracting area (impl-manufacturing P14): SubcontractOperations, SubcontractDetail (by its operation) and its
 // instructions, and the shared Supplier360, OrderDetail and ShipmentDetail with the Manufacturing context, whose routes are in

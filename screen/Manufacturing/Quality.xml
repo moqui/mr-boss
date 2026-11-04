@@ -12,12 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Quality area of IronStone Manufacturing (design-manufacturing §1.2, §6): Inspections (the default), the shared
-    InspectionTemplates, ScrapLoss and Downtime (impl-manufacturing P7, P8, P11), for the quality inspector, verifier and
-    administrator groups and the supervisor only (BOSS_MFG_QUALITY). -->
+<!-- The Quality area of IronStone Manufacturing (design-manufacturing §1.2, §6), for the quality inspector, verifier and
+    administrator groups and the supervisor only (BOSS_MFG_QUALITY): ScrapLoss (impl-manufacturing P7, the default for now);
+    Inspections, the shared InspectionTemplates and Downtime come with P8 and P11, each a file of Quality/ or a
+    subscreens-item here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Quality" default-menu-index="7" menu-image="sym_o_verified" menu-image-type="icon">
+    <subscreens default-item="ScrapLoss" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Production inspections, templates, scrap and loss, and downtime." type="p"/>
+        <subscreens-menu id="ManufacturingQualityTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

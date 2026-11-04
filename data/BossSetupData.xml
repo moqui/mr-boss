@@ -1274,6 +1274,15 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
     <moqui.security.user.NotificationTopic topic="ProductionStagedRelease"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P5b: the shortage notice opens the work order's Components -->
+    <moqui.security.user.NotificationTopic topic="ProductionShortage"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Components?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P7: a loss above its reason's threshold and output beyond the overproduction tolerance, decided on the
+        work order's Quantities tab -->
+    <moqui.security.user.NotificationTopic topic="ProductionLossApproval"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
+    <moqui.security.user.NotificationTopic topic="ProductionOverproduction"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
 
     <!-- Manufacturing P14 (impl-manufacturing §4): the buyer's permissions, which Purchasing's buyer group holds when
         Purchasing is built (its P1 adds SUPPLIER_SCORECARD_EDIT): the purchase order edit that converts outside processing to

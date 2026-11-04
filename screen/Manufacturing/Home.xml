@@ -64,9 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Open" value="${summaryText.openCount}" icon="sym_o_assignment" size="sm"
                     link="${workOrdersLink}"/>
             <number-card title="In progress" value="${summaryText.inProgressCount}" icon="sym_o_pending_actions" size="sm"
-                    link="${workOrdersLink}"/>
+                    link="${workOrdersLink}/Find?statusId=WeInProgress"/>
             <number-card title="Late" value="${summaryText.lateCount}" icon="sym_o_schedule" size="sm"
-                    link="${workOrdersLink}"/>
+                    link="${workOrdersLink}/Find?late=Y"/>
             <number-card title="Short" value="${summaryText.shortCount}" icon="sym_o_production_quantity_limits" size="sm"
                     link="${workOrdersLink}"/>
             <number-card title="Completed this month" value="${summaryText.completedCount}" icon="sym_o_task_alt" size="sm"
@@ -74,14 +74,15 @@ along with this software (see the LICENSE.md file). If not, see
         </dashboard>
         <container-box>
             <box-header title="Due work and shortages${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}"/>
-            <!-- P13: shortages open the plant's supply plan (design Home Actions); P5b's shortage rows link it the same way -->
+            <!-- P13: shortages open the plant's supply plan (design Home Actions); P5b's short rows open the work order's
+                Components -->
             <box-toolbar>
                 <link url="${sharedLinks['Planning/SupplyPlanning']}" text="Supply planning" link-type="anchor"
                         icon="sym_o_view_timeline" parameter-map="{plantId:manufacturing.plantId}"
                         condition="manufacturing.capabilities.supplyPlan"/>
             </box-toolbar>
             <box-body>
-                <label text="No work is due." type="p" condition="!queueRows.length"/>
+                <label text="No work is due and nothing is short." type="p" condition="!queueRows.length"/>
                 <section name="QueueList" condition="queueRows.length">
                     <widgets>
                         <form-list name="QueueRows" list="queueRows" skip-form="true" paginate="false">

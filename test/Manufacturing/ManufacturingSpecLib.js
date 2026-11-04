@@ -56,6 +56,8 @@ const users = {
     services: "manufacturing.services",
     // P6: a production reader with Accounting's ACCOUNTING_VIEW
     finance: "manufacturing.finance",
+    // P5b: an operator who issues and moves stock (Warehouse's issue and move groups)
+    material: "manufacturing.material",
     // P14: a production reader in Purchasing's buyer group (which reads supplier prices)
     buyer: "manufacturing.buyer"
 }
@@ -196,6 +198,23 @@ function routeFixtures() {
         "Planning/SupplyPlanning": {parameters: {plantId: ids.plantId}, text: "Supply planning"}
     })
     mounts.push(["Planning/SupplyPlanning", shared + "SupplyPlanning.xml"])
+    // P5b: the Components and Materials tabs (Shared/MaterialIssueReceipt) on the Warehouse demo's released run, and the
+    // Planning area's shared InventoryAvailability with the Manufacturing context on its output at Retail's plant
+    const stockProduct = {productId: "BOSS_WH_COATED", facilityId: ids.plantId}
+    Object.assign(routes, {
+        "WorkOrders/WorkOrderDetail/Components": {parameters: {workEffortId: ids.releasedRunId}, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/MaterialIssueReceipt": {
+            parameters: {workEffortId: ids.releasedRunId},
+            text: "Coated filters"
+        },
+        "Planning/InventoryAvailability": {parameters: stockProduct, text: "Coated filter"},
+        "Planning/InventoryAvailability/Projection": {parameters: stockProduct, text: "Coated filter"}
+    })
+    mounts.push(
+        ["WorkOrders/WorkOrderDetail/MaterialIssueReceipt", shared + "MaterialIssueReceipt.xml"],
+        ["Planning/InventoryAvailability", shared + "InventoryAvailability.xml"],
+        ["Planning/InventoryAvailability/Projection", shared + "InventoryAvailability/Projection.xml"]
+    )
     // P11: Downtime under Work centers (line A's demo changeover), quick create's report and Projects' shared request and
     // work item screens with the Manufacturing context (an id of no maintenance request or task: not available there)
     Object.assign(routes, {
@@ -208,6 +227,16 @@ function routeFixtures() {
         ["WorkCenters/RequestDetail", shared + "RequestDetail.xml"],
         ["WorkCenters/WorkItemDetail", shared + "WorkItemDetail.xml"]
     )
+    // P7: the Quantities and By-products tabs and the labels of the Warehouse demo's released run (a tab shows its header's
+    // text, F63), and Quality's ScrapLoss
+    const released = {workEffortId: ids.releasedRunId}
+    Object.assign(routes, {
+        "WorkOrders/WorkOrderDetail/Quantities": {parameters: released, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/ByProducts": {parameters: released, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/OutputLabels": {parameters: released, text: "Coated filters"},
+        Quality: {text: "Scrap and loss"},
+        "Quality/ScrapLoss": {text: "Scrap and loss"}
+    })
     // P14: the Subcontracting area (SubcontractOperations by default), the outside processing of the Warehouse demo's coating
     // operation and its instructions, and the shared supplier, order and shipment screens with the Manufacturing context on
     // Ziddleman, the demo's service order and its subcontract dispatch

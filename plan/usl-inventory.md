@@ -1207,7 +1207,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | get#ProductionRunDisplayInfo | Manufacturing/WorkOrders/WorkOrderDetail; Shared/MaterialIssueReceipt |  |
 | ManufacturingServices | create#ProductionRun |  | mantle.work.ProductionServices.create#ProductionOrder (without the legacy consume and produce products, P16a) |
 | ManufacturingServices | create#ShipmentAssemblyWorkEffort |  |  |
-| ManufacturingServices | set#ProducedProductQuantity |  |  |
+| ManufacturingServices | set#ProducedProductQuantity |  | — never called (F8): a target change is mantle.work.ProductionServices.change#ProductionQuantity (P7) |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
 | ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
 | ManufacturingServices | breakDown#Assembly |  |  |
@@ -1215,8 +1215,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | unissue#Component |  |  |
 | ManufacturingServices | cancel#AssemblyWorkEffort |  |  |
 | ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly |  |
-| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly |  |
-| ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt |  |
+| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly | — not used by Quantities: it reads mantle.work.ProductionServices.get#ProductionQuantities (the run lines and receipts, P7) |
+| ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt | — Manufacturing/WorkOrders/WorkOrderDetail/Components and MaterialIssueReceipt: get#ProductionMaterials over the run's own lines (P5b) |
 | ManufacturingServices | get#ProductBomDetail | Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion |  |
 | ManufacturingServices | get#ProductionRunPickInfo | Manufacturing/WorkOrders/WorkOrderDetail | — not used: Manufacturing/WorkOrders/WorkOrderDetail/PickSheet reads mantle.work.ProductionServices.get#ProductionPickList (the run lines, P5a) |
 | MeasurementServices | get#MeasurementUomsByMeasurementType |  |  |
@@ -1567,6 +1567,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/ProductionServices | get#ProductionResources |  | Manufacturing/WorkOrders/WorkOrderDetail/Overview (P5a) |
 | work/ProductionServices | get#ProductionOperations | Manufacturing/WorkOrders/WorkOrderDetail/Operations | Manufacturing/WorkOrders/WorkOrderDetail/Operations, Traveler (P5a) |
 | work/ProductionServices | get#ProductionPickList |  | Manufacturing/WorkOrders/WorkOrderDetail/PickSheet (P5a) |
+| work/ProductionServices | get#ProductionMaterials | Manufacturing/WorkOrders/WorkOrderDetail/Components; Shared/MaterialIssueReceipt | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (material lines, stock to issue from) (P5b) |
+| work/ProductionServices | store#ProductionMaterial | Manufacturing/WorkOrders/WorkOrderDetail/Components | Manufacturing/WorkOrders/WorkOrderDetail/Components (AddMaterial, Edit, Remove of a manual draft line) (P5b) |
+| work/ProductionServices | preview#ProductionBackflush | Shared/MaterialIssueReceipt | Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Backflush preview) (P5b) |
+| work/ProductionServices | backflush#ProductionMaterials | Shared/MaterialIssueReceipt | Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt (Confirm backflush, through issue#ProductionMaterial) (P5b) |
+| work/ProductionServices | get#ProductionShortages | Manufacturing/Home | Manufacturing/Home (Short count, the queue's shortages) (P5b) |
 | work/ProductionServices | request#SubcontractService | Manufacturing/Subcontracting/SubcontractOperations; Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractOperations and SubcontractDetail (New outside processing, P14) |
 | work/ProductionServices | store#ProductionSubcontract | Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractDetail (Edit agreement, P14) |
 | work/ProductionServices | get#SubcontractMaterials | Manufacturing/Subcontracting/SubcontractDetail | Manufacturing/Subcontracting/SubcontractDetail (Materials), SubcontractInstructions (P14) |

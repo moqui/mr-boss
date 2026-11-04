@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Manufacturing's materials and stock (impl-manufacturing P5b; Materials.js): Shared/MaterialIssueReceipt's Manufacturing
+    context (crosscut §3.9) under WorkOrders/WorkOrderDetail. The screen checks the run (AccessServices.check#Record) before
+    each read and posting; the Mantle production verbs check their own permission, organization and facility again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="MaterialSource" allow-remote="false">
+        <description>A production run as Shared/MaterialIssueReceipt shows it in Manufacturing: Warehouse's production run
+            source read with the Manufacturing scope and record check (the output lines, issuances left to return, the
+            output's tracking, the movements with value only with financial read), its material lines from
+            mantle.work.ProductionServices.get#ProductionMaterials (required, issued, returned and left apart, short and held
+            text, the stock to issue from for STOCK_ISSUE holders; a staged short line is offered once stock covers it),
+            Stage for STOCK_MOVE holders (Warehouse's Move with the run fixed), the run's consumption policy and, when it
+            backflushes, the backflush preview (its lines, lots and findings). Refuses a user without Manufacturing (MANUFACTURING_UNAVAILABLE) and a run
+            outside the scope (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="sourceId"/>
+            <parameter name="workEffortId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="sourceType"/>
+            <parameter name="source" type="Map"/>
+            <parameter name="materialRows" type="List"/>
+            <parameter name="movementRows" type="List"/>
+            <parameter name="outputRows" type="List"/>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="trackingRows" type="List"/>
+            <parameter name="filesRecordId"/>
+            <parameter name="financialRead" type="Boolean"/>
+            <parameter name="backflush" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="material" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Materials.js')
+                    .execute('materialSource', context)"/>
+            <script>ec.context.putAll(material)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="MaterialAction" allow-remote="false">
+        <description>The posting a Manufacturing MaterialIssueReceipt form asks for: the record and capability check#Record
+            checks (the run, issue: STOCK_ISSUE), the Mantle entry point and its parameters: issue#ProductionMaterial,
+            return#UnusedMaterial or receive#ProductionOutput (Warehouse's run actions), or backflush#ProductionMaterials with
+            the preview's key. Posts nothing; the screen's transition checks the record and calls the entry point, which
+            checks everything again. ACTION_INVALID for another kind.</description>
+        <in-parameters>
+            <parameter name="sourceId"/>
+            <parameter name="workEffortId"/>
+            <parameter name="lineKey"/>
+            <parameter name="quantity"/>
+            <parameter name="operationKey"/>
+            <parameter name="actionKind"><description>issue (default), return, receive or backflush.</description></parameter>
+            <parameter name="assetId"/>
+            <parameter name="toLocationSeqId"/>
+            <parameter name="toFacilityId"/>
+            <parameter name="firstSerialNumber"/>
+            <parameter name="lotNumber"/>
+            <parameter name="previewKey"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="capability"/>
+            <parameter name="serviceName"/>
+            <parameter name="parameters" type="Map"/>
+            <parameter name="doneText"/>
+        </out-parameters>
+        <actions>
+            <set field="action" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Materials.js')
+                    .execute('materialAction', context)"/>
+            <script>ec.context.putAll(action)</script>
+        </actions>
+    </service>
+</services>
