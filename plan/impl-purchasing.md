@@ -783,6 +783,42 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   - **F-P3-7** BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create screen there
     was offered to the reader, planner and approver; it is the root's `NewPurchaseOrder` with its own group.
 
+**Review Nov 4 (P3).**
+- Checked: Mantle defaults with no PurchasePolicy row (approve#Order's direction check: a sales or mixed part still needs
+  ORDER_APPROVE, a purchase part takes PURCHASE_ORDER_APPROVE or ORDER_APPROVE, so ReturnServices' replacement approvals,
+  change#OrderPartsStatus and createOrders' place-and-approve keep working; the SECA adds nothing with the gate off, so
+  autoApprove#Order is unchanged; hold#Order only widens, and un-sends a Sent order only when every part is a purchase part);
+  increment#OrderRevision's revisionKind (content, note and status still count and item returns early unless the order's
+  buyer sets commercialRevisionOnly, so F-P3-2 holds); decide#PurchaseApproval (PURCHASE_APPROVE, the buying organization
+  through FacilityScope, Placed only, STALE_REVISION naming the current revision, SELF_APPROVAL by enteredByPartyId or the
+  logged OrderPlaced change, operation replay); send#PurchaseOrder (Approved or Sent only, the revision checked, recipients
+  EmailOrder then EmailPrimary, ALREADY_SENT per recipient of the revision, the PDF stored once per print hash, the
+  OrderEmailMessage with its revision); the amounts in find#PurchaseOrders and get#OrderDetail (Withheld, not zero); F-P3-1
+  against the framework.
+- **R1 (high, BOSS)** OrderDetail's History showed each price change's old and new value, and Documents opened the issued
+  PDF (with its prices), to a reader whose amounts are withheld. The history's price rows say Withheld for that reader, the
+  issued PDF is listed without a link and the orderContent transition refuses it (`Orders.js contentReadable`);
+  PurchasingOrders checks the history.
+- **R2 (medium, Mantle)** send#PurchaseOrder checked the status and the revision before the operation key, so a retry of a
+  send that went through (a double submit) was refused once the order had moved on (STALE_REVISION without the commercial
+  revision). The replay now comes first, its request naming the revision asked for; PurchaseOrders retries the first send
+  after the revision moved.
+- For the lead:
+  - F-P3-1 is a framework divergence: `crates/moqui-entity/src/entity/field_rw.rs:349-352` skips an update whose old value
+    is null when the flag is "update" ("does not log the first non-null value. That is the initial set."). The XSD
+    (`entity-definition-3.xsd:197-202`) and Moqui Java's `EntityValueBase.handleAuditLog` leave out only the create under
+    "update"; an update from null to a value is logged. With it fixed, "update" would do for the P3 fields (the as-of read
+    needs the change, not the create) and save an audit row per new line of every order, sales included; Accounting's
+    "update" fields (`OrderItem`/`InvoiceItem`/`AcctgTransEntry.costCenterId`, AccountingPayableEntities.xml and
+    AccountingControlEntities.xml) then log a first coding of an uncoded line, which they miss now.
+  - Without `commercialRevisionOnly` (every organization but the Retail demo) the send's own OrderContent and its
+    Approved to Sent move the revision by two, so the revision recorded on the email is not the order's afterwards, and a
+    send after a hold and release mails the supplier again; decisions are unaffected (the check runs before the status
+    change). Purchasing's revision-bound rules assume the flag: consider defaulting it on where Purchasing sets up an
+    organization's policy.
+  - Budget: the client walk is 6.8 s, nearly all of it steps of 0.2 to 0.7 s and the send's PDF and mail (1.3 s); a trim
+    saves well under the 3 s over mr-boss's client budget, so it is unchanged.
+
 ### P4 — Approvals and budgets
 
 - **PUR-APPROVAL, the policies** (design ApprovalPolicies, Approvals).
