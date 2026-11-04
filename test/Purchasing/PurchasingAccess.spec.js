@@ -813,7 +813,8 @@ feature("an order's revisions and acknowledgement are its organization's, and ch
 })
 
 // P13: an agreement is its organization's: AgreementDetail's read for its reader and refused for another organization's; its
-// writes (change, release) the buyer's; its record link opens AgreementDetail
+// writes (change, release) the buyer's; its record link opens AgreementDetail; its approved PDF withheld from the reader and
+// never uploaded (review)
 feature("an agreement is its organization's; changing or releasing it is the buyer's; its link opens AgreementDetail", {
     when() {
         const problems = []
@@ -849,6 +850,52 @@ feature("an agreement is its organization's; changing or releasing it is the buy
         )
         if (link !== "/qapps/Purchasing/Agreements/AgreementDetail?agreementId=" + ids.agreementId)
             problems.push(`the agreement's link: ${link}`)
+        // P13 review: the approved PDF is withheld from a reader who does not see amounts, another organization's refused;
+        // an upload is not taken for the approved agreement
+        const content = system(() =>
+            ec.service
+                .sync()
+                .name("create#mantle.party.agreement.AgreementContent")
+                .parameters({
+                    agreementId: ids.agreementId,
+                    contentLocation: "dbresource://mantle/content/agreement/spec/approved.pdf",
+                    contentTypeEnumId: "AcntApprovedVersion"
+                })
+                .call()
+        )
+        const transition = (user, name, parameters, method = "get") =>
+            asUser(user, () => {
+                const result = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render("apps/Purchasing/Agreements/AgreementDetail/" + name, parameters, method)
+                const errors = Array.from(result.errorMessages || []).join(" | ")
+                ec.message.clearErrors()
+                return errors
+            })
+        try {
+            const download = {agreementId: ids.agreementId, agreementContentId: content.agreementContentId}
+            const readerFile = transition(users.read, "agreementContent", download)
+            if (!readerFile.includes("withheld from you")) problems.push(`the reader's approved PDF: ${readerFile || "sent"}`)
+            const otherFile = transition(users.services, "agreementContent", download)
+            if (!otherFile.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's file: ${otherFile || "sent"}`)
+            const spoofed = transition(
+                users.buyer,
+                "uploadFile",
+                {agreementId: ids.agreementId, contentTypeEnumId: "AcntApprovedVersion"},
+                "post"
+            )
+            if (!spoofed.includes("Choose an agreement document"))
+                problems.push(`an uploaded approved version: ${spoofed || "taken"}`)
+        } finally {
+            system(() =>
+                ec.service
+                    .sync()
+                    .name("delete#mantle.party.agreement.AgreementContent")
+                    .parameters({agreementContentId: content.agreementContentId})
+                    .call()
+            )
+        }
         return {problems}
     },
     then({problems}) {

@@ -2133,6 +2133,35 @@ adjust#ExpectedReceipt's old callers. Fixes:
   - **F-P13-8** The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF);
     mr-mantle's feature time was 294 of 300 s at wave 3, so the lead may move its third feature to acceptance.
 
+**Review Nov 4 (P13).** Checked: release#PurchaseAgreement's lock (the acceptance walk's two parallel releases), quantity and
+value caps with the tolerance, and its refusals of an expired, draft and changed-but-unapproved agreement; the line goes
+through store#PurchaseOrderItem (check#ProductUsable) and a new draft through create#PurchaseOrder (the supplier check);
+decide#PurchaseApproval without orderId (neither id is RECORD_UNAVAILABLE; orders unchanged: PurchaseApprovals,
+PurchaseOrders, PurchaseRevisions pass); the Agreement status flow and audit-log changes against Mantle's other agreement
+users (no Mantle, marble or BOSS writer sets an Agreement status outside P13; marble's EditAgreement has no status field;
+the flow only adds transitions the entity-auto status check needed, so AgrSales and other agreements are unaffected);
+F-P13-3 (store#AgreementItem's rows always carry the agreement and item, the resolver matches them only with that agreement
+and item in its context, so no general supplier price is written: not an escalation); AgreementDetail's files. Fixes:
+  - R1 (medium) A released draft line could be raised past its release, or repriced above it, and keep the agreement's
+    price beyond the caps (the allocation is the record): `store#PurchaseOrderItem` and a revision (PurchaseRevisions.js)
+    now refuse a released line's quantity above its releases or a price above their price (RELEASE_LINE_OVER, from
+    PurchaseAgreements.js `releasedLineRefusal`); more comes from another release, which checks the caps. Only lines with
+    an AgreementRelease are checked, so no existing order changes.
+  - R2 (medium) An item without the agreement's price was released at the supplier's general price; a release now needs
+    the agreement's own price row (PRICE_UNAVAILABLE), and a release to an existing draft runs the buying policy's supplier
+    check as a new draft does.
+  - R3 (medium, F-P13-3's other side) `store#`/`replace#`/`expire#ProductPrice` (SUPPLIER_PRICE_EDIT) could change an
+    approved purchase agreement's price row with no revision or approval; PricePolicy.js refuses writes to an AgrPurchase
+    agreement's rows (the type is new, so no existing row is affected).
+  - R4 (low) AgreementDetail's uploadFile took any content type, so a buyer could store a file as the approved agreement
+    (AcntApprovedVersion); it now takes only the form's kinds. PurchasingAccess's agreement feature checks the reader's
+    approved PDF withheld, another organization's file refused and the spoofed upload refused.
+  - R5 (F-P13-8) The Mantle spec's third feature kept only its rules (change pending, stale revision, the R1-R3 refusals,
+    expiry); the history, as-of print, reapproval and the expiry job are acceptance's PurchaseAgreementWalk. 3.2 s.
+  - R6 AppStructure's placeholder floor is 56 (Agreements built).
+  Left: a changed item product keeps the old product's price row until a price is set (the release then refuses
+  PRICE_UNAVAILABLE, which is safe); F-P13-4 (marble's raw writes count no revision) stands.
+
 ### P14 — Replenishment
 
 - **CX-PLANNING, the buy conversion** (§4). Manufacturing P13 built the run, the schedule and the make conversion, and

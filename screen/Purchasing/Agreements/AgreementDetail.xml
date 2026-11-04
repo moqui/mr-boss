@@ -197,6 +197,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <!-- the form's kinds only: the approved agreement (AcntApprovedVersion) is stored by its approval, not uploaded -->
+            <if condition="contentTypeEnumId &amp;&amp; !['AcntDocument', 'AcntSupporting', 'AcntPriceSheet'].includes(contentTypeEnumId)">
+                <return error="true" message="Choose an agreement document, supporting document or price sheet"/></if>
             <service-call name="mantle.party.AgreementServices.create#AgreementContent"
                     in-map="{agreementId:agreementId, contentFile:contentFile, contentTypeEnumId:contentTypeEnumId || 'AcntSupporting',
                         description:description || null}"/>
