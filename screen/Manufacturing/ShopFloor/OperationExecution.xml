@@ -300,6 +300,10 @@ along with this software (see the LICENSE.md file). If not, see
                                             <conditional-field condition="op.outputOperation" title="Put good output in"
                                                     tooltip="A location of the plant"><text-line size="12"/></conditional-field>
                                         </field>
+                                        <field name="lotNumber">
+                                            <conditional-field condition="op.outputOperation" title="Lot"
+                                                    tooltip="The output's lot, required for a lot-tracked product"><text-line size="12"/></conditional-field>
+                                        </field>
                                         <field name="stopTimer">
                                             <default-field title="Your timer"><check><option key="true" text="Stop my timer on this operation"/></check></default-field>
                                         </field>
@@ -308,7 +312,7 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field-row><field-ref name="good"/><field-ref name="pending"/></field-row>
                                             <field-row><field-ref name="processLoss"/><field-ref name="scrap"/><field-ref name="rework"/></field-row>
                                             <field-row><field-ref name="reasonCode"/><field-ref name="reason"/></field-row>
-                                            <field-ref name="toLocationSeqId"/>
+                                            <field-row><field-ref name="toLocationSeqId"/><field-ref name="lotNumber"/></field-row>
                                             <field-ref name="stopTimer"/>
                                             <field-ref name="submit"/>
                                         </field-layout>

@@ -133,6 +133,8 @@ feature("Test and pack's refused completion keeps what was entered, then it comp
         dialog.getByLabel("Good", {exact: true}).fill("5")
         dialog.getByLabel("Scrap", {exact: true}).fill("1")
         dialog.getByLabel("Note", {exact: true}).fill("Dropped one")
+        // WarehousePoliciesWalk makes DEMO_1_1 lot required in this database: the output's lot
+        dialog.getByLabel("Lot", {exact: true}).fill("WALK-SF-" + testId)
         confirmNext(page)
         dialog.getByRole("button", {name: "Complete", exact: true}).click()
         waitForText(page, "good 5")
