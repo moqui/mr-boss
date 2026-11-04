@@ -1019,6 +1019,12 @@ materials and stock.
     ManufacturingMaterials, ManufacturingAccess, ManufacturingWorkOrders, ManufacturingShell, ClientIsolation,
     ProductsInventory, ProductsSharedContext, WarehouseProductionFixtures, WarehousePacking, AppStructure, TuiRender (167,
     pass); walks ManufacturingMaterialsWalk, WarehouseProductionWalk (5, pass); `moqui lint --screens` clean for P5b's screens.
+  - Merged with master (P7) Nov 3; F-P7-10 decided: change#ProductionQuantity leaves a manual material line's quantity as
+    the planner entered it (a quantity for the run, not per unit made) unless `scaleManual`; ProductionMaterials' target change
+    feature covers both. After the merge: Mantle ProductionMaterials, ProductionQuantities, ProductionOrders,
+    WarehouseProduction, ManufacturingServices (40, pass); BOSS ManufacturingMaterials, ManufacturingAccess,
+    ManufacturingWorkOrders, ManufacturingShell, ClientIsolation, AppStructure, TuiRender (145, pass); walks
+    ManufacturingMaterialsWalk, ManufacturingQuantitiesWalk (5, pass).
 
 ### P6 — Cost evidence
 
@@ -1286,7 +1292,7 @@ Design §3 Quantities and ByProducts, §6 ScrapLoss and §12.2; M2, M4, M6 and M
     operator alone can record losses but not receive output; the Quantities dialog still offers good and pending. Either the
     operator holds the Warehouse issue group or the dialog hides the receipt fields without `can.issue` (P10's shop floor).
   - **F-P7-10** (P5b merge) change#ProductionQuantity scales every PrlrMaterial line, so P5b's manual material lines scale
-    too; the merge should decide whether a manual line keeps its quantity. The Mantle collisions with P5b are append-only
+    too; the merge should decide whether a manual line keeps its quantity. Decided at the merge: it keeps it unless `scaleManual` (P5b review). The Mantle collisions with P5b are append-only
     (Production.js's export list, ProductionServices.xml's appended sections); BOSS collides with master (P11) only in
     appended blocks (Manufacturing.js, ManufacturingAccess, ManufacturingSpecLib, suite.js).
   - Review specs: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction (32, then the two
