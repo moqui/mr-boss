@@ -24,11 +24,15 @@ function acceptConfirmations(page) {
         return true
     })
 }
-// a drop-down of the open dialog or the page: open it, type, choose the option
+// a drop-down of the open dialog or the page: open it, type, choose the option; the options stay open over the dialog's
+// button (with every open purchase order part listed) until the focus moves on
 function choose(page, scope, label, typed, option) {
     scope.getByLabel(label, {exact: true}).click()
     if (typed) page.keyboard.type(typed)
     page.getByRole("option", {name: option}).first().click()
+    page.keyboard.press("Tab")
+    page.waitFor(() => !Array.from(document.querySelectorAll(".q-menu"))
+        .some(menu => menu.getClientRects().length && getComputedStyle(menu).visibility !== "hidden"))
 }
 function openReceipt(page) {
     page.goto("/qapps/Warehouse/Receiving/Receipts").status == 200
