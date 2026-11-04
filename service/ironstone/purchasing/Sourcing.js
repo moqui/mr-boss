@@ -281,7 +281,9 @@ function historyOf(requestId) {
         requiredByDate: "required by",
         description: "description",
         statusId: "status",
-        responseRequiredDate: "response date"
+        responseRequiredDate: "response date",
+        facilityId: "deliver to",
+        currencyUomId: "currency"
     }
     const audit = Array.from(
         find("moqui.entity.EntityAuditLog")
@@ -299,6 +301,7 @@ function historyOf(requestId) {
         if (text == null || text === "") return ""
         if (field === "statusId") return statusText(text)
         if (field === "productId") return productText(text)
+        if (field === "facilityId") return one("mantle.facility.Facility", {facilityId: text})?.facilityName || String(text)
         if (field === "requiredByDate" || field === "responseRequiredDate") return dateText(text)
         return String(text)
     }

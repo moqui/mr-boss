@@ -2127,7 +2127,8 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
 - Mantle:
   - `entity/SourcingEntities.xml`: the `RqtPurchaseRfq` request type and the `RqCntRfqPublished` request content type;
     the audit log on RequestItem's `description` ("true", F57; with P10's product, quantity, unit and date and Mantle's
-    status, the RFQ items' material fields), on Request's `responseRequiredDate` and `description` ("update", F-P11-11), and
+    status, the RFQ items' material fields); the RFQ header's response date, text, facility and currency logged by
+    `store#QuoteRequest` itself, a first set included (F-P11-11, review R1); and
     on OrderPart's `validFromDate` and `validThruDate` ("true"); the `OctSupplierQuote` order content type; ProductPrice's `sourceOrderId` and `sourceOrderItemSeqId`
     (audit-logged), which Products' `PricePolicy.js` now writes (F-P11-4). `data/SourcingSetupData.xml`: the
     `MANTLE_RFQ_EMAIL` template; `template/order/QuoteRequest.print.html.fancy` and `QuoteRequestEmail.html.fancy`.
@@ -2217,8 +2218,8 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - **F-P11-3** The promotion way of quantity tiers (F41) needs a purchasing ProductStore with tax and shipping calculation,
     store emails and reservation turned off for purchase parts; not built (§7). Tiers are published price rows.
   - **F-P11-4** ProductPrice named no source; `sourceOrderId` and `sourceOrderItemSeqId` are added and Products'
-    `PricePolicy.js` writes them through `store#ProductPrice` (a widening that refuses nothing); `replace#ProductPrice` copies
-    them to a successor row.
+    `PricePolicy.js` writes them through `store#ProductPrice` (a widening that refuses nothing); a `replace#ProductPrice`
+    successor names no source, as its price is not the quote's (review R3).
   - **F-P11-5** `expire#ProductPrice` takes an end now or later, so a published price starts a second ahead at the earliest
     and the tier's earlier row ends where it starts.
   - **F-P11-6** Design QuoteRequestSuppliers' per-supplier contact, send channel, deadline and capability expiry are not
@@ -2234,9 +2235,42 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
     (P3's rule on any purchase order); harmless, as no approval decision exists on a quote, and it counts amendments.
   - **F-P11-10** AppStructure's placeholder count drops by one (Sourcing built): its floor is 54.
   - **F-P11-11** Every request's audit-logged change shows in its Chatter timeline, so logging Request's response date
-    and description on create ("true") gave every request with them a "Set to" entry (Chatter's paging spec failed). They
-    are "update": an RFQ's response date, set on create, has each later change logged; a specification text first set after
-    create is not (F57), so an as-of print before that shows it, and that first set moves no revision.
+    and description on create ("true") gave every request with them a "Set to" entry (Chatter's paging spec failed). Built
+    as "update", which left a text first set after create unlogged (no revision, a wrong as-of print). Review R1: Request
+    has no audit-logged field again; `store#QuoteRequest` writes the RFQ header's EntityAuditLog rows itself (response date,
+    text, facility, currency; a first set included), so only an RFQ's timeline shows them.
+
+**Review Nov 4 (P11).** Checked the Mantle and BOSS diffs against this section, §2, design §5 and R-PUR-13/21: access (every
+Sourcing transition calls `check#Record` before the Mantle service; the quick creates follow P10's, the root's
+`get#SharedContext`), the organization and permission checks in each Mantle verb, restricted amounts ("Withheld", never
+zero; a supplier's print and email name no other supplier), the send (per-recipient transaction, failure named and the
+others sent, PDF stored once per print hash, operation replay), the Commons and Projects exclusion (`get#RequestAccess`,
+`find#RequestRows`, Projects' list; only the RFQ type; Chatter's Request access is `get#RecordLinkInfo`, untouched), the
+convert refusal (the RFQ type only) and that quotes leave P5's expected receipts, P6's bill and match lists and P9's
+acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
+  - **R1** (medium) The RFQ header's material change was read from Request's "update" audit, so a specification text first
+    set after create (and any facility or currency change, not logged at all) moved no revision, needed no new send, and an
+    as-of print showed the later text. `store#QuoteRequest` now logs the header's response date, text, facility and currency
+    itself (`headerAudit`, a first set included), the as-of print reads facility and currency back too, and Request's
+    entity audit is removed, so no other request's timeline changes (F-P11-11). QuoteRequestDetail's history labels them.
+  - **R2** (medium) `publish#SupplierQuotePrice`: a thru date given past the quote's validity published a price the supplier
+    never quoted; it is now capped at the quote's thru date. A per-term row (`termUomId`) of the scope is no longer ended
+    (another scope, as a store's and an agreement's). An awarded quote (placed from OrderProposed, P12) still publishes.
+  - **R3** (low) `replace#ProductPrice` copied the source quote to a successor with a new price; the successor names none.
+  - **R4** (tests) Sourcing.spec: the text first set after a send moves the revision and is absent from the earlier print; a
+    tier of 100 is its own row and leaves the tier of 0, the supplier's agreement price and another supplier's price alone;
+    a new feature runs `run#SupplyPlan` at a warehouse with a requested and a proposed quote of 20 and gets the whole
+    minimum of 30 suggested, nothing reserved, placed, approved or RequirementSupply (F-P11-7 now tested; about 0.3 s).
+  - Left for the lead: F-P11-8 stands. Purchase orders' Closed and All views still show a declined quote, and P12's Not
+    awarded ones; a quote order carries no marker the PO list's find can test (a cancelled draft PO looks the same: no
+    `placedDate`, OrderCancelled), and the audit-log test `wasQuote` uses is per order. P12 should add one (for instance a
+    quote flag or the RFQ id on OrderHeader set by `quoteOrder`) and `Orders.js purchaseFind` exclude it. Also: an
+    agreement price row exactly as specific as a published row (agreement in place of the unit) is an equal-precedence
+    overlap Products' `store#ProductPrice` refuses, so the publish fails with Products' message; P13's agreement rows should
+    name their unit or item, or the publish should say PRICE_OVERLAP.
+  - Specs: Mantle Sourcing (7), ProductPricePolicy, ProductEffectivePrices, ProductPriceLists, OrderProcureToPayBasicFlow,
+    PurchaseRequests, PurchaseOrders, SupplyPlanning, DropShip, WorkProjectRequests (87 features, pass); BOSS
+    PurchasingSourcing, PurchasingAccess, PurchasingOrders, Requests, ProjectRequests, ProjectsAccess, Chatter (88, pass).
 
 ### P12 — Comparison and award
 
