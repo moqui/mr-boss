@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The reorder rules (design-purchasing §8 ReorderRules: ReorderFind and ReorderRuleList; impl-purchasing P14a): the
+    ProductFacility rows at the facilities of the user's organizations, found by product, facility, supplier, below minimum
+    and snoozed (ironstone.purchasing.ReplenishmentServices.find#ReorderRules), each with its levels, method, available stock
+    and snooze; a stock planner (STOCK_POLICY_PLAN) adds and edits a rule, snoozes it with a thru date and reason, through
+    store#ProductFacilityPolicy (storeRule). A snooze stops automatic conversion, not the shortage: the supply plan still
+    suggests it. Each product opens InventoryAvailability with the Purchasing context. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Rules" default-menu-index="1">
+    <parameter name="productId"/>
+    <parameter name="facilityId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="belowMinimum"/>
+    <parameter name="snoozedOnly"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingReplenishmentParts.xml"/>
+    <transition-include name="storeRule" location="component://mr-boss/template/PurchasingReplenishmentParts.xml"/>
+    <actions>
+        <service-call name="ironstone.purchasing.ReplenishmentServices.find#ReorderRules" out-map="found"
+                in-map="{appRoot:appRoot, productId:productId, facilityId:facilityId, supplierPartyId:supplierPartyId,
+                    belowMinimum:belowMinimum, snoozedOnly:snoozedOnly, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="ruleList" from="found.ruleList"/>
+        <set field="ruleListCount" from="found.ruleListCount"/>
+        <set field="ruleListPageIndex" from="found.ruleListPageIndex"/>
+        <set field="ruleListPageSize" from="found.ruleListPageSize"/>
+        <set field="ruleListPageMaxIndex" from="found.ruleListPageMaxIndex"/>
+        <set field="ruleListPageRangeLow" from="found.ruleListPageRangeLow"/>
+        <set field="ruleListPageRangeHigh" from="found.ruleListPageRangeHigh"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="reorderOptions" from="found.reorderOptions"/>
+        <set field="availabilityPath" from="sharedLinks['Replenishment/InventoryAvailability']"/>
+        <set field="filtered" from="!!(productId || facilityId || supplierPartyId || belowMinimum || snoozedOnly)"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Reorder rules"/>
+            <box-toolbar>
+                <container-dialog id="NewReorderRule" button-text="New rule" title="Add a reorder rule" width="640"
+                        type="primary" icon="sym_o_add" condition="can.stockPolicy">
+                    <form-single name="NewReorderRuleForm" transition="storeRule">
+                        <field name="productId">
+                            <default-field title="Product">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'planProducts'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field title="Facility">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'planFacilities'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="minimumStock">
+                            <default-field title="Minimum stock" tooltip="Below this the plan orders">
+                                <text-line input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="maximumStock">
+                            <default-field title="Maximum stock" tooltip="Up to maximum orders to this level">
+                                <text-line input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="reorderMethodEnumId">
+                            <default-field title="Order">
+                                <drop-down allow-empty="true">
+                                    <list-options list="reorderOptions" key="${value}" text="${label}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="reorderQuantity">
+                            <default-field title="Reorder quantity" tooltip="With a fixed quantity, the least the plan orders">
+                                <text-line input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Add rule"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="productId"/>
+                                <field-ref name="facilityId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="minimumStock"/>
+                                <field-ref name="maximumStock"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="reorderMethodEnumId"/>
+                                <field-ref name="reorderQuantity"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body>
+                <form-single name="ReorderFind" transition="." map="{productId:productId, facilityId:facilityId,
+                        supplierPartyId:supplierPartyId, belowMinimum:belowMinimum, snoozedOnly:snoozedOnly}">
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'planProducts', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'planFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="supplierPartyId">
+                        <default-field title="Supplier" tooltip="Products with a purchase price from this supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="belowMinimum">
+                        <default-field title="Stock">
+                            <drop-down allow-empty="true">
+                                <option key="" text="Any"/>
+                                <option key="Y" text="Below minimum"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="snoozedOnly">
+                        <default-field title="Snoozed">
+                            <drop-down allow-empty="true">
+                                <option key="" text="Any"/>
+                                <option key="Y" text="Snoozed only"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Find"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="productId"/>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="supplierPartyId"/>
+                            <field-ref name="belowMinimum"/>
+                            <field-ref name="snoozedOnly"/>
+                            <field-ref name="submit"/>
+                        </field-row-big>
+                    </field-layout>
+                </form-single>
+            </box-body>
+            <box-body-nopad>
+                <label text="No reorder rule matches. Clear the filters to see every rule." type="p" style="q-pa-md m-muted"
+                        condition="!ruleList.length &amp;&amp; filtered"/>
+                <label text="No reorder rules yet. A rule gives a product's minimum and maximum stock at a facility; add one with New rule, or set levels from demand history in Suggest levels."
+                        type="p" style="q-pa-md m-muted" condition="!ruleList.length &amp;&amp; !filtered"/>
+                <section name="RuleListSection" condition="ruleList.length">
+                    <widgets>
+                        <form-list name="ReorderRuleList" list="ruleList" skip-form="true" select-columns="true">
+                            <field name="pseudoId">
+                                <default-field title="Product">
+                                    <link url="${availabilityPath}" text="${pseudoId}" link-type="anchor"
+                                            tooltip="Stock and policy of ${productName}"
+                                            parameter-map="{productId:productId, facilityId:facilityId}"/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Name">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="minimumStock" align="right">
+                                <default-field title="Minimum">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="maximumStock" align="right">
+                                <default-field title="Maximum">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="reorderMethodText">
+                                <default-field title="Order">
+                                    <display text="${reorderMethodText}${reorderQuantity &amp;&amp; reorderMethodEnumId == 'RdmFixedQuantity' ? ' ' + reorderQuantity : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="availableQuantity" align="right">
+                                <default-field title="Available">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            stateText}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="snoozeText">
+                                <default-field title="Snoozed">
+                                    <display text="${snoozed ? 'Until ' + snoozeThruText + (snoozeReason ? ': ' + snoozeReason : '') : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditRule_${productId}_${facilityId}" button-text="Edit"
+                                            title="Reorder rule of ${productName} at ${facilityName}" width="640"
+                                            icon="sym_o_edit" condition="can.stockPolicy">
+                                        <form-single name="EditRule_${productId}_${facilityId}" transition="storeRule"
+                                                map="{productId:productId, facilityId:facilityId, minimumStock:minimumStock,
+                                                    maximumStock:maximumStock, reorderQuantity:reorderQuantity,
+                                                    reorderMethodEnumId:reorderMethodEnumId, daysToShip:daysToShip,
+                                                    snoozeThruDate:snoozeThruDate, snoozeReason:snoozeReason,
+                                                    expectedLastUpdatedStamp:lastUpdatedStamp}">
+                                            <field name="productId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="expectedLastUpdatedStamp">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
+                                            <field name="minimumStock">
+                                                <default-field title="Minimum stock">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="maximumStock">
+                                                <default-field title="Maximum stock">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reorderMethodEnumId">
+                                                <default-field title="Order">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="reorderOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="reorderQuantity">
+                                                <default-field title="Reorder quantity">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="daysToShip">
+                                                <default-field title="Days to ship">
+                                                    <text-line input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="snoozeThruDate">
+                                                <default-field title="Snooze until"
+                                                        tooltip="Automatic conversion leaves the shortage until then; the plan still shows it. Empty ends the snooze.">
+                                                    <date-time type="timestamp"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="snoozeReason">
+                                                <default-field title="Snooze reason">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="Save rule"/>
+                                                </default-field>
+                                            </field>
+                                            <field-layout>
+                                                <field-row>
+                                                    <field-ref name="minimumStock"/>
+                                                    <field-ref name="maximumStock"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="reorderMethodEnumId"/>
+                                                    <field-ref name="reorderQuantity"/>
+                                                </field-row>
+                                                <field-ref name="daysToShip"/>
+                                                <field-row>
+                                                    <field-ref name="snoozeThruDate"/>
+                                                    <field-ref name="snoozeReason"/>
+                                                </field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="pseudoId"/>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="facilityName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="minimumStock"/>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

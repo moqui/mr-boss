@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SuggestLevels of ReorderRules (design-purchasing §8 ReorderRules; impl-purchasing P14a, R-PUR-19): for the products with
+    a rule at a facility (or the one chosen), the minimum and maximum suggested from average daily demand × lead time +
+    safety stock (mantle.facility.ReorderRuleServices.preview#ReorderLevels: the demand issued over the history, the
+    supplier's lead time or the one given, the safety and cover days), a product without demand history or lead time named;
+    a stock planner applies the selected rows (applyLevels: apply#ReorderLevels, each row through store#ProductFacilityPolicy
+    in its own transaction, each failure named and the others kept). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Suggest levels" default-menu-index="2">
+    <parameter name="planFacilityId"/>
+    <parameter name="scopeProductId"/>
+    <parameter name="historyDays"/>
+    <parameter name="safetyDays"/>
+    <parameter name="coverDays"/>
+    <parameter name="leadTimeDays"/>
+    <parameter name="preview"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingReplenishmentParts.xml"/>
+    <transition name="applyLevels">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'stockPolicy'}"/>
+            <!-- the levels applied are the server's own preview with the same parameters, not values from the page -->
+            <service-call name="mantle.facility.ReorderRuleServices.preview#ReorderLevels" out-map="previewed"
+                    in-map="{facilityId:planFacilityId, productId:scopeProductId || null, historyDays:historyDays || null,
+                        safetyDays:safetyDays || null, coverDays:coverDays || null, leadTimeDays:leadTimeDays || null}"/>
+            <set field="selectedIds" from="Array.isArray(productIdList) ? productIdList
+                    : String(productIdList || '').split(',').filter(Boolean)"/>
+            <set field="chosen" from="previewed.levelRows.filter(row =&gt; selectedIds.includes(row.productId))"/>
+            <iterate list="chosen.filter(row =&gt; !row.ok)" entry="skipped">
+                <message type="warning">${skipped.pseudoId}: ${skipped.message}</message>
+            </iterate>
+            <set field="levelRows" from="chosen.filter(row =&gt; row.ok).map(row =&gt; ({productId: row.productId,
+                    facilityId: row.facilityId, minimumStock: row.suggestedMinimum, maximumStock: row.suggestedMaximum}))"/>
+            <if condition="levelRows.length">
+                <service-call name="mantle.facility.ReorderRuleServices.apply#ReorderLevels" out-map="applied"
+                        in-map="{facilityId:planFacilityId, levelRows:levelRows,
+                            reorderMethodEnumId:reorderMethodEnumId || null, changeReason:changeReason}"/>
+                <iterate list="applied.results" entry="result">
+                    <if condition="result.ok">
+                        <then>
+                            <message type="success">Levels of ${result.productId} applied</message>
+                        </then>
+                        <else>
+                            <message type="warning">${result.productId}: ${result.message}</message>
+                        </else>
+                    </if>
+                </iterate>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="planFacilityId"/>
+            <parameter name="scopeProductId"/>
+            <parameter name="historyDays"/>
+            <parameter name="safetyDays"/>
+            <parameter name="coverDays"/>
+            <parameter name="leadTimeDays"/>
+            <parameter name="preview" value="Y"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReplenishmentServices.get#PlanContext" out-map="planContext"
+                in-map="{appRoot:appRoot, facilityId:planFacilityId || null}" transaction="force-new" ignore-error="true"/>
+        <set field="planFacilityId" from="planContext?.facilityId || null"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="levelForm" from="{planFacilityId:planFacilityId, scopeProductId:scopeProductId, historyDays:historyDays || '90',
+                safetyDays:safetyDays || '7', coverDays:coverDays || '30', leadTimeDays:leadTimeDays}"/>
+        <if condition="preview == 'Y' &amp;&amp; planFacilityId &amp;&amp; can.stockPolicy">
+            <service-call name="mantle.facility.ReorderRuleServices.preview#ReorderLevels" out-map="previewed"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{facilityId:planFacilityId, productId:scopeProductId || null, historyDays:levelForm.historyDays,
+                        safetyDays:levelForm.safetyDays, coverDays:levelForm.coverDays, leadTimeDays:leadTimeDays || null}"/>
+        </if>
+        <set field="levelRows" from="(previewed?.levelRows || []).map(row =&gt; Object.assign({}, row, {
+                resultText: row.ok ? 'Minimum ' + row.suggestedMinimum + ', maximum ' + row.suggestedMaximum : row.message,
+                stateText: row.ok ? 'Suggested' : 'Not suggested', stateColor: row.ok ? 'primary' : 'warning'}))"/>
+        <set field="reorderOptions" from="[{value:'RdmUpToMaximum', label:'Up to the maximum'},
+                {value:'', label:'Keep each rule’s method'}]"/>
+    </actions>
+    <widgets>
+        <label text="Suggesting levels needs a stock planner." type="p" condition="!can.stockPolicy"/>
+        <section name="LevelsPlanner" condition="can.stockPolicy">
+            <widgets>
+                <container-box>
+                    <box-header title="Suggest levels from demand"/>
+                    <box-body>
+                        <form-single name="LevelOptions" transition="." map="levelForm">
+                            <field name="planFacilityId">
+                                <default-field title="Facility">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'planFacilities', selected:planFacilityId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="scopeProductId">
+                                <default-field title="Product" tooltip="Empty suggests for every product with a rule here">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'planProducts', selected:scopeProductId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="historyDays">
+                                <default-field title="Demand history in days">
+                                    <text-line input-type="number" size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="safetyDays">
+                                <default-field title="Safety stock in days of demand">
+                                    <text-line input-type="number" size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="coverDays">
+                                <default-field title="Maximum covers days of demand">
+                                    <text-line input-type="number" size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="leadTimeDays">
+                                <default-field title="Lead time in days" tooltip="For a product whose supplier gives none">
+                                    <text-line input-type="number" size="6"/>
+                                </default-field>
+                            </field>
+                            <field name="preview" from="'Y'">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview levels"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="planFacilityId"/>
+                                    <field-ref name="scopeProductId"/>
+                                </field-row>
+                                <field-row-big>
+                                    <field-ref name="historyDays"/>
+                                    <field-ref name="safetyDays"/>
+                                    <field-ref name="coverDays"/>
+                                    <field-ref name="leadTimeDays"/>
+                                </field-row-big>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <label text="Preview the levels to see each product's suggestion before applying it." type="p"
+                        condition="preview != 'Y'"/>
+                <label text="No product has a reorder rule at this facility yet; choose a product to suggest its levels."
+                        type="p" condition="preview == 'Y' &amp;&amp; previewed &amp;&amp; !levelRows.length"/>
+                <section name="LevelRowsSection" condition="levelRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Suggested levels"/>
+                            <box-body-nopad>
+                                <form-list name="SuggestedLevels" list="levelRows" skip-form="true" paginate="false">
+                                    <row-selection id-field="productId" parameter="productIdList" list-mode="true">
+                                        <action>
+                                            <dialog button-text="Apply" title="Apply the suggested levels"/>
+                                            <form-single name="ApplyLevels" transition="applyLevels">
+                                                <field name="planFacilityId" from="planFacilityId">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="scopeProductId" from="scopeProductId">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="historyDays" from="levelForm.historyDays">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="safetyDays" from="levelForm.safetyDays">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="coverDays" from="levelForm.coverDays">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="leadTimeDays" from="leadTimeDays">
+                                                    <default-field title="">
+                                                        <hidden/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="reorderMethodEnumId">
+                                                    <default-field title="Order">
+                                                        <drop-down>
+                                                            <list-options list="reorderOptions" key="${value}" text="${label}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="changeReason">
+                                                    <default-field title="Reason">
+                                                        <text-line/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submit">
+                                                    <default-field title="">
+                                                        <submit text="Apply levels"
+                                                                confirmation="Apply the suggested minimum and maximum to each selected rule? A product without a suggestion is named and left."/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </action>
+                                    </row-selection>
+                                    <field name="pseudoId">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Name">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="averageDailyDemand" align="right">
+                                        <default-field title="Daily demand">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="leadTimeDays" align="right">
+                                        <default-field title="Lead days">
+                                            <display text="${leadTimeDays ? leadTimeDays + ' (' + leadTimeSource.toLowerCase() + ')' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="safetyStock" align="right">
+                                        <default-field title="Safety stock">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="currentText">
+                                        <default-field title="Now">
+                                            <display text="${[currentMinimum, currentMaximum].some(Boolean) ? (currentMinimum || '–') + ' to ' + (currentMaximum || '–') : 'No levels'}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="resultText">
+                                        <default-field title="Suggested">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                    stateText}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="pseudoId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="resultText"/>
+                                            <field-ref name="stateText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

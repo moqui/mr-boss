@@ -12,12 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Replenishment area of IronStone Purchasing (design-purchasing §1, §8): the shared SupplyPlanning (the default) and
-    InventoryAvailability, and ReorderRules (impl-purchasing P14), for the planner, buyer, reader and administrator groups
-    (BOSS_PUR_REPLENISHMENT). -->
+<!-- The Replenishment area of IronStone Purchasing (design-purchasing §1, §8; impl-purchasing P14a), for the planner, buyer,
+    reader and administrator groups (BOSS_PUR_REPLENISHMENT): Manufacturing's shared SupplyPlanning with the Purchasing
+    context (the default: the buying organization's facility, buy suggestions first), the ReorderRules of Replenishment/
+    (the rules, SuggestLevels and PlanSchedule), and Products' shared InventoryAvailability with the Purchasing context
+    (Summary, Projection and Policy; crosscut §3.7), opened from a reorder rule with its product and facility, so not in the
+    menu. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Replenishment" default-menu-index="8" menu-image="sym_o_autorenew" menu-image-type="icon">
+    <subscreens default-item="SupplyPlanning" always-use-full-path="true">
+        <subscreens-item name="SupplyPlanning" location="component://mr-boss/screen/Shared/SupplyPlanning.xml"
+                menu-title="Supply planning" menu-index="1"/>
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Supply planning, availability and reorder rules." type="p"/>
+        <subscreens-menu id="PurchasingReplenishmentTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

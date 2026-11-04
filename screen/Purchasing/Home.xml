@@ -31,6 +31,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.purchasing.BuyerServices.find#BuyerWork" in-map="{appRoot:appRoot}" out-map="work"/>
         <set field="workRows" from="work.workRows || []"/>
         <set field="can" from="purchasing.capabilities"/>
+        <set field="planRunText" from="home.planRunText || null"/>
         <if condition="lookupId">
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
@@ -77,6 +78,11 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Held bills" value="${counterText.heldCount}" icon="sym_o_block" size="sm"
                     link="/qapps/Purchasing/Bills" condition="can.listRead"/>
         </dashboard>
+        <!-- P14a: the shortfalls are the open buy suggestions of the current supply plans, as of the latest one -->
+        <label text="Shortfalls as of the supply plan of ${planRunText}" type="p" style="text-caption m-muted"
+                condition="can.replenishment &amp;&amp; planRunText"/>
+        <label text="No supply plan has been calculated yet: Replenishment's supply planning recalculates it." type="p"
+                style="text-caption m-muted" condition="can.replenishment &amp;&amp; !planRunText"/>
         <container-box>
             <box-header title="My work"/>
             <box-body>

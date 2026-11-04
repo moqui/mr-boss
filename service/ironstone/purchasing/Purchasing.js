@@ -12,6 +12,7 @@ const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/Enti
 const {find, one, rows, denied, call} = lib
 const access = lib.access
 
+const replenishment = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -213,7 +214,11 @@ const linkPaths = [
     "Returns",
     "Bills",
     "Performance",
-    "Settings"
+    "Settings",
+    // P14a: Replenishment's shared supply plan and availability, and the reorder rules
+    "Replenishment/SupplyPlanning",
+    "Replenishment/InventoryAvailability",
+    "Replenishment/ReorderRules"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -294,6 +299,13 @@ function readSupplier(partyId) {
     return {owners: [], suppliers: [partyId], shared: true, label: partyName(partyId), detail: ""}
 }
 
+// A facility a replenishment screen plans or lists (P14a): its owner is the buyer; it names no supplier.
+function readFacility(facilityId) {
+    const facility = one("mantle.facility.Facility", {facilityId})
+    if (!facility || !isInternal(facility.ownerPartyId)) return null
+    return {owners: [facility.ownerPartyId], suppliers: [], label: facility.facilityName || facilityId, detail: ""}
+}
+
 // Each kind a Purchasing screen, mount, palette or record link may be given: its name, icon, the Purchasing screen that opens
 // it (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup), the capability that reads it beyond the requester's own (listRead) and its read (a record answers its owners
@@ -311,7 +323,9 @@ const recordKinds = {
     rfq: {name: "RFQ", icon: "sym_o_contract", destination: null, read: id => readRequest(id, rfqRequestType)},
     agreement: {name: "Agreement", icon: "sym_o_handshake", destination: null, read: readAgreement},
     supplierReturn: {name: "Supplier return", icon: "sym_o_assignment_return", destination: null, read: readSupplierReturn},
-    supplier: {name: "Supplier", icon: "sym_o_corporate_fare", destination: null, read: readSupplier}
+    supplier: {name: "Supplier", icon: "sym_o_corporate_fare", destination: null, read: readSupplier},
+    // P14a: the facility a plan or reorder rule is for (no screen of its own)
+    facility: {name: "Facility", icon: "sym_o_warehouse", destination: null, read: readFacility}
 }
 
 // A record the user may work with: every buyer it names is one of their organizations and every supplier it names is in
@@ -480,7 +494,11 @@ const choiceSources = {
         if (selected && !options.some(option => option.value === selected) && ids.includes(selected))
             options.push({value: selected, label: partyName(selected)})
         return options
-    }
+    },
+    // P14a: Replenishment's planning facilities, products and plan methods (Replenishment.js)
+    planFacilities: (userScope, term, selected) => replenishment().facilityChoices(userScope, term, selected),
+    planProducts: (userScope, term, selected) => replenishment().productChoices(userScope, term, selected),
+    planningMethods: (userScope, term) => replenishment().methodChoices(term)
 }
 function choices(p) {
     const userScope = required()

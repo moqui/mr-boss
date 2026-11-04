@@ -1828,7 +1828,7 @@ quantity stays in the stock unit, converted at PO creation (R-SA-15). Planning r
 `WorkEffortProduct` WeptConsume and WeptProduce rows, which §4.2 says who maintains (R-SA-05). Built (impl-manufacturing P13): a
 run's facility set is `PlanningRunFacility` rows, each facility netted with those under it; the one schedule is
 `PlanSchedule`, keyed by organization; netting reads the records `get#InventoryProjectedInfo` sums directly, in the run's
-transaction, since the search index lags the commit (impl-manufacturing F76).
+transaction, since the search index lags the commit (impl-manufacturing F76). Built (impl-purchasing P14a): the line of a draft purchase order a buy conversion made (its RequirementSupply) is supply to the next run, so a converted shortage is not suggested again; a product's reorder rule orders up to its maximum or at least its reorder quantity below the minimum; plan readers include `SUPPLY_PLAN_VIEW` (Purchasing's reader).
 
 **Actions.** Recalculate, accept/reject and convert require planner/buyer/production permissions
 for their target method. Purchasing converts buy suggestions (`BOSS_PURCHASING_BUYER`),

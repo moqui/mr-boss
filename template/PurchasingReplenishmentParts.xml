@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Purchasing's Replenishment screens (impl-purchasing P14a). A screen includes each transition it uses by name
+    (transition-include), so a form here posts to the screen it is on.
+    - choices: the server-search drop-downs (ironstone.purchasing.AccessServices.get#Choices: planFacilities, planProducts,
+      planningMethods, suppliers);
+    - storeRule: a product's reorder rule at a facility, its levels, method and snooze, after the facility's check with the
+      stock planner's capability (stockPolicy), through Warehouse's mantle.facility.FacilityServices.store#ProductFacilityPolicy,
+      which checks STOCK_POLICY_PLAN and the organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeRule">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'stockPolicy'}"/>
+            <service-call name="mantle.facility.FacilityServices.store#ProductFacilityPolicy"
+                    in-map="{productId:productId, facilityId:facilityId, minimumStock:minimumStock, maximumStock:maximumStock,
+                        reorderQuantity:reorderQuantity, reorderMethodEnumId:reorderMethodEnumId, daysToShip:daysToShip,
+                        snoozeThruDate:snoozeThruDate, snoozeReason:snoozeReason, changeReason:changeReason,
+                        expectedLastUpdatedStamp:expectedLastUpdatedStamp || null}"/>
+            <message type="success">Reorder rule of ${productId} at ${facilityId} saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>

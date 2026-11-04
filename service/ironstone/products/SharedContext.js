@@ -153,6 +153,9 @@ function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()
+    // Purchasing's Replenishment mount of InventoryAvailability (impl-purchasing P14a, crosscut §3.7)
+    if (appRoot === "Purchasing")
+        return ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js").catalogContext()
     if (appRoot !== "Products") throw new Error("Shared catalog context is not available")
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,

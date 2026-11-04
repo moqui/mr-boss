@@ -38,6 +38,11 @@ along with this software (see the LICENSE.md file). If not, see
                     lateCount: null, heldCount: null}"/>
             <set field="planRunText" from="null"/>
             <!-- later phases: each counts its records here, by the capability that reads them -->
+            <!-- P14a: the open buy suggestions of the current plans, with the latest plan's date, for Replenishment's groups -->
+            <set field="shortfall" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Replenishment.js')
+                    .shortfalls(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope())"/>
+            <set field="counters" from="Object.assign({}, counters, {shortfallCount: shortfall.shortfallCount})"/>
+            <set field="planRunText" from="shortfall.planRunText"/>
         </actions>
     </service>
     <service verb="find" noun="BuyerWork" allow-remote="false">
