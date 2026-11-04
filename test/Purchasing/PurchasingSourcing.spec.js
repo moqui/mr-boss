@@ -2,6 +2,8 @@
 // render (a requester refused); QuoteRequestDetail's one html render for the buyer with the invited suppliers and the answer,
 // the reader's amounts withheld; the quote list's Expiring view and QuoteDetail's one html render, Publish price offered only to
 // a supplier-price editor; and Home's RFQs-due and quotes-expiring counts with the Today source of RFQs due, a buyer's only.
+// P12: QuoteComparison's and Award's one html render each, the quote's awards before an award, and a declined quote (marked a
+// quote) left out of Purchase orders' Closed view (F-P11-8).
 // The rules of RFQs, quotes and the price publish are Mantle's (mr-mantle test/order/Sourcing); the access cases are
 // PurchasingAccess's; the usable-when walk is acceptance PurchasingSourcingWalk. Run: ./moq test mr-boss --spec PurchasingSourcing
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
@@ -45,6 +47,8 @@ spec({
                 })
                 state.requestId = requestId
                 state.quoteId = quoteId
+                state.lineSeqId = line.orderItemSeqId
+                state.otherQuoteId = state.sent.supplierResults.find(row => row.supplierPartyId == ids.supplierId).orderId
             },
             false
         )
@@ -132,3 +136,53 @@ feature("Home counts RFQs due and quotes expiring; Today lists the RFQ due for a
         reader.length == 0
     }
 })
+
+feature(
+    "QuoteComparison's and Award's one html render; no award yet on the quote; a declined quote stays out of Purchase orders",
+    {
+        when() {
+            const compared = asUser(users.buyer, () => page("Sourcing/QuoteComparison", {requestId: state.requestId}, "html"))
+            const item = Array.from(
+                ec.entity.find("mantle.request.RequestItem").condition("requestId", state.requestId).disableAuthz().list()
+            )[0]
+            const allocationsText = [state.quoteId, state.lineSeqId, item.requestItemSeqId, "5"].join(":")
+            const award = asUser(users.buyer, () => page("Sourcing/Award", {requestId: state.requestId, allocationsText}, "html"))
+            const awards = asUser(users.buyer, () =>
+                invoke("ironstone.purchasing.AwardServices.get#QuoteAwards", {orderId: state.quoteId})
+            )
+            asUser(
+                users.buyer,
+                () =>
+                    invoke(S + "store#QuoteInvitation", {
+                        requestId: state.requestId,
+                        orderId: state.otherQuoteId,
+                        declined: true,
+                        reason: "No stock"
+                    }),
+                false
+            )
+            const closed = asUser(users.buyer, () =>
+                invoke("ironstone.purchasing.OrderServices.find#PurchaseOrders", {view: "closed", text: state.otherQuoteId})
+            )
+            const marked = ec.entity
+                .find("mantle.order.OrderHeader")
+                .condition("orderId", state.otherQuoteId)
+                .disableAuthz()
+                .one()
+            return {compared, award, awards, closedIds: Array.from(closed.orderRows || []).map(row => row.orderId), marked}
+        },
+        then({compared, award, awards, closedIds, marked}) {
+            compared.errors.join(" | ") == ""
+            compared.output.includes("Compare quotes")
+            compared.output.includes("Awaiting the supplier")
+            compared.output.includes("8.75")
+            award.errors.join(" | ") == ""
+            award.output.includes("Review the award")
+            award.output.includes("Place 1 quote")
+            awards.awardState == "open"
+            marked.statusId == "OrderRejected"
+            marked.supplierQuote == "Y"
+            !closedIds.includes(state.otherQuoteId)
+        }
+    }
+)

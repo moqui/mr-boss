@@ -1,0 +1,410 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- QuoteComparison (design-purchasing §5 QuoteComparison; style-guide split; impl-purchasing P12): an RFQ's quotes compared,
+    over mantle.order.SourcingServices.compare#SupplierQuotes after AccessServices.check#Record of the RFQ. CompareBasis: the
+    display currency, the day of the exchange rates and the compared quantity of the demand line chosen. The split: the demand
+    lines (the RFQ items, with what is left to award and the best comparable offer) at left, and the chosen line's offers at
+    right (OfferComparison: the original basis beside the normalized price per demand unit, committed amount, freight and
+    estimated landed cost, lead time, validity and risk; Not comparable with its reason, never zero or cheapest; the ranking
+    explains and chooses nothing). Phones and the terminal pick a demand line, then its offers. SelectOffer: Add allocation of
+    the chosen line's quantities to its selectable offers (a substitute accepted explicitly); the award so far shows each
+    line's demanded, selected and remaining quantity, and Review the award opens Award with the allocations. Print and CSV
+    give the comparison with the original and normalized basis. Prices are a buyer's or an approver's (Mantle's permission). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Compare quotes" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="requestItemSeqId"/>
+    <parameter name="displayCurrencyUomId"/>
+    <parameter name="fxDate"/>
+    <parameter name="quantity"/>
+    <parameter name="allocationsText"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <!-- CompareBasis: the page again on the basis chosen -->
+    <transition name="basis">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="requestItemSeqId"/>
+            <parameter name="displayCurrencyUomId"/>
+            <parameter name="fxDate"/>
+            <parameter name="quantity"/>
+            <parameter name="allocationsText"/>
+        </default-response>
+    </transition>
+    <!-- SelectOffer: the chosen line's allocations (the rows posted) in place of its earlier ones, the others kept -->
+    <transition name="addAllocation">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <script><![CDATA[
+                const params = ec.web.parameters
+                const kept = String(allocationsText || '').split(';').map((entry) => entry.trim()).filter(Boolean)
+                    .filter((entry) => entry.split(':')[2] !== String(requestItemSeqId || ''))
+                const added = []
+                let invalid = false
+                for (const key of Object.keys(params).filter((name) => /^orderItemSeqId_\d+$/.test(name))) {
+                    const suffix = key.slice(key.lastIndexOf('_'))
+                    const amount = String(params['allocateQuantity' + suffix] ?? '').trim()
+                    if (!amount) continue
+                    if (!/^\d+(\.\d+)?$/.test(amount)) invalid = true
+                    else if (Number(amount) > 0) {
+                        const substitute = String(params['substituteApproved' + suffix] ?? '') === 'Y' ? ':S' : ''
+                        added.push([params['orderId' + suffix], params[key], requestItemSeqId, amount].join(':') + substitute)
+                    }
+                }
+                if (invalid) ec.message.addError('Enter a quantity of zero or more')
+                else allocationsText = kept.concat(added).join(';')
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="requestItemSeqId"/>
+            <parameter name="displayCurrencyUomId"/>
+            <parameter name="fxDate"/>
+            <parameter name="allocationsText"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="comparisonCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}"/>
+            <service-call name="mantle.order.SourcingServices.compare#SupplierQuotes" out-map="exported"
+                    in-map="{requestId:requestId, displayCurrencyUomId:(displayCurrencyUomId || null), fxDate:(fxDate || null),
+                        output:'csv'}"/>
+            <script>ec.web.sendTextResponse(exported.csvText, 'text/csv', exported.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="comparisonPrint" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}"/>
+            <service-call name="mantle.order.SourcingServices.compare#SupplierQuotes" out-map="printed"
+                    in-map="{requestId:requestId, displayCurrencyUomId:(displayCurrencyUomId || null), fxDate:(fxDate || null),
+                        output:'print'}"/>
+            <script>
+                const bytes = ec.resource.xslFoTransform(printed.printHtml, null, null, 'application/pdf')
+                ec.web.response.setContentType('application/pdf')
+                ec.web.response.setHeader('Content-Disposition', 'inline; filename="' + printed.fileName + '"')
+                ec.web.response.getOutputStream().write(bytes)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.AccessServices.check#Record" out-map="rfqRecord"
+                in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}" transaction="force-new" ignore-error="true"/>
+        <set field="unavailableText" from="ec.message.hasError() ? 'RFQ ' + requestId + ' is not available: it does not exist or it '
+                + 'is not a request for quotation of your organizations.' : null"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="!unavailableText">
+            <service-call name="mantle.order.SourcingServices.compare#SupplierQuotes" out-map="comparison"
+                    in-map="{requestId:requestId, requestItemSeqId:null, displayCurrencyUomId:(displayCurrencyUomId || null),
+                        fxDate:(fxDate || null)}" transaction="force-new" ignore-error="true"/>
+            <set field="unavailableText" from="comparison?.basis ? null : 'The comparison of RFQ ' + requestId
+                    + ' is not available: it is for its buyers and purchase approvers.'"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="found" from="!unavailableText"/>
+        <if condition="found">
+            <set field="basisValue" from="comparison.basis"/>
+            <set field="demandRows" from="comparison.demandRows"/>
+            <set field="chosenSeqId" from="requestItemSeqId || demandRows[0]?.requestItemSeqId || null"/>
+            <set field="chosenDemand" from="demandRows.find((row) =&gt; row.requestItemSeqId == chosenSeqId) || null"/>
+            <!-- the chosen line again at the compared quantity given -->
+            <if condition="chosenDemand &amp;&amp; quantity">
+                <service-call name="mantle.order.SourcingServices.compare#SupplierQuotes" out-map="chosenComparison"
+                        in-map="{requestId:requestId, requestItemSeqId:chosenSeqId, quantity:quantity,
+                            displayCurrencyUomId:(displayCurrencyUomId || null), fxDate:(fxDate || null)}"
+                        transaction="force-new" ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="offerRows" from="(chosenComparison?.offerRows || comparison.offerRows)
+                    .filter((row) =&gt; row.requestItemSeqId == chosenSeqId)"/>
+            <set field="selectRows" from="offerRows.filter((row) =&gt; row.canSelect)"/>
+            <!-- the award so far: each line's demanded, selected and remaining quantity from the allocations -->
+            <script><![CDATA[
+                const entries = String(allocationsText || '').split(';').map((entry) => entry.trim()).filter(Boolean)
+                    .map((entry) => entry.split(':'))
+                const allOffers = comparison.offerRows
+                const allocationRows = entries.map((fields) => {
+                    const offer = allOffers.find((row) => row.orderId == fields[0] && row.orderItemSeqId == fields[1]) || {}
+                    return {orderId: fields[0], orderItemSeqId: fields[1], requestItemSeqId: fields[2], quantityText: fields[3],
+                        supplierName: offer.supplierName || fields[0], productText: offer.productText || '',
+                        substituteText: fields[4] === 'S' ? 'Substitute accepted' : ''}
+                })
+                const awardDemandRows = demandRows.map((row) => {
+                    const selected = entries.filter((fields) => fields[2] == row.requestItemSeqId)
+                        .reduce((total, fields) => total + Number(fields[3] || 0), 0)
+                    const remaining = Number(row.remaining || 0) - selected
+                    return {requestItemSeqId: row.requestItemSeqId, productText: row.productText,
+                        demandedText: row.remainingText + ' ' + row.uomText, selectedText: String(selected),
+                        remainingText: remaining < 0 ? 'Over by ' + (-remaining) : String(remaining)}
+                })
+                const quoteRevisions = [...new Set(allOffers.map((row) => row.orderId + ':' + row.orderRevision))].join(',')
+                const choices = selectRows.map((row) => Object.assign({}, row, {allocateQuantity: (entries.find((fields) =>
+                    fields[0] == row.orderId && fields[1] == row.orderItemSeqId) || [])[3] || ''}))
+                ec.context.putAll({allocationRows, awardDemandRows, quoteRevisions, selectRows: choices})
+            ]]></script>
+            <set field="basisFormValue" from="{requestId:requestId, requestItemSeqId:chosenSeqId, allocationsText:allocationsText || '',
+                    displayCurrencyUomId:basisValue.displayCurrencyUomId, fxDate:basisValue.fxDay,
+                    quantity:quantity || chosenDemand?.comparedQuantity}"/>
+            <set field="exportParameters" from="{requestId:requestId, displayCurrencyUomId:basisValue.displayCurrencyUomId,
+                    fxDate:basisValue.fxDay}"/>
+            <set field="csvUrl" from="sri.buildUrl('comparisonCsv').addParameters(exportParameters).getUrlWithParams()"/>
+            <set field="printUrl" from="sri.buildUrl('comparisonPrint').addParameters(exportParameters).getUrlWithParams()"/>
+            <set field="canAward" from="!!purchasing.capabilities.buy"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="QuoteComparisonMissing" condition="!found">
+            <widgets>
+                <context title="Compare quotes of RFQ ${requestId}"/>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="${unavailableText}"/>
+                        <link url="${sharedLinks['Sourcing/QuoteRequests']}" text="Back to RFQs" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="QuoteComparisonFound" condition="found">
+            <widgets>
+                <context record-entity="mantle.request.Request" record-id="${requestId}"
+                        title="Compare quotes · RFQ ${requestId} · ${basisValue.requestName}"/>
+                <container style="q-mb-xs">
+                    <link url="${sharedLinks['Sourcing/QuoteRequestDetail']}" link-type="anchor" text="RFQ ${requestId}"
+                            icon="arrow_back" parameter-map="{requestId:requestId}"/>
+                </container>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-baseline">
+                                <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                                <label text="Compare quotes · ${basisValue.requestName}" type="h5"/>
+                            </container>
+                            <label text="${[basisValue.organizationName, basisValue.revisionText, basisValue.basisText]
+                                    .filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-foot m-record-actions">
+                        <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" link-type="anchor-button"
+                                target-window="_blank"/>
+                        <link url="${csvUrl}" url-type="plain" text="CSV" icon="sym_o_download" link-type="anchor-button"/>
+                    </container>
+                </container>
+                <!-- CompareBasis -->
+                <container-box>
+                    <box-header title="Basis"/>
+                    <box-body>
+                        <form-single name="CompareBasis" transition="basis" map="basisFormValue">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="requestItemSeqId"><default-field><hidden/></default-field></field>
+                            <field name="allocationsText"><default-field><hidden/></default-field></field>
+                            <field name="displayCurrencyUomId">
+                                <default-field title="Display currency">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" min-length="0"
+                                                parameter-map="{choice:'currencies', selected:displayCurrencyUomId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fxDate">
+                                <default-field title="Rates of" tooltip="The day of Accounting's exchange rates">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Compared quantity" tooltip="Of the demand line chosen; the quantity left to award by default">
+                                    <text-line size="8"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Compare"><submit type="default"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="displayCurrencyUomId"/><field-ref name="fxDate"/></field-row>
+                                <field-row><field-ref name="quantity"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-row>
+                    <!-- the demand lines -->
+                    <row-col md="4">
+                        <container-box>
+                            <box-header title="Demand · ${demandRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="DemandLines" list="demandRows" skip-form="true" paginate="false">
+                                    <field name="productText">
+                                        <default-field title="Item">
+                                            <link url="." text="${requestItemSeqId} · ${productText}" link-type="anchor"
+                                                    parameter-map="{requestId:requestId, requestItemSeqId:requestItemSeqId,
+                                                        displayCurrencyUomId:basisValue.displayCurrencyUomId, fxDate:basisValue.fxDay,
+                                                        allocationsText:allocationsText || ''}"/>
+                                            <label text="${requestItemSeqId == chosenSeqId ? 'Shown' : ''}" type="div"
+                                                    style="text-caption text-primary" condition="requestItemSeqId == chosenSeqId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="remainingText" align="right">
+                                        <default-field title="Left">
+                                            <label text="${remainingText} ${uomText}" type="span"/>
+                                            <label text="of ${quantityText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="bestText"><default-field title="Lowest"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/></column>
+                                        <column><field-ref name="remainingText"/><field-ref name="bestText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <!-- OfferComparison: the chosen line's offers -->
+                    <row-col md="8">
+                        <container-box>
+                            <box-header title="Offers for ${chosenDemand ? chosenDemand.requestItemSeqId + ' · ' + chosenDemand.productText
+                                    + ' · ' + (quantity || chosenDemand.comparedText) + ' ' + chosenDemand.uomText : 'no item'}"/>
+                            <box-body-nopad>
+                                <form-list name="OfferComparison" list="offerRows" skip-form="true" paginate="false">
+                                    <field name="rankText"><default-field title="Rank"><display/></default-field></field>
+                                    <field name="supplierName">
+                                        <default-field title="Supplier">
+                                            <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="${supplierName}" link-type="anchor"
+                                                    parameter-map="{orderId:orderId}"/>
+                                            <label text="${orderId} · ${statusText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="originalText">
+                                        <default-field title="As quoted">
+                                            <label text="${productText}" type="div"/>
+                                            <label text="${originalText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="normalizedText" align="right">
+                                        <default-field title="Unit price">
+                                            <label text="${comparable ? normalizedText : 'Not comparable'}" type="div"/>
+                                            <label text="${basisText}" type="div" style="text-caption m-muted" condition="basisText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="committedText" align="right"><default-field title="Committed"><display/></default-field></field>
+                                    <field name="landedText" align="right">
+                                        <default-field title="Est. landed">
+                                            <label text="${landedText}" type="div"/>
+                                            <label text="freight ${freightText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="leadText"><default-field title="Delivery"><display/></default-field></field>
+                                    <field name="validityText"><default-field title="Valid"><display/></default-field></field>
+                                    <field name="riskText">
+                                        <default-field title="Risk">
+                                            <label text="${riskText}" type="div"/>
+                                            <label text="${reasonText}" type="div" style="text-caption text-warning" condition="!comparable"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="supplierName"/><field-ref name="rankText"/></column>
+                                        <column><field-ref name="normalizedText"/><field-ref name="landedText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!offerRows.length"
+                                        text="No supplier quoted this item yet."/>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="offerRows.length"
+                                        text="The ranking compares committed unit prices; it does not choose or approve a supplier."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <!-- SelectOffer: allocate the chosen line's quantity to its offers -->
+                <section name="SelectOfferShown" condition="canAward &amp;&amp; selectRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Allocate ${chosenDemand.requestItemSeqId} · ${chosenDemand.remainingText} ${chosenDemand.uomText} left"/>
+                            <box-body-nopad>
+                                <form-list name="SelectOffer" list="selectRows" transition="addAllocation" multi="true">
+                                    <hidden-parameters parameter-map="{requestId:requestId, requestItemSeqId:chosenSeqId,
+                                            displayCurrencyUomId:basisValue.displayCurrencyUomId, fxDate:basisValue.fxDay,
+                                            allocationsText:allocationsText || ''}"/>
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                    <field name="supplierName">
+                                        <default-field title="Offer">
+                                            <label text="${supplierName}" type="div"/>
+                                            <label text="${productText} · ${normalizedText || originalText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="allocateQuantity">
+                                        <default-field title="Quantity (${chosenDemand.uomText})"><text-line size="8"/></default-field>
+                                    </field>
+                                    <field name="substituteApproved">
+                                        <conditional-field condition="substitute" title="Substitute">
+                                            <check><option key="Y" text="Accept the substitute"/></check>
+                                        </conditional-field>
+                                        <default-field title=""><display text=""/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title=""><submit text="Add allocation" type="default"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="supplierName"/></column>
+                                        <column><field-ref name="allocateQuantity"/><field-ref name="substituteApproved"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- the award so far -->
+                <section name="AwardSoFar" condition="canAward &amp;&amp; allocationRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="The award so far"/>
+                            <box-toolbar>
+                                <link url="${sharedLinks['Sourcing/Award']}" text="Review the award" icon="sym_o_fact_check"
+                                        btn-type="primary" parameter-map="{requestId:requestId, allocationsText:allocationsText,
+                                            sourceRevision:basisValue.sourceRevision, quoteRevisions:quoteRevisions}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="AwardDemand" list="awardDemandRows" skip-form="true" paginate="false">
+                                    <field name="productText"><default-field title="Item"><display/></default-field></field>
+                                    <field name="demandedText" align="right"><default-field title="Left to award"><display/></default-field></field>
+                                    <field name="selectedText" align="right"><default-field title="Selected"><display/></default-field></field>
+                                    <field name="remainingText" align="right"><default-field title="Remaining"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/></column>
+                                        <column><field-ref name="selectedText"/><field-ref name="remainingText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="AwardAllocations" list="allocationRows" skip-form="true" paginate="false">
+                                    <field name="requestItemSeqId"><default-field title="Item"><display/></default-field></field>
+                                    <field name="supplierName">
+                                        <default-field title="Supplier">
+                                            <label text="${supplierName}" type="div"/>
+                                            <label text="${orderId}:${orderItemSeqId} · ${productText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                    <field name="substituteText"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="supplierName"/></column>
+                                        <column><field-ref name="quantityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

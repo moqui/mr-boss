@@ -183,7 +183,10 @@ function routeFixtures() {
         "Sourcing/Quotes": {parameters: {}, text: "Supplier quotes"},
         "Sourcing/QuoteRequestDetail": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"},
         "Sourcing/QuoteDetail": {parameters: {orderId: "BOSS_PUR_NO_QUOTE"}, text: "not available"},
-        NewQuoteRequest: {parameters: {}, text: "New RFQ"}
+        NewQuoteRequest: {parameters: {}, text: "New RFQ"},
+        // P12: the comparison and award of an RFQ (no demo RFQ: not available)
+        "Sourcing/QuoteComparison": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"},
+        "Sourcing/Award": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

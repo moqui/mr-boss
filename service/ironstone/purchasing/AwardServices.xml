@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's comparison and award reads (design-purchasing §5 QuoteComparison, Award, QuoteDetail's QuoteAwards;
+    impl-purchasing P12; Awards.js): QuoteDetail's awards of a quote and the Award screen's stored result. The screens call the
+    Mantle rules (mantle.order.SourcingServices compare#SupplierQuotes, preview#Award, commit#Award, close#QuoteRequest,
+    store#SupplierQuoteFreight) after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="QuoteAwards" allow-remote="false">
+        <description>QuoteAwards (design §5 QuoteDetail): what an award placed of a quote the user may read (check#Record order),
+            line by line: the RFQ item, the quantity awarded and ordered, the price (withheld from a user who may not see
+            prices), the purchase request line and requirement it supplies and what is left of the RFQ item; or that the quote
+            was not awarded (cancelled when its RFQ closed) or declined, with the reason; or that nothing is awarded yet.
+            Refuses an order the user may not read (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="orderId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="awardState"><description>open, awarded, notAwarded or declined</description></parameter>
+            <parameter name="awardText"/>
+            <parameter name="awardRows" type="List"/>
+            <parameter name="purchaseOrderUrl"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Awards.js')
+                    .execute('quoteAwards', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="AwardResult" allow-remote="false">
+        <description>The Award screen's result of an award (commit#Award) or a close (close#QuoteRequest) of an RFQ the user may
+            work with, as its operation stored it: the result per supplier group (placed, existing, failed by name, or waiting
+            for the award's approval) with each placed order's link and the allocations a new award may retry, and per regret
+            recipient. Amounts are withheld from a user who may not see prices. Refuses an RFQ the user may not work with and
+            an operation not of it (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+            <parameter name="operationKey" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="kind"/>
+            <parameter name="status"/>
+            <parameter name="resultStatus"/>
+            <parameter name="stepText"/>
+            <parameter name="doneText"/>
+            <parameter name="groupRows" type="List"/>
+            <parameter name="recipientRows" type="List"/>
+            <parameter name="closingRows" type="List"/>
+            <parameter name="warningText"/>
+            <parameter name="retryText"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Awards.js')
+                    .execute('awardResult', context))</script>
+        </actions>
+    </service>
+</services>

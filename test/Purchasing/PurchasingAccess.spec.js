@@ -15,8 +15,8 @@
 // (requestCreate), a request's detail for its requester and organization, and its sourcing for the buyer only; P13 an
 // agreement's scope, its change and release for the buyer only and its record link to AgreementDetail; P11 the quick create of
 // an RFQ (rfqCreate), an RFQ's scope, its writes for the buyer only, its record link to QuoteRequestDetail and the RFQ left out
-// of Commons and Projects; P16 the supplier-response topic, and Supplier360's Invite to the Supplier app for the buyer only, on a
-// supplier in scope.
+// of Commons and Projects; P12 an RFQ's comparison for its buyers and approvers, its award and close for the buyer only; P16
+// the supplier-response topic, and Supplier360's Invite to the Supplier app for the buyer only, on a supplier in scope.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -1070,5 +1070,47 @@ feature("inviting a supplier's contact to the Supplier app is the buyer's, on a 
         other.includes("RECORD_UNAVAILABLE")
         buyerInvite == ""
         readerInvite.includes("PERMISSION_DENIED")
+    }
+})
+
+feature("an RFQ's comparison is its buyers' and approvers'; its award and close are the buyer's", {
+    when() {
+        const problems = []
+        const S = "mantle.order.SourcingServices."
+        const rfqId = asUser(
+            users.buyer,
+            () => {
+                const requestId = invoke(S + "create#QuoteRequest", {
+                    organizationPartyId: ids.organizationId,
+                    requestName: "Access spec award"
+                }).requestId
+                invoke(S + "store#QuoteRequestItem", {requestId, productId: "DEMO_1_1", quantity: 2})
+                return requestId
+            },
+            false
+        )
+        const compare = user => asUser(user, () => refusal(S + "compare#SupplierQuotes", {requestId: rfqId}), false)
+        for (const user of [users.buyer, users.approve]) {
+            const message = compare(user)
+            if (message !== "") problems.push(`${user}'s comparison: ${message}`)
+        }
+        const reader = compare(users.read)
+        if (!reader.includes("PERMISSION_DENIED")) problems.push(`the reader's comparison: ${reader || "accepted"}`)
+        const close = user => asUser(user, () => refusal(S + "close#QuoteRequest", {requestId: rfqId, preview: true}), false)
+        const buyerClose = close(users.buyer)
+        if (buyerClose !== "") problems.push(`the buyer's close preview: ${buyerClose}`)
+        const approverClose = close(users.approve)
+        if (!approverClose.includes("PERMISSION_DENIED")) problems.push(`the approver's close: ${approverClose || "accepted"}`)
+        const award = user =>
+            asUser(user, () => refusal(access + "check#Record", {recordType: "rfq", recordId: rfqId, capability: "buy"}))
+        const otherAward = asUser(users.services, () => refusal(access + "check#Record", {recordType: "rfq", recordId: rfqId}))
+        if (!otherAward.includes("RECORD_UNAVAILABLE"))
+            problems.push(`another organization's reader: ${otherAward || "accepted"}`)
+        if (award(users.buyer) !== "") problems.push("the buyer may not award")
+        if (!award(users.approve).includes("PERMISSION_DENIED")) problems.push("the approver may award")
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
     }
 })

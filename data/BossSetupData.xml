@@ -1559,4 +1559,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Purchasing P12: an award of an RFQ's quotes waiting for its approval (Mantle's PurchaseAwardApproval topic,
+        SourcingAwardSetupData.xml) opens the RFQ under Purchasing, decided from Approvals or the Commons inbox -->
+    <moqui.security.user.NotificationTopic topic="PurchaseAwardApproval"
+            linkTemplate="/qapps/Purchasing/Sourcing/QuoteRequestDetail?requestId=${requestId}"/>
 </entity-facade-xml>

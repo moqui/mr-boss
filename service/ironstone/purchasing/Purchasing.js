@@ -299,7 +299,10 @@ const linkPaths = [
     "Sourcing/QuoteRequests",
     "Sourcing/QuoteRequestDetail",
     "Sourcing/Quotes",
-    "Sourcing/QuoteDetail"
+    "Sourcing/QuoteDetail",
+    // P12: the comparison and award of an RFQ's quotes
+    "Sourcing/QuoteComparison",
+    "Sourcing/Award"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")

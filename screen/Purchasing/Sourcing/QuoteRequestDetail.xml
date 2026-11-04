@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     order in the quote statuses, with when it was sent the RFQ and whether it changed since, Invite supplier, Enter quote
     (QuoteDetail) and Declined. QuoteRequestResponses: the quotes answered. The published PDFs, the History from the audit log,
     the Conversation and Files. Every write is mantle.order.SourcingServices', after AccessServices.check#Record of the RFQ
-    with the buy capability; a reader sees the RFQ without its actions. -->
+    with the buy capability; a reader sees the RFQ without its actions. P12: Compare quotes (QuoteComparison, once a supplier
+    answered) and More's Close RFQ (Award's CloseSolicitation step). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="RFQ" default-menu-include="false">
     <parameter name="requestId" required="true"/>
@@ -215,7 +216,12 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                         <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" link-type="anchor-button"
                                 target-window="_blank"/>
+                        <!-- P12: the comparison and award of the quotes, and the close of the RFQ -->
+                        <link url="${sharedLinks['Sourcing/QuoteComparison']}" text="Compare quotes" icon="sym_o_compare_arrows"
+                                link-type="anchor-button" parameter-map="{requestId:requestId}" condition="rfq.responseRows.length"/>
                         <button-menu text="More" icon="more_horiz">
+                            <link url="${sharedLinks['Sourcing/Award']}" text="Close RFQ" icon="sym_o_task_alt" link-type="anchor"
+                                    parameter-map="{requestId:requestId, step:'close'}" condition="rfq.canEdit"/>
                             <container-dialog id="EditQuoteRequest" button-text="Edit RFQ" icon="sym_o_edit" width="720"
                                     title="Edit RFQ ${requestId}" condition="rfq.canEdit">
                                 <form-single name="EditQuoteRequestForm" transition="updateRfq" map="headerValue">
