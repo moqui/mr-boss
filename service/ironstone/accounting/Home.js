@@ -102,8 +102,8 @@ function moneyCards(scope, counts, findings) {
 
 // MyFinanceWork: each source the user works on, with its count and the list that resolves it. A source that fails is
 // listed as unavailable; one with nothing waiting is left out. The close is a link to the last ended open month's
-// checklist, without a count, since the checklist runs every close check. Production runs awaiting cost close come with
-// Manufacturing's cost close.
+// checklist, without a count, since the checklist runs every close check. Production runs awaiting their cost close are
+// Manufacturing's queue (ironstone.accounting.ProductionCostServices.find#CostCloseQueue, impl-manufacturing P15).
 const LIMIT = 2000
 const openStatus = () => {
     const cf = ec.entity.conditionFactory
@@ -153,6 +153,10 @@ function work(scope) {
                 parameters: {organizationPartyId: org, timePeriodId: period.timePeriodId}
             }
         })
+    if (c.glPost || policy.lib.access.has("PRODUCTION_COST_POST"))
+        source("Production runs awaiting cost close", links["Inventory/ProductionCostClose"], {organizationPartyId: org}, () => ({
+            count: probe("ironstone.accounting.ProductionCostServices.find#CostCloseQueue", {organizationPartyId: org}).queueCount
+        }))
     if (c.arRead || c.arEdit)
         source("Collection follow-ups assigned to you", links["Receivables/Collections"], {organizationPartyId: org}, () => ({
             count: followUps(org)

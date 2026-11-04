@@ -60,6 +60,8 @@ function access(parameters) {
         "Records/ReturnDetail",
         "Records/Product360",
         "Inventory/InventoryValuation",
+        "Inventory/ProductionCostClose",
+        "Settings/CostingPolicies",
         "Payables/LandedCosts",
         "Reports/StockTransactions",
         "Approvals",
@@ -303,7 +305,9 @@ const enumTypes = [
     "DepreciationType",
     "BudgetType",
     "BudgetControlStage",
-    "BudgetControlAction"
+    "BudgetControlAction",
+    "ProductionOverheadBasis",
+    "ProductionCoproductMethod"
 ]
 const accountRow = {value: row => row.glAccountId, label: accountLabel, searchedByPolicy: true}
 const choiceSources = {

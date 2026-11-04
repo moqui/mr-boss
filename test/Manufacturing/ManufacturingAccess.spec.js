@@ -1957,3 +1957,109 @@ feature("the schedule and Capacity open for the scheduler with the Move form, th
         other.status != 200 || !other.output.includes("Access spec 1")
     }
 })
+
+// ===== P15: cost close =====
+// Accounting's ProductionCostClose: the Cost close tab needs the finance groups and not the Accounting launcher, the
+// estimator requests the review and neither previews nor posts, and the queue is Accounting's read.
+const accountingPage = (path, parameters = {}) => {
+    const result = ec.screen
+        .makeTest()
+        .rootScreen("component://mr-boss/screen/Accounting.xml")
+        .renderMode("html")
+        .render(path, Object.assign({lastStandalone: "-2"}, parameters), null)
+    const output = String(result.output || "")
+    ec.message.clearErrors()
+    return {status: result.status, output, errors: output.match(/(Error rendering|Exception in render)[^\n<]*/g) || []}
+}
+feature("the cost close's Mantle verbs and the queue check their permissions on the same parameters", {
+    when() {
+        const run = {workEffortId: ids.releasedRunId}
+        // the queue is Accounting's: the finance approver's own organization (the Accounting demo's)
+        const queue = {organizationPartyId: "BOSS_ACCT_ORG"}
+        return {
+            approverPreview: asUser(
+                users.costClose,
+                () => refusal("mantle.ledger.ProductionCostServices.preview#CostClose", run),
+                false
+            ),
+            estimatorPreview: asUser(
+                users.cost,
+                () => refusal("mantle.ledger.ProductionCostServices.preview#CostClose", run),
+                false
+            ),
+            estimatorPost: asUser(
+                users.cost,
+                () =>
+                    refusal("mantle.ledger.ProductionCostServices.post#CostClose", {
+                        operationKey: "mfg-access-p15",
+                        workEffortId: ids.releasedRunId,
+                        inputFingerprint: "x"
+                    }),
+                false
+            ),
+            financePost: asUser(
+                users.finance,
+                () =>
+                    refusal("mantle.ledger.ProductionCostServices.post#CostClose", {
+                        operationKey: "mfg-access-p15f",
+                        workEffortId: ids.releasedRunId,
+                        inputFingerprint: "x"
+                    }),
+                false
+            ),
+            otherPreview: asUser(
+                users.services,
+                () => refusal("mantle.ledger.ProductionCostServices.preview#CostClose", run),
+                false
+            ),
+            approverQueue: asUser("finance.approve", () =>
+                refusal("ironstone.accounting.ProductionCostServices.find#CostCloseQueue", queue)
+            ),
+            estimatorQueue: asUser(
+                users.cost,
+                () =>
+                    refusal("ironstone.accounting.ProductionCostServices.find#CostCloseQueue", {
+                        organizationPartyId: "ORG_ZIZI_RETAIL"
+                    }),
+                false
+            )
+        }
+    },
+    then(r) {
+        r.approverPreview == ""
+        r.estimatorPreview.includes("PERMISSION_DENIED")
+        r.estimatorPost.includes("PERMISSION_DENIED")
+        r.financePost.includes("PERMISSION_DENIED")
+        r.otherPreview.includes("PERMISSION_DENIED") || r.otherPreview.includes("RECORD_UNAVAILABLE")
+        r.approverQueue == ""
+        r.estimatorQueue != ""
+    }
+})
+feature("the Cost close tab opens the task for the finance groups without the Accounting launcher, and a note for the others", {
+    when() {
+        const run = {workEffortId: ids.releasedRunId, lastStandalone: "true"}
+        return {
+            approver: asUser(users.costClose, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCostClose", run, "html")),
+            reader: asUser(users.finance, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCostClose", run, "html")),
+            estimator: asUser(users.cost, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCostClose", run, "html")),
+            approverAccounting: asUser(users.costClose, () => accountingPage("Inventory/ProductionCostClose")),
+            accounting: asUser("finance.approve", () =>
+                accountingPage("Inventory/ProductionCostClose", {organizationPartyId: "BOSS_ACCT_ORG"})
+            )
+        }
+    },
+    then({approver, reader, estimator, approverAccounting, accounting}) {
+        approver.errors.length == 0
+        approver.output.includes("Not ready to post")
+        approver.output.includes("RUN_NOT_COMPLETE") || approver.output.includes("complete it first")
+        reader.errors.length == 0
+        reader.output.includes("Preview needs general ledger posting")
+        !reader.output.includes("Not ready to post")
+        estimator.errors.length == 0
+        estimator.output.includes("The cost close is Accounting")
+        // the Manufacturing mount does not open Accounting: its launcher is still needed there
+        approverAccounting.status != 200 || !approverAccounting.output.includes("Waiting for the cost close")
+        accounting.errors.length == 0
+        accounting.output.includes("Waiting for the cost close")
+    }
+})

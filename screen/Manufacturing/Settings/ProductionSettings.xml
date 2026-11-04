@@ -74,6 +74,15 @@ along with this software (see the LICENSE.md file). If not, see
                 [group, traceRows.filter(row =&gt; row.group === group)]))"/>
         <set field="formScope" from="{organizationPartyId:policy?.organizationPartyId, facilityId:policy?.facilityId,
                 expectedFromDate:policy?.expectedFromDate}"/>
+        <!-- impl-manufacturing P15: Accounting's costing policy in effect, read only (no rates without financial read) -->
+        <set field="costing" from="null"/>
+        <if condition="policyAvailable">
+            <service-call name="mantle.ledger.ProductionCostServices.get#AllocationPolicies" out-map="costing"
+                    transaction="force-new" ignore-error="true" in-map="{organizationPartyId:policy.organizationPartyId}"/>
+        </if>
+        <set field="costingText" from="costing?.policy ? 'Overhead ' + costing.policy.overheadBasisText + '; co-products by '
+                + costing.policy.coproductMethodText + (costing.policy.stateText == 'Default' ? ' (the default)' : ', from '
+                + costing.policy.fromDateText) : ''"/>
     </actions>
     <widgets>
         <section name="Scope">
@@ -430,6 +439,12 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Time evidence and estimates" type="p" style="text-caption m-muted"/>
                         <label text="Overhead and co-product allocation are Accounting's costing policies, not set here."
                                 type="p" style="text-caption m-muted"/>
+                        <!-- impl-manufacturing P15: the policy in effect, read only, and its settings for the finance administrator -->
+                        <label text="Costing policy: ${costingText}." type="p" style="text-caption" condition="costingText"/>
+                        <link url="/qapps/Accounting/Settings/CostingPolicies" url-type="plain" text="Costing policies"
+                                link-type="anchor" icon="sym_o_open_in_new" target-window="_blank"
+                                condition="ec.user.hasPermission('ACCOUNTING_ADMIN')"
+                                parameter-map="{organizationPartyId:policy?.organizationPartyId}"/>
                         <form-list name="TimeAndCostTrace" list="groupRows.timeAndCost" skip-form="true" paginate="false">
                             <field name="fieldLabel">
                                 <default-field title="Setting">

@@ -264,6 +264,9 @@ function routeFixtures() {
         ["Records/ReturnDetail", "Customer return BOSS_ACCT_RETURN", {returnId: "BOSS_ACCT_RETURN"}],
         ["Records/Product360", "Source movements", {productId: "BOSS_ACCT_SUPPLY"}],
         ["Inventory/InventoryValuation", "Valuation exceptions"],
+        // impl-manufacturing P15: the production cost close queue and the costing policies
+        ["Inventory/ProductionCostClose", "Waiting for the cost close"],
+        ["Settings/CostingPolicies", "Costing policies"],
         ["Payables/LandedCosts", "Charge lines", {invoiceId: "BOSS_ACCT_BILL_FREIGHT"}],
         ["Reports/StockTransactions", "Count variance", {timePeriodId: ids.closePeriodId}],
         ["Approvals", "Approvals"],

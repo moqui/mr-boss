@@ -1,0 +1,567 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProductionCostClose (design-accounting ProductionCostClose, style-guide §3.6 Task; crosscut §3.24; impl-manufacturing
+    P15): a production run's cost close. Accounting mounts it at Accounting/Inventory/ProductionCostClose (appRoot
+    Accounting): with no run, the queue of runs waiting for the close (ironstone.accounting.ProductionCostServices
+    find#CostCloseQueue: reviews requested, completed runs, adjustments after a close); with a run, the preview
+    (mantle.ledger.ProductionCostServices.preview#CostClose): the events absorbed by component, the overhead the
+    CostingPolicies row applies, the scrap moved out of WIP, the co-product split over the output lines with each line's
+    variance, the proposed ledger lines and what blocks the post, and Post cost close (post#CostClose, which also closes the
+    run) or Return to production. Manufacturing mounts it as WorkOrderDetail's Cost close tab (appRoot Manufacturing; the
+    work order checked by WorkOrderDetail): the same task for the finance groups, whatever their Accounting launcher, and a
+    note for the others. Mantle checks the permissions and the organization: preview needs ACCOUNTING_GL_POST or
+    PRODUCTION_COST_POST, post and return PRODUCTION_COST_POST, the posted allocations' amounts financial read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cost close" default-menu-index="10">
+    <parameter name="workEffortId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="accountingDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="postClose">
+        <actions>
+            <service-call name="mantle.ledger.ProductionCostServices.post#CostClose" out-map="posted"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, accountingDate:accountingDate || null,
+                        inputFingerprint:inputFingerprint, changeReason:changeReason || null}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${posted.result.mode == 'adjustment' ? 'Cost adjustment posted' : 'Cost close posted; the work order is closed'}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="returnReview">
+        <actions>
+            <service-call name="mantle.ledger.ProductionCostServices.return#CostReview"
+                    in-map="{workEffortId:workEffortId, note:note}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Cost review returned to production</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="inAccounting" from="appRoot == 'Accounting'"/>
+        <!-- what the user may do, from the permissions Mantle checks -->
+        <set field="canPreview" from="ec.user.hasPermission('ACCOUNTING_GL_POST') || ec.user.hasPermission('PRODUCTION_COST_POST')"/>
+        <set field="canPost" from="ec.user.hasPermission('PRODUCTION_COST_POST')"/>
+        <set field="financialRead" from="canPreview || ec.user.hasPermission('ACCOUNTING_VIEW')"/>
+        <set field="journalUrl" from="inAccounting ? sharedLinks['GeneralLedger/JournalEntryDetail']
+                : '/qapps/Accounting/GeneralLedger/JournalEntryDetail'"/>
+        <!-- the queue, in Accounting with no run chosen -->
+        <set field="queue" from="null"/>
+        <if condition="inAccounting &amp;&amp; !workEffortId &amp;&amp; organizationPartyId">
+            <service-call name="ironstone.accounting.ProductionCostServices.find#CostCloseQueue" out-map="queue"
+                    transaction="force-new" ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+        </if>
+        <set field="queueRows" from="queue?.queueRows || []"/>
+        <!-- the run's close: the preview, and what is posted -->
+        <set field="previewed" from="null"/>
+        <set field="closeInfo" from="null"/>
+        <if condition="workEffortId &amp;&amp; financialRead">
+            <service-call name="mantle.ledger.ProductionCostServices.get#CostClose" out-map="closeInfo"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <if condition="workEffortId &amp;&amp; canPreview &amp;&amp; closeInfo?.workEffortId">
+            <service-call name="mantle.ledger.ProductionCostServices.preview#CostClose" out-map="previewed"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{workEffortId:workEffortId, accountingDate:accountingDate || null}"/>
+        </if>
+        <set field="recordFound" from="!!closeInfo?.workEffortId"/>
+        <set field="hasPreview" from="!!previewed?.inputFingerprint"/>
+        <set field="findingText" from="(previewed?.findings || []).map(row =&gt; row.message).join('; ')"/>
+        <set field="warningText" from="(previewed?.warnings || []).map(row =&gt; row.message).join('; ')"/>
+        <set field="money" from="Object.fromEntries(Object.entries(previewed?.totals || {}).map(([name, value]) =&gt; [name,
+                value == null ? '' : ec.l10n.formatCurrency(toDecimal(value), previewed.currencyUomId)]))"/>
+        <set field="postForm" from="{workEffortId:workEffortId, accountingDate:previewed?.accountingDate,
+                inputFingerprint:previewed?.inputFingerprint,
+                operationKey:ec.resource.script('component://mr-boss/service/ironstone/accounting/AccountingLib.js').operationKey('costclose')}"/>
+        <set field="postShown" from="hasPreview &amp;&amp; canPost &amp;&amp; !previewed.blocked"/>
+        <set field="returnShown" from="recordFound &amp;&amp; canPost &amp;&amp; closeInfo.reviewStatusId == 'PcrRequested'"/>
+        <set field="allocationRows" from="closeInfo?.allocationRows || []"/>
+    </actions>
+    <widgets>
+        <!-- Accounting with no run: the organization and the queue -->
+        <section name="Queue" condition="inAccounting &amp;&amp; !workEffortId">
+            <widgets>
+                <label text="Production cost close" type="h5"/>
+                <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+                <container-box>
+                    <box-header title="Waiting for the cost close"/>
+                    <box-body-nopad>
+                        <label text="Choose an organization to see its work orders waiting for the cost close." type="p"
+                                style="q-pa-md" condition="!organizationPartyId"/>
+                        <label text="No work order is waiting for the cost close. Manufacturing requests a review from a work order's Costs."
+                                type="p" style="q-pa-md" condition="organizationPartyId &amp;&amp; !queueRows.length"/>
+                        <section name="QueueList" condition="queueRows.length">
+                            <widgets>
+                                <form-list name="CostCloseQueue" list="queueRows" skip-form="true" paginate="false">
+                                    <field name="workEffortId">
+                                        <default-field title="Work order">
+                                            <link url="." text="${workEffortId}" link-type="anchor"
+                                                    parameter-map="{workEffortId:workEffortId, organizationPartyId:organizationPartyId}"/>
+                                            <label text="${workEffortName}" type="div" style="text-caption"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="kindText">
+                                        <default-field title="Waiting">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${kindColor}">${WebUtilities.encodeHtml(kindText || '')}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: kindText || ""})}]]></text>
+                                                <text type="html">${kindText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountingDate">
+                                        <default-field title="Proposed date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="exceptionText">
+                                        <default-field title="Needs attention">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="workEffortId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="kindText"/>
+                                            <field-ref name="exceptionText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- a production user without financial authority -->
+        <section name="FinanceOnly" condition="workEffortId &amp;&amp; !financialRead">
+            <widgets>
+                <label text="The cost close is Accounting's: it needs financial read, and posting it the cost close authority. Request the review from the Costs tab."
+                        type="p"/>
+            </widgets>
+        </section>
+        <section name="CloseNotAvailable" condition="workEffortId &amp;&amp; financialRead &amp;&amp; !recordFound">
+            <widgets>
+                <label text="Work order ${workEffortId} is not available." type="p"/>
+                <link url="." text="Back to the queue" link-type="anchor" icon="sym_o_arrow_back" condition="inAccounting"
+                        parameter-map="{workEffortId:'', organizationPartyId:organizationPartyId}"/>
+            </widgets>
+        </section>
+
+        <section name="Close" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${workEffortId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${previewed?.modeText || 'Cost close'}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="${closeInfo.statusText} · review ${closeInfo.reviewStatusText}${closeInfo.closed ? ' · cost closed ' + closeInfo.closedDateText : ''}${previewed?.accountingDate ? ' · accounting date ' + previewed.accountingDate : ''}"
+                                    type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${closeInfo.closed ? 'grey-7' : previewed?.blocked ? 'warning' : 'positive'}">${
+                                    WebUtilities.encodeHtml(closeInfo.closed ? 'Cost closed' : previewed?.blocked ? 'Blocked' : hasPreview ? 'Ready to post' : 'Preview not available')}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: closeInfo.closed ? "Cost closed" : previewed?.blocked ? "Blocked" : hasPreview ? "Ready to post" : "Preview not available"})}]]></text>
+                                <text type="html">${closeInfo.closed ? 'Cost closed' : previewed?.blocked ? 'Blocked' : hasPreview ? 'Ready to post' : 'Preview not available'}</text>
+                            </render-mode>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-actions row items-center q-gutter-sm">
+                            <container-dialog id="PostCostClose" condition="postShown" type="primary" icon="sym_o_publish"
+                                    button-text="${previewed.mode == 'adjustment' ? 'Post adjustment' : 'Post cost close'}" width="640"
+                                    title="${previewed.mode == 'adjustment' ? 'Post the cost adjustment of' : 'Post the cost close of'} work order ${workEffortId}">
+                                <label text="Posts the ledger lines below at ${previewed.accountingDate}${previewed.mode == 'adjustment' ? '' : ' and closes the work order'}; variance ${money.residual}."
+                                        type="p"/>
+                                <form-single name="PostClose" transition="postClose" map="postForm">
+                                    <field name="workEffortId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountingDate">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="inputFingerprint">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason" tooltip="On the journal entry">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="${previewed.mode == 'adjustment' ? 'Post adjustment' : 'Post cost close'}"
+                                                    confirmation="Post the cost of work order ${workEffortId}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <button-menu text="More" icon="more_horiz" condition="returnShown">
+                                <container-dialog id="ReturnReview" button-text="Return to production" icon="sym_o_undo"
+                                        title="Return the cost review of work order ${workEffortId}">
+                                    <form-single name="ReturnReviewForm" transition="returnReview">
+                                        <field name="workEffortId" from="workEffortId">
+                                            <default-field>
+                                                <hidden/>
+                                            </default-field>
+                                        </field>
+                                        <field name="note">
+                                            <default-field title="What production should fix">
+                                                <text-area rows="3"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Return the review"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+
+                <section name="DateChoice" condition="canPreview &amp;&amp; !closeInfo.closed">
+                    <widgets>
+                        <form-single name="CostCloseScope" transition="." map="context">
+                            <field name="workEffortId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="accountingDate">
+                                <default-field title="Accounting date" tooltip="The review's proposed date when empty">
+                                    <date-time type="date"/>
+                                </default-field>
+                            </field>
+                            <field name="submit">
+                                <default-field title="">
+                                    <submit text="Preview at this date"/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="accountingDate"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                    </widgets>
+                </section>
+
+                <section name="Findings" condition="findingText">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not ready to post"/>
+                            <box-body>
+                                <label text="${findingText}." type="p"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label text="${warningText}." type="p" style="text-warning" condition="warningText"/>
+                <label text="Preview needs general ledger posting or the cost close authority; the posted close is below."
+                        type="p" style="m-muted" condition="!canPreview"/>
+
+                <section name="Preview" condition="hasPreview">
+                    <widgets>
+                        <label text="${previewed.policy.stateText} policy: overhead ${previewed.policy.overheadBasisText}, co-products by ${previewed.policy.coproductMethodText}. Work in process before ${money.before}, absorbed ${money.absorbedTotal}, overhead ${money.overheadTotal}, scrap ${money.scrapTotal}; to variance ${money.residual}."
+                                type="p"/>
+                        <container-box>
+                            <box-header title="Cost evidence absorbed"/>
+                            <box-body-nopad>
+                                <label text="Nothing waits to be absorbed: material and output posted with their stock movements."
+                                        type="p" style="q-pa-md" condition="!previewed.absorptionRows.length"/>
+                                <section name="AbsorptionList" condition="previewed.absorptionRows.length">
+                                    <widgets>
+                                        <form-list name="Absorption" list="previewed.absorptionRows" skip-form="true" paginate="false">
+                                            <field name="eventTypeText">
+                                                <default-field title="Event">
+                                                    <display text="${eventTypeText} · ${eventDateText}${afterClose ? ' · after the close' : ''}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="componentText">
+                                                <default-field title="Component">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="eventTypeText"/>
+                                                    <field-ref name="componentText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="amount"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="OverheadList" condition="previewed.overheadRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Overhead applied"/>
+                                    <box-body-nopad>
+                                        <form-list name="Overhead" list="previewed.overheadRows" skip-form="true" paginate="false">
+                                            <field name="description">
+                                                <default-field title="Basis">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="description"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="amount"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="ScrapList" condition="previewed.scrapRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Scrap of issued material"/>
+                                    <box-body-nopad>
+                                        <form-list name="Scrap" list="previewed.scrapRows" skip-form="true" paginate="false">
+                                            <field name="productId">
+                                                <default-field title="Product">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Amount">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="productId"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="amount"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Output allocation"/>
+                            <box-body-nopad>
+                                <label text="No output line takes a share; the residual goes to variance." type="p" style="q-pa-md"
+                                        condition="!previewed.outputRows.length"/>
+                                <section name="OutputList" condition="previewed.outputRows.length">
+                                    <widgets>
+                                        <form-list name="OutputAllocation" list="previewed.outputRows" skip-form="true" paginate="false">
+                                            <field name="productName">
+                                                <default-field title="Output">
+                                                    <display text="${productName} · ${roleText}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sharePercent">
+                                                <default-field title="Share %">
+                                                    <display align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="share">
+                                                <default-field title="Allocated">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="relieved">
+                                                <default-field title="Received at">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="variance">
+                                                <default-field title="Variance">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="productName"/>
+                                                    <field-ref name="sharePercent"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="share"/>
+                                                    <field-ref name="variance"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Proposed journal entry"/>
+                            <box-body-nopad>
+                                <label text="Nothing to post: the work order closes with no journal entry." type="p" style="q-pa-md"
+                                        condition="!previewed.ledgerRows.length"/>
+                                <section name="LedgerList" condition="previewed.ledgerRows.length">
+                                    <widgets>
+                                        <form-list name="LedgerProposal" list="previewed.ledgerRows" skip-form="true" paginate="false">
+                                            <field name="accountText">
+                                                <default-field title="Account">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="debit">
+                                                <default-field title="Debit">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="credit">
+                                                <default-field title="Credit">
+                                                    <display currency-unit-field="previewed.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="accountText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="debit"/>
+                                                    <field-ref name="credit"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="Posted" condition="allocationRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Posted allocations"/>
+                            <box-body-nopad>
+                                <form-list name="PostedAllocations" list="allocationRows" skip-form="true" paginate="false">
+                                    <field name="destinationText">
+                                        <default-field title="To">
+                                            <display text="${destinationText}${adjustment ? ' (adjustment)' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="componentText">
+                                        <default-field title="Component">
+                                            <display text="${componentText || ''}${productName ? ' · ' + productName : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="accountingDate">
+                                        <default-field title="Date">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="allocatedAmount" hide="!closeInfo.financialRead">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="amountUomId" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acctgTransId" hide="!closeInfo.financialRead">
+                                        <conditional-field condition="acctgTransId">
+                                            <link url="${journalUrl}" url-type="plain" text="${acctgTransId}" link-type="anchor"
+                                                    parameter-map="{recordId:acctgTransId, organizationPartyId:closeInfo.organizationPartyId}"/>
+                                        </conditional-field>
+                                        <default-field title="Journal entry">
+                                            <display text=""/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="destinationText"/>
+                                            <field-ref name="componentText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="allocatedAmount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

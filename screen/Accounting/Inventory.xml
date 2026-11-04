@@ -13,8 +13,9 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Inventory (design-accounting §10): the stock valuation beside the inventory and WIP accounts, with its exceptions,
-    revaluation and cost data repair (Shared/InventoryValuation with the Accounting context). Manufacturing's
-    ProductionCostClose joins it when it is built. -->
+    revaluation and cost data repair (Shared/InventoryValuation with the Accounting context), and the production cost close
+    (Shared/ProductionCostClose with the Accounting context: the queue of runs waiting for it, the preview and the post;
+    impl-manufacturing P15). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         default-menu-title="Inventory"
         menu-image="sym_o_inventory_2"
@@ -26,6 +27,10 @@ along with this software (see the LICENSE.md file). If not, see
                 location="component://mr-boss/screen/Shared/InventoryValuation.xml"
                 menu-title="Valuation"
                 menu-index="1"/>
+        <subscreens-item name="ProductionCostClose"
+                location="component://mr-boss/screen/Shared/ProductionCostClose.xml"
+                menu-title="Production cost close"
+                menu-index="2"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="InventoryPanel" type="tab"/>
