@@ -132,7 +132,11 @@ function routeFixtures() {
         "Products/ProductFind": {parameters: {}, text: "Find a product"},
         "Products/Product360": {parameters: {productId: "DEMO_1_1"}, text: "DEMO_1_1"},
         "Settings/SettingsHome": {parameters: {}, text: "Supplier categories"},
-        "Settings/PurchasePolicy": {parameters: {}, text: "Purchase controls"}
+        "Settings/PurchasePolicy": {parameters: {}, text: "Purchase controls"},
+        // P3: the purchase orders, Retail's draft in OrderDetail and the quick create
+        "Orders/PurchaseOrders": {parameters: {}, text: "Purchase orders"},
+        "Orders/OrderDetail": {parameters: {orderId: ids.orderId}, text: "Brightline restock"},
+        NewPurchaseOrder: {parameters: {}, text: "New purchase order"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
@@ -141,7 +145,9 @@ function routeFixtures() {
         ["Suppliers/Supplier360", "component://mr-boss/screen/Shared/Supplier360.xml"],
         ["Suppliers/SupplierPrices", "component://mr-boss/screen/Shared/SupplierPrices.xml"],
         ["Suppliers/PriceExplain", "component://mr-boss/screen/Shared/PriceExplain.xml"],
-        ["Products/Product360", "component://mr-boss/screen/Shared/Product360.xml"]
+        ["Products/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
+        // P3: Projects' shared OrderDetail under Orders
+        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"]
     ]
     return {routes, mounts}
 }

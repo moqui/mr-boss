@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A new draft purchase order from the shell's quick create (design-purchasing §1 PUR-SHELL; impl-purchasing P3): the buying
+    organization, the supplier and a reference (mantle.order.PurchaseServices.create#PurchaseOrder, PURCHASE_ORDER_EDIT); it
+    opens the draft in OrderDetail to add its lines. For buyers (BOSS_PUR_NEW_ORDER), so quick create offers it to them
+    only; it is at the root, out of the menu, since the buying lists' grant on Orders reaches every screen under it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New purchase order" default-menu-include="false">
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="createOrder">
+        <actions>
+            <service-call name="mantle.order.PurchaseServices.create#PurchaseOrder" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, vendorPartyId:vendorPartyId, orderName:orderName}"/>
+            <set field="orderId" from="created.orderId"/>
+        </actions>
+        <default-response url="//Purchasing/Orders/OrderDetail">
+            <parameter name="orderId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="draftValue" from="{organizationPartyId:purchasing.activeOrganizationPartyId
+                || purchasing.organizationPartyIds[0] || ''}"/>
+    </actions>
+    <widgets>
+        <label text="New purchase order" type="h5"/>
+        <label text="A draft for the supplier; add its lines on the order, then place it." type="p"
+                style="text-caption m-muted"/>
+        <form-single name="QuickPurchaseOrder" transition="createOrder" map="draftValue">
+            <field name="organizationPartyId">
+                <default-field title="Buying organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="vendorPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="orderName">
+                <default-field title="Reference">
+                    <text-line/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title=""><submit text="Create draft" type="primary"/></default-field>
+            </field>
+        </form-single>
+    </widgets>
+</screen>

@@ -6,7 +6,8 @@
 // with artifact authorization enabled. The Mantle services' own permission checks are Mantle's (mr-mantle test/order). The
 // access and isolation walk is the acceptance PurchasingFoundationWalk. A later phase adds a case only for an access rule it
 // adds, and its quick creates, Today sources and notification topics to the menu feature's rows; P2 adds the supplier scope of
-// the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link.
+// the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link; P3 the quick create of a
+// purchase order, a purchase order's record link to OrderDetail and its detail's record scope.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell} = lib
@@ -99,22 +100,26 @@ const menuOf = extra => order.filter(name => ["Home", "Requests"].includes(name)
 // no area of P1 creates a record, so quick create offers nothing yet: P3 adds the purchase order, P10 the request, P11 the RFQ
 feature("the Purchasing menu and providers follow each group's areas; the launcher shows Purchasing to its users only", {
     when() {
+        // P3: quick create of a purchase order for the buyer and the administrator (BOSS_PUR_NEW_ORDER)
         const rows = [
-            {user: users.requester, extra: []},
-            {user: users.read, extra: lists.concat(["Replenishment"])},
-            {user: users.buyer, extra: lists.concat(["Replenishment"])},
-            {user: users.planner, extra: lists.concat(["Replenishment"])},
-            {user: users.approve, extra: lists.concat(["Approvals"])},
-            {user: users.admin, extra: order}
+            {user: users.requester, extra: [], quick: []},
+            {user: users.read, extra: lists.concat(["Replenishment"]), quick: []},
+            {user: users.buyer, extra: lists.concat(["Replenishment"]), quick: ["purchasingPurchaseOrder"]},
+            {user: users.planner, extra: lists.concat(["Replenishment"]), quick: []},
+            {user: users.approve, extra: lists.concat(["Approvals"]), quick: []},
+            {user: users.admin, extra: order, quick: ["purchasingPurchaseOrder"]}
         ]
         const problems = []
-        for (const {user, extra} of rows) {
+        for (const {user, extra, quick} of rows) {
             const found = shell(user)
-            const quickKinds = (found.providers?.quickCreate || []).map(item => item.kind)
+            const quickKinds = (found.providers?.quickCreate || [])
+                .map(item => item.kind)
+                .filter(kind => kind.startsWith("purchasing"))
             if (found.status != 200) problems.push(`${user}'s menu: ${found.status}`)
             if (JSON.stringify(found.names) !== JSON.stringify(menuOf(extra)))
                 problems.push(`${user}'s menu is ${found.names}, not ${menuOf(extra)}`)
-            if (quickKinds.length) problems.push(`${user} is offered quick create ${quickKinds}`)
+            if (JSON.stringify(quickKinds) !== JSON.stringify(quick))
+                problems.push(`${user} is offered quick create ${quickKinds}, not ${quick}`)
             if (!(found.providers?.paletteSources || []).some(source => source.group === "Purchasing"))
                 problems.push(`${user} has no Purchasing palette source`)
             if (!(found.providers?.keymaps || []).some(keymap => keymap.scope === "purchasing"))
@@ -145,6 +150,9 @@ feature("Home shows the reader's counters as unavailable, no work yet, spend una
         errors == []
         output.includes("Unacknowledged orders")
         output.includes("Unavailable")
+        // P3: the purchase order counts are the list groups'
+        output.includes("Draft orders")
+        output.includes("Approved, not sent")
         output.includes("Nothing is waiting for you.")
         output.includes("Committed and billed spend is unavailable.")
         output.includes("Purchase order " + ids.orderId)
@@ -233,7 +241,7 @@ feature("a user's suppliers are their organization's and the shared ones, in the
         const search = (user, text) =>
             asUser(user, () => invoke(access + "search#Records", {text, limit: 20}).rows.map(row => row.url))
         const orders = search(users.read, "boss_pur_po")
-        if (!orders.some(url => url.includes("lookupType=order&lookupId=" + ids.orderId)))
+        if (!orders.some(url => url.endsWith("Orders/OrderDetail?orderId=" + ids.orderId)))
             problems.push(`the reader's palette orders: ${orders}`)
         if (orders.some(url => url.includes(ids.otherOrderId))) problems.push("the reader's palette has the other order")
         const suppliers = search(users.read, "ziddleman")
@@ -353,12 +361,37 @@ feature("a purchase order's record link opens under Purchasing for its reader on
         }
     },
     then({own, other, services, requester, finance}) {
-        // P1 builds no record screen, so a purchase order opens Home's lookup; P3 sets its destination
-        own == "/qapps/Purchasing/Home?lookupType=order&lookupId=" + ids.orderId
+        // P3: a purchase order opens the shared OrderDetail under Purchasing
+        own == "/qapps/Purchasing/Orders/OrderDetail?orderId=" + ids.orderId
         other == null
-        services == "/qapps/Purchasing/Home?lookupType=order&lookupId=" + ids.otherOrderId
+        services == "/qapps/Purchasing/Orders/OrderDetail?orderId=" + ids.otherOrderId
         requester == null
         finance == null
+    }
+})
+
+// P3: OrderDetail's Purchasing context is the record check's: a buyer's organization's order, refused for another
+// organization's and for a requester (no buying lists)
+feature("a purchase order's detail is its organization's buyer's, and refused for another organization's and a requester", {
+    when() {
+        const detail = (user, orderId) =>
+            asUser(user, () => invoke("ironstone.purchasing.OrderServices.get#OrderDetail", {appRoot: "Purchasing", orderId}))
+        const refusedDetail = (user, orderId) =>
+            asUser(user, () => refusal("ironstone.purchasing.OrderServices.get#OrderDetail", {appRoot: "Purchasing", orderId}))
+        return {
+            own: detail(users.buyer, ids.orderId).purchaseOrder,
+            other: refusedDetail(users.buyer, ids.otherOrderId),
+            services: detail(users.services, ids.otherOrderId).purchaseOrder,
+            requester: refusedDetail(users.requester, ids.orderId)
+        }
+    },
+    then({own, other, services, requester}) {
+        own.orderId == ids.orderId
+        own.actions.place == true
+        other.includes("RECORD_UNAVAILABLE")
+        services.orderId == ids.otherOrderId
+        services.actions.place == false
+        requester.includes("RECORD_UNAVAILABLE")
     }
 })
 

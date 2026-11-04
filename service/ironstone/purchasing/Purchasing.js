@@ -13,6 +13,7 @@ const {find, one, rows, denied, call} = lib
 const access = lib.access
 
 const replenishment = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js")
+const orders = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Orders.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -229,7 +230,10 @@ const linkPaths = [
     "Suppliers/SupplierPrices",
     "Suppliers/PriceExplain",
     "Products/Product360",
-    "Settings/PurchasePolicy"
+    "Settings/PurchasePolicy",
+    // P3: the purchase orders and the shared OrderDetail
+    "Orders/PurchaseOrders",
+    "Orders/OrderDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -336,7 +340,13 @@ function readFacility(facilityId) {
 // lookup), the capability that reads it beyond the requester's own (listRead) and its read (a record answers its owners
 // (buyers) and suppliers, a label and a detail, or null when there is no such record). Later phases set the destinations.
 const recordKinds = {
-    order: {name: "Purchase order", icon: "sym_o_receipt_long", destination: null, read: id => readOrder(id)},
+    // P3: a purchase order opens the shared OrderDetail under Orders
+    order: {
+        name: "Purchase order",
+        icon: "sym_o_receipt_long",
+        destination: "Orders/OrderDetail?orderId=",
+        read: id => readOrder(id)
+    },
     quote: {name: "Supplier quote", icon: "sym_o_request_quote", destination: null, read: id => readOrder(id, true)},
     request: {
         name: "Purchase request",
@@ -601,6 +611,9 @@ const choiceSources = {
             options.push({value: selected, label: partyName(selected)})
         return options
     },
+    // P3: the products a purchase order line may name, and the cost centres of a line (Orders.js)
+    orderProducts: (userScope, term, selected) => orders().productChoices(userScope, term, selected),
+    costCenters: (userScope, term, selected) => orders().costCenterChoices(userScope, term, selected),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

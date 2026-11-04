@@ -36,12 +36,19 @@ along with this software (see the LICENSE.md file). If not, see
     impl-manufacturing P14; mantle.work.ProductionServices.get#SubcontractOrder; template/ManufacturingSubcontractParts.xml):
     read only, a subcontract purchase order or a sales order linked to the user's work orders: its header and items with their
     production links (a service line's operation and work order with what was accepted, a sales line's supplying work orders),
-    prices only for a buyer or price reader; nothing is placed or approved here. -->
+    prices only for a buyer or price reader; nothing is placed or approved here.
+    Purchasing (appRoot Purchasing, mounted at Purchasing/Orders/OrderDetail; crosscut §3.6 Purchasing row, impl-purchasing P3;
+    ironstone.purchasing.OrderServices.get#OrderDetail; template/PurchasingOrderDetail.xml): a purchase order of the user's
+    organizations, its header with Place, Approve or Send by status and More (hold, release, close remainder, clone, print as
+    of, cancel), its holds, lines (a draft's edited here; a service line's acceptance), approvals, documents and emails, and
+    history; each action through the Mantle purchase services. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Order" default-menu-include="false">
 
     <parameter name="orderId" required="true"/>
     <parameter name="organizationPartyId"/>
+    <!-- Purchasing: the time a print as of was asked for -->
+    <parameter name="printAsOf"/>
 
     <transition name="sendEstimate">
         <actions>
@@ -58,6 +65,23 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="issueSupplierLink" location="component://mr-boss/template/AccountingRecords.xml"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="createOutgoing" location="component://mr-boss/template/WarehousePickParts.xml"/>
+    <!-- Purchasing (impl-purchasing P3): the purchase order's actions -->
+    <transition-include name="purchaseChoices" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="storeLine" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="deleteLine" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="updateOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="placeOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="approveOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="sendOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="holdOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="releaseHold" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="cancelOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="closeRemainder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="cloneOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="acceptService" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="asOf" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="printOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+    <transition-include name="orderContent" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"
@@ -78,6 +102,12 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.work.ProductionServices.get#SubcontractOrder" in-map="{orderId:orderId}"
                     out-map="manufacturingOrderOut" transaction="force-new" ignore-error="true"/>
             <set field="manufacturingOrder" from="manufacturingOrderOut?.subcontractOrder || null"/>
+            <set field="recordFound" from="false"/>
+        </else-if><else-if condition="appRoot == 'Purchasing'">
+            <!-- Purchasing (crosscut §3.6 Purchasing row, impl-purchasing P3): a purchase order of the user's organizations -->
+            <service-call name="ironstone.purchasing.OrderServices.get#OrderDetail" in-map="{appRoot:appRoot, orderId:orderId}"
+                    out-map="purchaseOrderOut" transaction="force-new" ignore-error="true"/>
+            <set field="purchaseOrder" from="purchaseOrderOut?.purchaseOrder || null"/>
             <set field="recordFound" from="false"/>
         </else-if><else>
         <script><![CDATA[
@@ -105,8 +135,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="AccountingOrder" location="component://mr-boss/template/AccountingRecords.xml"/>
         <section-include name="WarehouseOrder" location="component://mr-boss/template/WarehouseOrderDetail.xml"/>
         <section-include name="ManufacturingOrder" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
+        <section-include name="PurchasingOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
         <section name="OrderNotFound"
-                condition="!recordFound &amp;&amp; appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"><widgets>
+                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing'].includes(appRoot)"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Order ${orderId} is not available: it does not exist, it is not linked to a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

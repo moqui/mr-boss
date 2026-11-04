@@ -1,0 +1,657 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Purchasing branch (crosscut §3.6 Purchasing row, design-purchasing §6 OrderDetail; impl-purchasing P3): the
+    section Shared/OrderDetail includes when appRoot is Purchasing (ironstone.purchasing.OrderServices.get#OrderDetail), and
+    its transitions, each included by name. The header with the order's status, revision, supplier and total, and one primary
+    action by status: Place (a draft), Approve (placed, a purchase approver: decide#PurchaseApproval) or Send (approved:
+    send#PurchaseOrder); More holds Hold (a buyer, with a Purchase reason) and Release (a purchase approver), Close remainder
+    (close#PurchaseRemainders), Cancel, Clone and Print as of a date and time (get#PurchaseOrderPrint). Then the open holds, the
+    lines (a draft's added, changed and removed through store#PurchaseOrderItem; a service line's acceptance through
+    accept#ServiceItem), the approval decisions, the stored documents and emails, and the history from the audit log. Each
+    write checks the order with AccessServices.check#Record, then calls the Mantle service, which checks its permission and
+    the organization again. Bills and the supplier prepayment come with Bills (P6); changes after placing with OrderChanges
+    (P9). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="purchaseChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeLine">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.store#PurchaseOrderItem"
+                    in-map="{orderId:orderId, orderItemSeqId:orderItemSeqId || null, productId:productId, quantity:quantity,
+                        unitAmount:unitAmount || null, itemDescription:itemDescription, requiredByDate:requiredByDate || null,
+                        costCenterId:costCenterId || null}"/>
+            <message type="success">Line saved</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="deleteLine">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.delete#PurchaseOrderItem"
+                    in-map="{orderId:orderId, orderItemSeqId:orderItemSeqId}"/>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="updateOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.update#PurchaseOrder"
+                    in-map="{orderId:orderId, orderName:orderName, facilityId:facilityId || null}"/>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="placeOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.place#PurchaseOrder" in-map="{orderId:orderId}"
+                    out-map="placed"/>
+            <message type="success">Placed; it is ${placed.statusId == 'OrderApproved' ? 'approved' : 'waiting for approval'}</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'approve'}"/>
+            <service-call name="mantle.order.PurchaseServices.decide#PurchaseApproval"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, reason:reason, operationKey:operationKey}"/>
+            <message type="success">Approved</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="sendOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.OrderServices.send#PurchaseOrder" out-map="sent"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, operationKey:operationKey,
+                        toAddresses:toAddresses || null, note:note}"/>
+            <script>ec.message.addMessage('Sent to ' + sent.successCount + ' of ' + sent.recipientResults.length +
+                (sent.recipientResults.some((row) =&gt; row.reasonCode == 'ALREADY_SENT') ? '; this revision was already sent to the others'
+                    : ''), sent.failureCount ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="holdOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <service-call name="mantle.order.OrderServices.hold#Order"
+                    in-map="{orderId:orderId, holdTypeEnumId:'OhtPurchase', holdComment:holdComment}"/>
+            <message type="success">On hold</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="releaseHold">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'holdRelease'}"/>
+            <entity-find-one entity-name="mantle.order.OrderHoldReason" value-field="holdReason" disable-authz="true"/>
+            <if condition="holdReason?.orderId != orderId">
+                <return error="true" message="The hold is not on order ${orderId}"/></if>
+            <service-call name="mantle.order.OrderServices.release#OrderHold"
+                    in-map="{orderHoldReasonId:orderHoldReasonId, releaseComment:releaseComment}"/>
+            <message type="success">Hold released</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.cancel#PurchaseOrder" in-map="{orderId:orderId, reason:reason}"/>
+            <message type="success">Cancelled</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeRemainder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.OrderServices.close#PurchaseRemainders" out-map="closed"
+                    in-map="{orderId:orderId, reason:reason}"/>
+            <message type="success">Remainder closed</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cloneOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.PurchaseServices.clone#PurchaseOrder" in-map="{orderId:orderId}" out-map="cloned"/>
+            <set field="orderId" from="cloned.orderId"/>
+            <message type="success">A new draft from the order</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="acceptService">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <service-call name="mantle.order.OrderServices.accept#ServiceItem"
+                    in-map="{operationKey:operationKey, orderId:orderId, orderItemSeqId:orderItemSeqId,
+                        acceptedQuantity:acceptedQuantity, acceptedDate:acceptedDate || null, comments:comments}"/>
+            <message type="success">Acceptance recorded</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the print as of a time: a link form back to the order with the time, whose page then offers the PDF -->
+    <transition name="asOf">
+        <default-response url=".">
+            <parameter name="orderId"/>
+            <parameter name="printAsOf"/>
+        </default-response>
+    </transition>
+    <transition name="printOrder" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <service-call name="mantle.order.OrderServices.get#PurchaseOrderPrint" out-map="printed"
+                    in-map="{orderId:orderId, asOfDate:asOfDate || null}"/>
+            <script>
+                const bytes = ec.resource.xslFoTransform(printed.printHtml, null, null, 'application/pdf')
+                ec.web.response.setContentType('application/pdf')
+                ec.web.response.setHeader('Content-Disposition', 'inline; filename="' + printed.fileName + '"')
+                ec.web.response.getOutputStream().write(bytes)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="orderContent" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <entity-find-one entity-name="mantle.order.OrderContent" value-field="content" disable-authz="true"/>
+            <if condition="content?.orderId != orderId || !content?.contentLocation">
+                <return error="true" message="The file is not on order ${orderId}"/></if>
+            <!-- the issued PDF shows the prices: only to a user who sees the order's amounts (§2) -->
+            <if condition="!ec.resource.script('component://mr-boss/service/ironstone/purchasing/Orders.js').contentReadable(content)">
+                <return error="true" message="PERMISSION_DENIED: The issued purchase order shows its prices, which are withheld from you"/></if>
+            <script>ec.web.sendResourceResponse(content.contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="PurchasingOrder" condition="appRoot == 'Purchasing'">
+            <actions>
+                <set field="po" from="purchaseOrder"/>
+                <if condition="po">
+                    <set field="act" from="po.actions"/>
+                    <set field="lineValue" from="{orderId:orderId, quantity:'1'}"/>
+                    <set field="headerValue" from="{orderId:orderId, orderName:po.orderName, facilityId:po.facilityId}"/>
+                    <set field="decisionValue" from="{orderId:orderId, orderRevision:String(po.orderRevision),
+                            operationKey:'po-approve-' + ec.user.randomString(24)}"/>
+                    <set field="sendValue" from="{orderId:orderId, orderRevision:String(po.orderRevision),
+                            operationKey:'po-send-' + ec.user.randomString(24)}"/>
+                    <set field="acceptKey" from="'po-accept-' + ec.user.randomString(20)"/>
+                    <set field="printUrl" from="sri.buildUrl('printOrder').addParameters({orderId:orderId}).getUrlWithParams()"/>
+                    <set field="printAsOfUrl" from="printAsOf ? sri.buildUrl('printOrder')
+                            .addParameters({orderId:orderId, asOfDate:printAsOf}).getUrlWithParams() : null"/>
+                    <set field="contentUrl" from="sri.buildUrl('orderContent').path + '?orderId=' + encodeURIComponent(orderId)
+                            + '&amp;orderContentId='"/>
+                    <set field="primaryAction" from="act.place ? 'place' : act.approve ? 'approve' : act.send ? 'send' : null"/>
+                </if>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderMissing" condition="!po">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Purchase order ${orderId} is not available: it does not exist, or it is not
+                                        an order of your organizations from a supplier you work with."/>
+                                <link url="${sharedLinks['Orders/PurchaseOrders']}" text="Back to the purchase orders"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PurchasingOrderFound" condition="po">
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}"
+                                title="Purchase order ${orderId} · ${po.supplierName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Purchase order ${orderId}" type="h5"/>
+                                        <label text="${po.supplierName}" type="span" style="text-subtitle1 m-muted"/>
+                                    </container>
+                                    <label text="${[po.orderName, po.organizationName, 'Revision ' + po.orderRevision,
+                                            po.totalText ? 'total ' + po.totalText : ''].filter(Boolean).join(' · ')}"
+                                            type="div" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <status-bar id="PurchaseOrderStatusBar" status-id="${po.statusId}" status-flow-id="Default"
+                                            stages="${po.stageStatusIds}" read-only="true"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                                    <link url="placeOrder" link-type="hidden-form" text="Place" icon="sym_o_send" btn-type="primary"
+                                            condition="primaryAction == 'place'" parameter-map="{orderId:orderId}"
+                                            confirmation="Place purchase order ${orderId} with ${po.supplierName}?"/>
+                                    <container-dialog id="PurchaseOrderApprove" button-text="Approve" icon="sym_o_approval"
+                                            type="primary" width="520" title="Approve purchase order ${orderId}"
+                                            condition="primaryAction == 'approve'">
+                                        <form-single name="ApprovePurchaseOrder" transition="approveOrder" map="decisionValue">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Note"><text-area rows="2"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Approve revision ${po.orderRevision}"><submit/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="PurchaseOrderSend" button-text="Send" icon="sym_o_outgoing_mail"
+                                            type="primary" width="560" title="Send purchase order ${orderId} to ${po.supplierName}"
+                                            condition="primaryAction == 'send'">
+                                        <form-single name="SendPurchaseOrder" transition="sendOrder" map="sendValue">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="toAddresses">
+                                                <default-field title="To" tooltip="Empty sends to the supplier's order address, else its primary one">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="note"><default-field title="Message"><text-area rows="3"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Send revision ${po.orderRevision}"><submit/></default-field>
+                                            </field>
+                                        </form-single>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="The PDF of the revision is attached and kept on the order; an address it was already sent to is not sent again."/>
+                                    </container-dialog>
+                                    <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print"
+                                            link-type="anchor-button" target-window="_blank" condition="act.print"/>
+                                    <button-menu text="More" icon="more_horiz" condition="act.hold || act.release || act.close
+                                            || act.cancel || act.clone || act.print || act.edit">
+                                        <container-dialog id="PurchaseOrderEdit" button-text="Edit order" icon="sym_o_edit"
+                                                width="560" title="Edit purchase order ${orderId}" condition="act.edit">
+                                            <form-single name="EditPurchaseOrder" transition="updateOrder" map="headerValue">
+                                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="orderName"><default-field title="Reference"><text-line/></default-field></field>
+                                                <field name="facilityId">
+                                                    <default-field title="Receive at">
+                                                        <drop-down allow-empty="true">
+                                                            <dynamic-options transition="purchaseChoices" server-search="true"
+                                                                    min-length="0" parameter-map="{choice:'planFacilities',
+                                                                        selected:facilityId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="PurchaseOrderHold" button-text="Hold" icon="sym_o_pause" width="520"
+                                                title="Hold purchase order ${orderId}" condition="act.hold">
+                                            <form-single name="HoldPurchaseOrder" transition="holdOrder">
+                                                <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="holdComment">
+                                                    <default-field title="Reason"><text-area rows="2"/></default-field>
+                                                </field>
+                                                <field name="submitButton">
+                                                    <default-field title="Hold">
+                                                        <submit confirmation="Hold purchase order ${orderId}? A purchase approver releases it."/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="PurchaseOrderRelease" button-text="Release hold" icon="sym_o_play_arrow"
+                                                width="520" title="Release the purchase hold of ${orderId}" condition="act.release">
+                                            <form-single name="ReleasePurchaseHold" transition="releaseHold">
+                                                <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="orderHoldReasonId" from="po.purchaseHoldId"><default-field><hidden/></default-field></field>
+                                                <field name="releaseComment">
+                                                    <default-field title="Comment"><text-area rows="2"/></default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Release"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="PurchaseOrderClose" button-text="Close remainder" icon="sym_o_block"
+                                                width="520" title="Close what is left of ${orderId}" condition="act.close">
+                                            <form-single name="ClosePurchaseRemainder" transition="closeRemainder">
+                                                <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Close remainder">
+                                                        <submit type="danger" confirmation="Close what is left to receive on purchase order ${orderId}?"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <link url="cloneOrder" link-type="hidden-form-link" text="Clone" icon="sym_o_content_copy"
+                                                condition="act.clone" parameter-map="{orderId:orderId}"
+                                                confirmation="A new draft with the lines of ${orderId}?"/>
+                                        <container-dialog id="PurchaseOrderPrintAsOf" button-text="Print as of" icon="sym_o_history"
+                                                width="480" title="Purchase order ${orderId} as of" condition="act.print">
+                                            <form-single name="PrintAsOf" transition="asOf">
+                                                <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="printAsOf"><default-field title="Date and time"><date-time/></default-field></field>
+                                                <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="PurchaseOrderCancel" button-text="Cancel order" icon="sym_o_cancel"
+                                                width="520" title="Cancel purchase order ${orderId}" condition="act.cancel">
+                                            <form-single name="CancelPurchaseOrder" transition="cancelOrder">
+                                                <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Cancel order">
+                                                        <submit type="danger" confirmation="Cancel purchase order ${orderId}?"/>
+                                                    </default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <section name="PurchaseOrderAsOf" condition="printAsOfUrl">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Print as of ${printAsOf}"/>
+                                    <box-body>
+                                        <link url="${printAsOfUrl}" url-type="plain" text="Open the print as of ${printAsOf}"
+                                                icon="sym_o_picture_as_pdf" link-type="anchor-button" target-window="_blank"/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="PurchaseOrderHeld" condition="po.held">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="On hold"/>
+                                    <box-body>
+                                        <label type="p" text="${po.holdText}"/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Details"/>
+                                    <box-body>
+                                        <label text="Buyer: ${po.organizationName}" type="div"/>
+                                        <label text="Supplier: ${po.supplierName}" type="div"/>
+                                        <label text="Supplier reference: ${po.supplierReference}" type="div"
+                                                condition="po.supplierReference"/>
+                                        <label text="Receive at: ${po.facilityName}" type="div" condition="po.facilityName"/>
+                                        <label text="Currency: ${po.currencyUomId}" type="div"/>
+                                        <label text="Entered ${po.entryText}" type="div" style="m-muted"/>
+                                        <label text="Placed ${po.placedText}" type="div" style="m-muted" condition="po.placedText"/>
+                                        <label text="Approved ${po.approvedText}" type="div" style="m-muted"
+                                                condition="po.approvedText"/>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Approvals · ${po.decisionRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchaseOrderDecisions" list="po.decisionRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                                            <field name="byText"><default-field title="By"><display/></default-field></field>
+                                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="decisionText"/><field-ref name="byText"/></column>
+                                                <column><field-ref name="dateText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No approval decision yet."
+                                                condition="!po.decisionRows.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                        <container-box>
+                            <box-header title="Lines · ${po.itemRows.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="PurchaseOrderAddLine" button-text="Add line" icon="sym_o_add" width="640"
+                                        title="Add a line to ${orderId}" condition="act.edit">
+                                    <form-single name="AddPurchaseOrderLine" transition="storeLine" map="lineValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="productId">
+                                            <default-field title="Product">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="purchaseChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'orderProducts'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                        <field name="unitAmount">
+                                            <default-field title="Unit price" tooltip="Empty takes the supplier's price">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="requiredByDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                                        <field name="costCenterId">
+                                            <default-field title="Cost centre">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="purchaseChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'costCenters'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="itemDescription"><default-field title="Description"><text-line/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add line"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-ref name="productId"/>
+                                            <field-row>
+                                                <field-ref name="quantity"/>
+                                                <field-ref name="unitAmount"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="requiredByDate"/>
+                                                <field-ref name="costCenterId"/>
+                                            </field-row>
+                                            <field-ref name="itemDescription"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderLines" list="po.itemRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="productText">
+                                        <default-field title="Product">
+                                            <label text="${productText || description}" type="div"/>
+                                            <label text="${description}" type="div" style="text-caption m-muted"
+                                                    condition="productText &amp;&amp; description"/>
+                                            <label text="Cost centre: ${costCenterText}" type="div" style="text-caption m-muted"
+                                                    condition="costCenterText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Ordered"><label text="${quantityText} ${unitText}" type="span"/></default-field>
+                                    </field>
+                                    <field name="cancelledText" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                                    <field name="receivedText" align="right">
+                                        <default-field title="Received">
+                                            <label text="${isService ? acceptedText + ' accepted' : receivedText}" type="span"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                                    <field name="priceText" align="right">
+                                        <default-field title="Price"><label text="${priceText}" type="span" style="text-no-wrap"/></default-field>
+                                    </field>
+                                    <field name="amountText" align="right">
+                                        <default-field title="Amount">
+                                            <label text="${amountText}" type="span" style="text-no-wrap text-weight-medium"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="requiredText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="EditLine_${orderItemSeqId}" button-text="Edit" icon="sym_o_edit"
+                                                    width="560" title="Edit line ${orderItemSeqId}" condition="act.edit">
+                                                <form-single name="EditPurchaseOrderLine" transition="storeLine">
+                                                    <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                                    <field name="unitAmount"><default-field title="Unit price"><text-line size="10"/></default-field></field>
+                                                    <field name="requiredByDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                                                    <field name="costCenterId">
+                                                        <default-field title="Cost centre">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="purchaseChoices" server-search="true"
+                                                                        min-length="0" parameter-map="{choice:'costCenters', selected:costCenterId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="itemDescription" from="description">
+                                                        <default-field title="Description"><text-line/></default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="deleteLine" link-type="hidden-form" text="Remove" icon="sym_o_delete"
+                                                    btn-type="danger" condition="act.edit"
+                                                    parameter-map="{orderId:orderId, orderItemSeqId:orderItemSeqId}"
+                                                    confirmation="Remove line ${orderItemSeqId} of ${orderId}?"/>
+                                            <container-dialog id="AcceptLine_${orderItemSeqId}" button-text="Record acceptance"
+                                                    icon="sym_o_task_alt" width="520" title="Accept line ${orderItemSeqId}"
+                                                    condition="act.accept &amp;&amp; canAccept">
+                                                <form-single name="AcceptServiceLine" transition="acceptService">
+                                                    <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey" from="acceptKey + '-' + orderItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="acceptedQuantity" from="openText">
+                                                        <default-field title="Accepted quantity"><text-line size="8"/></default-field>
+                                                    </field>
+                                                    <field name="acceptedDate"><default-field title="Accepted on"><date-time/></default-field></field>
+                                                    <field name="comments"><default-field title="Evidence and comments"><text-area rows="2"/></default-field></field>
+                                                    <field name="submitButton"><default-field title="Record acceptance"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="quantityText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!po.itemRows.length"
+                                        text="${act.edit ? 'No lines yet. Add one with Add line, then place the order.' : 'This order has no lines.'}"/>
+                                <container style="row justify-end q-pa-sm">
+                                    <label text="Total ${po.totalText}" type="span" style="text-subtitle1 text-weight-medium"/>
+                                </container>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="PurchaseOrderHolds" condition="po.holdRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Holds · ${po.holdRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchaseOrderHoldList" list="po.holdRows" skip-form="true" paginate="false">
+                                            <field name="typeText"><default-field title="Hold"><display/></default-field></field>
+                                            <field name="comment"><default-field title="Reason"><display/></default-field></field>
+                                            <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                                            <field name="releasedText"><default-field title="Released"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="typeText"/><field-ref name="comment"/></column>
+                                                <column><field-ref name="releasedText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Documents and emails"/>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderDocuments" list="po.contentRows" skip-form="true" paginate="false">
+                                    <field name="description">
+                                        <default-field title="Document">
+                                            <link url="${contentUrl}${orderContentId}" url-type="plain" text="${description}"
+                                                    link-type="anchor" target-window="_blank" condition="canOpen"/>
+                                            <label text="${description} (withheld)" condition="!canOpen"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="dateText"><default-field title="Stored"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="dateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="PurchaseOrderEmails" list="po.emailRows" skip-form="true" paginate="false">
+                                    <field name="revisionText"><default-field title="Sent revision"><display/></default-field></field>
+                                    <field name="toText"><default-field title="To"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="sentText"><default-field title="When"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="revisionText"/><field-ref name="toText"/></column>
+                                        <column><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not sent yet; its PDF is kept here once it is."
+                                        condition="!po.contentRows.length &amp;&amp; !po.emailRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="History"/>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderHistory" list="po.historyRows" skip-form="true" paginate="false">
+                                    <field name="changedText"><default-field title="When"><display/></default-field></field>
+                                    <field name="whatText"><default-field title="Changed"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="toText"><default-field title="To"><display/></default-field></field>
+                                    <field name="byText"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whatText"/><field-ref name="changedText"/></column>
+                                        <column><field-ref name="toText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No change recorded yet."
+                                        condition="!po.historyRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

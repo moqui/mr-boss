@@ -274,8 +274,8 @@ Added in Accounting P10 (collections, credit and recurring invoices), called by 
 | CreditServices | evaluate#OrderCredit | Accounting/Records/OrderDetail | (approve#Order; the OrderPreApproveCredit SECA) |
 | CreditServices | release#CreditHold | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360 | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360/Credit |
 | CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit |
-| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit) |
-| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold) |
+| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit); Purchasing/Orders/OrderDetail (Hold, a Purchase reason; Purchasing P3) |
+| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold); Purchasing/Orders/OrderDetail (Release hold, a Purchase reason; Purchasing P3) |
 | RecurringInvoiceServices | store#Schedule | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | preview#Period | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | generate#Invoices | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
@@ -588,7 +588,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | --- | --- | --- | --- |
 | OrderBulkServices | store#Order |  |  |
 | OrderBulkServices | change#OrderPartsStatus |  |  |
-| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360) |
+| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360); — (Purchasing P3: OrderDetail reads through ironstone.purchasing.OrderServices.get#OrderDetail; the display info gains revisionHistoryList and itemOtherAuditLogList) |
 | OrderInfoServices | get#OrderItemsTotalCount |  |  |
 | OrderInfoServices | get#OrderItemDisplayInfo |  |  |
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
@@ -597,18 +597,18 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order) |
 | OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail |  |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
-| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail |  |
-| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail | Purchasing/Orders/PurchaseOrders and Purchasing/NewPurchaseOrder (through mantle.order.PurchaseServices.create#PurchaseOrder) (Purchasing P3) |
+| OrderServices | update#OrderHeader | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's reference through PurchaseServices.update#PurchaseOrder) |
 | OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; Sales/Orders/Orders; Sales/Quotes/Quotes |  |
-| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's receiving facility through PurchaseServices.update#PurchaseOrder) |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3) |
+| OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft line through PurchaseServices.store#PurchaseOrderItem, the entity update) |
+| OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Remove, through PurchaseServices.delete#PurchaseOrderItem) (Purchasing P3) |
 | OrderServices | recalc#OrderItemAmount |  |  |
 | OrderServices | recalc#OrderPartItemAmounts |  |  |
 | OrderServices | check#AvailableInventory |  |  |
-| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | add#OrderProductQuantity | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Products/ProductDetail; PASS:Shop/Cart; PASS:Shop/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: lines through PurchaseServices.store#PurchaseOrderItem, create#OrderItem at the resolver's supplier price) |
 | OrderServices | update#OrderProductQuantity | PASS:Shop/Cart |  |
 | OrderServices | merge#OrderItems |  |  |
 | OrderServices | set#OrderBillingShippingInfo | Shared/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
@@ -617,8 +617,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | change#OrderStatusInterface |  |  |
 | OrderServices | update#OrderStatus | Purchasing/Orders/OrderDetail |  |
 | OrderServices | propose#Order | Sales/Orders/OrderDetail |  |
-| OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote |  |
-| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderServices | place#Order | Purchasing/Orders/OrderDetail; PASS:Shop/Checkout; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Place, through PurchaseServices.place#PurchaseOrder) (Purchasing P3) |
+| OrderServices | approve#Order | Purchasing/Orders/OrderDetail; Purchasing/Orders/PurchaseOrders; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Approve) and Purchasing/Orders/PurchaseOrders (bulk), through PurchaseServices.decide#PurchaseApproval; its direction check and the approval gate (Purchasing P3) |
 | OrderServices | autoApprove#OrdersDelayed |  |  |
 | OrderServices | autoApprove#Order |  |  |
 | OrderServices | isFulfilled#OrderPart |  |  |
@@ -628,14 +628,14 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | checkCancelComplete#Order |  |  |
 | OrderServices | checkRejectedComplete#Order |  |  |
 | OrderServices | complete#OrderPart | Purchasing/Orders/OrderDetail |  |
-| OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders |  |
-| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote |  |
+| OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders and Purchasing/Orders/OrderDetail (Close remainder: close#PurchaseRemainders completes the part) (Purchasing P3) |
+| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3) |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11) |
 | OrderServices | reject#Order |  |  |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
-| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 |  |
+| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3) |
 | OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
 | OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
 | OrderServices | create#RecurringOrder |  |  |
@@ -644,7 +644,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | handle#OrderMajorChange |  |  |
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
-| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges |  |
+| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly; OrderChanges is P9) |
 | OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
 | OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
@@ -1682,7 +1682,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | facility/PrintServices | dispatch#Document |  | Warehouse/Shipping/Ship (Print labels, Reprint); Warehouse/Locations/Printers and Shared/FacilityDetail/Printers (PrinterTest) (P13) |
 | facility/PrintServices | get#PrinterCapabilities |  | Warehouse/Locations/Printers (PrinterIndex) (P13) |
 | facility/PrintServices | store#FacilityPrinter |  | Shared/FacilityDetail/Printers (Bind printer, End) (P13) |
-| order/OrderServices | close#PurchaseRemainders |  | (Purchasing's ClosePurchaseOrders when built; its close runs inside close#ReceiptRemainder) |
+| order/OrderServices | close#PurchaseRemainders |  | Purchasing/Orders/PurchaseOrders (ClosePurchaseOrders, bulk) and Purchasing/Orders/OrderDetail (Close remainder) (Purchasing P3); its close runs inside close#ReceiptRemainder |
 | other/BudgetServices | release#ClosedSourceCommitments |  | (internal to close#PurchaseRemainders) |
 | product/AssetPoolServices | find#AssetPools, get#AssetPool, store#AssetPool, store#AssetPoolParty, store#AssetPoolStore, preview#AssetPoolReservations |  | Warehouse/Settings/AssetPools/PoolList; Warehouse/Settings/AssetPools/PoolDetail |
 | ledger/AssetBookServices | preview#Revaluation |  | Shared/InventoryValuation (Products mount); Accounting/Inventory/InventoryValuation |
@@ -1693,6 +1693,12 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/IdentifierServices | store#IdentifierPolicy |  | Shared/IdentificationTypes; Products/Settings/IdentificationTypes |
 | product/PriceServices | get#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
 | product/PriceServices | store#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
+| order/PurchaseServices | create#PurchaseOrder, update#PurchaseOrder, store#PurchaseOrderItem, delete#PurchaseOrderItem, place#PurchaseOrder, cancel#PurchaseOrder, clone#PurchaseOrder |  | Purchasing/Orders/PurchaseOrders (New purchase order); Purchasing/NewPurchaseOrder; Purchasing/Orders/OrderDetail (Edit order, Add line, Edit, Remove, Place, Cancel order, Clone) (Purchasing P3) |
+| order/PurchaseServices | decide#PurchaseApproval |  | Purchasing/Orders/OrderDetail (Approve); Purchasing/Orders/PurchaseOrders (Approve, bulk) (Purchasing P3) |
+| order/PurchaseServices | check#PurchaseApprovalRequired |  | (the OrderPreApprovePurchase SECA on check#OrderPreApprove, and approve#Order; Purchasing P3) |
+| order/OrderServices | send#PurchaseOrder |  | Purchasing/Orders/OrderDetail (Send) (Purchasing P3) |
+| order/OrderServices | get#PurchaseOrderPrint |  | Purchasing/Orders/OrderDetail (Print, Print as of) (Purchasing P3) |
+| order/OrderServices | accept#ServiceItem |  | Purchasing/Orders/OrderDetail (Record acceptance of a service line) (Purchasing P3) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

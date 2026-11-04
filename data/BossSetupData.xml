@@ -1479,4 +1479,22 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
             fromDate="0"/>
+    <!-- Purchasing P3: the shell's quick create of a purchase order (NewPurchaseOrder, at the root: the buying lists' ALWAYS
+        on Orders would reach a screen under it) for the buyers and the administrator only, as Manufacturing's new work order
+        (BOSS_MFG_NEW_WORK_ORDER); the list's New purchase order is shown by the buy capability, and create#PurchaseOrder
+        checks PURCHASE_ORDER_EDIT -->
+    <artifactGroups artifactGroupId="BOSS_PUR_NEW_ORDER">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/NewPurchaseOrder.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_ORDER_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_ORDER_BUYER" userGroupId="BOSS_PURCHASING_BUYER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_NEW_ORDER_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

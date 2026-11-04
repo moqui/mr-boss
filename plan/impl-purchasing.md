@@ -253,7 +253,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 4 (§6 F1–F43) |
 | P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | built Nov 4, 2026 |
 | P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | built Nov 4, 2026 |
-| P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | — |
+| P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | built Nov 4, 2026 |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
 | P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | — |
@@ -669,6 +669,160 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   - Manufacturing P14's draft service PO is placed and approved here;
   - a PO partly received through Warehouse's Receive closes its remainder with a reason, records the cancelled quantity
     in the line's history and completes.
+
+**Built Nov 4 (P3).**
+- Mantle:
+  - `entity/PurchaseOrderEntities.xml`: `mantle.order.purchase.PurchaseApprovalDecision` (source entity, id and revision,
+    organization, decision PadApproved/PadRefused, date, user and party, reason, the PurchasePolicy row's `policyFromDate`,
+    the approval policy and step for P4, operation key); the audit log on `OrderHeader.orderRevision` and OrderItem's
+    `itemDescription`, `quantityUomId` and `quantityCancelled` (create and update, F-P3-1); `PurchasePolicy.commercialRevisionOnly`;
+    the content type `OctPurchaseOrderIssued`. `data/PurchaseOrderSetupData.xml`: the `MANTLE_PURCHASE_ORDER_EMAIL` template.
+  - `service/mantle/order/PurchaseServices.xml` (appended) over the new `PurchaseOrders.js`: `create#PurchaseOrder` (one
+    purchase part, the supplier's profile currency else the policy's, the policy's receiving facility; the supplier check's
+    Stop refuses and Warn warns; another organization's supplier SUPPLIER_UNAVAILABLE), `update#PurchaseOrder`,
+    `store#PurchaseOrderItem` (a draft's line: `check#ProductUsable` Purchase, PRODUCT_NOT_USABLE with the reason; the
+    resolver's supplier price unless given, PRICE_UNAVAILABLE; the cost centre the organization or a PrtOrgRollup child,
+    COST_CENTER_INVALID), `delete#PurchaseOrderItem`, `place#PurchaseOrder` (ORDER_EMPTY, the supplier check again),
+    `cancel#PurchaseOrder` (a reason as an internal note; ORDER_RECEIVED, ORDER_BILLED: close the remainder instead),
+    `clone#PurchaseOrder` (a new draft without payments, files or notes; unusable lines named), `decide#PurchaseApproval`
+    (the no-policy rule: PURCHASE_APPROVE, a placed order at its revision, STALE_REVISION naming the current one,
+    SELF_APPROVAL unless `selfApprovalAllowed`, the supplier check, the decision kept, then `approve#Order`; operation key
+    replay) and `check#PurchaseApprovalRequired`; every verb under PURCHASE_ORDER_EDIT in the buying organization
+    (FacilityScope), one purchase part (NOT_PURCHASE, PURCHASE_PARTS), drafts only for line and header changes
+    (ORDER_NOT_DRAFT).
+  - `service/Purchase.secas.xml`: OrderPreApprovePurchase on `check#OrderPreApprove`, adding PURCHASE_APPROVAL_REQUIRED for
+    a purchase part of an organization with `approvalGateEnabled` and no decision at the order's revision, so
+    `autoApprove#Order` approves no such order (a prepaid one included).
+  - `OrderServices.xml`: `approve#Order` direction-aware (`PurchaseOrders.js approveRefusal`, decision below);
+    `hold#Order` places a Change or Purchase reason under the order's change permission for its direction
+    (PURCHASE_ORDER_EDIT; ORDER_CHANGE_APPLY or SALES_ORDER_CHANGE) or the type's release permission, and un-sends a sent
+    purchase order to Approved first (D7); `increment#OrderRevision` takes `revisionKind` (content, note and status are not
+    counted, an item's quantity or price is, where the order's buying organization sets `commercialRevisionOnly`; every
+    other order as before; `Order.eecas.xml`'s content and note rules and `handle#OrderPartChange`'s status-only update
+    pass their kind, `handle#OrderItemChange` the item's); appended `send#PurchaseOrder` and `get#PurchaseOrderPrint` over
+    the new `PurchaseOrderDocuments.js` (send#Invoice's path, F42: the print rendered to a PDF stored once per print as
+    OrderContent, `send#EmailTemplate` per recipient in its own transaction with the bytes, OrderEmailMessage with the
+    revision, ALREADY_SENT per recipient of the revision, Approved to Sent, PostingOperation replay; recipients the
+    supplier's EmailOrder, else EmailPrimary; the print as of a time read back from the audit log, ORDER_NOT_YET before the
+    order) with `template/order/PurchaseOrder.print.html.fancy` and `PurchaseOrderEmail.html.fancy`.
+  - `OrderInfoServices.xml`: `get#OrderDisplayInfo` gains `revisionHistoryList` and `itemOtherAuditLogList`,
+    `get#OrderItemDisplayInfo` `itemOtherAuditList` (the new audit fields, apart from the quantity and price lists marble
+    reads).
+  - Spec `test/order/PurchaseOrders.spec.js` (8 features, about 1.5 s).
+- BOSS:
+  - `ironstone.purchasing.OrderServices` (`Orders.js`): `find#PurchaseOrders` (views Draft, Awaiting approval, Approved not
+    sent, Open, On hold, Closed; ordered, received, total, billed and balance apart; amounts withheld from a user who neither
+    works the orders nor reads supplier prices or the books), `get#OrderDetail` (the Purchasing context: header, holds,
+    lines with received, accepted and billed, history from the audit log, documents, emails, decisions and the actions by
+    capability and status), `bulk#PurchaseOrderActions` (approve or close each selected order in its own transaction, a
+    result per order); Home's `draftCount` and `unsentCount` and BuyerWork's orders to send; the choices `orderProducts` and
+    `costCenters`. `Purchasing.js`: the order kind's destination `Orders/OrderDetail`, the P3 link paths.
+  - Screens: `Purchasing/Orders.xml` (PurchaseOrders, the shared OrderDetail), `Orders/PurchaseOrders.xml` (OrderFind and
+    PurchaseOrderList with saved finds, CreatePurchaseOrder, ApprovePurchaseOrders and ClosePurchaseOrders on the selected
+    rows), `Purchasing/NewPurchaseOrder.xml` (quick create, BOSS_PUR_NEW_ORDER); `Shared/OrderDetail.xml`'s Purchasing branch
+    with `template/PurchasingOrderDetail.xml` (the header with Place, Approve or Send by status and More: Edit order, Hold,
+    Release hold, Close remainder, Clone, Print as of, Cancel order; Print; the holds, Details, Approvals, Lines with Add
+    line, Edit, Remove and Record acceptance of a service line through `accept#ServiceItem`, Documents and emails, History);
+    Home's Draft orders and Approved, not sent cards. `Purchasing.xml`: the purchase order quick create.
+  - Data: BossSetupData's `BOSS_PUR_NEW_ORDER`; BossPurchasingDemoData: Retail's policy with `commercialRevisionOnly`, the
+    demo sink server for `MANTLE_PURCHASE_ORDER_EMAIL` (F-P3-5).
+  - Specs: `PurchasingOrders` (4: the list's views, amounts and its html render; OrderDetail's html render and a reader's
+    detail; the bulk approval's named refusal; Home's counts and work); PurchasingAccess gains the quick create per group,
+    the order record link to OrderDetail, the palette's order link and a feature for the detail's record scope (13
+    features). The app's golden-path client walk `test/client/Purchasing/PurchasingOrdersWalk` (create, add a line, place,
+    approve, send; 6.9 s). Acceptance `PurchasingOrdersWalk` (6: the usable-when items); PurchasingFoundationWalk's quick
+    create; `routeFixtures` lists Orders/PurchaseOrders, Orders/OrderDetail and NewPurchaseOrder (AppStructure's placeholder
+    count 61).
+- Tests run: Mantle PurchaseOrders, OrderProcureToPayBasicFlow, CrmMiscServices, OrderLifecycle, OrderBulk,
+  WorkProjectRequests, PurchaseHoldPermission, PurchasePolicy, AccountingCredit, OrderToCashBasicFlow, Replenishment,
+  SupplyPlanning, ProductionSubcontract, ReturnToResponseBasicFlow, WarehouseReceiving (148 features, all pass); BOSS
+  PurchasingAccess, PurchasingOrders, PurchasingSuppliers, PurchasingReplenishment, AccountingCollections,
+  AccountingPayables, ManufacturingSubcontracting, ManufacturingWorkOrders, ManufacturingMaterials, ManufacturingSchedule,
+  ManufacturingPlanning, ClientBilling, ProjectsAccess, WarehouseReceiving, WarehousePicking (85 features, all pass); client
+  PurchasingOrdersWalk (pass); acceptance PurchasingOrdersWalk (6), PurchasingFoundationWalk (3), PurchasingSuppliersWalk,
+  PurchasingReplenishmentWalk and AppStructure (all pass). `moqui lint --screens`: no idiom or hazard site in the changed
+  screens (informational anchors only). mr-boss's client feature time is now about 39 s of its 36 s budget (a warning;
+  the budget is not raised).
+- Decisions:
+  - approve#Order's direction (F33): a sales or internal part needs ORDER_APPROVE as before; a purchase part of an
+    organization whose buying policy has the approval gate on needs PURCHASE_ORDER_APPROVE and a current decision; with
+    the gate off (no row, Mantle's default) PURCHASE_ORDER_APPROVE or ORDER_APPROVE, so no ORDER_APPROVE holder is refused
+    a purchase order they approve today and BOSS_PURCHASING_APPROVE (PURCHASE_ORDER_APPROVE only) approves too. The new
+    refusal is the gate's; OrderProcureToPayBasicFlow and the Accounting demo (gate off for BOSS_ACCT_ORG and Retail) pass.
+  - decide#PurchaseApproval is new, so its rules hold whatever the gate: one PURCHASE_APPROVE holder, no self-approval
+    unless the policy allows it (the user who entered or placed the order), the revision current. BOSS approves only
+    through it; the gate makes it the only way in Mantle too.
+  - The commercial revision (X2) is behind `PurchasePolicy.commercialRevisionOnly` for an organization's purchase orders,
+    the flag with its owner's settings (impl-accounting §4); Sales adds its own for sales orders. Retail's demo turns it on,
+    so a sent order's revision stays the one approved and sent; `get#OrderCommercialSnapshot` is not needed.
+  - hold#Order's widening (a buyer places a Purchase hold; a sent order un-sends first) is no new refusal and has no flag;
+    a released order returns to Approved and is sent again (the revision already sent marks it Sent without mailing).
+  - The print shows the status only as of a time, so the current print of a revision, and its stored PDF, are the same
+    whatever its status.
+  - Amounts in Purchasing's order reads show to a buyer, an approver, a supplier-price reader or a finance reader, and are
+    "Withheld" for the reader group (§2).
+  - The quick create is the root's NewPurchaseOrder, not a screen under Orders (F-P3-7). The PO palette type is
+    Purchasing's own palette source, which now opens OrderDetail (F-P3-6).
+- Left for later phases: OrderDetail's Create draft bill (Accounting's InvoiceFromSource) and Money's supplier prepayment
+  (`add#OrderPartPayment`, R-PUR-36) are P6's with Bills; the addresses and terms tab and changes after placing are P9's
+  (OrderChanges); a refusal decision and the Approvals list are P4's; the late, received-not-billed and drop-ship views come
+  with P5, P6 and P7.
+- Findings (provisional):
+  - **F-P3-1** The framework's `enable-audit-log="update"` does not log the first value set on an empty field (the
+    initial set), so a line's first cancelled quantity was not logged and an as-of read would show it before it happened.
+    P3 logs `orderRevision`, the unit, the cancelled quantity and the description on create and update ("true").
+    Accounting P6's `OrderItem.costCenterId` is "update": its first set is not in the log (P9 may change it to "true").
+  - **F-P3-2** Under Mantle's counting a line's quantity or price change never moved `orderRevision`
+    (`handle#OrderItemChange` leaves it to the part update, and `handle#OrderPartChange` returns early on a `partTotal`
+    change), while a file, a note or a status change did. With `commercialRevisionOnly` the line change counts.
+  - **F-P3-3** OrderContent has no immutable flag (F42's "immutable OrderContent"): the issued PDF is stored once per
+    print and typed `OctPurchaseOrderIssued`, but nothing refuses its change.
+  - **F-P3-4** `check#OrderPreApprove` warns every purchase order without authorized payments (payments low), so
+    approve#Order cannot refuse on its warnings in general; it refuses on the purchase approval's warning only.
+  - **F-P3-5** Mantle's SYSTEM EmailServer has no SMTP host, so `MANTLE_PURCHASE_ORDER_EMAIL` sends nothing on a plain
+    install (the send names each recipient failed); BOSS's demo points the template to a local sink server, as Accounting's
+    demo delivery does, and the Mantle spec uses a server and template of its own.
+  - **F-P3-6** The MantleOrder search index holds sales orders and every organization's orders, and Commons' Records
+    source falls back to the search's own link when `get#RecordLink` answers none, so a MantleOrder palette type would list
+    them; the purchase order palette type is Purchasing's own source (P1's `search#Records`).
+  - **F-P3-7** BOSS_PUR_LISTS's ALWAYS on `Orders.xml` reaches every screen under it, so a quick create screen there
+    was offered to the reader, planner and approver; it is the root's `NewPurchaseOrder` with its own group.
+
+**Review Nov 4 (P3).**
+- Checked: Mantle defaults with no PurchasePolicy row (approve#Order's direction check: a sales or mixed part still needs
+  ORDER_APPROVE, a purchase part takes PURCHASE_ORDER_APPROVE or ORDER_APPROVE, so ReturnServices' replacement approvals,
+  change#OrderPartsStatus and createOrders' place-and-approve keep working; the SECA adds nothing with the gate off, so
+  autoApprove#Order is unchanged; hold#Order only widens, and un-sends a Sent order only when every part is a purchase part);
+  increment#OrderRevision's revisionKind (content, note and status still count and item returns early unless the order's
+  buyer sets commercialRevisionOnly, so F-P3-2 holds); decide#PurchaseApproval (PURCHASE_APPROVE, the buying organization
+  through FacilityScope, Placed only, STALE_REVISION naming the current revision, SELF_APPROVAL by enteredByPartyId or the
+  logged OrderPlaced change, operation replay); send#PurchaseOrder (Approved or Sent only, the revision checked, recipients
+  EmailOrder then EmailPrimary, ALREADY_SENT per recipient of the revision, the PDF stored once per print hash, the
+  OrderEmailMessage with its revision); the amounts in find#PurchaseOrders and get#OrderDetail (Withheld, not zero); F-P3-1
+  against the framework.
+- **R1 (high, BOSS)** OrderDetail's History showed each price change's old and new value, and Documents opened the issued
+  PDF (with its prices), to a reader whose amounts are withheld. The history's price rows say Withheld for that reader, the
+  issued PDF is listed without a link and the orderContent transition refuses it (`Orders.js contentReadable`);
+  PurchasingOrders checks the history.
+- **R2 (medium, Mantle)** send#PurchaseOrder checked the status and the revision before the operation key, so a retry of a
+  send that went through (a double submit) was refused once the order had moved on (STALE_REVISION without the commercial
+  revision). The replay now comes first, its request naming the revision asked for; PurchaseOrders retries the first send
+  after the revision moved.
+- For the lead:
+  - F-P3-1 is a framework divergence: `crates/moqui-entity/src/entity/field_rw.rs:349-352` skips an update whose old value
+    is null when the flag is "update" ("does not log the first non-null value. That is the initial set."). The XSD
+    (`entity-definition-3.xsd:197-202`) and Moqui Java's `EntityValueBase.handleAuditLog` leave out only the create under
+    "update"; an update from null to a value is logged. With it fixed, "update" would do for the P3 fields (the as-of read
+    needs the change, not the create) and save an audit row per new line of every order, sales included; Accounting's
+    "update" fields (`OrderItem`/`InvoiceItem`/`AcctgTransEntry.costCenterId`, AccountingPayableEntities.xml and
+    AccountingControlEntities.xml) then log a first coding of an uncoded line, which they miss now.
+  - Without `commercialRevisionOnly` (every organization but the Retail demo) the send's own OrderContent and its
+    Approved to Sent move the revision by two, so the revision recorded on the email is not the order's afterwards, and a
+    send after a hold and release mails the supplier again; decisions are unaffected (the check runs before the status
+    change). Purchasing's revision-bound rules assume the flag: consider defaulting it on where Purchasing sets up an
+    organization's policy.
+  - Budget: the client walk is 6.8 s, nearly all of it steps of 0.2 to 0.7 s and the send's PDF and mail (1.3 s); a trim
+    saves well under the 3 s over mr-boss's client budget, so it is unchanged.
 
 ### P4 — Approvals and budgets
 

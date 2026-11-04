@@ -12,12 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Purchase orders area of IronStone Purchasing (design-purchasing §1, §6): PurchaseOrders (the default), the shared
-    OrderDetail, OrderChanges and Acknowledgements (impl-purchasing P3, P7, P9), for the buying lists' groups
-    (BOSS_PUR_LISTS). -->
+<!-- The Purchase orders area of IronStone Purchasing (design-purchasing §1, §6; impl-purchasing P3), for the buying lists'
+    groups (BOSS_PUR_LISTS): PurchaseOrders (the default: find, views, New purchase order and the bulk approval and close),
+    and the shared OrderDetail in the Purchasing context (crosscut §3.6, hidden from the menu); the shell's quick create of a
+    purchase order is the root's NewPurchaseOrder. OrderChanges and Acknowledgements come with P9. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Purchase orders" default-menu-index="5" menu-image="sym_o_receipt_long" menu-image-type="icon">
+    <subscreens default-item="PurchaseOrders" always-use-full-path="true">
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Purchase orders, their changes and supplier acknowledgements." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>
