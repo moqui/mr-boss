@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Instructions (design-manufacturing Instructions: Steps and Evidence; style-guide §3.5 Task, §8.2 handheld; impl-manufacturing
+    P10): an operation's instructions as of its work order's release, one step at a time in order (the instruction text, its
+    file and checksum, a revision warning when a newer one was published), each with Acknowledge (the one primary until every
+    step is acknowledged), and the evidence the operation requires (a value with its unit, or a note), with the record of who
+    acknowledged and recorded what. The acknowledgment is a record of its own (mantle.work.ProductionServices
+    record#InstructionStep, after ironstone.manufacturing.AccessServices.check#Record with operate), which Start requires.
+    Print opens the operator instructions print (InstructionsPrint). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Instructions" default-menu-include="false" density="handheld">
+    <parameter name="operationWorkEffortId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="operationCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId || '_NA_'}"/>
+        <set field="recordFound" from="!!operationCheck?.recordId"/>
+    </always-actions>
+    <transition name="recordStep">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.record#InstructionStep" out-map="recorded"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId,
+                        stepTypeEnumId:stepTypeEnumId || 'IstAcknowledge', workEffortContentId:workEffortContentId || null,
+                        valueText:valueText || null, valueUomId:valueUomId || null, comments:comments || null}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${recorded.result?.resultCode == 'EVIDENCE_RECORDED' ? 'Evidence recorded' : 'Acknowledged'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionInstructions" out-map="instructionsFound"
+                    transaction="force-new" ignore-error="true" in-map="{operationWorkEffortId:operationWorkEffortId}"/>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!instructionsFound?.productionInstructions"/>
+        <set field="instructions" from="instructionsFound?.productionInstructions || {}"/>
+        <set field="keyBase" from="'sfi-' + operationWorkEffortId + '-' + ec.user.randomString(12)"/>
+        <set field="stepRows" from="(instructions.instructionRows || []).map((row) =&gt; Object.assign({}, row, {
+                operationKey: keyBase + '-' + row.workEffortContentId, operationWorkEffortId: operationWorkEffortId,
+                stepTypeEnumId: 'IstAcknowledge'}))"/>
+        <!-- one step at a time: the first not acknowledged (else the last) is open, with the one primary -->
+        <set field="currentStep" from="stepRows.find((row) =&gt; !row.acknowledged) || null"/>
+        <set field="evidence" from="instructions.evidence || {}"/>
+        <set field="evidenceValues" from="{operationKey:keyBase + '-evidence', operationWorkEffortId:operationWorkEffortId,
+                stepTypeEnumId:'IstEvidence'}"/>
+        <set field="acknowledgmentRows" from="instructions.acknowledgmentRows || []"/>
+        <set field="linkParameters" from="{operationWorkEffortId:operationWorkEffortId}"/>
+        <set field="printParameters" from="{operationWorkEffortId:operationWorkEffortId, renderMode:'html-print', lastStandalone:'true'}"/>
+    </actions>
+    <widgets>
+        <section name="InstructionsNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Operation ${operationWorkEffortId} is not available to you." type="p"/>
+                        <link url="../Station" text="Back to the station" icon="sym_o_arrow_back"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="InstructionsFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${operationWorkEffortId}"
+                        title="Instructions · ${instructions.operationName}"/>
+                <container style="row items-center q-col-gutter-x-md q-mb-sm">
+                    <container style="col-12 col-md">
+                        <label text="Instructions: ${instructions.operationName}" type="h5"/>
+                        <label text="Work order ${instructions.workEffortId} · ${instructions.runName} · as released ${instructions.releaseText}"
+                                type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto q-gutter-x-sm">
+                        <link url="../OperationExecution" text="Back to the operation" icon="sym_o_arrow_back" parameter-map="linkParameters"/>
+                        <link url="../InstructionsPrint" text="Print" icon="sym_o_print" target-window="_blank"
+                                parameter-map="printParameters"/>
+                    </container>
+                </container>
+                <label text="${instructions.revisionWarning}" type="p" style="text-warning" condition="instructions.revisionWarning"/>
+                <label text="This operation has no published instruction to acknowledge." type="p" style="m-muted"
+                        condition="!stepRows.length"/>
+                <section-iterate name="InstructionSteps" list="stepRows" entry="step">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Step ${step.stepNumber} of ${stepRows.length}: ${step.title}"/>
+                            <box-body>
+                                <label text="${step.body}" type="pre" condition="step.body"/>
+                                <label text="File ${step.fileName} · checksum ${step.contentChecksum || 'none'} · published ${step.fromText}" type="p"
+                                        style="text-caption m-muted"/>
+                                <label text="${step.acknowledgedText}" type="p" style="${step.acknowledged ? 'text-positive' : 'text-caption'}"/>
+                                <section name="AcknowledgeStep"
+                                        condition="currentStep?.workEffortContentId == step.workEffortContentId &amp;&amp; instructions.canRecord">
+                                    <widgets>
+                                        <form-single name="AcknowledgeForm" transition="recordStep" map="step">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="workEffortContentId"><default-field><hidden/></default-field></field>
+                                            <field name="stepTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="Acknowledge"
+                                                    icon="sym_o_check"/></default-field></field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <section name="EvidenceSection" condition="evidence.required">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Evidence: ${evidence.text}"/>
+                            <box-body>
+                                <label text="Recorded" type="p" style="text-positive" condition="evidence.recorded"/>
+                                <section name="EvidenceEntry" condition="instructions.canRecord">
+                                    <widgets>
+                                        <form-single name="EvidenceForm" transition="recordStep" map="evidenceValues">
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="stepTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="valueText"><default-field title="${evidence.text}"><text-line required="true"/></default-field></field>
+                                            <field name="comments"><default-field title="Note"><text-line/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="Record evidence"
+                                                    type="default"/></default-field></field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AcknowledgmentHistory" condition="acknowledgmentRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Acknowledgments and evidence"/>
+                            <box-body-nopad>
+                                <form-list name="AcknowledgmentList" list="acknowledgmentRows" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="personName"><default-field title="By"><display/></default-field></field>
+                                    <field name="whenText"><default-field title="When"><display/></default-field></field>
+                                    <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="personName"/></column>
+                                        <column><field-ref name="whenText"/><field-ref name="valueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

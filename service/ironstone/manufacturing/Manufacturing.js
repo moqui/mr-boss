@@ -1421,6 +1421,24 @@ Object.assign(choiceSources, {
 })
 const productNameOf = productId => (productId ? one("mantle.product.Product", {productId})?.productName || productId : "")
 
+// ===== P10: the shop floor and production time =====
+// The Shop floor area's screens (impl-manufacturing P10): the station's board, an operation's execution and instructions and a
+// work order's time, whose routes are in sharedLinks; and the production work types a person's timer takes.
+linkPaths.push("ShopFloor/Station", "ShopFloor/OperationExecution", "ShopFloor/Instructions", "ShopFloor/ProductionTime")
+const productionWorkTypes = ["WktpProductionSetup", "WktpProductionRun", "WktpProductionRework"]
+Object.assign(choiceSources, {
+    productionWorkTypes: (userScope, term, selected) =>
+        rowOptions(
+            find("moqui.basic.Enumeration").condition("enumId", "in", productionWorkTypes).orderBy("enumId"),
+            "enumId",
+            row => row.description || row.enumId,
+            ["enumId", "description"],
+            term,
+            selected,
+            enumId => (productionWorkTypes.includes(enumId) ? one("moqui.basic.Enumeration", {enumId}) : null)
+        )
+})
+
 // ===== P16: reports =====
 // The Reports area's index and eight reports (impl-manufacturing P16), whose routes are in sharedLinks for Home's Kpis; and
 // the reports' work order drop-down: the production runs of the user's organizations, newest first, by id or name.

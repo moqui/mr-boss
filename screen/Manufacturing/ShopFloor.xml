@@ -12,11 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Shop floor area of IronStone Manufacturing (design-manufacturing §1.2, §4): ShopFloor, OperationExecution and
-    Instructions (impl-manufacturing P10, P11), for the operator and supervisor groups only (BOSS_MFG_SHOP_FLOOR). -->
+<!-- The Shop floor area of IronStone Manufacturing (design-manufacturing §1.2, §4; impl-manufacturing P10), for the operator
+    and supervisor groups only (BOSS_MFG_SHOP_FLOOR): Station, the plant's board of operations and the selected operation's card
+    (a .qvue with its terminal twin); OperationExecution, one operation at handheld density with its start checks, person
+    timer, machine runtime and completion; Instructions, its instruction as of the work order's release with the acknowledgment
+    and the evidence; ProductionTime, a work order's person time and its weeks; and InstructionsPrint, the operator
+    instructions print. Each service checks its permission and organization again (mantle.work.ProductionServices). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shop floor" default-menu-index="3" menu-image="sym_o_speed" menu-image-type="icon">
+    <subscreens default-item="Station" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: The operations to run, their instructions and time." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

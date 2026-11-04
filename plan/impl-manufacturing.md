@@ -216,7 +216,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | built Nov 3 |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | built Nov 3 |
-| P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
+| P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | built Nov 4 |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
@@ -1570,15 +1570,15 @@ BillOfMaterialsCompare's amendment action; M4.
   answers FORWARD_REPOST_REQUIRED until Accounting turns them on; a substitute's issue at a backflush follows P5b's lines as
   they are; merging drafts stays §7.
 - Findings (provisional):
-  - **F-P9-1** A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and
+  - **F120** A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and
     renders an empty page; SplitWorkOrder's Back and Next link to the screen with the step, and its forms post to `toStep`,
     as NewWorkOrder does.
-  - **F-P9-2** With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it
+  - **F121** With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it
     deletes the posted transaction and leaves the new one unposted in the error journal, so the history is lost (F31 expected
     an error); ReceiptAdjustments' spec asserts the forward delta posts and the legacy path keeps no posted history.
-  - **F-P9-3** `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's
+  - **F122** `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's
     internal release and an amendment's review need it too; a planner or supervisor without it is refused METHOD_INVALID.
-  - **F-P9-4** For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the
+  - **F123** For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the
     appended P9 section), AssetAutoPostServices.xml (`repost#AssetReceipt`'s first two actions), AccountingControlEntities.xml,
     AccountingSetup.js, SetupServices.xml; BOSS Components.xml, Quantities.xml (a link beside Labels), WorkOrderDetail.xml
     (a transition, two actions, two More items), Find.xml, Shared/BillOfMaterialsCompare.xml (an appended section),
@@ -1597,8 +1597,8 @@ BillOfMaterialsCompare's amendment action; M4.
     that lowers fewer kits than asked is refused (BREAKDOWN_SHORT) rather than cancelling the whole slices.
   - (low) an amendment removing a method line that has an applied substitute deleted it under the substitute; it is kept now,
     with a finding.
-  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F-P9-2).
-  - F-P9-2 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
+  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F121).
+  - F121 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
     source's refused posting goes to the error journal, so the unchanged legacy `repost#AssetReceipt` loses the locked day's
     posting. Recorded in impl-accounting §7; the forward flag avoids it.
   - (medium, after the merge with master) cancellation counted only issues, output receipts, time and losses, while the
@@ -1647,6 +1647,140 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
   - the run's supervisor approves the operator's timesheet, which writes the labor event; reopening it writes the
     reversal;
   - the same flow completes in the terminal twin.
+
+**Built Nov 4 (P10).**
+- Mantle records (`entity/ProductionShopFloorEntities.xml`, new): `mantle.work.production.MachineRuntimeEvent` (run, operation,
+  work center, optional equipment, mode, from and thru, hours, the WorkCenterRate it was valued at with rate, amount and
+  currency, valuation, its cost event) and `InstructionAcknowledgment` (run, operation, the WorkEffortContent row, step kind
+  IstAcknowledge or IstEvidence, person, user, date, value and unit, file reference, note); on WorkEffort the operation's
+  audit-logged `productionGoodQuantity`, `productionLossQuantity` and the start override (`productionStartOverride`, `...Checks`,
+  `...ByUserId`, `...Date`). Seeds (`data/ProductionShopFloorData.xml`): the WorkTypes `WktpProductionSetup`, `WktpProductionRun`
+  and `WktpProductionRework` (F18), the RatePurpose `RaprProductionCost` (the costing rate, design Y2), MachineRuntimeMode,
+  InstructionStepType and the cost event types `PcetLabor` and `PcetMachine`.
+- Mantle services (`ProductionShopFloor.js`, eleven appended to `ProductionServices.xml`): `get#ShopFloorQueue` (the open runs'
+  operations at a plant or center by state: running, ready, paused, blocked, done; readiness from `get#ProductionOperations`;
+  mine; at most 100 runs), `get#ProductionOperation` (the start checks, timer, runtime, evidence, quantities and what the user may
+  do; values only with ACCOUNTING_VIEW), `get#ProductionInstructions` and `record#InstructionStep` (the instruction rows of the
+  routing operation and its template in effect at the release, a revision warning when a newer one is published; acknowledgment
+  once per person; the evidence of `methodRequiredEvidence`), `override#ProductionOperationStart` (PRODUCTION_SUPERVISE),
+  `start#`, `pause#` and `complete#ProductionOperation`, `record#MachineRuntime`, `sync#ProductionLaborCost` (internal) and
+  `get#ProductionTime`. Start checks (§4): the run running, the operation open, its predecessors started, the in-process gate
+  (P8's `operationGate`, F104), a staged short line, the run's equipment (blocked status or an open outage), the operator
+  assigned when the run names assignees (or a supervisor), and the required skills and instruction acknowledgment, blocking
+  unless overridden, with an advisory when neither is configured; then TimesheetServices' `start#Timer`, a timer elsewhere only
+  with `confirmSwitch` (TIMER_SWITCH_REQUIRED). Complete: the predecessors complete (PREDECESSOR_OPEN, naming them), the evidence
+  recorded, no machine runtime open, then `record#ProductionQuantity` under the operation's key (the output operation receives
+  good and pending output; any operation records loss), the user's timer stopped, `TimeEntry.pieceCount` = good under the
+  `pieceRate` policy, and the operation Complete; one transaction, a retry answers the first. Machine runtime: start, stop or a
+  past interval, valued at the center's approved PccMachine WorkCenterRate in effect at its start, else PcvUnvalued; its
+  PcetMachine event awaits the close. `ProductionCosts.js` gained the TimeEntry and MachineRuntimeEvent sources and a source
+  that answers no event (a labor delta of nothing); `record#ProductionCostEvent` takes `sourceRemoved`.
+- The labor hook (F34, F35): `TimesheetServices.approve#` and `reopen#Timesheet` and `TimeServices.store#` and `delete#TimeEntry`
+  call `sync#ProductionLaborCost` beside `post#WorkEffortCost`: per entry on a production run whose owner's policy has
+  `laborCostSync`, the delta between its hours while its week is approved and what its labor events recorded (approval at the
+  costing RateAmount by position class and work type, else unvalued; reopen and deletion the reversal; an hours change a delta at
+  the first rate). Other entries are passed over after one read; an entry that fails is logged and named. No
+  `get#TimesheetApprovers` change (F33).
+- Mantle's Today (F41): `get#UserTodayItems` leaves out a WepProductionRun and the WetTask operations under one.
+- F90/F95: `transition#ProductionOrder` complete refuses operations not completed on the shop floor (OPERATION_UNREPORTED, after
+  the material check) unless `closeUnreportedOperations`; `completeOnFinalReceipt` counts as that acceptance. ProductionQuantities
+  and ProductionQuality's completing features pass it; WorkOrderDetail's Complete dialog has the checkbox.
+- BOSS: the Shop floor area (`ShopFloor.xml`, its placeholder replaced): `Station` (`Station.qvue`: scan, plant, My work, the
+  selected card with Open, Start and Instructions, the board by state, stacked at phone width; `Station.tui.json`, the board
+  component opening OperationExecution), `OperationExecution` and `Instructions` (density handheld, scan-input), `ProductionTime`
+  and `InstructionsPrint` (html-print); `ironstone.manufacturing.ShopFloorServices` (`get#Station`, `resolve#OperationScan`) and
+  `HomeServices.get#TodayItems` over `ShopFloor.js`; the root's `<today-source>`; Manufacturing.js's P10 block (routes, the
+  `productionWorkTypes` choice). Demo: line A's policy row (machine runtime recorded, piece rate, `laborCostSync`), Retail's
+  costing rate `BOSS_MFG_RATE_RUN`, the material handler's assembly skill.
+- Specs: Mantle `test/work/ProductionShopFloor.spec.js` (7 features, about 2 s: the queue by state; the skill override and the
+  acknowledgment blocking the start; the timer switch with its confirmation and a retry; overlap with completion refused before
+  the predecessor; machine runtime valued and unvalued, apart from labor; the evidence; 6 good at Assemble with its piece count,
+  then 5 good and 1 scrap at Pack with the coupled receipt and a retry; STOCK_ISSUE_REQUIRED; the supervisor's approval writing
+  the labor event and the reopen its reversal, the flag off at a second plant and a plain task writing none; OPERATION_UNREPORTED
+  then closed; Today leaving out a run and its operation and keeping a plain task; the reads refused). BOSS
+  `ManufacturingShopFloor` (6, through the screens' transitions and pages with authz on, and the tui twins),
+  ManufacturingAccess's P10 section (2), the route fixtures (AppStructure, TuiRender; AppStructure's placeholder floor 63),
+  ManufacturingSpecLib's `shopFloorFixture`, `ManufacturingShopFloorFixtures` and the client walk `ManufacturingShopFloorWalk`
+  (2, at 390 px), both in `suite.js`.
+- Tests run: Mantle ProductionShopFloor (7), and ManufacturingServices, WarehouseProduction, ProductMethods, ProductionQuantities,
+  ProductionQuality, ProductionOrders, ProductionCosts, ProductionSchedule, ProductionMaterials, ProductionPolicy,
+  ProductionSubcontract, ProductionDowntime, WorkTimeEntries, WorkTimesheets, CommonsToday (122, all pass; no baseline failure
+  of the time specs showed in this runtime); BOSS ManufacturingShopFloor (6), AppStructure and TuiRender (21), ManufacturingAccess,
+  ManufacturingShell, TodayPanel, ManufacturingWorkOrders, ManufacturingDowntime, ManufacturingMaterials, TuiRender (135),
+  TimeEntries, Billing, ClientBilling, ManufacturingSchedule, ManufacturingSubcontracting (31), all pass; the walk
+  ManufacturingShopFloorWalk (2, pass). `moqui lint --screens`: only informational anchor rows for the Shop floor screens.
+- Decisions:
+  - An operation may start once the operations before it have started (overlapping work), and completes only after they have
+    completed; the readiness text still says "Waiting for" until they complete.
+  - The supervisor's override waives the required skills and, only when asked, the instruction acknowledgment; it is recorded on
+    the operation (audit-logged) for every operator of it, and no other check is overridable.
+  - The required acknowledgment is the instruction in effect at the release (the template's or the routing operation's), and the
+  required evidence (`methodRequiredEvidence`) is asked for at completion, not at start.
+  - F96: the coupled output receipt needs STOCK_ISSUE (§2), refused before anything posts with STOCK_ISSUE_REQUIRED and its
+    advice; a plain operator records only loss at the output operation. The demo's material handler holds both.
+  - Machine runtime follows the policy: none where `machineRuntimeEnumId` is Not recorded, the built-in default (F125).
+  - The labor event names its entry by `sourceId` and `timeEntryId` (no foreign key, F129), and freezes the rate at the
+    approval; a RateAmount correction reaches a run through P15's review, while a change of what chooses the rate (work type,
+    position class, date) or of the entry's operation or run reverses the recording and records it again (review).
+  - Pause is the operation's own On hold with its reason and an optional timer stop; a stop of the line is reported apart in
+    Downtime (Report stop), which carries the run and operation.
+  - ProductionTime is the whole work order's time (no operation filter on the screen), with Projects' submit, approve and reopen.
+- Deferred: Home's work list reusing Today's items (F41's "Home's work list reuses it"); the time-log enforcement policy
+  (`timeLogEnforcementEnumId` PtlWarn, PtlRequired) at completion; backflush at the policy's operation issue points (P5b named P10
+  its caller); the shared-station device credential (CX-DEVICE, §7); WorkOrderDetail Operations' link to the shop floor.
+- Findings (provisional):
+  - **F124** ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which
+    is no entity (`mantle.humanres.ability.PartySkill`), so an assignment's or a schedule's skill check errored once a template
+    had a skill standard. Fixed in both.
+  - **F125** The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused
+    (MACHINE_RUNTIME_OFF) until a policy row records it; the demo's line A row does.
+  - **F126** A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate
+    completion leaves no time: the specs move a timer's start back, and the walk's fixture records earlier time.
+  - **F127** Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue
+    is the run's end until it is scheduled.
+  - **F128** (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt
+    closes them as before.
+  - **F129** ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened
+    week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). The
+    review made the relationship `one-nofk`: the events keep the entry's id as their source after it is deleted.
+  - **F130** The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed
+    over, but a failure of the event's write would roll back the approval.
+  - **F131** For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s
+    `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s
+    null event), ProductionQuantities.js (`completeCheck`, `afterReceipt`), ProductionOrders.js (`blockedReasons`, the request
+    field, the PartySkill name), ProductionSchedule.js (PartySkill), TimesheetServices.xml, TimeServices.xml,
+    WorkEffortServices.xml (`get#UserTodayItems`), the P7 and P8 specs' complete calls; BOSS: Manufacturing.xml (today-source),
+    Manufacturing.js, HomeServices.xml, Quantities.xml (the checkbox), BossManufacturingDemoData, BossUsersDemoData,
+    ManufacturingSpecLib (routes, `shopFloorFixture`), ManufacturingAccess, AppStructure's floor (63), suite.js and
+    docs/ManufacturingImplementation.md. P9 (in parallel) edits ProductionOrders.js and the Components screens.
+- **Review (Nov 4).** Findings and fixes:
+  - Medium: the labor spec's costing rate lost to BOSS's demo `BOSS_MFG_RATE_RUN` in a runtime with BOSS data (RateAmount names
+    no organization; the later started wins), so the labor feature failed there. The spec's rates now start yesterday.
+  - Medium: F129 fixed properly rather than leaving `timeEntryId` empty: `ProductionCostEvent`'s TimeEntry relationship is
+    `one-nofk` and labor events set `timeEntryId`; a reversal, a deletion and the delete of the reopened week's entry
+    tested.
+  - Medium: the labor delta covered only an hours change (F35 names work type, position class, from date and work effort
+    too): a recording that no longer fits (the frozen rate row no longer matches the entry, or another operation or run) is
+    now reversed on its own run and recorded again; an entry moved off a run, or a run whose flag was turned off, still has
+    its recorded labor brought to it. The delta's rate and original event are the current recording's (since its net was
+    last nothing), not the entry's first event ever.
+  - Low: `get#ShopFloorQueue`'s `mine` (Today's source) filtered after the 100 work order limit, so an assignee's
+    operations could be missed; it now limits to the user's work orders before the limit.
+  - Verified: F124's PartySkill checks had no spec; a new feature covers the assignment's warning and the schedule
+    preview's SKILLS conflict, with and without the skill. Machine runtime's Not recorded default stands (P4's policy
+    default, consistent with §2's off by default; design TimeAndCost names no default).
+  - Left: PmrRequired and the time-log enforcement are not enforced at completion (deferred above); completion does not
+    check the operator's assignment (start does); the costing rate takes no currency or organization match (RateAmount has
+    no organization).
+  - Specs: Mantle ProductionShopFloor (9, pass), WorkTimeEntries, WorkTimesheets, CommonsToday, ProductionCosts,
+    ProductionOrders, ProductionQuantities, ProductionQuality, ProductionSchedule (69, pass); BOSS ManufacturingShopFloor,
+    ManufacturingAccess, TodayPanel (103, pass).
+  - Merge with master (P9): P9's backorder completion of the source and its close-out of a cancelled run with postings
+    pass `closeUnreportedOperations` (the backorder or the close-out takes the rest of the work), so OPERATION_UNREPORTED
+    does not refuse them. After the merge: Mantle ProductionShopFloor, ProductionChanges, ProductionOrders,
+    ProductionQuantities, ProductionQuality, ProductionSchedule, ProductionCosts, WorkTimeEntries, WorkTimesheets,
+    CommonsToday (88, pass); BOSS ManufacturingShopFloor, ManufacturingAccess, ManufacturingWorkOrders, TodayPanel,
+    AppStructure (placeholders 63), TuiRender (130, pass).
 
 ### P11 — Downtime and maintenance
 
@@ -2529,6 +2663,18 @@ is written there too.
 | F117 | P14: `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order is placed and approved in Purchasing (and the bill match needs an approved order). | P14 Built note |
 | F118 | P14: Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the Subcontract orders tab is checked by ManufacturingSubcontracting's html render. | P14 Built note |
 | F119 | P14: A group whose mount offers an action must hold every permission the action's Mantle service checks; here the conversion's supplier-price read. | P14 Built note |
+| F120 | P9: A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and renders an empty page; SplitWorkOrder's Back and Next link to the screen with the step, and its forms post to `toStep`, as NewWorkOrder does. | P9 Built note |
+| F121 | P9: With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it deletes the posted transaction and leaves the new one unposted in the error journal, so the history is lost (F31 expected an error); … | P9 Built note |
+| F122 | P9: `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's internal release and an amendment's review need it too; a planner or supervisor without it is refused METHOD_INVALID. | P9 Built note |
+| F123 | P9: For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the appended P9 section), AssetAutoPostServices.xml (`repost#AssetReceipt`'s first two actions), AccountingControlEntities.xml, AccountingSetup.js, … | P9 Built note |
+| F124 | P10: ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which is no entity (`mantle.humanres.ability.PartySkill`), so an assignment's or a schedule's skill check errored once a template had a skill standard. | P10 Built note |
+| F125 | P10: The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused (MACHINE_RUNTIME_OFF) until a policy row records it; the demo's line A row does. | P10 Built note |
+| F126 | P10: A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate completion leaves no time: the specs move a timer's start back, and the walk's fixture records earlier time. | P10 Built note |
+| F127 | P10: Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue is the run's end until it is scheduled. | P10 Built note |
+| F128 | P10: (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt closes them as before. | P10 Built note |
+| F129 | P10: ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). | P10 Built note |
+| F130 | P10: The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed over, but a failure of the event's write would roll back the approval. | P10 Built note |
+| F131 | P10: For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s null event), … | P10 Built note |
 
 ## 7. Later
 

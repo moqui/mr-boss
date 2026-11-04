@@ -1442,7 +1442,7 @@ adoption flags), F115–F126 and R2 say what stands.
 
 Designed, not in this build:
 
-- **From Manufacturing P9 (impl-manufacturing F-P9-2):** with `postingGuardEnabled`, the legacy `repost#AssetReceipt`
+- **From Manufacturing P9 (impl-manufacturing F121):** with `postingGuardEnabled`, the legacy `repost#AssetReceipt`
   under a hard lock of the receipt's day unposts and deletes the posted transaction (`PostingGuard.assertMutable` lets an
   unpost through) and its new posting goes to the error journal unposted, so the posted history is lost. The unpost should
   be refused under the lock, or the forward flags made the default where a lock is in force.

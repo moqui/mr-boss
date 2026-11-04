@@ -77,4 +77,28 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
         </actions>
     </service>
+    <!-- P10: the Manufacturing today-source (Manufacturing.xml shell-providers; F41) -->
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Manufacturing today-source (get#UserTodayItems calls it): the user's due operations, the open
+            operations of the work orders and operations they are assigned to, due by thruDate (ShopFloor.js today), each
+            opening OperationExecution with its work order as the record and no Mark done (canUpdate false; Mantle's Today
+            leaves a run's operations out of its own tasks). A user without Manufacturing or a production permission, and
+            another user's Today, get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/ShopFloor.js')
+                    .execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
 </services>
