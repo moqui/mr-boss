@@ -719,3 +719,139 @@ feature("a work-center change needs METHOD_RESOURCES: the reader is refused what
         resource == ""
     }
 })
+
+// ===== P2: the method services, the shared method context, Approvals, the palette and record links =====
+// the Mantle verbs and Products' shared-screen services are run as the screens run them: their screen's authorization is
+// inherited, so here artifact authorization is off and each service's own permission check is what refuses
+const asService = (user, action) => asUser(user, action, false)
+const P2 = {
+    template: {
+        organizationPartyId: "ORG_ZIZI_RETAIL",
+        workEffortName: "Spec access template",
+        timeUomId: "TF_hr",
+        methodBatchQuantity: 1,
+        methodQuantityUomId: "OTH_ea",
+        changeReason: "Spec access"
+    }
+}
+feature("the method verbs check METHOD_EDIT and METHOD_APPROVE through MethodPolicy, on the same parameters", {
+    when() {
+        const store = user => asService(user, () => refusal("mantle.work.RoutingServices.store#OperationTemplate", P2.template))
+        const release = user =>
+            asService(user, () => {
+                const detail = invoke("mantle.work.RoutingServices.get#RoutingDetail", {workEffortId: ids.routingId})
+                return refusal("mantle.work.RoutingServices.release#RoutingDraft", {
+                    workEffortId: ids.routingId,
+                    expectedRevision: detail.expectedRevision,
+                    changeReason: "Spec access"
+                })
+            })
+        return {
+            engineer: store(users.method),
+            reader: store(users.read),
+            approverStore: store(users.methodApprove),
+            engineerRelease: release(users.method),
+            readerRelease: release(users.read)
+        }
+    },
+    then({engineer, reader, approverStore, engineerRelease, readerRelease}) {
+        engineer == ""
+        reader.includes("edit authority")
+        approverStore.includes("edit authority")
+        engineerRelease.includes("approve authority")
+        readerRelease.includes("approve authority")
+    }
+})
+feature("another organization's reader reaches none of Retail's methods, routings or templates", {
+    when() {
+        return asService(users.services, () => ({
+            method: refusal(access + "check#Record", {recordType: "method", recordId: ids.methodId}),
+            routing: refusal(access + "check#Record", {recordType: "routing", recordId: ids.routingId}),
+            template: refusal(access + "check#Record", {recordType: "routing", recordId: ids.templateIds[0]}),
+            templates: refusal("mantle.work.RoutingServices.find#OperationTemplates", {workEffortId: ids.templateIds[0]}),
+            list: invoke("ironstone.manufacturing.MethodServices.get#BomList", {organizationPartyId: "ORG_ZIZI_RETAIL"})
+        }))
+    },
+    then({method, routing, template, templates, list}) {
+        method.includes("RECORD_UNAVAILABLE")
+        routing.includes("RECORD_UNAVAILABLE")
+        template.includes("RECORD_UNAVAILABLE")
+        templates.includes("not available")
+        !list.bomRows.some(row => row.productBomId === ids.methodId)
+    }
+})
+feature("the Manufacturing context of the shared method screens: #user's tabs and capabilities", {
+    where: [
+        {user: users.read, costs: false, edit: false},
+        {user: users.method, costs: false, edit: true},
+        {user: users.cost, costs: true, edit: false}
+    ],
+    when({user}) {
+        return asService(user, () => invoke("ironstone.products.CatalogServices.get#SharedContext", {appRoot: "Manufacturing"}))
+    },
+    then({productTabs, capabilities, sharedLinks, costs, edit}) {
+        productTabs.includes("BOM")
+        productTabs.includes("KitComponents")
+        productTabs.includes("Costs") == costs
+        capabilities.read == true
+        capabilities.catalogEdit == false
+        capabilities.priceRead == false
+        capabilities.methodEdit == edit
+        sharedLinks["Products/Product360"] == "//Manufacturing/BillsOfMaterials/Product360"
+    }
+})
+feature("a user without Manufacturing gets no Manufacturing context for the shared screens", {
+    when() {
+        return {
+            warehouse: asService("warehouse.read", () =>
+                refusal("ironstone.products.CatalogServices.get#SharedContext", {appRoot: "Manufacturing"})
+            ),
+            products: asService("catalog.method", () =>
+                refusal("ironstone.products.CatalogServices.get#SharedContext", {appRoot: "Manufacturing"})
+            )
+        }
+    },
+    then({warehouse, products}) {
+        warehouse != ""
+        products != ""
+    }
+})
+feature("Approvals opens for the method approver only, and lists the method release topics", {
+    when() {
+        return {
+            approver: asUser(users.methodApprove, () => lib.page("Approvals", {}, "html")),
+            engineer: asUser(users.method, () => lib.page("Approvals", {}, "html"))
+        }
+    },
+    then({approver, engineer}) {
+        approver.status == 200
+        approver.errors.length == 0
+        engineer.status != 200
+    }
+})
+feature("the palette and record links open methods and routings under Manufacturing for its users only", {
+    when() {
+        const search = (user, text) =>
+            asUser(user, () => invoke(access + "search#Records", {text, limit: 10}).rows.map(row => row.url))
+        const link = (user, recordEntityName, recordId) =>
+            asUser(user, () => invoke("ironstone.commons.PaletteServices.get#RecordLink", {recordEntityName, id: recordId}).url)
+        return {
+            method: search(users.method, "pilot"),
+            routing: search(users.method, "Line A assembly"),
+            other: search(users.services, "pilot"),
+            bomLink: link(users.method, "mantle.product.bom.ProductBom", ids.methodId),
+            operationLink: link(users.method, "mantle.work.effort.WorkEffort", ids.routingOperationIds[1]),
+            templateLink: link(users.method, "mantle.work.effort.WorkEffort", ids.templateIds[0]),
+            productsLink: link("catalog.method", "mantle.product.bom.ProductBom", ids.methodId)
+        }
+    },
+    then({method, routing, other, bomLink, operationLink, templateLink, productsLink}) {
+        method.some(url => url == "/qapps/Manufacturing/BillsOfMaterials/BillOfMaterialsDetail?productBomId=" + ids.methodId)
+        routing.some(url => url == "/qapps/Manufacturing/Routings/RoutingDetail?workEffortId=" + ids.routingId)
+        !other.some(url => url.includes(ids.methodId))
+        bomLink == "/qapps/Manufacturing/BillsOfMaterials/BillOfMaterialsDetail?productBomId=" + ids.methodId
+        operationLink.includes("Routings/RoutingDetail?workEffortId=" + ids.routingId)
+        templateLink == "/qapps/Manufacturing/Routings/OperationTemplates?workEffortId=" + ids.templateIds[0]
+        !String(productsLink || "").includes("/Manufacturing/")
+    }
+})

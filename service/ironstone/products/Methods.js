@@ -11,6 +11,8 @@ function run(op, parameters) {
     // The product, its method organization and BOM, and the user's method access: what a write needs to be authorized.
     function method(p) {
         if (!local.access().capabilities.read) throw new Error("Catalog read access is required")
+        // a routing on its own (Manufacturing's Routings, RoutingDetail with no product): its organization's method access
+        if (!p.productId && !p.productBomId && p.workEffortId) return routingMethod(p)
         let productId = p.productId,
             detail = null
         if (p.productBomId) {
@@ -32,11 +34,29 @@ function run(op, parameters) {
                 productId,
                 asOfDate: p.asOfDate
             }).bomRows
-            if (!detail && found.bomRows.length)
-                found.detail = call(S + "get#BomDetail", {productBomId: found.bomRows[0].productBomId, asOfDate: p.asOfDate})
+            // the product's MAIN method when it has one (as Mantle's cost roll-up picks), else its first
+            const opened = found.bomRows.find(row => row.methodCode === "MAIN") || found.bomRows[0]
+            if (!detail && opened)
+                found.detail = call(S + "get#BomDetail", {productBomId: opened.productBomId, asOfDate: p.asOfDate})
         }
         found.productBomId = found.detail?.productBom.productBomId || null
         found.workEffortId = p.workEffortId || found.detail?.productBom.routingWorkEffortId || null
+        return found
+    }
+    function routingMethod(p) {
+        const routing = lib.one("mantle.work.effort.WorkEffort", {workEffortId: p.workEffortId})
+        if (!routing || routing.purposeEnumId !== "WepRouting") throw new Error("Routing is not available")
+        const access = policy.capabilities(),
+            found = {
+                product: null,
+                productId: null,
+                access,
+                detail: null,
+                bomRows: [],
+                kit: false,
+                workEffortId: routing.workEffortId
+            }
+        if (access.read) found.organizationPartyId = policy.scope({organizationPartyId: routing.ownerPartyId}).organizationPartyId
         return found
     }
     function requireAccess(found, need = "read") {
@@ -46,10 +66,10 @@ function run(op, parameters) {
     // The screen context of the method screens: the method with its edit defaults, options and the rows to show.
     function context(p, found = method(p)) {
         const {product, productId, access, detail} = found,
-            amountUomId = product.amountUomId || "OTH_ea",
+            amountUomId = product?.amountUomId || "OTH_ea",
             out = {
                 appRoot: local.access().appRoot,
-                product: map(product),
+                product: product ? map(product) : null,
                 productId,
                 methodAccess: access,
                 productBomId: p.productBomId || null,
@@ -115,7 +135,7 @@ function run(op, parameters) {
             "TF_min",
             "LEN_m",
             "WT_kg",
-            product.amountUomId,
+            product?.amountUomId,
             detail?.productBom.quantityUomId,
             ...(detail?.bomItemRows || []).map(row => row.quantityUomId),
             ...(detail?.draftItemRows || []).map(row => row.quantityUomId)
@@ -319,7 +339,7 @@ function run(op, parameters) {
             operationEdit: Object.assign(
                 {
                     methodBatchQuantity: 1,
-                    methodQuantityUomId: c.product.amountUomId || "OTH_ea",
+                    methodQuantityUomId: c.product?.amountUomId || "OTH_ea",
                     timeUomId: "TF_hr",
                     estimatedSetupTime: 0,
                     estimatedWorkTime: 0,
@@ -334,7 +354,7 @@ function run(op, parameters) {
                     methodMachineSetupTime: edited.methodMachineSetupTime ?? edited.machineSetupTime ?? 0,
                     methodMachineRunTime: edited.methodMachineRunTime ?? edited.machineRunTime ?? 0,
                     methodBatchQuantity: edited.methodBatchQuantity ?? edited.batchQuantity ?? 1,
-                    methodQuantityUomId: edited.methodQuantityUomId || edited.quantityUomId || c.product.amountUomId || "OTH_ea",
+                    methodQuantityUomId: edited.methodQuantityUomId || edited.quantityUomId || c.product?.amountUomId || "OTH_ea",
                     methodWorkCenterId: edited.methodWorkCenterId || edited.workCenterFacilityId || null,
                     methodPredecessorIds: edited.methodPredecessorIds || edited.predecessorWorkEffortIds || "",
                     changeReason: ""
@@ -421,11 +441,18 @@ function run(op, parameters) {
             validateRouting: [R + "validate#RoutingDraft"],
             releaseRouting: [R + "release#RoutingDraft", "approve"],
             storeCenter: [R + "store#WorkCenter", "resources"],
+            // Manufacturing P2: copies into the routing and the engineer's release requests
+            copyOperations: [R + "copy#RoutingOperations", "edit"],
+            requestRelease: [S + "request#BomRelease", "edit"],
+            requestRoutingRelease: [R + "request#RoutingRelease", "edit"],
             storeRate: [R + "store#WorkCenterRate", "resources"]
         }
         if (!route[op]) throw new Error("Unknown method operation " + op)
         const [name, need] = route[op]
-        return native(p, name, requireAccess(method(p), need || "read"))
+        const found = requireAccess(method(p), need || "read")
+        // a routing stored with no workEffortId is a new one (RoutingDetail's New routing), never the method's routing
+        if (op === "storeRouting" && !p.workEffortId) found.workEffortId = null
+        return native(p, name, found)
     }
     return execute(op, parameters)
 }

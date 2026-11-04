@@ -179,7 +179,13 @@ const linkPaths = [
     "Subcontracting",
     "Settings",
     "Approvals",
-    "Reports"
+    "Reports",
+    // P2: the method records
+    "BillsOfMaterials/BillOfMaterialsDetail",
+    "BillsOfMaterials/WhereUsed",
+    "BillsOfMaterials/Product360",
+    "Routings/RoutingDetail",
+    "Routings/OperationTemplates"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Manufacturing") denied("MANUFACTURING_CONTEXT", "Manufacturing context is not available")
@@ -257,15 +263,21 @@ function readMethod(productBomId) {
 function readRouting(workEffortId) {
     const row = one("mantle.work.effort.WorkEffort", {workEffortId})
     if (!row || !routingPurposes.includes(row.purposeEnumId)) return null
+    // an operation template is a routing task with no routing (P2), checked by its own owner
+    const template = row.purposeEnumId === "WepRoutingTask" && !row.parentWorkEffortId
     const routing =
-        row.purposeEnumId === "WepRoutingTask"
+        row.purposeEnumId === "WepRoutingTask" && !template
             ? one("mantle.work.effort.WorkEffort", {workEffortId: row.parentWorkEffortId})
             : row
     return {
         owners: [routing?.ownerPartyId],
         facilities: [],
         label: row.workEffortName || workEffortId,
-        detail: row.purposeEnumId === "WepRoutingTask" ? "Routing " + (routing?.workEffortId || "") : statusText(row.statusId)
+        detail: template
+            ? "Operation template"
+            : row.purposeEnumId === "WepRoutingTask"
+              ? "Routing " + (routing?.workEffortId || "")
+              : statusText(row.statusId)
     }
 }
 // A work center: a facility with a WorkCenter row, by the facility's owner.
@@ -311,6 +323,21 @@ function readFacility(facilityId) {
     }
 }
 
+// The Manufacturing screen of a routing, an operation (its routing's, with the operation selected) or a template (P2).
+function routingDestination(workEffortId) {
+    const row = one("mantle.work.effort.WorkEffort", {workEffortId})
+    if (row?.purposeEnumId === "WepRoutingTask" && !row.parentWorkEffortId)
+        return "Routings/OperationTemplates?workEffortId=" + encodeURIComponent(workEffortId)
+    if (row?.purposeEnumId === "WepRoutingTask")
+        return (
+            "Routings/RoutingDetail?workEffortId=" +
+            encodeURIComponent(row.parentWorkEffortId) +
+            "&selectedOperationId=" +
+            encodeURIComponent(workEffortId)
+        )
+    return "Routings/RoutingDetail?workEffortId=" + encodeURIComponent(workEffortId)
+}
+
 // Each kind a Manufacturing screen, mount, palette or record link may be given: its name, icon, the Manufacturing screen that
 // opens it (destination, the path and id parameter under the root; null until its phase builds it, and then the record
 // opens Home's lookup) and its read (a record answers its owners and facilities, a label and a detail, or null when there is
@@ -318,8 +345,13 @@ function readFacility(facilityId) {
 const recordKinds = {
     run: {name: "Work order", icon: "sym_o_precision_manufacturing", destination: null, read: readRun},
     operation: {name: "Operation", icon: "sym_o_task_alt", destination: null, read: readOperation},
-    method: {name: "BOM", icon: "sym_o_account_tree", destination: null, read: readMethod},
-    routing: {name: "Routing", icon: "sym_o_route", destination: null, read: readRouting},
+    method: {
+        name: "BOM",
+        icon: "sym_o_account_tree",
+        destination: "BillsOfMaterials/BillOfMaterialsDetail?productBomId=",
+        read: readMethod
+    },
+    routing: {name: "Routing", icon: "sym_o_route", destination: routingDestination, read: readRouting},
     workCenter: {name: "Work center", icon: "sym_o_factory", destination: null, read: readWorkCenter},
     asset: {name: "Asset", icon: "sym_o_precision_manufacturing", destination: null, read: readAsset},
     facility: {name: "Facility", icon: "sym_o_warehouse", destination: null, read: readFacility}
@@ -368,6 +400,8 @@ function checkRecord(p) {
 // The Manufacturing screen of a record: its kind's destination, else Home's lookup of it.
 function recordUrl(kind, recordId) {
     const destination = recordKinds[kind]?.destination
+    // a destination is a path the id is added to, or a function of the id (a routing's operation opens its routing)
+    if (typeof destination === "function") return "/qapps/Manufacturing/" + destination(recordId)
     if (destination) return "/qapps/Manufacturing/" + destination + encodeURIComponent(recordId)
     return "/qapps/Manufacturing/Home?lookupType=" + kind + "&lookupId=" + encodeURIComponent(recordId)
 }
@@ -518,6 +552,98 @@ function facilityOptions(query, term, selected, keep) {
 const choiceSources = {
     plants: (userScope, term, selected) =>
         facilityOptions(plantFind(userScope), term, selected, facility => isPlant(userScope, facility)),
+    // P2: the products of the user's organizations a method may be made for (not pick kits, D15), by id, pseudo id and name
+    products: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product").condition("productTypeEnumId", "not-equals", "PtPickAssembly")
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", userScope.ownerIds)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["productId", "pseudoId", "productName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        const options = Array.from(query.orderBy("productName").limit(choiceLimit).list()).map(row => ({
+            value: row.productId,
+            label: label(row)
+        }))
+        if (selected && !options.some(option => option.value === selected)) {
+            const row = one("mantle.product.Product", {productId: selected})
+            if (row && owns(userScope, row.ownerPartyId) && row.productTypeEnumId !== "PtPickAssembly")
+                options.push({value: row.productId, label: label(row)})
+        }
+        return options
+    },
+    // P2: the operation templates and the other routings' operations a routing may copy (not archived templates)
+    operationSources: (userScope, term, selected, p) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.effort.WorkEffort", {purposeEnumId: "WepRoutingTask"}).condition(
+            factory.makeCondition(
+                [
+                    factory.makeCondition("methodArchived", "is-null", null),
+                    factory.makeCondition("methodArchived", "equals", "N")
+                ],
+                "or"
+            )
+        )
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", userScope.ownerIds)
+        // not this routing's own operations; a template has no parent, which a plain not-equals would leave out
+        if (p.workEffortId)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("parentWorkEffortId", "is-null", null),
+                        factory.makeCondition("parentWorkEffortId", "not-equals", p.workEffortId)
+                    ],
+                    "or"
+                )
+            )
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["workEffortId", "workEffortName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row =>
+            (row.workEffortName || row.workEffortId) + (row.parentWorkEffortId ? " · " + row.parentWorkEffortId : " · template")
+        const options = Array.from(query.orderBy("workEffortName").limit(choiceLimit).list())
+            .filter(row => row.methodRemoved !== "Y")
+            .map(row => ({value: row.workEffortId, label: label(row)}))
+        if (selected && !options.some(option => option.value === selected)) {
+            const row = one("mantle.work.effort.WorkEffort", {workEffortId: selected})
+            if (row?.purposeEnumId === "WepRoutingTask" && owns(userScope, row.ownerPartyId))
+                options.push({value: row.workEffortId, label: label(row)})
+        }
+        return options
+    },
+    // P2: the production inspection templates of the user's organizations (Warehouse P8's InspectionTemplate)
+    inspectionTemplates: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.quality.InspectionTemplate", {inspectionContextEnumId: "QicProduction"}).condition(
+            "statusId",
+            "not-equals",
+            "QtRetired"
+        )
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        if (term) query = query.condition(factory.makeCondition("templateName", "like", likeText(term)).ignoreCase())
+        const options = Array.from(query.orderBy("templateName").limit(choiceLimit).list()).map(row => ({
+            value: row.inspectionTemplateId,
+            label: row.templateName || row.inspectionTemplateId
+        }))
+        if (selected && !options.some(option => option.value === selected)) {
+            const row = one("mantle.product.quality.InspectionTemplate", {inspectionTemplateId: selected})
+            if (row && owns(userScope, row.organizationPartyId))
+                options.push({value: row.inspectionTemplateId, label: row.templateName || row.inspectionTemplateId})
+        }
+        return options
+    },
     // the work centers of the user's organizations, under the given plant when there is one
     workCenters: (userScope, term, selected, p) => {
         const centerIds = workCenterIds()
@@ -559,9 +685,12 @@ const choiceSources = {
         return options
     }
 }
+// the method form choices (P2) name a method organization's products, operations and inspection templates: method readers only
+const methodChoices = ["products", "operationSources", "inspectionTemplates"]
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Manufacturing choice " + p.choice)
+    if (methodChoices.includes(p.choice) && !userScope.capabilities.methodRead) return {options: []}
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 

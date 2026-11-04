@@ -36,7 +36,15 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.products.MethodServices.get#BomExplosion" in-map="context" out-map="context"/>
     </actions>
     <widgets>
-        <label text="BOM explosion" type="h5"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="BOM explosion" type="h5"/>
+            </container>
+            <container style="col-auto">
+                <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="!!productBomId &amp;&amp; sri.getRenderMode() !== 'html-print'"
+                        parameter-map="{productId:productId,productBomId:productBomId,asOfDate:asOfDate || '',quantity:quantity || '',quantityUomId:quantityUomId || '',facilityId:facilityId || '',renderMode:'html-print'}"/>
+            </container>
+        </container>
         <form-single name="BillOfMaterialsExplosionParameters" transition=".">
             <field name="productId" from="productId || null">
                 <default-field>

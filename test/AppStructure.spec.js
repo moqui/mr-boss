@@ -67,7 +67,7 @@ const demoRecords = {
     "Products/Prices/StandardCosts": {text:"m-subscreens-active"},
     "Products/Prices/CostRollup": {text:"m-subscreens-active"},
     "Products/Prices/CostHistory": {text:"m-subscreens-active"},
-    "Shared/BillOfMaterialsDetail/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"manufacturing method"},
+    "Shared/BillOfMaterialsDetail/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Released components and outputs"},
     "Shared/BillOfMaterialsExplosion/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"BOM explosion"},
     "Shared/BillOfMaterialsCompare/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Compare method dates"},
     "Shared/WhereUsed/": {parameters:{productId:"DEMO_1_1",organizationPartyId:"ORG_ZIZI_RETAIL"},text:"Where used"},

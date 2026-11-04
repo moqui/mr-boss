@@ -12,12 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Routings area of IronStone Manufacturing (design-manufacturing §1.2, §5): Routings, the shared RoutingDetail
-    with the Manufacturing context and OperationTemplates (impl-manufacturing P2). Open to every Manufacturing user; the
-    routing services check METHOD_VIEW. -->
+<!-- The Routings area of IronStone Manufacturing (design-manufacturing §1.2, §5; impl-manufacturing P2): Routings (the
+    Find list, NewRouting, CSV import), the shared RoutingDetail with the Manufacturing context (copy operations, the release
+    request, notes) and OperationTemplates, the operation catalogue with its published instructions. Open to every
+    Manufacturing user; the routing services check METHOD_VIEW, METHOD_EDIT and METHOD_APPROVE. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Routings" default-menu-index="5" menu-image="sym_o_route" menu-image-type="icon">
+    <subscreens default-item="Find" always-use-full-path="true">
+        <subscreens-item name="Find" menu-title="Routings" menu-index="1"
+                location="component://mr-boss/screen/Manufacturing/Routings/Find.xml"/>
+        <subscreens-item name="OperationTemplates" menu-title="Operation templates" menu-index="2"
+                location="component://mr-boss/screen/Manufacturing/Routings/OperationTemplates.xml"/>
+        <subscreens-item name="RoutingDetail" location="component://mr-boss/screen/Shared/RoutingDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: The operations of each method and the operation catalogue." type="p"/>
+        <subscreens-panel id="RoutingsPanel" type="tab"/>
     </widgets>
 </screen>

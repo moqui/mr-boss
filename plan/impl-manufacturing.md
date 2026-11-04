@@ -208,7 +208,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 3 (§6 F1–F41) |
 | P1 Foundation | Mantle, BOSS | the Manufacturing root and menu, Home | built Nov 3 |
-| P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | — |
+| P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | built Nov 3 |
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
@@ -421,6 +421,93 @@ The rest of M3 and CX-METHOD (design §5, crosscut §3.23), over Products P8's r
   - released lines cannot be edited, and a change is a draft of new lines that a release stamps;
   - WhereUsed shows the component's parents, and DEMO_PA's kit read only with its link to the Kit components pane;
   - an import of two versions with one bad unit applies the good one and names the other.
+
+**Built Nov 3 (P2).**
+- Mantle: `WorkEffort` gains the audit-logged `methodSourceWorkEffortId`, `methodRequiredEvidence`,
+  `methodInspectionTemplateId` and `methodArchived`; `WorkEffortContent` gains audit-logged `fromDate`, `thruDate` and
+  `contentChecksum`, with the `WectInstruction` content type. `OperationTemplates.js` (an operation template is a
+  WepRoutingTask with no routing): `find#OperationTemplates`, `store#OperationTemplate`, `store#OperationInstruction`
+  (stored once under `dbresource://mantle/content/workEffort/`, SHA-256 checksum, a publish ends the one in effect) and
+  `copy#RoutingOperations` (draft copies with their source, standards, evidence, inspection template and resources;
+  predecessors follow; archive blocks new copies). `MethodReleases.js`: `request#BomRelease`, `request#RoutingRelease`
+  (checks first; notifies METHOD_APPROVE holders of the organization through `Payables.js` notify) and the release's
+  clearing of the notices (added to `release#BomDraft` and `release#RoutingDraft`); topics `BomRelease` and `RoutingRelease`
+  in `MethodNotificationSetupData.xml`. `MethodTransfer.js`: `clone#Bom`, `import#BomCsv` and `import#RoutingCsv` with
+  preview, each version in its own transaction (`import#BomVersion`, `import#RoutingVersion`), kits skipped, nothing
+  released. `find#Boms` and `find#Routings` take `text` (in the query) and leave kits out quietly; `find#Routings` rows have
+  their last release and operation counts; `validate#BomDraft` names an overlapping effective window. Every verb checks
+  `METHOD_VIEW`, `METHOD_EDIT` or `METHOD_APPROVE` and the organization through `MethodPolicy.js`.
+- BOSS: Products' `SharedContext.js` `manufacturingContext()` (read with METHOD_VIEW, product master read only, the
+  crosscut tabs, Costs with cost read, Kit components read only, Manufacturing `sharedLinks`); `Methods.js` takes a routing
+  with no product (Manufacturing's Routings) and routes `copy#RoutingOperations`, `request#BomRelease` and
+  `request#RoutingRelease`. Screens: `BillsOfMaterials` (Find list, New BOM, Clone, legacy and CSV import; mounts
+  BillOfMaterialsDetail, WhereUsed, Product360 and CostRollup), `Routings` (Find list, New routing, CSV import; RoutingDetail;
+  OperationTemplates with Publish instruction, Edit, Archive, instruction history and file, notes and files), `Approvals`
+  (Commons Notifications with `BomRelease`, `RoutingRelease`; BOSS `linkTemplate`s and the root's `<notification-topic>`).
+  Shared method screens: Request release for an editor without release authority, Print (html-print) on the method, routing,
+  explosion and compare, Copy operations and Notes and files on RoutingDetail, and where used's kit rows link to Kit
+  components. `ironstone.manufacturing.MethodServices` (`get#BomList`, `get#RoutingList`, `get#TemplateList`) adds display
+  text and paging over the Mantle finds. `Manufacturing.js`: methods and routings (and operations, templates) have their
+  destinations, so the palette and `get#RecordLink` open them in Manufacturing; choices `products`, `operationSources`,
+  `inspectionTemplates`.
+- Demo (F42): operation templates `BOSS_MFG_OPT_ASSEMBLE`, `BOSS_MFG_OPT_TEST`, the released routing `BOSS_MFG_ROUTING_A`
+  copied from them and the released BOM `BOSS_MFG_BOM_PILOT` of DEMO_1_1 (method code PILOT), DEMO_RM_1 at the second
+  operation, with their release decisions and the audit rows they name.
+- Specs: Mantle `MethodTemplates` (4); BOSS `ManufacturingMethods` (6, the "usable when" items), `ManufacturingAccess` P2 section
+  (8 more), AppStructure and TuiRender routes (ManufacturingSpecLib); client walk `ManufacturingMethodsWalk` (5, with the
+  390 px lists). Tests run: Mantle MethodTemplates, ProductMethods, ManufacturingServices, WarehouseProduction (30, pass);
+  BOSS ManufacturingMethods, ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, ProductsSharedContext,
+  ProductsAccess, ProductsScreens, ProductsInventory, Notifications, Files, WarehouseShell, WarehouseAccess,
+  ProductsMethodFixtures, ProductsMethods, ProductsCosts, ProductsShell (422, pass), WarehouseProductionFixtures (pass);
+  client ManufacturingMethodsWalk and ProductsMethodWalk (pass). `moqui lint --screens`: no idiom or hazard site in the
+  changed screens.
+- Decisions: two release topics, `BomRelease` and `RoutingRelease` (a topic has one `linkTemplate`); Request release is
+  offered to a method editor without METHOD_APPROVE, as no setting says whether an organization separates drafting from
+  release (a ProductionPolicy flag is P4's to add if wanted); a request whose checks fail is answered with its findings as
+  warnings and sends nothing; the BOM's notes and files stay in Overview (Products P8 put them there), so no Notes tab;
+  Copy operations shows in the Manufacturing context only; the demo method's code is PILOT so Products' MAIN fixture
+  method of DEMO_1_1 stays its own.
+- Deferred: an operator's acknowledgment and a run's instruction as of release (P10); editing a template's equipment and
+  skill standards (the demo has one; `store#RoutingResource` is for routing operations); templates in the palette; a "Not
+  available" state for a missing routing in RoutingDetail; where used's bulk replacement (`later`).
+- Findings (provisional):
+  - **F-P2-1** Products' `Methods.js` stored a routing with no `workEffortId` into the method's routing (native's fallback),
+    so "New routing" for a product whose method has one edited that routing; ProductsMethodFixtures did that to the demo
+    routing. A routing stored with no id is now new.
+  - **F-P2-2** Products' specs assume DEMO_1_1's MAIN and DEMO_3_1 have no method (ProductsMethodFixtures, ProductsMethodWalk),
+    so the demo method is DEMO_1_1's PILOT; `find#Boms` now orders by product and method code, so Product360 opens MAIN
+    first when there is one. AppStructure's BillOfMaterialsDetail text is now one the seeded method shows.
+  - **F-P2-3** DEMO_1_1, DEMO_SA_1, DEMO_SA_2 and DEMO_RM_1 have no `amountUomId`, so `store#Bom` and `store#BomItem` need
+    an explicit unit for them; the CSV import asks for `baseUomId` then.
+  - **F-P2-4** Manufacturing users reach the Mantle method verbs and Products' `ironstone.products.MethodServices` only
+    through the screens' inherited authorization (no artifact group grants them directly); the specs call them with
+    authorization off, where each service's permission check refuses.
+  - **F-P2-5** A screen-local variable named `selected` is passed to the shared `choices` transition (`in-map="context"`) as
+    the selected value; OperationTemplates' selected template is `selectedTemplate` for that reason.
+- Review (Nov 3):
+  - Fixed: the `operationSources` choice left every template out when given the routing (`parentWorkEffortId <> ?` drops
+    the templates' null parent), so Copy operations offered other routings' operations only; it now keeps a null parent,
+    and the P2 method choices answer nothing to a user without METHOD_VIEW. ManufacturingMethods checks the templates are
+    offered.
+  - Fixed: a published instruction was immutable only in `store#OperationInstruction`; its publisher could remove it (row
+    and file) from the template's Files, and the generic WorkEffortContent services could replace its file. Mantle's
+    `WorkEffortInstructionImmutable` EECA (Work.eecas.xml, `OperationTemplates.js` `guardInstruction`) now refuses a
+    delete, a change of its file, checksum, type, template or start, a reopened end, and a create without a checksum under
+    the instruction store; RecordFiles lists it as not removable and refuses its removal. MethodTemplates covers each.
+  - Fixed: Products' `Methods.js` opened a product's first method by method code (F-P2-2's sort), so an `ALT` method came
+    before MAIN; it opens MAIN when there is one, as Mantle's cost roll-up picks.
+  - Spec: a METHOD_APPROVE holder of another organization gets no release notice (MethodTemplates).
+  - Checked, no change: F-P2-1 (every Products caller of `store#Routing` that edits passes `workEffortId`; New routing shows
+    only without one); the overlap finding (release already refused a date before the latest approval, so only
+    `validate#BomDraft` and the request show it); the CSV imports (each version in its own transaction through
+    `import#…Version`, which checks METHOD_EDIT again; kits skipped; nothing released); `clone#Bom`; the Manufacturing
+    context (each capability is the user's own CatalogAccess capability, Costs only with cost read); F-P2-4 (the Mantle and
+    Products method services are `allow-remote="false"` and check their permissions, and the palette reads through
+    `search#Records`, so no REST or palette path reaches them).
+  - Specs run: Mantle MethodTemplates, ProductMethods, ManufacturingServices, WarehouseProduction (30, pass); BOSS
+    ManufacturingMethods, ManufacturingAccess, ProductsMethods, ProductsMethodFixtures, ProductsSharedContext,
+    ProductsCosts, Files (123, pass), RecordFiles, AccountingIssuedFiles, AccountingPaymentFiles (20, pass); client
+    ManufacturingMethodsWalk and ProductsMethodWalk (6, pass).
 
 ### P3 — Work centers and equipment
 

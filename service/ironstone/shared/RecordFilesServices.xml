@@ -226,7 +226,9 @@ along with this software (see the LICENSE.md file). If not, see
                 }
                 for (const value of rows.slice(0, limit || 200)) {
                     const row = value.getMap()
-                    const immutable = row.isImmutable === 'Y' || (isPayment && !!content.paymentContentLocked)
+                    // a production instruction is published once and only ended (Mantle store#OperationInstruction)
+                    const immutable = row.isImmutable === 'Y' || (isPayment && !!content.paymentContentLocked) ||
+                            (entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction')
                     const location = row.contentLocation ? String(row.contentLocation) : ''
                     const fileName = location ? baseName(location) : null
                     const key = {}
@@ -479,7 +481,8 @@ along with this software (see the LICENSE.md file). If not, see
                 fileName = fileOut.fileName || ec.l10n.localize('the file')
                 const entityName = ec.entity.makeValue(recordEntityName).getEntityName()
                 const mine = !!row.userId && row.userId === ec.user.userId
-                if (content.catalogCanChange === false || (!mine && !ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update'))) {
+                const instruction = entityName === 'mantle.work.effort.WorkEffort' && row.contentTypeEnumId === 'WectInstruction'
+                if (instruction || content.catalogCanChange === false || (!mine && !ec.artifactExecution.isPermitted(entityName, 'AT_ENTITY', 'update'))) {
                     ec.message.addError(ec.resource.expand('You may not remove ${fileName}', '', {fileName: fileName})); return }
                 const keys = {}
                 for (const field of content.pkFields) keys[field] = row[field]

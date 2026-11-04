@@ -124,6 +124,42 @@ along with this software (see the LICENSE.md file). If not, see
         </default-response>
         <error-response url="." />
     </transition>
+    <!-- Manufacturing P2: draft copies of operation templates or another routing's operations, and the engineer's request
+        that the approvers release the draft -->
+    <transition name="copyOperations">
+        <actions>
+            <service-call name="ironstone.products.MethodServices.copy#RoutingOperations" in-map="context" />
+        </actions>
+        <default-response url=".">
+            <parameter name="productId" />
+            <parameter name="productBomId" />
+            <parameter name="organizationPartyId" />
+            <parameter name="workEffortId" />
+            <parameter name="asOfDate" value="" />
+        </default-response>
+        <error-response url="." />
+    </transition>
+    <transition name="requestRoutingRelease">
+        <actions>
+            <service-call name="ironstone.products.MethodServices.request#RoutingRelease" in-map="context" out-map="requested" />
+            <script>if(requested.notified)ec.message.addMessage('Release requested from the method approvers');else if(requested.valid)ec.message.addMessage(requested.message||'Nothing is waiting to be released');else for(const f of requested.findings||[])ec.message.addMessage(f.recordId+': '+f.message,'warning')</script>
+        </actions>
+        <default-response url=".">
+            <parameter name="productId" />
+            <parameter name="productBomId" />
+            <parameter name="organizationPartyId" />
+            <parameter name="workEffortId" />
+            <parameter name="asOfDate" value="" />
+        </default-response>
+        <error-response url="." />
+    </transition>
+    <transition name="operationChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.get#Choices" in-map="{choice:'operationSources', term:term, selected:selected, workEffortId:workEffortId}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <actions>
         <service-call name="ironstone.products.MethodServices.get#RoutingDetail" in-map="context" out-map="context" />
     </actions>
@@ -186,6 +222,40 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </widgets>
                 </section>
+                <section name="RequestRouting" condition="!!workEffortId &amp;&amp; methodAccess.edit &amp;&amp; !methodAccess.approve">
+                    <widgets>
+                        <container-dialog id="RoutingRequestDialog" button-text="Request release" type="primary" icon="sym_o_send" title="Request release of this routing" width="720">
+                            <label text="The draft's checks run first. The method approvers are notified and release it on this routing." type="p"/>
+                            <form-single name="RoutingRequest" transition="requestRoutingRelease">
+                                <field name="productId" from="productId || null">
+                                    <default-field>
+                                        <hidden />
+                                    </default-field>
+                                </field>
+                                <field name="productBomId" from="productBomId || null">
+                                    <default-field>
+                                        <hidden />
+                                    </default-field>
+                                </field>
+                                <field name="workEffortId" from="workEffortId || null">
+                                    <default-field>
+                                        <hidden />
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="What changed">
+                                        <text-line />
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Request release">
+                                        <submit />
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </widgets>
+                </section>
                 <section name="NewRouting" condition="!workEffortId &amp;&amp; methodAccess.edit">
                     <widgets>
                         <container-dialog id="NewRoutingDialog" button-text="New routing" type="primary" icon="sym_o_add" title="New routing" width="720">
@@ -239,7 +309,63 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-dialog>
                     </widgets>
                 </section>
-                <button-menu text="More" icon="more_horiz" condition="(!!workEffortId &amp;&amp; methodAccess.edit) || methodAccess.resources">
+                <button-menu text="More" icon="more_horiz" condition="!!workEffortId || methodAccess.resources">
+                    <link url="." text="Print" icon="sym_o_print" target-window="_blank" condition="!!workEffortId"
+                            parameter-map="{productId:productId,productBomId:productBomId,workEffortId:workEffortId,asOfDate:asOfDate || '',renderMode:'html-print'}"/>
+                    <section name="CopyOperations" condition="!!workEffortId &amp;&amp; methodAccess.edit &amp;&amp; appRoot == 'Manufacturing'">
+                        <widgets>
+                            <container-dialog id="CopyOperationsDialog" button-text="Copy operations" icon="sym_o_content_copy" title="Copy operations into this routing" width="720">
+                                <label text="Copies become draft operations of this routing, after its operations. The templates and the other routings stay as they are." type="p"/>
+                                <form-single name="CopyOperations" transition="copyOperations">
+                                    <field name="productId" from="productId || null">
+                                        <default-field>
+                                            <hidden />
+                                        </default-field>
+                                    </field>
+                                    <field name="productBomId" from="productBomId || null">
+                                        <default-field>
+                                            <hidden />
+                                        </default-field>
+                                    </field>
+                                    <field name="workEffortId" from="workEffortId || null">
+                                        <default-field>
+                                            <hidden />
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedRevision" from="routingExpectedRevision || null">
+                                        <default-field>
+                                            <hidden />
+                                        </default-field>
+                                    </field>
+                                    <field name="sourceWorkEffortIds">
+                                        <default-field title="Operations or templates">
+                                            <drop-down allow-multiple="true">
+                                                <dynamic-options transition="operationChoices" server-search="true" min-length="0"
+                                                        parameter-map="{workEffortId:workEffortId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="replaceExisting">
+                                        <default-field title="Replace">
+                                            <check>
+                                                <option key="true" text="Remove this routing's current operations in the draft"/>
+                                            </check>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Change reason">
+                                            <text-line />
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Copy operations">
+                                            <submit />
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </widgets>
+                    </section>
                     <link url="validateRouting" link-type="hidden-form-link" text="Validate routing" icon="sym_o_rule" condition="!!workEffortId &amp;&amp; methodAccess.edit"
                             parameter-map="{productId:productId,productBomId:productBomId,organizationPartyId:organizationPartyId,workEffortId:workEffortId,expectedRevision:routingExpectedRevision}"/>
                     <section name="EditRouting" condition="!!workEffortId &amp;&amp; methodAccess.edit">
@@ -734,6 +860,17 @@ along with this software (see the LICENSE.md file). If not, see
                                 <column><field-ref name="workEffortName"/></column>
                             </columns>
                         </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="RoutingNotes" condition="!!workEffortId &amp;&amp; sri.getRenderMode() !== 'html-print'">
+            <widgets>
+                <container-box>
+                    <box-header title="Notes and files" />
+                    <box-body>
+                        <chatter id="RoutingConversation" record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}" default-tab="message"/>
+                        <record-files id="RoutingFiles" record-entity="mantle.work.effort.WorkEffort" record-id="${workEffortId}"/>
                     </box-body>
                 </container-box>
             </widgets>
