@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     - reportStop: open a stop, or record one with its end (store#ProductionDowntime open). Downtime answers with the new stop
       selected (maintenanceDialog row) and EquipmentDetail with its equipment (equipment); for an equipment fault with the
       page's Maintenance dialog open;
-    - closeStop, correctStop: the end of an open stop and a supervisor's correction (close, correct);
+    - closeStop, approveStop, correctStop: the end of an open stop, and a supervisor's approval of an ended stop longer than
+      its reason's threshold and correction (close, approve, correct);
     - requestMaintenance: corrective maintenance of the stop's equipment, or of equipment alone, with an optional intake
       request (request#ProductionMaintenance).
     The ReportStopForm section is the report form (reportStopValues from the including screen: operationKey and the
@@ -44,6 +45,11 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="assetId">
                 <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            </if>
+            <if condition="workEffortId || operationWorkEffortId">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:workEffortId ? 'run' : 'operation',
+                            recordId:workEffortId || operationWorkEffortId}"/>
             </if>
             <service-call name="mantle.work.ProductionServices.store#ProductionDowntime" out-map="stored"
                     in-map="{operationKey:operationKey, action:'open', facilityId:facilityId, assetId:assetId || null,
@@ -98,6 +104,21 @@ along with this software (see the LICENSE.md file). If not, see
                         reasonCode:reasonCode || null, description:description, changeReason:changeReason}"/>
             <if condition="!ec.message.hasError()">
                 <message type="success">Stop ${productionDowntimeId} corrected as ${stored.result.productionDowntimeId}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="approveStop">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'downtime', recordId:productionDowntimeId || '_NA_',
+                        capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionDowntime" out-map="stored"
+                    in-map="{operationKey:operationKey, action:'approve', productionDowntimeId:productionDowntimeId,
+                        expectedRevision:expectedRevision}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Stop ${productionDowntimeId} approved</message>
             </if>
         </actions>
         <default-response url="."/>

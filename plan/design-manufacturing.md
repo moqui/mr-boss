@@ -131,8 +131,8 @@ All paths are under the BOSS app root; these are proposed screen routes, not cla
 | Downtime | `Manufacturing/WorkCenters/Downtime` | list | xml | Capture reason-coded production stops and recovery. | mantle.work.production.ProductionDowntime (proposed) | own | app | new | ProductionDowntime rows; list find parameters |
 | Nonconformances | `Manufacturing/Quality/Nonconformances` | list | xml | Manage findings and corrective action without duplicating cases. | Request + proposed QualityNonconformance | own | quality inspector/verifier; quality administrator for setup | later | QualityNonconformance rows; list find parameters |
 | Gauges | `Manufacturing/Quality/Gauges` | list | xml | Track inspection instruments and calibration evidence. | Asset + proposed GaugeCalibration | own | quality inspector/verifier; quality administrator for calibration records | later | Asset rows; list find parameters |
-| RequestDetail | `Manufacturing/Quality/RequestDetail` | detail | xml | Open the canonical RequestDetail in production context. | mantle.request.Request | RequestDetail, [crosscut §3.11](design-crosscut.md#311-requestdetail) | app | new | Request requestId |
-| WorkItemDetail | `Manufacturing/Quality/WorkItemDetail` | detail | xml | Open the canonical WorkItemDetail in production context. | mantle.work.effort.WorkEffort | WorkItemDetail, [crosscut §3.12](design-crosscut.md#312-workitemdetail) | app | new | WorkEffort workEffortId |
+| RequestDetail | `Manufacturing/WorkCenters/RequestDetail` (built P11; Quality requests may mount it under Quality) | detail | xml | Open the canonical RequestDetail in production context. | mantle.request.Request | RequestDetail, [crosscut §3.11](design-crosscut.md#311-requestdetail) | app | new | Request requestId |
+| WorkItemDetail | `Manufacturing/WorkCenters/WorkItemDetail` (built P11) | detail | xml | Open the canonical WorkItemDetail in production context. | mantle.work.effort.WorkEffort | WorkItemDetail, [crosscut §3.12](design-crosscut.md#312-workitemdetail) | app | new | WorkEffort workEffortId |
 | SupplyPlanning | `Manufacturing/Planning/SupplyPlanning` | split | xml | Open the canonical SupplyPlanning in production context. | PlanningRun / PlanningSuggestion / RequirementSupply (proposed) | SupplyPlanning, [crosscut §3.20](design-crosscut.md#320-supplyplanning) | app | new | run, facilities and selected requirements |
 | InventoryAvailability | `Manufacturing/Planning/InventoryAvailability` | list | xml | Open the canonical InventoryAvailability in production context. | Asset / reservations / projected inventory | InventoryAvailability, [crosscut §3.7](design-crosscut.md#37-inventoryavailability) | app | parity | product/facility/lot filters; asset selection |
 | ProductionSchedule | `Manufacturing/Planning/ProductionSchedule` | calendar | qvue | Schedule operation slots against resources and calendars. | WorkEffort operations + WorkCenter capacity (proposed) | own | scheduler | new | plant, work centers and date range; selected operation |
@@ -834,8 +834,10 @@ equipment. Quick create's Downtime report is `Manufacturing/ReportDowntime`, for
 `mantle.work.production.ProductionDowntime` (impl-manufacturing P11); its reasons are the organization's downtime and hold
 reason codes (ReasonCodes, categories PrcDowntime and PrcHold), whose classification it keeps. Maintenance is suggested (the
 row's Request maintenance) for an equipment fault of a machine only. A correction is a new row; the corrected one keeps its
-interval and reporter and shows in the stop's correction history. The approval threshold of a reason is not applied yet
-(impl-manufacturing P11, F-P11-3).
+interval and reporter and shows in the stop's correction history. A stop that has ended and lasted longer than its reason's
+approval threshold (minutes, of the reason row at its start) is marked Needs approval, and a supervisor approves it from its
+row (`store#ProductionDowntime` action `approve`, PRODUCTION_SUPERVISE); the list filters the stops waiting for approval.
+Nothing yet holds an unapproved stop out of a total: the OEE and downtime reports (P12, P16) decide how they count it.
 
 **Source.** research §8; ERPNext `erpnext/manufacturing/doctype/downtime_entry/downtime_entry.json`.
 

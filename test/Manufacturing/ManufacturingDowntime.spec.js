@@ -199,6 +199,44 @@ feature("a supervisor's correction keeps the original stop and its reporter in t
         historyPage.output.includes("Changeover started later")
     }
 })
+feature("a stop longer than its reason's threshold waits for the supervisor's approval on Downtime", {
+    when() {
+        // the robot fault reason's threshold is 60 minutes; no equipment, so no outage
+        const stop = report(users.operate, {
+            facilityId: ids.lineId,
+            reasonCode: "ROBOT_FAULT",
+            fromDate: new Date(Date.now() - 90 * 60000),
+            thruDate: new Date(Date.now() - 5 * 60000)
+        })
+        const parameters = {productionDowntimeId: stop.productionDowntimeId}
+        const operatorPage = asUser(users.operate, () => page("WorkCenters/Downtime", parameters))
+        const supervisorPage = asUser(users.supervise, () =>
+            page("WorkCenters/Downtime", {needsApproval: "true", facilityId: ids.lineId})
+        )
+        const check = asUser(users.supervise, () =>
+            refusal(access + "check#Record", {
+                recordType: "downtime",
+                recordId: stop.productionDowntimeId,
+                capability: "supervise"
+            })
+        )
+        const approved = store(users.supervise, Object.assign({action: "approve", expectedRevision: 1}, parameters))
+        const row = one("mantle.work.production.ProductionDowntime", parameters)
+        return {stop, operatorPage, supervisorPage, check, approved, row}
+    },
+    then({stop, operatorPage, supervisorPage, check, approved, row}) {
+        stop.approvalRequired == true
+        operatorPage.errors.length == 0
+        operatorPage.output.includes("Needs approval")
+        !operatorPage.output.includes("Approve stop")
+        supervisorPage.errors.length == 0
+        supervisorPage.output.includes(stop.productionDowntimeId)
+        supervisorPage.output.includes("Approve stop")
+        check == ""
+        approved.resultCode == "APPROVED"
+        row.approvedByUserId == "BOSS_MFG_SUPERVISE"
+    }
+})
 feature("a follow-up task of the maintenance request opens in Manufacturing's WorkItemDetail; a run's operation does not", {
     when() {
         const {requested} = robotFault()

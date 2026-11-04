@@ -14,21 +14,23 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Downtime (design-manufacturing Downtime: the list, ReportStop and Maintenance; style-guide §3.2 List; impl-manufacturing
     P11): the current and past stops of the user's work centers (mantle.work.ProductionServices.find#ProductionDowntime),
-    found by center, equipment, reason and open only, newest first, each with its equipment, work, reason, interval,
-    duration, state and maintenance. Report stop (the primary action; Request maintenance while the stop a report answers
-    with is an equipment fault with none) opens or records a stop; a row's End stop closes an
-    open one, Request maintenance asks for corrective maintenance of its equipment (offered for an equipment fault only),
-    and Correct (supervisors) makes a corrected row that keeps the original. With productionDowntimeId the stop's correction
-    history shows. Under Work centers, open to every Manufacturing user to read; Mantle checks PRODUCTION_OPERATE or
-    PRODUCTION_SUPERVISE to report and PRODUCTION_SUPERVISE to correct. OperationExecution's Pause (P10) opens it with
-    workEffortId and operationWorkEffortId (and facilityId, assetId) and _openDialog=ReportStopDialog, so the report carries
-    the run and operation. -->
+    found by center, equipment, reason, open only and waiting for approval, newest first, each with its equipment, work,
+    reason, interval, duration, state (with its approval) and maintenance. Report stop (the primary action; Request
+    maintenance while the stop a report answers with is an equipment fault with none) opens or records a stop; a row's End
+    stop closes an open one, Request maintenance asks for corrective maintenance of its equipment (offered for an equipment
+    fault only), Approve (supervisors) approves an ended stop longer than its reason's approval threshold, and Correct
+    (supervisors) makes a corrected row that keeps the original. With productionDowntimeId the stop's correction history
+    shows. Under Work centers, open to every Manufacturing user to read; Mantle checks PRODUCTION_OPERATE or
+    PRODUCTION_SUPERVISE to report and PRODUCTION_SUPERVISE to approve and correct. OperationExecution's Pause (P10) opens it
+    with workEffortId and operationWorkEffortId (and facilityId, assetId) and _openDialog=ReportStopDialog, so the report
+    carries the run and operation. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Downtime" default-menu-index="4">
     <parameter name="facilityId"/>
     <parameter name="assetId"/>
     <parameter name="reasonCode"/>
     <parameter name="open"/>
+    <parameter name="needsApproval"/>
     <parameter name="workEffortId"/>
     <parameter name="operationWorkEffortId"/>
     <parameter name="productionDowntimeId"/>
@@ -37,6 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="reportStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition-include name="closeStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition-include name="correctStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="approveStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition-include name="requestMaintenance" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <actions>
         <set field="downtimeList" from="null"/>
@@ -47,7 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
                 transaction="force-new" ignore-error="true"
                 in-map="{productionDowntimeId:productionDowntimeId || null, facilityId:facilityId || null,
                     assetId:assetId || null, reasonCode:reasonCode || null, workEffortId:workEffortId || null,
-                    open:open == 'true', pageIndex:pageIndex || 0}"/>
+                    open:open == 'true', needsApproval:needsApproval == 'true', pageIndex:pageIndex || 0}"/>
         <set field="downtimeAvailable" from="downtimeList != null"/>
         <set field="downtimeList" from="downtimeList || []"/>
         <set field="historyRows" from="history || []"/>
@@ -190,6 +193,13 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </header-field>
                     </field>
+                    <field name="needsApproval">
+                        <header-field title="Approval">
+                            <drop-down allow-empty="true">
+                                <option key="true" text="Waiting for approval"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
                     <field name="facilityName">
                         <default-field title="Work center">
                             <link url="." text="${facilityName}" link-type="anchor"
@@ -231,9 +241,12 @@ along with this software (see the LICENSE.md file). If not, see
                         <default-field title="State">
                             <render-mode>
                                 <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
-                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
-                                <text type="html">${statusText}</text>
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>${approvalText ? '<div class="text-caption' +
+                                    (canApprove || !approvedByName ? ' text-warning' : ' m-muted') + '">' +
+                                    WebUtilities.encodeHtml(approvalText) + '</div>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText +
+                                    (approvalText ? " · " + approvalText : "")})}]]></text>
+                                <text type="html">${statusText}${approvalText ? ' · ' + approvalText : ''}</text>
                             </render-mode>
                         </default-field>
                     </field>
@@ -276,6 +289,35 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="submit">
                                         <default-field title="">
                                             <submit text="End stop"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveStop_${productionDowntimeId}" condition="canApprove" button-text="Approve"
+                                    icon="sym_o_task_alt" title="Approve stop ${productionDowntimeId} at ${facilityName}" width="520">
+                                <label text="${reasonName} for ${durationText}, longer than the reason's approval threshold; reported by ${reportedByName}."
+                                        type="p" style="text-caption"/>
+                                <form-single name="ApproveStop" transition="approveStop"
+                                        map="{productionDowntimeId:productionDowntimeId, expectedRevision:revision,
+                                            operationKey:'dtapprove-' + productionDowntimeId + '-' + revision}">
+                                    <field name="productionDowntimeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedRevision">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Approve stop"/>
                                         </default-field>
                                     </field>
                                 </form-single>

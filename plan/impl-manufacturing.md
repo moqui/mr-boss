@@ -1138,8 +1138,8 @@ Design §6 Downtime, Equipment, RequestDetail and WorkItemDetail; M6's downtime 
     intake that triages RqtMaintenance.
   - **F-P11-2** `_openDialog` does not open a `container-dialog` inside a form-list row in qvt; Downtime answers a report with
     the new stop selected and a top-level Maintenance dialog for it instead.
-  - **F-P11-3** A reason's `approvalThreshold` (minutes for a stop) is not applied: no stop waits for a supervisor's approval.
-    Left for the OEE and report phases (P12, P16) or P17, with the design's "supervisors may correct and approve".
+  - **F-P11-3** (resolved in review) A reason's `approvalThreshold` (minutes for a stop) was not applied. The review built it:
+    see the review note below. How an unapproved stop counts in OEE and the downtime reports stays P12's and P16's.
   - **F-P11-4** A correction does not move or end the outage it carries: MT-07's `correct#` and `end#ResourceUnavailability`
     own that. There is no `find#ResourceUnavailability` yet, so `WorkCenters.js` reads the open outage directly for the
     equipment's availability; P12's load and calendar should read it (with the stops) when they subtract downtime.
@@ -1147,6 +1147,34 @@ Design §6 Downtime, Equipment, RequestDetail and WorkItemDetail; M6's downtime 
     Commons and Projects request's Tasks or Work tab; F38's guards refuse its changes there, and the Manufacturing context
     links it to its work order instead.
   - **F-P11-6** F57's Centers columns (next available, offline reason) are not built; P12 adds them with the load.
+- **Review (Nov 3).** Checked against the P11 scope and usable-when items, §2 and the design: the correction chain, the
+  permissions and organization checks, the one-outage rule (the asset row locked before the open-outage read), the
+  ResourceUnavailability names (design-maintenance MT-07, Y3; internal, allow-remote false), Mantle's
+  `create#AssetMaintenance` and `RequestServices.link#RequestRecord`, and the Shared screens' Manufacturing branches (gated
+  by `appRoot`). Fixed:
+  - Retry under concurrency: close, approve, correct and request#ProductionMaintenance now lock the stop (or the equipment)
+    in the service and call `posting.settled`, as the other production verbs do, so a double submit that waited on the lock
+    answers the first instead of REVISION_CHANGED or MAINTENANCE_REQUESTED.
+  - Downtime's `reportStop` and quick create's ReportDowntime check the equipment and the run or operation through
+    `check#Record`, not only the work center (Mantle checked them already).
+  - F-P11-3 built (the plan does not name it in P11, but the design's Downtime has "supervisors may correct and approve" and
+    P4 seeded the threshold): ProductionDowntime keeps `approvalThreshold` from its reason row and sets `approvalRequired`
+    when an ended stop is longer; `store#ProductionDowntime` action `approve` (PRODUCTION_SUPERVISE; DOWNTIME_OPEN,
+    APPROVAL_NOT_REQUIRED, DOWNTIME_APPROVED); `find#` `needsApproval`, `approvalText` and `canApprove`; Downtime's row
+    Approve and the Approval filter (`approveStop` in the template). A correction recomputes the need and is not an approval.
+  - Design: RequestDetail and WorkItemDetail routes are WorkCenters' (built), and the Downtime note describes the approval.
+  - Specs: Mantle ProductionDowntime gains the approval feature (7); BOSS ManufacturingDowntime gains it (6).
+  - Ran: Mantle ProductionDowntime, ManufacturingServices, WarehouseProduction, ProductionPolicy (29, pass); BOSS
+    ManufacturingDowntime, ManufacturingAccess, ManufacturingShell, ManufacturingWorkCenters, AppStructure, TuiRender,
+    Requests, ProjectRequests, WorkItemDetail, WorkItems, Tasks, AccountingFixedAssets, QuickCreate (199, pass); the walk
+    ManufacturingDowntimeWalk (2, pass); `moqui lint --screens` clean for the touched screens.
+  - Merge with master (P5a, P6, P13): Mantle merges clean. BOSS conflicts are both-sides appends: AccessServices
+    `get#Choices` parameters (keep `productId` and `facilityId`), ManufacturingAccess sections, suite.js walks,
+    ManufacturingImplementation.md sections, ManufacturingSpecLib (take master's WorkOrderDetail ProductionCosts route and
+    drop this branch's root `ProductionCosts`/`moved`, then add P11's routes and mounts), and ManufacturingShell's quick
+    kinds: plan and admin get `manufacturingWorkOrder`, operate, supervise and admin `manufacturingReportDowntime` (the admin
+    both, by sequence 85 then 95). Quick create screens differ in place (P5a's `WorkOrders/QuickCreate`, P11's root
+    `ReportDowntime`); both are behind their own artifact groups, which is consistent enough to leave.
 
 ### P12 — Scheduling and capacity
 

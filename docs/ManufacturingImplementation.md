@@ -152,9 +152,9 @@ item, the `ProductionCosts` link path and ManufacturingSpecLib's `moved` path go
 
 Downtime (`screen/Manufacturing/WorkCenters/Downtime.xml`) reads `mantle.work.ProductionServices.find#ProductionDowntime`;
 its forms and transitions are `template/ManufacturingDowntime.xml` (`downtimeChoices`, `reportStop`, `closeStop`,
-`correctStop`, `requestMaintenance`, the `ReportStopForm` and `MaintenanceForm` sections), which EquipmentDetail and
+`approveStop`, `correctStop`, `requestMaintenance`, the `ReportStopForm` and `MaintenanceForm` sections), which EquipmentDetail and
 `ReportDowntime` include too. Each transition checks the work center, equipment or stop with `check#Record` (the `downtime`
-kind, `supervise` for a correction), then calls `store#ProductionDowntime` or `request#ProductionMaintenance` with the form's
+kind, `supervise` for an approval or a correction), then calls `store#ProductionDowntime` or `request#ProductionMaintenance` with the form's
 operation key. A report answers Downtime with the new stop selected, and an equipment fault with its Request maintenance
 dialog open (`_openDialog=MaintenanceDialog`). OperationExecution's Pause (P10) opens Downtime with `workEffortId`,
 `operationWorkEffortId`, `facilityId` and `assetId` and `_openDialog=ReportStopDialog`. EquipmentDetail's Manufacturing
