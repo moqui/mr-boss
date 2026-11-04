@@ -1515,6 +1515,33 @@ P7 ports it into mr-mantle and finishes it.
   - **F-P9-10** An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or
     sent outside Mantle) is unacknowledged but never overdue.
 
+**Review Nov 4 (P9).** Checked: apply#PurchaseRevision's one transaction, lock order (the open receipts, then the order; the
+facts and the basis key read under the locks, so a receive cannot post between the check and the writes), its refusals and
+operation replay; the count hold (`uncounted`: try/finally, keyed by order, nested and other orders safe; every revision
+EECA runs synchronously inside it); the Change hold's release only by decide#PurchaseApproval (PURCHASE_APPROVE, the steps,
+separation and quorum, budget) and by the buyer's cancel of an unapplied change; decide on a held order only for a revision's
+applied hold, and a revision of an order with no earlier decision (P8's $0 replacement) goes back for approval through it;
+lower#SourceCommitments internal (allow-remote false, not in any REST or screen, only apply calls it; releases down to what the
+line still needs); reminder dedupe per recipient, revision, template and occurrence, a result per order and recipient;
+SUPERSEDED_REVISION; the "true" audit fields; increment#OrderRevision's early return only under the hold; the print's and
+adjust#ExpectedReceipt's old callers. Fixes:
+  - R1 (medium) "applied" was the order's count past the hold's source, but by default a note or a receipt's status change
+    moves the count while a change is only started: the buyer's cancel was refused and decide treated the hold as waiting for
+    approval. The Change hold now carries `appliedRevision` (OrderHoldReason, set by apply), Mantle's `revisionState` and
+    BOSS's `changeState` read it, and a Change hold with no source is not a revision's.
+  - R2 (medium) An ORDER_APPROVE holder's release#OrderHold of an applied revision's Change hold returned the order to Approved
+    or Sent with no decision at the new revision, past the approval gate; with the gate on it now returns to Placed for its
+    approval (`PurchaseRevisions.releaseReturn`; nothing changes with the gate off).
+  - R3 (low) adjust#ExpectedReceipt took an order on any hold (a credit or quality hold too); it takes a held order only while
+    a Change hold is open.
+  - R4 (low) apply adjusted the expected receipt only for receipts found before its locks; a receipt opened in between is on
+    the line's facts and is adjusted too.
+  - Specs: PurchaseRevisions gains a cancel after the count moved and the gated release (9 features).
+- Left for the lead: a currency change together with a price or quantity change lowers commitments held in the old currency
+  against amounts in the new one (lower#SourceCommitments compares them as one currency); record#Acknowledgement accepts a
+  response while an applied revision waits for its approval (the supplier has not been sent it yet); a reminder's mail is
+  sent in its own transaction before its OrderEmailMessage is written, so a failure after the send can repeat it.
+
 ### P10 — Purchase requests
 
 - **PUR-REQUEST.**

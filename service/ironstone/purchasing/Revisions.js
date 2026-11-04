@@ -43,8 +43,9 @@ function changeState(order) {
     const hold = rows("mantle.order.OrderHoldReason", {orderId: order.orderId, holdTypeEnumId: "OhtChange"})
         .filter(row => !row.releasedDate)
         .sort((a, b) => ms(b.placedDate) - ms(a.placedDate))[0]
-    if (!hold) return {state: "none", hold: null}
-    return {state: Number(order.orderRevision ?? 1) > Number(hold.sourceId || 0) ? "applied" : "started", hold}
+    // as Mantle's PurchaseRevisions.revisionState: applied is the hold's appliedRevision, not the order's count
+    if (!hold || hold.sourceId == null || hold.sourceId === "") return {state: "none", hold: null}
+    return {state: hold.appliedRevision == null ? "started" : "applied", hold}
 }
 // When each revision of the order first went to the supplier: the order emails of the revision that are not reminders.
 function sentDates(orderId) {
