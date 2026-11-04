@@ -1452,6 +1452,47 @@ P7 ports it into mr-mantle and finishes it.
   - **F-P8-8** `settle#Return` refuses a credit against a bill not finalized (CREDIT_SOURCE_INVALID); the walk approves the
     supplier's bill before Accounting settles.
 
+**Review Nov 4 (P8).**
+- Checked: `authorize#SupplierReturn` (RETURN_AUTHORIZE, the return's buying organization through FacilityScope, a supplier
+  return only, closed and empty returns refused; idempotent by status, so no operation key) and `create#ReplacementOrder`
+  (PURCHASE_ORDER_EDIT through the posting guard, organization, operation replay before and after the lock, a supplier
+  return only, open quantity under lock). The replacement's approval without `decide#PurchaseApproval` cannot approve a
+  priced order: the service creates the order itself (no orderId in), every line is `add#OrderProductQuantity` with
+  `unitAmount` 0 (not null, so no price lookup; isModifiedPrice Y), and a purchase order gets no adjustment on place; its
+  `update#OrderStatus` to OrderApproved is reached only for that new order. Purchasing edits a purchase order only while
+  OrderOpen, so the approved replacement cannot be repriced today (a P9 note below). Every Purchasing path to the raw
+  `create#ReturnFromOrder` and `cancel#Return` (F-P8-1) runs `check#Record` with `buy` first: `newSupplierReturn` (the order)
+  and `purchasingCancelReturn` (the return, before authorization); the other transitions (`purchasingAddReceipt`,
+  `purchasingAuthorizeReturn`, `purchasingReplaceReturn`) do too, and Shared/ReturnDetail's Purchasing transitions posted
+  under another app's mount meet the same check#Record (which needs the Purchasing capability whatever the appRoot).
+  Restricted values: a credit's amount and the settlement preview for a finance reader only, "Withheld" otherwise, in
+  find#SupplierReturns, get#ReturnDetail and their screens; the authorization print shows no price.
+- R1 (low, test): `PurchaseReturns.spec.js` now turns the buying policy's approval gate on before the replacement and
+  checks the order's grand total is zero and the part approved (the deliberate exception to the gate, D8), and its header
+  no longer says Mantle orders a replacement at authorization.
+- F-P8-4 confirmed, left for the lead and Accounting (not a small change): the match base is
+  `mantle/account/InvoiceMatch.js` `receiptsOf` / `checkAllocation` (`accepted - held - inspectionRejected`, both the
+  order-line `base` and the `receiptBase`), fed by `mantle/product/Quality.js` `sourceStatus` (get#SourceInspectionStatus),
+  whose `inspectionRemovedQuantity` counts only scrap and a Return to supplier disposition's `returnedQuantity` (raised by
+  `ReturnStock.js` `issueSupplierReturn` only for held stock). A supplier return of released stock (ReturnItem.assetReceiptId,
+  issued through `issue#SupplierReturnStock`) lowers nothing, so the plan's "a return of unbilled quantity lowers the
+  match-eligible receipt" does not hold today: a later bill still matches goods that went back (in the walk's third feature
+  3 released units go back, 2 unbilled, and nothing takes those 2 out of the receipt's base). A correct base is not simply "less shipped
+  returns": `settle#Return` credits a return against the order line's billed quantity first (orderCap) and leaves a
+  replacement uncredited, so the base must take out, per receipt, what supplier returns shipped of it less what their
+  credits (standing ReturnItemBilling) and replacements (`replacedQuantity`) settled, less what the dispositions already
+  took out (to avoid counting a disposed unit twice). Taking out returned-but-credited units would instead turn the original
+  bill's match into an exception on its next re-evaluation, and a replaced unit's original bill likewise. Nothing queues a
+  match re-evaluation when released stock ships back or a return is credited or replaced (only the disposition path calls
+  `queue#MatchReevaluation`). It changes the eligible quantity of bills of organizations already using Warehouse P14's
+  supplier returns, so Accounting should decide it (as a base correction like P8 review B2, or behind a match-policy flag).
+- For P9: `handle#PurchaseApprovalRevision` returns at once for an order with no decision, so when revisions of approved
+  orders are built, a commercial revision of a replacement order (approved without a decision) must send it back for
+  approval under the gate, like any other approved order.
+- Specs: Mantle PurchaseReturns, ReturnToResponseBasicFlow, AccountingMatching; BOSS PurchasingReturns, PurchasingAccess,
+  WarehouseReturns, AccountingAccess: all pass (PurchaseReturns 2, the ReturnToResponseBasicFlow run 55 with its flow specs,
+  AccountingMatching 14, PurchasingReturns 3, PurchasingAccess 17, WarehouseReturns 6, AccountingAccess 8).
+
 ### P9 — Revisions and acknowledgements
 
 - **PUR-ORDER, the revision**, on the audit-log rule (§2): no revision record.
