@@ -214,4 +214,42 @@ along with this software (see the LICENSE.md file). If not, see
             equipmentFault="N" plannedStop="Y" fromDate="2026-11-02 10:00:00" thruDate="2026-11-02 10:40:00"
             description="Changeover to the pilot assembly" revision="1" reportedByUserId="BOSS_MFG_OPERATE"
             reportedDate="2026-11-02 10:41:00" closedByUserId="BOSS_MFG_OPERATE" closedDate="2026-11-02 10:41:00"/>
+
+    <!-- P8: Retail's in-process weld check (a production template published at the start of the year), and a running work
+        order on line A whose release kept its gate on the Weld operation: the draft inspection of that gate, 2 assemblies
+        sampled 2, assigned to manufacturing.inspect, which holds Pack (after Weld) until it passes. It has no material or
+        planning rows, so no shortage or supply reads it. -->
+    <mantle.product.quality.InspectionTemplate inspectionTemplateId="BOSS_MFG_QTMPL" organizationPartyId="ORG_ZIZI_RETAIL"
+            templateName="Weld check" inspectionContextEnumId="QicProduction" productionStageEnumId="QpsInProcess"
+            sampleBasisEnumId="QsbReceipt" samplePolicyEnumId="QspAll" statusId="QtPublished"
+            publishedDate="2026-01-01 00:00:00" createdDate="2026-01-01 00:00:00" createdByUserId="BOSS_MFG_QUALITY_ADMIN"/>
+    <mantle.product.quality.InspectionTemplateItem inspectionTemplateItemId="BOSS_MFG_QTMPL_1"
+            inspectionTemplateId="BOSS_MFG_QTMPL" characteristicId="BOSS_MFG_QTMPL_1" sequenceNum="1"
+            characteristicName="Weld bead even" readingTypeEnumId="QrtPassFail" mandatory="Y" fromDate="2026-01-01 00:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_RUN_Q" workEffortTypeEnumId="WetEvent" purposeEnumId="WepProductionRun"
+            statusId="WeInProgress" facilityId="BOSS_MFG_LINE_A" workEffortName="Welded frames" ownerPartyId="ORG_ZIZI_RETAIL"
+            productionRevision="3" productionMethodDate="2026-11-02 00:00:00" productionReleaseDate="2026-11-02 08:00:00"
+            productionGatesDate="2026-11-02 08:00:00" actualStartDate="2026-11-02 09:00:00"
+            estimatedStartDate="2026-11-02 08:00:00" estimatedCompletionDate="2026-11-06 17:00:00"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_RUN_Q_10" workEffortTypeEnumId="WetTask"
+            parentWorkEffortId="BOSS_MFG_RUN_Q" rootWorkEffortId="BOSS_MFG_RUN_Q" statusId="WeComplete" workEffortName="Weld"
+            ownerPartyId="ORG_ZIZI_RETAIL" facilityId="BOSS_MFG_LINE_A" sequenceNum="1" operationSequenceNum="10"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_RUN_Q_20" workEffortTypeEnumId="WetTask"
+            parentWorkEffortId="BOSS_MFG_RUN_Q" rootWorkEffortId="BOSS_MFG_RUN_Q" statusId="WeApproved" workEffortName="Pack"
+            ownerPartyId="ORG_ZIZI_RETAIL" facilityId="BOSS_MFG_LINE_A" sequenceNum="2" operationSequenceNum="20"/>
+    <mantle.work.production.ProductionRunLine productionRunLineId="BOSS_MFG_RUN_Q_OUT" workEffortId="BOSS_MFG_RUN_Q"
+            lineRoleEnumId="PrlrOutput" lineSeqNum="10" productId="DEMO_1_1" quantity="2" quantityUomId="OTH_ea"
+            stockQuantity="2" stockUomId="OTH_ea" conversionFactor="1" operationWorkEffortId="BOSS_MFG_RUN_Q_20"
+            frozenDate="2026-11-02 08:00:00"/>
+    <mantle.work.production.ProductionQualityGate productionQualityGateId="BOSS_MFG_QGATE_1" workEffortId="BOSS_MFG_RUN_Q"
+            operationWorkEffortId="BOSS_MFG_RUN_Q_10" productionStageEnumId="QpsInProcess" inspectionTemplateId="BOSS_MFG_QTMPL"
+            templateName="Weld check" templateAsOfDate="2026-11-02 08:00:00" samplePolicyEnumId="QspAll"
+            sampleBasisEnumId="QsbReceipt" attachedEnumId="PgsOperation" createdDate="2026-11-02 08:00:00"/>
+    <mantle.product.quality.QualityInspection qualityInspectionId="BOSS_MFG_INSP" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="BOSS_MFG_LINE_A" statusId="QiDraft" inspectionContextEnumId="QicProduction"
+            sourceTypeEnumId="QisWorkEffort" workEffortId="BOSS_MFG_RUN_Q" operationWorkEffortId="BOSS_MFG_RUN_Q_10"
+            productionQualityGateId="BOSS_MFG_QGATE_1" productId="DEMO_1_1" quantity="2" heldQuantity="0"
+            disposedQuantity="0" sampleSize="2" inspectionTemplateId="BOSS_MFG_QTMPL" templateAsOfDate="2026-11-02 08:00:00"
+            inspectorPartyId="BOSS_MFG_INSPECT" createdDate="2026-11-02 10:00:00" createdByUserId="BOSS_MFG_INSPECT"
+            comments="Weld of the first frames"/>
 </entity-facade-xml>

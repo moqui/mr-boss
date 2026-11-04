@@ -29,6 +29,12 @@ const ids = {
     templateIds: ["BOSS_MFG_OPT_ASSEMBLE", "BOSS_MFG_OPT_TEST"],
     componentId: "DEMO_RM_1",
     kitId: "DEMO_PA",
+    // P8: the running work order with its in-process weld gate, the gate, its draft inspection and the weld template
+    qualityRunId: "BOSS_MFG_RUN_Q",
+    qualityOperationIds: ["BOSS_MFG_RUN_Q_10", "BOSS_MFG_RUN_Q_20"],
+    qualityGateId: "BOSS_MFG_QGATE_1",
+    inspectionId: "BOSS_MFG_INSP",
+    qualityTemplateId: "BOSS_MFG_QTMPL",
     // P14: the Warehouse demo's subcontractor, its placed service order of the coating operation and the dispatch
     supplierId: "ZiddlemanInc",
     serviceProductId: "BOSS_WH_COATING",
@@ -234,9 +240,33 @@ function routeFixtures() {
         "WorkOrders/WorkOrderDetail/Quantities": {parameters: released, text: "Coated filters"},
         "WorkOrders/WorkOrderDetail/ByProducts": {parameters: released, text: "Coated filters"},
         "WorkOrders/WorkOrderDetail/OutputLabels": {parameters: released, text: "Coated filters"},
-        Quality: {text: "Scrap and loss"},
         "Quality/ScrapLoss": {text: "Scrap and loss"}
     })
+    // P8: the Quality area (Inspections by default), the shared inspection and templates with the Manufacturing context, the
+    // inspection station and its operator mode, the certificate, and the quality work order's Quality tab and checklist (a
+    // tab and a station mount show their parent's text, F63)
+    const qualityRun = {workEffortId: ids.qualityRunId}
+    const inspection = {qualityInspectionId: ids.inspectionId}
+    Object.assign(routes, {
+        Quality: {text: "Inspections"},
+        "Quality/Inspections": {text: "Inspections"},
+        "Quality/QualityInspection": {parameters: inspection, text: "Weld bead even"},
+        "Quality/InspectionTemplates": {parameters: {inspectionTemplateId: ids.qualityTemplateId}, text: "Weld check"},
+        "Quality/InspectionStation": {text: "Inspection station"},
+        "Quality/InspectionStation/Scan": {text: "Scan the inspection"},
+        "Quality/InspectionStation/Inspection": {parameters: inspection, text: "Inspection station"},
+        "Quality/QualityCertificate": {parameters: inspection, text: "Inspection evidence"},
+        "WorkOrders/WorkOrderDetail/Quality": {parameters: qualityRun, text: "Welded frames"},
+        "WorkOrders/WorkOrderDetail/QualityChecklist": {
+            parameters: {workEffortId: ids.qualityRunId, productionQualityGateId: ids.qualityGateId},
+            text: "Welded frames"
+        }
+    })
+    mounts.push(
+        ["Quality/QualityInspection", shared + "QualityInspection.xml"],
+        ["Quality/InspectionTemplates", shared + "InspectionTemplates.xml"],
+        ["Quality/InspectionStation/Inspection", shared + "QualityInspection.xml"]
+    )
     // P14: the Subcontracting area (SubcontractOperations by default), the outside processing of the Warehouse demo's coating
     // operation and its instructions, and the shared supplier, order and shipment screens with the Manufacturing context on
     // Ziddleman, the demo's service order and its subcontract dispatch
