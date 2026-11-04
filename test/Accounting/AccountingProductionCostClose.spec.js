@@ -44,7 +44,9 @@ const transition = (user, workEffortId, action) =>
                 operationKey: key(),
                 workEffortId,
                 action,
-                expectedRevision: revision(workEffortId)
+                expectedRevision: revision(workEffortId),
+                // nothing reports this run's operation on the shop floor (P10): complete closes it with the run
+                closeUnreportedOperations: action === "complete"
             }),
         false
     )

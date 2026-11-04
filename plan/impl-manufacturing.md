@@ -221,7 +221,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | built Nov 3, reviewed |
-| P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
+| P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | built Nov 4 |
 | P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | — |
 | P17 Finish | BOSS | — | — |
 
@@ -2372,6 +2372,100 @@ steps 20–23.
   - a retry answers the first post, and a closed period is refused;
   - a labor event after close is previewed as an adjustment;
   - a cost estimator can request review but not preview or post.
+
+**Built Nov 4 (P15).**
+- Mantle records (`entity/ProductionCostCloseEntities.xml`, `data/ProductionCostingData.xml`, new files):
+  `mantle.work.production.ProductionAllocationPolicy` (organization, from/thru, overhead basis PobWorkCenterHour /
+  PobLaborPercent / PobNone, fallback overhead rate and currency, labor percent, co-product method PcmQuantity /
+  PcmFixedShare / PcmSalesValue, explicit output weights allowed, scrap to variance, variance account; key fields
+  audit-logged); P6's ProductionCostAllocation extended (organization, component, account, accounting date, adjustment,
+  basis quantity and rate, share, description); the run's audit-logged `productionCostClosedDate`,
+  `productionCostCloseTransId` and `productionAllocationPolicyId` (the row the close applied); destination PcdScrap; the
+  review decisions PcrReturned and PcrClosed (F69); the PeriodCloseCheck rows PccProductionWip and PccProductionCostClose
+  (F26). The data file loads after ProductionCostData, whose enumeration types it extends.
+- `mantle.ledger.ProductionCostServices` (`ProductionCostClose.js`): `get#AllocationPolicies` (finance reads; PRODUCTION_VIEW
+  without rates), `store#AllocationPolicy` (ACCOUNTING_ADMIN: a change ends the row in effect, POLICY_CHANGED on a stale
+  form), `preview#CostClose` (ACCOUNTING_GL_POST or PRODUCTION_COST_POST), `post#CostClose` (PRODUCTION_COST_POST),
+  `get#CostClose`, `return#CostReview` and `check#ProductionClose`. The preview absorbs every valued event awaiting the
+  close by its cost component (PrcLabor to GatLaborApplied, PrcMachine and overhead to GatOverheadApplied, PrcOutside to
+  GatOutsideProcessAccrued), so P10's PcetLabor and PcetMachine events are absorbed with no change; overhead per work-center
+  hour on each operation's machine hours (its labor hours with no machine runtime) at the center's approved PccOverhead
+  WorkCenterRate on the event's date, else the policy's rate, or a percentage of labor; the scrap of issued material out of
+  WIP (asset type scrap account, else variance); the co-product split of the run's cost over the output lines (quantity in
+  the primary's unit, fixed BOM shares, list-price sales value, or explicit weights where allowed) with each line's variance;
+  the residual WIP to variance. It blocks on a run not complete, unvalued events (F70, P10's unvalued machine runtime; a
+  later revision of the source clears one), movements that posted nothing, another currency, time on the run or its
+  operations not on an approved timesheet (read from mantle.work.time directly), a closed or missing period, unmapped or
+  inactive accounts. After the run's close it previews the late events as an adjustment (R-SA-11). The post: one
+  AttManufacturing AcctgTrans with the run's workEffortId, events PclClosePosted with closeAcctgTransId, an allocation per
+  line under the policy row, the run's close fields and PcrClosed, then `transition#ProductionOrder` close in the same
+  transaction; review notices marked read; a retry answers the first post (EntityLib operation key); a stale preview is
+  STALE_PREVIEW.
+- Shared-file edits: ProductionOrders.js (`close` action, PRODUCTION_COST_POST, refused COST_CLOSE_NOT_POSTED until the
+  close is posted, CLOSE_BY_COST_CLOSE for a user without the permission, left out of the Lifecycle dialog);
+  Production.js (`outputPlan`: a by-product at its share of the frozen estimate under the policy in effect,
+  BYPRODUCT_NOT_COSTED without a standard); ProductionCosts.js (a source takes the revision as a third argument; a bill
+  match line's later revision is the reversal of its variance once the match is unapplied, F115); ProductionQuantities.js
+  (the completion impact text); ProductionServices.xml descriptions.
+- BOSS: `Shared/ProductionCostClose` (queue in Accounting with no run; record header with the state chip, Post cost close
+  primary dialog, More / Return to production; accounting-date preview; findings; evidence absorbed, overhead, scrap,
+  output allocation, proposed journal entry; posted allocations), mounted at `Accounting/Inventory/ProductionCostClose`
+  and as WorkOrderDetail's Cost close tab (index 9), classified in ClientIsolation; `Accounting/Settings/CostingPolicies`;
+  `ironstone.accounting.ProductionCostServices.find#CostCloseQueue` (`ProductionCosts.js`: reviews requested, completed
+  runs not closed, closed runs with late events); Home MyFinanceWork's "Production runs awaiting cost close";
+  PeriodCloseDetail's productionCostClose route; the ProductionCostReview linkTemplate and the topic in Accounting's shell
+  (F69); BOSS_ACCOUNTING_APPROVE on Accounting Inventory; ProductionCostServices in BOSS_ACCOUNTING_ACCESS; the two
+  enumeration types in Accounting's choices; ProductionSettings shows the costing policy in effect read only and links
+  CostingPolicies for the finance administrator; ByProducts' Actual allocation; Warehouse's MaterialIssueReceipt offers
+  the by-product receipt; demo: Retail's four production cost accounts and `manufacturing.costclose` (production reader
+  and BOSS_ACCOUNTING_APPROVE, no Accounting launcher).
+- Specs: Mantle `test/ledger/ProductionCostClose.spec.js` (10 features, about 3 s of features: policy store and
+  refusals with its audit row; the by-product at its share; a completed run with material, labor, P10 machine runtime
+  through its MachineRuntimeEvent source and outside accrual previewing absorption 15/20/30, overhead 20, split 87.5/17.5
+  and variance 46.67; closed period refused and the run not closable outside the close; estimator and GL poster refusals,
+  another organization; one post closing the run, the retry, the notices read; the adjustment; unapproved time and unvalued
+  machine runtime blocking; the F115 reversal; the close-check rows); ProductionQuantities' by-product now received at 4.165;
+  ProductionSubcontract's variance counts scoped to its organization. BOSS `test/Accounting/AccountingProductionCostClose`
+  (3: queue, Home and checklist; preview and post through the Accounting screen closing the run, GL poster without post;
+  CostingPolicies and ProductionSettings' read only policy), ManufacturingAccess P15 (2), AccountingShell (approver menu),
+  route fixtures; walk `ManufacturingCostCloseWalk` (4, with 390 px) in suite.js.
+- Tests run (after merging master with P9 and P10): Mantle ProductionCostClose, ProductionShopFloor, ProductionChanges,
+  ProductionCosts, ProductionOrders, ProductionQuantities, ProductionSubcontract, WarehouseProduction,
+  ManufacturingServices, AccountingSetup, AccountingPeriodClose, ProductionPolicy (98, pass); before the merge also
+  AccountingMatching and ProductMethods (pass). BOSS AccountingProductionCostClose, ManufacturingAccess, AppStructure,
+  TuiRender, ClientIsolation, AccountingShell, ManufacturingWorkOrders (181, pass); before the merge also
+  ManufacturingShell, AccountingPeriodClose, AccountingValuation, AccountingAccess, WarehouseAccess, Notifications,
+  ManufacturingSubcontracting (pass). Walk ManufacturingCostCloseWalk (4, pass). `moqui lint --screens`: the new and
+  changed screens show only informational anchor rows.
+- Decisions:
+  - Absorption is generic by cost component, so any later event kind of a known component is absorbed; an unknown
+    component blocks (COMPONENT_UNMAPPED). Revisions are deltas: every valued revision counts.
+  - The co-product reallocation is reported per output line and booked as variance by line; receipts and stock are never
+    revalued (ByProducts: no retroactive edits of receipts). A by-product is received at its share of the frozen estimate
+    (the share rounded to the currency), refused without an approved standard.
+  - Overhead hours are the machine events' (else the labor events') of each operation, valued at the rate of the event's
+    date, so an adjustment applies overhead only to its own hours.
+  - The preview also takes PRODUCTION_COST_POST, since BOSS_ACCOUNTING_APPROVE (which posts) holds no ACCOUNTING_GL_POST;
+    the estimator holds neither.
+  - F52: the cost estimator still adds no WorkCenterRate; overhead rates are the resource administrator's WorkCenterRate
+    rows (PccOverhead) and Accounting's fallback policy rate, so the cost group needs no new grant.
+  - CostingPolicies stays the finance administrator's (Accounting Settings); Manufacturing reads the policy in effect
+    without rates on ProductionSettings.
+- Deferred: CostingPolicies' LaborCostingRates form (People's get#CostingRate; P10 values labor with its own rate rows);
+  posted allocations' reversal actions; a demo run awaiting the close (the walk reads the released Warehouse demo run).
+- Findings (provisional):
+  - **F-P15-1** The cost close data file sorted before ProductionCostData (alphabetical load order) and failed on the
+    missing enumeration type, skipping the whole file; it is `ProductionCostingData.xml`.
+  - **F-P15-2** BOSS_ACCOUNTING_APPROVE (PRODUCTION_COST_POST) had no authz on Accounting Inventory; granted, so the
+    approvers' menu shows Inventory (AccountingShell updated).
+  - **F-P15-3** The Accounting demo users work in BOSS_ACCT_ORG, not Retail, where the Manufacturing demo runs are; the
+    BOSS spec makes Retail finance users of its own, and the demo adds `manufacturing.costclose` for the Manufacturing mount.
+  - **F-P15-4** A Mantle spec that counts every event of a type (ProductionSubcontract's variances) breaks when another
+    spec of the run writes one; scoped to its organization.
+  - **F-P15-5** For the merge: ProductionOrders.js (close action), ProductionCosts.js (the source signature now
+    `(id, removed, revision)`), Production.js (`outputPlan`), BossAccountingSetupData (Inventory authz, artifact group,
+    topic link), BossManufacturingDemoData and BossUsersDemoData (appended), ManufacturingAccess and ManufacturingSpecLib
+    (appended P15 blocks), AppStructure and TuiRender (the Accounting Inventory mount), suite.js.
 
 ### P16 — Reports
 
