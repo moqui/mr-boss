@@ -3,7 +3,7 @@
 The Manufacturing app calls Mantle's production, method, quality and stock services, which check their own permissions
 and organization. BOSS owns the app's access (`ironstone.manufacturing.AccessServices`), its routes, choices, Home and
 forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation), P2 (methods), P3 (work centers and
-equipment) and P4 (policy and reasons) of
+equipment), P4 (policy and reasons), P6 (cost evidence) and P11 (downtime and maintenance) of
 [impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
 
 ## Routes and users
@@ -14,7 +14,8 @@ equipment) and P4 (policy and reasons) of
 | BOMs | `BillsOfMaterials/Find` (the list, New BOM, Clone, legacy and CSV import), and Products' shared `BillOfMaterialsDetail` (with its explosion, compare, where used and routing tabs), `WhereUsed`, `Product360` and `CostRollup` with the Manufacturing context |
 | Routings | `Routings/Find` (the list, New routing, CSV import), `Routings/OperationTemplates` (the catalogue, instructions, archive) and the shared `RoutingDetail` (copy operations, release request, notes) |
 | Approvals | Commons Notifications with the `BomRelease` and `RoutingRelease` topics, for the approval groups (below) |
-| Work centers | `WorkCenters/Centers` (Find, the load, New work center), `Equipment`, `ResourceCalendar` (and `ResourceCalendarTui`); `FacilityDetail` and `EquipmentDetail`, the shared screens with the Manufacturing context, hidden from the menu |
+| Work centers | `WorkCenters/Centers` (Find, the load, New work center), `Equipment`, `ResourceCalendar` (and `ResourceCalendarTui`), `Downtime` (P11: the stops, Report stop, End stop, Request maintenance, Correct); `FacilityDetail` and `EquipmentDetail`, and Projects' `RequestDetail` and `WorkItemDetail` (P11), the shared screens with the Manufacturing context, hidden from the menu |
+| Quick create | `ReportDowntime` (P11), the downtime report of the + menu, for the operators and supervisors (`BOSS_MFG_REPORT_DOWNTIME`) |
 | Settings | `Settings/ProductionSettings` (the organization default and plant overrides) and `Settings/ReasonCodes`, for the settings group (below) |
 | Work orders, Reports | Placeholders, open to every Manufacturing user |
 | Shop floor, Quality, Planning, Subcontracting | Placeholders, for their groups only (below) |
@@ -74,6 +75,7 @@ Demo records (BossManufacturingDemoData.xml):
 | Skill types | `BOSS_MFG_SKILL_ASSEMBLY`, `_COATING`, `_INSPECTION` |
 | Line A's resources (P3) | calendar `BOSS_MFG_CAL_LINE_A` (the weekday `BOSS_MFG_LINE_A_SHIFT`, the shutdown day `BOSS_MFG_LINE_A_SHUTDOWN` on 2026-11-27), capacities `BOSS_MFG_LINE_A_SLOTS` (2 slots) and `BOSS_MFG_LINE_A_RATE` (30 DEMO_1_1 an hour), alternate `BOSS_MFG_LINE_A_ALT_B`, approved machine rate `BOSS_MFG_LINE_A_MACHINE` |
 | Methods (P2) | operation templates `BOSS_MFG_OPT_ASSEMBLE`, `BOSS_MFG_OPT_TEST`; the released routing `BOSS_MFG_ROUTING_A` (operations `_10`, `_20`); the released BOM `BOSS_MFG_BOM_PILOT` of DEMO_1_1 (method code PILOT) |
+| Downtime (P11) | the closed changeover `BOSS_MFG_DT_1` of line A |
 | Ziziwork Services (isolation) | plant `BOSS_MFG_SVC_PLANT` (FcTpPlant), line `BOSS_MFG_SVC_LINE`, run `BOSS_MFG_SVC_RUN` |
 
 ## Access contract
@@ -146,10 +148,27 @@ with `check#Record` and reads `mantle.work.ProductionServices.get#ProductionCost
 it hidden at `Manufacturing/ProductionCosts`; then the WorkOrderDetail directory makes it that screen's Costs tab and the root
 item, the `ProductionCosts` link path and ManufacturingSpecLib's `moved` path go.
 
+## Downtime and maintenance (P11)
+
+Downtime (`screen/Manufacturing/WorkCenters/Downtime.xml`) reads `mantle.work.ProductionServices.find#ProductionDowntime`;
+its forms and transitions are `template/ManufacturingDowntime.xml` (`downtimeChoices`, `reportStop`, `closeStop`,
+`correctStop`, `requestMaintenance`, the `ReportStopForm` and `MaintenanceForm` sections), which EquipmentDetail and
+`ReportDowntime` include too. Each transition checks the work center, equipment or stop with `check#Record` (the `downtime`
+kind, `supervise` for a correction), then calls `store#ProductionDowntime` or `request#ProductionMaintenance` with the form's
+operation key. A report answers Downtime with the new stop selected, and an equipment fault with its Request maintenance
+dialog open (`_openDialog=MaintenanceDialog`). OperationExecution's Pause (P10) opens Downtime with `workEffortId`,
+`operationWorkEffortId`, `facilityId` and `assetId` and `_openDialog=ReportStopDialog`. EquipmentDetail's Manufacturing
+context has Report stop, Request maintenance and a Downtime pane, and its availability reads the open outage (Out of
+service). RequestDetail and WorkItemDetail take the Commons context with a Production box
+(`template/ManufacturingRequestParts.xml`, `ironstone.manufacturing.DowntimeServices` `get#RequestContext` and
+`get#WorkItemContext`): a maintenance request of the user's plants, and a follow-up task of one; any other request or
+task, and a production operation, are not available there.
+
 ## Verification
 
-`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters`, `./moq test mr-mantle --spec
-WorkCenters,ProductionCosts`, the walks `ManufacturingWorkCentersWalk` and `ManufacturingCostsWalk`; AppStructure and TuiRender cover the built screens and the area
+`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters,ManufacturingDowntime`,
+`./moq test mr-mantle --spec WorkCenters,ProductionCosts,ProductionDowntime`, the walks `ManufacturingWorkCentersWalk`,
+`ManufacturingCostsWalk` and `ManufacturingDowntimeWalk`; AppStructure and TuiRender cover the built screens and the area
 placeholders.
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingMethods`; AppStructure and TuiRender cover
 the built routes (ManufacturingSpecLib's `routeFixtures`) and the area placeholders; `./moq test mr-mantle --spec

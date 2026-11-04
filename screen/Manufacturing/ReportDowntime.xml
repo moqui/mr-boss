@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Quick create's Downtime report (design-manufacturing §1.2 quick create, Downtime ReportStop; impl-manufacturing P11): the
+    report form of the Downtime list in the shell's + dialog, for the operators and supervisors only (the BOSS_MFG_REPORT_DOWNTIME
+    artifact group). The record of the page under it fills the form: equipment, a work center, or a run or operation. The
+    transition answers JSON, so the dialog closes, with a link to the stop in Downtime (its Maintenance dialog open for an
+    equipment fault). Mantle checks PRODUCTION_OPERATE or PRODUCTION_SUPERVISE and the organization. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Report downtime" default-menu-include="false" server-static="qvt">
+    <parameter name="recordEntity"/>
+    <parameter name="recordId"/>
+    <transition-include name="downtimeChoices" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition name="reportStop">
+        <actions>
+            <script><![CDATA[
+                ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record')
+                        .parameters({appRoot: appRoot, recordType: 'workCenter', recordId: facilityId || '_NA_'}).call()
+                let reported = {}
+                if (!ec.message.hasError())
+                    reported = ec.service.sync().name('mantle.work.ProductionServices.store#ProductionDowntime').parameters({
+                        operationKey: operationKey, action: 'open', facilityId: facilityId, assetId: assetId || null,
+                        workEffortId: workEffortId || null, operationWorkEffortId: operationWorkEffortId || null, reasonCode: reasonCode,
+                        fromDate: fromDate || null, thruDate: thruDate || null, description: description || null}).call()?.result || {}
+                const id = reported.productionDowntimeId
+                const url = id ? '/qapps/Manufacturing/WorkCenters/Downtime?productionDowntimeId=' + encodeURIComponent(id)
+                        + (reported.suggestMaintenance ? '&_openDialog=MaintenanceDialog' : '') : null
+                ec.web.sendJsonResponse(ec.message.hasError() ? {} : {productionDowntimeId: id, url: url,
+                    messageInfos: [{type: 'success', link: url, message: 'Stop ' + id + ' reported'
+                        + (reported.suggestMaintenance ? '; open it to request maintenance' : '')}]})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <!-- the record of the page under the dialog: equipment, a work center, or a run or an operation -->
+        <set field="fromRecord" from="{}"/>
+        <if condition="recordEntity == 'mantle.product.asset.Asset' &amp;&amp; recordId">
+            <set field="fromRecord" from="{assetId:recordId}"/>
+        </if>
+        <if condition="recordEntity == 'mantle.facility.Facility' &amp;&amp; recordId">
+            <set field="fromRecord" from="{facilityId:recordId}"/>
+        </if>
+        <if condition="recordEntity == 'mantle.work.effort.WorkEffort' &amp;&amp; recordId">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="workRecord"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:recordId}"/>
+            <set field="fromRecord" from="workRecord?.recordId ? {operationWorkEffortId:recordId,
+                    facilityId:workRecord.facilityId} : {}"/>
+        </if>
+        <set field="reportStopValues" from="Object.assign({operationKey:'downtime-' + ec.user.randomString(24),
+                maintenanceDialog:'row'}, fromRecord)"/>
+    </actions>
+    <widgets>
+        <section-include name="ReportStopForm" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    </widgets>
+</screen>

@@ -990,3 +990,155 @@ feature("the cost estimator requests a work order's cost review; a reader is ref
         !after.output.includes("Request cost review")
     }
 })
+
+// ===== P11: downtime and maintenance =====
+// Each refusal on the parameters a permitted user passes with: the reader may not report or ask for maintenance, the operator
+// may not correct, and the other organization's user reaches no Retail stop, center, robot or request.
+const downtimeKey = () => "spec-p11-access-" + Date.now() + "-" + Math.floor(Math.random() * 1000000)
+const reportOn = (user, facilityId = ids.lineBId) =>
+    asUser(
+        user,
+        () =>
+            refusal(production + "store#ProductionDowntime", {
+                operationKey: downtimeKey(),
+                action: "open",
+                facilityId,
+                reasonCode: "MATERIAL_HOLD"
+            }),
+        false
+    )
+feature("reporting a stop needs PRODUCTION_OPERATE or PRODUCTION_SUPERVISE; a correction PRODUCTION_SUPERVISE", {
+    when() {
+        const stopId = asUser(
+            users.operate,
+            () =>
+                invoke(production + "store#ProductionDowntime", {
+                    operationKey: downtimeKey(),
+                    action: "open",
+                    facilityId: ids.lineBId,
+                    reasonCode: "MATERIAL_HOLD",
+                    fromDate: new Date(Date.now() - 20 * 60000),
+                    thruDate: new Date(Date.now() - 10 * 60000)
+                }).result.productionDowntimeId,
+            false
+        )
+        const correction = {action: "correct", productionDowntimeId: stopId, expectedRevision: 1, changeReason: "Spec correction"}
+        const correct = user =>
+            asUser(
+                user,
+                () => refusal(production + "store#ProductionDowntime", Object.assign({operationKey: downtimeKey()}, correction)),
+                false
+            )
+        const maintenance = user =>
+            asUser(
+                user,
+                () =>
+                    refusal(production + "request#ProductionMaintenance", {
+                        operationKey: downtimeKey(),
+                        assetId: ids.equipmentId,
+                        problem: "Spec noise"
+                    }),
+                false
+            )
+        const check = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "downtime", recordId: stopId, capability: "supervise"})
+            )
+        return {
+            operator: reportOn(users.operate),
+            supervisor: reportOn(users.supervise),
+            reader: reportOn(users.read),
+            // the other organization's reader is refused the line by the screens' check (Mantle's spec refuses an operator of
+            // another organization the same way)
+            services: asUser(users.services, () => refusal(access + "check#Record", {recordType: "workCenter", recordId: ids.lineBId})),
+            operatorCorrect: correct(users.operate),
+            operatorCheck: check(users.operate),
+            supervisorCheck: check(users.supervise),
+            supervisorCorrect: correct(users.supervise),
+            readerMaintenance: maintenance(users.read),
+            operatorMaintenance: maintenance(users.operate)
+        }
+    },
+    then(r) {
+        r.operator == ""
+        r.supervisor == ""
+        r.reader.includes("PERMISSION_DENIED")
+        r.services.includes("RECORD_UNAVAILABLE")
+        r.operatorCorrect.includes("PERMISSION_DENIED")
+        r.operatorCheck.includes("PERMISSION_DENIED")
+        r.supervisorCheck == ""
+        r.supervisorCorrect == ""
+        r.readerMaintenance.includes("PERMISSION_DENIED")
+        r.operatorMaintenance == ""
+    }
+})
+feature("the other organization's user reads none of Retail's stops, reasons, equipment or maintenance requests", {
+    when() {
+        const choices = (user, choice) =>
+            asUser(user, () => invoke(access + "get#Choices", {choice, facilityId: ids.lineId, selected: null}).options)
+        const requestId = system(
+            () =>
+                Array.from(
+                    ec.entity.find("mantle.request.Request").condition({requestTypeEnumId: "RqtMaintenance"}).limit(1).list()
+                )[0]?.requestId
+        )
+        return {
+            retailStops: asUser(
+                users.read,
+                () => invoke(production + "find#ProductionDowntime", {facilityId: ids.lineId}),
+                false
+            ),
+            servicesStops: asUser(
+                users.services,
+                () => invoke(production + "find#ProductionDowntime", {facilityId: ids.lineId}),
+                false
+            ),
+            servicesDemo: asUser(
+                users.services,
+                () => refusal(production + "find#ProductionDowntime", {productionDowntimeId: ids.downtimeId}),
+                false
+            ),
+            retailReasons: choices(users.operate, "downtimeReasons"),
+            servicesReasons: choices(users.services, "downtimeReasons"),
+            retailEquipment: choices(users.operate, "equipment"),
+            servicesEquipment: choices(users.services, "equipment"),
+            requestId,
+            servicesRequest: requestId ? asUser(users.services, () => lib.page("WorkCenters/RequestDetail", {requestId})) : null,
+            servicesDowntime: asUser(users.services, () => lib.page("WorkCenters/Downtime"))
+        }
+    },
+    then(r) {
+        r.retailStops.downtimeList.some(row => row.productionDowntimeId == ids.downtimeId)
+        r.servicesStops.downtimeList.length == 0
+        r.servicesDemo.includes("RECORD_UNAVAILABLE")
+        r.retailReasons.some(option => option.value == "ROBOT_FAULT")
+        !r.retailReasons.some(option => option.value == "SCRAP_DAMAGE")
+        r.servicesReasons.length == 0
+        r.retailEquipment.some(option => option.value == ids.equipmentId)
+        r.servicesEquipment.length == 0
+        r.requestId == null || r.servicesRequest.output.includes("not available")
+        r.servicesDowntime.errors.length == 0
+        !r.servicesDowntime.output.includes("Changeover")
+    }
+})
+feature("quick create's downtime report opens for the operator and the supervisor, and not for a reader, with authz enabled", {
+    when() {
+        return {
+            operator: asUser(users.operate, () => lib.page("ReportDowntime")),
+            supervisor: asUser(users.supervise, () => lib.page("ReportDowntime")),
+            reader: asUser(users.read, () => lib.page("ReportDowntime")),
+            readerList: asUser(users.read, () => lib.page("WorkCenters/Downtime")),
+            operatorList: asUser(users.operate, () => lib.page("WorkCenters/Downtime"))
+        }
+    },
+    then({operator, supervisor, reader, readerList, operatorList}) {
+        operator.errors.length == 0
+        operator.output.includes("Report stop")
+        supervisor.output.includes("Report stop")
+        reader.status != 200 || !reader.output.includes("Report stop")
+        readerList.errors.length == 0
+        readerList.output.includes("Changeover")
+        !readerList.output.includes("Report stop")
+        operatorList.output.includes("Report stop")
+    }
+})

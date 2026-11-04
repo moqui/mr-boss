@@ -51,6 +51,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P1: runs, methods, routings, work centers and scoped equipment in the palette (search#Records) -->
         <palette-source group="Manufacturing" label="Manufacturing records" icon="sym_o_precision_manufacturing"
                 service="ironstone.manufacturing.AccessServices.search#Records" sequence="49"/>
+        <!-- P11: a downtime report, for the operators and supervisors (BOSS_MFG_REPORT_DOWNTIME) -->
+        <quick-create kind="manufacturingReportDowntime" label="Downtime report" screen="Manufacturing/ReportDowntime"
+                icon="sym_o_report" sequence="95"/>
         <!-- P2: the method release requests of Approvals (F40) -->
         <notification-topic topic="BomRelease"/>
         <notification-topic topic="RoutingRelease"/>

@@ -1172,6 +1172,26 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P11: quick create's downtime report (Manufacturing/ReportDowntime) for the operators and supervisors, so the + menu
+        offers it to them only; Downtime itself is under Work centers, open to every Manufacturing user to read -->
+    <artifactGroups artifactGroupId="BOSS_MFG_REPORT_DOWNTIME">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/ReportDowntime.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_ReportDowntime_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_ReportDowntime_OPERATE" userGroupId="BOSS_MANUFACTURING_OPERATE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_ReportDowntime_SUPERVISE" userGroupId="BOSS_MANUFACTURING_SUPERVISE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_ReportDowntime_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection -->
     <moqui.security.user.NotificationTopic topic="QualityInspectionDecision"
             linkTemplate="/qapps/Warehouse/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>

@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The downtime parts of the IronStone Manufacturing screens (design-manufacturing Downtime ReportStop and Maintenance;
+    impl-manufacturing P11): WorkCenters/Downtime, EquipmentDetail's Manufacturing context and quick create's ReportDowntime
+    include each transition they use by name, and the sections with the forms. Each transition checks the record through
+    ironstone.manufacturing.AccessServices.check#Record, then calls the Mantle verb with the form's operation key, which
+    checks PRODUCTION_OPERATE or PRODUCTION_SUPERVISE (a correction PRODUCTION_SUPERVISE) and the organization again.
+    - downtimeChoices: the drop-downs (get#Choices), apart from a screen's own choices transition;
+    - reportStop: open a stop, or record one with its end (store#ProductionDowntime open). Downtime answers with the new stop
+      selected (maintenanceDialog row) and EquipmentDetail with its equipment (equipment); for an equipment fault with the
+      page's Maintenance dialog open;
+    - closeStop, correctStop: the end of an open stop and a supervisor's correction (close, correct);
+    - requestMaintenance: corrective maintenance of the stop's equipment, or of equipment alone, with an optional intake
+      request (request#ProductionMaintenance).
+    The ReportStopForm section is the report form (reportStopValues from the including screen: operationKey and the
+    facility, equipment, run and operation it is for, as OperationExecution's Pause will pass them); MaintenanceForm is
+    EquipmentDetail's maintenance request (maintenanceValues). ProductionStops lists a maintenance request's stops and equipment
+    (productionRequest) for template/ManufacturingRequestParts.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="downtimeChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="reportStop">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'workCenter', recordId:facilityId || '_NA_'}"/>
+            <if condition="assetId">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.store#ProductionDowntime" out-map="stored"
+                    in-map="{operationKey:operationKey, action:'open', facilityId:facilityId, assetId:assetId || null,
+                        workEffortId:workEffortId || null, operationWorkEffortId:operationWorkEffortId || null,
+                        reasonCode:reasonCode, fromDate:fromDate || null, thruDate:thruDate || null,
+                        description:description || null}"/>
+            <set field="reported" from="stored?.result || {}"/>
+            <set field="openedDialog" from="reported.suggestMaintenance ? (maintenanceDialog == 'equipment'
+                    ? 'EquipmentMaintenanceDialog' : 'MaintenanceDialog') : null"/>
+            <!-- Downtime answers with the new stop selected, not filtered by the report's own fields -->
+            <if condition="maintenanceDialog != 'equipment' &amp;&amp; reported.productionDowntimeId">
+                <set field="productionDowntimeId" from="reported.productionDowntimeId"/>
+                <set field="facilityId" from="null"/>
+                <set field="assetId" from="null"/>
+                <set field="reasonCode" from="null"/>
+                <set field="workEffortId" from="null"/>
+                <set field="operationWorkEffortId" from="null"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Stop ${reported.productionDowntimeId} reported${reported.outageLinked
+                    ? '; the equipment was already out of service' : ''}${reported.suggestMaintenance
+                    ? '. Request maintenance for the equipment if it needs repair.' : ''}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="_openDialog" from="openedDialog"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="closeStop">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'downtime', recordId:productionDowntimeId || '_NA_'}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionDowntime" out-map="stored"
+                    in-map="{operationKey:operationKey, action:'close', productionDowntimeId:productionDowntimeId,
+                        expectedRevision:expectedRevision, thruDate:thruDate || null}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Stop ${productionDowntimeId} ended</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="correctStop">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'downtime', recordId:productionDowntimeId || '_NA_',
+                        capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionDowntime" out-map="stored"
+                    in-map="{operationKey:operationKey, action:'correct', productionDowntimeId:productionDowntimeId,
+                        expectedRevision:expectedRevision, fromDate:fromDate || null, thruDate:thruDate || null,
+                        reasonCode:reasonCode || null, description:description, changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Stop ${productionDowntimeId} corrected as ${stored.result.productionDowntimeId}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="requestMaintenance">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:productionDowntimeId ? 'downtime' : 'asset',
+                        recordId:productionDowntimeId || assetId || '_NA_'}"/>
+            <service-call name="mantle.work.ProductionServices.request#ProductionMaintenance" out-map="requested"
+                    in-map="{operationKey:operationKey, productionDowntimeId:productionDowntimeId || null,
+                        assetId:productionDowntimeId ? null : assetId, problem:problem, priority:priority || null,
+                        createRequest:createRequest == 'Y'}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Maintenance ${requested.result.assetMaintenanceId} requested${requested.result.requestId
+                    ? ' with request ' + requested.result.requestId : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="ReportStopForm">
+            <widgets>
+                <label text="For work order ${reportStopValues.workEffortId}${reportStopValues.operationWorkEffortId
+                    ? ', operation ' + reportStopValues.operationWorkEffortId : ''}"
+                        type="p" style="text-caption" condition="reportStopValues.workEffortId || reportStopValues.operationWorkEffortId"/>
+                <form-single name="ReportStop" transition="reportStop" map="reportStopValues">
+                    <field name="operationKey">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="operationWorkEffortId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="maintenanceDialog">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Work center">
+                            <drop-down>
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workCenters', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field title="Equipment" tooltip="The machine that stopped, when one did">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        depends-optional="true"
+                                        parameter-map="{choice:'equipment', facilityId:facilityId, selected:assetId}">
+                                    <depends-on field="facilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="reasonCode">
+                        <default-field title="Reason">
+                            <drop-down>
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        depends-optional="true"
+                                        parameter-map="{choice:'downtimeReasons', facilityId:facilityId, selected:reasonCode}">
+                                    <depends-on field="facilityId"/>
+                                </dynamic-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <default-field title="Stopped at" tooltip="Leave empty for now">
+                            <date-time/>
+                        </default-field>
+                    </field>
+                    <field name="thruDate">
+                        <default-field title="Restarted at" tooltip="Leave empty while it is still stopped">
+                            <date-time/>
+                        </default-field>
+                    </field>
+                    <field name="description">
+                        <default-field title="What happened">
+                            <text-area rows="3"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Report stop"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="assetId"/>
+                        </field-row>
+                        <field-ref name="reasonCode"/>
+                        <field-row>
+                            <field-ref name="fromDate"/>
+                            <field-ref name="thruDate"/>
+                        </field-row>
+                        <field-ref name="description"/>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <section name="MaintenanceForm">
+            <widgets>
+                <label text="For stop ${maintenanceValues.productionDowntimeId}." type="p" style="text-caption"
+                        condition="maintenanceValues.productionDowntimeId"/>
+                <form-single name="RequestMaintenance" transition="requestMaintenance" map="maintenanceValues">
+                    <field name="operationKey">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="productionDowntimeId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="assetId">
+                        <default-field>
+                            <hidden/>
+                        </default-field>
+                    </field>
+                    <field name="problem">
+                        <default-field title="Problem">
+                            <text-area rows="3"/>
+                        </default-field>
+                    </field>
+                    <field name="priority">
+                        <default-field title="Urgency">
+                            <drop-down>
+                                <option key="2" text="Urgent"/>
+                                <option key="5" text="Normal"/>
+                                <option key="8" text="When convenient"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="createRequest">
+                        <default-field title="Intake request" tooltip="A maintenance request the plant triages, linked to the stop and the equipment">
+                            <drop-down>
+                                <option key="Y" text="Create a maintenance request"/>
+                                <option key="N" text="Maintenance record only"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Request maintenance"/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+        <!-- the stops and equipment of a maintenance request (productionRequest), each with its Manufacturing link -->
+        <section name="ProductionStops">
+            <widgets>
+                <form-list name="ProductionRequestStops" list="productionRequest.downtimeRows" skip-form="true" paginate="false">
+                    <field name="facilityName">
+                        <default-field title="Stop">
+                            <link url="${url}" url-type="plain" text="${facilityName} · ${reasonName}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="fromText">
+                        <default-field title="Stopped">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="durationText">
+                        <default-field title="Duration">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="facilityName"/>
+                            <field-ref name="fromText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="durationText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <form-list name="ProductionRequestEquipment" list="productionRequest.equipmentRows" skip-form="true"
+                        paginate="false">
+                    <field name="label">
+                        <default-field title="Equipment">
+                            <link url="${url}" url-type="plain" text="${label}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="detail">
+                        <default-field title="">
+                            <display/>
+                        </default-field>
+                    </field>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -50,9 +50,9 @@ XML is the default implementation. All lists use saved finds, server paging and 
 - Routings — `Routings`
   - Routing record — `RoutingDetail`; operation catalogue — `OperationTemplates`
 - Work centers — `WorkCenters`
-  - Equipment — `Equipment`; calendar — `ResourceCalendar`
+  - Equipment — `Equipment`; calendar — `ResourceCalendar`; downtime — `Downtime`
 - Quality — `Inspections`
-  - Templates — `InspectionTemplates`; scrap/loss — `ScrapLoss`; downtime — `Downtime`; nonconformances — `Nonconformances` and gauges — `Gauges` (`later`)
+  - Templates — `InspectionTemplates`; scrap/loss — `ScrapLoss`; nonconformances — `Nonconformances` and gauges — `Gauges` (`later`)
 - Planning — `SupplyPlanning`
   - Availability — `InventoryAvailability`; schedule — `ProductionSchedule`; capacity — `Capacity`; forecast, master and finite schedules — `later`
 - Subcontracting — `SubcontractOperations`
@@ -128,7 +128,7 @@ All paths are under the BOSS app root; these are proposed screen routes, not cla
 | QualityInspection | `Manufacturing/Quality/QualityInspection` | task | xml | Open the canonical QualityInspection in production context. | mantle.product.quality.QualityInspection (built, Warehouse P8) | QualityInspection, [crosscut §3.19](design-crosscut.md#319-qualityinspection-and-inspectiontemplates) | app | new | inspection and source identity |
 | InspectionTemplates | `Manufacturing/Quality/InspectionTemplates` | settings | xml | Open the canonical InspectionTemplates in production context. | InspectionTemplate / InspectionTemplateItem (built, Warehouse P8) | InspectionTemplates, [crosscut §3.19](design-crosscut.md#319-qualityinspection-and-inspectiontemplates) | app | new | template and as-of date |
 | ScrapLoss | `Manufacturing/Quality/ScrapLoss` | list | xml | Record and review scrap, process loss and rework. | mantle.work.production.ProductionLoss (proposed) | own | app | new | ProductionLoss rows; list find parameters |
-| Downtime | `Manufacturing/Quality/Downtime` | list | xml | Capture reason-coded production stops and recovery. | mantle.work.production.ProductionDowntime (proposed) | own | app | new | ProductionDowntime rows; list find parameters |
+| Downtime | `Manufacturing/WorkCenters/Downtime` | list | xml | Capture reason-coded production stops and recovery. | mantle.work.production.ProductionDowntime (proposed) | own | app | new | ProductionDowntime rows; list find parameters |
 | Nonconformances | `Manufacturing/Quality/Nonconformances` | list | xml | Manage findings and corrective action without duplicating cases. | Request + proposed QualityNonconformance | own | quality inspector/verifier; quality administrator for setup | later | QualityNonconformance rows; list find parameters |
 | Gauges | `Manufacturing/Quality/Gauges` | list | xml | Track inspection instruments and calibration evidence. | Asset + proposed GaugeCalibration | own | quality inspector/verifier; quality administrator for calibration records | later | Asset rows; list find parameters |
 | RequestDetail | `Manufacturing/Quality/RequestDetail` | detail | xml | Open the canonical RequestDetail in production context. | mantle.request.Request | RequestDetail, [crosscut §3.11](design-crosscut.md#311-requestdetail) | app | new | Request requestId |
@@ -754,7 +754,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 ### EquipmentDetail
 
-**Context passed.** Pass equipment assetId, facility/plant, assigned operation and read/write capabilities. Show production assignments, qualifications, downtime, maintenance history and documents; allow authorized assignment and request-maintenance. The canonical EquipmentDetail has no request-maintenance action yet; it gains one, calling `request#ProductionMaintenance`, with the Manufacturing context (§13). Acquisition/depreciation and valuation remain Accounting actions. A read-only operator sees safe-use instructions and blocked state without procurement or asset book value.
+**Context passed.** Pass equipment assetId, facility/plant, assigned operation and read/write capabilities. Show production assignments, qualifications, downtime, maintenance history and documents; allow authorized assignment and request-maintenance. The canonical EquipmentDetail has no request-maintenance action yet; it gains one, calling `request#ProductionMaintenance`, with the Manufacturing context (§13). Built (P11): Report stop and Request maintenance in its header for operators and supervisors, a Downtime pane, and "Out of service" while an outage of it is open. Acquisition/depreciation and valuation remain Accounting actions. A read-only operator sees safe-use instructions and blocked state without procurement or asset book value.
 
 ### ResourceCalendar
 
@@ -826,6 +826,16 @@ planning, booking and Maintenance read, so it is never counted twice. Closing th
 does not restore the equipment. Maintenance owns restoration through `end#ResourceUnavailability`,
 after the required work or an authorized disposition. A later downtime on the same asset links the
 outage that is still open. Non-equipment reasons create no outage.
+
+**Built (P11, Nov 3, 2026).** At `Manufacturing/WorkCenters/Downtime`, not under Quality: a stop is a work center's and its
+equipment's availability, its readers are every Manufacturing user (Quality is for the quality groups and the supervisor
+only), and operators report it; it sits beside Equipment and the calendar, as Maintenance's Downtime sits under its
+equipment. Quick create's Downtime report is `Manufacturing/ReportDowntime`, for the operators and supervisors. The stop is
+`mantle.work.production.ProductionDowntime` (impl-manufacturing P11); its reasons are the organization's downtime and hold
+reason codes (ReasonCodes, categories PrcDowntime and PrcHold), whose classification it keeps. Maintenance is suggested (the
+row's Request maintenance) for an equipment fault of a machine only. A correction is a new row; the corrected one keeps its
+interval and reporter and shows in the stop's correction history. The approval threshold of a reason is not applied yet
+(impl-manufacturing P11, F-P11-3).
 
 **Source.** research §8; ERPNext `erpnext/manufacturing/doctype/downtime_entry/downtime_entry.json`.
 

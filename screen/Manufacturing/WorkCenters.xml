@@ -13,9 +13,10 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Work centers area of IronStone Manufacturing (design-manufacturing §1.2, §6; impl-manufacturing P3): Centers, the
-    work centers with their capacity and load and New work center; Equipment, the equipment at the user's facilities; and
-    ResourceCalendar, the Commons calendar of the centers' work hours, holidays and released operations, read only. The
-    shared FacilityDetail and EquipmentDetail are mounted here with the Manufacturing context, hidden from the menu. Open to
+    work centers with their capacity and load and New work center; Equipment, the equipment at the user's facilities;
+    ResourceCalendar, the Commons calendar of the centers' work hours, holidays and released operations, read only; and
+    Downtime, the centers' stops with their maintenance (P11). The shared FacilityDetail and EquipmentDetail, and Projects'
+    RequestDetail and WorkItemDetail (P11), are mounted here with the Manufacturing context, hidden from the menu. Open to
     every Manufacturing user; changes check METHOD_RESOURCES, and a rate the cost authority, in Mantle. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work centers" default-menu-index="6" menu-image="sym_o_factory" menu-image-type="icon">
@@ -23,6 +24,12 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml"
+                menu-include="false"/>
+        <!-- P11: Projects' shared request and work item screens with the Manufacturing context (maintenance requests and their
+            follow-up tasks) -->
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml"
                 menu-include="false"/>
     </subscreens>
     <widgets>

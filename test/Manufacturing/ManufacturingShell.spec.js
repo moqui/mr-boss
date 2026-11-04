@@ -37,7 +37,8 @@ function shell(user) {
     })
 }
 
-// no area of P1 creates a record, so quick create offers nothing yet: P5 adds the draft work order, P11 the downtime report
+// quick create: P11's downtime report for the operators, supervisors and the administrator (P5 adds the draft work order)
+const reportsDowntime = [users.operate, users.supervise, users.admin]
 feature("the Manufacturing menu follows the #user grants", {
     where: [
         {user: users.read, extra: []},
@@ -58,10 +59,11 @@ feature("the Manufacturing menu follows the #user grants", {
         const found = shell(user)
         return Object.assign(found, {quickKinds: (found.providers?.quickCreate || []).map(item => item.kind)})
     },
-    then({status, names, providers, extra, quickKinds}) {
+    then({user, status, names, providers, extra, quickKinds}) {
         status == 200
         names == menuOf(extra)
-        quickKinds == []
+        quickKinds.filter(kind => kind !== "manufacturingReportDowntime") == []
+        quickKinds.includes("manufacturingReportDowntime") == reportsDowntime.includes(user)
         providers.paletteSources.some(source => source.group === "Manufacturing")
         providers.keymaps[0].scope == "manufacturing"
     }
