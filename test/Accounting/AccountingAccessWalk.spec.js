@@ -46,7 +46,8 @@ const sections = {
     "GeneralLedger/JournalEntries": ["gl", "read", "approve", "admin"],
     "PeriodClose/Periods": ["gl", "approve", "admin"],
     "FixedAssets/FixedAssets": ["gl", "read", "approve", "admin"],
-    "Inventory/InventoryValuation": ["gl", "read", "admin"],
+    // the approvers read Inventory for its ProductionCostClose (impl-manufacturing P15, F133)
+    "Inventory/InventoryValuation": ["gl", "read", "approve", "admin"],
     "Tax/TaxStatements": ["tax", "admin"],
     "Budgets/Budgets": ["gl", "read", "approve", "admin"],
     "Reports/TrialBalance": ["gl", "read", "approve", "admin"],

@@ -402,6 +402,9 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   and ManufacturingShopFloor published instructions on the same demo template (each now checks its own; fixed);
   `moqui lint --screens` clean; BOSS client walks 165 passed, 1 failed: ManufacturingShopFloorWalk could not complete a
   lot-required output (F145; fixed).
+- **Wave 7 suites (Nov 4, on master after P15 and P16 merged):** standalone mr-mantle 1,567 passed, 2 failed (the
+  baseline), 11 skipped; mr-boss 1,745 passed, 1 failed: AccountingAccessWalk's section map did not have P15's approver
+  read of Inventory (F133; the map now does); `moqui lint --screens` clean; BOSS client walks 173 passed.
 
 ### P2 — Methods
 
