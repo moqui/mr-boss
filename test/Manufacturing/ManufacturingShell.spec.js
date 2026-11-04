@@ -37,7 +37,9 @@ function shell(user) {
     })
 }
 
-// quick create offers the draft work order to the planners and the administrator (P5a); P11 adds the downtime report
+// quick create offers the draft work order to the planners and the administrator (P5a), and the downtime report to the
+// operators, supervisors and the administrator (P11)
+const reportsDowntime = [users.operate, users.supervise, users.admin]
 feature("the Manufacturing menu follows the #user grants", {
     where: [
         {user: users.read, extra: []},
@@ -61,7 +63,9 @@ feature("the Manufacturing menu follows the #user grants", {
     then({status, names, providers, extra, quickKinds, user}) {
         status == 200
         names == menuOf(extra)
-        quickKinds == ([users.plan, users.admin].includes(user) ? ["manufacturingWorkOrder"] : [])
+        quickKinds.includes("manufacturingWorkOrder") == [users.plan, users.admin].includes(user)
+        quickKinds.includes("manufacturingReportDowntime") == reportsDowntime.includes(user)
+        quickKinds.filter(kind => kind !== "manufacturingWorkOrder" && kind !== "manufacturingReportDowntime") == []
         providers.paletteSources.some(source => source.group === "Manufacturing")
         providers.keymaps[0].scope == "manufacturing"
     }

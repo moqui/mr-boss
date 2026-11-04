@@ -11,6 +11,8 @@ const ids = {
     releasedRunId: "BOSS_WH_RUN",
     operationId: "BOSS_WH_RUN_OP",
     equipmentId: "EQUIP_AB4_1",
+    // P11: line A's demo changeover (BossManufacturingDemoData.xml)
+    downtimeId: "BOSS_MFG_DT_1",
     // P3: line A's calendar, capacities, alternate and machine rate (BossManufacturingDemoData.xml)
     lineCalendarId: "BOSS_MFG_CAL_LINE_A",
     lineRateId: "BOSS_MFG_LINE_A_MACHINE",
@@ -186,6 +188,18 @@ function routeFixtures() {
         "Planning/SupplyPlanning": {parameters: {plantId: ids.plantId}, text: "Supply planning"}
     })
     mounts.push(["Planning/SupplyPlanning", shared + "SupplyPlanning.xml"])
+    // P11: Downtime under Work centers (line A's demo changeover), quick create's report and Projects' shared request and
+    // work item screens with the Manufacturing context (an id of no maintenance request or task: not available there)
+    Object.assign(routes, {
+        "WorkCenters/Downtime": {text: "Downtime"},
+        ReportDowntime: {text: "Report stop"},
+        "WorkCenters/RequestDetail": {parameters: {requestId: "BOSS_MFG_NO_REQUEST"}, text: "not available in Manufacturing"},
+        "WorkCenters/WorkItemDetail": {parameters: {workEffortId: "BOSS_MFG_NO_TASK"}, text: "not available in Manufacturing"}
+    })
+    mounts.push(
+        ["WorkCenters/RequestDetail", shared + "RequestDetail.xml"],
+        ["WorkCenters/WorkItemDetail", shared + "WorkItemDetail.xml"]
+    )
     return {routes, mounts}
 }
 

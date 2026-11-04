@@ -41,6 +41,14 @@ along with this software (see the LICENSE.md file). If not, see
     policy), Allocate (move: a transfer from another facility, or a move within this one), Complete and Cancel, Conversation
     and Files.
 
+    Manufacturing (impl-manufacturing P11, crosscut §3.11 Manufacturing row; ironstone.manufacturing.DowntimeServices
+    get#RequestContext, template/ManufacturingRequestParts.xml ManufacturingRequestContext): a maintenance request of the user's
+    plants (RqtMaintenance at one of their facilities, or one asked for a stop of theirs), at
+    Manufacturing/WorkCenters/RequestDetail: the Commons request (header, Overview, Conversation, Tasks, Files) with a
+    Production box of its stops, equipment, corrective maintenance and run or operation, and links back to Downtime. Its
+    production runs and operations among the tasks open in Manufacturing, never as tasks (F38); a follow-up task opens
+    WorkItemDetail under Manufacturing. Any other request is not available there.
+
     The request is found under the record visibility rule (R5, R28; in Projects also its project's, impl-projects.md F1): one the
     user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -248,6 +256,10 @@ along with this software (see the LICENSE.md file). If not, see
             // a client contact (the PROJECT_CLIENT permission; impl-projects.md P10b): its part of the request only
             clientView = !!ec.user.userId && ec.user.hasPermission('PROJECT_CLIENT')
             detailPath = projects ? '/qapps/Projects/Requests/RequestDetail' : '/qapps/Commons/Requests/RequestDetail'
+            // Manufacturing (impl-manufacturing P11): a maintenance request of the user's plants, on the Commons request
+            mfgRequest = appRoot === 'Manufacturing'
+            productionRequest = {}
+            if (mfgRequest) detailPath = '/qapps/Manufacturing/WorkCenters/RequestDetail'
             // Warehouse (impl-warehouse P15): a stock request in its own section (template/WarehouseRequestDetail.xml)
             if (appRoot === 'Warehouse') {
                 let wh = {}
@@ -275,6 +287,14 @@ along with this software (see the LICENSE.md file). If not, see
                 detail = ec.service.sync().name('ironstone.commons.RequestServices.get#RequestDetail').parameters({requestId: requestId}).call() || {}
                 recordFound = !!detail.visible
             }
+            if (mfgRequest && recordFound) {
+                ec.message.pushErrors()
+                try {
+                    productionRequest = ec.service.sync().name('ironstone.manufacturing.DowntimeServices.get#RequestContext')
+                            .parameters({requestId: requestId}).call() || {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = !!productionRequest.available
+            }
             const tabKeys = projects ? ['overview', 'conversation', 'work'].concat(pd.itemsShown ? ['items'] : []).concat(['files'])
                     : ['overview', 'conversation', 'tasks', 'files']
             tab = tabKeys.includes(tab) ? tab : 'overview'
@@ -296,6 +316,13 @@ along with this software (see the LICENSE.md file). If not, see
             // a client contact opens no contact (Commons is not its): the people without links
             partyList = (detail.partyList || []).map((one) => clientView ? Object.assign({}, one, {url: null}) : one)
             taskList = detail.taskList || []
+            // in Manufacturing a follow-up task opens its WorkItemDetail there, and a run or operation its work order (F38)
+            if (mfgRequest) {
+                const productionIds = productionRequest.productionWorkIds || []
+                const workUrls = Object.fromEntries((productionRequest.workRows || []).map((row) => [row.workEffortId, row.url]))
+                taskList = taskList.map((task) => Object.assign({}, task, {url: productionIds.includes(task.workEffortId) ? workUrls[task.workEffortId]
+                        : '/qapps/Manufacturing/WorkCenters/WorkItemDetail?workEffortId=' + encodeURIComponent(task.workEffortId)}))
+            }
             captionText = [L('Request') + ' ' + requestId, request.typeLabel, request.filedByName ? L('raised by') + ' ' + request.filedByName : null,
                 request.requestDateText].filter((part) => part).join(' · ')
             const fact = (label, value, cls) => '<div class="col-auto"><div class="text-caption m-muted">' + enc(L(label)) + '</div><div class="text-body2' + (cls ? ' ' + cls : '') + '">' + value + '</div></div>'
@@ -377,17 +404,24 @@ along with this software (see the LICENSE.md file). If not, see
 
     <widgets>
         <section-include name="WarehouseStockRequest" location="component://mr-boss/template/WarehouseRequestDetail.xml"/>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse'"><widgets>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; !mfgRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="ProductionRequestNotFound" condition="!recordFound &amp;&amp; mfgRequest"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Request ${requestId} is not available in Manufacturing: it is not a maintenance request of your plants."/>
+                <link url="${sharedLinks['WorkCenters/Downtime']}" text="Back to Downtime" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>
 
         <section name="RequestFound" condition="recordFound"><widgets>
             <!-- the record for the shell: quick create's link chip and the activity kind, Today's "Add activity on this record" -->
             <context record-entity="mantle.request.Request" record-id="${requestId}" title="${request.requestName || requestId}"/>
-            <container style="q-mb-xs"><link url="requests" link-type="anchor" text="Requests" icon="arrow_back"/></container>
+            <container style="q-mb-xs"><link url="requests" link-type="anchor" text="Requests" icon="arrow_back" condition="!mfgRequest"/>
+                <link url="${sharedLinks['WorkCenters/Downtime']}" link-type="anchor" text="Downtime" icon="arrow_back" condition="mfgRequest"/></container>
 
             <section name="CommonsHeader" condition="!projects"><widgets>
                 <!-- ===== the header card (style-guide §3.3): the name with the status-bar at its right, then the facts with the actions at their right ===== -->
@@ -620,6 +654,8 @@ along with this software (see the LICENSE.md file). If not, see
                 </container>
             </widgets></section>
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
+            <!-- Manufacturing (impl-manufacturing P11): the request's stops, equipment, maintenance and work, on the overview -->
+            <section-include name="ManufacturingRequestContext" location="component://mr-boss/template/ManufacturingRequestParts.xml"/>
 
             <section name="CommonsOverview" condition="!projects"><widgets>
                 <!-- ===== Overview ===== -->

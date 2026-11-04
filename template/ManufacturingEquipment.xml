@@ -17,8 +17,10 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.manufacturing.WorkCenterServices.get#Equipment (productionEquipment in Shared/EquipmentDetail's actions): its
     availability, with a warning when it must not be used (left, or in maintenance), its safe-use instructions, its
     identity without cost or book value, its production assignments, the routing operations that need its model and its
-    maintenance history. The same for an operator, who reads it only. Its files and notes are EquipmentDetail's own section;
-    reporting downtime and requesting maintenance come with the Downtime area. -->
+    maintenance history. The same for an operator, who reads it only. Its files and notes are EquipmentDetail's own section.
+    P11: Report stop and Request maintenance in the header for operators and supervisors (template/ManufacturingDowntime.xml,
+    the maintenance for the equipment's open equipment-fault stop when there is one, else for the equipment alone), and the
+    Downtime pane with its latest stops (equipmentStops, find#ProductionDowntime). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
@@ -59,6 +61,22 @@ along with this software (see the LICENSE.md file). If not, see
                                     link-type="anchor"
                                     condition="productionEquipment.asset.facilityId"
                                     parameter-map="{facilityId:productionEquipment.asset.facilityId}"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-x-sm m-record-actions">
+                            <!-- one primary: Request maintenance while a fault stop of it waits for one, else Report stop -->
+                            <container-dialog id="EquipmentReportStopDialog" condition="downtimeReport"
+                                    type="${suggestedStop ? 'default' : 'primary'}" button-text="Report stop" icon="sym_o_report"
+                                    title="Report a stop of ${productionEquipment.asset.assetName}" width="720">
+                                <section-include name="ReportStopForm"
+                                        location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                            </container-dialog>
+                            <container-dialog id="EquipmentMaintenanceDialog" condition="downtimeReport"
+                                    type="${suggestedStop ? 'primary' : 'default'}" button-text="Request maintenance"
+                                    icon="sym_o_build" title="Request maintenance of ${productionEquipment.asset.assetName}"
+                                    width="620">
+                                <section-include name="MaintenanceForm"
+                                        location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                            </container-dialog>
                         </container>
                     </container>
                 </container>
@@ -208,6 +226,66 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                         <label text="Not assigned to any work now or ahead." type="p" style="q-pa-md m-muted"
                                 condition="!productionEquipment.assignmentList.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Downtime"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['WorkCenters/Downtime']}" text="All stops" link-type="anchor"
+                                parameter-map="{assetId:productionEquipment.asset.assetId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ProductionEquipmentStops" list="equipmentStops" skip-form="true" paginate="false">
+                            <field name="facilityName">
+                                <default-field title="Work center">
+                                    <link url="${sharedLinks['WorkCenters/Downtime']}" text="${facilityName}" link-type="anchor"
+                                            parameter-map="{productionDowntimeId:productionDowntimeId}"/>
+                                </default-field>
+                            </field>
+                            <field name="reasonName">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="Stopped">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="durationText">
+                                <default-field title="Duration">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong",
+                                            text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="maintenanceText">
+                                <default-field title="Maintenance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="facilityName"/>
+                                    <field-ref name="reasonName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="durationText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <label text="No stops are recorded for this equipment." type="p" style="q-pa-md m-muted"
+                                condition="!equipmentStops.length"/>
                     </box-body-nopad>
                 </container-box>
                 <container-box>

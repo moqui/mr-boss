@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Production boxes of Projects' shared RequestDetail and WorkItemDetail in Manufacturing (impl-manufacturing P11;
+    crosscut §3.11 and §3.12 Manufacturing rows): ManufacturingRequestContext, a maintenance request's stops, equipment,
+    corrective maintenance and stopped work (productionRequest from ironstone.manufacturing.DowntimeServices
+    get#RequestContext), and ManufacturingWorkItemContext, a follow-up task's maintenance requests with their stops and
+    equipment (productionTask from get#WorkItemContext). Both show on the Overview tab. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ManufacturingRequestContext" condition="mfgRequest &amp;&amp; tab == 'overview'">
+            <widgets>
+                <container-box>
+                    <box-header title="Production${productionRequest.facilityName ? ' · ' + productionRequest.facilityName : ''}"/>
+                    <box-body-nopad>
+                        <section-include name="ProductionStops" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                        <form-list name="ProductionRequestMaintenance" list="productionRequest.maintenanceRows" skip-form="true"
+                                paginate="false">
+                            <field name="typeText">
+                                <default-field title="Maintenance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="Asked">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="comments">
+                                <default-field title="Problem">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="typeText"/>
+                                    <field-ref name="comments"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                        <form-list name="ProductionRequestWork" list="productionRequest.workRows" skip-form="true"
+                                paginate="false">
+                            <field name="label">
+                                <default-field title="Stopped work">
+                                    <link url="${url}" url-type="plain" text="${label}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="kindName">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="detail">
+                                <default-field title="">
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ManufacturingWorkItemContext" condition="mfgTask &amp;&amp; tab == 'overview'">
+            <actions>
+                <set field="productionRequest" from="{downtimeRows:productionTask.downtimeRows || [],
+                        equipmentRows:productionTask.equipmentRows || []}"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Production"/>
+                    <box-body-nopad>
+                        <form-list name="ProductionTaskRequests" list="productionTask.requestRows" skip-form="true"
+                                paginate="false">
+                            <field name="requestName">
+                                <default-field title="Maintenance request">
+                                    <link url="${url}" url-type="plain" text="${requestName}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <section-include name="ProductionStops" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

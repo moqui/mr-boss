@@ -217,7 +217,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
-| P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | — |
+| P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | — |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | — |
@@ -1180,6 +1180,115 @@ Design §6 Downtime, Equipment, RequestDetail and WorkItemDetail; M6's downtime 
   - closing the downtime leaves the request, maintenance and outage open and starts no timer;
   - a no-material stop suggests no maintenance;
   - a supervisor's correction keeps the original interval and actor.
+
+**Built Nov 3 (P11).**
+- Mantle records: `entity/ProductionDowntimeEntities.xml` (new) `mantle.work.production.ProductionDowntime`: organization,
+  work center, optional asset, run and operation, status (PdtOpen, PdtClosed, PdtCorrected), the reason code with the
+  category, equipment fault and planned stop of the reason row in effect at its start, from and thru, note, revision, the
+  reporter and closer, the correction chain (`originalDowntimeId`, `correctionOfDowntimeId`, `supersededByDowntimeId`, the
+  corrector and `changeReason`) and its outage, AssetMaintenance and Request, key fields audit-logged.
+  `entity/ResourceBookingEntities.xml` (new) Maintenance's minimal `mantle.work.effort.ResourceUnavailability` (design Y3,
+  design-maintenance MT-07): kind (ResourceUnavailabilityKind RukActual, RukPlanned for MT-07), asset or facility,
+  organization, from and thru, description, `sourceProductionDowntimeId`. Seeds (`data/ProductionDowntimeData.xml`): the
+  ProductionDowntime statuses and flow, the kinds, `RqtMaintenance` and `MntTpCorrective` (F18).
+- Mantle services: `mantle.work.ResourceBookingServices.record#ResourceUnavailability` (new file; XML Actions): with the asset
+  locked, the open actual outage of the asset is linked, else one is created; internal, its caller checks. Appended to
+  `ProductionServices.xml` over `ProductionDowntime.js`: `store#ProductionDowntime` (open, close, correct; operation key;
+  PRODUCTION_OPERATE or PRODUCTION_SUPERVISE to open and close, PRODUCTION_SUPERVISE to correct; the center, equipment, run,
+  operation, reason, interval and revision checks of its description), `find#ProductionDowntime` (PRODUCTION_VIEW, OPERATE or
+  SUPERVISE; the user's organizations; filters, paging, display text, what the user may do, and a stop's correction history)
+  and `request#ProductionMaintenance` (operation key; an AssetMaintenance through `EquipmentServices.create#AssetMaintenance`
+  with AsMntCreated and MntTpCorrective; with createRequest a submitted RqtMaintenance Request at the stop's center with the
+  organization as OrgInternal, linked through `RequestServices.link#RequestRecord` to the stop, the equipment, the maintenance
+  and the stopped operation or run). An equipment-fault stop of an asset records or links the outage in its transaction;
+  closing changes the stop only.
+- BOSS: `screen/Manufacturing/WorkCenters/Downtime.xml` (the list with Find, Report stop as the primary action, the selected
+  stop's Request maintenance, each row's End stop, Request maintenance for an equipment fault and Correct for supervisors,
+  the correction history); `template/ManufacturingDowntime.xml` (the transitions and the ReportStop and Maintenance forms,
+  included by Downtime, EquipmentDetail and quick create); `screen/Manufacturing/ReportDowntime.xml`, quick create's
+  Downtime report (JSON answer with a link to the stop), behind the new `BOSS_MFG_REPORT_DOWNTIME` artifact group and the root's
+  `<quick-create kind="manufacturingReportDowntime">`; EquipmentDetail's Manufacturing context gains Report stop, Request
+  maintenance (for its open fault stop when there is one) and a Downtime pane, and `WorkCenters.js` availability reads the
+  open outage ("Out of service", blocked); Projects' `Shared/RequestDetail` and `Shared/WorkItemDetail` mounted under
+  WorkCenters with the Manufacturing context: the Commons request or task plus a Production box
+  (`template/ManufacturingRequestParts.xml`, `ironstone.manufacturing.DowntimeServices` `get#RequestContext` and
+  `get#WorkItemContext` over `Downtime.js`), for a maintenance request of the user's plants and its follow-up tasks; a
+  production operation is not a follow-up task there (F38) and links to its work order. `Manufacturing.js`: the `downtime`
+  record kind (destination Downtime), the P11 link paths, the `downtimeReasons` and `equipment` choices (`get#Choices` takes
+  `facilityId`). Demo: line A's closed changeover `BOSS_MFG_DT_1`.
+- OperationExecution (P10) does not exist yet: its Pause opens `WorkCenters/Downtime` with `workEffortId`,
+  `operationWorkEffortId`, `facilityId`, `assetId` and `_openDialog=ReportStopDialog`, and the report carries the run and
+  operation (hidden fields of ReportStopForm); P10 may instead include `ReportStopForm` and the `reportStop` transition with
+  its own `reportStopValues`.
+- Specs: Mantle `test/work/ProductionDowntime.spec.js` (6 features, about 1 s: the five usable-when items and the refusals,
+  spec-local users); BOSS `ManufacturingDowntime` (5, the usable-when items through the screens' calls and pages, and the
+  follow-up task), `ManufacturingAccess` P11 section (3: the permission refusals on the same parameters, the other
+  organization's reads and choices, quick create and the list with authz enabled), ManufacturingShell's quick-create rows,
+  ManufacturingSpecLib's routes (Downtime, ReportDowntime, RequestDetail, WorkItemDetail); client walk
+  `ManufacturingDowntimeWalk` (2, with 390 px), added to `suite.js`.
+- Tests run: Mantle ProductionDowntime, ManufacturingServices, WarehouseProduction, ProductMethods, ProductionPolicy,
+  ProductionCosts (43 features, pass); BOSS ManufacturingDowntime, ManufacturingAccess, ManufacturingShell, AppStructure,
+  TuiRender (114, pass), ManufacturingMethods, ManufacturingWorkCenters, WarehouseAccess, WarehouseShell (172, pass), and the
+  shared-screen specs Requests, ProjectRequests, WorkItemDetail, WorkItems, Tasks, TodayPanel, QuickCreate,
+  AccountingFixedAssets, WarehouseTransfers, WarehouseFacilities, ServerStatic, ClientWrites, Shell (128, pass); the walk
+  ManufacturingDowntimeWalk (2, pass). `moqui lint --screens`: no idiom or hazard site in the new or changed screens.
+- Decisions:
+  - Downtime is `Manufacturing/WorkCenters/Downtime`, not `Quality/Downtime` (design §6 and §1.2 updated): a stop is a work
+    center's and its equipment's availability, every Manufacturing user reads it, and operators, who have no Quality area,
+    report it. RequestDetail and WorkItemDetail are mounted under WorkCenters too.
+  - A stop names an organization's reason code of category PrcDowntime or PrcHold; only an equipment fault with an asset
+    records an outage and suggests maintenance (the Request maintenance action of a row). Supervisors may report and close
+    stops as well as correct them.
+  - A correction keeps the stop's request, maintenance and outage on the new row; it records or links an outage when it
+    becomes an equipment fault of an asset and leaves an existing outage to Maintenance.
+  - Operation keys: a report's is made per form render; End stop and Correct key on the stop and its revision, and a stop's
+    maintenance on the stop, so a double submit answers the first.
+  - `record#ResourceUnavailability` is internal for now (no permission of its own), as `record#ProductionCostEvent`; MT-07
+    gives it Maintenance's entry point.
+- Findings (provisional):
+  - **F-P11-1** Commons' RequestDetail lets only the request's people (reporter, assignee, customer) comment and add tasks. A
+    plant supervisor sees a maintenance request (its facility is theirs) but cannot add its follow-up tasks; the spec adds
+    them as the reporter. Triage of maintenance requests (assign, accept, resolve) waits for Maintenance or a Projects
+    intake that triages RqtMaintenance.
+  - **F-P11-2** `_openDialog` does not open a `container-dialog` inside a form-list row in qvt; Downtime answers a report with
+    the new stop selected and a top-level Maintenance dialog for it instead.
+  - **F-P11-3** (resolved in review) A reason's `approvalThreshold` (minutes for a stop) was not applied. The review built it:
+    see the review note below. How an unapproved stop counts in OEE and the downtime reports stays P12's and P16's.
+  - **F-P11-4** A correction does not move or end the outage it carries: MT-07's `correct#` and `end#ResourceUnavailability`
+    own that. There is no `find#ResourceUnavailability` yet, so `WorkCenters.js` reads the open outage directly for the
+    equipment's availability; P12's load and calendar should read it (with the stops) when they subtract downtime.
+  - **F-P11-5** The maintenance request's RequestWorkEffort link to the stopped operation makes the operation a row of the
+    Commons and Projects request's Tasks or Work tab; F38's guards refuse its changes there, and the Manufacturing context
+    links it to its work order instead.
+  - **F-P11-6** F57's Centers columns (next available, offline reason) are not built; P12 adds them with the load.
+- **Review (Nov 3).** Checked against the P11 scope and usable-when items, §2 and the design: the correction chain, the
+  permissions and organization checks, the one-outage rule (the asset row locked before the open-outage read), the
+  ResourceUnavailability names (design-maintenance MT-07, Y3; internal, allow-remote false), Mantle's
+  `create#AssetMaintenance` and `RequestServices.link#RequestRecord`, and the Shared screens' Manufacturing branches (gated
+  by `appRoot`). Fixed:
+  - Retry under concurrency: close, approve, correct and request#ProductionMaintenance now lock the stop (or the equipment)
+    in the service and call `posting.settled`, as the other production verbs do, so a double submit that waited on the lock
+    answers the first instead of REVISION_CHANGED or MAINTENANCE_REQUESTED.
+  - Downtime's `reportStop` and quick create's ReportDowntime check the equipment and the run or operation through
+    `check#Record`, not only the work center (Mantle checked them already).
+  - F-P11-3 built (the plan does not name it in P11, but the design's Downtime has "supervisors may correct and approve" and
+    P4 seeded the threshold): ProductionDowntime keeps `approvalThreshold` from its reason row and sets `approvalRequired`
+    when an ended stop is longer; `store#ProductionDowntime` action `approve` (PRODUCTION_SUPERVISE; DOWNTIME_OPEN,
+    APPROVAL_NOT_REQUIRED, DOWNTIME_APPROVED); `find#` `needsApproval`, `approvalText` and `canApprove`; Downtime's row
+    Approve and the Approval filter (`approveStop` in the template). A correction recomputes the need and is not an approval.
+  - Design: RequestDetail and WorkItemDetail routes are WorkCenters' (built), and the Downtime note describes the approval.
+  - Specs: Mantle ProductionDowntime gains the approval feature (7); BOSS ManufacturingDowntime gains it (6).
+  - Ran: Mantle ProductionDowntime, ManufacturingServices, WarehouseProduction, ProductionPolicy (29, pass); BOSS
+    ManufacturingDowntime, ManufacturingAccess, ManufacturingShell, ManufacturingWorkCenters, AppStructure, TuiRender,
+    Requests, ProjectRequests, WorkItemDetail, WorkItems, Tasks, AccountingFixedAssets, QuickCreate (199, pass); the walk
+    ManufacturingDowntimeWalk (2, pass); `moqui lint --screens` clean for the touched screens.
+  - Merge with master (P5a, P6, P13): Mantle merges clean. BOSS conflicts are both-sides appends: AccessServices
+    `get#Choices` parameters (keep `productId` and `facilityId`), ManufacturingAccess sections, suite.js walks,
+    ManufacturingImplementation.md sections, ManufacturingSpecLib (take master's WorkOrderDetail ProductionCosts route and
+    drop this branch's root `ProductionCosts`/`moved`, then add P11's routes and mounts), and ManufacturingShell's quick
+    kinds: plan and admin get `manufacturingWorkOrder`, operate, supervise and admin `manufacturingReportDowntime` (the admin
+    both, by sequence 85 then 95). Quick create screens differ in place (P5a's `WorkOrders/QuickCreate`, P11's root
+    `ReportDowntime`); both are behind their own artifact groups, which is consistent enough to leave.
 
 ### P12 — Scheduling and capacity
 

@@ -30,6 +30,10 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="assetId" required="true"/>
     <parameter name="organizationPartyId"/>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <!-- Manufacturing (impl-manufacturing P11): report a stop of the equipment and request its maintenance -->
+    <transition-include name="downtimeChoices" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="reportStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="requestMaintenance" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
     <transition name="capitalizeAsset">
         <actions>
             <service-call name="mantle.ledger.AssetBookServices.capitalize#Asset" in-map="context"/>
@@ -80,6 +84,21 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="appRoot == 'Manufacturing'">
             <service-call name="ironstone.manufacturing.WorkCenterServices.get#Equipment" in-map="{assetId:assetId}"
                     out-map="productionEquipment" transaction="force-new" ignore-error="true"/>
+            <!-- P11: its stops (the Downtime pane), Report stop and Request maintenance, for the stop still open when there
+                is one -->
+            <if condition="productionEquipment?.asset">
+                <service-call name="mantle.work.ProductionServices.find#ProductionDowntime" out-map="equipmentDowntime"
+                        transaction="force-new" ignore-error="true" in-map="{assetId:assetId, pageSize:10}"/>
+                <set field="equipmentStops" from="equipmentDowntime?.downtimeList || []"/>
+                <set field="downtimeReport" from="!!equipmentDowntime?.canReport"/>
+                <set field="suggestedStop" from="equipmentStops.find(stop =&gt; stop.suggestMaintenance) || null"/>
+                <set field="reportStopValues" from="{operationKey:'downtime-' + ec.user.randomString(24), assetId:assetId,
+                        facilityId:productionEquipment.asset.isWorkCenter ? productionEquipment.asset.facilityId : null,
+                        maintenanceDialog:'equipment'}"/>
+                <set field="maintenanceValues" from="{operationKey:'maintenance-' + ec.user.randomString(24), assetId:assetId,
+                        productionDowntimeId:suggestedStop?.productionDowntimeId || null, problem:suggestedStop?.description,
+                        priority:suggestedStop ? '2' : '5', createRequest:'Y'}"/>
+            </if>
         </if>
         <set field="recordFound" from="!!book?.asset || !!equipment?.asset || !!productionEquipment?.asset"/>
         <set field="asset" from="book?.asset || {}"/>

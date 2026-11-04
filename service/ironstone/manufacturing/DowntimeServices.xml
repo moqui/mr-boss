@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Manufacturing context of Projects' shared RequestDetail and WorkItemDetail (impl-manufacturing P11; Downtime.js): a
+    maintenance request of the user's plants with its stops, equipment, maintenance and work, and a follow-up task of one.
+    The stops themselves are Mantle's mantle.work.ProductionServices (store#, find#ProductionDowntime and
+    request#ProductionMaintenance), which the Downtime screens call after ironstone.manufacturing.AccessServices; nothing
+    here passes them through. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="RequestContext" allow-remote="false">
+        <description>RequestDetail's Manufacturing context: a request of type RqtMaintenance at one of the user's facilities,
+            or one asked for a stop of theirs (available), with its stops (find#ProductionDowntime by request, each with its
+            Downtime link), the equipment, the corrective maintenance and the run or operation it is linked to, each in the
+            user's scope with its Manufacturing link, and productionWorkIds, the runs and operations among its tasks. Any
+            other request is not available. Refuses a user without Manufacturing (MANUFACTURING_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="downtimeRows" type="List"/>
+            <parameter name="equipmentRows" type="List"/>
+            <parameter name="maintenanceRows" type="List"/>
+            <parameter name="workRows" type="List"/>
+            <parameter name="productionWorkIds" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/Downtime.js"/>
+            <set field="found" from="ec.resource.script(module).execute('requestContext', context)"/>
+            <set field="available" from="!!found.available"/>
+            <set field="facilityId" from="found.facilityId || null"/>
+            <set field="facilityName" from="found.facilityName || ''"/>
+            <set field="downtimeRows" from="found.downtimeRows || []"/>
+            <set field="equipmentRows" from="found.equipmentRows || []"/>
+            <set field="maintenanceRows" from="found.maintenanceRows || []"/>
+            <set field="workRows" from="found.workRows || []"/>
+            <set field="productionWorkIds" from="found.productionWorkIds || []"/>
+        </actions>
+    </service>
+    <service verb="get" noun="WorkItemContext" allow-remote="false">
+        <description>WorkItemDetail's Manufacturing context: a follow-up task of one or more maintenance requests of the
+            user's plants (RequestWorkEffort; available), with those requests (each with its Manufacturing RequestDetail
+            link), their stops and equipment. A task of no such request is not available, and neither is a production run
+            or operation, which is no follow-up task (productionWork, with its Work orders link when it has one). Refuses a
+            user without Manufacturing (MANUFACTURING_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="workEffortId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="productionWork" type="Boolean"/>
+            <parameter name="url"/>
+            <parameter name="requestRows" type="List"/>
+            <parameter name="downtimeRows" type="List"/>
+            <parameter name="equipmentRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/manufacturing/Downtime.js"/>
+            <set field="found" from="ec.resource.script(module).execute('workItemContext', context)"/>
+            <set field="available" from="!!found.available"/>
+            <set field="productionWork" from="!!found.productionWork"/>
+            <set field="url" from="found.url || null"/>
+            <set field="requestRows" from="found.requestRows || []"/>
+            <set field="downtimeRows" from="found.downtimeRows || []"/>
+            <set field="equipmentRows" from="found.equipmentRows || []"/>
+        </actions>
+    </service>
+</services>
