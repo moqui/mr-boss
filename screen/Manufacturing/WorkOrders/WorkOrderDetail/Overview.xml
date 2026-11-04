@@ -24,6 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="workEffortId"/>
     <transition name="storeHeader">
         <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
             <service-call name="mantle.work.ProductionServices.store#ProductionOrder" out-map="stored"
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
                         workEffortName:workEffortName, description:description || null, priority:priority || null,
@@ -36,6 +37,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeEquipment">
         <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
             <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
             <service-call name="mantle.work.ProductionServices.store#ProductionEquipment" out-map="stored"
@@ -50,6 +52,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="storeParty">
         <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
             <service-call name="mantle.work.ProductionServices.store#ProductionParty" out-map="stored"
                     in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
                         partyId:partyId, roleTypeId:roleTypeId, remove:remove == 'true'}"/>
@@ -86,7 +89,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="operationNames" from="Object.fromEntries((order?.operations || []).map((op) =&gt; [op.workEffortId, op.workEffortName]))"/>
         <set field="lineRows" from="(order?.lines || []).map((line) =&gt; Object.assign({}, line, {roleText: roleNames[line.lineRoleEnumId] || line.lineRoleEnumId,
                 operationText: line.operationWorkEffortId ? operationNames[line.operationWorkEffortId] || line.operationWorkEffortId : '',
-                stagedText: ''}))"/>
+                stagedText: line.stagedShort ? 'Short ' + line.stagedShort + ' at a staged release: not issued until covered' : ''}))"/>
         <set field="equipmentRows" from="resources?.equipmentRows || []"/>
         <set field="peopleRows" from="resources?.peopleRows || []"/>
         <set field="historyRows" from="lifecycle?.history || []"/>
@@ -192,6 +195,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </field>
                             <field name="operationText"><default-field title="Operation"><display/></default-field></field>
                             <field name="remaining" align="right"><default-field title="Left"><display format="#,##0.###"/></default-field></field>
+                            <field name="stagedText"><default-field title="Staged"><display style="text-warning"/></default-field></field>
                             <columns type="mobile">
                                 <column><field-ref name="productName"/><field-ref name="roleText"/></column>
                                 <column><field-ref name="quantity"/><field-ref name="remaining"/></column>

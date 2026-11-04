@@ -202,8 +202,9 @@ feature("a released run held before start resumes as released; an unrelease afte
 feature("Product360's Open runs link, the palette and record links open the work orders", {
     when() {
         const workEffortId = draft(1)
-        // as the administrator: Product360 needs Products' catalog read, which the Manufacturing groups lack (F-P5a-3)
-        const product = asUser("john.doe", () => lib.page("BillsOfMaterials/Product360", {productId: ids.productId}))
+        // a production reader opens Product360 under Manufacturing: the Manufacturing groups read the catalog (F-P5a-3)
+        const product = asUser(users.read, () => lib.page("BillsOfMaterials/Product360", {productId: ids.productId}, "html"))
+        const catalog = asService(users.read, () => invoke("ironstone.products.CatalogServices.get#CatalogAccess", {}))
         const byProduct = asService(users.read, () => invoke(P + "find#ProductionOrders", {productId: ids.productId}))
         const search = asUser(users.read, () =>
             invoke("ironstone.manufacturing.AccessServices.search#Records", {text: workEffortId, limit: 5}).rows.map(
@@ -216,11 +217,15 @@ feature("Product360's Open runs link, the palette and record links open the work
                 id: workEffortId
             })
         ).url
-        return {workEffortId, product, byProduct, search, link}
+        return {workEffortId, product, catalog, byProduct, search, link}
     },
-    then({workEffortId, product, byProduct, search, link}) {
+    then({workEffortId, product, catalog, byProduct, search, link}) {
         product.errors.length == 0
+        product.output.includes("Demo Product One-One")
+        !product.output.includes("Catalog read access is required")
         product.output.includes("Open runs")
+        catalog.capabilities.read == true
+        catalog.capabilities.catalogEdit == false
         byProduct.orderRows.some(row => row.workEffortId === workEffortId)
         byProduct.orderRows.every(row => row.productId === ids.productId)
         search.includes("/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=" + workEffortId)

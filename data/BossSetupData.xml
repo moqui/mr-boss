@@ -1173,6 +1173,36 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Manufacturing users read their organizations' catalog, as Warehouse users do (impl-manufacturing F-P5a-3): Product360
+        under Manufacturing (crosscut §3.5, product readers) reads the master through Products' services, which check
+        PRODUCT_CATALOG_VIEW. Every group that reads methods holds it, the plant display not; the Products app stays closed to
+        them, and catalog edit, prices and supplier prices stay Products' grants. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE"
+            userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT"
+            userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY"
+            userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN"
+            userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN"
+            userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
     <!-- the record links of the palette, Today and notifications for Manufacturing users (runs, operations, methods, routings
         and work centers route through ironstone.manufacturing's scope) -->
     <artifactGroups artifactGroupId="BOSS_MFG_RECORD_LINK">

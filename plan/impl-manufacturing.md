@@ -877,8 +877,8 @@ materials and stock.
     fails ("screen includes are nested too deeply"); WorkOrderDetail includes LifecycleActionRow directly.
   - **F-P5a-2** A tab's content is not in a qvt render with `lastStandalone: -2` (the tab loads apart), so the tab routes'
     texts are the header's, as FacilityDetail's are; the specs render a tab with `lastStandalone: "true"`.
-  - **F-P5a-3** Product360 under Manufacturing fails for the Manufacturing groups ("Catalog read access is required"):
-    Products' services need PRODUCT_CATALOG_VIEW, which no Manufacturing group holds. Not changed here (Products' or P17's).
+  - **F-P5a-3** Product360 under Manufacturing failed for the Manufacturing groups ("Catalog read access is required"):
+    Products' services need PRODUCT_CATALOG_VIEW, which no Manufacturing group held. Fixed in the review (below).
   - **F-P5a-4** `get#AvailableInventory` and `get#BomExplosion`'s buildable quantity read one facility; P5a passes the
     plant for a line's run (stockFacilityIds). P13 nets by line and plant on its own.
   - **F-P5a-5** StockPosting's `reasonOf` reads only codes with an underscore, so a batch row refused SHORTAGE read FAILED;
@@ -886,6 +886,24 @@ materials and stock.
   - **F-P5a-6** For the merge: Production.js gained two exports and a staged-short check in `issuePlan` (P5b, P7 and P9
     edit it too); BossSetupData's new artifact group sits before the record-link group.
   - **F-P5a-7** Warehouse's BOSS_WH_RUN is still WetTask (F43); left, since the guards key on the purpose.
+- **Review Nov 3 (P5a).** Checked against the phase scope, §2 and design §1.1, §3; the ten verbs' permissions, operation keys and
+  revisions, the release gate, the staged block, batch results and the screens' record checks hold. Fixed:
+  - (medium) cancel took a run held after its start (no fact yet), against the decision "has not started": now RUN_STARTED
+    (blocked in a batch); ProductionOrders' hold feature covers it.
+  - (medium, F-P5a-3) BossSetupData grants PRODUCT_CATALOG_VIEW to every Manufacturing group that reads methods (not the plant
+    display), as Warehouse's groups hold it; ManufacturingWorkOrders opens Product360 as the production reader.
+  - (low) a staged short line was not visible: get#ProductionOrder's material lines carry `stagedShort` and Overview's lines
+    show it; Overview's storeHeader, storeEquipment and storeParty refuse a run the record check did not find, as
+    lifecycleAction does.
+  - Left: the three seeded transitions carry their permission, so a holder calling a generic update#WorkEffort directly
+    (authorization disabled) could still skip the guard's state and fact checks (a supervisor resuming a started run to
+    Approved, a planner unreleasing a run with facts). No BOSS path does (Commons' set#TaskStatus refuses runs and reads the
+    task's own flow); closing it needs a framework hook on the status check. WorkOrders' Find has no organization or date
+    period filter and the board groups by status only (design §3 also names the facility); the service takes dueFrom and
+    dueThru. Equivalent scope: bulk actions skip check#Record, but Mantle's runOf checks the same organizations.
+  - Tests: Mantle ProductionOrders, WarehouseProduction, ManufacturingServices (26, pass); BOSS ManufacturingWorkOrders,
+    ManufacturingAccess, ManufacturingShell, ProductsAccess, ProductsSharedContext, AppStructure, TuiRender,
+    ManufacturingMethods (154, pass); `moqui lint --screens` clean for the P5a screens.
 
 ### P6 — Cost evidence
 
