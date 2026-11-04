@@ -501,6 +501,25 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   - **F-P3-6** Centers has no next-available or offline-reason columns and Equipment no downtime action: they come with P11
     and P12. P1's ManufacturingAccess `store` helper and ManufacturingShell's `outsider` line are not Prettier-clean; left so
     as not to conflict.
+- **Review (Nov 3).** Checked against the scope, §2 and the usable-when items; the rate is omitted (not zeroed) for a
+  non-cost reader and no screen fetches it to hide it; the Warehouse and Accounting actions and values stay out of the
+  Manufacturing contexts; the Commons calendar's own modes are unchanged. Fixed:
+  - ending a dated capacity or alternate could set an end before now (rewriting what was in effect), and ending a row that
+    had not started failed ("end before the start"); an end is now or later (a day given as today is now), and a future row
+    ends at its start, withdrawn, so the same row can be added again (a Mantle WorkCenters feature);
+  - a new center's plant defaulted to its parent even when that parent was another organization's, which then refused
+    store#WorkCenter for a facility Products P8 accepted; it now defaults only to a parent of the same organization;
+  - get#ResourceCalendarEvents read the holidays of a given plant's owner without checking the plant was the user's;
+  - the Add rate dialog offered Approve to a user without the approval authority (Mantle refused it).
+
+  F-P3-1 is agreed: the plan keeps `store#WorkCenterRate` "as built" (resources and the cost authority), and the
+  usable-when's "a rate needs cost authority" holds (the resource administrator alone is refused). Left: the load counts
+  the whole hours of an operation that overlaps the range, not the part inside it, with the run's dates on each operation
+  (F-P3-4), until P12 schedules operations; store#WorkCenter's new line has no operation key, so a double submit makes two
+  lines (as P8's verb, no key).
+  Tests: Mantle WorkCenters (6), ProductMethods, ManufacturingServices, WarehouseProduction, ProductStandardCosts (57,
+  pass); BOSS ManufacturingWorkCenters, ManufacturingAccess, ProductsMethods, Calendar (92, pass); `moqui lint --screens`
+  flags none of the changed screens.
 
 ### P4 — Policy and reasons
 

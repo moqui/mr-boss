@@ -358,6 +358,8 @@ function calendarEvents(p) {
         return new Date(Date.UTC(y, m - 1, d + 1)).toISOString().substring(0, 10)
     }
     const plantId = p.plantId || null
+    // the plant is one of the user's facilities (its organization's holidays are read below)
+    if (plantId) manufacturing.recordOf(userScope, "facility", plantId)
     const centerIds = manufacturing.workCenterIds()
     let centerQuery = manufacturing.facilityFind(userScope).condition("facilityId", "in", centerIds.length ? centerIds : ["_NA_"])
     if (plantId) {
