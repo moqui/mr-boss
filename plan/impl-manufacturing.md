@@ -215,7 +215,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | built Nov 3 |
-| P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
+| P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | built Nov 3 |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
@@ -1487,6 +1487,126 @@ BillOfMaterialsCompare's amendment action; M4.
   - a DEMO_PA kit assembly is reversed with dated reversing entries in an open period, and a kit unit already sold is
     refused.
 
+**Built Nov 3 (P9).**
+- Mantle records (`entity/ProductionChangeEntities.xml`, a new file): `ProductionChange` (a substitution or an amendment
+  request: the run's revision and preview key it was asked at, the line, substitute, quantity and factor, or the method date,
+  change notice and the remap as JSON; the requester, the method approver's and the supervisor's reviews, a refusal, the
+  applied date and revision; status PchRequested, PchApplied or PchRefused), `ProductionRunLine.substituteOfLineId` and
+  `productionChangeId`, and `WorkEffort.productionSourceRunId`/`productionSourceEnumId` (PsoSplit, PsoBackorder, PsoClone),
+  all audit-logged. `data/ProductionChangeData.xml`: the enumerations, the change status flow and the ProductionSubstitution
+  and ProductionAmendment topics.
+- Mantle services (`ProductionChanges.js`, `SupportedAssembly.js`; eleven services appended to `ProductionServices.xml`):
+  - `get#ProductionChanges` (VIEW): the requests with their reviews and who may decide, the substitutes each material line
+    allows, what the user may ask.
+  - `substitute#ProductionMaterial` (request: PLAN or SUPERVISE; approve, refuse: SUPERVISE): a candidate only from the BOM
+    line's rule (BsrEquivalent: the component's active PatEquivalent rows; SUBSTITUTE_NOT_ALLOWED otherwise), at most what
+    the line has left, a factor in the substitute's stock unit (UNIT_INCOMPATIBLE without one across units). Applying adds the
+    substitute's line beside the original (its operation and BOM line), lowers the original, rewrites WeptConsume and counts
+    the revision up (on a released run, an amendment of its lines). A supervisor's own request, or the policy's
+    `substituteApproval` N, applies at once; else the supervisors are told and the decision revalidates the request
+    (CHANGE_STALE). Strict release refuses it on a released run.
+  - `preview#ProductionAmendment` and `amend#ProductionOrder` (request: PLAN or METHOD_EDIT; approve, refuse: METHOD_APPROVE or
+    SUPERVISE): the method as of a date (Production.js `method`, a new export) remaps only unexecuted work: an operation with
+    facts or started is kept, others follow the routing (kept, changed, added, cancelled); a method line issued, scrapped or on
+    an executed operation is kept with its facts (LINE_EXECUTED_KEPT), others change by BOM lineage (`replacesBomItemId`),
+    less what substitutes took, never below what was issued; manual and substitute lines stay. Each reviewer revalidates the
+    remap (PREVIEW_CHANGED); the method approvers are told first, then the supervisors; both reviews apply it, rewriting the
+    Wept rows and the run's method date, routing and refs at the next revision with the amendment as the audit reason.
+    `strictRelease` refuses (STRICT_RELEASE); a draft is AMEND_NOT_RELEASED.
+  - `preview#ProductionSplit` and `split#ProductionOrder` (PLAN; a completing backorder SUPERVISE): a quantity of what is left
+    moves with each line's share up to what it has left to issue (issued material stays as WIP, MATERIAL_STAYS), the
+    RequirementSupply links ended and started again so the sums stay, a target-change event on the source; the new run has the
+    source's method date, BOM, routing, refs and demand links, and a released source's is released at the same method date
+    (Production.js `release` takes `keepMethod`, a local edit), with its own operations. A backorder with `complete` completes
+    the running source in the same transaction (P7's Backorder option). A retry answers the same runs.
+  - `preview#ProductionCancellation` and `cancel#ProductionOrder` (SUPERVISE; returns STOCK_ISSUE): a reversal (each issue
+    returned through `return#UnusedMaterial`, then cancelled) when nothing was received, lost or timed, else a residual close
+    (unused issues returned when asked, the rest finished as an approved loss, the material variance accepted, completed for the
+    cost close); NO_FACTS sends a run without postings to the lifecycle's cancel.
+  - `clone#ProductionOrder` (PLAN): `create#ProductionOrder` from the run's product, quantity, facility and method as of now
+    (PsoClone); no posting, manual line or timer.
+  - `preview#SupportedAssemblyReversal` and `reverse#SupportedAssembly` (SUPERVISE) per F29–F32: a PtPickAssembly kit of a
+    WepPickAssembly effort on hand; `breakDown#Assembly` without its unissue, then the kit slices cancelled newest first with
+    their quantities; refused naming each flag that is off (FORWARD_REPOST_REQUIRED), KIT_SOLD, KIT_HELD, KIT_COUNTED,
+    PERIOD_CLOSED, BOM_MISSING, BOM_CHANGED and COST_SLICE_MISMATCH (the slices' value must equal the kits').
+  - Accounting's receipt delta: `ReceiptAdjustments.js` in `repost#AssetReceipt` (a two-line local edit) behind
+    `PartyAcctgPreference.forwardReceiptRepostEnabled` (AccountingControlEntities.xml, audit-logged, default N; added to
+    AccountingSetup.js and SetupServices.xml's flag list; BOSS AccountingPreferences shows it); a never-posted receipt or a
+    moved received date keeps the legacy path.
+- BOSS: Components' Substitute row dialog and the substitution requests with Approve and Refuse; WorkOrderDetail's Changes tab
+  (index 11: the amendment remap with a method date and Request amendment, the requests with their reviews, Cancel with
+  postings by its plan); SplitWorkOrder (Allocation, Disposition, Confirm, under the header); WorkOrders/Disassembly (Assembly,
+  Preview, Confirm; linked from Find for supervisors); WorkOrderDetail's More: Split or backorder, Clone; Quantities' Backorder
+  remainder; `Shared/BillOfMaterialsCompare`'s Manufacturing section of released work orders with Request amendment (to the
+  Changes tab at the compare's later date). Manufacturing.js P9 block (links, `kitAssets`), the two topics in the root,
+  Approvals and BossSetupData's links.
+- Specs: Mantle `test/work/ProductionChanges.spec.js` (8 features, about 3 s), `test/work/SupportedAssembly.spec.js` (4,
+  about 1 s: two DEMO_PA packs at 4 and 6, both flags named, the older kit refused, the newest reversed with dated entries and
+  the original posting kept, WIP 0 after each reversal, a kit unit sold refused), `test/ledger/ReceiptAdjustments.spec.js` (3:
+  flag off legacy, on in an open period, on under a hard lock of the receipt's day). BOSS ManufacturingAccess P9 section (2),
+  route fixtures (Changes, SplitWorkOrder, Disassembly); client walk `ManufacturingChangesWalk` (4, with 390 px).
+- Tests run: Mantle ProductionChanges, SupportedAssembly, ReceiptAdjustments (15, pass), ManufacturingServices,
+  WarehouseProduction, ProductionOrders, ProductionQuantities, ProductionMaterials, AccountingControls, WarehousePacking,
+  AccountingSetup, ProductionCosts (94, pass); BOSS ManufacturingAccess, AppStructure, TuiRender, ManufacturingShell,
+  ProductsMethodFixtures (125, pass), ManufacturingWorkOrders, ManufacturingMaterials, ManufacturingMethods,
+  ProductsSharedContext, Notifications (116 with ManufacturingAccess, pass), AccountingShell, AccountingAccessWalk (60, pass);
+  walks ManufacturingChangesWalk, ManufacturingQuantitiesWalk, ManufacturingWorkOrdersWalk, ManufacturingMaterialsWalk,
+  ManufacturingMethodsWalk (16, pass). `moqui lint --screens`: informational anchors only for the P9 screens.
+- Decisions:
+  - Substitutions and amendments are one record, ProductionChange, decided on the run (F40); an amendment applies once a
+    method approver and a supervisor have each reviewed it (one user holding both gives both), each review revalidating the
+    remap; the method approvers are told first.
+  - "No change after any fact by default" reads as: nothing reaches a released run but the reviewed amendment; with
+    `strictRelease` not even that. A draft takes method changes by its release's re-explosion, not an amendment.
+  - The amendment's review reads the method (METHOD_VIEW, which every Manufacturing group holds).
+  - A split's or backorder's new run of a released source is released in the same transaction at the source's method date,
+    so it keeps the method revision; a draft source's stays a draft.
+  - A cancellation with postings is a reversal only when nothing was received, lost or timed; otherwise a residual close that
+    completes the run (WeComplete) for the cost close, never WeCancelled with WIP left.
+  - The kit reversal refuses any difference between the kits' value and their slices' (no tolerance), so WIP nets to zero;
+    a batch whose cost was split (KitCost's remainder kit) is reversed whole.
+  - The change notice is stored on the amendment as given: Products' ChangeNotices is not built (§7, R-MFG-32).
+- Deferred: the demo data keeps both forward flags off for Retail (other specs post receipts there), so the demo's Disassembly
+  answers FORWARD_REPOST_REQUIRED until Accounting turns them on; a substitute's issue at a backflush follows P5b's lines as
+  they are; merging drafts stays §7.
+- Findings (provisional):
+  - **F-P9-1** A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and
+    renders an empty page; SplitWorkOrder's Back and Next link to the screen with the step, and its forms post to `toStep`,
+    as NewWorkOrder does.
+  - **F-P9-2** With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it
+    deletes the posted transaction and leaves the new one unposted in the error journal, so the history is lost (F31 expected
+    an error); ReceiptAdjustments' spec asserts the forward delta posts and the legacy path keeps no posted history.
+  - **F-P9-3** `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's
+    internal release and an amendment's review need it too; a planner or supervisor without it is refused METHOD_INVALID.
+  - **F-P9-4** For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the
+    appended P9 section), AssetAutoPostServices.xml (`repost#AssetReceipt`'s first two actions), AccountingControlEntities.xml,
+    AccountingSetup.js, SetupServices.xml; BOSS Components.xml, Quantities.xml (a link beside Labels), WorkOrderDetail.xml
+    (a transition, two actions, two More items), Find.xml, Shared/BillOfMaterialsCompare.xml (an appended section),
+    Approvals.xml, Manufacturing.xml's topics, BossSetupData's topic links, Manufacturing.js (a block before `operations`),
+    ManufacturingSpecLib's routes, ManufacturingAccess (appended), suite.js, AccountingPreferences.xml.
+- Review (Nov 3): checked substitution (candidates only from the BOM line's rule, PatEquivalent only under BsrEquivalent, the
+  supervisor's decision revalidating revision, candidate and quantity), the amendment (only unexecuted lines and operations
+  remapped, issued facts keeping their links, both reviews, strictRelease), split and backorder (RequirementSupply conserved,
+  retry answering the same runs; `keepMethod` is honored only as a JS `true`, so the release service's paths are unchanged),
+  cancellation and the kit reversal against F29–F32. Fixed:
+  - (medium) a released run's substitute applied at once under the policy's `substituteApproval` N, a method change after
+    release with no review (§4); it now always waits for a supervisor after release, N applying to drafts only (spec: a draft's
+    applies, a released run's is REQUESTED).
+  - (medium) `reverse#SupportedAssembly` refused only components issued short of the kits' BOM quantities; it now refuses any
+    difference (BOM_CHANGED), since with `kitCostFromComponents` N no value check catches a lowered BOM; and a breakdown
+    that lowers fewer kits than asked is refused (BREAKDOWN_SHORT) rather than cancelling the whole slices.
+  - (low) an amendment removing a method line that has an applied substitute deleted it under the substitute; it is kept now,
+    with a finding.
+  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F-P9-2).
+  - F-P9-2 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
+    source's refused posting goes to the error journal, so the unchanged legacy `repost#AssetReceipt` loses the locked day's
+    posting. Recorded in impl-accounting §7; the forward flag avoids it.
+  - (medium, after the merge with master) cancellation counted only issues, output receipts, time and losses, while the
+    lifecycle's cancel also refuses P7's quantity events and P8's inspections and a started run (RUN_STARTED): a split's
+    source (its target change), an inspected run or a started run with no fact could be cancelled by neither. The plan now
+    counts the same facts, reverses a started run with none, and keeps the inspections as records (spec: all three
+    cancelled, a plain released run still NO_FACTS).
+
 ### P10 — Shop floor and time
 
 Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M7, and review §4.1 steps 17 and 18.
@@ -2181,6 +2301,7 @@ Made for this plan:
 | Oct 28, 2026 | Phase order: methods, work centers and the production policy first; then the runs and their materials; cost evidence early, so each later fact writes its event as it is built; then quantities and quality, controlled changes, the shop floor and downtime, scheduling, supply planning, subcontracting, the cost close and reports | The user's call. The alternative was the run first (P5 before P2–P4), on Products P8's methods and a default policy |
 | Oct 28, 2026 | Manufacturing builds crosscut CX-PLANNING (P13): PlanningRun, PlanningSuggestion and RequirementSupply, `run#SupplyPlan`, `get#SupplyPlan`, `store#PlanSchedule` and `convert#PlanningSuggestions`, and `Shared/SupplyPlanning` with the Manufacturing context. It converts make suggestions (P13) and outside-processing requirements to draft service PO lines (P14), the second for `BOSS_PURCHASING_BUYER` on the Manufacturing mount, which crosscut §3.20's Manufacturing row gains; the Mantle service checks `PURCHASE_ORDER_EDIT`, which that group holds (the plan review Q2 row below). Purchasing adds its mount and buy conversion when it is built, and Warehouse its mount and transfer conversion from its §7 | The user's call. The alternative was to wait for Purchasing, with SupplyPlanning, make conversion and the service PO conversion in §7. Warehouse had left CX-PLANNING for its owner (impl-warehouse §4) |
 | Oct 28, 2026 | Mantle stands without BOSS, and business logic leans to Mantle. No Mantle service, SECA, EECA, script, data file or spec here calls `ironstone.*`, reads a BOSS screen, entity or setting, or names a BOSS group; each checks its Moqui permission and the organization itself, and a BOSS screen calls it after `ironstone.manufacturing.AccessServices`, with no pass-through. Moved: Accounting's cost close core to `mantle.ledger.ProductionCostServices` (`store#AllocationPolicy`, `preview#CostClose`, `post#CostClose`), with only `find#CostCloseQueue` left in `ironstone.accounting`; the ProductionCostReview topic to mr-mantle's data. `mantle.work`'s production, planning and report services and the timesheet hook, `mantle.product`'s methods and supply planning, and `mantle.request`'s requirement records stay Mantle, checking permissions in place of BOSS groups; record links route through Commons' `get#RecordLink`. P1 seeds the other five `PRODUCTION_*` permissions (Warehouse P16a seeded `PRODUCTION_VIEW` and `PRODUCTION_PLAN`) and `SUPPLY_PLAN_RUN`, and grants the seven, with `METHOD_VIEW` and the `QUALITY_*` permissions, to the Manufacturing groups; P14 seeds `SUPPLIER_PROFILE_EDIT` and grants `BOSS_PURCHASING_BUYER` four, and Purchasing P1 adds `SUPPLIER_SCORECARD_EDIT` | The user's call (plan review Q2): both rules are in impl-drawers-commons §4. The owner designs' names follow in the design sweep |
+| Nov 3, 2026 | Disassembly needs `forwardIssuanceRepostEnabled` and `forwardReceiptRepostEnabled` on the kit owner's PartyAcctgPreference (Accounting's flags, F29–F32), not ProductionPolicy flags; §2's "behind its own ProductionPolicy flag" reads as Accounting's flag for these two reposts | F32's resolution, built in P9; written into design Disassembly and design-accounting's SECA table |
 | Oct 28, 2026 | Explosion depth (P5, P13): the tree shows every level, but requirements and buildable quantity stop at a non-phantom sub-assembly, so its stock counts, and a phantom is blown through with its routing. P5's producible-now reads `get#BomExplosion`'s buildable quantity at the run's facility; P13 nets level by level, a sub-assembly's stock and supply before its own shortage is exploded. `fullBlowThrough` keeps the full depth for a caller that wants it; neither phase passes it | The user's call (plan review Q8), as Odoo does. Products P9 built it (F24) |
 
 ## 5. Open questions

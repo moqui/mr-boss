@@ -188,6 +188,16 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <!-- Manufacturing P9 (impl-manufacturing F32): the receipt delta beside the issuance one -->
+                    <field name="forwardReceiptRepostEnabled">
+                        <default-field title="Forward receipt adjustments"
+                                tooltip="Post a dated adjustment for a changed receipt instead of reposting it; a kit's disassembly needs it">
+                            <radio>
+                                <option key="N" text="Off"/>
+                                <option key="Y" text="On"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="allowAccountingSelfApproval">
                         <default-field title="Self approval"
                                 tooltip="Let the person who drafted a record approve it; each such approval is marked">
@@ -307,6 +317,9 @@ along with this software (see the LICENSE.md file). If not, see
                         </field-row>
                         <field-row>
                             <field-ref name="forwardIssuanceRepostEnabled"/>
+                            <field-ref name="forwardReceiptRepostEnabled"/>
+                        </field-row>
+                        <field-row>
                             <field-ref name="allowAccountingSelfApproval"/>
                         </field-row>
                         <field-row>

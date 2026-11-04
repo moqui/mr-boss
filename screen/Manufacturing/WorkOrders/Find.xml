@@ -109,6 +109,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <link url="." text="Late" link-type="anchor-button" icon="sym_o_schedule" parameter-map="{late:'Y'}"/>
                 <link url="." text="Blocked" link-type="anchor-button" icon="sym_o_block" parameter-map="{blocked:'Y'}"/>
                 <link url="." text="Mine" link-type="anchor-button" icon="sym_o_person" parameter-map="{mine:'Y'}"/>
+                <!-- P9: the reversal of a pick assembly kit, for supervisors -->
+                <link url="../Disassembly" text="Disassembly" link-type="anchor-button" icon="sym_o_undo"
+                        condition="manufacturing.capabilities.supervise"/>
             </container>
         </container>
         <container-box>

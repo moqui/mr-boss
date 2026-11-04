@@ -19,8 +19,10 @@ along with this software (see the LICENSE.md file). If not, see
     planner adds a manual line to a draft, changes or removes it (store#ProductionMaterial; a method line changes only through
     the method). Issue and Return open the Materials tab (Shared/MaterialIssueReceipt); Stage opens Warehouse's Move with the
     run fixed for those who move stock (there is no WIP location, R-MFG-03); a component's availability opens the Planning
-    area's InventoryAvailability for those who plan. Substitute comes with P9. It reads the run when the client loads the tab
-    alone. -->
+    area's InventoryAvailability for those who plan. Substitute (P9): a line whose BOM line allows approved equivalents offers
+    them (mantle.work.ProductionServices.get#ProductionChanges, substitute#ProductionMaterial) to planners and supervisors; a
+    planner's request waits for a supervisor, who approves or refuses it here (or applies their own at once), and the
+    requests are listed with their state. It reads the run when the client loads the tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Components" default-menu-index="2">
     <parameter name="workEffortId"/>
@@ -35,6 +37,22 @@ along with this software (see the LICENSE.md file). If not, see
                         remove:remove == 'true', clearEmpty:clearEmpty == 'true'}"/>
             <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Material line removed'
                     : productionRunLineId ? 'Material line saved' : 'Material line added', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <!-- P9: a substitute asked, approved or refused (the supervisor's decision on the record, F40) -->
+    <transition name="substituteMaterial">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.substitute#ProductionMaterial" out-map="substituted"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, action:substituteAction || 'request',
+                        expectedRevision:expectedRevision || null, productionRunLineId:productionRunLineId || null,
+                        substituteProductId:substituteProductId || null, quantity:quantity || null,
+                        conversionFactor:conversionFactor || null, reason:reason || null,
+                        productionChangeId:productionChangeId || null, refusalReason:refusalReason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage({REQUESTED: 'Substitute sent to the supervisors for approval',
+                    APPLIED: 'Substitute applied', REFUSED: 'Substitute refused'}[substituted.result?.resultCode] || 'Saved', 'success')</script>
         </actions>
         <default-response url="."><parameter name="workEffortId"/></default-response>
         <error-response url="."><parameter name="workEffortId"/></error-response>
@@ -66,6 +84,19 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="policyText" from="materials?.policy ? materials.policy.consumptionText
                 + (materials.policy.issuePointText ? ' · ' + materials.policy.issuePointText : '') : ''"/>
         <set field="stageParameters" from="{workEffortId:workEffortId, facilityId:materialRun.facilityId}"/>
+        <!-- P9: the substitutes each line allows and the substitution requests -->
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionChanges" out-map="changes"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="substituteByLine" from="Object.fromEntries((changes?.substituteRows || [])
+                .map((row) =&gt; [row.productionRunLineId, row]))"/>
+        <set field="canSubstitute" from="!!changes?.canSubstitute"/>
+        <set field="componentRows" from="componentRows.map((row) =&gt; Object.assign(row, {
+                substituteOptions: canSubstitute &amp;&amp; substituteByLine[row.productionRunLineId]
+                    &amp;&amp; !substituteByLine[row.productionRunLineId].pending
+                    ? substituteByLine[row.productionRunLineId].candidates : null}))"/>
+        <set field="substitutionRows" from="(changes?.changeRows || []).filter((row) =&gt; row.changeTypeEnumId === 'PchtSubstitution')"/>
     </actions>
     <widgets>
         <section name="ComponentsFound" condition="recordFound">
@@ -217,6 +248,48 @@ along with this software (see the LICENSE.md file). If not, see
                                             parameter-map="{workEffortId:workEffortId, expectedRevision:materialRun.revision,
                                                 operationKey:keyBase + '-remove-' + productionRunLineId,
                                                 productionRunLineId:productionRunLineId, remove:'true'}"/>
+                                    <container-dialog id="Substitute_${productionRunLineId}" button-text="Substitute"
+                                            icon="sym_o_swap_horiz" width="600" title="Substitute for ${productName}"
+                                            condition="substituteOptions?.length &gt; 0">
+                                        <label text="Replaces what the line has left to issue (${remaining}) or the quantity given, in its stock unit. The method's rule allows only these products; a supervisor approves the substitute unless you are one."
+                                                type="p" style="text-caption"/>
+                                        <form-single name="SubstituteMaterial" transition="substituteMaterial"
+                                                map="{workEffortId:workEffortId, expectedRevision:materialRun.revision,
+                                                    operationKey:keyBase + '-sub-' + productionRunLineId,
+                                                    productionRunLineId:productionRunLineId, substituteAction:'request',
+                                                    quantity:remaining}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                                            <field name="substituteAction"><default-field><hidden/></default-field></field>
+                                            <field name="substituteProductId">
+                                                <default-field title="Substitute">
+                                                    <drop-down allow-empty="false">
+                                                        <list-options list="substituteOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity replaced"><text-line size="8" input-type="number"/></default-field>
+                                            </field>
+                                            <field name="conversionFactor">
+                                                <default-field title="Factor" tooltip="Substitute units per unit of the original; 1 when empty">
+                                                    <text-line size="8" input-type="number"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="reason">
+                                                <default-field title="Reason"><text-line required="true"/></default-field>
+                                            </field>
+                                            <field name="submit"><default-field title=""><submit text="Ask for the substitute"/></default-field></field>
+                                            <field-layout>
+                                                <field-ref name="substituteProductId"/>
+                                                <field-row><field-ref name="quantity"/><field-ref name="conversionFactor"/></field-row>
+                                                <field-ref name="reason"/>
+                                                <field-ref name="submit"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
                                     <link url="${sharedLinks['Planning/InventoryAvailability']}" text="Availability"
                                             icon="sym_o_inventory" link-type="anchor"
                                             parameter-map="{productId:productId, facilityId:stockFacilityId}" condition="canPlanStock"/>
@@ -236,6 +309,68 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- P9: the substitution requests, a supervisor's decision on each waiting one -->
+                <section name="Substitutions" condition="substitutionRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Substitutes · ${substitutionRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="SubstitutionRequests" list="substitutionRows" skip-form="true" paginate="false">
+                                    <field name="summary">
+                                        <default-field title="Substitute"><display/></default-field>
+                                    </field>
+                                    <field name="reason">
+                                        <default-field title="Reason"><display/></default-field>
+                                    </field>
+                                    <field name="reviewText">
+                                        <default-field title="Review"><display/></default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                                <text type="html">${statusText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="substituteMaterial" text="Approve" link-type="hidden-form-link" condition="canApprove"
+                                                    confirmation="Apply ${summary} on work order ${workEffortId}?"
+                                                    parameter-map="{workEffortId:workEffortId, substituteAction:'approve',
+                                                        productionChangeId:productionChangeId,
+                                                        operationKey:'wo-' + workEffortId + '-sub-approve-' + productionChangeId}"/>
+                                            <container-dialog id="RefuseSubstitute_${productionChangeId}" button-text="Refuse"
+                                                    icon="sym_o_block" width="480" title="Refuse the substitute" condition="canApprove">
+                                                <form-single name="RefuseSubstitute" transition="substituteMaterial"
+                                                        map="{workEffortId:workEffortId, substituteAction:'refuse',
+                                                            productionChangeId:productionChangeId,
+                                                            operationKey:'wo-' + workEffortId + '-sub-refuse-' + productionChangeId}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                                    <field name="substituteAction"><default-field><hidden/></default-field></field>
+                                                    <field name="productionChangeId"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="refusalReason">
+                                                        <default-field title="Reason"><text-line required="true"/></default-field>
+                                                    </field>
+                                                    <field name="submit">
+                                                        <default-field title=""><submit text="Refuse" type="danger"/></default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="summary"/><field-ref name="reviewText"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

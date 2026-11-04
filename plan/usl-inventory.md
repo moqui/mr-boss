@@ -482,7 +482,7 @@ Added in Accounting P17 (returns and order changes):
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AssetAutoPostServices | post#AssetReceipt |  |  |
-| AssetAutoPostServices | repost#AssetReceipt |  |  |
+| AssetAutoPostServices | repost#AssetReceipt |  | Manufacturing/WorkOrders/Disassembly (a dated delta with forwardReceiptRepostEnabled, ReceiptAdjustments.js, Manufacturing P9) |
 | AssetAutoPostServices | post#AssetIssuance |  |  |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
@@ -1210,11 +1210,11 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | set#ProducedProductQuantity |  | — never called (F8): a target change is mantle.work.ProductionServices.change#ProductionQuantity (P7) |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
 | ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
-| ManufacturingServices | breakDown#Assembly |  |  |
+| ManufacturingServices | breakDown#Assembly |  | Manufacturing/WorkOrders/Disassembly (inside mantle.work.ProductionServices.reverse#SupportedAssembly, without its unissue, Manufacturing P9) |
 | ManufacturingServices | unissue#AssemblyComponents |  |  |
-| ManufacturingServices | unissue#Component |  |  |
+| ManufacturingServices | unissue#Component |  | — not used by Disassembly: reverse#SupportedAssembly cancels the kit slices newest first itself (F30, Manufacturing P9) |
 | ManufacturingServices | cancel#AssemblyWorkEffort |  |  |
-| ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly |  |
+| ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly | — Manufacturing/WorkOrders/Disassembly reads preview#SupportedAssemblyReversal (the kit slices, Manufacturing P9) |
 | ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly | — not used by Quantities: it reads mantle.work.ProductionServices.get#ProductionQuantities (the run lines and receipts, P7) |
 | ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt | — Manufacturing/WorkOrders/WorkOrderDetail/Components and MaterialIssueReceipt: get#ProductionMaterials over the run's own lines (P5b) |
 | ManufacturingServices | get#ProductBomDetail | Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion |  |

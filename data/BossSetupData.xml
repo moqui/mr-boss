@@ -1288,6 +1288,11 @@ along with this software (see the LICENSE.md file). If not, see
         Quality tab -->
     <moqui.security.user.NotificationTopic topic="ProductionQualityBlock"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quality?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P9: a substitute decided on the work order's Components, an amendment reviewed on its Changes tab -->
+    <moqui.security.user.NotificationTopic topic="ProductionSubstitution"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Components?workEffortId=${workEffortId}"/>
+    <moqui.security.user.NotificationTopic topic="ProductionAmendment"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Changes?workEffortId=${workEffortId}"/>
 
     <!-- Manufacturing P14 (impl-manufacturing §4): the buyer's permissions, which Purchasing's buyer group holds when
         Purchasing is built (its P1 adds SUPPLIER_SCORECARD_EDIT): the purchase order edit that converts outside processing to
