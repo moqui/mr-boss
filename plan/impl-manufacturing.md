@@ -222,7 +222,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | built Nov 3, reviewed |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
-| P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | — |
+| P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | built Nov 4 (OEE and cost read P10's and P15's records when merged) |
 | P17 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -2255,6 +2255,97 @@ Design §9; the reporting part of M10.
   - OEE for a line shows its three factors from P10's events and P11's downtime;
   - a reader without financial read gets the quantities and no money columns, on screen and in the export;
   - a failed partition is named and the total marked incomplete, never zero.
+
+**Built Nov 4 (P16).**
+- Mantle (new files, nothing shared edited): `service/mantle/work/ProductionReportServices.xml` (`define#ReportParameters`:
+  organization, facility, period, page; and the nine services) over `ProductionReports.js`:
+  `get#ProductionStatusReport`, `get#ProductionMaterialReport`, `get#OperationPerformanceReport`, `get#ProductionLossReport`,
+  `get#ProductionQualityReport`, `get#ProductionCostReport`, `get#BomVarianceReport`, `get#ProductionPlanningReport` and
+  `get#ProductionDashboard`. Each checks PRODUCTION_VIEW and the user's organizations and facilities (FacilityScope; a run
+  by owner and facility), refuses an organization or facility outside them as missing (RECORD_UNAVAILABLE) and a period
+  over 366 days (PERIOD_TOO_LONG), and answers `scope`, `asOf`, `unitList`, `currencyUomIds` (financial read only),
+  `partitions` (name and message), `complete`, `financialRead` and `withheldText`. Each independent source and each run,
+  work center or plan is read in its own `partition`: a failure is logged, named and left out of the totals. A source
+  another phase builds is read only when its entity is defined (`plannedSource`), else named "Not available in this build".
+  Money (amounts, WIP, allocations, variance, the loss's cost, the usage variance, the frozen estimate with Products' cost
+  read too) only with ACCOUNTING_VIEW: left out of rows and totals, never zero. Totals per unit and per currency. Lists page
+  from the service (`lib.pageList`, export up to 2000 rows); more than 2000 runs is a named partition. The status report
+  reuses `find#ProductionOrders`, the material and cost reports `Production.js materialTotals` and `ProductionQuantities.js
+  outputFigures`, OEE `ProductionCalendar.js` (work hours, holidays, offline intervals, `operationHours`), the utilization
+  Kpi `get#WorkCenterLoad`, and planning `SupplyPlanning.js coveredOf`/`staleOf`.
+- OEE (design OperationPerformanceReport), per work center over the period (7 days by default): planned production time =
+  work hours less planned stops (plannedStop Y) and planned outages (RukPlanned), × slots; downtime = unplanned stops and
+  outages unioned within the planned time; run time = the machines' runtime (MachineRuntimeEvent, unioned per machine)
+  within the planned time and outside the downtime when any is recorded, else planned time less downtime (named);
+  availability = run / planned; performance = the ideal hours of the units counted (the routing operation's standard
+  hours for its run's output quantity, machine time where it has any) / run time; quality = good / every unit counted,
+  weighed by ideal hours (by count when the units share one unit); OEE = the product. The units: an operation's own
+  completion counts (P10's `productionGoodQuantity` and `productionLossQuantity`) when it has them, else its run's quantity
+  events in the period (good, held, scrap, process loss, rework), each unit once; a rework run's (a loss's
+  `reworkWorkEffortId`) output is left out, its units counted as rework where they were made. Missing figures (no planned
+  time, no units, an operation without standards, mixed units without standards) make a factor "Not calculable" with its
+  reason. The plant's factors sum the calculable centers' hours. Downtime by reason (planned ones marked excluded).
+- BOSS: `screen/Manufacturing/Reports.xml` (placeholder replaced: tab panel, ReportIndex by default) with `ReportIndex`
+  and the eight report screens under `Reports/` (parameters form with server-search drop-downs, ReportStatus, totals, the
+  rows with CSV and XLSX export, the report's other lists); `template/ManufacturingReportParts.xml` (ReportStatus: as of,
+  scope, units, currency, what is withheld, the incomplete warning naming the partitions). A list with money columns is
+  two form-lists by `financialRead` (with them, and without them), so the columns are absent for a reader in qvt, html,
+  tui and the export alike. Home: the Kpis box (number cards: completed, on-time completion, OEE, utilization, scrap rate
+  and, with financial read, WIP value at the plant this month, each linking to its report with the same filters), and
+  "Completed this month" counted (`get#Home`'s P16 block over `get#ProductionDashboard`; its link opens the status report
+  of the month's completions). Manufacturing.js P16 block: the report routes in sharedLinks, the `workOrders` choice.
+- Specs: Mantle `test/work/ProductionReports.spec.js` (5 features, under 1 s of features; spec-local organizations, users
+  and a released method; two runs, quantities, rework, three stops): OEE of a work center (planned 7 h, downtime 1.5 h
+  unioned, run 5.5 h, availability 78.6%, performance 90.9%, quality 80%, OEE 57.1%, 10 units counted with the redone
+  rework unit not again); a reader's cost, loss and variance rows without money and a financial reader's with it; a work
+  center whose calendar's time zone is not known named as a partition, the report incomplete and the center not shown;
+  every report's scope and figures, the dashboard's Kpis and its WIP value withheld; refusals (no PRODUCTION_VIEW, another
+  organization, a facility outside the scope, a long period). BOSS `ManufacturingReports` (3: Home's Kpis and completed
+  count, the cost report's columns on screen and in the CSV for a reader and a financial reader, each report's render),
+  ManufacturingAccess's P16 section (2: every report service refused for the plant display on the parameters a reader
+  passes, the other organization's reader, the money, the work order choice; the Reports area by role with authz on),
+  the route fixtures (AppStructure, TuiRender), ManufacturingShell's Home check (completed is counted now), and the walk
+  `ManufacturingReportsWalk` (3: Home's OEE card opens the performance report; a reader's and a financial reader's cost
+  columns; 390 px) in suite.js. AppStructure's placeholder floor is 63.
+- Tests run: Mantle ProductionReports with ProductionCosts (9 features, pass); BOSS ManufacturingReports,
+  ManufacturingAccess, AppStructure, TuiRender, ManufacturingShell (passing after the fixes below: 93 features for Reports
+  and Access, 23 for Reports and Shell, AppStructure and TuiRender in a 44-feature run); walk ManufacturingReportsWalk (3,
+  pass). `moqui lint --screens`: the new screens show only informational anchor rows. `ss-inventory.md`'s RunList row
+  names Home and the status report; no `usl-inventory.md` row is called (the report services are new).
+- Re-verify after P10 and P15 merge:
+  - P10: with `MachineRuntimeEvent` defined, ProductionReports' OEE feature records a runtime event over the period and
+    expects the report complete with 5.5 machine hours; ManufacturingReports then skips its "Incomplete: Machine runtime"
+    check. P10's operation completion counts are read through the same marker (`isEntityDefined(MachineRuntimeEvent)`) and
+    the fields' names in its plan's entity (`productionGoodQuantity`, `productionLossQuantity`); its runtime mode `MrmSetup`
+    splits machine setup hours, and labor setup hours are TimeEntry `WktpProductionSetup`. Check both names on merge.
+  - P15: the cost report reads ProductionCostAllocation's P6 fields (`destinationEnumId`, `allocatedAmount`,
+    `acctgTransId`; output and by-product to output, variance to variance) and the events' `closeAcctgTransId`; a closed
+    run shows "Closed". No spec covers a posted close here; P15's cost close spec or a P17 walk should read one through
+    the report. MyFinanceWork's runs awaiting close stay P15's.
+- Decisions:
+  - `get#ProductionDashboard` is in `mantle.work.ProductionReportServices` (this plan), not ProductionServices (design
+    Home's table, corrected there); it is the Kpi provider Insights registers (crosscut §3.17).
+  - The Kpis are completed, on-time completion (completed by the due date), OEE, utilization (booked over available
+    hours, Capacity's measure, not OEE), scrap rate (scrap, process loss and rework over all output; component scrap is
+    apart, in the material's units) and WIP value (the open runs' events, financial read only, left out otherwise).
+  - Without P10's completion counts, each operation of a run is credited with the run's output quantities in the period, so
+    a center is measured on the units that passed through it; the row names it.
+  - A report's parameters default the facility to the selected plant, as Warehouse's reports do; the lot filter is a
+    service parameter only (no lot drop-down), and the design's shift filter is not built (no shift record).
+- Findings (provisional):
+  - **F-P16-1** With P10 not on master, the performance report and the Home OEE Kpi are always incomplete (machine
+    runtime named as not in this build), and run time is planned time less downtime.
+  - **F-P16-2** In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render
+    of a report; not investigated further: the reports use two form-lists by financial read instead. P6's ProductionCosts
+    tab uses `hide` on its amount and ledger columns and may want the same check.
+  - **F-P16-3** Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale,
+    a cache or a scheduled snapshot (Insights) later.
+  - **F-P16-4** Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are
+    the providers it registers.
+  - **F-P16-5** For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where
+    the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at
+    the end of routeFixtures), ManufacturingAccess.spec.js (P16 section at the end), suite.js (the walk after
+    ManufacturingChangesWalk), AppStructure's floor (63), ManufacturingShell's Home check.
 
 ### P17 — Finish
 

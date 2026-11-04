@@ -1421,6 +1421,32 @@ Object.assign(choiceSources, {
 })
 const productNameOf = productId => (productId ? one("mantle.product.Product", {productId})?.productName || productId : "")
 
+// ===== P16: reports =====
+// The Reports area's index and eight reports (impl-manufacturing P16), whose routes are in sharedLinks for Home's Kpis; and
+// the reports' work order drop-down: the production runs of the user's organizations, newest first, by id or name.
+const reportNames = [
+    "WorkOrderStatusReport",
+    "MaterialReport",
+    "OperationPerformanceReport",
+    "LossReport",
+    "QualityReport",
+    "ProductionCostReport",
+    "BillOfMaterialsVarianceReport",
+    "PlanningReport"
+]
+linkPaths.push("Reports/ReportIndex", ...reportNames.map(name => "Reports/" + name))
+Object.assign(choiceSources, {
+    workOrders: (userScope, term, selected) => {
+        let query = find("mantle.work.effort.WorkEffort", {purposeEnumId: runPurpose}).orderBy("-workEffortId")
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", userScope.ownerIds)
+        const label = row => [row.workEffortId, row.workEffortName].filter(Boolean).join(" · ")
+        return rowOptions(query, "workEffortId", label, ["workEffortId", "workEffortName"], term, selected, workEffortId => {
+            const row = one("mantle.work.effort.WorkEffort", {workEffortId})
+            return row && row.purposeEnumId === runPurpose && owns(userScope, row.ownerPartyId) ? row : null
+        })
+    }
+})
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

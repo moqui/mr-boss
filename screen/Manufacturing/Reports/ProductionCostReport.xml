@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProductionCostReport (design-manufacturing §9 ProductionCostReport; style-guide §3.12 Report): the work orders
+    completed in the period, open now (WIP) or one of them (CostFind;
+    mantle.work.ProductionReportServices.get#ProductionCostReport): good quantity, cost close state and event counts
+    for every reader, and with financial read only the cost by component, output relief, WIP, output allocation,
+    variance, GL transactions and the frozen estimate (CostRows; the money columns are hidden for others, on screen and
+    in the export, since the service leaves them out); totals per unit and per currency. Every Manufacturing reader
+    reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cost" default-menu-index="7">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="basis"/>
+    <parameter name="workEffortId"/>
+    <parameter name="productId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <!-- the selected plant until the parameters name a facility or clear it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (manufacturing.plantId || null) : (facilityId || null)"/>
+        <set field="basisOptions" from="[{value:'completed', label:'Completed in the period'},
+                {value:'open', label:'Open now (WIP)'}]"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:reportFacilityId,
+                basis:basis || 'completed', workEffortId:workEffortId || null, productId:productId || null,
+                currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+        <service-call name="mantle.work.ProductionReportServices.get#ProductionCostReport" out-map="report"
+                in-map="Object.assign({}, options, {pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.asOf"/>
+        <set field="financialRead" from="!!report?.financialRead"/>
+        <set field="costRows" from="report?.costRows || []"/>
+        <set field="quantityTotals" from="report?.quantityTotals || []"/>
+        <set field="moneyTotals" from="report?.moneyTotals || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['costRows' + key] = report['costRows' + key]</script>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Production cost" type="h5"/>
+                <label text="Each work order's cost evidence: material, labor, machine, overhead and outside cost, output
+                        relief, WIP and the cost close's allocation and variance. Amounts need financial read; without
+                        it the quantities and the close state show."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="CostFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Plant or work center" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="basis">
+                <default-field title="Work orders">
+                    <drop-down allow-empty="false">
+                        <list-options list="basisOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="workEffortId">
+                <default-field title="Work order">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'workOrders', selected:workEffortId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'materialProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency" tooltip="The run's own currency when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="30 days before the last day when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="basis"/>
+                    <field-ref name="workEffortId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="productId"/>
+                    <field-ref name="currencyUomId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportStatus" location="component://mr-boss/template/ManufacturingReportParts.xml"/>
+        <section name="QuantityTotalsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Quantities"/>
+                    <box-body-nopad>
+                        <label text="No totals." type="p" style="q-pa-md m-muted"
+                                condition="!quantityTotals.length"/>
+                        <form-list name="CostQuantityTotals" list="quantityTotals" skip-form="true" paginate="false">
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rowCount" align="right">
+                                <default-field title="Work orders">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="goodQuantity" align="right">
+                                <default-field title="Good">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="eventCount" align="right">
+                                <default-field title="Events">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="unvaluedCount" align="right">
+                                <default-field title="Unvalued">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="awaitingCloseCount" align="right">
+                                <default-field title="Awaiting close">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="unitText"/>
+                                    <field-ref name="rowCount"/>
+                                </column>
+                                <column>
+                                    <field-ref name="goodQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MoneyTotalsSection" condition="reportFound &amp;&amp; financialRead">
+            <widgets>
+                <container-box>
+                    <box-header title="Amounts"/>
+                    <box-body-nopad>
+                        <label text="No amounts." type="p" style="q-pa-md m-muted"
+                                condition="!moneyTotals.length"/>
+                        <form-list name="CostMoneyTotals" list="moneyTotals" skip-form="true" paginate="false">
+                            <field name="currencyUomId">
+                                <default-field title="Currency">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="materialCost" align="right">
+                                <default-field title="Material">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="laborCost" align="right">
+                                <default-field title="Labor">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="machineCost" align="right">
+                                <default-field title="Machine">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="overheadCost" align="right">
+                                <default-field title="Overhead">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="outsideCost" align="right">
+                                <default-field title="Outside">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="totalCost" align="right">
+                                <default-field title="Total">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="outputRelief" align="right">
+                                <default-field title="Output relief">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="wipAmount" align="right">
+                                <default-field title="WIP">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="allocatedOutput" align="right">
+                                <default-field title="Allocated to output">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <field name="varianceAmount" align="right">
+                                <default-field title="Variance">
+                                    <display currency-unit-field="currencyUomId"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="currencyUomId"/>
+                                    <field-ref name="totalCost"/>
+                                </column>
+                                <column>
+                                    <field-ref name="wipAmount"/>
+                                    <field-ref name="varianceAmount"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="CostRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Work orders"/>
+                    <box-body-nopad>
+                        <label text="No work order in this scope." type="p" style="q-pa-md m-muted"
+                                condition="!costRows.length"/>
+                        <section name="CostRowsMoney" condition="financialRead">
+                            <widgets>
+                                <form-list name="CostRows" list="costRows" skip-form="true" paginate="true"
+                                        select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                                    <field name="workEffortId">
+                                        <default-field title="Work order">
+                                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}"
+                                                    link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="completedText">
+                                        <default-field title="Completed">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="goodQuantity" align="right">
+                                        <default-field title="Good">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unitText">
+                                        <default-field title="Unit">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="closeText">
+                                        <default-field title="Cost close">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="eventCount" align="right">
+                                        <default-field title="Events">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unvaluedCount" align="right">
+                                        <default-field title="Unvalued">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="awaitingCloseCount" align="right">
+                                        <default-field title="Awaiting close">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="materialCost" align="right">
+                                        <default-field title="Material">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="laborCost" align="right">
+                                        <default-field title="Labor">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="machineCost" align="right">
+                                        <default-field title="Machine">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="overheadCost" align="right">
+                                        <default-field title="Overhead">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="outsideCost" align="right">
+                                        <default-field title="Outside">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="totalCost" align="right">
+                                        <default-field title="Total">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="outputRelief" align="right">
+                                        <default-field title="Output relief">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="wipAmount" align="right">
+                                        <default-field title="WIP">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="allocatedOutput" align="right">
+                                        <default-field title="Allocated to output">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="varianceAmount" align="right">
+                                        <default-field title="Variance">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="estimateAmount" align="right">
+                                        <default-field title="Estimate">
+                                            <display currency-unit-field="currencyUomId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="glText">
+                                        <default-field title="GL transactions">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="workEffortId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="goodQuantity"/>
+                                            <field-ref name="closeText"/>
+                                            <field-ref name="wipAmount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="CostRowsQuantities" condition="!financialRead">
+                            <widgets>
+                                <form-list name="CostRowsQuantities" list="costRows" skip-form="true" paginate="true"
+                                        select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                                    <field name="workEffortId">
+                                        <default-field title="Work order">
+                                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}"
+                                                    link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="completedText">
+                                        <default-field title="Completed">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="goodQuantity" align="right">
+                                        <default-field title="Good">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unitText">
+                                        <default-field title="Unit">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="closeText">
+                                        <default-field title="Cost close">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="eventCount" align="right">
+                                        <default-field title="Events">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="unvaluedCount" align="right">
+                                        <default-field title="Unvalued">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="awaitingCloseCount" align="right">
+                                        <default-field title="Awaiting close">
+                                            <display format="#,##0"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="glText">
+                                        <default-field title="GL transactions">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="workEffortId"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="goodQuantity"/>
+                                            <field-ref name="closeText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

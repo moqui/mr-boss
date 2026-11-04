@@ -29,6 +29,12 @@ along with this software (see the LICENSE.md file). If not, see
                 completedCount (this month), each null where not counted.</description></parameter>
             <parameter name="queueRows" type="List"><description>Each row's title, url, productName, dueText,
                 workCenterName, statusText and shortageText.</description></parameter>
+            <parameter name="kpis" type="List"><description>P16: the plant's Kpis this month (get#ProductionDashboard), each
+                with its title, valueText, detail and the url of its report with the same filters; empty for a user without
+                production read.</description></parameter>
+            <parameter name="kpiStatus" type="Map"><description>P16: the Kpis' asOfText, periodText, complete,
+                partitionsText and withheldText.</description></parameter>
+            <parameter name="completedLink"/>
         </out-parameters>
         <actions>
             <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext"
@@ -48,7 +54,27 @@ along with this software (see the LICENSE.md file). If not, see
                 <script>Object.assign(summary, materialsHome.summary)</script>
                 <set field="queueRows" from="materialsHome.queueRows"/>
             </if>
-            <!-- later phases: P16 counts the completed runs -->
+            <!-- P16: the Kpis (Mantle's get#ProductionDashboard over the reports, this month at the plant), each opening its
+                report with the same filters, and completed this month from them -->
+            <set field="kpis" from="[]"/>
+            <set field="kpiStatus" from="{}"/>
+            <if condition="can.productionRead">
+                <service-call name="mantle.work.ProductionReportServices.get#ProductionDashboard" out-map="dashboard"
+                        in-map="{facilityId:plantId || null}" transaction="force-new" ignore-error="true"/>
+                <script><![CDATA[
+                    const base = '/qapps/Manufacturing/Reports/'
+                    const query = parameters => Object.entries(parameters || {}).filter(([, value]) => value != null && value !== '')
+                        .map(([name, value]) => encodeURIComponent(name) + '=' + encodeURIComponent(String(value))).join('&')
+                    kpis = Array.from(dashboard?.kpis || []).map(kpi => ({kpiId: kpi.kpiId, title: kpi.title,
+                        valueText: kpi.valueText, detail: kpi.detail || '', url: base + kpi.reportName + '?' + query(kpi.parameters)}))
+                    kpiStatus = dashboard?.asOf ? {asOfText: dashboard.asOfText, periodText: dashboard.scope?.periodText,
+                        complete: dashboard.complete, partitionsText: dashboard.partitionsText, withheldText: dashboard.withheldText}
+                        : {unavailable: true}
+                    const completed = kpis.find(kpi => kpi.kpiId === 'completed')
+                    if (dashboard?.completedCount != null) summary.completedCount = dashboard.completedCount
+                    completedLink = completed ? completed.url : null
+                ]]></script>
+            </if>
         </actions>
     </service>
 </services>

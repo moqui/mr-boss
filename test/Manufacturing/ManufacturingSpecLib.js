@@ -300,6 +300,21 @@ function routeFixtures() {
         "WorkOrders/WorkOrderDetail/SplitWorkOrder": {parameters: released, text: "Coated filters"},
         "WorkOrders/Disassembly": {text: "Disassembly"}
     })
+    // P16: the Reports area (the index by default) and its eight reports on Retail's plant, each showing its title whatever
+    // the data
+    const plant = {facilityId: ids.plantId}
+    Object.assign(routes, {
+        Reports: {text: "Operation performance"},
+        "Reports/ReportIndex": {text: "Operation performance"},
+        "Reports/WorkOrderStatusReport": {parameters: plant, text: "Work order status"},
+        "Reports/MaterialReport": {parameters: plant, text: "Materials"},
+        "Reports/OperationPerformanceReport": {parameters: plant, text: "Operation performance"},
+        "Reports/LossReport": {parameters: plant, text: "Loss"},
+        "Reports/QualityReport": {parameters: plant, text: "Quality"},
+        "Reports/ProductionCostReport": {parameters: plant, text: "Production cost"},
+        "Reports/BillOfMaterialsVarianceReport": {parameters: plant, text: "BOM variance"},
+        "Reports/PlanningReport": {parameters: plant, text: "Planning"}
+    })
     return {routes, mounts}
 }
 

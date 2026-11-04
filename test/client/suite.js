@@ -65,7 +65,8 @@ suite(
         "ManufacturingQualityWalk",
         "ManufacturingSubcontractWalk",
         "ManufacturingScheduleWalk",
-        "ManufacturingChangesWalk"
+        "ManufacturingChangesWalk",
+        "ManufacturingReportsWalk"
     ],
     {
         server: {

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Manufacturing report screens (design-manufacturing §9; impl-manufacturing P16), included by
+    section-include. ReportStatus: what a report read (report is the mantle.work.ProductionReportServices answer): its
+    as-of time, organizations, facility and period, the units of its quantities and the currencies of its amounts, the money
+    columns left out without financial read, and the partitions it could not read, which leave the report incomplete (its
+    totals leave them out, never counting them as zero). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ReportStatus" condition="report?.asOf">
+            <widgets>
+                <label text="As of ${report.asOfText} · ${report.scope.organizationText} · ${report.scope.facilityText}${report.scope.periodText
+                        ? ' · ' + report.scope.periodText : ''}" type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="Units: ${report.unitsText}${report.currencyText ? ' · Currency: ' + report.currencyText : ''}" type="p"
+                        style="text-caption m-muted q-mb-none" condition="report.unitsText || report.currencyText"/>
+                <label text="${report.withheldText}." type="p" style="text-caption m-muted q-mb-none" condition="report.withheldText"/>
+                <label text="Incomplete: ${report.partitionsText}. The totals leave these out." type="p" style="text-warning"
+                        condition="!report.complete"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

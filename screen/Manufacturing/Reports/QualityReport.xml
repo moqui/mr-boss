@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- QualityReport (design-manufacturing §9 QualityReport; style-guide §3.12 Report): the production inspections created
+    in the period by template and product (QualityFind;
+    mantle.work.ProductionReportServices.get#ProductionQualityReport): inspections and those open, samples, readings
+    and failed readings, accepted, rejected and held quantity, failure rate, re-inspections, results and the average
+    hours to disposition (QualityRows), with totals per unit. The export holds the parameters and columns. Every
+    Manufacturing reader reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quality" default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="inspectionTemplateId"/>
+    <parameter name="productId"/>
+    <parameter name="resultEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <!-- the selected plant until the parameters name a facility or clear it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (manufacturing.plantId || null) : (facilityId || null)"/>
+        <set field="resultOptions" from="[{value:'QirAccepted', label:'Accepted'},
+                {value:'QirPartial', label:'Partly accepted'}, {value:'QirRejected', label:'Rejected'}]"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:reportFacilityId,
+                inspectionTemplateId:inspectionTemplateId || null, productId:productId || null,
+                resultEnumId:resultEnumId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+        <service-call name="mantle.work.ProductionReportServices.get#ProductionQualityReport" out-map="report"
+                in-map="Object.assign({}, options, {pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.asOf"/>
+        <set field="financialRead" from="!!report?.financialRead"/>
+        <set field="qualityRows" from="report?.qualityRows || []"/>
+        <set field="totalRows" from="report?.totalRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['qualityRows' + key] = report['qualityRows' + key]</script>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Quality" type="h5"/>
+                <label text="Production inspections by template and product: samples, readings, the failure rate, holds,
+                        re-inspections and the hours from submission to disposition."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="QualityFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Plant or work center" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="inspectionTemplateId">
+                <default-field title="Template">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'inspectionTemplates', selected:inspectionTemplateId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'materialProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="resultEnumId">
+                <default-field title="Result">
+                    <drop-down allow-empty="true">
+                        <list-options list="resultOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="30 days before the last day when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="inspectionTemplateId"/>
+                    <field-ref name="productId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="resultEnumId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportStatus" location="component://mr-boss/template/ManufacturingReportParts.xml"/>
+        <section name="TotalRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Totals"/>
+                    <box-body-nopad>
+                        <label text="No totals." type="p" style="q-pa-md m-muted"
+                                condition="!totalRows.length"/>
+                        <form-list name="QualityTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="inspectionCount" align="right">
+                                <default-field title="Inspections">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="openCount" align="right">
+                                <default-field title="Open">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="sampleCount" align="right">
+                                <default-field title="Samples">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="failedReadingCount" align="right">
+                                <default-field title="Failed readings">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <default-field title="Accepted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectedQuantity" align="right">
+                                <default-field title="Rejected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="failureRateText">
+                                <default-field title="Failure rate">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="unitText"/>
+                                    <field-ref name="inspectionCount"/>
+                                </column>
+                                <column>
+                                    <field-ref name="failureRateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="QualityRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Inspections"/>
+                    <box-body-nopad>
+                        <label text="No production inspection in this period." type="p" style="q-pa-md m-muted"
+                                condition="!qualityRows.length"/>
+                        <form-list name="QualityRows" list="qualityRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="templateText">
+                                <default-field title="Template">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="inspectionCount" align="right">
+                                <default-field title="Inspections">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="openCount" align="right">
+                                <default-field title="Open">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="sampleCount" align="right">
+                                <default-field title="Samples">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="readingCount" align="right">
+                                <default-field title="Readings">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="failedReadingCount" align="right">
+                                <default-field title="Failed readings">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="readingFailureRateText">
+                                <default-field title="Reading failure rate">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <default-field title="Accepted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="rejectedQuantity" align="right">
+                                <default-field title="Rejected">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="failureRateText">
+                                <default-field title="Failure rate">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reinspectionCount" align="right">
+                                <default-field title="Re-inspections">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="resultText">
+                                <default-field title="Results">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="dispositionText">
+                                <default-field title="To disposition" tooltip="Average hours from submission to first disposition">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="templateText"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="inspectionCount"/>
+                                    <field-ref name="failureRateText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MaterialReport (design-manufacturing §9 MaterialReport; style-guide §3.12 Report): the material and output lines of
+    the work orders with a movement in the period, or of one work order (MaterialFind;
+    mantle.work.ProductionReportServices.get#ProductionMaterialReport): required, issued, returned, net, good, held and
+    remaining quantity, lots, facilities and lineage (LineRows), with totals per role and unit. The export holds the
+    parameters and columns. Every Manufacturing reader reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Materials" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="workEffortId"/>
+    <parameter name="productId"/>
+    <parameter name="movementType"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <!-- the selected plant until the parameters name a facility or clear it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (manufacturing.plantId || null) : (facilityId || null)"/>
+        <set field="movementOptions" from="[{value:'issue', label:'Issues'}, {value:'return', label:'Returns'},
+                {value:'receipt', label:'Output receipts'}]"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:reportFacilityId,
+                workEffortId:workEffortId || null, productId:productId || null, movementType:movementType || null,
+                fromDate:fromDate || null, thruDate:thruDate || null}"/>
+        <service-call name="mantle.work.ProductionReportServices.get#ProductionMaterialReport" out-map="report"
+                in-map="Object.assign({}, options, {pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.asOf"/>
+        <set field="financialRead" from="!!report?.financialRead"/>
+        <set field="lineRows" from="report?.lineRows || []"/>
+        <set field="totalRows" from="report?.totalRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['lineRows' + key] = report['lineRows' + key]</script>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Materials" type="h5"/>
+                <label text="Each work order line's required, issued, returned and net quantity, or its good and held
+                        output, with its lots, facilities and an output's component lots. Totals are per role and
+                        unit."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="MaterialFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Plant or work center" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="workEffortId">
+                <default-field title="Work order">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'workOrders', selected:workEffortId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'materialProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="movementType">
+                <default-field title="Movement">
+                    <drop-down allow-empty="true">
+                        <list-options list="movementOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="30 days before the last day when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="workEffortId"/>
+                    <field-ref name="productId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="movementType"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportStatus" location="component://mr-boss/template/ManufacturingReportParts.xml"/>
+        <section name="TotalRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Totals"/>
+                    <box-body-nopad>
+                        <label text="No totals." type="p" style="q-pa-md m-muted"
+                                condition="!totalRows.length"/>
+                        <form-list name="MaterialTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="roleText">
+                                <default-field title="Role">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rowCount" align="right">
+                                <default-field title="Lines">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="requiredQuantity" align="right">
+                                <default-field title="Required">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="issuedQuantity" align="right">
+                                <default-field title="Issued">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="returnedQuantity" align="right">
+                                <default-field title="Returned">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="netQuantity" align="right">
+                                <default-field title="Net issued">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="goodQuantity" align="right">
+                                <default-field title="Good">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="roleText"/>
+                                    <field-ref name="unitText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="requiredQuantity"/>
+                                    <field-ref name="netQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="LineRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Lines"/>
+                    <box-body-nopad>
+                        <label text="No material issued or output received in this period." type="p" style="q-pa-md m-muted"
+                                condition="!lineRows.length"/>
+                        <form-list name="LineRows" list="lineRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="workEffortId">
+                                <default-field title="Work order">
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}"
+                                            link-type="anchor" parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="roleText">
+                                <default-field title="Role">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="requiredQuantity" align="right">
+                                <default-field title="Required">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="issuedQuantity" align="right">
+                                <default-field title="Issued">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="returnedQuantity" align="right">
+                                <default-field title="Returned">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="netQuantity" align="right">
+                                <default-field title="Net issued">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="goodQuantity" align="right">
+                                <default-field title="Good">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="remainingQuantity" align="right">
+                                <default-field title="Remaining">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lotText">
+                                <default-field title="Lots">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="facilityText">
+                                <default-field title="Facilities">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lineageText">
+                                <default-field title="From component lots">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="workEffortId"/>
+                                    <field-ref name="productName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="roleText"/>
+                                    <field-ref name="requiredQuantity"/>
+                                    <field-ref name="netQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -14,10 +14,12 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Manufacturing Home (design-manufacturing §3 Home; style-guide §3.1 Landing): the selected plant (PlantPicker, a
     preference that never widens the scope), the Summary (a number card per count: open, in progress, late, short and
-    completed this month, each unavailable until its phase counts it; ironstone.manufacturing.HomeServices.get#Home), the
-    Queue of due work and shortages, and the lookup of a record (lookupType and lookupId, through
+    completed this month, each unavailable until it is counted; ironstone.manufacturing.HomeServices.get#Home), the Kpis
+    (P16: completed, on-time completion, OEE, utilization, scrap rate and, with financial read, WIP value at the plant this
+    month, from Mantle's get#ProductionDashboard; each opens its report with the same filters, crosscut §3.17), the Queue of
+    due work and shortages, and the lookup of a record (lookupType and lookupId, through
     ironstone.manufacturing.AccessServices.check#Record): record links of kinds whose Manufacturing screen is not built yet
-    open it here. Kpis come with P16. -->
+    open it here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="lookupType"/>
@@ -30,6 +32,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="summaryText" from="Object.fromEntries(['openCount', 'inProgressCount', 'lateCount', 'shortCount',
                 'completedCount'].map(name =&gt; [name, summary[name] == null ? 'Unavailable' : String(summary[name])]))"/>
         <set field="queueRows" from="home.queueRows || []"/>
+        <set field="kpis" from="home.kpis || []"/>
+        <set field="kpiStatus" from="home.kpiStatus || {}"/>
+        <set field="kpiById" from="Object.fromEntries(kpis.map(kpi =&gt; [kpi.kpiId, kpi]))"/>
+        <set field="kpiDetail" from="kpis.filter(kpi =&gt; kpi.detail).map(kpi =&gt; kpi.title + ': ' + kpi.detail).join(' · ')"/>
         <set field="workOrdersLink" value="/qapps/Manufacturing/WorkOrders"/>
         <if condition="lookupId">
             <service-call name="ironstone.manufacturing.AccessServices.check#Record"
@@ -70,8 +76,42 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Short" value="${summaryText.shortCount}" icon="sym_o_production_quantity_limits" size="sm"
                     link="${workOrdersLink}"/>
             <number-card title="Completed this month" value="${summaryText.completedCount}" icon="sym_o_task_alt" size="sm"
-                    link="${workOrdersLink}"/>
+                    link="${home.completedLink || sharedLinks['Reports/WorkOrderStatusReport']}"/>
         </dashboard>
+        <!-- P16: the Kpis, each a provider over the reports opening its report with the same filters -->
+        <section name="Kpis" condition="kpis.length">
+            <widgets>
+                <container-box>
+                    <box-header title="This month${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Reports']}" text="Reports" link-type="anchor" icon="sym_o_assessment"/>
+                    </box-toolbar>
+                    <box-body>
+                        <dashboard min-width="170">
+                            <number-card title="${kpiById.completed?.title}" value="${kpiById.completed?.valueText}"
+                                    icon="sym_o_task_alt" size="sm" link="${kpiById.completed?.url}" condition="kpiById.completed"/>
+                            <number-card title="${kpiById.onTime?.title}" value="${kpiById.onTime?.valueText}"
+                                    icon="sym_o_event_available" size="sm" link="${kpiById.onTime?.url}" condition="kpiById.onTime"/>
+                            <number-card title="${kpiById.oee?.title}" value="${kpiById.oee?.valueText}"
+                                    icon="sym_o_speed" size="sm" link="${kpiById.oee?.url}" condition="kpiById.oee"/>
+                            <number-card title="${kpiById.utilization?.title}" value="${kpiById.utilization?.valueText}"
+                                    icon="sym_o_donut_large" size="sm" link="${kpiById.utilization?.url}" condition="kpiById.utilization"/>
+                            <number-card title="${kpiById.scrapRate?.title}" value="${kpiById.scrapRate?.valueText}"
+                                    icon="sym_o_delete_sweep" size="sm" link="${kpiById.scrapRate?.url}" condition="kpiById.scrapRate"/>
+                            <number-card title="${kpiById.wipValue?.title}" value="${kpiById.wipValue?.valueText}"
+                                    icon="sym_o_account_balance" size="sm" link="${kpiById.wipValue?.url}" condition="kpiById.wipValue"/>
+                        </dashboard>
+                        <label text="${kpiDetail}" type="p" style="text-caption m-muted q-mb-none" condition="kpiDetail"/>
+                        <label text="As of ${kpiStatus.asOfText} · ${kpiStatus.periodText}" type="p" style="text-caption m-muted"
+                                condition="kpiStatus.asOfText"/>
+                        <label text="${kpiStatus.withheldText}." type="p" style="text-caption m-muted"
+                                condition="kpiStatus.withheldText"/>
+                        <label text="Incomplete: ${kpiStatus.partitionsText}" type="p" style="text-warning"
+                                condition="kpiStatus.asOfText &amp;&amp; !kpiStatus.complete"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
         <container-box>
             <box-header title="Due work and shortages${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}"/>
             <!-- P13: shortages open the plant's supply plan (design Home Actions); P5b's short rows open the work order's

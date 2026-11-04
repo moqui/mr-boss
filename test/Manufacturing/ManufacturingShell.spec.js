@@ -176,7 +176,7 @@ feature("a run's link is never a Commons task or event: a Warehouse user opens i
         operation == null
     }
 })
-feature("Home shows the reader's Summary (completed unavailable), the due work, their plants and their own records' lookup", {
+feature("Home shows the reader's Summary and Kpis, the due work, their plants and their own records' lookup", {
     when() {
         return asUser(users.read, () => ({
             home: page("Home"),
@@ -189,8 +189,9 @@ feature("Home shows the reader's Summary (completed unavailable), the due work, 
         home.status == 200
         home.errors == []
         home.output.includes("Completed this month")
-        // P5b counts the open, in-progress, late and short work orders and lists the due ones; completed is P16's
-        home.output.includes("Unavailable")
+        // P5b counts the open, in-progress, late and short work orders and lists the due ones; P16 counts the completed and
+        // shows the Kpis
+        home.output.includes("On-time completion")
         // the first ten due work orders: other specs' runs may come before the demo's released run
         home.output.includes("WorkOrders/WorkOrderDetail")
         run.output.includes("Work order " + ids.runId)
