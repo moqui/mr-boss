@@ -632,16 +632,16 @@ is unchanged.
 | FindParty | CreateContactForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | OuterSearchForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
 | FindParty | PartyListForm | Commons/Contacts; People/Employees | Commons/Contacts/List |
-| EditAgreement | EditAgreement | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | AddSettlementTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | AddOtherTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | AgreementTermList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | AddAgreementItem | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | AgreementItemList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail |  |
-| EditAgreement | NewContentForm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail; Shared/RecordFiles |  |
+| EditAgreement | EditAgreement | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (EditAgreement) |
+| EditAgreement | AddSettlementTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (AddAgreementTerm) |
+| EditAgreement | AddOtherTerm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (AddAgreementTerm) |
+| EditAgreement | AgreementTermList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (AgreementTerms) |
+| EditAgreement | AddAgreementItem | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (AddAgreementItem) |
+| EditAgreement | AgreementItemList | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Purchasing/Agreements/AgreementDetail (AgreementItems) |
+| EditAgreement | NewContentForm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail; Shared/RecordFiles | Purchasing/Agreements/AgreementDetail (AgreementUploadFile) |
 | EditAgreement | UpdateContentForm | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail; Shared/RecordFiles |  |
-| FindAgreement | NewAgreement | Purchasing/Agreements; Sales/Agreements/Agreements |  |
-| FindAgreement | AgreementList | Purchasing/Agreements; Sales/Agreements/Agreements |  |
+| FindAgreement | NewAgreement | Purchasing/Agreements; Sales/Agreements/Agreements | Purchasing/Agreements/AgreementList (NewAgreement) |
+| FindAgreement | AgreementList | Purchasing/Agreements; Sales/Agreements/Agreements | Purchasing/Agreements/AgreementList (AgreementFind, AgreementList) |
 | PartyEmails | EmailMessageList | Comms/Inbox/MessageDetail; Shared/Chatter | Comms/Inbox/MessageDetail; Shared/Chatter |
 | PartyProjects | AddUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |
 | PartyProjects | UpdateUserAssignForm | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail | Projects/Projects/ProjectDetail/Team; Projects/Resources/PersonDetail |

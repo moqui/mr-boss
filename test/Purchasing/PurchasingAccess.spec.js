@@ -11,7 +11,8 @@
 // the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
 // render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator; P8 a supplier return's scope,
 // its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail; P9 a purchase order's revisions and
-// acknowledgement for its organization, and starting a change for the buyer only.
+// acknowledgement for its organization, and starting a change for the buyer only; P13 an agreement's scope, its change and
+// release for the buyer only and its record link to AgreementDetail.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -804,6 +805,50 @@ feature("an order's revisions and acknowledgement are its organization's, and ch
         if (holder !== "") problems.push(`the buyer's change check: ${holder}`)
         const without = capability(users.read)
         if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's change check: ${without || "accepted"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+// P13: an agreement is its organization's: AgreementDetail's read for its reader and refused for another organization's; its
+// writes (change, release) the buyer's; its record link opens AgreementDetail
+feature("an agreement is its organization's; changing or releasing it is the buyer's; its link opens AgreementDetail", {
+    when() {
+        const problems = []
+        const detail = user =>
+            asUser(user, () =>
+                refusal("ironstone.purchasing.AgreementServices.get#AgreementDetail", {
+                    appRoot: "Purchasing",
+                    agreementId: ids.agreementId
+                })
+            )
+        const reader = detail(users.read)
+        if (reader !== "") problems.push(`the reader's detail: ${reader}`)
+        const other = detail(users.services)
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's reader: ${other || "accepted"}`)
+        const capability = (user, agreementId) =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "agreement", recordId: agreementId, capability: "buy"})
+            )
+        const holder = capability(users.buyer, ids.agreementId)
+        if (holder !== "") problems.push(`the buyer's release check: ${holder}`)
+        const without = capability(users.read, ids.agreementId)
+        if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's release check: ${without || "accepted"}`)
+        const otherOrganization = capability(users.buyer, ids.otherAgreementId)
+        if (!otherOrganization.includes("RECORD_UNAVAILABLE"))
+            problems.push(`another organization's agreement: ${otherOrganization || "accepted"}`)
+        const link = asUser(
+            users.read,
+            () =>
+                invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.party.agreement.Agreement",
+                    id: ids.agreementId
+                }).url || null
+        )
+        if (link !== "/qapps/Purchasing/Agreements/AgreementDetail?agreementId=" + ids.agreementId)
+            problems.push(`the agreement's link: ${link}`)
         return {problems}
     },
     then({problems}) {

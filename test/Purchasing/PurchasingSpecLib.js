@@ -25,7 +25,11 @@ const ids = {
     receiptOrderId: "BOSS_PUR_PO_RCV",
     receiptId: "BOSS_PUR_RCV_SHIP",
     // P9: Retail's order from Brightline, sent and not acknowledged
-    ackOrderId: "BOSS_PUR_PO_ACK"
+    ackOrderId: "BOSS_PUR_PO_ACK",
+    // P13: Retail's active blanket agreement with Ziddleman, its template, and Ziziwork Services' draft agreement
+    agreementId: "BOSS_PUR_AGR_A",
+    templateAgreementId: "BOSS_PUR_AGR_TPL",
+    otherAgreementId: "BOSS_PUR_AGR_SVC"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -163,7 +167,10 @@ function routeFixtures() {
         "Returns/ReturnAuthorization": {parameters: {returnId: "BOSS_PUR_NO_RETURN"}, text: "not available"},
         // P9: the acknowledgements, and the sent order's change (none started: Start a change)
         "Orders/Acknowledgements": {parameters: {}, text: "Acknowledgements"},
-        "Orders/OrderChanges": {parameters: {orderId: ids.ackOrderId}, text: "Start a change"}
+        "Orders/OrderChanges": {parameters: {orderId: ids.ackOrderId}, text: "Start a change"},
+        // P13: the agreements and Retail's blanket agreement
+        "Agreements/AgreementList": {parameters: {}, text: "Agreements"},
+        "Agreements/AgreementDetail": {parameters: {agreementId: ids.agreementId}, text: "Widget blanket"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

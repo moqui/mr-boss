@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AgreementDetail (design-purchasing §7 AgreementDetail; style-guide §3.3 Detail; impl-purchasing P13): a purchase agreement or
+    template of the user's organizations (ironstone.purchasing.AgreementServices.get#AgreementDetail). The header with its
+    status, revision and approval, value limit, released and remaining, and one primary action by state: Send for approval (a
+    draft or a changed active agreement, a buyer: submit#PurchaseAgreement), Approve (a purchase approver whose step waits:
+    decide#PurchaseApproval with the agreementId) or Release (an active agreement at its approved revision:
+    release#PurchaseAgreement, template/PurchasingAgreementRelease.xml); More holds Edit agreement, Print, Print as of a date
+    and time (get#PurchaseAgreementPrint), Refuse, New agreement from a template, Close and Cancel. Then AgreementItems (each
+    item's caps, tolerance, price and balance, with Add item, Edit, End or Remove and its PriceExplain link), AgreementTerms
+    (Add term, End or Remove), AgreementReleases (each release's order and line, revision, ordered, cancelled and received
+    quantities and value), the signers, the approval (its steps and decisions), AgreementFiles (the approved PDFs and other
+    files, through create#AgreementContent) and History (the audit log). Each write checks the agreement with
+    AccessServices.check#Record, then calls the Mantle service, which checks its permission and the organization again. A
+    key-field change counts the agreement's revision and, on an active agreement, waits for its approval before the next
+    release. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreement" default-menu-include="false">
+    <parameter name="agreementId" required="true"/>
+    <!-- the time a print as of was asked for -->
+    <parameter name="printAsOf"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition-include name="releaseAgreement" location="component://mr-boss/template/PurchasingAgreementRelease.xml"/>
+    <transition name="updateAgreement">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement" out-map="stored"
+                    in-map="{agreementId:agreementId, otherPartyId:otherPartyId || null, description:description,
+                        textData:textData, fromDate:fromDate || null, thruDate:thruDate || null,
+                        currencyUomId:currencyUomId || null, changeReason:changeReason || null}"/>
+            <message type="success">${stored.revised ? 'Saved as revision ' + stored.agreementRevision : 'Saved'}</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeItem">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#AgreementItem" out-map="stored"
+                    in-map="{agreementId:agreementId, agreementItemSeqId:agreementItemSeqId || null, productId:productId || null,
+                        quantity:quantity, amountCap:amountCap, releaseTolerancePercent:releaseTolerancePercent,
+                        price:price || null, fromDate:fromDate || null, thruDate:thruDate || null, itemText:itemText,
+                        changeReason:changeReason || null}"/>
+            <message type="success">${stored.revised ? 'Item saved; the agreement is at revision ' + stored.agreementRevision : 'Item saved'}</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endItem">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#AgreementItem"
+                    in-map="{agreementId:agreementId, agreementItemSeqId:agreementItemSeqId, remove:remove == 'true',
+                        thruDate:remove == 'true' ? null : ec.user.nowTimestamp, changeReason:changeReason || null}"/>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeTerm">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement"
+                    in-map="{agreementId:agreementId, changeReason:changeReason || null, terms:[{agreementTermId:agreementTermId || null,
+                        termTypeEnumId:termTypeEnumId || null, settlementTermId:settlementTermId || null, termText:termText,
+                        termNumber:termNumber, agreementItemSeqId:termItemSeqId || null, fromDate:fromDate || null,
+                        thruDate:thruDate || null}]}"/>
+            <message type="success">Term saved</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endTerm">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement"
+                    in-map="{agreementId:agreementId, terms:[remove == 'true' ? {agreementTermId:agreementTermId, remove:true}
+                        : {agreementTermId:agreementTermId, thruDate:ec.user.nowTimestamp}]}"/>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeSigner">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement"
+                    in-map="{agreementId:agreementId, parties:[{partyId:partyId, roleTypeId:roleTypeId || 'AgreementSigner',
+                        remove:remove == 'true'}]}"/>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="submitAgreement">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.submit#PurchaseAgreement" in-map="{agreementId:agreementId}"
+                    out-map="submitted"/>
+            <message type="success">Sent for approval (${submitted.pendingStepText})</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideAgreement">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'approve'}"/>
+            <service-call name="mantle.order.PurchaseServices.decide#PurchaseApproval" out-map="decided"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision || null,
+                        decision:decision == 'refuse' ? 'refuse' : 'approve', reason:reason, operationKey:operationKey || null}"/>
+            <message type="success">${decision == 'refuse' ? 'Refused' : decided.pendingStepText ? 'Approved; waiting for '
+                + decided.pendingStepText : 'Approved; the agreement is active at revision ' + decided.agreementRevision}</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="changeStatus">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement"
+                    in-map="{agreementId:agreementId, statusId:statusId, changeReason:changeReason || null}"/>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="newFromTemplate">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <entity-find-one entity-name="mantle.party.agreement.Agreement" value-field="template" disable-authz="true"/>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement" out-map="stored"
+                    in-map="{organizationPartyId:template.organizationPartyId, templateAgreementId:agreementId,
+                        otherPartyId:otherPartyId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+            <set field="agreementId" from="stored.agreementId"/>
+            <message type="success">Created agreement ${agreementId} from the template</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the print as of a time: a link form back to the agreement with the time, whose page then offers the PDF -->
+    <transition name="asOf">
+        <default-response url=".">
+            <parameter name="agreementId"/>
+            <parameter name="printAsOf"/>
+        </default-response>
+    </transition>
+    <transition name="printAgreement" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId}"/>
+            <service-call name="mantle.party.AgreementServices.get#PurchaseAgreementPrint" out-map="printed"
+                    in-map="{agreementId:agreementId, asOfDate:asOfDate || null}"/>
+            <script>
+                const bytes = ec.resource.xslFoTransform(printed.printHtml, null, null, 'application/pdf')
+                ec.web.response.setContentType('application/pdf')
+                ec.web.response.setHeader('Content-Disposition', 'inline; filename="' + printed.fileName + '"')
+                ec.web.response.getOutputStream().write(bytes)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="agreementContent" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId}"/>
+            <entity-find-one entity-name="mantle.party.agreement.AgreementContent" value-field="content" disable-authz="true"/>
+            <if condition="content?.agreementId != agreementId || !content?.contentLocation">
+                <return error="true" message="The file is not on agreement ${agreementId}"/></if>
+            <!-- the approved PDF shows the prices: only to a user who sees the amounts (§2) -->
+            <set field="can" from="purchasing.capabilities"/>
+            <if condition="content.contentTypeEnumId == 'AcntApprovedVersion' &amp;&amp; !(can.buy || can.approve || can.orderApprove
+                    || can.supplierPriceRead || can.financialRead)">
+                <return error="true" message="PERMISSION_DENIED: The approved agreement shows its prices, which are withheld from you"/></if>
+            <script>ec.web.sendResourceResponse(content.contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="uploadFile">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.create#AgreementContent"
+                    in-map="{agreementId:agreementId, contentFile:contentFile, contentTypeEnumId:contentTypeEnumId || 'AcntSupporting',
+                        description:description || null}"/>
+            <message type="success">File added</message>
+        </actions>
+        <default-response url="."><parameter name="agreementId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.AgreementServices.get#AgreementDetail" out-map="detail" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, agreementId:agreementId}"/>
+        <set field="found" from="!!detail?.agreementFound"/>
+        <if condition="found">
+            <set field="agr" from="detail.agreement"/>
+            <set field="act" from="detail.actions"/>
+            <set field="approval" from="detail.approval"/>
+            <set field="primaryAction" from="act.approve ? 'approve' : act.submit ? 'submit' : act.release ? 'release' : null"/>
+            <set field="headerValue" from="{agreementId:agreementId, otherPartyId:agr.supplierPartyId, description:agr.description,
+                    textData:agr.textData, fromDate:agr.fromDate, thruDate:agr.thruDate, currencyUomId:agr.currencyUomId}"/>
+            <set field="itemValue" from="{agreementId:agreementId, releaseTolerancePercent:'0'}"/>
+            <set field="termValue" from="{agreementId:agreementId}"/>
+            <set field="decisionValue" from="{agreementId:agreementId, agreementRevision:String(agr.agreementRevision),
+                    operationKey:'agr-approve-' + ec.user.randomString(24)}"/>
+            <set field="releaseShown" from="act.release"/>
+            <set field="releaseFixed" from="true"/>
+            <set field="releaseValue" from="{agreementId:agreementId, agreementRevision:String(agr.agreementRevision),
+                    operationKey:'agr-release-' + ec.user.randomString(24), quantity:'1'}"/>
+            <set field="printUrl" from="sri.buildUrl('printAgreement').addParameters({agreementId:agreementId}).getUrlWithParams()"/>
+            <set field="printAsOfUrl" from="printAsOf ? sri.buildUrl('printAgreement')
+                    .addParameters({agreementId:agreementId, asOfDate:printAsOf}).getUrlWithParams() : null"/>
+            <set field="contentUrl" from="sri.buildUrl('agreementContent').path + '?agreementId=' + encodeURIComponent(agreementId)
+                    + '&amp;agreementContentId='"/>
+            <set field="explainUrl" from="sharedLinks['Suppliers/PriceExplain']"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="AgreementMissing" condition="!found">
+            <widgets>
+                <context title="Agreement ${agreementId}"/>
+                <container-box>
+                    <box-header title="Agreement ${agreementId} is not available"/>
+                    <box-body>
+                        <label type="p" text="It does not exist, or it is not one of your organizations' agreements."/>
+                        <link url="../AgreementList" text="All agreements" link-type="anchor-button"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="AgreementFound" condition="found">
+            <widgets>
+                <context record-entity="mantle.party.agreement.Agreement" record-id="${agreementId}"
+                        title="Agreement ${agreementId} · ${agr.supplierName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${agr.template ? 'Template' : 'Agreement'} ${agreementId}" type="h5"/>
+                                <label text="${agr.supplierName}" type="span" style="text-subtitle1 m-muted"/>
+                            </container>
+                            <label text="${[agr.description, agr.organizationName, agr.validityText, agr.currencyUomId,
+                                    agr.revisionText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${agr.statusColor}">${
+                                    WebUtilities.encodeHtml(agr.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: agr.statusText})}]]></text>
+                                <text type="html">${agr.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="submitAgreement" link-type="hidden-form" text="Send for approval" icon="sym_o_send"
+                                    btn-type="primary" condition="primaryAction == 'submit'" parameter-map="{agreementId:agreementId}"
+                                    confirmation="Send agreement ${agreementId} revision ${agr.agreementRevision} for approval?"/>
+                            <container-dialog id="AgreementApprove" button-text="Approve" icon="sym_o_approval" type="primary"
+                                    width="520" title="Approve agreement ${agreementId}" condition="primaryAction == 'approve'">
+                                <form-single name="ApproveAgreement" transition="decideAgreement" map="decisionValue">
+                                    <field name="agreementId"><default-field><hidden/></default-field></field>
+                                    <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Note"><text-area rows="2"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Approve revision ${agr.agreementRevision}"><submit/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <section-include name="PurchasingAgreementReleaseDialog"
+                                    location="component://mr-boss/template/PurchasingAgreementRelease.xml"/>
+                            <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" link-type="anchor-button"
+                                    target-window="_blank" condition="act.print"/>
+                            <button-menu text="More" icon="more_horiz" condition="act.edit || act.print || act.approve || act.close
+                                    || act.cancel || act.fromTemplate">
+                                <container-dialog id="AgreementEdit" button-text="Edit agreement" icon="sym_o_edit" width="720"
+                                        title="Edit agreement ${agreementId}" condition="act.edit">
+                                    <form-single name="EditAgreement" transition="updateAgreement" map="headerValue">
+                                        <field name="agreementId"><default-field><hidden/></default-field></field>
+                                        <field name="otherPartyId">
+                                            <default-field title="Supplier">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'suppliers', selected:headerValue.otherPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="currencyUomId">
+                                            <default-field title="Currency">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'currencies', selected:headerValue.currencyUomId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                        <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                        <field name="textData"><default-field title="Text"><text-area rows="4"/></default-field></field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason for the change"><text-line/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="otherPartyId"/><field-ref name="currencyUomId"/></field-row>
+                                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                            <field-ref name="description"/>
+                                            <field-ref name="textData"/>
+                                            <field-ref name="changeReason"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted" condition="agr.statusId == 'AgmStActive'"
+                                            text="A change of the supplier, dates or currency is a new revision: the agreement takes no
+                                                release until it is approved."/>
+                                </container-dialog>
+                                <container-dialog id="AgreementPrintAsOf" button-text="Print as of" icon="sym_o_history"
+                                        width="440" title="Print agreement ${agreementId} as of" condition="act.print">
+                                    <form-single name="AgreementAsOf" transition="asOf">
+                                        <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                        <field name="printAsOf"><default-field title="Date and time"><date-time/></default-field></field>
+                                        <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="AgreementRefuse" button-text="Refuse" icon="sym_o_block" width="520"
+                                        title="Refuse agreement ${agreementId}" condition="act.approve">
+                                    <form-single name="RefuseAgreement" transition="decideAgreement" map="decisionValue">
+                                        <field name="agreementId"><default-field><hidden/></default-field></field>
+                                        <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                                        <field name="decision" from="'refuse'"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Refuse"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="AgreementFromTemplate" button-text="New agreement from this template"
+                                        icon="sym_o_content_copy" width="560" title="New agreement from template ${agreementId}"
+                                        condition="act.fromTemplate">
+                                    <form-single name="AgreementFromTemplate" transition="newFromTemplate">
+                                        <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                        <field name="otherPartyId">
+                                            <default-field title="Supplier" tooltip="Empty takes the template's supplier">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'suppliers'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Create draft"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="changeStatus" link-type="hidden-form" text="Close agreement" icon="sym_o_lock"
+                                        condition="act.close" parameter-map="{agreementId:agreementId, statusId:'AgmStClosed'}"
+                                        confirmation="Close agreement ${agreementId}? It takes no more releases; its orders stay."/>
+                                <container-dialog id="AgreementCancel" button-text="Cancel agreement" icon="sym_o_cancel"
+                                        width="520" title="Cancel agreement ${agreementId}" condition="act.cancel">
+                                    <form-single name="CancelAgreement" transition="changeStatus">
+                                        <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                        <field name="statusId" from="'AgmStCancelled'"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason"><text-line required="true"/></default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Cancel agreement"><submit type="danger"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </button-menu>
+                        </container>
+                    </container>
+                </container>
+                <section name="AgreementAsOf" condition="printAsOfUrl">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Print as of ${printAsOf}"/>
+                            <box-body>
+                                <link url="${printAsOfUrl}" url-type="plain" text="Open the print as of ${printAsOf}"
+                                        icon="sym_o_picture_as_pdf" link-type="anchor-button" target-window="_blank"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="${agr.template ? 'A template has no balance: start an agreement from it' : 'Balance'}"/>
+                    <box-body>
+                        <container style="row q-col-gutter-md" condition="!agr.template">
+                            <label text="Limit ${agr.limitText}" type="div" style="col-auto"/>
+                            <label text="Released ${agr.releasedText}" type="div" style="col-auto"/>
+                            <label text="Remaining ${agr.remainingText}" type="div" style="col-auto" condition="agr.remainingText"/>
+                        </container>
+                        <label text="${agr.releaseRefusalText}" type="p" style="text-caption m-muted q-mb-none"
+                                condition="agr.releaseRefusalText &amp;&amp; !agr.template"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Items · ${detail.itemRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AgreementAddItem" button-text="Add item" icon="sym_o_add" width="720"
+                                title="Add an item to agreement ${agreementId}" condition="act.edit">
+                            <form-single name="AddAgreementItem" transition="storeItem" map="itemValue">
+                                <field name="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'orderProducts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="quantity"><default-field title="Quantity cap"><text-line size="8"/></default-field></field>
+                                <field name="price"><default-field title="Price"><text-line size="10"/></default-field></field>
+                                <field name="amountCap">
+                                    <default-field title="Value cap" tooltip="Empty is no value cap"><text-line size="10"/></default-field>
+                                </field>
+                                <field name="releaseTolerancePercent">
+                                    <default-field title="Release tolerance %"><text-line size="5"/></default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                <field name="itemText"><default-field title="Text"><text-line/></default-field></field>
+                                <field name="submitButton"><default-field title="Add item"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="productId"/><field-ref name="price"/></field-row>
+                                    <field-row><field-ref name="quantity"/><field-ref name="amountCap"/></field-row>
+                                    <field-row><field-ref name="releaseTolerancePercent"/><field-ref name="itemText"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="AgreementItems" list="detail.itemRows" skip-form="true" paginate="false">
+                            <field name="productText">
+                                <default-field title="Item">
+                                    <display text="${agreementItemSeqId} · ${productText}"/>
+                                    <label text="${[itemText, stateText].filter(Boolean).join(' · ')}" type="div"
+                                            style="text-caption m-muted" condition="itemText || stateText"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="priceText" align="right"><default-field title="Price"><display/></default-field></field>
+                            <field name="amountCapText" align="right"><default-field title="Value cap"><display/></default-field></field>
+                            <field name="toleranceText" align="right"><default-field title="Tolerance"><display/></default-field></field>
+                            <field name="releasedText" align="right"><default-field title="Released"><display/></default-field></field>
+                            <field name="remainingText" align="right"><default-field title="Remaining"><display/></default-field></field>
+                            <field name="datesText"><default-field title="Valid"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="${explainUrl}" text="Explain price" link-type="anchor" condition="productId"
+                                            parameter-map="{productId:productId, vendorPartyId:agr.supplierPartyId,
+                                                customerPartyId:agr.organizationPartyId, organizationPartyId:agr.organizationPartyId,
+                                                direction:'purchase', priceUomId:agr.currencyUomId, quantity:'1',
+                                                agreementId:agreementId, agreementItemSeqId:agreementItemSeqId}"/>
+                                    <container-dialog id="AgreementEditItem_${agreementItemSeqId}" button-text="Edit" icon="sym_o_edit"
+                                            width="720" title="Edit item ${agreementItemSeqId}" condition="act.edit">
+                                        <form-single name="EditAgreementItem_${agreementItemSeqId}" transition="storeItem">
+                                            <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                            <field name="agreementItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="quantity"><default-field title="Quantity cap"><text-line size="8"/></default-field></field>
+                                            <field name="price"><default-field title="Price"><text-line size="10"/></default-field></field>
+                                            <field name="amountCap"><default-field title="Value cap"><text-line size="10"/></default-field></field>
+                                            <field name="releaseTolerancePercent">
+                                                <default-field title="Release tolerance %"><text-line size="5"/></default-field>
+                                            </field>
+                                            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                            <field name="itemText"><default-field title="Text"><text-line/></default-field></field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change"><text-line/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save item"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="quantity"/><field-ref name="price"/></field-row>
+                                                <field-row><field-ref name="amountCap"/><field-ref name="releaseTolerancePercent"/></field-row>
+                                                <field-row><field-ref name="thruDate"/><field-ref name="itemText"/></field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="endItem" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger"
+                                            condition="act.edit &amp;&amp; inEffect"
+                                            parameter-map="{agreementId:agreementId, agreementItemSeqId:agreementItemSeqId}"
+                                            confirmation="End item ${agreementItemSeqId} now? It takes no more releases."/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productText"/><field-ref name="quantityText"/></column>
+                                <column><field-ref name="remainingText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!detail.itemRows.length"
+                                text="${act.edit ? 'No items yet. Add the products the agreement covers with Add item.' : 'This agreement has no items.'}"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Terms · ${detail.termRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AgreementAddTerm" button-text="Add term" icon="sym_o_add" width="640"
+                                title="Add a term to agreement ${agreementId}" condition="act.edit">
+                            <form-single name="AddAgreementTerm" transition="storeTerm" map="termValue">
+                                <field name="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="termTypeEnumId">
+                                    <default-field title="Term">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'termTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="settlementTermId">
+                                    <default-field title="Payment term">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" min-length="0" parameter-map="{choice:'settlementTerms'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="termItemSeqId">
+                                    <default-field title="Item" tooltip="Empty for every item">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" min-length="0"
+                                                    parameter-map="{choice:'agreementItems', agreementId:agreementId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="termNumber"><default-field title="Value"><text-line size="8"/></default-field></field>
+                                <field name="termText"><default-field title="Text"><text-area rows="2"/></default-field></field>
+                                <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add term"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="termTypeEnumId"/><field-ref name="settlementTermId"/></field-row>
+                                    <field-row><field-ref name="termItemSeqId"/><field-ref name="termNumber"/></field-row>
+                                    <field-ref name="termText"/>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="AgreementTerms" list="detail.termRows" skip-form="true" paginate="false">
+                            <field name="typeText"><default-field title="Term"><display/></default-field></field>
+                            <field name="itemText"><default-field title="Applies to"><display/></default-field></field>
+                            <field name="settlementText"><default-field title="Payment term"><display/></default-field></field>
+                            <field name="numberText" align="right"><default-field title="Value"><display/></default-field></field>
+                            <field name="termText"><default-field title="Text"><display/></default-field></field>
+                            <field name="datesText"><default-field title="Valid"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="endTerm" link-type="hidden-form" text="End" icon="sym_o_event_busy" btn-type="danger"
+                                            condition="act.edit &amp;&amp; inEffect"
+                                            parameter-map="{agreementId:agreementId, agreementTermId:agreementTermId}"
+                                            confirmation="End this term now?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="typeText"/><field-ref name="termText"/></column>
+                                <column><field-ref name="datesText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!detail.termRows.length"
+                                text="No terms. The supplier's buying profile and the purchase orders' own terms apply."/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="AgreementReleases" condition="!agr.template">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Releases · ${detail.releaseRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="AgreementReleaseList" list="detail.releaseRows" skip-form="true" paginate="false">
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId} / ${orderItemSeqId}"
+                                                    link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                            <label text="${orderStatusText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="agreementItemSeqId"><default-field title="Item"><display/></default-field></field>
+                                    <field name="agreementRevision"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="releaseDateText"><default-field title="Released"><display/></default-field></field>
+                                    <field name="releasedQuantityText" align="right">
+                                        <default-field title="Quantity"><display/></default-field>
+                                    </field>
+                                    <field name="orderedText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="cancelledText" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                                    <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Value"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderId"/><field-ref name="releasedQuantityText"/></column>
+                                        <column><field-ref name="receivedText"/><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!detail.releaseRows.length"
+                                        text="Nothing released yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="AgreementApproval" condition="!agr.template &amp;&amp; (approval || detail.decisionRows.length)">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-pa-sm q-mb-none" condition="approval?.currentStepText &amp;&amp; agr.pending"
+                                        text="Waiting for ${approval.currentStepText}${approval.refusalText ? ' · ' + approval.refusalText : ''}"/>
+                                <form-list name="AgreementApprovalSteps" list="approval?.stepRows || []" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="approverText"><default-field title="Approver"><display/></default-field></field>
+                                    <field name="state"><default-field title="State"><display/></default-field></field>
+                                    <field name="approvedByText"><default-field title="Approved by"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="AgreementDecisions" list="detail.decisionRows" skip-form="true" paginate="false">
+                                    <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="byText"><default-field title="By"><display/></default-field></field>
+                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="supersededText"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="revisionText"/><field-ref name="decisionText"/></column>
+                                        <column><field-ref name="byText"/><field-ref name="dateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Signers and parties"/>
+                    <box-toolbar>
+                        <container-dialog id="AgreementAddSigner" button-text="Add signer" icon="sym_o_draw" width="520"
+                                title="Add a signer to agreement ${agreementId}" condition="act.edit">
+                            <form-single name="AddAgreementSigner" transition="storeSigner">
+                                <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="partyId">
+                                    <default-field title="Person">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'agreementSigners', agreementId:agreementId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add signer"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="AgreementParties" list="detail.partyRows" skip-form="true" paginate="false">
+                            <field name="partyName"><default-field title="Party"><display/></default-field></field>
+                            <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="storeSigner" link-type="hidden-form" text="Remove" icon="sym_o_close"
+                                            condition="act.edit"
+                                            parameter-map="{agreementId:agreementId, partyId:partyId, roleTypeId:roleTypeId, remove:'true'}"
+                                            confirmation="Remove ${partyName} from the agreement?"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!detail.partyRows.length"
+                                text="No signers recorded."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Files"/>
+                    <box-toolbar>
+                        <container-dialog id="AgreementUpload" button-text="Add file" icon="sym_o_upload_file" width="520"
+                                title="Add a file to agreement ${agreementId}" condition="act.upload">
+                            <form-single name="AgreementUploadFile" transition="uploadFile">
+                                <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                <field name="contentFile"><default-field title="File"><file/></default-field></field>
+                                <field name="contentTypeEnumId">
+                                    <default-field title="Kind">
+                                        <drop-down allow-empty="false">
+                                            <option key="AcntDocument" text="Agreement document"/>
+                                            <option key="AcntSupporting" text="Supporting document"/>
+                                            <option key="AcntPriceSheet" text="Price sheet"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                <field name="submitButton"><default-field title="Add file"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="AgreementFiles" list="detail.contentRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="File">
+                                    <link url="${contentUrl}${agreementContentId}" url-type="plain" text="${description}"
+                                            link-type="anchor" target-window="_blank" condition="canOpen"/>
+                                    <label text="${description} (withheld)" condition="!canOpen"/>
+                                </default-field>
+                            </field>
+                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="dateText"><default-field title="Stored"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/></column>
+                                <column><field-ref name="dateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!detail.contentRows.length"
+                                text="No files. The approved agreement's PDF is stored here when it is approved."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="History"/>
+                    <box-body-nopad>
+                        <form-list name="AgreementHistory" list="detail.historyRows" skip-form="true" paginate="false">
+                            <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                            <field name="whatText"><default-field title="Changed"><display/></default-field></field>
+                            <field name="fieldText"><default-field title="Field"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                            <field name="userText"><default-field title="By"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="changedDateText"/><field-ref name="fieldText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="toText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

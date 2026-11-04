@@ -636,6 +636,8 @@ along with this software (see the LICENSE.md file). If not, see
                         <section-include name="PurchasingOrderDropShip" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
                         <!-- P8: the order's supplier returns -->
                         <section-include name="PurchasingOrderReturns" location="component://mr-boss/template/PurchasingOrderReturns.xml"/>
+                        <!-- P13: the agreement releases on the order -->
+                        <section-include name="PurchasingOrderAgreements" location="component://mr-boss/template/PurchasingOrderAgreements.xml"/>
                         <container-box>
                             <box-header title="Documents and emails"/>
                             <box-body-nopad>

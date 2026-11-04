@@ -176,4 +176,32 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.OrderItem orderId="BOSS_PUR_PO_ACK" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
             productId="DEMO_1_1" itemDescription="Demo product one-one" quantity="20" unitAmount="10"
             requiredByDate="2026-11-20 00:00:00"/>
+
+    <!-- P13: Retail's blanket agreement with Ziddleman for DEMO_1_1 (100 units, $1,000.00, 5% tolerance, $9.00 a unit),
+        active at its approved revision 1, so AgreementDetail releases from it; a sourcing template of Retail's; and Ziziwork
+        Services' draft agreement with its own supplier (another organization's, for the access checks) -->
+    <mantle.party.agreement.Agreement agreementId="BOSS_PUR_AGR_A" agreementTypeEnumId="AgrPurchase" statusId="AgmStActive"
+            organizationPartyId="ORG_ZIZI_RETAIL" organizationRoleTypeId="OrgInternal" otherPartyId="ZiddlemanInc"
+            otherRoleTypeId="Supplier" agreementDate="2026-10-01 00:00:00" fromDate="2026-10-01 00:00:00"
+            thruDate="2027-10-01 00:00:00" currencyUomId="USD" description="Widget blanket 2026-27" isTemplate="N"
+            agreementRevision="1" revisionDate="2026-10-01 00:00:00" approvedRevision="1" approvedDate="2026-10-01 00:00:00"/>
+    <mantle.party.agreement.AgreementItem agreementId="BOSS_PUR_AGR_A" agreementItemSeqId="01" agreementItemTypeEnumId="AitPurchase"
+            productId="DEMO_1_1" quantity="100" quantityUomId="OTH_ea" amountCap="1000" releaseTolerancePercent="5"
+            fromDate="2026-10-01 00:00:00"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_PUR_AGR_A_01" productId="DEMO_1_1" vendorPartyId="ZiddlemanInc"
+            customerPartyId="ORG_ZIZI_RETAIL" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptCurrent" priceUomId="USD"
+            quantityUomId="OTH_ea" minQuantity="0" price="9" agreementId="BOSS_PUR_AGR_A" agreementItemSeqId="01"
+            fromDate="2026-10-01 00:00:00"/>
+    <mantle.party.agreement.AgreementTerm agreementTermId="BOSS_PUR_AGR_A_T1" agreementId="BOSS_PUR_AGR_A"
+            termTypeEnumId="TtFinPaymentDays" termNumber="30" termText="Net 30 on each release" fromDate="2026-10-01 00:00:00"/>
+    <mantle.party.agreement.Agreement agreementId="BOSS_PUR_AGR_TPL" agreementTypeEnumId="AgrPurchase" statusId="AgmStDraft"
+            organizationPartyId="ORG_ZIZI_RETAIL" organizationRoleTypeId="OrgInternal" otherPartyId="ZiddlemanInc"
+            otherRoleTypeId="Supplier" agreementDate="2026-10-01 00:00:00" currencyUomId="USD"
+            description="Standard widget terms (template)" isTemplate="Y" agreementRevision="1" revisionDate="2026-10-01 00:00:00"/>
+    <mantle.party.agreement.AgreementItem agreementId="BOSS_PUR_AGR_TPL" agreementItemSeqId="01" agreementItemTypeEnumId="AitPurchase"
+            productId="DEMO_1_1" quantity="50" quantityUomId="OTH_ea" releaseTolerancePercent="5"/>
+    <mantle.party.agreement.Agreement agreementId="BOSS_PUR_AGR_SVC" agreementTypeEnumId="AgrPurchase" statusId="AgmStDraft"
+            organizationPartyId="ORG_ZIZI_SERVICES" organizationRoleTypeId="OrgInternal" otherPartyId="BOSS_PUR_SUP_SVC_ORG"
+            otherRoleTypeId="Supplier" agreementDate="2026-10-01 00:00:00" fromDate="2026-10-01 00:00:00" currencyUomId="USD"
+            description="Services paper supply" isTemplate="N" agreementRevision="1" revisionDate="2026-10-01 00:00:00"/>
 </entity-facade-xml>

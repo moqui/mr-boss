@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReleaseAgreement (design-purchasing §7 AgreementDetail, §6 CreatePurchaseOrder's agreement release; impl-purchasing P13):
+    a buyer's release of an active agreement's item to a new draft purchase order, through
+    mantle.party.AgreementServices.release#PurchaseAgreement (at the agreement's price, refused over the remaining quantity or
+    value beyond the item's tolerance, under a lock on the agreement), after AccessServices.check#Record with the buy
+    capability; it opens the draft in OrderDetail. Included by name: the transition releaseAgreement and the section
+    PurchasingAgreementReleaseDialog, a dialog button for a header's actions. On AgreementDetail the agreement is fixed
+    (releaseValue.agreementId set, releaseFixed true); on PurchaseOrders the buyer chooses an active agreement, of a supplier
+    when one is chosen first. The screen sets releaseValue and releaseShown; it needs the choices transition (PurchasingParts). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="releaseAgreement">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'agreement', recordId:agreementId, capability:'buy'}"/>
+            <service-call name="mantle.party.AgreementServices.release#PurchaseAgreement" out-map="released"
+                    in-map="{agreementId:agreementId, agreementRevision:agreementRevision || null,
+                        agreementItemSeqId:agreementItemSeqId, quantity:quantity, facilityId:facilityId || null,
+                        requiredByDate:requiredByDate || null, operationKey:operationKey || null}"/>
+            <set field="orderId" from="released.orderId"/>
+            <message type="success">Released to draft purchase order ${orderId}${released.overCap ? ', within the tolerance over the cap' : ''}; place it when ready</message>
+        </actions>
+        <default-response url="${sharedLinks['Orders/OrderDetail']}">
+            <parameter name="orderId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingAgreementReleaseDialog" condition="releaseShown">
+            <widgets>
+                <container-dialog id="ReleaseAgreementDialog" button-text="Release from agreement" icon="sym_o_call_split"
+                        width="640" title="Release to a draft purchase order">
+                    <form-single name="ReleaseAgreement" transition="releaseAgreement" map="releaseValue">
+                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="agreementRevision"><default-field><hidden/></default-field></field>
+                        <field name="vendorPartyId">
+                            <conditional-field condition="!releaseFixed" title="Supplier"
+                                    tooltip="Narrows the agreements to this supplier's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers'}"/>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field name="agreementId">
+                            <conditional-field condition="releaseFixed"><hidden/></conditional-field>
+                            <default-field title="Agreement">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            depends-optional="true" parameter-map="{choice:'releaseAgreements'}">
+                                        <depends-on field="vendorPartyId" parameter="partyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="agreementItemSeqId">
+                            <default-field title="Item" tooltip="With what it has left">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="false" min-length="0"
+                                            parameter-map="{choice:'agreementItems'}">
+                                        <depends-on field="agreementId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quantity">
+                            <default-field title="Quantity"><text-line size="8"/></default-field>
+                        </field>
+                        <field name="requiredByDate">
+                            <default-field title="Need by"><date-time type="date"/></default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field title="Receive at" tooltip="Empty takes the buying policy's receiving facility">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'planFacilities'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Release to a draft order"><submit/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="vendorPartyId"/>
+                                <field-ref name="agreementId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="agreementItemSeqId"/>
+                                <field-ref name="quantity"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="requiredByDate"/>
+                                <field-ref name="facilityId"/>
+                            </field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted"
+                            text="The line takes the agreement's price. A release over what the item has left is refused unless
+                                it stays within the item's tolerance; an expired or changed agreement waiting for its approval
+                                takes none."/>
+                </container-dialog>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

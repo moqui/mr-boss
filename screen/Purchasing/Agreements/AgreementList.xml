@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Agreements (design-purchasing §7 Agreements; style-guide §3.2 List; impl-purchasing P13): AgreementFind and AgreementList
+    over ironstone.purchasing.AgreementServices.find#Agreements (the purchase agreements and templates of the user's
+    organizations by view: Active, Expiring in 30 days, Exhausted, Draft and awaiting approval, Templates, Expired, closed and
+    cancelled; with each one's value limit, released and remaining), with saved finds; and NewAgreement: a buyer's
+    (PURCHASE_ORDER_EDIT) blanket agreement or sourcing template through mantle.party.AgreementServices.store#PurchaseAgreement,
+    started from a template when one is chosen (its items, prices and terms; never its releases). It opens the new agreement in
+    AgreementDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agreements" default-menu-index="1">
+    <parameter name="view"/>
+    <parameter name="vendorPartyId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="statusId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="newAgreement">
+        <actions>
+            <if condition="!purchasing.capabilities.buy">
+                <return error="true" message="PERMISSION_DENIED: PURCHASE_ORDER_EDIT is required"/></if>
+            <if condition="templateAgreementId">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'agreement', recordId:templateAgreementId, capability:'buy'}"/>
+            </if>
+            <service-call name="mantle.party.AgreementServices.store#PurchaseAgreement" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, otherPartyId:otherPartyId || null,
+                        templateAgreementId:templateAgreementId || null, isTemplate:isTemplate == 'Y' ? 'Y' : 'N',
+                        description:description || null, fromDate:fromDate || null, thruDate:thruDate || null,
+                        currencyUomId:currencyUomId || null}"/>
+            <set field="agreementId" from="stored.agreementId"/>
+            <message type="success">Created agreement ${agreementId}: add its items, then send it for approval</message>
+        </actions>
+        <default-response url="../AgreementDetail">
+            <parameter name="agreementId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.AgreementServices.find#Agreements" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId,
+                    statusId:statusId, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="agreementRows" from="found?.agreementRows || []"/>
+        <set field="agreementRowsCount" from="found?.agreementRowsCount"/>
+        <set field="agreementRowsPageIndex" from="found?.agreementRowsPageIndex"/>
+        <set field="agreementRowsPageSize" from="found?.agreementRowsPageSize"/>
+        <set field="agreementRowsPageMaxIndex" from="found?.agreementRowsPageMaxIndex"/>
+        <set field="agreementRowsPageRangeLow" from="found?.agreementRowsPageRangeLow"/>
+        <set field="agreementRowsPageRangeHigh" from="found?.agreementRowsPageRangeHigh"/>
+        <set field="viewLabel" from="found?.viewLabel || 'All'"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="newAgreementValues" from="{organizationPartyId:purchasing.activeOrganizationPartyId
+                || purchasing.organizationPartyIds[0] || '', isTemplate:'N'}"/>
+        <set field="viewLinks" from="[['', 'All'], ['active', 'Active'], ['expiring', 'Expiring'], ['exhausted', 'Exhausted'],
+                ['approval', 'Awaiting approval'], ['templates', 'Templates'], ['closed', 'Closed']]
+                .map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+        <set field="filtered" from="!!(view || statusId || vendorPartyId || text)"/>
+        <set field="emptyText" from="filtered ? 'No agreement matches these filters.' : (can.buy
+                ? 'No agreement yet. Start a blanket agreement or a template with New agreement.'
+                : 'Your organizations have no purchase agreement yet.')"/>
+    </actions>
+    <widgets>
+        <context title="Agreements"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Agreements" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewAgreementDialog" button-text="New agreement" type="primary" icon="sym_o_handshake"
+                        title="New supplier agreement" width="720" condition="can.buy">
+                    <form-single name="NewAgreement" transition="newAgreement" map="newAgreementValues">
+                        <field name="organizationPartyId">
+                            <default-field title="Buying organization">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:newAgreementValues.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="otherPartyId">
+                            <default-field title="Supplier" tooltip="Empty takes the template's supplier">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="templateAgreementId">
+                            <default-field title="Start from template" tooltip="Its items, prices and terms; never its releases">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'agreementTemplates'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="isTemplate">
+                            <default-field title="Kind">
+                                <radio>
+                                    <option key="N" text="Blanket agreement"/>
+                                    <option key="Y" text="Sourcing template (no balance)"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="description">
+                            <default-field title="Description">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="currencyUomId">
+                            <default-field title="Currency" tooltip="Empty takes the template's, else the buying policy's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'currencies'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="From">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="thruDate">
+                            <default-field title="Through">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Create draft">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="organizationPartyId"/>
+                                <field-ref name="otherPartyId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="templateAgreementId"/>
+                                <field-ref name="isTemplate"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="description"/>
+                                <field-ref name="currencyUomId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="fromDate"/>
+                                <field-ref name="thruDate"/>
+                            </field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="AgreementViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="AgreementList" list="agreementRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <field name="agreementId">
+                        <header-field title="Agreement" show-order-by="false"/>
+                        <default-field title="Agreement">
+                            <link url="../AgreementDetail" text="${agreementId}" link-type="anchor"
+                                    parameter-map="{agreementId:agreementId}"/>
+                            <label text="${description}" type="div" style="text-caption m-muted" condition="description"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Agreement or description">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                    </field>
+                    <field name="vendorPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Supplier">
+                            <display text="${supplierName}"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Buying organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Buyer">
+                            <display text="${organizationName}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${statusId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.StatusItem">
+                                        <econdition field-name="statusTypeId" value="Agreement"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="validityText">
+                        <default-field title="Valid">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="limitText" align="right">
+                        <default-field title="Limit">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="releasedText" align="right">
+                        <default-field title="Released">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="remainingText" align="right">
+                        <default-field title="Remaining">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="agreementId"/>
+                            <field-ref name="vendorPartyId"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusId"/>
+                            <field-ref name="remainingText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!agreementRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
