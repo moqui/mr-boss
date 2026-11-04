@@ -2028,6 +2028,37 @@ adjust#ExpectedReceipt's old callers. Fixes:
     key, and BossPurchasingDemoData loads before the users.
   - **F-P10-11** AppStructure's placeholder floor is now 56 (Requests built).
 
+**Review (Nov 4, P10).** Checked: `convert#PurchaseSourcing` (each group `convert#PurchaseSourcingGroup` in a new transaction,
+its requirements locked `forUpdate` in id order before the covered quantity is read again, so a second conversion waits and
+reads ALREADY_SOURCED; a same-key retry answers EXISTING from the operation's RequirementSupply and runs only the failed
+groups; a group's failure rolls back only its own transaction; `placeAndApproveOrders` refused, nothing placed or approved);
+the budget path (request approval reserves at BcsRequest, PO approval converts, `budgetLines` leaves request-sourced lines to
+`convertOrderCommitments`, cancel releases what is left); requester scope (list, Home count, detail, record link and Mantle's
+`own` all the filer or a non-organization party; the palette is `listRead` only; RequestSourcing and "Create purchase order"
+need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons and Projects. Fixes:
+  - R1 (medium, budget) F-P10-6 was a double count where the request's commitment kept a remainder (a line priced below its
+    maximum): a revision raising the line reserved its new amount beside the request's open remainder (request 40, PO 30 then
+    revised to 40 held 50). `convertOrderCommitments` now, for a revised line whose request commitment is still open, releases
+    the line's earlier order commitment (as `reserve#Commitment` replaces an earlier revision's) and converts the request's
+    remainder at the new revision; a line with a commitment at the current revision (a retry, a lowered line) and one whose
+    request commitment is spent go through `reserve#Commitment` as before. PurchaseRequests' PO-approval feature revises the
+    line and checks 40 held.
+  - R2 (low, approval) F-P10-2: a line with no maximum counts nothing, so it falls in the lowest band (every request still
+    needs one approval step, and the PO's own approval bands and budget reservation still apply at the PO stage). Not refused;
+    the approvers are told: the request's approval message `amountText` ("$40.00 + lines 02, 03 with no amount", the topic's
+    title) and `get#PurchaseRequestProgress` `approval.unpricedText`, shown in RequestDetail's Approval box.
+  - R3 (medium, compatibility) F-P10-5: Commons and Projects may raise a request of type RqtPurchase (QuickCreate's type
+    list; the demo's BOSS_DEMO_REQ_DRAFT) with no organization, which Purchasing cannot see or source; skipping every
+    RqtPurchase stopped a project's Purchase-type request completing from its work. `complete#RequestFromWork` now leaves
+    RqtPurchase alone only when it has an OrgInternal RequestParty (every Purchasing request); RqtPurchaseRfq and RqtInventory
+    by type (Warehouse P15's InventoryRequests.js already documents "never from linked work" for stock requests, and design
+    crosscut §3.11 says so, so nothing relied on it). The CX-REQUEST feature checks a plain project Purchase request completes.
+  - R4 (low, Projects behaviour) the shared Items tab replaced Projects' for a purchase request without its Maximum column;
+    `itemRows` gives `maximumText` and the tab shows it.
+  - Left for the lead: a request line priced below its maximum keeps the remainder reserved at BcsRequest until the request is
+    cancelled; nothing closes a fully sourced request (F-P10-9), so that remainder stays committed until P17 adds the close
+    (which should release it). No regression spec runs two conversions concurrently (the lock was checked by reading).
+
 ### P11 — RFQs and supplier quotes
 
 - **PUR-RFQ, the model** (§4; F19).
