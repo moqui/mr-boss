@@ -103,6 +103,7 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <actions>
         <set field="contextFound" from="false"/>
+        <set field="can" from="{}"/>
         <if condition="appRoot == 'Manufacturing'">
             <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" out-map="planContext"
                     in-map="{appRoot:appRoot, plantId:plantId || null}" transaction="force-new" ignore-error="true"/>
@@ -123,7 +124,12 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="demandSupply" from="plan?.demandSupply || []"/>
         <set field="selected" from="plan?.selected || null"/>
         <set field="schedule" from="plan?.schedule || {}"/>
-        <set field="convertible" from="suggestions.filter(row =&gt; row.canConvert)"/>
+        <!-- the actions shown: Mantle's answer for the user, and on a mount with its own context also that context's
+            server-derived capabilities, which its transitions check (as Shared/RequestDetail) -->
+        <set field="mayRun" from="!!plan?.canRun &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
+        <set field="maySchedule" from="!!plan?.canSchedule &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
+        <set field="convertible" from="appRoot == 'Manufacturing' &amp;&amp; !can.plan ? []
+                : suggestions.filter(row =&gt; row.canConvert)"/>
         <!-- the list's filter, apart from the rows' own method -->
         <set field="filterMethodEnumId" from="methodEnumId || null"/>
         <set field="filterExceptionsOnly" from="exceptionsOnly || null"/>
@@ -206,7 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
                             <container-dialog id="RecalculatePlanDialog" button-text="Recalculate" icon="sym_o_calculate"
                                     width="640" type="primary" title="Recalculate the supply plan of ${plan.facilityNames}"
-                                    condition="plan.canRun">
+                                    condition="mayRun">
                                 <form-single name="PlanParameters" transition="runPlan" map="{plantId:plantId}">
                                     <field name="plantId">
                                         <default-field>
@@ -236,7 +242,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <container-dialog id="PlanScheduleDialog" button-text="Schedule" icon="sym_o_event_repeat"
-                                    width="760" title="Plan schedule of ${plan.organizationName}" condition="plan.canSchedule">
+                                    width="760" title="Plan schedule of ${plan.organizationName}" condition="maySchedule">
                                 <form-single name="PlanSchedule" transition="storeSchedule" map="scheduleDefaults">
                                     <field name="plantId" from="plantId">
                                         <default-field>

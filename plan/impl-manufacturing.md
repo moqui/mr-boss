@@ -1036,6 +1036,30 @@ and service names, and `Shared/SupplyPlanning`, which Purchasing mounts when it 
   - **F-P13-8** `ManufacturingPlanningFixtures` runs in the whole mr-boss suite as Warehouse's fixtures do, adding a
     Retail sales order of its own product at ZIRET_WH (a new order id per load, since the walks' database outlives a
     run, F-P4-3).
+- **Review (Nov 3).** Fixed (mr-mantle `Manufacturing P13 review` commit, BOSS screen in this one):
+  - (high) A sales line's reservation was subtracted less its unavailable part, which reserve#AssetForOrderItem already
+    leaves as a negative available to promise, so a backordered quantity counted twice (10 ordered on 6 in stock planned
+    8); the whole reservation not issued is subtracted now, as `get#InventoryProjectedInfo`'s orderNotReserved does.
+  - (medium) A kit's line subtracted its components' reservations (component units) and its own issuances from the kit
+    quantity; issuances are now taken in kit units and reservations from each component's demand.
+  - (medium) Transfers in transit were not supply: the origin's stock leaves its available to promise at issue, so a
+    transfer on its way to a planned facility was suggested again. Each ShpTpTransfer line to a facility of the node now
+    counts its issuances less its receipts (accepted and rejected) as supply ("Transfer in transit").
+    `get#InventoryProjectedInfo` counts no transfer.
+  - (medium) `run#ScheduledSupplyPlans`: a schedule whose user could not sign in (disabled, terminated, password to
+    change) left the login's error on the job's messages, so the next write threw and the whole job failed and rolled
+    back, every 15 minutes, with no message kept; the login is in its own error frame now (SCHEDULE_USER_UNAVAILABLE on
+    that schedule, the others run), and the job logs out after the last schedule when it had no user of its own.
+  - (low) `Shared/SupplyPlanning` showed Recalculate, Schedule and Convert from Mantle's answer only; on the Manufacturing
+    mount they also need the context's server-derived capabilities (`supplyPlan`, `plan`) its transitions check.
+  - Specs: SupplyPlanning gained the reservation-and-transfer and the schedule-user features (11, pass; both fail
+    without the fixes); ManufacturingPlanning and ManufacturingAccess (61, pass); the walk ManufacturingPlanningWalk (3,
+    pass); `moqui lint --screens` informational only.
+  - Left: the identity of a scheduled run is the user who last kept the schedule. It re-checks that user's
+    SUPPLY_PLAN_RUN and organization at run time, but the run stops (named on the schedule) when that user is disabled,
+    leaves or must change a password, and whoever saves the schedule takes it over; a planner should re-save it then.
+    The Warehouse kit assembly (WepAssembling) is not shown with the kit runs; a transfer line not yet issued is
+    neither demand nor supply (its stock is still at the origin).
 
 ### P14 — Subcontracting
 
