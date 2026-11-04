@@ -264,7 +264,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
-| P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026 |
+| P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026; P14b built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
 | P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | — |
 | P17 Finish | BOSS | — | — |
@@ -2442,6 +2442,123 @@ store#ProductFacilityPolicy audits them with the change reason. Specs lean (Repl
   METHOD_INVALID on that product (SupplyPlanning.spec's last feature).
 Specs run: Mantle SupplyPlanning (11), Replenishment (6), ProductionSubcontract (8); BOSS ManufacturingPlanning (5),
 ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (11): all pass.
+
+**Built Nov 4 (P14b, the routes).**
+- Mantle, the buy conversion's routes (new `service/mantle/product/SupplyPlanningRoutes.js`, hooks in `SupplyPlanning.js`):
+  - the policy switch: `PurchasePolicy.planBuyToRequest` (new `entity/ReplenishmentRouteEntities.xml`, audit-logged, empty N;
+    PurchasePolicy.js's controls and `store#PurchasePolicy`'s parameter). `convert#PlanningSuggestions` takes `route` (order,
+    request, dropShip; the policy's when empty; order under a request policy is ROUTE_NOT_ALLOWED) and `supplierPartyId`, and
+    answers `requests`; `get#SupplyPlan` answers `buyRoute` and each row's `customerDemand`. The checks every route shares
+    (stale plan, exception, closed, `check#ProductUsable`) are `buyChecks`, and a competing conversion of any route is
+    DEMAND_ALREADY_COVERED naming the purchase order or request line.
+  - the request route: one purchase request per organization and facility in the call (`create#PurchaseRequest`,
+    `store#PurchaseRequestItem`, so their checks apply), a line per customer order line of the requirement with a
+    RequestItemOrder to it (F-P10-7) and one for the rest, at the supplier's price as the most to pay where the buyer may
+    read it, each a RequirementSupply RstPurchaseRequest on the plan's requirement; the requests are sent to approval
+    (`submit#PurchaseRequest`, each in its own transaction, a failure named and the request left a draft). The approval then
+    makes the request's own requirements and RequestSourcing sources them (P10). `cancel#PurchaseRequest` ends the request's
+    RstPurchaseRequest coverage (`releaseRequestSupply`).
+  - the drop-ship route: each customer order line of the requirement on an approved order through
+    `route#OrderItemToDropShip` (P7), its drop-ship purchase order line covering the requirement (RstPurchaseOrder); a line of
+    an order not yet approved is named in `pendingLines` (DROP_SHIP_PENDING when none moved), NO_CUSTOMER_LINE without one;
+    what is left stays to convert (PssPartial).
+  - the plan: the lines of the organization's approved purchase requests at the set's facilities, and of a submitted one a
+    conversion made, less what is ordered (RequestItemOrder to a live purchase line), are supply ("Purchase request" lines),
+    so approved request demand is not suggested again; a sales line reserved without stock is shown and pegged (kind
+    `salesWaiting`, not netted: its shortage nets as the negative availability) so customer demand keeps its sales line
+    (F-P14b-1); held quantity of a bought product nets within its supplier price's standard lead time where the schedule
+    nets held quantity (F-P14b-2; P13 had it for made products only).
+- Mantle, the receipt's reservation offer (R-PUR-37; new `service/mantle/order/PurchasePegServices.xml` over
+  `PurchasePegs.js`): `get#ReceiptPegs` (PURCHASE_ORDER_EDIT or STOCK_RECEIVE, a purchase receipt of the user's organizations:
+  each received line's sales lines through its RequirementSupply, the requirement's RequirementOrderItem and the request
+  line's RequestItemOrder, with what is to ship, waits and is reserved on the received stock) and `reserve#ReceiptPeg`
+  (STOCK_RECEIVE: what is not available of the line's reservations taken off up to the stock on hand, then
+  `reserve#AssetForOrderItem` with the asset first, displacing other reservations of it; NOT_PEGGED, ASSET_UNAVAILABLE,
+  STOCK_HELD, STOCK_UNAVAILABLE; alreadyReserved). Stock on hold at the dock for its putaway may be reserved (F-P14b-3).
+- BOSS: Shared/SupplyPlanning's Purchasing branch: Convert's Route ("Drop-ship customer orders" where a selected row has
+  customer demand), the request route's wording where the policy says so, and messages for requests, drop-ship lines and the
+  requests sent for approval. PurchasePolicy's controls form gains "Plan buys go to purchase requests". New
+  `template/PurchasingReceiptPegs.xml`: section PurchasingReceiptPegs ("Bought for customer orders", included in
+  PurchasingReceiptDetail's PurchasingReceiptFound) and transition `purchaseReservePeg` (check#Record receipt `receive`, then
+  `reserve#ReceiptPeg`; transition-included in Shared/ShipmentDetail).
+- Specs: Mantle `test/product/ReplenishmentRoutes.spec.js` (5 features, 1.5 s: the request route with its lines, links,
+  submission, retry, DEMAND_ALREADY_COVERED and ROUTE_NOT_ALLOWED; request supply while submitted, approved and sourced, the
+  request's drop-ship route through RequestSourcing (F-P10-7's missing spec) and a cancel ending the coverage; the plan's
+  drop-ship route with NO_CUSTOMER_LINE and a pending order; the receipt's pegs, Reserve, PERMISSION_DENIED and NOT_PEGGED;
+  held netting within the supplier's lead time). No BOSS regression spec (F-P14b-6). Acceptance
+  `acceptance/Purchasing/PurchasingReplenishmentRoutesWalk` (3: a customer-order shortage converted to a purchase order keeps
+  its sales line and its receipt reserves for it from ShipmentDetail; the drop-ship route from SupplyPlanning; under the
+  request policy the request's demand, submitted and approved, is not suggested again).
+- Tests run: Mantle ReplenishmentRoutes (5), Replenishment (6), SupplyPlanning (11), ProductionSubcontract (8),
+  PurchaseRequests (6), PurchasePolicy (5), DropShip (6), all pass; BOSS PurchasingReplenishment (3), PurchasingReceiving (3),
+  ManufacturingPlanning (5), ManufacturingSubcontracting (5), PurchasingSuppliers (3), PurchasingAccess (21),
+  PurchasingRequests (4), all pass; acceptance PurchasingReplenishmentRoutesWalk (3), pass. `moqui lint --screens`: no parse
+  failure, no idiom or hazard site in the changed screens.
+- Decisions:
+  - The request route sends the request to its approval rather than making it approved: crosscut §4.2 routes plan buys
+    "through request approval", and an approved request made by a conversion would skip its approvers and the request-stage
+    budget reservation. The plan's demand is covered from the conversion (RstPurchaseRequest), so a submitted request is
+    neither converted again nor suggested again; a refused one stays submitted but is no supply (review R1): shown in the
+    provenance, not netted, so its demand is suggested again, and its coverage of the old requirement ends when cancelled.
+  - The request's approval makes its own requirements (P10) and the plan's requirement stays covered by the request line,
+    so RequestSourcing reads the request's remaining quantity as P10 built it; the request line's ordered quantity moves to
+    its purchase order line in the next plan.
+  - The drop-ship route is the buyer's choice per conversion, never the policy's; it moves only lines of approved orders,
+    as RequestSourcing's (P10).
+- Findings (provisional):
+  - **F-P14b-1** Mantle reserves a sales line when its order is placed, its shortage reserved without stock (negative
+    availability), so the plan's sales lines left out every placed order: a customer-order shortage had no sales line in its
+    provenance or RequirementOrderItem. Such a line is now shown and pegged (`salesWaiting`), not netted; the netting is
+    unchanged.
+  - **F-P14b-2** Held quantity was netted "within the lead time" only for a made product (its BOM's lead days); a bought
+    product had none, so only inspections already due were netted. Its supplier price's `standardLeadTimeDays` is now its
+    lead time for that rule.
+  - **F-P14b-3** Warehouse's receive leaves stock AstOnHold at the dock until its putaway, and `receive#Asset` gives stock to
+    waiting reservations only once it is available (`reserve#IncreasedAsset`, by priority then date), so a pegged line could
+    lose its stock to another order. The receipt's Reserve reserves the on-hold stock for the pegged line; putaway's
+    `move#Asset` carries the reservation (ReplenishmentRoutes covers it since the review).
+  - **F-P14b-4** Request lines as plan supply count any approved purchase request of the organization at a facility of the
+    set, in the line's quantity: a request line in a unit other than the stock unit is not converted (the request route
+    writes the stock unit; a hand-filed line in another unit would be miscounted). Fixed in the review (R2).
+  - **F-P14b-5** The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which
+    may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but
+    Convert offers no supplier choice yet.
+  - **F-P14b-6** No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is
+    the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's.
+  - **F-P14b-7** F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its
+    customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route.
+
+**Review Nov 4 (P14b).** Checked both diffs against this section, §2, crosscut §4.2 and the brief, with the shared planning
+behaviour first. Manufacturing: netting is unchanged (`salesWaiting` lines are pegged, never netted; the shortage still nets
+as the negative available), so ManufacturingPlanning, SupplyPlanning and ProductionSubcontract results hold; two intended
+effects on made products: a make requirement now also keeps a placed (reserved) sales line as RequirementOrderItem, so a
+make conversion with one such line sets the work order's demand order (Quality's release then reserves for it), and with
+the schedule's held-quantity option a bought component nets held stock due within its supplier's lead time (before, only
+inspections already due). ManufacturingPlanningWalk's "Sales order …" text still matches the new label. No double count:
+request supply subtracts what its RequestItemOrder put on a live purchase line, that line counts once (a draft only with its
+RequirementSupply, P14a), and the plan's own requirement coverage (RstPurchaseRequest) is not supply. Drop-ship: approved
+orders only, the rest PssPartial; a supplier with no drop-ship price or facility is refused by name (P7's
+NOT_DROP_SHIPPABLE, NO_DROP_SHIP_FACILITY), now in the spec. Reserve: putaway keeps the reservation (a whole move updates
+the asset in place; a part moves reservations beyond its available), receiptOf limits the receipt to the user's
+organizations and NOT_PEGGED to the purchase line's own pegs. `planBuyToRequest` is empty N, no row takes the order route
+(Replenishment's default conversion). Fixes:
+- R1 (high): a refused purchase request kept covering the plan's demand with no cue, a silent shortage until someone
+  cancelled it. `requestSupply` shows a submitted request refused at its revision as "Refused purchase request …, not netted
+  until it is changed or cancelled" (kind `requestNotNetted`) and does not net it, so the shortage is suggested again. If the
+  requester changes and resubmits it while a second conversion covers the same demand, both count: the buyer cancels one.
+- R2 (medium, F-P14b-4): request lines in another unit are converted to the stock unit (MethodPolicy.convert); a line with
+  no conversion is shown with the reason and not netted.
+- R3 (medium): `convert#PlanningSuggestion` called directly with route `order` bypassed ROUTE_NOT_ALLOWED; convertOne checks
+  the route against the policy too.
+- R4 (medium): get#/reserve#ReceiptPeg offered another internal organization's sales line linked to the requirement; pegs are
+  now only the receipt organization's own sales lines.
+- Spec additions in ReplenishmentRoutes (6 features, about 2 s): the refusal, the unit, NOT_DROP_SHIPPABLE, and the pegged
+  reservation on dock stock (AstOnHold at a receiving location) kept through putaway#Stock.
+Left for the lead: Convert still offers no drop-ship supplier choice (F-P14b-5); `outsideRequirements` limits RqTpProduct
+requirements before filtering to outside processing, so P10's approved request requirements count toward that limit (P10's,
+low). Specs run: Mantle ReplenishmentRoutes (6), Replenishment, SupplyPlanning, ProductionSubcontract, PurchaseRequests,
+PurchasePolicy, DropShip, WarehouseReceiving (60, pass); BOSS PurchasingReplenishment, PurchasingReceiving,
+ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, PurchasingAccess (41, pass).
 
 ### P15 — Performance
 

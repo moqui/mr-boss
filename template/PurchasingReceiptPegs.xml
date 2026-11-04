@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's make-to-order pegging on a purchase receipt (impl-purchasing P14b, R-PUR-37; design-purchasing §8
+    SupplyPlanning and §9 ShipmentDetail): a received line bought for customer-order demand shows the sales line it was bought
+    for, and a holder of Warehouse's receive permission reserves the received stock for it. Included by name like
+    PurchasingReceiptDetail.xml:
+    - purchaseReservePeg: check#Record on the receipt with the receive capability, then
+      mantle.order.PurchasePegServices.reserve#ReceiptPeg (STOCK_RECEIVE, the receipt's organization and the peg again);
+    - section PurchasingReceiptPegs (in PurchasingReceiptDetail's PurchasingReceiptFound): get#ReceiptPegs' rows, shown only
+      when the receipt has a pegged line. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="purchaseReservePeg">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'receipt', recordId:shipmentId, capability:'receive'}"/>
+            <service-call name="mantle.order.PurchasePegServices.reserve#ReceiptPeg" out-map="pegReserved"
+                    in-map="{shipmentId:shipmentId, assetId:assetId, orderId:orderId, orderItemSeqId:orderItemSeqId}"/>
+            <message type="success">${pegReserved.alreadyReserved ? 'Order ' + orderId + ' line ' + orderItemSeqId
+                    + ' is already reserved' : 'Reserved ' + pegReserved.reservedQuantity + ' of the received stock for order '
+                    + orderId + ' line ' + orderItemSeqId}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="shipmentId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="shipmentId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <section name="PurchasingReceiptPegs">
+            <actions>
+                <service-call name="mantle.order.PurchasePegServices.get#ReceiptPegs" out-map="pegsOut"
+                        in-map="{shipmentId:shipmentId}" transaction="force-new" ignore-error="true"/>
+                <set field="pegRows" from="pegsOut?.pegRows || []"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingReceiptPegList" condition="pegRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Bought for customer orders"/>
+                            <box-body-nopad>
+                                <form-list name="PurchaseReceiptPegs" list="pegRows" skip-form="true" paginate="false">
+                                    <field name="orderId">
+                                        <default-field title="Customer order">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId} line ${orderItemSeqId}"
+                                                    link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                    <field name="productId"><default-field title="Product"><display/></default-field></field>
+                                    <field name="receivedText" align="right">
+                                        <default-field title="Received"><display/></default-field></field>
+                                    <field name="toShipText" align="right">
+                                        <default-field title="To ship"><display/></default-field></field>
+                                    <field name="waitingText" align="right">
+                                        <default-field title="Waiting for stock"><display/></default-field></field>
+                                    <field name="reservedHereText" align="right">
+                                        <default-field title="Reserved here"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="purchaseReservePeg" text="Reserve for this order" link-type="hidden-form"
+                                                    icon="sym_o_lock" condition="canReserve"
+                                                    parameter-map="{shipmentId:shipmentId, assetId:assetId, orderId:orderId,
+                                                        orderItemSeqId:orderItemSeqId}"
+                                                    confirmation="Reserve the received stock for order ${orderId} line ${orderItemSeqId}? Another order's reservation of it moves to other stock or waits."/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="orderId"/><field-ref name="customerName"/></column>
+                                        <column><field-ref name="waitingText"/><field-ref name="stateText"/>
+                                            <field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

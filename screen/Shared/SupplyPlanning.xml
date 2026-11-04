@@ -28,7 +28,10 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.purchasing.ReplenishmentServices.get#PlanContext), checked by ironstone.purchasing.AccessServices.check#Record
     before each Mantle verb; buy suggestions by default, every method's demand and supply shown; a buyer
     (PURCHASE_ORDER_EDIT) converts buy and outside-processing suggestions into lines of draft purchase orders, never placed;
-    make stays Manufacturing's and transfer Warehouse's. Other apps add their contexts when they are built. -->
+    make stays Manufacturing's and transfer Warehouse's. P14b: where the buying policy sends plan buys to purchase requests,
+    the buy conversion makes purchase requests sent for approval, and Convert's route "Drop-ship customer orders" sends a
+    customer-order shortage's sales lines to the supplier's drop-ship facility (buyRoute, Mantle's route). Other apps add their
+    contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Supply planning"
@@ -130,16 +133,33 @@ along with this software (see the LICENSE.md file). If not, see
                     : String(planningSuggestionIdList || '').split(',').filter(Boolean)"/>
             <service-call name="mantle.product.SupplyPlanningServices.convert#PlanningSuggestions" out-map="converted"
                     in-map="{operationKey:operationKey, planningSuggestionIds:selectedIds, methodDate:methodDate || null,
-                        facilityId:runFacilityId || null}"/>
+                        facilityId:runFacilityId || null,
+                        route:appRoot == 'Purchasing' &amp;&amp; buyRoute == 'dropShip' ? 'dropShip' : null}"/>
             <iterate list="converted.results" entry="result">
                 <if condition="result.ok">
                     <then>
-                        <if condition="result.orderId">
+                        <!-- P14b: a purchase request (the policy's request route), a drop-ship order (the drop-ship route) -->
+                        <if condition="result.requestId">
                             <then>
+                                <message type="success">${result.resultCode == 'EXISTING' ? 'Already on' : 'Added to'}
+                                    purchase request ${result.requestId} for suggestion ${result.planningSuggestionId}${
+                                    result.message ? ': ' + result.message : ''}</message>
+                            </then>
+                            <else-if condition="result.route == 'dropShip'">
+                                <set field="routedText" from="(result.routedLines || []).map(line =&gt; line.orderId
+                                        + ' line ' + line.orderItemSeqId).join(', ')"/>
+                                <set field="routeRestText" from="(result.pendingLines?.length ? '; not approved yet: '
+                                        + result.pendingLines.join(', ') : '') + (result.remainingQuantity
+                                        &amp;&amp; result.remainingQuantity != '0' ? '; ' + result.remainingQuantity
+                                        + ' is left to convert' : '')"/>
+                                <message type="success">Drop-shipped customer order ${routedText} on purchase order
+                                    ${result.orderId} for suggestion ${result.planningSuggestionId}${routeRestText}</message>
+                            </else-if>
+                            <else-if condition="result.orderId">
                                 <message type="success">${result.resultCode == 'EXISTING' ? 'Already on' : 'Added to draft'}
                                     purchase order ${result.orderId} line ${result.orderItemSeqId} for suggestion
                                     ${result.planningSuggestionId}</message>
-                            </then>
+                            </else-if>
                             <else>
                                 <message type="success">${result.resultCode == 'EXISTING' ? 'Already covered by' : 'Made'} work
                                     order ${result.workEffortId} for suggestion ${result.planningSuggestionId}</message>
@@ -148,6 +168,16 @@ along with this software (see the LICENSE.md file). If not, see
                     </then>
                     <else>
                         <message type="warning">Suggestion ${result.planningSuggestionId}: ${result.message}</message>
+                    </else>
+                </if>
+            </iterate>
+            <iterate list="converted.requests || []" entry="madeRequest">
+                <if condition="madeRequest.submitted">
+                    <then>
+                        <message type="success">Purchase request ${madeRequest.requestId} is sent for approval</message>
+                    </then>
+                    <else>
+                        <message type="warning">Purchase request ${madeRequest.requestId} is a draft: ${madeRequest.message}</message>
                     </else>
                 </if>
             </iterate>
@@ -206,9 +236,14 @@ along with this software (see the LICENSE.md file). If not, see
                 : appRoot == 'Purchasing' ? ['PsmBuy', 'PsmOutside'].includes(row.methodEnumId) &amp;&amp; !!can.buy : true))"/>
         <set field="convertsOutside" from="convertible.some(row =&gt; row.methodEnumId == 'PsmOutside')"/>
         <set field="convertsMake" from="convertible.some(row =&gt; row.methodEnumId == 'PsmMake')"/>
-        <set field="convertText" from="appRoot == 'Purchasing' ? 'Make draft purchase orders' : convertsOutside &amp;&amp;
+        <!-- P14b: the buying policy's route of a buy conversion (order or request), and whether a selected row may drop-ship -->
+        <set field="buyRequests" from="appRoot == 'Purchasing' &amp;&amp; plan?.buyRoute == 'request'"/>
+        <set field="dropShippable" from="appRoot == 'Purchasing' &amp;&amp; convertible.some(row =&gt; row.customerDemand)"/>
+        <set field="convertText" from="appRoot == 'Purchasing' ? (buyRequests ? 'Convert' : 'Make draft purchase orders') : convertsOutside &amp;&amp;
                 convertsMake ? 'Convert' : convertsOutside ? 'Make draft purchase order lines' : 'Make draft work orders'"/>
-        <set field="convertConfirm" from="appRoot == 'Purchasing'
+        <set field="convertConfirm" from="buyRequests
+                ? 'Add each selected buy suggestion to a purchase request of its facility, sent for approval as the buying policy says (outside processing still goes to a draft purchase order); with Drop-ship customer orders, each customer order line moves to the supplier instead. A suggestion already covered is named and left.'
+                : appRoot == 'Purchasing'
                 ? 'Add each selected suggestion to a draft purchase order of its supplier, one order per supplier and facility? The orders stay drafts until they are placed; a suggestion already covered is named and left.'
                 : convertsOutside
                 ? 'Make a draft purchase order line of its supplier for each selected outside-processing request, and a draft work order for each make suggestion? The orders are placed in Purchasing; buy and transfer suggestions are left for Purchasing and Warehouse.'
@@ -542,6 +577,20 @@ along with this software (see the LICENSE.md file). If not, see
                                                                     <dynamic-options transition="choices" server-search="true"
                                                                             min-length="0"
                                                                             parameter-map="{choice:'workCenters', plantId:plantId}"/>
+                                                                </drop-down>
+                                                            </conditional-field>
+                                                            <default-field title="">
+                                                                <hidden/>
+                                                            </default-field>
+                                                        </field>
+                                                        <!-- P14b: a buy's route; the drop-ship route takes a shortage's
+                                                            customer order lines to the supplier's drop-ship facility -->
+                                                        <field name="buyRoute">
+                                                            <conditional-field condition="dropShippable" title="Route"
+                                                                    tooltip="Drop-ship moves each customer order line of the shortage to the supplier, who ships it to the customer">
+                                                                <drop-down>
+                                                                    <option key="policy" text="${buyRequests ? 'Purchase request, as the buying policy says' : 'Draft purchase order'}"/>
+                                                                    <option key="dropShip" text="Drop-ship customer orders"/>
                                                                 </drop-down>
                                                             </conditional-field>
                                                             <default-field title="">
