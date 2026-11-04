@@ -12,11 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Settings area of IronStone Manufacturing (design-manufacturing §1.2): ProductionSettings (the default) and
-    ReasonCodes (impl-manufacturing P4), for the production and resource administrator group only (BOSS_MFG_SETTINGS). -->
+<!-- The Settings area of IronStone Manufacturing (design-manufacturing §1.2, §8): ProductionSettings (the default), the
+    production policy of the organization and its plants, and ReasonCodes (impl-manufacturing P4), for the production and
+    resource administrator group only (BOSS_MFG_SETTINGS). Both read and write through mantle.work.ProductionServices,
+    which checks PRODUCTION_POLICY_EDIT and the organization again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
+    <subscreens default-item="ProductionSettings"/>
     <widgets>
-        <label text="Placeholder: The production policy and reason codes." type="p"/>
+        <subscreens-menu id="ManufacturingSettingsTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

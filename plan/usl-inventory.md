@@ -911,7 +911,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | checkReserve#ProductAssets |  |  |
 | AssetServices | issue#AssetReservation |  |  |
 | AssetServices | issue#Asset |  | Warehouse/Transfers/TransferShipmentDetail (through issue#TransferStock, P15) |
-| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16) |
+| AssetServices | issue#AssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | Warehouse/Transfers/Repack (through repack#Asset, P6); Warehouse/Inventory/MaterialIssueReceipt (MaterialLines Issue, through issue#ProductionMaterial with issuanceFields: a new issuance, P16; beyond the line up to the ProductionPolicy scrap allowance, Manufacturing P4) |
 | AssetServices | issue#AnyAssetToWorkEffort | Warehouse/Inventory/MaterialIssueReceipt; Shared/MaterialIssueReceipt; Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt | — Warehouse/Inventory/MaterialIssueReceipt (MaterialActionForm: pack#ShipmentAssembly for a kit, issue#ProductionMaterial for a run) |
 | AssetServices | issue#AnyAssetForShipmentItemSource | Warehouse/Returns/SupplierReturnShipment | Warehouse/Returns/SupplierReturnShipment (Send back), through WarehouseTaskServices.issue#SupplierReturnStock with the new assetId |
 | AssetServices | move#IssuancesToNewShipment |  |  |

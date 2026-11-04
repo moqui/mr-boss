@@ -26,7 +26,12 @@ const fixture = {
     assignee: "joe.developer",
     assigneePartyId: "ORG_ZIZI_JD"
 }
-const store = (entity, fields) => ec.service.sync().name("store#" + entity).parameters(fields).call()
+const store = (entity, fields) =>
+    ec.service
+        .sync()
+        .name("store#" + entity)
+        .parameters(fields)
+        .call()
 
 spec({
     setupSpec() {
@@ -466,5 +471,114 @@ feature("a run is no event: EventDetail's access refuses it and it cannot be dup
         run.includes("is not available")
         duplicate.includes("is not available")
         added == 0
+    }
+})
+
+// ===== P4: the production policy and reason codes =====
+// The policy changes here start a year ahead, so they change nothing the other specs read now.
+const production = "mantle.work.ProductionServices."
+const ahead = offsetDays => new Date(Date.now() + offsetDays * 86400000).toISOString()
+feature(
+    "the resource administrator sets an organization default and a plant override; a reader cannot, another organization reads none",
+    {
+        when() {
+            const defaultRow = {
+                organizationPartyId: "ORG_ZIZI_RETAIL",
+                fromDate: ahead(365),
+                overProducePercent: 4,
+                changeReason: "Spec organization default"
+            }
+            const plantRow = {
+                facilityId: ids.plantId,
+                fromDate: ahead(366),
+                overProducePercent: 9,
+                changeReason: "Spec plant override"
+            }
+            // the negative cases first, with the parameters that then succeed
+            const reader = asUser(users.read, () => refusal(production + "store#ProductionPolicy", plantRow), false)
+            const otherRead = asUser(
+                users.services,
+                () => refusal(production + "get#ProductionPolicy", {facilityId: ids.plantId}),
+                false
+            )
+            const stored = asUser(
+                users.resource,
+                () => [
+                    refusal(production + "store#ProductionPolicy", defaultRow),
+                    refusal(production + "store#ProductionPolicy", plantRow)
+                ],
+                false
+            )
+            const resolved = asUser(
+                users.read,
+                () => invoke(production + "get#ProductionPolicy", {facilityId: ids.lineId, asOfDate: ahead(367)}),
+                false
+            )
+            const source = (resolved.traceRows || []).find(row => row.field === "overProducePercent") || {}
+            return {reader, otherRead, stored, value: Number(String(resolved.policy.overProducePercent)), source}
+        },
+        then({reader, otherRead, stored, value, source}) {
+            reader.includes("PERMISSION_DENIED")
+            otherRead.includes("RECORD_UNAVAILABLE")
+            stored == ["", ""]
+            value == 9
+            source.level == "facility"
+            source.sourceFacilityId == ids.plantId
+        }
+    }
+)
+feature("reason codes are kept by the resource administrator and read by a reader; a reader cannot change them", {
+    when() {
+        const reason = {
+            organizationPartyId: "ORG_ZIZI_RETAIL",
+            changeReason: "Spec reasons",
+            reasons: [
+                {reasonCode: "SPEC_P4_JAM", reasonName: "Spec jam", reasonCategoryEnumId: "PrcDowntime", equipmentFault: "Y"}
+            ]
+        }
+        const reader = asUser(users.read, () => refusal(production + "store#ProductionReasons", reason), false)
+        const stored = asUser(users.resource, () => refusal(production + "store#ProductionReasons", reason), false)
+        const listed = asUser(
+            users.read,
+            () => invoke(production + "find#ProductionReasons", {organizationPartyId: "ORG_ZIZI_RETAIL"}),
+            false
+        )
+        const other = asUser(
+            users.services,
+            () => refusal(production + "find#ProductionReasons", {organizationPartyId: "ORG_ZIZI_RETAIL"}),
+            false
+        )
+        return {reader, stored, codes: listed.reasons.map(row => row.reasonCode), canEdit: listed.canEdit, other}
+    },
+    then({reader, stored, codes, canEdit, other}) {
+        reader.includes("PERMISSION_DENIED")
+        stored == ""
+        codes.includes("SPEC_P4_JAM")
+        canEdit == false
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("Settings opens for the resource administrator with its change actions, and not for a reader, with authz enabled", {
+    when() {
+        const resource = asUser(users.resource, () => ({
+            settings: lib.page("Settings/ProductionSettings"),
+            plant: lib.page("Settings/ProductionSettings", {plantId: ids.plantId}),
+            reasons: lib.page("Settings/ReasonCodes")
+        }))
+        const reader = asUser(users.read, () => lib.page("Settings/ProductionSettings"))
+        const otherPlant = asUser(users.resource, () => lib.page("Settings/ProductionSettings", {plantId: ids.otherPlantId}))
+        return {resource, reader, otherPlant}
+    },
+    then({resource, reader, otherPlant}) {
+        resource.settings.status == 200
+        resource.settings.errors.length == 0
+        resource.settings.output.includes("Change consumption")
+        resource.settings.output.includes("Organization default")
+        resource.plant.output.includes("Plant override at")
+        resource.reasons.errors.length == 0
+        resource.reasons.output.includes("Add reason")
+        resource.reasons.output.includes("SPEC_P4_JAM")
+        reader.status != 200 || !reader.output.includes("Change consumption")
+        otherPlant.output.includes("This production policy is not available to you.")
     }
 })
