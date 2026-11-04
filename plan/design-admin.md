@@ -1082,6 +1082,10 @@ The inventories add **Designed in** mappings only. Framework forms are cited her
 
 ### 15.3 Acceptance scenarios
 
+Each scenario is an acceptance test to write (`acceptance/Admin/`, `acceptance/client/Admin/`), named in the
+implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
+acceptance test, one per app per mode.
+
 | Scenario | Required evidence |
 | --- | --- |
 | Delegated administration | An organization identity operator can invite/end membership there, cannot inspect another organization's details, disable a multi-organization identity globally, assign privileged/sealed rights or infer them from a launcher grant. Direct service/import/SSO attempts obey the same rules. |

@@ -932,8 +932,9 @@ crosscut design's roll-up is the work list.
 4. Styles, if any, as `m-*` classes in `webroot/screen/webroot/css/WebrootVue.qvt.css`.
 5. Goldens: `UPDATE_GOLDEN=1 cargo test -p moqui-core --lib screen::tests::qvt`, review the diff
    under `crates/moqui-core/src/script/testdata/screen/qvt/render/`; the node tests of the
-   client; the Gate 3 browser smoke when behavior changed; the `tui` render goldens and terminal
-   snapshots once that mode exists.
+   client; the `tui` render goldens once that mode exists; a rule test for the element's behavior.
+   The Gate 3 browser smoke and the terminal snapshots are acceptance tests of the framework, run
+   when asked.
 6. A row in `docs/ui/Qvt-Client.md`'s component table; a gallery screen (§10) that shows it.
 
 A new custom screen (a `.qvue`, or a raw `qvt` text) is not an XML element, but it has a checklist
@@ -1017,10 +1018,10 @@ Built Oct 18, 2026:
 | `example/screen/Gallery.xml` | The gallery root, mounted under the apps root by the example `MoquiConf.xml`; ADMIN authorization in `example/data/ExampleSecurityData.xml` |
 | `Gallery/Landing.xml`, `List.xml`, `Detail.xml`, `Record360.xml`, `Task.xml`, `Split.xml`, `Settings.xml`, `Wizard.xml`, `Dialog.xml`, `Report.xml`, `Panel.xml` | One archetype each over framework data (`moqui.basic.Enumeration`, `Geo`, `StatusItem`, `moqui.security.UserAccount`, `moqui.server.ArtifactHitBin`) or inline lists built in the screen actions; every widget of §4 appears at least once |
 | `Gallery/Board.xml` + `Board.qvue`, `Gallery/Calendar.xml` + `Calendar.qvue` | The `.qvue` path of §4.8 for the custom archetypes: a drag-and-drop board and a month grid over the screen's own transitions |
-| `Gallery/Tree.xml` (`view-tree` is shown in `Gallery/Views.xml` since Oct 21, 2026; a screen of its own is left) | §3.15 over an inline three- to seven-level breakdown built in the screen actions, with own and total hours, a muted ancestor from a find, a branch of more than 200 rows, drag and keyboard re-parenting through a transition that refuses a drop into a row's own branch, and the CSV, XLSX and print outputs. `example/test/client/GallerySmoke.spec.js` loads Views with the tree. |
+| `Gallery/Tree.xml` (`view-tree` is shown in `Gallery/Views.xml` since Oct 21, 2026; a screen of its own is left) | §3.15 over an inline three- to seven-level breakdown built in the screen actions, with own and total hours, a muted ancestor from a find, a branch of more than 200 rows, drag and keyboard re-parenting through a transition that refuses a drop into a row's own branch, and the CSV, XLSX and print outputs. `example/acceptance/client/GallerySmoke.spec.js` loads Views with the tree. |
 | `Gallery/Widgets.xml` | Every field widget, button role, label type, list feature, container type, tree, editable and image side by side, as the fixture for style changes |
-| `example/test/Gallery.spec.js` | Renders every gallery screen in its render mode through the screen test API (`./moq test example`) |
-| `example/test/client/GallerySmoke.spec.js` | Loads each gallery screen in the `/qapps` shell at 1280 with a clean console and no render error (`moqui test-client example --serve --spec GallerySmoke`) |
+| `example/acceptance/Gallery.spec.js` | The gallery sweep, an acceptance test of the framework: renders every gallery screen in its render mode through the screen test API (`./moq accept example`) |
+| `example/acceptance/client/GallerySmoke.spec.js` | The gallery sweep in the browser, an acceptance test: loads each gallery screen in the `/qapps` shell at 1280 with a clean console and no render error |
 
 Each gallery screen starts with an info box naming the §3 section it renders and the §8 items it
 stands in for with a fallback. A dialog opens on load with `?_openDialog=<dialog id>`.

@@ -35,7 +35,7 @@ Warehouse was built after both (§4), so these were there to extend:
   - [design-customer-service.md](design-customer-service.md): StockAtDate and Returns
 - Plans:
   - [impl-products.md](impl-products.md): the pattern; P7, which builds Warehouse's facility and tracking policy and
-    `Shared/InventoryAvailability`; the groups its P1 seeds; the BOSS client screenshot spec (its F23).
+    `Shared/InventoryAvailability`; the groups its P1 seeds.
   - [impl-accounting.md](impl-accounting.md): the shared screens and the Warehouse contract it builds, its posting and
     adoption rules, and its findings that recur here (F4, F5, F25, F27).
   - [impl-projects.md](impl-projects.md): OrderDetail, InvoiceDetail and RequestDetail.
@@ -114,7 +114,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - demo data;
   - builds and commits.
 
-  Screenshots come from the BOSS `test/client` spec that Products adds (impl-products §2).
+  The walks are on Products' pattern (impl-products §2): one golden-path walk in `test/client/`, the rest acceptance
+  tests. No screenshots.
 - **Stock rows through services.** `MANTLE_USER_ORG` filters Facility by owner, but nothing filters Asset, AssetDetail
   or PhysicalInventory, and nothing filters by facility (F2). Warehouse reads and writes them only through services.
   A Warehouse screen or mount calls `ironstone.warehouse.AccessServices`, which checks the user's organizations, the
@@ -165,16 +166,18 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle`, their users in spec-local groups that hold the
-      permissions, never a BOSS group;
-    - `./moq test mr-boss` passing, with AppStructure covering the new screens and Warehouse in its non-placeholder
-      list;
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle, their users in spec-local
+      groups that hold the permissions, never a BOSS group, and BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing, with the handheld mounts at 390;
     - the inventories' **Implemented in** columns;
-  - the `WarehouseAccess` spec extended to the phase's services and mounts;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `WarehouseAccess` (one holder and one non-holder on one verb, and another
+    organization's record refused), not every service and mount;
   - its row and **Built** note here.
+
+  The phase's "usable when" and its §8 scenario are acceptance tests to write (`acceptance/Warehouse/`,
+  `acceptance/client/Warehouse/`, the handheld mounts at 390 px among them), named in the phase; running them is not
+  part of Done.
 
 ## 3. Phases
 
@@ -267,12 +270,13 @@ checked on Oct 31, with Mantle's `WarehouseStockChecks` spec and the "P0 verific
   - `BossUsersDemoData.xml` gains a user per capability, and a warehouse reader with no other launcher.
 - **Specs.**
   - `WarehouseShell`: the menu per group, the palette, record links, quick create.
-  - `WarehouseAccess`: started, covering facility scope and groups through the services, and the refused REST paths
-    (MANTLE_API stays ADMIN-only for the Warehouse groups); an empty organization list is no facility, and an active
-    organization the user does not belong to never widens the scope (F58).
-- **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A reader
-  sees their organization's facilities, stock and shipments but not another organization's, in lists, the palette and
-  record links. A forged facility or asset ID is refused.
+  - `WarehouseAccess`: the app's one access spec, about seven features run once with authorization on: facility scope
+    and groups through the services, and the refused REST paths (MANTLE_API stays ADMIN-only for the Warehouse
+    groups); an empty organization list is no facility, and an active organization the user does not belong to never
+    widens the scope (F58). A later phase adds a case only for an access rule it adds.
+- **Usable when** (the acceptance test `WarehouseFoundationWalk`): the menu renders for each group, and quick create
+  offers only what the group may create. A reader sees their organization's facilities, stock and shipments but not
+  another organization's, in lists, the palette and record links. A forged facility or asset ID is refused.
 
 ### P2 — Facilities and locations
 
@@ -808,10 +812,11 @@ Built in two parts: P16a the runs and their lines, then P16b the stock guards. U
 
 ### P18 — Finish
 
-- The terminal twins, and the server-static pass.
-- The design §19 acceptance review and crosscut §6 standalone operation. A Warehouse user with no other launcher, and an
-  organization with no ProductStore, run receive to ship. That user is refused cost, settlement and other
-  organizations' facilities, through URLs, shared contexts, handheld mounts, exports, the palette and search.
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The design §19 acceptance review and crosscut §6 standalone operation, acceptance tests (`WarehouseAccessWalk`,
+  `WarehouseIsolationWalk`). A Warehouse user with no other launcher, and an organization with no ProductStore, run
+  receive to ship. That user is refused cost, settlement and other organizations' facilities, through URLs, shared
+  contexts, handheld mounts, exports, the palette and search.
 - The §16 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
@@ -1406,10 +1411,12 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo warehouse user, and walk each built phase's
   "usable when" in order.
-- **Design §19's acceptance review and crosscut §6,** scenario by phase:
+- **Design §19's acceptance review and crosscut §6,** scenario by phase. The walks named are acceptance tests, run with
+  `./moq accept mr-boss` when asked, except `WarehouseReceivingWalk`, the app's one golden-path client walk in the
+  regression suite:
 
 | Scenario | Phase | Covered by (checked in P18) |
 | --- | --- | --- |
@@ -1426,13 +1433,13 @@ Designed, not in this build:
 | Lot expiry change | P6 (the correction), P5 (the gate) | mr-mantle WarehouseAdjustments (LOT_EXPIRY_EXTEND, old and new kept), WarehouseExpiry |
 | Invalid serial or unit | P7 | mr-mantle WarehouseReceiving (one unique serial per unit; a unit with no conversion) |
 | Mixed owners and pools | P3 (pools), P5 (moves) | mr-mantle WarehousePolicy (pools), WarehouseMoves (another owner's container refused), WarehouseTransfers (two owners refused) |
-| Unauthorized financial fields | `WarehouseAccess` in every phase; P18 | BOSS WarehouseAccess; WarehouseAccessWalk (no cost or price on 13 routes and their CSV without financial read; settlement, release and revaluation refused) |
+| Unauthorized financial fields | `WarehouseAccess` for each access rule a phase adds; P18 | BOSS WarehouseAccess; WarehouseAccessWalk (no cost or price on 13 routes and their CSV without financial read; settlement, release and revaluation refused) |
 | Closed-period correction | P6 | mr-mantle and BOSS WarehouseAdjustments (a backdated adjustment into a closed period refused) |
-| Standalone Warehouse, with no ProductStore and no other app's grant | P18 (`WarehouseAccess` in every phase) | WarehouseAccessWalk (BOSS_P18_ORG with no ProductStore, receive to ship, users of one capability with no other launcher) |
+| Standalone Warehouse, with no ProductStore and no other app's grant | P18 (`WarehouseAccess` for each access rule) | WarehouseAccessWalk (BOSS_P18_ORG with no ProductStore, receive to ship, users of one capability with no other launcher) |
 | Crosscut sales order fulfillment | P11–P13; the substitute through Customer Service is §7 | WarehouseAccessWalk (an order with no store reserved, shipped by its users); the Picking, Packing and Shipping specs |
 | Crosscut count with moving stock | P10 | mr-mantle WarehouseCounts |
 
-- **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
+- **Phone width.** The handheld mounts at 390 px are acceptance tests; no screenshots.
 
 ### Overall verification
 

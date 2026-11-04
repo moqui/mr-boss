@@ -47,8 +47,7 @@ first. Manufacturing is built after all three and before Purchasing (§4), so th
   - [design-projects.md](design-projects.md): §5 Timeline, and time and timesheets
 - Plans:
   - [impl-products.md](impl-products.md): the pattern; P8, which builds the methods, the five shared method screens
-    and the costing part of the work centers; P9's standard costs; the groups its P1 seeds; the BOSS client screenshot
-    spec (its F23).
+    and the costing part of the work centers; P9's standard costs; the groups its P1 seeds.
   - [impl-accounting.md](impl-accounting.md): the posting guard and the dated issuance reversal (P2a), the production
     GL account types (P13), and its decision that ProductionCostClose and CostingPolicies are built with Manufacturing.
   - [impl-warehouse.md](impl-warehouse.md): P16, which builds the runs, their lines and the stock guards; P5's scan
@@ -139,7 +138,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - demo data;
   - builds and commits.
 
-  Screenshots come from the BOSS `test/client` spec that Products adds (impl-products §2).
+  The walks are on Products' pattern (impl-products §2): one golden-path walk in `test/client/`, the rest acceptance
+  tests. No screenshots.
 - **Production rows through services.** No entity filter covers WorkEffort, so nothing scopes a run, operation or
   routing by organization (F3). Manufacturing reads and writes them only through services:
   `ironstone.manufacturing.AccessServices` checks the user's organizations, the plant facility (through Warehouse's
@@ -191,16 +191,18 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle` without mr-boss, their users in spec-local groups that
-      hold the permissions;
-    - `./moq test mr-boss` passing, with AppStructure covering the new screens and Manufacturing in its
-      non-placeholder list;
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle without mr-boss, their users in
+      spec-local groups that hold the permissions, and BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing, with the handheld mounts at 390;
     - the inventories' **Implemented in** columns;
-  - the `ManufacturingAccess` spec extended to the phase's services and mounts;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `ManufacturingAccess` (one holder and one non-holder on one verb, and
+    another organization's record refused), not a section per phase;
   - its row and **Built** note here.
+
+  No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
+  scenario are acceptance tests to write (`acceptance/Manufacturing/`, `acceptance/client/Manufacturing/`, the
+  handheld mounts at 390 px among them), named in the phase; running them is not part of Done.
 
 ## 3. Phases
 
@@ -302,11 +304,12 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
     display user.
 - **Specs.**
   - `ManufacturingShell`: the menu per group, the palette, record links, quick create.
-  - `ManufacturingAccess`: started, covering organization and plant scope and the groups' permissions through the
-    services.
-- **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A reader
-  sees their organization's runs and methods but not another organization's, in lists, the palette and record links. A
-  forged run, facility or asset ID is refused.
+  - `ManufacturingAccess`: the app's one access spec, about seven features run once with authorization on:
+    organization and plant scope and the groups' permissions through the services. A later phase adds a case only for
+    an access rule it adds.
+- **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
+  group may create. A reader sees their organization's runs and methods but not another organization's, in lists, the
+  palette and record links. A forged run, facility or asset ID is refused.
 
 **Built Nov 3 (P1).**
 - Mantle: `MantleSetupData.xml` seeds `PRODUCTION_SCHEDULE`, `_OPERATE`, `_SUPERVISE`, `_COST_REVIEW`, `_POLICY_EDIT` and
@@ -487,14 +490,14 @@ The rest of M3 and CX-METHOD (design §5, crosscut §3.23), over Products P8's r
 - Demo (F42): operation templates `BOSS_MFG_OPT_ASSEMBLE`, `BOSS_MFG_OPT_TEST`, the released routing `BOSS_MFG_ROUTING_A`
   copied from them and the released BOM `BOSS_MFG_BOM_PILOT` of DEMO_1_1 (method code PILOT), DEMO_RM_1 at the second
   operation, with their release decisions and the audit rows they name.
-- Specs: Mantle `MethodTemplates` (4); BOSS `ManufacturingMethods` (6, the "usable when" items), `ManufacturingAccess` P2 section
-  (8 more), AppStructure and TuiRender routes (ManufacturingSpecLib); client walk `ManufacturingMethodsWalk` (5, with the
-  390 px lists). Tests run: Mantle MethodTemplates, ProductMethods, ManufacturingServices, WarehouseProduction (30, pass);
-  BOSS ManufacturingMethods, ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, ProductsSharedContext,
-  ProductsAccess, ProductsScreens, ProductsInventory, Notifications, Files, WarehouseShell, WarehouseAccess,
-  ProductsMethodFixtures, ProductsMethods, ProductsCosts, ProductsShell (422, pass), WarehouseProductionFixtures (pass);
-  client ManufacturingMethodsWalk and ProductsMethodWalk (pass). `moqui lint --screens`: no idiom or hazard site in the
-  changed screens.
+- Specs: rule tests Mantle `MethodTemplates` (4) and BOSS `ManufacturingMethods` (6, the rules of the "usable when"
+  items), `ManufacturingAccess` P2 section (8 more); no route fixtures. Acceptance test: the client walk
+  `ManufacturingMethodsWalk` (5, with the 390 px lists). Tests run: Mantle MethodTemplates, ProductMethods,
+  ManufacturingServices, WarehouseProduction (30, pass); BOSS ManufacturingMethods, ManufacturingAccess,
+  ManufacturingShell, AppStructure, TuiRender, ProductsSharedContext, ProductsAccess, ProductsScreens,
+  ProductsInventory, Notifications, Files, WarehouseShell, WarehouseAccess, ProductsMethodFixtures, ProductsMethods,
+  ProductsCosts, ProductsShell (422, pass), WarehouseProductionFixtures (pass); client ManufacturingMethodsWalk and
+  ProductsMethodWalk (pass). `moqui lint --screens`: no idiom or hazard site in the changed screens.
 - Decisions: two release topics, `BomRelease` and `RoutingRelease` (a topic has one `linkTemplate`); Request release is
   offered to a method editor without METHOD_APPROVE, as no setting says whether an organization separates drafting from
   release (a ProductionPolicy flag is P4's to add if wanted); a request whose checks fail is answered with its findings as
@@ -596,9 +599,10 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   terminal twin ResourceCalendarTui.
 - Demo: line A's calendar (a weekday day shift, a shutdown day), two slots, 30 DEMO_1_1 an hour, line B as its alternate and
   an approved machine rate; both lines' plant and scheduling policy.
-- Specs: Mantle `WorkCenters` (5 features); BOSS `ManufacturingWorkCenters` (5, the "usable when" items), ManufacturingAccess's
-  P3 section (3 features, 4 cases), ManufacturingShell's link rows, the route fixtures and mounts in ManufacturingSpecLib; the
-  client walk `ManufacturingWorkCentersWalk` (3, with 390 px).
+- Specs: rule tests Mantle `WorkCenters` (5 features) and BOSS `ManufacturingWorkCenters` (5, the rules of the "usable
+  when" items), ManufacturingAccess's P3 section (3 features, 4 cases), ManufacturingShell's link rows and the mounts in
+  ManufacturingSpecLib; no route fixtures. Acceptance test: the client walk `ManufacturingWorkCentersWalk` (3, with
+  390 px).
 - Tests run: Mantle WorkCenters, ManufacturingServices, WarehouseProduction, ProductMethods, ProductStandardCosts (56, pass);
   BOSS ManufacturingWorkCenters, ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, WarehouseFacilities,
   WarehousePolicies, WarehouseAccess, Calendar, AccountingFixedAssets, TimelineWalk, ProductsMethods (all pass); the client walk
@@ -875,11 +879,12 @@ materials and stock.
   ManufacturingCostsWalk and ManufacturingAccess's P6 pages open the tab.
 - Specs: Mantle `test/work/ProductionOrders.spec.js` (11 features, about 5 s: the release with its retry and the policy
   kept; the staged release, its approval and the blocked issue; the PsrStaged line; the later method release and
-  re-explosion; hold before start and resume; unrelease, cancel, refused complete, close, generic move and stale revision;
-  the guarded seeded transitions on a task; the bulk release; another organization and a reader; the header, equipment
-  and people; operations' readiness and the pick list). BOSS `ManufacturingWorkOrders` (4, the "usable when" items through
-  the screens and verbs), ManufacturingAccess's P5a section (4), ManufacturingShell's quick create, palette and links,
-  the route fixtures; client walk `ManufacturingWorkOrdersWalk` (2, with 390 px).
+  re-explosion; hold before start and resume; unrelease, cancel, refused complete, close, generic move and stale
+  revision; the guarded seeded transitions on a task; the bulk release; another organization and a reader; the header,
+  equipment and people; operations' readiness and the pick list). BOSS `ManufacturingWorkOrders` (4, the rules of the
+  "usable when" items through the screens and verbs), ManufacturingAccess's P5a section (4), ManufacturingShell's quick
+  create, palette and links; no route fixtures. The client walk `ManufacturingWorkOrdersWalk` (2) is the app's one
+  golden-path walk in the regression suite; its 390 px check is an acceptance test.
 - Tests run: Mantle ProductionOrders, SupplyPlanning, ProductionCosts, WarehouseProduction, ManufacturingServices,
   ProductionPolicy, ProductMethods, MethodTemplates, WorkCenters (69, pass); BOSS ManufacturingWorkOrders,
   ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, ManufacturingMethods, ManufacturingWorkCenters,
@@ -2665,11 +2670,11 @@ Design §9; the reporting part of M10.
 
 ### P17 — Finish
 
-- The terminal twins, and the server-static pass.
-- The design §10.3 acceptance review and crosscut §6 standalone operation. A Manufacturing user with no other launcher
-  plans, makes and receives through the shared mounts. That user is refused cost, finance, other organizations' runs and
-  stock actions without `STOCK_ISSUE`, through URLs, shared contexts, the shop floor, exports, the palette and
-  search.
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The design §10.3 acceptance review and crosscut §6 standalone operation, acceptance tests (`ManufacturingAccessWalk`,
+  `ManufacturingIsolationWalk`, `ManufacturingCostIsolationWalk`). A Manufacturing user with no other launcher plans,
+  makes and receives through the shared mounts. That user is refused cost, finance, other organizations' runs and stock
+  actions without `STOCK_ISSUE`, through URLs, shared contexts, the shop floor, exports, the palette and search.
 - The §11 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
@@ -3017,10 +3022,12 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo production user, and walk each built phase's
   "usable when" in order.
-- **Design §10.3's acceptance review and crosscut §6,** scenario by phase:
+- **Design §10.3's acceptance review and crosscut §6,** scenario by phase. The walks named are acceptance tests, run
+  with `./moq accept mr-boss` when asked, except `ManufacturingWorkOrdersWalk`, the app's one golden-path client walk
+  in the regression suite:
 
 | Scenario | Phase | Covered by (checked in P17) |
 | --- | --- | --- |
@@ -3032,8 +3039,8 @@ Designed, not in this build:
 | Intake, assignment, reopen and resolution | P11 (downtime and quality requests); SLA and CSAT are Customer Service's | mr-mantle ProductionDowntime (a fault with its maintenance request; closing the stop leaves the request open); BOSS ManufacturingDowntime, ManufacturingDowntimeWalk |
 | Released BOM or routing changes; missing instruction | P9 (amendment), P10 (the instruction gate); the gauge is §7 | mr-mantle ProductionChanges (amendment, strict release), ProductionShopFloor (a start waits for the acknowledgment); BOSS ManufacturingMethods, ManufacturingShopFloor, ManufacturingChangesWalk, ManufacturingShopFloorWalk |
 | Cancellation, partial completion and retry | P5 (cancel and retry), P7 (partial), P9 (split); batches are §7 | mr-mantle ProductionOrders (cancel, unrelease, retries), ProductionChanges (split, a posted run reversed or closed out), ProductionQuantities (complete refused until reconciled, a retry posts nothing twice); BOSS ManufacturingWorkOrders |
-| Unauthorized action and standalone app | `ManufacturingAccess` in every phase; P17 | BOSS ManufacturingAccess (a section per phase), ManufacturingAccessWalk, ManufacturingIsolationWalk and ManufacturingCostIsolationWalk (P17) |
+| Unauthorized action and standalone app | `ManufacturingAccess` for each access rule a phase adds; P17 | BOSS ManufacturingAccess, ManufacturingAccessWalk, ManufacturingIsolationWalk and ManufacturingCostIsolationWalk (P17) |
 | Subcontract dispatch and output receipt | P14, on Warehouse P15 and P16 | mr-mantle ProductionSubcontract; BOSS ManufacturingSubcontracting, ManufacturingSubcontractWalk |
 | Production cost close (design-accounting §16.3 production-to-GL) | P15 | mr-mantle ProductionCostClose; BOSS ManufacturingAccess (P15), ManufacturingCostCloseWalk |
 
-- **Screenshots** through the BOSS client spec of §2, light and dark, and the handheld mounts at phone width.
+- **Phone width.** The handheld mounts at 390 px are acceptance tests; no screenshots.

@@ -1778,6 +1778,10 @@ add only a source-verified row and identify the addition; do not count XML-comme
 
 ### 16.3 Implementation acceptance scenarios
 
+Each scenario is an acceptance test to write (`acceptance/Marketing/`, `acceptance/client/Marketing/`), named in the
+implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
+acceptance test, one per app per mode.
+
 1. **Organization and private contacts:** two organizations plus a private contact; permitted
    read/edit/preview/export succeeds, identical parameters for an unauthorized user fail for the
    permission/scope reason. IDs, counts, choices and cached report results do not leak records.
@@ -1824,9 +1828,9 @@ add only a source-verified row and identify the addition; do not count XML-comme
     untracked recipients do not depress a tracking rate; primary versus influenced outcomes do not
     double count. Split invoices, partial refunds, parent campaigns, multiple currencies and missing
     evidence show explicit, source-reconciled results.
-16. **Devices and surfaces:** every screen renders in qvt and tui; public HTML is accessible; phone
-    lists/check-in fit at 390 px. Check real action presence for allowed roles and absence for readers,
-    empty states, stale-write recovery and not-available links. All new routes join structure/TUI specs.
+16. **Devices and surfaces:** one sweep of the app per mode (qvt and tui); public HTML is accessible;
+    phone lists/check-in fit at 390 px. Check real action presence for allowed roles and absence for
+    readers, empty states, stale-write recovery and not-available links.
 17. **Bounces and complaints:** a hard-bounce DSN and an ARF complaint to a VERP address each
     suppress the destination once and mark the ledger attempt; a duplicate report changes nothing;
     a soft bounce follows the retry policy; an unknown key is logged and other reports continue.

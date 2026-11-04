@@ -80,8 +80,9 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - demo data;
   - builds and commits.
 
-  The walks are BOSS `test/client` specs, run with `moqui test-client mr-boss --serve` (F23). No spec takes
-  screenshots; a check at phone width goes in `ProductsPhone.spec.js`'s pattern, for what changes there.
+  `ProductsWalk` is the app's one golden-path client walk in the regression suite (`test/client/`); every other walk,
+  and a check at phone width on `ProductsPhone.spec.js`'s pattern, is an acceptance test (`acceptance/client/`). No
+  spec takes screenshots.
 - **Catalog rows through services.** No entity filter covers a product's prices, associations, parties, content or
   identifiers (F1). Products reads and writes them only through services: `ironstone.products.CatalogServices` checks
   the product's owner and the Products grant, then the Mantle store service runs (below).
@@ -119,15 +120,17 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle`;
-    - `./moq test mr-boss` passing, with AppStructure covering the new screens and Products in its non-placeholder
-      list;
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle, BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing;
     - the inventories' **Implemented in** columns;
-  - the `ProductsAccess` spec extended to the phase's services and mounts;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `ProductsAccess` (one holder and one non-holder on one verb, and another
+    organization's record refused), not every service and mount;
   - its row and **Built** note here.
+
+  No route fixtures: a screen sweep is an acceptance test, one per app per mode. The phase's "usable when" and its §8
+  scenario are acceptance tests to write (`acceptance/Products/`, `acceptance/client/Products/`), named in the phase;
+  running them is not part of Done.
 
 ## 3. Phases
 
@@ -181,9 +184,11 @@ cross-checks, review-document presence and `git diff --check`.
   - `BossUsersDemoData.xml` gains a user per grant, and a catalog reader with no other launcher.
 - **Specs.**
   - `ProductsShell`: the menu per grant, the palette, record links.
-  - `ProductsAccess`: started, covering owner scope and grants through the services.
-- **Usable when:** the Products menu renders for each grant. A catalog reader sees the shared products and their own
-  organization's products, but not another organization's, in lists, the palette and record links.
+  - `ProductsAccess`: the app's one access spec, about seven features run once with authorization on: owner scope and
+    grants through the services. A later phase adds a case only for an access rule it adds.
+- **Usable when** (an acceptance test to write): the Products menu renders for each grant. A catalog reader sees the
+  shared products and their own organization's products, but not another organization's, in lists, the palette and
+  record links.
 
 **Built Oct 28 (P1).** Framework `f9641cda`, Mantle `6d548a3e`; BOSS f1c2a37. Composable Products grants plus the owner apps' grants; active-org root filters; trusted Mantle
 `get#CatalogOwnerScope` and BOSS capability/record/find guards; a guarded read list and minimal product/category record
@@ -622,9 +627,9 @@ services only call Mantle's. Validation evidence was kept by the build session.
 
 ### P14 — Finish
 
-- The terminal twins, and the server-static pass.
-- The §12.3 #8 walk. A Products user with no other launcher is refused cost, finance, stock posting and other
-  organizations' records, through URLs, shared contexts, imports, exports and search.
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The §12.3 #8 walk, an acceptance test. A Products user with no other launcher is refused cost, finance, stock posting
+  and other organizations' records, through URLs, shared contexts, imports, exports and search.
 - The §13 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
@@ -813,10 +818,10 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo catalog user, and walk each built phase's
   "usable when" in order.
-- **Design §12.3**, scenario by phase:
+- **Design §12.3**, scenario by phase, each an acceptance test (`./moq accept mr-boss`, when asked):
 
 | Scenario | Phase |
 | --- | --- |
@@ -827,12 +832,12 @@ Designed, not in this build:
 | 5 Estimates apart from valuation, and the roll-up | P9, on P8's methods |
 | 6 Imports and documents | P12, P10 |
 | 7 Scans, packs and labels | P11 |
-| 8 Products alone, the rest denied | P14 (ProductsAccess in every phase) |
+| 8 Products alone, the rest denied | P14 (ProductsAccess for each access rule a phase adds) |
 | 9 Obsolete products refused | P2 (order lines); the other callers are in §7 |
 | 10 Kits | P2 (availability, and assembly through `produce#AvailableAssemblies` until Warehouse Pack exists); P8 (never a BOM) |
 | 11 Unit and currency writes refused | P11 |
 
-- **Screenshots** through the BOSS client spec of §2, light and dark.
+- No screenshots.
 
 P1 committed after validation: framework `f9641cda`, Mantle `6d548a3e`, BOSS `f1c2a37`.
 

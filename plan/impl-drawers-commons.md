@@ -148,11 +148,13 @@ Each finding was verified in the code. Each resolution is now part of the design
   - Mantle's existing uses of both patterns are kept, not replaced.
 - **Demo data.** BOSS adds `data/BossDemoData.xml` (type demo) per milestone so specs and walks have content.
 - **Done for a milestone:**
-  - Tests: `cargo test` for the touched crates, with goldens reviewed; the new Mantle specs in `test/suite.js` passing
-    under `./moq test mr-mantle`; `./moq test mr-boss` passing, with `test/AppStructure.spec.js` extended to
-    every implemented Commons and Comms screen (not only the placeholders); `moqui lint --screens` clean for BOSS.
-  - Screens: the `test/client` walks passing (`moqui test-client mr-boss --serve`, mr-moqui
-    `docs/dev/Client-Testing.md`).
+  - Tests: `cargo test` for the touched crates, with goldens reviewed; the regression tests (`test/`) for the rules the
+    milestone adds passing, in Mantle for Mantle rules; the regression suites of mr-mantle and mr-boss passing within
+    their `test/budget` (`./moq test-apps`); `moqui lint --screens` clean for BOSS. No route fixtures: a screen sweep
+    is an acceptance test, one per app per mode.
+  - Scenarios: the milestone's end-to-end scenarios are acceptance tests to write (`acceptance/`,
+    `acceptance/client/`), named in the milestone; running them is not part of Done. The rules are mr-moqui
+    `docs/dev/Practices-App-Dev.md` §7 and `docs/Build-Test.md` "The two suites".
   - Paperwork: the **Implemented in** columns of `ss-inventory.md` and `usl-inventory.md` filled, and
     `Remaining-Work.md` updated. The milestone's status in §5 updated.
 - **Builds and commits.** Debug incremental builds with one toolchain (the building skill); `rustfmt --edition 2021` on
@@ -687,14 +689,15 @@ with what the drawers and Commons gained for it.
 
 ## 7. Verification
 
-- **Per milestone,** as in its specs and the "Done" rule of §4.
+- **Per milestone,** its rule tests and the "Done" rule of §4.
 - **End to end,** run `./moq run` and sign in as `john.doe`, then:
   - **M1–M3:** walk through the badges, the palette (Ctrl+K, each prefix, an id), each tray tab, quick create from an
     order, and Chatter on that order.
   - **M4:** import a Google Contacts CSV.
   - **M5:** add a real mail account with an app password, then read, reply, file the thread on a record and move it.
   - **M7–M11:** the calendar, files, knowledge, chat and consent flows of their screens.
-- **Client walks** with `moqui test-client mr-boss --serve` (mr-moqui `docs/dev/Client-Testing.md`).
+- **Acceptance tests,** the client walks among them, with `./moq accept mr-boss`, when asked (mr-moqui
+  `docs/Build-Test.md` "The two suites").
 - **Non-BOSS check:** with BOSS's theme values removed, MarbleERP and the tools screens still render with the hidden
   elements (R27).
 

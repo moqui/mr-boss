@@ -44,10 +44,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   written so its client state is an addition, not a rewrite: no money or internal fields read without a group check.
 - **Shared screens.** `Shared/WorkItemDetail` and `Shared/RequestDetail` replace Commons' TaskDetail and RequestDetail;
   Commons keeps its paths and its specs keep passing.
-- **Done for a phase:** impl-drawers-commons §4 "Done" (cargo tests for touched crates with goldens reviewed, the new
-  Mantle specs under `./moq test mr-mantle`, `./moq test mr-boss` with AppStructure covering the new screens,
-  `moqui lint --screens` clean for BOSS, the `test/client` walks passing, the inventories'
-  **Implemented in** columns), the phase's walk in §8, and its row and **Built** note here.
+- **Done for a phase:** impl-drawers-commons §4 "Done" (cargo tests for touched crates with goldens reviewed, the
+  regression tests for the rules the phase adds, the regression suites of mr-mantle and mr-boss within budget,
+  `moqui lint --screens` clean for BOSS, the inventories' **Implemented in** columns), and its row and **Built** note
+  here. The phase's "usable when" is an acceptance test to write (`acceptance/Projects/` or
+  `acceptance/client/Projects/`), named in the phase; running it is not part of Done.
 
 ## 3. Phases
 
@@ -831,10 +832,10 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** `./moq run`, signed in as `john.doe` (and the demo client user from P10), walking each built phase's
   "usable when" in order.
-- **Client walks** with `moqui test-client mr-boss --serve` (mr-moqui `docs/dev/Client-Testing.md`).
+- **Acceptance tests,** the usable-when walks and client walks, with `./moq accept mr-boss`, when asked.
 
 ## 9. Addendum: the client portal in mr-pass
 
@@ -890,11 +891,13 @@ F41–F43, for the PASS pattern.
 - **Nothing internal leaves.** P10's isolation holds for every operation: no Chatter note or activity, rate, cost,
   allocation, other client, internal member, setting, unshared item or unpublished note. A refused action is absent
   from the projection's capabilities, as P10b hid refused controls.
-- **Done for a phase:** §2's Done for the Mantle and BOSS parts; `./moq test mr-pass mr-mantle mr-boss` with the app's
-  specs, among them `ClientPortalAccess`, which carries ClientIsolation's cases over to the operations; the remote
-  pair on PASS's RemoteFixtures pattern; `moqui test-client mr-pass --serve` on ForumHttp's and RemoteHttp's pattern;
-  lint clean for PASS; WorkProjectClients and the BOSS Client specs
-  passing until C7 changes them; the phase's walk, and its row and **Built** note here.
+- **Done for a phase:** §2's Done for the Mantle and BOSS parts; the regression tests for the phase's rules in mr-pass,
+  among them `ClientPortalAccess`, the app's one access spec, which carries ClientIsolation's rules over to the
+  operations; the regression suites of mr-pass, mr-mantle and mr-boss within budget; lint clean for PASS;
+  WorkProjectClients and the BOSS Client specs passing until C7 changes them; and its row and **Built** note here. The
+  phase's "usable when" is an acceptance test to write in mr-pass `acceptance/` or `acceptance/client/` (the remote
+  pair on PASS's RemoteFixtures pattern, a browser walk on ForumHttp's and RemoteHttp's), named in the phase; running
+  it is not part of Done.
 
 ### 9.3 Phases
 
@@ -1001,7 +1004,7 @@ Each result is a row in §9.6 and, where it changes the design, an edit there. S
   `screen/RequestIntake.xml` and the `r` token route then leave BOSS.
 - A Customer Service queue's form is its Support app's (impl-customer-service P15), on the same token service.
 - **Usable when:** an old link redirects and its submit makes the request; an unknown, rotated or turned-off token says
-  the form is not available; ProjectRequests and RequestWalk pass against the new page.
+  the form is not available; ProjectRequests passes against the new page, and RequestWalk (acceptance) is updated.
 
 #### C7 — Retiring BOSS's client mode
 
@@ -1056,6 +1059,6 @@ Each result is a row in §9.6 and, where it changes the design, an edit there. S
 
 ### 9.8 Verification
 
-- **Per phase,** §9.2's Done and the phase's "usable when".
+- **Per phase,** §9.2's Done; the phases' "usable when" acceptance tests with `./moq accept mr-pass`, when asked.
 - **End to end,** the demo PASS site as sheldon.acme and gob.bluth, locally and through a remote frontend, walking
   each built phase's "usable when" in order; after C7, P10's client walk as the same steps in the app.

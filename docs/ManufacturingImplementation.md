@@ -108,17 +108,19 @@ other launcher), `.plan`, `.schedule`, `.method`, `.methodapprove`, `.operate`, 
 
 ## Tests
 
-Run from mr-moqui: `./moq test mr-mantle --spec <name>` and `./moq test mr-boss --spec <name>`.
+Run from mr-moqui: `./moq test mr-mantle --spec <name>` and `./moq test mr-boss --spec <name>` while working, and
+`./moq test-apps` before a commit; the acceptance suite with `./moq accept mr-boss`, when asked.
 
 - Mantle: `test/work/Production*.spec.js`, `WorkCenters`, `MethodTemplates`, `WarehouseProduction`;
   `test/product/ProductMethods`, `SupplyPlanning`; `test/ledger/ProductionCostClose`.
-- BOSS: `test/Manufacturing/*.spec.js` (one per area, `ManufacturingAccess` with a section per phase), the route fixtures
-  in `ManufacturingSpecLib.routeFixtures()` that AppStructure, TuiRender and ManufacturingServerStatic render, and the standalone
-  walks `ManufacturingAccessWalk`, `ManufacturingIsolationWalk` and `ManufacturingCostIsolationWalk` (`ManufacturingStandaloneLib.js`: an organization of
-  its own plans, makes and receives with users of one capability; the other organization's users are refused its records
-  and actions by URL, transition, service, export, print, palette, scan, search, notice and the other apps' shared
-  contexts, and no cost shows without financial read).
-- Client walks: `test/client/Manufacturing/*Walk.spec.js`, through `./moq test-client mr-boss --serve -- --spec <name>`.
+- BOSS regression: `test/Manufacturing/*.spec.js` (one per area; `ManufacturingAccess`, the app's one access spec),
+  and the golden-path client walk `test/client/Manufacturing/ManufacturingWorkOrdersWalk.spec.js`.
+- BOSS acceptance (`acceptance/Manufacturing/`, `acceptance/client/Manufacturing/`): the standalone walks
+  `ManufacturingAccessWalk`, `ManufacturingIsolationWalk` and `ManufacturingCostIsolationWalk`
+  (`ManufacturingStandaloneLib.js`: an organization of its own plans, makes and receives with users of one capability;
+  the other organization's users are refused its records and actions by URL, transition, service, export, print,
+  palette, scan, search, notice and the other apps' shared contexts, and no cost shows without financial read),
+  ManufacturingServerStatic, one screen sweep per mode, and the other client walks.
 
-Each new screen adds its route to `routeFixtures()` and, when it shows a record, to the standalone lib's `p17Routes`; a
-screen ManufacturingServerStatic reports clean is marked `server-static="qvt"`.
+No route fixtures: a screen sweep is an acceptance test, one per app per mode. A new screen that shows a record goes in
+the standalone lib's `p17Routes`; a screen ManufacturingServerStatic reports clean is marked `server-static="qvt"`.

@@ -1680,6 +1680,10 @@ Chatter link to the surviving deal, preserving each record's history and audienc
 
 ### 14.3 Implementation acceptance scenarios
 
+Each scenario is an acceptance test to write (`acceptance/Sales/`, `acceptance/client/Sales/`), named in the
+implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
+acceptance test, one per app per mode.
+
 1. A rep creates a lead without a customer account, finds an existing contact during qualification
    and preserves one salesOpportunityId, attribution, activities and files. Retry creates no second
    account/deal. A stale conversion and a cross-organization account selection are refused.

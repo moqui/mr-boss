@@ -737,6 +737,10 @@ Legacy saved finds/schedules are inventoried by ID, owner, source route and shar
 
 ### 13.3 Acceptance scenarios
 
+Each scenario is an acceptance test to write (`acceptance/Insights/`, `acceptance/client/Insights/`), named in the
+implementation plan; the rules it relies on get their own regression tests. No route fixtures: a screen sweep is an
+acceptance test, one per app per mode.
+
 | Scenario | Required result |
 | --- | --- |
 | Reader versus author/steward/distributor | Each UI affordance has a successful authorized case and an otherwise valid denied direct-service case. Editing alone grants no source read. |
@@ -757,7 +761,7 @@ Legacy saved finds/schedules are inventoried by ID, owner, source route and shar
 | Editable map copies | Copy preserves suite provenance; local edits survive template updates; stale version fails; an unauthorized/missing target exposes no count or live link; a flow-map Definition saved through Tools with an unregistered target renders that step as informational; map actions cannot mutate business records. |
 | Definition and source change | Version conflicts, retired fields, changed metric grain and removed references give actionable blockers; restore creates a new version; import/Git sync does not activate delivery or bypass admission. |
 | Assist and MCP | Assist's answers and charts come from the same authorized query as the dashboard; an MCP client cannot read a People, payroll or cost dataset. |
-| Device and output | Browser, narrow phone and TUI can read/use every screen; chart/map has a table/list alternative; exported documents retain filters, units, basis, versions and as-of. |
+| Device and output | Browser, narrow phone and TUI can read/use every screen (one sweep per mode); chart/map has a table/list alternative; exported documents retain filters, units, basis, versions and as-of. |
 
 ## 14. Documents and outputs
 

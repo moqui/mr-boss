@@ -138,7 +138,7 @@ Each comes from one or more reviewers, with their recommendation. The per-plan f
 | Q11 | Where does the close residual go without an approved standard? | To the output, by the landed-cost split, under a standard-or-actual basis on ProductionAllocationPolicy. Variance stays the rule for standard-costed runs. This changes design-accounting's decided rule 3 | I-MFG-06 |
 | Q12 | What is the drop-ship cost path? | The bill lines post to COGS, and the drop-ship facility holds no valued stock (Odoo). Split P7 into a Mantle port and a BOSS phase. The branch is about 600 lines of Groovy-era services, with defects to fix | I-PUR-03, I-PUR-04, I-PUR-05 |
 | Q13 | Where do the shared core-app rules live? | In a new "Core apps" part of impl-drawers-commons §4: Done, the flag rule, preview-then-post, restricted values and owner contracts. Each plan keeps only its exceptions | I-XC-54, I-XC-56, I-XC-57, I-XC-63 |
-| Q14 | Do terminal twins come per phase or at Finish? | Per phase, with TuiRender in Done. Finish keeps only the server-static pass | I-XC-50 |
+| Q14 | Do terminal twins come per phase or at Finish? | Per phase, with TuiRender in Done. Finish keeps only the server-static pass. Superseded by the new Done ([impl-drawers-commons §4](impl-drawers-commons.md#4-ground-rules), [the test rules](../../../../docs/dev/Practices-App-Dev.md#7-tests)): no TuiRender in Done; a sweep is an acceptance test, one per app per mode | I-XC-50 |
 | Q15 | Which phases should be split? | Products P9 and P11; Accounting P6, P10, P17 and P18 (and show P2a/P2b in the table); Purchasing P7; Customer Service P2 (and reorder its end: Support app, then Feedback, then Reports). No merges | I-PRD-15, I-ACC-14, I-PUR-03, I-CS-08 |
 | Q16 | Who builds PASS's anonymous token operation and the bound invitation? | Accounting P18, as part of settling how a PASS app registers. Issue invitations from Customer360 and Supplier360 through a Mantle service that checks the issuer's access. Purchasing P16 and Customer Service P15 reuse both | I-ACC-08, I-CS-04, I-CS-21 |
 | Q17 | One approval-decision record or several? | Make Purchasing P3's decision record generic in Mantle before it is built. Customer Service P9 and P10 reuse it, and only the warranty decision keeps its own record | customer-service.md, question 2 |
@@ -192,11 +192,13 @@ Each of these is S-sized, and most are a line or two in a plan. The IDs are in t
 - The root authz is live since `f4c1781`: one P1 access line for all five plans (I-XC-58 and the per-plan rows).
 - Mark Products' built fields, services and `expiryBlock` as existing, and shrink the phases that planned them: Warehouse P3, Manufacturing P2/P3 and Purchasing P14 (I-XC-10, I-WH-11, I-MFG-08, I-PUR-21).
 - impl-drawers-commons §4:
-  - replace `gallery-shots.mjs` with `moqui test-client <component> --serve --spec GalleryShots` (I-XC-53);
+  - replace `gallery-shots.mjs` with `moqui test-client <component> --serve --spec GalleryShots` (I-XC-53; superseded:
+    no screenshot specs, and the gallery sweep is an acceptance test);
   - correct the `orderRevision` sentence and complete the audit-logged list (I-XC-52).
 - Fix Customer Service P13's usable-when ("next version is a clone") to the dated-form decision (I-XC-51, I-CS-18).
 - Write Manufacturing's bare P16a/P16b as "Warehouse P16a/P16b", and "built" as "builds" where the phase is future (I-XC-64, I-MFG-25, I-MFG-26).
-- Drop the AppStructure floor number from Accounting F3 and Purchasing F16 (I-ACC-09, I-PUR-22).
+- Drop the AppStructure floor number from Accounting F3 and Purchasing F16 (I-ACC-09, I-PUR-22). Superseded: no route
+  fixtures, and AppStructure is an acceptance test.
 
 **Reuse what exists.**
 - Products P12 reuses P4's `ProductCatalogOperation`, whose entity already says so (I-PRD-22).
@@ -213,7 +215,9 @@ Each of these is S-sized, and most are a line or two in a plan. The IDs are in t
 - Accounting P17 conditions all three return SECAs on D11's flag (I-XC-05).
 - Products P9 sets `OrderItem.standardCost` only when the customer is not internal (I-PRD-07).
 - Warehouse: no guarded production issue past on-hand (I-WH-05), and enforce `lotRequired` and `serialRequired` at receipt (I-WH-15).
-- Each P1 adds its root to TuiRender and the client deny pattern (I-XC-50, I-XC-55).
+- Each P1 adds its root to TuiRender and the client deny pattern (I-XC-50, I-XC-55). The TuiRender part is superseded
+  by the new Done ([impl-drawers-commons §4](impl-drawers-commons.md#4-ground-rules),
+  [the test rules](../../../../docs/dev/Practices-App-Dev.md#7-tests)): no route fixtures.
 
 **Moves that fix the order.**
 - Seed `BOSS_PURCHASING_BUYER` in Accounting P1 (I-XC-04).

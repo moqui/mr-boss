@@ -124,8 +124,8 @@ work is §7, the open questions §5.
   - demo data;
   - builds and commits.
 
-  The walks are BOSS `test/client` specs, as Products' are (impl-products §2). No spec takes screenshots; a walk
-  asserts what a page shows.
+  The walks are on Products' pattern (impl-products §2): one golden-path walk in `test/client/`, the rest acceptance
+  tests. No spec takes screenshots; a walk asserts what a page shows.
 - **Use Mantle first.** Before adding a service, entity or guard, find the Mantle service that already does it and use
   it, or extend it with a parameter: payments through `create#`/`update#Payment` and `post#Payment`, so their SECAs
   run; applications through the `apply#*` services; refunds through `create#RefundPayment`; gateway operations through
@@ -204,19 +204,19 @@ work is §7, the open questions §5.
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle` without mr-boss, their users in spec-local groups
-      holding the permissions;
-    - `./moq test mr-boss` passing, with AppStructure covering the new screens and Accounting in its
-      non-placeholder list (F3);
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle without mr-boss, their users in
+      spec-local groups holding the permissions, and BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing;
     - the inventories' **Implemented in** columns;
-  - the `AccountingAccess` spec extended to the phase's services and mounts;
-  - for P18: `./moq test mr-pass mr-mantle mr-boss` with the apps' specs, the remote pair on PASS's RemoteFixtures
-    pattern, `moqui test-client mr-pass --serve` on ForumHttp's and RemoteHttp's pattern, with the phone-width
-    overflow checks at 390 px, and lint clean for PASS;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `AccountingAccess` (one holder and one non-holder on one verb, and another
+    organization's record refused), not every service and mount;
+  - for P18: the same for mr-pass, and lint clean for PASS;
   - its row and **Built** note here.
+
+  The phase's "usable when" and its §8 walkthrough are acceptance tests to write (`acceptance/Accounting/`,
+  `acceptance/client/Accounting/`), named in the phase; for P18 the remote pair on PASS's RemoteFixtures pattern and
+  the browser walk on ForumHttp's and RemoteHttp's, in mr-pass `acceptance/`. Running them is not part of Done.
 
 ## 3. Phases
 
@@ -316,11 +316,12 @@ closes. Completed checks (findings F48–F60; verification below):
     report reader with no other launcher.
 - **Specs.**
   - `AccountingShell`: the menu per group, the palette, record links, quick create.
-  - `AccountingAccess`: started, covering organization scope and groups through AccessServices, and the
-    permissions through the Mantle services.
-- **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A
-  report reader sees their organization's invoices, payments and accounts but not another organization's, in
-  lists, the palette and record links.
+  - `AccountingAccess`: the app's one access spec, about seven features run once with authorization on: organization
+    scope and groups through AccessServices, and the permissions through the Mantle services. A later phase adds a
+    case only for an access rule it adds.
+- **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
+  group may create. A report reader sees their organization's invoices, payments and accounts but not another
+  organization's, in lists, the palette and record links.
 
 ### P2 — Ledger and posting guard
 
@@ -880,9 +881,10 @@ Accounting's customer and supplier pages, as two PASS apps in mr-pass (§2, §4)
 
 ### P21 — Finish
 
-- The terminal twins, and the server-static pass.
-- The §16.3 access walk: an Accounting user of one group with no other launcher is refused the other groups'
-  actions and other organizations' records, through URLs, shared mounts, imports, exports and search.
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The §16.3 access walk, an acceptance test (`AccountingAccessWalk`): an Accounting user of one group with no other
+  launcher is refused the other groups' actions and other organizations' records, through URLs, shared mounts, imports,
+  exports and search.
 - The §17 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
@@ -1543,10 +1545,10 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo finance user, and walk each built
   phase's "usable when" in order.
-- **Design §16.3**, walkthrough by phase:
+- **Design §16.3**, walkthrough by phase, each an acceptance test (`./moq accept mr-boss`, when asked):
 
 | Walkthrough | Phase |
 | --- | --- |
@@ -1556,9 +1558,10 @@ Designed, not in this build:
 | Production-to-GL | P13 (revaluation, and the inventory, WIP and GL tie-out); the cost close in §7, with Manufacturing |
 | Bank-to-close | P2 (closed periods), P9 (statements and matches), P11 (close), P12 (depreciation into a closed period) |
 | Batch/activation | P8 (supplier payment), P9 (statement row), P10 (notice recipient), P12 (asset depreciation), P19 (activation) |
-| Access | `AccountingAccess` in every phase; P18 (customer token); P21 (the full walk) |
+| Access | `AccountingAccess` for each access rule a phase adds; P18 (customer token); P21 (the full walk, acceptance) |
 
-- **Walks** through the BOSS client specs of §2, asserting what each page shows.
+- **Walks.** `AccountingReceivablesWalk` is the app's one golden-path client walk in the regression suite; every other
+  walk, the 390 px checks among them, is an acceptance test in `acceptance/client/Accounting/`.
 
 ### P0 verification — Oct 29, 2026
 

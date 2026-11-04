@@ -59,7 +59,7 @@ Purchasing is built after Manufacturing and before Customer Service (§4), so th
     contract, identity and invitations, for P16's pages
 - Plans:
   - [impl-products.md](impl-products.md): the pattern; P5, P6 and P7, which build the price, supplier-price and
-    availability screens Purchasing mounts; the BOSS client screenshot spec (its F23).
+    availability screens Purchasing mounts.
   - [impl-accounting.md](impl-accounting.md): P6, P7, P10, P13, P15, P17 and P18 (the PASS Supplier app), and its §7
     list of Purchasing's callers.
   - [impl-warehouse.md](impl-warehouse.md): P7, P8, P14 and P16, which build Purchasing's three services, and its §7
@@ -153,7 +153,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - demo data;
   - builds and commits.
 
-  The walks are BOSS `test/client` specs on Products' pattern (impl-products §2).
+  The walks are on Products' pattern (impl-products §2): one golden-path walk in `test/client/`, the rest acceptance
+  tests.
 - **Rules in Mantle, screens in BOSS** (§4). Purchasing's approvals, policies, supplier profile and check, sends,
   revisions, acknowledgements, requests, sourcing, agreements and scorecards are Mantle services in the package of their
   records (`mantle.order`, `mantle.request`, `mantle.party`). Each checks its Moqui permission (§4) and the organization
@@ -226,23 +227,24 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - the reservation SECA, which with P7's port makes a drop-ship PO only for a line reserved at a drop-ship facility.
 
   Mantle's OrderProcureToPayBasicFlow, CrmMiscServices, OrderLifecycle, OrderBulk and WorkProjectRequests specs pass
-  unchanged, and so do the earlier apps' BOSS walks.
+  unchanged, and so does the earlier apps' BOSS regression suite.
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle`, their users in spec-local groups holding the
-      permissions, never a `BOSS_*` group;
-    - `./moq test mr-boss` passing, with AppStructure covering the new screens and Purchasing in its non-placeholder
-      list (F16);
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle, their users in spec-local
+      groups holding the permissions, never a `BOSS_*` group, and BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing;
     - the inventories' **Implemented in** columns;
-  - the `PurchasingAccess` spec extended to the phase's services and mounts;
-  - for P16: `./moq test mr-pass mr-mantle mr-boss` with the Supplier app's specs, the remote pair on PASS's
-    RemoteFixtures pattern, `moqui test-client mr-pass --serve` on ForumHttp's and RemoteHttp's pattern, lint clean
-    for PASS;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `PurchasingAccess` (one holder and one non-holder on one verb, and another
+    organization's record refused), not every service and mount;
+  - for P16: the same for mr-pass, and lint clean for PASS;
   - its row and **Built** note here.
+
+  No route fixtures: a screen sweep is an acceptance test, one per app per mode (F16). The phase's "usable when" and
+  its §8 scenario are acceptance tests to write (`acceptance/Purchasing/`, `acceptance/client/Purchasing/`; for P16,
+  the remote pair on PASS's RemoteFixtures pattern and a browser walk on ForumHttp's and RemoteHttp's in mr-pass
+  `acceptance/`), named in the phase; running them is not part of Done.
 
 ## 3. Phases
 
@@ -346,11 +348,12 @@ check:
     Warehouse receive group, and a Purchasing reader with no other launcher.
 - **Specs.**
   - `PurchasingShell`: the menu per group, the palette, record links, quick create.
-  - `PurchasingAccess`: started, covering organization and supplier scope, the groups through the services and their
-    permissions, and the refused REST and bulk paths.
-- **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A reader
-  sees their organization's POs and suppliers but not another organization's, in lists, the palette and record links,
-  and sees shared suppliers too. A forged order or supplier ID is refused.
+  - `PurchasingAccess`: the app's one access spec, about seven features run once with authorization on: organization
+    and supplier scope, the groups through the services and their permissions, and the refused REST and bulk paths. A
+    later phase adds a case only for an access rule it adds.
+- **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
+  group may create. A reader sees their organization's POs and suppliers but not another organization's, in lists, the
+  palette and record links, and sees shared suppliers too. A forged order or supplier ID is refused.
 
 ### P2 — Suppliers and buying policy
 
@@ -926,11 +929,11 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
 
 ### P17 — Finish
 
-- The terminal twins, and the server-static pass.
-- The design §14.4 acceptance review. A Purchasing user with no other launcher is refused cost, finance, stock posting
-  and other organizations' prices, through URLs, shared contexts, exports, the palette, search and the Supplier app.
-  With the receive and finance groups, the same user works from the shared mounts without the Warehouse or Accounting
-  root.
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The design §14.4 acceptance review, acceptance tests. A Purchasing user with no other launcher is refused cost,
+  finance, stock posting and other organizations' prices, through URLs, shared contexts, exports, the palette, search
+  and the Supplier app. With the receive and finance groups, the same user works from the shared mounts without the
+  Warehouse or Accounting root.
 - The §15 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
 
@@ -999,7 +1002,7 @@ is written there too.
 | F13 | P0: `send#EmailDraft` sends an existing EmailMessage by ID, with record links and followers. `send#OrderStoreEmail` needs a ProductStore (design §14.1). Projects' `send#Invoice` sends a template with the rendered PDF (impl-accounting F2). OrderContent has a type, an item, a party and role, and a content date | P3's `send#PurchaseOrder` on that pattern, storing the PDF as OrderContent; P0 checks the attachment path |
 | F14 | P0: Mantle's drop-ship pieces: ProductPrice `canDropShip` (with `standardLeadTimeDays`, `otherPartyItemId`, `quantityIncrement`, `preferredOrderEnumId` and the agreement keys); ShpTpDrop, with no parent shipment type; and `create#Order`'s Customer Bill-To from a drop-ship channel store's ProductStoreParty role. `OrderHeader.parentOrderId` is set by `clone#Order` for recurrence and listed as child orders. The `EmailOrder` contact purpose exists. Moqui Java's master has the same three pieces | P7, on F21 |
 | F15 | P0: Commons' demo topic BossDemoApproval, "Purchase Approval (demo)", with `approve#DemoPurchase` and `refuse#DemoPurchase`, is Commons' demo, not a purchase source | Purchasing's Approvals filters by its own topics; the demo stays |
-| F16 | P0: AppStructure's non-placeholder list is Commons, Comms, Insights, Projects and Products, each built app adding itself; its placeholder floor (94 today) counts Purchasing's nine | P1 adds Purchasing and lowers the floor |
+| F16 | P0: AppStructure's non-placeholder list is Commons, Comms, Insights, Projects and Products, each built app adding itself; its placeholder floor (94 today) counts Purchasing's nine | None: no route fixtures; the sweep is an acceptance test (§2 Done) |
 | F17 | P0: OrderItem has `quantityUomId`, `unitListPrice`, `isModifiedPrice`, `productPriceId`, `standardCost`, `quantityCancelled`, `requiredByDate` and `overrideGlAccountId`, but no promised date, and no `costCenterId` until Accounting P6. OrderPart has `otherPartyOrderId`, `otherPartyOrderDate`, `estimatedShipDate`, `estimatedDeliveryDate`, `validFromDate`, `validThruDate`, `settlementTermId` and `tradeTermEnumId` | The acknowledgement on OrderPart and a promised date per line (P9); the quote's validity and terms on OrderPart (P11) |
 | F18 | P0: the audit log covers OrderHeader's status; OrderItem's product, quantity, required date, unit amount and standard cost; OrderPart's status, vendor, customer, facility, carrier, shipment method, address and priority; Agreement's status, other party and dates; AgreementItem's quantity; and only the status of Request, RequestItem and Requirement. `get#OrderDisplayInfo` and `get#OrderItemDisplayInfo` read the order's audit history. Not covered: `orderRevision`, OrderItem's unit and cancelled quantity, OrderPart's supplier reference, validity and terms, and RequestItem's quantity, product, date and supplier | Each phase adds `enable-audit-log` to the fields it locks (P3, P9, P10, P11, P13) |
 | F19 | P0: Mantle's quote flow is OrderOpen → OrderRequested ("Request Quote") → OrderProposed ("Propose Quote") → OrderPlaced ("Place from Quote"), with OrderRequested → OrderRejected ("Reject Request") and OrderProposed → OrderCancelled ("Cancel Quote") or OrderBeingChanged. The statuses read "Quote Requested by Customer" and "Quote Proposed by Vendor"; on a PO the customer is the buying organization | Supplier quotes as purchase orders in these statuses (§4, P11, P12); P0 checks the services on them. Not awarded uses Cancel Quote: no Proposed → Rejected, since OrderRejected means rejected by the vendor (crosscut X3) |
@@ -1029,10 +1032,10 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo purchasing user, and walk each built phase's
   "usable when" in order.
-- **Design §14.4**, scenario by phase:
+- **Design §14.4**, scenario by phase, each an acceptance test (`./moq accept mr-boss`, when asked):
 
 | Scenario | Phase |
 | --- | --- |
@@ -1043,10 +1046,10 @@ Designed, not in this build:
 | Count with an intervening movement | Warehouse's P10; Purchasing reads posted availability (P14) |
 | Case intake to resolution | Customer Service's; supplier follow-ups link Requests and WorkItems (P15) |
 | Cancellation, failed inspection and substitution | P3 (cancel remainder), P5 (failed inspection), P11 and P16 (a cancelled RFQ revokes), P12 (substitutes) |
-| Closed period, unauthorized action and standalone use | P6 (a bill correction through Accounting); `PurchasingAccess` in every phase; P17 |
+| Closed period, unauthorized action and standalone use | P6 (a bill correction through Accounting); `PurchasingAccess` for each access rule a phase adds; P17 |
 | Named independent failures, atomic inner posting | Every phase: P4 (bulk approvals), P7 (drop-ship lines), P9 (reminders), P10 (supplier groups), P11 (invitations), P15 (evaluations) |
 | Drop-ship order to customer invoice and supplier bill (design §18) | P7 |
 | A revision and its as-of print (§2) | P9; P11 (the RFQ), P13 (the agreement) |
 
-- **Screenshots** through the BOSS client spec of §2, light and dark, and the Supplier app's pages through PASS's
-  client spec at phone and desktop widths.
+- **Walks.** One golden-path client walk for the app in the regression suite; the others, and the Supplier app's
+  pages at phone and desktop widths in mr-pass, are acceptance tests. No screenshots.

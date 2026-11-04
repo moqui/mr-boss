@@ -63,7 +63,7 @@ before it provide. Customer Service is the last of the six core apps, built afte
     the request contract), §5 (identity, membership and invitations), §13.1 (the shared foundation) and §13.4 (the
     forum's case escalation)
 - Plans:
-  - [impl-products.md](impl-products.md): the pattern; P2, P5 and P7; the BOSS client screenshot spec (its F23).
+  - [impl-products.md](impl-products.md): the pattern; P2, P5 and P7.
   - [impl-accounting.md](impl-accounting.md): P4, P6, P10, P17 and P18, its rule flags, operation record and pack
     invoice (§4), and its §7 list of Customer Service's contexts and callers.
   - [impl-warehouse.md](impl-warehouse.md): P8, P11, P13, P14 and P17, and its §7 list.
@@ -163,7 +163,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - demo data;
   - builds and commits.
 
-  The walks are BOSS `test/client` specs on Products' pattern (impl-products §2).
+  The walks are on Products' pattern (impl-products §2): one golden-path walk in `test/client/`, the rest acceptance
+  tests.
 - **Service rows through services.** Under the organization filters (impl-drawers-commons §4), Party, OrderPart, Shipment, ReturnHeader and Invoice
   are filtered, but not Request, RequestCategory, OrderHeader, OrderItem, CommunicationEvent or the Request joins (F2).
   Customer Service reads and writes them only through services: `ironstone.customerservice.AccessServices` checks the
@@ -263,23 +264,24 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   Mantle's WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow,
   ReturnToResponseBasicFlow, ShipmentReturnMisc and WorkPlanToCashBasicFlow specs, PASS's specs (Forum, ForumAccess,
   PublicIdentity, Integrations, RemoteFixtures, and ForumHttp and RemoteHttp in the browser) and mr-marble's render
-  specs pass unchanged, and so do the earlier apps' BOSS walks.
+  specs pass unchanged, and so does the earlier apps' BOSS regression suite.
 - **Done for a phase** means all of these:
   - impl-projects §2 "Done":
     - cargo tests for the touched crates, with goldens reviewed;
-    - the new Mantle specs passing under `./moq test mr-mantle`;
-    - `./moq test mr-boss` passing, with AppStructure and TuiRender covering the new screens and Customer Service in
-      their root lists (F20);
+    - the regression tests for the rules the phase adds passing: Mantle's in mr-mantle, BOSS's in mr-boss;
+    - the regression suites of mr-mantle and mr-boss passing within their budget;
     - `moqui lint --screens` clean for BOSS with the Debug binary;
-    - the `test/client` walks passing;
     - the inventories' **Implemented in** columns;
-  - the `CustomerServiceAccess` spec extended to the phase's services and mounts, and ClientIsolation and ClientWrites
-    passing with the new package (F17);
-  - for a phase that touches the Support app (P13, P15): `./moq test mr-pass mr-mantle mr-boss` with its specs, the
-    remote pair on RemoteFixtures' pattern, `moqui test-client mr-pass --serve` on ForumHttp's and RemoteHttp's
-    pattern, and lint clean for PASS;
-  - the phase's walk in §8;
+  - an access rule the phase adds checked in `CustomerServiceAccess` (one holder and one non-holder on one verb, and
+    another organization's record refused), not every service and mount; ClientIsolation and ClientWrites passing with
+    the new package (F17);
+  - for a phase that touches the Support app (P13, P15): the same for mr-pass, and lint clean for PASS;
   - its row and **Built** note here.
+
+  No route fixtures: a screen sweep is an acceptance test, one per app per mode (F20). The phase's "usable when" and
+  its §8 scenario are acceptance tests to write (`acceptance/CustomerService/`, `acceptance/client/CustomerService/`;
+  for the Support app, the remote pair on RemoteFixtures' pattern and a browser walk on ForumHttp's and RemoteHttp's in
+  mr-pass `acceptance/`), named in the phase; running them is not part of Done.
 
 ## 3. Phases
 
@@ -409,11 +411,12 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     customer contacts.
 - **Specs.**
   - `CustomerServiceShell`: the menu per group, the palette, record links, quick create.
-  - `CustomerServiceAccess`: started, covering organization, customer and queue scope and the groups through the
-    services, each group's permissions, and the refused REST paths.
-- **Usable when:** the menu renders for each group, and quick create offers only what the group may create. An agent
-  finds their organization's customers and orders through the palette but not another organization's, and a forged
-  customer or order ID is refused. A Projects client contact is refused the root and every
+  - `CustomerServiceAccess`: the app's one access spec, about seven features run once with authorization on:
+    organization, customer and queue scope and the groups through the services, each group's permissions, and the
+    refused REST paths. A later phase adds a case only for an access rule it adds.
+- **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
+  group may create. An agent finds their organization's customers and orders through the palette but not another
+  organization's, and a forged customer or order ID is refused. A Projects client contact is refused the root and every
   `ironstone.customerservice` service.
 
 ### P2 — Cases and queues
@@ -1053,14 +1056,14 @@ Design §8; CS-PORTAL.
   - a forged, expired or revoked token shows nothing about the customer or the record; an anonymous reader sees
     published help only;
   - the same walk passes through a remote PASS frontend with only framework, webroot and PASS installed;
-  - Forum's walks and the Projects client walks pass unchanged.
+  - the regression suites of mr-pass and mr-boss pass unchanged.
 
 ### P16 — Finish
 
-- The terminal twins, and the server-static pass.
-- The design §10 end-to-end review. A Customer Service user with no other launcher is refused cost, finance, stock
-  posting and other organizations' records, through URLs, shared contexts, exports, the palette, search and
-  notifications. With the W and F groups, the same user works from the shared mounts without the Warehouse or
+- The terminal twins, and the server-static sweep, an acceptance test.
+- The design §10 end-to-end review, acceptance tests. A Customer Service user with no other launcher is refused cost,
+  finance, stock posting and other organizations' records, through URLs, shared contexts, exports, the palette, search
+  and notifications. With the W and F groups, the same user works from the shared mounts without the Warehouse or
   Accounting root. A customer contact reaches nothing in BOSS, and nothing of another customer in the Support app.
 - The §11 outputs not built earlier: the case summary print, customer-visible and internal.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-pass README and
@@ -1131,7 +1134,7 @@ is written there too.
 | F17 | P0: no `ExternalAccessServices` exists (Accounting P18). EXTERNAL_USER is a permission. The client deny pattern's service pattern names `ironstone.(commons\|comms\|projects\|products\|shared)` and a fixed verb list, and ClientWrites walks every ironstone service file | Answered Nov 1: Accounting P18 built `mantle.party.ExternalAccessServices`, and the deny pattern now names accounting and warehouse too (BossSetupData); P1 adds `customerservice` and its verbs; customers never reach BOSS (§4) |
 | F18 | P0: client checks are bound to projects: `get#ClientWriteContext` refuses a request with no project, Chatter's client mode comes from PROJECT_CLIENT, and `get#ClientRecordVisibility` shows a request the client filed or one of a client project. A client's file list may include RqCntInternal content (P0 confirms) | Customers read through the Support app's Mantle projections, outward messages and approved files only (§4, P15), so these stay as they are; P0 confirms the internal-content question for Projects' own clients |
 | F19 | P0: the borrowed groups (`BOSS_ACCOUNTING_AR`, `_TREASURY`, `_APPROVE`, Warehouse's receive, inspect and quality manager) do not exist yet | Answered Nov 1: `BOSS_ACCOUNTING_AR`, `_TREASURY` and `_APPROVE` and `BOSS_WAREHOUSE_RECEIVE`, `_INSPECT` and `_QUALITY_MANAGER` exist |
-| F20 | P0: AppStructure's built-root list (Commons, Comms, Insights, Projects, Products) and TuiRender's (Commons, Comms, Insights, Products) leave out Customer Service | P1 adds it |
+| F20 | P0: AppStructure's built-root list (Commons, Comms, Insights, Projects, Products) and TuiRender's (Commons, Comms, Insights, Products) leave out Customer Service | None: no route fixtures; the sweep is an acceptance test (§2 Done) |
 | F21 | P0: `find#ReturnableOrderItems` measures invoiced quantity less non-cancelled returns; nothing locks eligibility across drafts; `update#ReturnItem` can raise `returnQuantity` at any status without the ceiling | P9: eligibility under a lock, shipped and invoiced, every BOSS write checked |
 | F22 | P0: `cancel#Return` cancels the items and header but not the return shipment approval made | P9 |
 | F23 | P0: `add#ReturnToShipment` sets `ReturnItemBilling.shipmentId`, which is not a field | P9's Mantle fix, unless Warehouse P14 made it |
@@ -1179,11 +1182,11 @@ Designed, not in this build:
 
 ## 8. Verification
 
-- **Per phase,** the "Done" rule of §2 and the phase's "usable when".
+- **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo service user, and walk each built phase's
   "usable when" in order; sign in to the demo PASS site as the demo customer contacts for the Support app's, locally
   and through a remote frontend.
-- **Design §10 end-to-end review,** scenario by phase:
+- **Design §10 end-to-end review,** scenario by phase, each an acceptance test (`./moq accept mr-boss`, when asked):
 
 | Scenario | Phase |
 | --- | --- |
@@ -1193,8 +1196,8 @@ Designed, not in this build:
 | Case, RMA, partial receipt, failed inspection, credit or refund | P9; a supplier return linked from the case is Purchasing P8's |
 | Count with an intervening movement | Warehouse's P10; Customer Service reads availability (P3) |
 | Case intake, assignment, pause and reopen, resolution, CSAT | P2, P4, P5, P6, P8 and P13; a customer's own intake and reply in the Support app, P15 |
-| Unauthorized actions, cancellations, closed period and standalone use | `CustomerServiceAccess` in every phase; P9 and P10 (cancel and ClosedPeriod); P16 |
+| Unauthorized actions, cancellations, closed period and standalone use | `CustomerServiceAccess` for each access rule a phase adds; P9 and P10 (cancel and ClosedPeriod); P16 |
 | Independent failures, atomic inner operations | Every phase: P2 (bulk), P4 (the SLA scan), P5 (bulk reply), P9 (batch authorize), P12 (feedback review), P13 (invitations) |
 
-- **Screenshots** through the BOSS client spec of §2, light and dark, and the Support app's through PASS's client
-  spec at phone and desktop widths.
+- **Walks.** One golden-path client walk for the app in the regression suite; the others, and the Support app's at
+  phone and desktop widths in mr-pass, are acceptance tests. No screenshots.
