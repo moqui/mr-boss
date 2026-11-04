@@ -117,8 +117,40 @@ feature("Products alone refuses financial outputs, posting and unsupported conte
         search.rows == []
     }
 })
-feature("resolved list and explanation output render in #mode without edit forms in the printable trace", {
-    where: [{mode: "html-print"}, {mode: "tui"}, {mode: "qvt"}],
+// An effective scoped price list prints without its editing controls: john.doe can edit BOSS_PRICE_LIST, so its html
+// render has them, and its html-print render has its rules and none of them; the printable trace has no edit forms.
+const controls = ["Publish reviewed list", "End price list", "Print effective list", "RuleSuccessor"]
+feature("an effective scoped price list prints without its editing controls, and its trace without edit forms", {
+    when() {
+        const list = mode =>
+            render(
+                "Prices/PriceLists/PriceListDetail",
+                {priceListId: "BOSS_PRICE_LIST", productIds: "BOSS_PRD_OWN", runEffectivePrices: true},
+                mode
+            )
+        return {
+            ...as("john.doe", true, () => ({html: list("html"), print: list("html-print")})),
+            trace: as("catalog.price.read", true, () =>
+                render("Prices/PriceExplain", {productId: "BOSS_PRD_OWN", organizationPartyId: "ORG_ZIZI_SERVICES"}, "html-print")
+            )
+        }
+    },
+    then({html, print, trace}) {
+        html.status == 200
+        controls.filter(c => html.output.includes(c)) == controls
+        print.status == 200
+        print.errorMessages.length == 0
+        !/Error rendering|Exception in render/.test(print.output)
+        print.output.includes("Services catalog policy")
+        print.output.includes("BOSS_PRD_OWN")
+        controls.filter(c => print.output.includes(c)) == []
+        trace.errorMessages.length == 0
+        !trace.output.includes("SERV-SUPPLY-01")
+        !trace.output.includes("ExplainContextControls")
+    }
+})
+feature("resolved list and explanation output render in #mode", {
+    where: [{mode: "tui"}, {mode: "qvt"}],
     when({mode}) {
         return as("catalog.price.read", true, () => ({
             list: render(
@@ -134,6 +166,5 @@ feature("resolved list and explanation output render in #mode without edit forms
         trace.errorMessages.length == 0
         if (mode !== "qvt") list.output.includes("BOSS_PRD_OWN")
         !trace.output.includes("SERV-SUPPLY-01")
-        if (mode === "html-print") !trace.output.includes("ExplainContextControls")
     }
 })

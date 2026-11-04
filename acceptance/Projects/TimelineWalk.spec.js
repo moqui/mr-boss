@@ -7,7 +7,7 @@
 // calendar, and removes the dependency; bob.developer, not on the project, sees none of it and moves nothing; john imports a Jira
 // CSV (test/files/jira-work-items.csv) into the project through the wizard's steps (the row without a title fails alone, named),
 // and the timeline draws what came in. The project is cancelled after, so the other specs' lists keep their records.
-// Run: ./moq test mr-boss --spec TimelineWalk
+// Run: ./moq accept mr-boss --spec TimelineWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "TLW"
 

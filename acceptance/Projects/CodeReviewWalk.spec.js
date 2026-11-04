@@ -5,7 +5,7 @@
 // Closes line links the item to complete on merge), john is asked to review, comments on a line and approves, CI posts its
 // status, and joe merges: the merge request is merged, the branch deleted and the work item complete. The project is
 // cancelled and the repository archived after, so the other specs' lists keep their records.
-// Run: ./moq test mr-boss --spec CodeReviewWalk
+// Run: ./moq accept mr-boss --spec CodeReviewWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "CRW"
 const REPO = "crw-walk"

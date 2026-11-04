@@ -42,7 +42,10 @@ function act(paymentId, action, extra = {}) {
             previewId: preview.previewId,
             previewKind: "gateway"
         }).paymentReview
-    return app.call(native + "execute#PaymentGatewayAction", review.confirmParameters)
+    return Object.assign(
+        {previewId: preview.previewId},
+        app.call(native + "execute#PaymentGatewayAction", review.confirmParameters)
+    )
 }
 
 feature("the gateway dialogs send only the action, reason and a refund's amount", {
@@ -136,11 +139,18 @@ feature("treasury reviews and confirms an authorization and a capture; the revie
     }
 })
 
-feature("a receivables user sees the payment without gateway actions and cannot open gateway transactions", {
+// PaymentDetail's header with its gateway primary action (Authorize payment) is on AccountingPayments' render.
+feature("a receivables user reads the payment without gateway actions and cannot open gateway transactions", {
     when() {
         const paymentId = promised(),
-            treasury = app.asUser("finance.treasury", () => app.page("Payments/PaymentDetail", {paymentId})),
-            ar = app.asUser("finance.ar", () => app.page("Payments/PaymentDetail", {paymentId})),
+            ar = app.asUser(
+                "finance.ar",
+                () =>
+                    app.call("ironstone.accounting.PaymentScreenServices.get#PaymentContext", {
+                        organizationPartyId: org,
+                        paymentId
+                    }).financePayment
+            ),
             arTransactions = app.asUser("finance.ar", () => app.page("Payments/GatewayTransactions")),
             arPreview = app.asUser("finance.ar", () =>
                 app.refusal(native + "preview#PaymentGatewayAction", {
@@ -150,12 +160,12 @@ feature("a receivables user sees the payment without gateway actions and cannot 
                     reason: "Not mine"
                 })
             )
-        return {paymentId, treasury, ar, arTransactions, arPreview}
+        return {paymentId, ar, arTransactions, arPreview}
     },
-    then({paymentId, treasury, ar, arTransactions, arPreview}) {
-        treasury.output.includes("Authorize payment")
-        ar.output.includes(paymentId)
-        !ar.output.includes("Authorize payment")
+    then({paymentId, ar, arTransactions, arPreview}) {
+        ar.paymentId == paymentId
+        ar.capabilities.canGatewayAuthorize != true
+        ar.gatewayActionRows.length == 0
         arTransactions.output.includes("Treasury access is required")
         arPreview != ""
     }
@@ -171,21 +181,33 @@ feature("gateway transactions list a payment's answers with their outcome and re
                 listed = screen().execute("gatewayTransactions", {organizationPartyId: org, paymentId}),
                 accepted = screen().execute("gatewayTransactions", {organizationPartyId: org, paymentId, outcome: "accepted"}),
                 pages = ["qvt", "tui", "html"].map(mode => app.page("Payments/GatewayTransactions", {paymentId}, mode)),
+                // the review of a gateway refund: its refund amounts and its answer's refund payment
+                refundReview = app.page("Payments/PaymentDetail/Review", {
+                    paymentId,
+                    previewId: refund.previewId,
+                    previewKind: "gateway"
+                }),
                 providers = app.call("ironstone.accounting.AccessServices.get#Choices", {
                     organizationPartyId: org,
                     choice: "paymentGatewayProviders",
                     selected: gatewayId
                 })
-            return {refund, listed, accepted, pages, providers}
+            return {refund, listed, accepted, pages, refundReview, providers}
         })
     },
-    then({refund, listed, accepted, pages, providers}) {
+    then({refund, listed, accepted, pages, refundReview, providers}) {
         refund.outcome == "accepted"
         listed.records.length >= 3
         listed.records.some(row => row.refundPaymentId == refund.refundPaymentId && row.refundParameters != null)
         listed.records.every(row => row.providerName == "Demonstration test gateway")
         accepted.records.every(row => row.outcomeText == "Accepted")
         pages.every(page => page.status === 200 && !page.errors.length && page.output.includes(refund.refundPaymentId))
+        refundReview.status == 200
+        refundReview.errors == []
+        refundReview.output.includes("Refund through the gateway")
+        refundReview.output.includes("Available to refund")
+        refundReview.output.includes("Gateway answer: Accepted")
+        refundReview.output.includes(refund.refundPaymentId)
         providers.options.some(row => row.value == gatewayId && row.label == "Demonstration test gateway")
     }
 })

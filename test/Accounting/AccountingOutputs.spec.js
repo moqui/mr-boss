@@ -34,21 +34,20 @@ feature("AP prints a bill as the supplier issued it; the printed page has no for
     }
 })
 
+// PeriodCloseDetail's link to its print is checked on AccountingPeriodClose's html render.
 feature("the record screens print their record as evidence: a journal entry and a period's close", {
     when() {
         return lib.asUser("finance.gl", () => ({
             entry: lib.page("GeneralLedger/JournalEntryDetail", {recordId: "BOSS_ACCT_ENTRY"}, "html"),
             entryPrint: lib.page("GeneralLedger/JournalEntryDetail", {recordId: "BOSS_ACCT_ENTRY"}, "html-print"),
-            close: lib.page("PeriodClose/PeriodCloseDetail", {timePeriodId: lib.ids.closePeriodId}, "html"),
             closePrint: lib.page("PeriodClose/PeriodCloseDetail", {timePeriodId: lib.ids.closePeriodId}, "html-print")
         }))
     },
-    then({entry, entryPrint, close, closePrint}) {
+    then({entry, entryPrint, closePrint}) {
         entry.output.includes("GeneralLedger/JournalEntryDetail?renderMode=html-print&amp;recordId=BOSS_ACCT_ENTRY")
         entryPrint.errors == []
         entryPrint.output.includes("Office expense review")
         !entryPrint.output.includes("<form")
-        close.output.includes("PeriodClose/PeriodCloseDetail?renderMode=html-print&amp;timePeriodId=" + lib.ids.closePeriodId)
         closePrint.errors == []
         closePrint.output.includes("Last month")
         !closePrint.output.includes("<form")

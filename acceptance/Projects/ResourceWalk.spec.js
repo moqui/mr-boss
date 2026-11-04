@@ -6,7 +6,7 @@
 // hours and Bob half his week from the planner's dialog, Bob joining the project as a quality analyst; the planner shows Joe's 50 hours
 // over his 40 and Bob's 20; a drag moves Joe's 30 hours a week later, which clears the first week; joe.developer sees the plan read only.
 // The project is cancelled after, with its allocations.
-// Run: ./moq test mr-boss --spec ResourceWalk
+// Run: ./moq accept mr-boss --spec ResourceWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "RWK"
 const made = {}

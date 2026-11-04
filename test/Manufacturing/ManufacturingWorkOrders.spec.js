@@ -1,10 +1,10 @@
 // Manufacturing's work orders (impl-manufacturing P5a's "usable when"; design-manufacturing WorkOrders, NewWorkOrder,
 // WorkOrderDetail): a planner reviews a draft of DEMO_1_1 from the released demo BOM with what is producible now, creates and
 // releases it; a short run waits for a supervisor's staged release, a board move runs the same guard and a bulk release names
-// the blocked run; a released run held before start resumes as released, an unrelease after an issue is refused and an
-// unposted draft is cancelled; Product360's Open runs link, the palette and record links open the work order. The screens
-// render as the demo users with artifact authorization enabled; the Mantle verbs run as the screens run them, after the
-// record check, with the screens' inherited authorization (artifact authorization off, F-P3-2).
+// the blocked run; Product360's Open runs link, the palette and record links open the work order. Hold and resume, an
+// unrelease after an issue and a cancel are mr-mantle's ProductionOrders spec. The screens render as the demo users with
+// artifact authorization enabled; the Mantle verbs run as the screens run them, after the record check, with the screens'
+// inherited authorization (artifact authorization off, F-P3-2).
 // Run: ./moq test mr-boss --spec ManufacturingWorkOrders
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke} = lib
@@ -161,51 +161,15 @@ feature(
     }
 )
 
-feature("a released run held before start resumes as released; an unrelease after an issue is refused; a draft is cancelled", {
-    when() {
-        const workEffortId = draft(1)
-        act(users.plan, workEffortId, "release")
-        const held = act(users.supervise, workEffortId, "hold", {reasonCode: "MATERIAL_HOLD"})
-        const heldStatus = runOf(workEffortId).statusId
-        const resumed = act(users.supervise, workEffortId, "resume")
-        const resumedStatus = runOf(workEffortId).statusId
-        // an issue is a fact of the run (the stock guards are MaterialIssueReceipt's; the fact alone is enough here)
-        system(() =>
-            ec.service
-                .sync()
-                .name("create#mantle.product.issuance.AssetIssuance")
-                .parameters({
-                    workEffortId,
-                    assetId: state[ids.componentId],
-                    productId: ids.componentId,
-                    quantity: 1,
-                    issuedDate: ec.user.nowTimestamp
-                })
-                .call()
-        )
-        const unrelease = act(users.plan, workEffortId, "unrelease")
-        const cancelled = draft(1)
-        const cancel = act(users.supervise, cancelled, "cancel", {reason: "Demand withdrawn"})
-        return {held, heldStatus, resumed, resumedStatus, unrelease, cancelled, cancel}
-    },
-    then({held, heldStatus, resumed, resumedStatus, unrelease, cancelled, cancel}) {
-        held == ""
-        heldStatus == "WeOnHold"
-        resumed == ""
-        resumedStatus == "WeApproved"
-        unrelease.includes("RUN_HAS_FACTS")
-        cancel == ""
-        runOf(cancelled).statusId == "WeCancelled"
-    }
-})
-
 feature("Product360's Open runs link, the palette and record links open the work orders", {
     when() {
         const workEffortId = draft(1)
         // a production reader opens Product360 under Manufacturing: the Manufacturing groups read the catalog (F-P5a-3)
         const product = asUser(users.read, () => lib.page("BillsOfMaterials/Product360", {productId: ids.productId}, "html"))
         const catalog = asService(users.read, () => invoke("ironstone.products.CatalogServices.get#CatalogAccess", {}))
-        const byProduct = asService(users.read, () => invoke(P + "find#ProductionOrders", {productId: ids.productId, pageSize: 500}))
+        const byProduct = asService(users.read, () =>
+            invoke(P + "find#ProductionOrders", {productId: ids.productId, pageSize: 500})
+        )
         const search = asUser(users.read, () =>
             invoke("ironstone.manufacturing.AccessServices.search#Records", {text: workEffortId, limit: 5}).rows.map(
                 row => row.url

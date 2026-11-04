@@ -222,12 +222,11 @@ feature("a container takes stock where it is, refuses stock away from it, and mo
     }
 })
 
-feature("the Handheld area mounts Move at handheld density with the user's recent moves, and Home scans", {
+feature("the Handheld area mounts Move at handheld density with the user's recent moves, and its Home scans", {
     when() {
         return asUser("warehouse.move", () => ({
             handheld: page("Handheld/Move", {facilityId: "ZIRET_WH"}, "html"),
             home: page("Handheld/Home", {lookupId: "BOSS_WH_P5_A"}, "html"),
-            desk: page("Home", {}, "html"),
             scan: invoke("ironstone.warehouse.AccessServices.resolve#Scan", {
                 scanText: "BOSS_WH_P5_A",
                 allowedTypes: ["asset"],
@@ -240,7 +239,7 @@ feature("the Handheld area mounts Move at handheld density with the user's recen
             })
         }))
     },
-    then({handheld, home, desk, scan, locationOnly}) {
+    then({handheld, home, scan, locationOnly}) {
         handheld.errors == []
         handheld.output.includes("Scan the bin")
         !handheld.output.includes("Choose the stock")
@@ -248,7 +247,6 @@ feature("the Handheld area mounts Move at handheld density with the user's recen
         handheld.output.includes("BOSS_WH_P5_A")
         home.output.includes("Move it")
         home.output.includes("Move stock")
-        desk.output.includes("Scan or type a code")
         scan.matches.length == 1
         scan.matches[0].identityType == "asset"
         scan.matches[0].id == "BOSS_WH_P5_A"

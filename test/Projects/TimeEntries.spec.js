@@ -1,12 +1,13 @@
 // IronStone Projects P6b (impl-projects.md P6; design-projects.md §8 TimeEntries and ImportTime, §4 ProjectTime, §1.4 Today, §12
 // TimeSettings, time in Chatter) through the screens' transitions, with authorization on: in a project of its own (TEW, john.doe its
 // manager, joe.developer a programmer, bob.developer a quality analyst), in the weeks of January 4 and 11, 2027. joe logs time in
-// TimeEntries' dialog and finds it; bob does not see it; john.doe sees it with the rates. The bulk changes keep the lock: joe's
+// TimeEntries' dialog and finds it; bob does not see it; john.doe sees it with the rates, joe not even in the column chooser
+// (impl-manufacturing F141), and the team timesheet's print link. The bulk changes keep the lock: joe's
 // submitted week is changed only in its money, by john.doe; an open week's entry is moved and retyped. joe imports a Time entries
 // CSV through the wizard: the bad rows are named with their reasons and the others imported; the same file again skips them.
-// The Today source gives joe's running timer (stopped from the Today panel) and his week to submit, and john.doe the request to
-// triage. ProjectDetail's Time tab renders with its totals (impl-projects.md F52: AppStructure walks files only); a work item's
-// Chatter and its Time tab show the time logged on it. TimeSettings keeps the policy and the work types offered, which MyTime offers.
+// The Today source gives joe's running timer (stopped from the Today panel) and his week to submit. ProjectDetail's Time tab
+// renders with its totals (impl-projects.md F52: AppStructure walks files only); a work item's All time shows the time logged on
+// it (the record timeline's time is mr-mantle's WorkTimeEntries). TimeSettings keeps the policy and the work types offered, which MyTime offers.
 // The project is cancelled after, and the organization's time settings put back.
 // Run: ./moq test mr-boss --spec TimeEntries
 const webroot = "component://webroot/screen/webroot.xml"
@@ -108,7 +109,7 @@ spec({
     },
 })
 
-feature("joe logs time in TimeEntries' dialog and finds it; bob, his line manager, sees it read only; john.doe sees it with the rates", {
+feature("joe logs time in TimeEntries' dialog and finds it; bob, his line manager, sees it read only; john.doe sees it with the rates and the print link", {
     when() {
         const dialog = as("joe.developer", () => render("apps/Projects/Time/TimeEntries/EditEntry", {}))
         const logged = as("joe.developer", () => post("Projects/Time/TimeEntries/EditEntry/saveEntry", { entryItemId: "TEW-1", day: "2027-01-11", hours: "2",
@@ -133,6 +134,9 @@ feature("joe logs time in TimeEntries' dialog and finds it; bob, his line manage
         !page.broken && page.output.includes("Ledger rows first cut") && page.output.includes("Ledger rows last week")
         // This week, the default list, has the week's entry only
         thisWeek.output.includes("Ledger rows first cut") && !thisWeek.output.includes("Ledger rows last week")
+        // a column its hide condition hides (hide="!ratesShown") is not offered in the column chooser either (477f9e89, the qvt
+        // template ScreenQvt.js): not to joe, who reads no rates; to john.doe
+        !page.output.includes("Worker rate") && !thisWeek.output.includes("Worker rate")
         edit.output.includes("Ledger rows first cut")
         bobLogged.errors == ""
         // joe sees his own; bob, his line manager in the demo, sees joe's too but may not change it; john.doe, the project's manager, all
@@ -142,7 +146,9 @@ feature("joe logs time in TimeEntries' dialog and finds it; bob, his line manage
         john.rowList.find((row) => row.timeEntryId == made.open).canEdit == true
         // no rate reaches one who does not manage money
         joe.rowList.every((row) => !("clientHourRate" in row) && row.clientAmountText === "") && john.rowList.every((row) => "clientHourRate" in row)
-        !johnPage.broken && johnPage.output.includes("Ledger rows first cut")
+        !johnPage.broken && johnPage.output.includes("Ledger rows first cut") && johnPage.output.includes("Worker rate")
+        // the team timesheet print of the same find
+        johnPage.output.includes("TeamTimesheet?renderMode=html-print")
         bobEdit.output.includes("not yours to change") && !bobEdit.output.includes("EntryForm")
     },
 })
@@ -230,16 +236,13 @@ feature("joe imports a Time entries CSV through the wizard: the bad rows are nam
     },
 })
 
-feature("the Today source gives joe's running timer and his week to submit, and john.doe the new request to triage; Stop in the Today panel stops the timer", {
+feature("the Today source gives joe's running timer and his week to submit; Stop in the Today panel stops the timer", {
     when() {
         setNow(at(15, 9))
         as("joe.developer", () => sys(() => call("mantle.work.TimesheetServices.start#Timer", { workEffortId: "TEW-1", comments: "Friday ledger" })))
         setNow(at(15, 10, 30))
-        sys(() => call("mantle.request.RequestServices.create#Request", { requestName: "Time entries walk request", requestTypeEnumId: "RqtSupport", rootWorkEffortId: PROJECT,
-            statusId: "ReqSubmitted" }))
         const projects = { service: "mantle.work.ProjectServices.get#ProjectTodayItems", label: "Projects" }
         const joeView = as("joe.developer", () => sys(() => call("ironstone.commons.CommonsServices.get#TodayView", { sourceServiceNames: [projects] })))
-        const johnItems = sys(() => call("mantle.work.ProjectServices.get#ProjectTodayItems", {}).items)
         const group = (joeView.groups || []).find((one) => one.label === "Projects") || { items: [] }
         const timer = group.items.find((item) => item.kind === "timer") || {}
         const week = group.items.find((item) => item.kind === "timesheet") || {}
@@ -251,22 +254,21 @@ feature("the Today source gives joe's running timer and his week to submit, and 
         })
         // authorization is on again after a Commons render (mr-moqui e29d336f, impl-projects.md F77), so the features after check it
         if (ec.artifactExecution.authzDisabled()) throw new Error("authorization left off after the Today panel")
-        return { group, timer, week, johnItems, panel, stopped, timerAfter: as("joe.developer", () => sys(() => call("mantle.work.TimesheetServices.get#Timer", {}).timer)) }
+        return { group, timer, week, panel, stopped, timerAfter: as("joe.developer", () => sys(() => call("mantle.work.TimesheetServices.get#Timer", {}).timer)) }
     },
-    then({ group, timer, week, johnItems, panel, stopped, timerAfter }) {
+    then({ group, timer, week, panel, stopped, timerAfter }) {
         timer.title.includes("TEW-1") && timer.canStopTimer == true && timer.timeText.includes("Running since")
         week.url.includes("/Projects/Time/MyTime?weekDate=2027-01-11")
         week.title.includes("Submit your week")
         // the submitted week of January 4 is not one to submit
         group.items.filter((item) => item.kind === "timesheet").length == 1
-        johnItems.some((item) => item.kind === "triage" && item.title === "Time entries walk request")
         !panel.broken && panel.output.includes("Stop the timer")
         stopped.messageInfos[0].message.includes("Timer stopped")
         timerAfter == null
     },
 })
 
-feature("ProjectDetail's Time tab renders the project's time with its totals; a work item's Chatter and Time tab show the time logged on it", {
+feature("ProjectDetail's Time tab renders the project's time with its totals; a work item's All time shows the time logged on it", {
     when() {
         const tab = render("apps/Projects/Projects/ProjectDetail/Time", { workEffortId: PROJECT })
         const joeTab = as("joe.developer", () => render("apps/Projects/Projects/ProjectDetail/Time", { workEffortId: PROJECT }))
@@ -274,18 +276,15 @@ feature("ProjectDetail's Time tab renders the project's time with its totals; a 
         const totals = sys(() => call("ironstone.projects.TimeServices.get#ProjectTime", { workEffortId: PROJECT, findParameters: { list: "all" } }).projectTime)
         const rates = post("Projects/Projects/ProjectDetail/Time/updateRates", { workEffortId: PROJECT })
         const joeRates = as("joe.developer", () => post("Projects/Projects/ProjectDetail/Time/updateRates", { workEffortId: PROJECT }))
-        const timeline = as("joe.developer", () => sys(() => call("mantle.party.CommunicationServices.get#RecordTimeline",
-                { recordEntityName: "mantle.work.effort.WorkEffort", recordId: "TEW-1" }).entryList))
-        const notesOnly = as("joe.developer", () => sys(() => call("mantle.party.CommunicationServices.get#RecordTimeline",
-                { recordEntityName: "mantle.work.effort.WorkEffort", recordId: "TEW-1", kinds: ["notes"] }).entryList))
-        const itemTab = as("bob.developer", () => render("apps/Projects/WorkItems/WorkItemDetail", { workEffortId: "TEW-1", tab: "time" }))
+        // WorkItemDetail's All time box, by the service it calls (WorkItemDetail.spec.js renders the screen)
+        const itemTime = as("bob.developer", () => sys(() => call("ironstone.projects.TimeServices.get#ItemTime", { workEffortId: "TEW-1" }).itemTime))
         // the entry dialog in the tab, with the project, and its save back to the tab
         const tabDialog = render("apps/Projects/Projects/ProjectDetail/Time/EditEntry", { workEffortId: PROJECT, timeEntryId: made.open })
         const tabSave = post("Projects/Projects/ProjectDetail/Time/EditEntry/saveEntry", { workEffortId: PROJECT, timeEntryId: made.open, entryItemId: "TEW-2",
             day: "2027-01-11", hours: "2.5", billable: "Y", workTypeEnumId: "WktpTesting", comments: "Ledger rows first cut" })
-        return { tab, joeTab, tui, totals, rates, joeRates, timeline, notesOnly, itemTab, tabDialog, tabSave }
+        return { tab, joeTab, tui, totals, rates, joeRates, itemTime, tabDialog, tabSave }
     },
-    then({ tab, joeTab, tui, totals, rates, joeRates, timeline, notesOnly, itemTab, tabDialog, tabSave }) {
+    then({ tab, joeTab, tui, totals, rates, joeRates, itemTime, tabDialog, tabSave }) {
         !tabDialog.broken && tabDialog.output.includes("Ledger rows first cut") && tabDialog.output.includes("Rates")
         tabSave.errors == "" && Number(String(entry(made.open).hours)) == 2.5
         tab.status == 200 && !tab.broken && tab.errors == ""
@@ -298,9 +297,7 @@ feature("ProjectDetail's Time tab renders the project's time with its totals; a 
         totals.byItem.some((item) => item.workEffortId === "TEW-1")
         rates.errors == ""
         joeRates.errors.includes("Only a manager of the project")
-        timeline.some((one) => one.kind === "time" && one.body === "Ledger rows last week" && one.authorPartyId === "ORG_ZIZI_JD")
-        !notesOnly.some((one) => one.kind === "time")
-        !itemTab.broken && itemTab.output.includes("All time") && itemTab.output.includes("Imported ledger work")
+        itemTime != null && itemTime.rowList.some((row) => row.comments === "Imported ledger work")
     },
 })
 

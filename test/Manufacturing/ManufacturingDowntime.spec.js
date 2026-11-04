@@ -1,11 +1,12 @@
 // Manufacturing's downtime and maintenance (impl-manufacturing P11, its "usable when"), through the calls the Downtime screens
 // make after the Manufacturing access check and the pages they show: an operator reports a robot fault on line A with a
-// maintenance request, which makes a corrective AssetMaintenance and a linked maintenance request that the supervisor opens
-// in Manufacturing's RequestDetail; the fault takes the robot out of service once, and a second fault links the same outage;
-// closing the stop leaves the request, the maintenance and the outage open; a no-material stop suggests no maintenance; a
-// supervisor's correction keeps the original stop and its reporter in the history; a follow-up task of the request opens in
-// Manufacturing's WorkItemDetail. The Mantle calls run with artifact authorization disabled, as a screen's transition inherits
-// it: they check their own permissions (F53). Refusals and the other organization are ManufacturingAccess's P11 section.
+// maintenance request that the supervisor opens in Manufacturing's RequestDetail, and the robot is out of service in
+// Manufacturing; a no-material stop offers no maintenance on Downtime; a supervisor's correction shows the original stop in
+// the history; a long stop waits for the supervisor's Approve stop; a follow-up task of the request opens in Manufacturing's
+// WorkItemDetail. The Mantle calls run with artifact authorization disabled, as a screen's transition inherits it: they
+// check their own permissions (F53). The rules of the stops (the maintenance and request made, the one outage a second
+// fault links, closing, correction, approval) are mr-mantle's ProductionDowntime spec. Refusals and the other organization
+// are ManufacturingAccess's P11 section.
 // Run: ./moq test mr-boss --spec ManufacturingDowntime
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -15,8 +16,6 @@ const production = "mantle.work.ProductionServices."
 const robotId = "EQUIP_AB4_2"
 let keySeq = 0
 const key = () => "spec-p11-" + Date.now() + "-" + ++keySeq
-const one = (entity, conditions) => system(() => ec.entity.find(entity).condition(conditions).one())
-const count = (entity, conditions) => system(() => ec.entity.find(entity).condition(conditions).count())
 // as the screen's transition: the record check, then the Mantle verb (its result map)
 function report(user, parameters) {
     asUser(user, () => invoke(access + "check#Record", {recordType: "workCenter", recordId: parameters.facilityId}))
@@ -70,27 +69,17 @@ spec({
 
 feature("an operator reports a robot fault on line A with a maintenance request; the supervisor opens it in Manufacturing", {
     when() {
-        const {opened, requested} = robotFault()
-        const row = one("mantle.work.production.ProductionDowntime", {productionDowntimeId: opened.productionDowntimeId})
+        const {requested} = robotFault()
         return {
-            opened,
-            requested,
-            maintenance: one("mantle.product.maintenance.AssetMaintenance", {assetMaintenanceId: requested.assetMaintenanceId}),
-            request: one("mantle.request.Request", {requestId: requested.requestId}),
-            row,
             downtimePage: asUser(users.operate, () => page("WorkCenters/Downtime", {facilityId: ids.lineId})),
             requestPage: asUser(users.supervise, () => page("WorkCenters/RequestDetail", {requestId: requested.requestId})),
-            equipmentPage: asUser(users.operate, () => page("WorkCenters/EquipmentDetail", {assetId: robotId}))
+            // EquipmentDetail's availability (its render is ManufacturingWorkCenters')
+            equipment: asUser(users.operate, () =>
+                invoke("ironstone.manufacturing.WorkCenterServices.get#Equipment", {assetId: robotId})
+            )
         }
     },
-    then({opened, requested, maintenance, request, row, downtimePage, requestPage, equipmentPage}) {
-        opened.resultCode == "OPENED"
-        opened.suggestMaintenance == true
-        requested.resultCode == "MAINTENANCE_REQUESTED"
-        maintenance.statusId == "AsMntCreated"
-        maintenance.maintenanceTypeEnumId == "MntTpCorrective"
-        request.requestTypeEnumId == "RqtMaintenance"
-        row.requestId == requested.requestId
+    then({downtimePage, requestPage, equipment}) {
         downtimePage.errors.length == 0
         downtimePage.output.includes("Assembly robot fault")
         downtimePage.output.includes("Report stop")
@@ -99,45 +88,11 @@ feature("an operator reports a robot fault on line A with a maintenance request;
         requestPage.output.includes("Assembly line A")
         requestPage.output.includes("Corrective Maintenance")
         requestPage.output.includes("Assembly Bot 4 2345")
-        equipmentPage.errors.length == 0
-        equipmentPage.output.includes("Out of service")
-        equipmentPage.output.includes("Request maintenance")
-        equipmentPage.output.includes("Assembly robot fault")
+        equipment.availabilityText == "Out of service"
+        equipment.blocked == true
     }
 })
-feature("a second fault of the robot links its one outage; closing a stop leaves the request, maintenance and outage open", {
-    when() {
-        const {opened, requested} = robotFault()
-        const second = report(users.supervise, {facilityId: ids.lineBId, assetId: robotId, reasonCode: "ROBOT_FAULT"})
-        const outages = count("mantle.work.effort.ResourceUnavailability", {assetId: robotId, thruDate: null})
-        const closed = store(users.operate, {
-            action: "close",
-            productionDowntimeId: opened.productionDowntimeId,
-            expectedRevision: opened.revision
-        })
-        return {
-            second,
-            opened,
-            outages,
-            closed,
-            maintenance: one("mantle.product.maintenance.AssetMaintenance", {assetMaintenanceId: requested.assetMaintenanceId}),
-            request: one("mantle.request.Request", {requestId: requested.requestId}),
-            outage: one("mantle.work.effort.ResourceUnavailability", {resourceUnavailabilityId: opened.resourceUnavailabilityId}),
-            equipmentPage: asUser(users.operate, () => page("WorkCenters/EquipmentDetail", {assetId: robotId}))
-        }
-    },
-    then({second, opened, outages, closed, maintenance, request, outage, equipmentPage}) {
-        second.outageLinked == true
-        second.resourceUnavailabilityId == opened.resourceUnavailabilityId
-        outages == 1
-        closed.resultCode == "CLOSED"
-        maintenance.statusId == "AsMntCreated"
-        request.statusId == "ReqSubmitted"
-        outage.thruDate == null
-        equipmentPage.output.includes("Out of service")
-    }
-})
-feature("a no-material stop suggests no maintenance; a robot fault's row offers it", {
+feature("a no-material stop's row offers no maintenance; a robot fault's row offers it", {
     when() {
         const hold = report(users.operate, {facilityId: ids.lineBId, reasonCode: "MATERIAL_HOLD"})
         const fault = report(users.operate, {facilityId: ids.lineBId, assetId: robotId, reasonCode: "ROBOT_FAULT"})
@@ -147,19 +102,16 @@ feature("a no-material stop suggests no maintenance; a robot fault's row offers 
         const faultPage = asUser(users.operate, () =>
             page("WorkCenters/Downtime", {productionDowntimeId: fault.productionDowntimeId})
         )
-        return {hold, fault, holdPage, faultPage}
+        return {holdPage, faultPage}
     },
-    then({hold, fault, holdPage, faultPage}) {
-        hold.suggestMaintenance == false
-        hold.resourceUnavailabilityId == null
+    then({holdPage, faultPage}) {
         holdPage.errors.length == 0
         holdPage.output.includes("Waiting for material")
         !holdPage.output.includes("Request maintenance")
-        fault.suggestMaintenance == true
         faultPage.output.includes("Request maintenance")
     }
 })
-feature("a supervisor's correction keeps the original stop and its reporter in the history", {
+feature("a supervisor's correction shows the original stop in the history", {
     when() {
         const from = new Date(Date.now() - 50 * 60000)
         const stop = report(users.operate, {
@@ -182,17 +134,14 @@ feature("a supervisor's correction keeps the original stop and its reporter in t
             fromDate: new Date(Date.now() - 40 * 60000),
             changeReason: "Changeover started later"
         })
-        const original = one("mantle.work.production.ProductionDowntime", {productionDowntimeId: stop.productionDowntimeId})
         const historyPage = asUser(users.read, () =>
             page("WorkCenters/Downtime", {productionDowntimeId: corrected.productionDowntimeId})
         )
-        return {stop, check, corrected, original, from, historyPage}
+        return {stop, check, corrected, historyPage}
     },
-    then({stop, check, corrected, original, historyPage}) {
+    then({stop, check, corrected, historyPage}) {
         check == ""
         corrected.resultCode == "CORRECTED"
-        original.statusId == "PdtCorrected"
-        original.reportedByUserId == "BOSS_MFG_OPERATE"
         historyPage.errors.length == 0
         historyPage.output.includes("Correction history")
         historyPage.output.includes(stop.productionDowntimeId)
@@ -220,12 +169,9 @@ feature("a stop longer than its reason's threshold waits for the supervisor's ap
                 capability: "supervise"
             })
         )
-        const approved = store(users.supervise, Object.assign({action: "approve", expectedRevision: 1}, parameters))
-        const row = one("mantle.work.production.ProductionDowntime", parameters)
-        return {stop, operatorPage, supervisorPage, check, approved, row}
+        return {stop, operatorPage, supervisorPage, check}
     },
-    then({stop, operatorPage, supervisorPage, check, approved, row}) {
-        stop.approvalRequired == true
+    then({stop, operatorPage, supervisorPage, check}) {
         operatorPage.errors.length == 0
         operatorPage.output.includes("Needs approval")
         !operatorPage.output.includes("Approve stop")
@@ -233,8 +179,6 @@ feature("a stop longer than its reason's threshold waits for the supervisor's ap
         supervisorPage.output.includes(stop.productionDowntimeId)
         supervisorPage.output.includes("Approve stop")
         check == ""
-        approved.resultCode == "APPROVED"
-        row.approvedByUserId == "BOSS_MFG_SUPERVISE"
     }
 })
 feature("a follow-up task of the maintenance request opens in Manufacturing's WorkItemDetail; a run's operation does not", {

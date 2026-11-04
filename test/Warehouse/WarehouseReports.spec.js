@@ -244,5 +244,7 @@ feature("Home has a card per queue, the Today source's items as Your work and th
         render.errors == []
         render.output.includes("Products in stock")
         render.output.includes("Counts/Counts")
+        // the desk's scan or look up
+        render.output.includes("Scan or type a code")
     }
 })

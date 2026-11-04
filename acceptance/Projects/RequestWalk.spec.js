@@ -5,7 +5,7 @@
 // Assigned to me; he triages them (accepts, assigns, sets the priority), makes a work item from each, and when joe.developer completes
 // the items on WorkItemDetail the requests are Completed, Fixed for the bug and Completed for the feature; a reply to the email
 // joins its request's conversation.
-// Run: ./moq test mr-boss --spec RequestWalk
+// Run: ./moq accept mr-boss --spec RequestWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const intakePage = "component://mr-boss/screen/RequestIntake.xml"
 const TOKEN = "BossDemoIronIntakeForm1"

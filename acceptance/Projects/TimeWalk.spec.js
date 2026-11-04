@@ -6,7 +6,7 @@
 // reason; joe sees the reason, fixes the week and submits again; john.doe approves it from Timesheets. The screens render along the
 // way: MyTime's component, its terminal twin, Timesheets, TimesheetDetail, QuickTime, Home with the timer strip, and WorkItemDetail's
 // timer. The project is cancelled after, so the other specs' lists keep their records.
-// Run: ./moq test mr-boss --spec TimeWalk
+// Run: ./moq accept mr-boss --spec TimeWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "TWK"
 // a moment of a day of the week of Monday December 7, 2026, in the session's time zone

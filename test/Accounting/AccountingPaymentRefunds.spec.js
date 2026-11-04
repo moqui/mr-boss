@@ -1,6 +1,6 @@
-// Refunds on the payment screens: the manual refund dialog's input, its retained review and result rendered through the
-// Accounting mount (preview#PaymentRefund and refund#ReviewedPayment over Mantle's create#RefundPayment), the refund
-// through the gateway dialog (refund#SinglePayment), and treasury-only access.
+// Refunds on the payment screens: the manual refund dialog's input, its retained review and result (preview#PaymentRefund
+// and refund#ReviewedPayment over Mantle's create#RefundPayment; the Review screen's render is AccountingPaymentGateway's),
+// the refund through the gateway dialog (refund#SinglePayment), and treasury-only access.
 const app = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
 const screen = () => ec.resource.script("component://mr-boss/service/ironstone/accounting/Payments.js")
 const native = "mantle.account.PaymentServices."
@@ -68,7 +68,7 @@ feature("the manual refund dialog sends the reviewed fields and the chosen metho
     }
 })
 
-feature("treasury reviews and confirms a manual refund on the Refunds tab; the review and its result render", {
+feature("treasury reviews and confirms a manual refund on the Refunds tab; the review and its result read as a refund", {
     when() {
         const paymentId = receipt()
         return app.asUser("finance.treasury", () => {
@@ -80,16 +80,14 @@ feature("treasury reviews and confirms a manual refund on the Refunds tab; the r
                 preview = app.call(native + "preview#PaymentRefund", input),
                 parameters = {paymentId, previewId: preview.previewId, previewKind: "refund"},
                 review = reviewContext(parameters).paymentReview,
-                reviewPages = ["qvt", "tui", "html"].map(mode => app.page("Payments/PaymentDetail/Review", parameters, mode)),
                 first = app.call(native + "refund#ReviewedPayment", review.confirmParameters),
                 retry = app.call(native + "refund#ReviewedPayment", review.confirmParameters),
                 completed = reviewContext(parameters).paymentReview,
-                resultPages = ["qvt", "html"].map(mode => app.page("Payments/PaymentDetail/Review", parameters, mode)),
                 after = context({paymentId}).financePayment
-            return {paymentId, detail, review, reviewPages, first, retry, completed, resultPages, after}
+            return {paymentId, detail, review, first, retry, completed, after}
         })
     },
-    then({paymentId, detail, review, reviewPages, first, retry, completed, resultPages, after}) {
+    then({paymentId, detail, review, first, retry, completed, after}) {
         detail.capabilities.canPreviewRefund == true
         toDecimal(detail.refundValue.amount).eq(50)
         detail.refundValue.organizationMethodToken.startsWith("BOSS_ACCT_GW_BANK~")
@@ -97,19 +95,14 @@ feature("treasury reviews and confirms a manual refund on the Refunds tab; the r
         review.canConfirm == true
         review.factRows.some(row => row.label == "Organization method")
         review.fundingRows.find(row => row.label == "Available to refund").afterAmount == 35
-        reviewPages.every(
-            page =>
-                page.status === 200 &&
-                !page.errors.length &&
-                page.output.includes("Refund payment") &&
-                page.output.includes("Confirm by")
-        )
+        review.title == "Refund payment"
         first.statusId == "PmntDelivered"
         retry.alreadyApplied == true
         retry.refundPaymentId == first.refundPaymentId
         completed.hasResults == true
         completed.resultPaymentRows[0].paymentId == first.refundPaymentId
-        resultPages.every(page => page.status === 200 && !page.errors.length && page.output.includes("Refund completed"))
+        completed.resultsTitle == "Refund completed"
+        completed.canConfirm == false
         after.refundRows.some(row => row.paymentId == first.refundPaymentId)
         after.refundSummaryRows.find(row => row.label == "Available to refund").amount == 35
         first.paymentId == paymentId

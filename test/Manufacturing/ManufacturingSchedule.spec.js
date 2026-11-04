@@ -1,12 +1,13 @@
 // Manufacturing's scheduling and capacity (impl-manufacturing P12, its "usable when"; design-manufacturing ProductionSchedule,
-// Capacity, Operations' Reschedule, FacilityDetail's offline change), through the screens' transitions and pages as the demo
-// users with artifact authorization on: the scheduler's drag of run 1's Assemble to line B previews a capacity conflict with
-// run 2's Test there, and the Move form commits it at a free time; a move over a conflict needs a supervisor, who approves
-// the scheduler's request without changing line B's capacity; an offline time on line A previews the operation it moves;
-// Capacity shows the hours and names line B's missing calendar and slots; the terminal twin previews and applies a move of
-// run 3's Test; Reschedule on WorkOrderDetail's Operations previews a move. The runs are ManufacturingSpecLib's
-// scheduleFixture ("Schedule spec"), placed on a Monday a week or more on. Refusals and the other organization are
-// ManufacturingAccess's P12 section; the rules are mr-mantle's ProductionSchedule.
+// Capacity, Operations' Reschedule), through the screens' transitions and pages as the demo users with artifact
+// authorization on: the scheduler's drag of run 1's Assemble to line B previews a capacity conflict with run 2's Test there,
+// and the Move form commits it at a free time; a move over a conflict needs a supervisor, who approves the scheduler's
+// request without changing line B's capacity; Capacity shows the hours and names line B's missing calendar and slots; the
+// terminal twin previews and applies a move of run 3's Test; Reschedule on WorkOrderDetail's Operations previews a move.
+// The runs are ManufacturingSpecLib's scheduleFixture ("Schedule spec"), placed on a Monday a week or more on. Refusals
+// and the other organization are ManufacturingAccess's P12 section; the rules (an offline time's preview among them) are
+// mr-mantle's ProductionSchedule, and FacilityDetail's offline section is ManufacturingWorkCenters' but for the move it
+// previews here.
 // Run: ./moq test mr-boss --spec ManufacturingSchedule
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, system, page} = lib
@@ -198,37 +199,26 @@ feature(
     }
 )
 
-feature("an offline time on line A previews the operation it moves in FacilityDetail", {
+feature("an offline time on line A previews the operation it moves in FacilityDetail, with Move them as previewed", {
     when() {
-        const run3 = state.runs[2]
-        const from = state.day(1) + " 05:00"
-        const thru = state.day(1) + " 07:00"
-        const preview = asUser(users.schedule, () =>
+        // a second render of FacilityDetail's WorkCenter: only this spec's runs give an operation the offline time would move
+        return asUser(users.schedule, () =>
             page(
                 "WorkCenters/FacilityDetail/WorkCenter",
                 {
                     facilityId: ids.lineId,
-                    offlineFrom: from,
-                    offlineThru: thru,
+                    offlineFrom: state.day(1) + " 05:00",
+                    offlineThru: state.day(1) + " 07:00",
                     offlineReason: "Fixture change",
                     lastStandalone: "true"
                 },
                 "html"
             )
         )
-        const reader = asUser(users.read, () =>
-            page("WorkCenters/FacilityDetail/WorkCenter", {facilityId: ids.lineId, lastStandalone: "true"}, "html")
-        )
-        return {preview, reader, run3}
     },
-    then({preview, reader}) {
+    then(preview) {
         preview.errors.length == 0
-        preview.output.includes("Offline preview")
-        preview.output.includes("Schedule spec 3")
         preview.output.includes("Move them as previewed")
-        preview.output.includes("Calendar-adjusted hours")
-        !reader.output.includes("Take offline")
-        reader.output.includes("Offline times")
     }
 })
 
@@ -248,6 +238,8 @@ feature("Capacity shows nominal, calendar-adjusted, downtime, booked and availab
         result.output.includes("Assembly line B")
         result.output.includes("No work calendar")
         result.output.includes("No parallel slots set")
+        // the Print link (the print itself is ManufacturingReports')
+        result.output.includes("renderMode=html-print")
     }
 })
 

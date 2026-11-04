@@ -218,7 +218,7 @@ feature("the primary action moves a project along the Default flow, and a projec
     },
 })
 
-feature("the Team tab: the members with their roles and the client contacts; a member added and ended by the manager", {
+feature("the Team tab: the members with their roles, the client contacts and the allocations; a member added and ended by the manager", {
     when() {
         const tab = render("apps/Projects/Projects/ProjectDetail/Team", { workEffortId: "ACME" })
         const team = sys(() => call("ironstone.projects.ProjectServices.get#ProjectTeam", { workEffortId: "ACME" }))
@@ -234,6 +234,9 @@ feature("the Team tab: the members with their roles and the client contacts; a m
         !tab.broken
         tab.output.includes("Add member")
         tab.output.includes("Client contacts")
+        // the Allocations box on the resource demo (data/BossProjectsDemoDataTimeResources.xml), with the placeholder to staff
+        tab.output.includes("Allocations · 4") && tab.output.includes("Ana Designer") && tab.output.includes("To staff")
+        tab.output.includes("Request allocation")
         team.memberList.map((row) => row.name).includes("Joe Developer")
         team.memberList.find((row) => row.name === "John Doe").roleText == "Project Manager"
         team.clientList.map((row) => row.roleTypeId).sort() == ["ClientBilling", "ClientManager", "Customer"]

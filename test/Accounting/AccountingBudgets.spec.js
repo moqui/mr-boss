@@ -1,7 +1,7 @@
 // The Budgets screens (design-accounting §12) over the demo's operating budget: the list, the detail as of either revision
 // with its stored PDFs, the controls with the demo's Stop and the purchase order commitment, the variance report's
-// committed column, a bill's override action for the overriders only, and the budget choices. The rules are mr-mantle's
-// AccountingBudgets spec.
+// committed column, and the budget choices; a bill's override action is on AccountingPayables' render of BillDetail. The
+// rules are mr-mantle's AccountingBudgets spec.
 const helper = () => ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
 const as = (user, run) => helper().asUser(user, run)
 const budget = {organizationPartyId: "BOSS_ACCT_ORG", budgetId: "BOSS_ACCT_BUDGET"}
@@ -90,30 +90,22 @@ feature("the controls show the Stop, the order commitment, and the variance repo
     }
 })
 
-feature("an over-budget bill offers Approve over budget to an overrider only, and the budget choices list the demo's", {
+feature("the budget choices list the demo's budgets, periods and revisions, and none of another budget", {
     when() {
-        const bill = user => as(user, () => helper().page("Payables/BillDetail", {recordId: "BOSS_ACCT_BILL_OVER"}))
         const choice = (choice, extra = {}) =>
             helper().call("ironstone.accounting.AccessServices.get#Choices", {
                 organizationPartyId: "BOSS_ACCT_ORG",
                 choice,
                 ...extra
             }).options
-        return {
-            approver: bill("finance.approve"),
-            ap: bill("finance.ap"),
-            ...as("finance.read", () => ({
-                budgets: choice("budgets", {term: "Operating"}),
-                periods: choice("budgetPeriodsOf", {budgetId: "BOSS_ACCT_BUDGET"}),
-                revisions: choice("budgetRevisions", {budgetId: "BOSS_ACCT_BUDGET", term: "_none_", selected: "000"}),
-                foreign: choice("budgetRevisions", {budgetId: "_NA_"})
-            }))
-        }
+        return as("finance.read", () => ({
+            budgets: choice("budgets", {term: "Operating"}),
+            periods: choice("budgetPeriodsOf", {budgetId: "BOSS_ACCT_BUDGET"}),
+            revisions: choice("budgetRevisions", {budgetId: "BOSS_ACCT_BUDGET", term: "_none_", selected: "000"}),
+            foreign: choice("budgetRevisions", {budgetId: "_NA_"})
+        }))
     },
-    then({approver, ap, budgets, periods, revisions, foreign}) {
-        approver.errors == []
-        approver.output.includes("Approve over budget")
-        !ap.output.includes("Approve over budget")
+    then({budgets, periods, revisions, foreign}) {
         budgets.some(option => option.value == "BOSS_ACCT_BUDGET")
         periods.length > 1
         revisions.some(option => option.value == "000" && option.label.startsWith("Approved"))

@@ -143,8 +143,11 @@ feature("an asset's detail offers an adjuster only its name and comments, and th
         reader.page.errors == []
         reader.page.output.includes("SCN-1001")
         !reader.page.output.includes("Edit details")
+        // AssetDetail's Record adjustment opens Adjustments for an adjuster only
+        !reader.page.output.includes("Record adjustment")
         reader.save.includes("PERMISSION_DENIED")
         adjuster.page.output.includes("Edit details")
+        adjuster.page.output.includes("Record adjustment")
         // the edit form has the name and comments, and nothing for quantity, location, status, owner or cost
         adjuster.page.output.includes('name="assetName"')
         !/name="(quantityOnHandTotal|locationSeqId|statusId|ownerPartyId|acquireCost|facilityId)"/.test(adjuster.page.output)

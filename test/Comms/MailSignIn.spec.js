@@ -1,19 +1,16 @@
 // Sign-in with Google or Microsoft for a mail account (screen/Comms/Settings/MailAccounts/SignIn.xml and SignIn.qvue, the
-// wizard's Connect step and the account page; service/ironstone/comms/MailSettingsServices.xml get#OAuthChoice, start#MailSignIn,
-// mr-moqui docs/interfaces/Mail-OAuth.md), with no network. Not set up (the seeded Google and Microsoft have no
-// client here): Connect offers no button and says an administrator can set the sign-in up, the password path is as before,
-// and a sign-in is refused. Set up (a provider of this spec's own, with its client on the EmailOAuthProvider row and a
-// reserved domain): Connect shows the button; startSignIn answers the provider's address with PKCE, state and nonce and makes
+// account page's signOut and savePassword; service/ironstone/comms/MailSettingsServices.xml get#OAuthChoice, start#MailSignIn,
+// mr-moqui docs/interfaces/Mail-OAuth.md), with no network. What Connect, the account page and the list show of a sign-in is
+// MailAccounts.spec.js's, on its renders of them. Not set up (the seeded Google and Microsoft have no client here): a sign-in
+// is refused. Set up (a provider of this spec's own, with its client on the EmailOAuthProvider row and a
+// reserved domain): the component; startSignIn answers the provider's address with PKCE, state and nonce and makes
 // no account (the framework makes it, paused with the year's sync window, when the sign-in succeeds); an account made to sign
 // in later (save#AccountConnection) is paused with the year's window as with a password; signInStatus answers only this
 // user's sign-in; a code the provider's token endpoint does not take (nothing listens there) ends the sign-in with an error
-// the status tells, and makes no account. The
-// account page: a new sign-in for an account that needs one, Signs in with and Sign out for one signed in (its token is never
-// in a page), sign in instead of a password, and a password that switches the account back. POP: the framework's sign-in
-// (start#OAuthSignIn storeProtocol pop3) asks for the POP scope and makes the account on the provider's POP server only when it
-// succeeds; a provider with no POP server here is not offered POP. Another user reaches none of it.
+// the status tells, and makes no account. Sign out ends a sign-in, and a password switches the account back. POP: the
+// framework's sign-in (start#OAuthSignIn storeProtocol pop3) asks for the POP scope and makes the account on the provider's POP
+// server only when it succeeds; a provider with no POP server here refuses it. Another user reaches none of it.
 // Run: ./moq test mr-boss --spec MailSignIn
-const webroot = "component://webroot/screen/webroot.xml"
 const comms = "component://mr-boss/screen/Comms.xml"
 const SETTINGS = "org.moqui.comms.MailSettingsServices"
 const BASE = "Settings/MailAccounts"
@@ -24,12 +21,6 @@ const SECRET = "boss-spec-secret"
 const TOKEN = "boss-spec-refresh-token"
 const made = {}
 
-function render(path, parameters) {
-    const str = ec.screen.makeTest().rootScreen(webroot).renderMode("qvt").withStaticData().render(`apps/Comms/${BASE}/${path}`, Object.assign({ lastStandalone: "true" }, parameters || {}), null)
-    const output = String(str.output || "")
-    ec.message.clearErrors()
-    return { status: str.status, errors: str.errorMessages.join(" | "), output, broken: /Error rendering|Exception in render/.test(output) }
-}
 function transition(path, parameters, method) {
     const str = ec.screen.makeTest().rootScreen(comms).render(`${BASE}/${path}`, parameters || {}, method || null)
     const output = String(str.output || "")
@@ -65,8 +56,6 @@ const queryOf = (url) => {
     }
     return out
 }
-const gmail = { emailAddress: "jane.roe@gmail.com", displayName: "Jane Roe", accountKindEnumId: "EakExternal", storeKind: "imap", storeSecurity: "ssl",
-    storeHost: "imap.gmail.com", storePort: "993", smtpHost: "smtp.gmail.com", smtpPort: "465", smtpSecurity: "ssl", mailUsername: "jane.roe@gmail.com", source: "provider" }
 const local = { storeKind: "imap", storeSecurity: "ssl", storeHost: "127.0.0.1", storePort: "1", smtpHost: "127.0.0.1", smtpPort: "1", smtpSecurity: "none" }
 
 spec({
@@ -88,30 +77,22 @@ spec({
     },
 })
 
-feature("not set up: Gmail's Connect has no sign-in button and says an administrator can set it up; a sign-in is refused and makes nothing", {
+feature("not set up: Gmail's sign-in is not set up; a sign-in is refused and makes nothing", {
     when() {
         const choice = sys(() => call(`${SETTINGS}.get#OAuthChoice`, { emailAddress: "jane.roe@gmail.com" })).choice
-        const connect = render("Add/Connect", gmail)
         const start = post("SignIn/startSignIn", { mode: "wizard", emailAddress: "jane.roe@gmail.com", displayName: "Jane Roe", accountKindEnumId: "EakExternal" })
-        return { choice, connect, start, account: accountOf("jane.roe@gmail.com") }
+        return { choice, start, account: accountOf("jane.roe@gmail.com") }
     },
-    then({ choice, connect, start, account }) {
+    then({ choice, start, account }) {
         choice.oauthProviderEnumId == "EopGoogle"
         choice.providerLabel == "Google"
         !choice.configured
-        connect.errors == ""
-        !connect.broken
-        !connect.output.includes('id="MailSignIn"')
-        connect.output.includes("Sign-in with Google, which needs no app password, is not set up on this server: an administrator can set it up")
-        // the password path as before
-        connect.output.includes("Make a Google app password")
-        connect.output.includes("App password")
         start.errors.includes("Sign-in with Google is not set up on this server")
         account == null
     },
 })
 
-feature("set up: Connect shows the button; startSignIn answers the provider's address with PKCE, state and nonce and makes no account until the sign-in succeeds", {
+feature("set up: the sign-in component; startSignIn answers the provider's address with PKCE, state and nonce and makes no account until the sign-in succeeds", {
     when() {
         sys(() => {
             store("moqui.basic.Enumeration", { enumId: PROVIDER, enumTypeId: "EmailOAuthProvider", description: "Spec Mail" })
@@ -121,9 +102,6 @@ feature("set up: Connect shows the button; startSignIn answers the provider's ad
                 storeHost: "127.0.0.1", storePort: "1", storeProtocol: "imap", smtpHost: "127.0.0.1", smtpPort: "1", smtpSsl: "N", smtpStartTls: "N" })
         })
         const choice = sys(() => call(`${SETTINGS}.get#OAuthChoice`, { emailAddress: `pat@${DOMAIN}` })).choice
-        // a reserved domain: the guesses, no lookup
-        const connect = render("Add/Connect", { emailAddress: `pat@${DOMAIN}`, displayName: "Pat Doe", accountKindEnumId: "EakExternal", storeKind: "imap", storeSecurity: "ssl",
-            storeHost: `imap.${DOMAIN}`, storePort: "993", smtpHost: `smtp.${DOMAIN}`, smtpPort: "587", smtpSecurity: "starttls", mailUsername: `pat@${DOMAIN}`, source: "guess" })
         const component = sys(() => {
             const str = ec.screen.makeTest().rootScreen(comms).renderMode("qvue").render(`${BASE}/SignIn`, { lastStandalone: "-2" }, null)
             ec.message.clearErrors()
@@ -140,19 +118,12 @@ feature("set up: Connect shows the button; startSignIn answers the provider's ad
         const account = made.accountId ? accountById(made.accountId) : null
         const server = account ? serverOf(account) : null
         const identity = made.accountId ? sys(() => ec.entity.find("moqui.basic.email.EmailIdentity").condition("emailAccountId", made.accountId).one()) : null
-        return { choice, connect, component, started, query: started.json.authUrl ? queryOf(started.json.authUrl) : {}, notYet, account, server, identity, pending }
+        return { choice, component, started, query: started.json.authUrl ? queryOf(started.json.authUrl) : {}, notYet, account, server, identity, pending }
     },
-    then({ choice, connect, component, started, query, notYet, account, server, identity, pending }) {
+    then({ choice, component, started, query, notYet, account, server, identity, pending }) {
         choice.oauthProviderEnumId == "EopBossSpec"
         choice.providerLabel == "Spec Mail"
         choice.configured
-        connect.errors == ""
-        !connect.broken
-        connect.output.includes('id="MailSignIn"')
-        connect.output.includes("/Comms/Settings/MailAccounts/SignIn")
-        connect.output.includes("mode=wizard")
-        connect.output.includes("Sign in with your Spec Mail account in the window that opens")
-        connect.output.includes("Or use a password or an app password instead")
         component.status == 200
         component.output.includes("module.exports")
         component.output.includes("MailSignIn")
@@ -239,83 +210,54 @@ feature("a code the provider does not take ends the sign-in with an error, which
     },
 })
 
-feature("the account page: a new sign-in for an account that needs one; signed in it says so, with Sign out, and never shows the token", {
+feature("Sign out ends a sign-in: the token goes and the account needs a sign-in again", {
     when() {
-        // an account whose sign-in is still to come
         made.samId = sys(() => call(`${SETTINGS}.save#AccountConnection`, { emailAddress: `sam@${DOMAIN}`, displayName: "Sam Doe", accountKindEnumId: "EakExternal",
             authTypeEnumId: "EatOAuth2", oauthProviderEnumId: PROVIDER })).emailAccountId
-        const needs = render("Account", { emailAccountId: made.samId })
         // as complete#OAuthSignIn leaves it: the token stored, the account in use
         sys(() => {
             const account = accountById(made.samId)
             store("moqui.basic.email.EmailServer", { emailServerId: account.emailServerId, oauthRefreshToken: TOKEN, oauthSignInDate: new Date(), mailUsername: `sam@${DOMAIN}` })
             store("moqui.basic.email.EmailAccount", { emailAccountId: made.samId, statusId: "EasActive", lastSyncDate: new Date() })
         })
-        const signedIn = render("Account", { emailAccountId: made.samId })
         const signedOut = post("Account/signOut", { emailAccountId: made.samId })
         const after = accountById(made.samId)
-        const server = serverOf(after)
-        const fix = render("Account", { emailAccountId: made.samId, fix: "Y" })
-        const list = render("List", {})
-        return { needs, signedIn, signedOut, after, server, fix, list }
+        return { signedOut, after, server: serverOf(after) }
     },
-    then({ needs, signedIn, signedOut, after, server, fix, list }) {
-        needs.errors == ""
-        !needs.broken
-        needs.output.includes("This account signs in with Spec Mail and is not signed in yet")
-        needs.output.includes('id="AccountSignIn"')
-        needs.output.includes("mode=account")
-        signedIn.errors == ""
-        signedIn.output.includes("Signs in with Spec Mail as sam@boss-oauth.example since")
-        signedIn.output.includes("Sign out")
-        !signedIn.output.includes('id="AccountSignIn"')
-        !signedIn.output.includes("boss-spec-refresh-token")
+    then({ signedOut, after, server }) {
         signedOut.errors == ""
         after.statusId == "EasAuthFailed"
         server.oauthRefreshToken == null
         server.authTypeEnumId == "EatOAuth2"
-        fix.output.includes('id="AccountSignIn"')
-        fix.output.includes("The sign-in with Spec Mail ended")
-        list.output.includes("Sign-in failed")
-        list.output.includes("The sign-in with the provider ended")
     },
 })
 
-feature("a password account at the provider may sign in instead; a password saved for a provider's account makes it sign in with the password", {
+feature("a password account at the provider is made with the password; a password saved for a provider's account makes it sign in with the password", {
     when() {
         const saved = post("Add/Connect/saveConnection", Object.assign({ emailAddress: `lee@${DOMAIN}`, displayName: "Lee Doe", accountKindEnumId: "EakExternal",
             mailUsername: `lee@${DOMAIN}`, mailPassword: "lee-app-pass" }, local))
         const lee = accountOf(`lee@${DOMAIN}`)
-        sys(() => store("moqui.basic.email.EmailAccount", { emailAccountId: lee.emailAccountId, statusId: "EasActive", lastSyncDate: new Date() }))
-        const offer = render("Account", { emailAccountId: lee.emailAccountId })
         const password = post("Account/savePassword", { emailAccountId: made.samId, emailAddress: `sam@${DOMAIN}`, mailPassword: "sam-app-pass" })
         const sam = serverOf(accountById(made.samId))
-        return { saved, offer, password, sam, lee: serverOf(lee) }
+        return { saved, password, sam, lee: serverOf(lee) }
     },
-    then({ saved, offer, password, sam, lee }) {
+    then({ saved, password, sam, lee }) {
         saved.errors == ""
         lee.authTypeEnumId == "EatPassword"
-        offer.errors == ""
-        offer.output.includes('id="AccountSignInOffer"')
-        offer.output.includes("Sign in with Spec Mail instead of a password")
         password.errors == ""
         sam.authTypeEnumId == "EatPassword"
         sam.mailPassword == "sam-app-pass"
     },
 })
 
-feature("POP with the provider's sign-in: offered only where the provider has a POP server; the framework's sign-in asks for the POP scope and makes the account only when it succeeds", {
+feature("POP with the provider's sign-in: refused where the provider has no POP server; the framework's sign-in asks for the POP scope and makes the account only when it succeeds", {
     when() {
-        const connectParams = { emailAddress: `pop@${DOMAIN}`, displayName: "Pop Doe", accountKindEnumId: "EakExternal", storeKind: "pop", storeSecurity: "ssl",
-            storeHost: `pop.${DOMAIN}`, storePort: "995", smtpHost: `smtp.${DOMAIN}`, smtpPort: "587", smtpSecurity: "starttls", mailUsername: `pop@${DOMAIN}`, source: "guess" }
         const popStart = () => post("SignIn/startSignIn", { mode: "wizard", emailAddress: `pop@${DOMAIN}`, displayName: "Pop Doe", accountKindEnumId: "EakExternal",
             oauthProviderEnumId: PROVIDER, storeKind: "pop" })
-        // no POP server: not offered, and a POP sign-in is refused
-        const noPopConnect = render("Add/Connect", connectParams)
+        // no POP server: a POP sign-in is refused
         const noPop = popStart()
         sys(() => store("moqui.basic.email.EmailOAuthProvider", { oauthProviderEnumId: PROVIDER, popScope: `https://mail.${DOMAIN}/pop`,
             popHost: "127.0.0.1", popPort: "2", popProtocol: "pop3" }))
-        const connect = render("Add/Connect", connectParams)
         const started = popStart()
         const query = started.json.authUrl ? queryOf(started.json.authUrl) : {}
         const notYet = accountOf(`pop@${DOMAIN}`)
@@ -334,15 +276,10 @@ feature("POP with the provider's sign-in: offered only where the provider has a 
             ec.message.clearErrors()
             return String(str.output || "")
         })
-        return { noPopConnect, noPop, connect, started, query, notYet, failed, after: accountOf(`pop@${DOMAIN}`), server, again, imap, component }
+        return { noPop, started, query, notYet, failed, after: accountOf(`pop@${DOMAIN}`), server, again, imap, component }
     },
-    then({ noPopConnect, noPop, connect, started, query, notYet, failed, after, server, again, imap, component }) {
-        noPopConnect.errors == ""
-        noPopConnect.output.includes("offerPop=N")
+    then({ noPop, started, query, notYet, failed, after, server, again, imap, component }) {
         noPop.errors.includes("has no POP server set up here")
-        connect.errors == ""
-        connect.output.includes("offerPop=Y")
-        connect.output.includes("storeKind=pop")
         component.includes("POP (downloads the Inbox only)")
         !component.includes("dropSignIn")
         started.errors == ""

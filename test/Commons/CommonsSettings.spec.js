@@ -1,6 +1,6 @@
 // Commons Home's setup card and the Commons settings (screen/Commons/Home.xml, screen/Commons/Settings/*;
 // impl-drawers-commons.md M2): NotificationSettings lists the topics by inbox and saves john.doe's in-app, email and daily
-// digest choice (NotificationTopicUser.digest); Preferences saves the appearance and a key binding into the KEYMAP preference
+// digest choice (NotificationTopicUser.digest); Home lists the recent pages and files; Preferences saves the appearance and a key binding into the KEYMAP preference
 // and resets it; the setup card's Done and Dismiss are kept in COMMONS_SETUP; Account changes only the signed-in user, and
 // its photo (the face image of the user's own party) is uploaded, replaced and removed, and shown by m-avatar in Chatter.
 // Run: ./moq test mr-boss --spec CommonsSettings
@@ -93,6 +93,8 @@ feature("Preferences shows the keys of the shell and of the apps, saves an overr
         before.errors == ""
         before.output.includes("Search and go to (the palette)")
         before.output.includes("Contacts")
+        // the Calendar box, whose defaults CalendarSettings saves
+        before.output.includes("Week starts on")
         saved.errors == ""
         JSON.parse(keymap).global["g c"] == "g x"
         after.status == 200
@@ -121,8 +123,13 @@ feature("Preferences saves the appearance and answers a page load", {
     },
 })
 
-feature("the setup card keeps Done and Dismiss, and goes when every item is", {
+feature("the setup card keeps Done and Dismiss, and goes when every item is; Home lists the recent pages and files", {
     when() {
+        // a page john.doe opened lately (the Knowledge screen's page transition) and a file he changed
+        get("Knowledge/page", { wikiSpaceId: "BOSSKB", pagePath: "Office" })
+        const driveId = sys(() => call("org.moqui.impl.FileServices.ensure#PersonalDrive", {})).driveId
+        sys(() => call("org.moqui.impl.FileServices.save#Text", { driveId, path: "Settings spec notes.md", text: "For Home's recent files\n" }))
+        ec.message.clearErrors()
         const first = render("Home")
         post("Home/setSetup", { item: "mailAccount", state: "done" })
         const done = render("Home")
@@ -136,6 +143,10 @@ feature("the setup card keeps Done and Dismiss, and goes when every item is", {
         first.output.includes("Add a mail account")
         first.output.includes("Due today")
         first.output.includes("Requests assigned")
+        first.output.includes("Recent pages")
+        first.output.includes("Office")
+        first.output.includes("Recent files")
+        first.output.includes("Settings spec notes.md")
         !done.output.includes("Add a mail account")
         done.output.includes("Import contacts")
         !dismissed.output.includes("Get started")

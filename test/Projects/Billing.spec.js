@@ -4,7 +4,9 @@
 // project of its own (BIL, john.doe its manager, joe.developer a programmer, in the week of July 5, 2027): the invoice dialog's
 // refusals (nothing selected, a project with no client), a draft's header edited (the terms move the due date), a line removed and the
 // invoice cancelled (each frees its time), a rate edited and ended, the billing settings saved; and joe.developer, who does not manage
-// money, refused an invoice (the one check of every money service, BillingServices check#Money).
+// money, refused an invoice (the one check of every money service, BillingServices check#Money). Home's one qvt render is here, with
+// the checks of its other blocks on the demo: the manager charts (Hours by project, Unbilled by client: Reports), Allocation requests
+// (Resources) and the reviews waiting (MergeRequests), none of which joe.developer sees.
 // Run: ./moq test mr-boss --spec Billing
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "BIL"
@@ -67,7 +69,7 @@ spec({
     },
 })
 
-feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header too; its draft invoice bills Joe's approved week, 40 h at 140 in a line, with the 10 entries behind it", {
+feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header too; its draft invoice bills Joe's approved week, 40 h at 140 in a line, with the 10 entries behind it; Home's blocks", {
     when() {
         made.demoInvoiceId = sys(() => Array.from(ec.entity.find("mantle.work.effort.WorkEffortInvoice").condition("workEffortId", "SUPP").list())[0]?.invoiceId)
         return {
@@ -79,14 +81,25 @@ feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header t
             invoice: one("mantle.account.invoice.Invoice", { invoiceId: made.demoInvoiceId }),
             time: sys(() => call("mantle.account.InvoiceServices.get#InvoiceTimeDetail", { invoiceId: made.demoInvoiceId })),
             joeHome: as("joe.developer", () => render("apps/Projects/Home", {})),
+            // the code demo's !1 (made only in a binary with git)
+            reviewMr: one("moqui.resource.GitMergeRequest", { repositoryId: "iron", mergeRequestNum: 1 }),
         }
     },
-    then({ unbilled, home, header, invoices, detail, invoice, time, joeHome }) {
+    then({ unbilled, home, header, invoices, detail, invoice, time, joeHome, reviewMr }) {
         made.demoInvoiceId != null
         unbilled.status == 200 && !unbilled.broken
         unbilled.output.includes("IronStone support desk")
         unbilled.output.includes("Brightwater Dental Group")
+        home.status == 200 && !home.broken
         home.output.includes("Unbilled")
+        // the manager charts with their tables (Reports)
+        home.output.includes("Hours by project") && home.output.includes("Unbilled by client") && home.output.includes("HomeHoursByProject")
+        home.output.includes("Brightwater Dental Group")
+        // the allocation requests john.doe approves (Resources)
+        home.output.includes("Allocation requests") && home.output.includes("Allocation · Acme customer portal")
+        // the code demo's !1, john.doe asked to review (MergeRequests)
+        home.output.includes("Reviews waiting on me")
+        reviewMr == null || home.output.includes("ReviewsWaitingList") && home.output.includes("Expand and collapse rows")
         /^\$[0-9,]+\.\d\d$/.test(header.unbilledText)
         invoices.output.includes(made.demoInvoiceId)
         invoices.output.includes("Drafts · ")
@@ -98,6 +111,8 @@ feature("the demo: SUPP is unbilled for Brightwater, on Home and SUPP's header t
         time.entryList.length == 10
         time.entryList.every((entry) => entry.personName === "Joe Developer" && dec(entry.rate) === "140.00")
         !joeHome.output.includes("$5,600.00") && !/title="Unbilled"/.test(joeHome.output)
+        !joeHome.output.includes("Hours by project") && !joeHome.output.includes("Unbilled by client")
+        joeHome.output.includes("No review is waiting for you")
     },
 })
 

@@ -1,5 +1,5 @@
-// Commons Settings/Sync and the device addresses of Calendars, Contact books and a drive (screen/Commons/Settings/Sync.xml,
-// Calendars.xml, ContactBooks.xml, screen/Commons/Files/DriveSettings.xml; design-drawers-commons.md §11 Sync): john.doe makes
+// Commons Settings/Sync (screen/Commons/Settings/Sync.xml; design-drawers-commons.md §11 Sync; the device addresses on Calendars,
+// Contact books and a drive's settings are CalendarSettings', ContactBookSettings' and Files' renders of them): john.doe makes
 // an app password for a phone (shown once, then a device with its name), sees the addresses a device uses (the DAV server,
 // his calendars, contact books and drives, from org.moqui.impl.DavServices.get#SyncAddresses) and the steps per platform, and
 // revokes it. The password then logs a DAV request in until it is revoked.
@@ -95,25 +95,5 @@ feature("an app password made by the service is taken by the DAV server until Re
         revoked.errors == ""
         after.status == 401
         !page.output.includes("Spec laptop")
-    },
-})
-
-feature("Calendars and Contact books show each one's CalDAV and CardDAV address, a drive its WebDAV address", {
-    when() {
-        const calendars = render("Settings/Calendars")
-        const books = render("Settings/ContactBooks")
-        const personalDriveId = sys(() => call("org.moqui.impl.FileServices.get#UserDrives", {}).personalDriveId)
-        const drive = render("Files/DriveSettings", { driveId: personalDriveId })
-        return { calendars, books, drive }
-    },
-    then({ calendars, books, drive }) {
-        calendars.errors == ""
-        calendars.output.includes("Phones and desktop apps (CalDAV)")
-        calendars.output.includes("/dav/calendars/john.doe/")
-        books.errors == ""
-        books.output.includes("Phones and desktop apps (CardDAV)")
-        drive.errors == ""
-        drive.output.includes("On your devices")
-        drive.output.includes("/dav/files/john.doe/My%20files/")
     },
 })

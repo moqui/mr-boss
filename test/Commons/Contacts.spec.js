@@ -1,13 +1,13 @@
 // Commons Contacts (impl-drawers-commons.md M4; design-drawers-commons.md §6): the side list of the split (screen/Commons/Contacts/List.xml)
 // by scope, search and letter; the contact record (template/ContactRecord.xml) of a directory party, a personal contact and an employee,
 // with its tabs; editing a personal contact's information, names, notes, organization and relationships, and a directory party only by
-// a contact admin; the bulk actions (add to group and book, remove from book, export vCard and CSV, merge two, delete); Duplicates with
-// Compare, Merge and Not a duplicate (Mantle's PartyNotDuplicate); New contact opening the record, Link to a directory party,
+// a contact admin; the bulk actions (add to group and book, remove from book, export vCard and CSV, merge two, delete); New contact
+// opening the record, Link to a directory party,
 // the contact's photo (add, change, remove). Privacy (impl R7): Joe Developer's personal contact Sam Secret (the demo's, with the same email and
 // phone as the demo's duplicate pair Pat and Patricia Quinn) never shows to john.doe through the list (every scope, the search
-// by name, email and phone), the record by id, its transitions, the palette's People source, Compare or Duplicates; john.doe's
-// personal contacts never show to Joe Developer. The demo is data/BossDemoData.xml (M4). Authorization stays on, as for a
-// browser request.
+// by name, email and phone), the record by id, its transitions or the palette's People source; john.doe's personal contacts never
+// show to Joe Developer. Duplicates, Compare and Merge are ContactsDuplicates.spec.js's. The demo is data/BossDemoData.xml (M4).
+// Authorization stays on, as for a browser request.
 // Run: ./moq test mr-boss --spec Contacts
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -207,7 +207,7 @@ feature("a personal contact shows the Private banner with its book; an employee 
     },
 })
 
-feature("another user's personal contact is never available to john.doe: the record, its transitions, the palette, compare and duplicates", {
+feature("another user's personal contact is never available to john.doe: the record, its transitions and the palette", {
     when() {
         const record = detail(SAM)
         const inSplit = list({ scope: "all", text: "Sam" })
@@ -218,13 +218,11 @@ feature("another user's personal contact is never available to john.doe: the rec
         const peopleRows = (json) => ((json.groups || []).find((group) => group.group === "People") || { rows: [] }).rows.map((row) => String(row.url))
         const people = peopleRows(shellJson("shellSearch", { text: "Secret", groups: "People", limit: "20" }))
         const peopleByEmail = peopleRows(shellJson("shellSearch", { text: "pat.quinn@quinnco.example", groups: "People", limit: "20" }))
-        const compare = render("apps/Commons/Contacts/Compare", { partyId: SAM, otherPartyId: PAT })
-        const duplicates = render("apps/Commons/Contacts/Duplicates", {})
-        return { record, inSplit, update, exported, bulk, people, peopleByEmail, compare, duplicates,
+        return { record, inSplit, update, exported, bulk, people, peopleByEmail,
             sam: one("mantle.party.Person", { partyId: SAM }), samEmails: current("mantle.party.contact.PartyContactMechInfo", { partyId: SAM }).length,
             samInJohnsBook: current("mantle.party.contact.ContactBookParty", { partyId: SAM, contactBookId: "BOSS_DEMO_BOOK_JD" }).length }
     },
-    then({ record, inSplit, update, exported, bulk, people, peopleByEmail, compare, duplicates, sam, samEmails, samInJohnsBook }) {
+    then({ record, inSplit, update, exported, bulk, people, peopleByEmail, sam, samEmails, samInJohnsBook }) {
         record.status == 200
         record.output.includes("is not available")
         !record.output.includes("Sam Secret")
@@ -236,10 +234,6 @@ feature("another user's personal contact is never available to john.doe: the rec
         people.length == 0
         peopleByEmail.filter((url) => url.includes(SAM)) == []
         peopleByEmail.filter((url) => url.includes(PAT)).length == 1
-        compare.output.includes("not found")
-        !compare.output.includes("Sam Secret")
-        !duplicates.output.includes("Sam Secret")
-        !duplicates.output.includes(SAM)
         sam.firstName == "Sam"
         samEmails == 2
         samInJohnsBook == 0
@@ -256,11 +250,10 @@ feature("as Joe Developer: his own personal contact shows, john.doe's never do, 
                     || { rows: [] }).rows.map((row) => String(row.url))
             const bob = detail("ORG_ACME_BA")
             const edit = post("Contacts/ContactDetail/contactUpdate", { partyId: "ORG_ACME_BA", firstName: "Robert" })
-            const duplicates = render("apps/Commons/Contacts/Duplicates", {})
-            return { all, sam, mary, people, bob, edit, duplicates }
+            return { all, sam, mary, people, bob, edit }
         })
     },
-    then({ all, sam, mary, people, bob, edit, duplicates }) {
+    then({ all, sam, mary, people, bob, edit }) {
         all.includes(SAM)
         !all.includes(MARY)
         !all.includes(ROBIN)
@@ -272,7 +265,6 @@ feature("as Joe Developer: his own personal contact shows, john.doe's never do, 
         bob.output.includes("Bob Acme")
         !bob.output.includes("ContactEditDialog")
         edit.errors.includes("You may not change contact ORG_ACME_BA")
-        duplicates.output.includes("Only contact admins review duplicates")
         one("mantle.party.Person", { partyId: "ORG_ACME_BA" }).firstName == "Bob"
     },
 })
@@ -470,109 +462,6 @@ feature("merge two from the list goes to the compare; it takes exactly two", {
     },
 })
 
-// The limit is of each reason's pairs: with one limit over all, the email pairs (sorted first) left no name group once a
-// database had more email pairs than the limit (a full test run's 800 or so).
-feature("the duplicate pairs' limit is of each reason, so more email pairs than the limit leave the name group", {
-    when() {
-        const pairs = sys(() => ec.service.sync().name("ironstone.commons.ContactServices.get#DuplicatePairs").parameters({ limit: 1 }).call().pairList)
-        const reasons = Array.from(pairs).map((pair) => pair.reason)
-        return { email: reasons.filter((reason) => reason == "email").length, name: reasons.filter((reason) => reason == "name").length }
-    },
-    then({ email, name }) {
-        email == 1
-        name == 1
-    },
-})
-
-feature("Duplicates groups the pairs by reason, runs the scan on demand, and leaves out personal contacts", {
-    when() {
-        const before = render("apps/Commons/Contacts/Duplicates", {})
-        const scan = post("Contacts/Duplicates/runScan", {})
-        const after = render("apps/Commons/Contacts/Duplicates", {})
-        const byEmail = render("apps/Commons/Contacts/Duplicates", { reason: "email" })
-        return { before, scan, after, byEmail }
-    },
-    then({ before, scan, after, byEmail }) {
-        before.errors == ""
-        !before.broken
-        before.output.includes("Same email · ")
-        before.output.includes("Same name · ")
-        before.output.includes("Patricia Quinn")
-        before.output.includes("Quinn Consulting LLC")
-        // the names as alike as Mantle scores them
-        before.output.includes("names 100% alike")
-        !before.output.includes("Sam Secret")
-        scan.errors == ""
-        after.output.includes("Patricia Quinn")
-        !after.output.includes("Sam Secret")
-        byEmail.output.includes("Patricia Quinn")
-        !byEmail.output.includes("Quinn Consulting LLC")
-    },
-})
-
-feature("Compare shows both side by side with the field choice; Merge keeps Pat Quinn with Patricia's first name and her address", {
-    when() {
-        const compare = render("apps/Commons/Contacts/Compare", { partyId: PAT, otherPartyId: PATRICIA, returnTo: "duplicates" })
-        const merged = post("Contacts/Compare/mergeContacts", { partyId: PAT, otherPartyId: PATRICIA, returnTo: "duplicates", keepPartyId: PAT,
-            pick_firstName: "right" })
-        const after = render("apps/Commons/Contacts/Duplicates", {})
-        return { compare, merged, after, pat: one("mantle.party.PartyDetail", { partyId: PAT }), patricia: one("mantle.party.Party", { partyId: PATRICIA }),
-            patAddresses: current("mantle.party.contact.PartyContactMechPostalAddress", { partyId: PAT }) }
-    },
-    then({ compare, merged, after, pat, patricia, patAddresses }) {
-        compare.errors == ""
-        compare.output.includes("Side by side")
-        compare.output.includes("Keep Pat Quinn (BOSS_DEMO_DUP_A)")
-        compare.output.includes("Not a duplicate")
-        compare.output.includes("pick_firstName")
-        merged.errors == ""
-        merged.status == 302
-        patricia.disabled == "Y"
-        patricia.mergedToPartyId == PAT
-        pat.firstName == "Patricia"
-        pat.comments == "Met at the October trade show."
-        patAddresses.length == 1
-        !after.output.includes(PATRICIA)
-    },
-})
-
-feature("Not a duplicate keeps a pair out of the list (Mantle's PartyNotDuplicate), and the scan leaves it out", {
-    when() {
-        const marked = post("Contacts/Duplicates/notDuplicate", { partyId: QUINN_ORG, otherPartyId: QUINN_LLC })
-        const after = render("apps/Commons/Contacts/Duplicates", {})
-        const scan = post("Contacts/Duplicates/runScan", {})
-        return { marked, after, scan, again: render("apps/Commons/Contacts/Duplicates", {}),
-            decision: one("mantle.party.PartyNotDuplicate", { partyId: QUINN_ORG, otherPartyId: QUINN_LLC }) }
-    },
-    then({ marked, after, scan, again, decision }) {
-        marked.errors == ""
-        decision.decidedByUserId == "EX_JOHN_DOE"
-        !after.output.includes("Quinn Consulting LLC")
-        scan.errors == ""
-        !again.output.includes("Quinn Consulting LLC")
-    },
-})
-
-feature("an old BOSS not-a-duplicate setting moves to PartyNotDuplicate on a load, and the setting goes", {
-    when() {
-        sys(() => ec.entity.makeDataLoader().xmlText(`<entity-facade-xml>
-            <mantle.party.PartySettingType partySettingTypeId="BossNotDuplicates" description="Not duplicates of (IronStone Contacts)"/>
-            <mantle.party.PartySetting partyId="ORG_ACME_BA" partySettingTypeId="BossNotDuplicates" settingValue="ORG_ACME_SA,NO_SUCH_PARTY"/>
-        </entity-facade-xml>`).load())
-        const out = sys(() => call("ironstone.commons.ContactServices.migrate#NotDuplicateSettings", {}))
-        const [low, high] = ["ORG_ACME_BA", "ORG_ACME_SA"].sort()
-        return { out, decision: one("mantle.party.PartyNotDuplicate", { partyId: low, otherPartyId: high }),
-            setting: one("mantle.party.PartySetting", { partyId: "ORG_ACME_BA", partySettingTypeId: "BossNotDuplicates" }),
-            type: one("mantle.party.PartySettingType", { partySettingTypeId: "BossNotDuplicates" }) }
-    },
-    then({ out, decision, setting, type }) {
-        out.migratedCount == 1
-        decision != null
-        setting == null
-        type == null
-    },
-})
-
 feature("New contact from Contacts (quick create with openAfter) makes a personal contact and opens it; Link to a directory party shares it", {
     when() {
         const made = post("QuickCreate/createContact", { partyTypeEnumId: "PtyPerson", contactName: "Lena Link", emailAddress: "lena@link.example",
@@ -657,19 +546,17 @@ feature("a photo for a contact: an image is its face image, shown as the avatar,
     },
 })
 
-feature("delete: john.doe's personal contact goes; a directory party with history is disabled; his own party and another user's contact stay", {
+// A directory party with history is disabled, not removed: Mantle's rule (mr-mantle test/party/Contacts.spec.js, delete#Contact), not
+// checked again here; Pat Quinn stays for ContactsDuplicates.
+feature("delete: john.doe's personal contact goes; his own party and another user's contact stay", {
     when() {
         const self = post("Contacts/List/bulkDelete", { selectedPartyIds: "EX_JOHN_DOE" })
         const deleted = post("Contacts/List/bulkDelete", { selectedPartyIds: `${TOM},${SAM}` })
-        // Pat Quinn has john.doe's email of the Contacts demo: kept, disabled (mantle.party.ContactBookServices.delete#Contact)
-        const directory = post("Contacts/List/bulkDelete", { selectedPartyIds: PAT })
         const mine = rowsOf(list({ scope: "mine" }).output)
-        return { self, deleted, directory, mine, tom: one("mantle.party.Party", { partyId: TOM }), sam: one("mantle.party.Party", { partyId: SAM }),
-            pat: one("mantle.party.Party", { partyId: PAT }), john: one("mantle.party.Party", { partyId: "EX_JOHN_DOE" }),
-            tomBooks: current("mantle.party.contact.ContactBookParty", { partyId: TOM }).length,
-            patBooks: current("mantle.party.contact.ContactBookParty", { partyId: PAT }).length }
+        return { self, deleted, mine, tom: one("mantle.party.Party", { partyId: TOM }), sam: one("mantle.party.Party", { partyId: SAM }),
+            john: one("mantle.party.Party", { partyId: "EX_JOHN_DOE" }), tomBooks: current("mantle.party.contact.ContactBookParty", { partyId: TOM }).length }
     },
-    then({ self, deleted, directory, mine, tom, sam, pat, john, tomBooks, patBooks }) {
+    then({ self, deleted, mine, tom, sam, john, tomBooks }) {
         self.errors == ""
         john.disabled != "Y"
         deleted.errors == ""
@@ -678,9 +565,6 @@ feature("delete: john.doe's personal contact goes; a directory party with histor
         tomBooks == 0
         sam.disabled != "Y"
         !mine.includes(TOM)
-        directory.errors == ""
-        pat.disabled == "Y"
-        patBooks == 0
     },
 })
 

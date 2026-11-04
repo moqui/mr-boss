@@ -3,8 +3,8 @@
 // (data/BossFilesDemoData.xml): the rail, folders with their versions, tags and favorites; new folders and text files,
 // rename, move and copy; uploads with the replace, keep both and skip answers; versions, compare and restore; the trash;
 // search, tags, favorites and recent; downloads and zips; the drives screens; the records drive, which shows only the
-// records a user may see; and another user (joe.developer) refused on john.doe's private files. Commons Home's recent
-// files and Compose's Attach from Files too.
+// records a user may see; and another user (joe.developer) refused on john.doe's private files. The palette's files and
+// Compose's Attach from Files too (Commons Home's recent files are CommonsSettings' render of Home).
 // Run: ./moq test mr-boss --spec Files
 const commons = "component://mr-boss/screen/Commons.xml"
 const comms = "component://mr-boss/screen/Comms.xml"
@@ -397,19 +397,18 @@ feature("the drives: a new folder drive with members, its settings, a member add
         settingsPage.status == 200
         settingsPage.errorMessages.length == 0
         settingsPage.output.includes("Bob Developer")
+        // the drive's WebDAV folder on a device
+        settingsPage.output.includes("On your devices")
+        settingsPage.output.includes("/dav/files/john.doe/Spec%20drive/")
     },
 })
 
-feature("Commons Home lists the recent files; the palette finds files", {
+// Commons Home's recent files are on CommonsSettings' render of Home
+feature("the palette finds files", {
     when() {
-        const home = ec.screen.makeTest().rootScreen(commons).renderMode("qvt").withStaticData().render("Home", { lastStandalone: "-2" }, null)
-        ec.message.clearErrors()
-        return { home, palette: sys(() => call("ironstone.commons.DriveServices.search#PaletteFiles", { text: "meeting", limit: 5 })) }
+        return { palette: sys(() => call("ironstone.commons.DriveServices.search#PaletteFiles", { text: "meeting", limit: 5 })) }
     },
-    then({ home, palette }) {
-        home.status == 200
-        home.output.includes("Recent files")
-        home.output.includes("Meeting notes.md")
+    then({ palette }) {
         palette.rows[0].title == "Meeting notes.md"
         palette.rows[0].url.startsWith("/qapps/Commons/Files?drive=")
     },

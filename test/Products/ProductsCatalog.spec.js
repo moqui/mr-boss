@@ -231,7 +231,8 @@ feature("clone copies modern dimensions without external identifiers or status a
         active.error.includes("unused drafts")
     }
 })
-feature("catalog settings use dated optimistic tokens, reject stale edits and require the administrator grant", {
+// A stale token, a backdated start and another organization's policy are refused in mr-mantle's ProductCatalogSettings.
+feature("catalog settings use dated optimistic tokens and require the administrator grant", {
     when() {
         const admin = as("catalog.admin", () => {
             const current = invoke(S + "get#CatalogSettings", {organizationPartyId: "ORG_ZIZI_SERVICES"})
@@ -240,12 +241,7 @@ feature("catalog settings use dated optimistic tokens, reject stale edits and re
                 expectedVersion: current.versionSeqId,
                 settings: {requiredFields: ["productName", "productTypeEnumId", "amountUomId"], allowCostSelfApproval: false}
             })
-            const stale = invoke(S + "store#CatalogSettings", {
-                organizationPartyId: "ORG_ZIZI_SERVICES",
-                expectedVersion: current.versionSeqId,
-                settings: {idPolicy: "manual"}
-            })
-            return {current, next, stale}
+            return {current, next}
         })
         const editor = as("catalog.edit", () =>
             invoke(S + "store#CatalogSettings", {organizationPartyId: "ORG_ZIZI_SERVICES", expectedVersion: 0, settings: {}})
@@ -259,7 +255,6 @@ feature("catalog settings use dated optimistic tokens, reject stale edits and re
         admin.next.error == ""
         admin.next.versionSeqId > admin.current.versionSeqId
         admin.next.versionSeqId == Number(String(admin.next.fromDate))
-        admin.stale.error.includes("changed")
         editor.error.includes("authority")
         reader.error.includes("Catalog editor")
     }
@@ -471,13 +466,6 @@ feature("catalog policy scheduling preserves as-of reads and audits while reject
                 fromDate: future,
                 settings: {idPolicy: "internal"}
             })
-            const past = invoke(S + "store#CatalogSettings", {
-                organizationPartyId,
-                expectedVersion: base.versionSeqId,
-                fromDate: "2000-01-01T00:00:00Z",
-                settings: {}
-            })
-            const other = invoke(S + "get#CatalogSettings", {organizationPartyId: "ORG_ZIZI_RETAIL"})
             const audits = Array.from(
                 ec.entity
                     .find("moqui.entity.EntityAuditLog")
@@ -485,10 +473,10 @@ feature("catalog policy scheduling preserves as-of reads and audits while reject
                     .disableAuthz()
                     .list()
             )
-            return {base, scheduled, inserted, current, atMiddle, later, duplicate, past, other, audits, future}
+            return {base, scheduled, inserted, current, atMiddle, later, duplicate, audits, future}
         })
     },
-    then({base, scheduled, inserted, current, atMiddle, later, duplicate, past, other, audits, future}) {
+    then({base, scheduled, inserted, current, atMiddle, later, duplicate, audits, future}) {
         scheduled.error == ""
         inserted.error == ""
         current.settings.idPolicy == base.settings.idPolicy
@@ -500,7 +488,5 @@ feature("catalog policy scheduling preserves as-of reads and audits while reject
         later.history.some(r => r.changeReason == "Scheduled manual IDs")
         audits.some(r => r.changeReason == "Earlier packaging policy")
         duplicate.error.includes("already starts")
-        past.error.includes("now or later")
-        other.error.includes("not available")
     }
 })

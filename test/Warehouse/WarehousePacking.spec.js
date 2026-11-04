@@ -52,10 +52,11 @@ feature("the Pack task shows the picked shipment's lines and the facility's cart
     }
 })
 
-feature("ShipmentDetail opens Pack for the packer, and the kit's MaterialIssueReceipt lists its components", {
+feature("ShipmentDetail opens Pack and refuses another organization's; the kit's MaterialIssueReceipt lists its components", {
     when() {
         return asUser("warehouse.pack", () => ({
             detail: lib.page("Shipping/ShipmentDetail", {shipmentId: "BOSS_WH_SHIP_PACK"}, "html"),
+            foreign: lib.page("Shipping/ShipmentDetail", {shipmentId: ids.otherShipmentId}, "html"),
             kit: lib.page(
                 "Inventory/MaterialIssueReceipt",
                 {sourceType: "shipmentAssembly", sourceId: "BOSS_WH_SHIP_KIT"},
@@ -65,9 +66,13 @@ feature("ShipmentDetail opens Pack for the packer, and the kit's MaterialIssueRe
             pack: invoke(packing + "get#PackContext", {shipmentId: "BOSS_WH_SHIP_KIT"})
         }))
     },
-    then({detail, kit, source, pack}) {
+    then({detail, foreign, kit, source, pack}) {
         detail.errors == []
+        // the Warehouse outbound branch, with no prices
+        detail.output.includes("Items and sources")
         detail.output.includes("Pack demo hinge")
+        !detail.output.includes("Unit price")
+        foreign.output.includes("is not available")
         // the header's Pack (a test render shows a link's text, not its address)
         detail.output.includes("inventory_2</span> Pack</a>")
         kit.errors == []

@@ -1,7 +1,8 @@
 // Projects WorkItemDetail (screen/Shared/WorkItemDetail.xml at Projects/WorkItems/WorkItemDetail, service/ironstone/projects/WorkItemServices.xml
 // get#WorkItemDetail; design-projects.md §5 WorkItemDetail; impl-projects.md P2) on the Projects demo
 // (data/BossProjectsDemoData.xml): the item's path, key and the stages of the development flow, the facts with the roll-up,
-// plan items and labels, the tabs; the compact render of the peek pane; the sub-item tree (a level, a move, a quick add);
+// plan items and labels, the tabs, the Development tab on the code demo (IRON-3's branch and merge request !1, MergeRequests.spec.js's
+// demo); the compact render of the peek pane; the sub-item tree (a level, a move, a quick add);
 // the links with a dependency's lag; the status along the flow with a resolution; the Edit dialog's fields, labels, Assign to
 // me, the repeat rule and Stop repeating; Move to project with the subtree; who may see and change an item (Joe Developer on
 // IRON's team, not on HIRE; impl-projects.md F1). The same screen in Commons keeps the Commons layout (Tasks.spec.js). The spec
@@ -50,8 +51,9 @@ spec({
 
 feature("a work item renders with its path, key, the development flow's stages, the facts with the roll-up and its tabs", {
     when() {
-        return { three: detail({ workEffortId: "IRON-3" }), two: detail({ workEffortId: "IRON-2" }), commons: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "IRON-3" }),
-            acme: detail({ workEffortId: "ACME-6" }) }
+        // Commons asked for the Development tab: it has none, so it opens on its overview
+        return { three: detail({ workEffortId: "IRON-3" }), two: detail({ workEffortId: "IRON-2" }),
+            commons: render("apps/Commons/Tasks/TaskDetail", { workEffortId: "IRON-3", tab: "development" }), acme: detail({ workEffortId: "ACME-6" }) }
     },
     then({ three, two, commons, acme }) {
         // a project on the Default flow: its work effort stages only (the Default flow holds every status type's moves)
@@ -79,6 +81,7 @@ feature("a work item renders with its path, key, the development flow's stages, 
         three.output.includes("Sub-items")
         three.output.includes("Links")
         three.output.includes('<m-chatter id="TaskChatter" record-entity="mantle.work.effort.WorkEffort" record-id="IRON-3"')
+        three.output.includes('data-tab="development"')
         // a parent: its own estimate and the one with its sub-items
         two.output.includes("With sub-items")
         two.output.includes("14 h · 0/2 done")
@@ -86,6 +89,18 @@ feature("a work item renders with its path, key, the development flow's stages, 
         commons.status == 200
         commons.output.includes("TaskStatusBar")
         !commons.output.includes("m-workitem-key")
+        !commons.output.includes("WorkItemBranches")
+    },
+})
+
+feature("the Development tab on the code demo: IRON-3's branches and its merge request !1", {
+    requires: ["git"],
+    when() { return { development: detail({ workEffortId: "IRON-3", tab: "development" }) } },
+    then({ development }) {
+        development.status == 200
+        !development.broken
+        development.output.includes("WorkItemBranches")
+        development.output.includes("!1 ")
     },
 })
 

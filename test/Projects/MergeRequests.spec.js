@@ -4,8 +4,9 @@
 // demo (service/ironstone/projects/CodeDemoServices.xml: !1 of iron, IRON-3-expand-collapse into main by joe.developer, john.doe asked to
 // review; IRON-7-timer with a failed check): the list by chip and by who may view what, the detail and its tabs, the review
 // threads (a line comment, a reply, resolve and reopen), a review, reviewers added and removed, work items linked and unlinked,
-// the draft and close moves, the Development tab with a branch made for a work item, and Home. The usable-when walk of P3b is
-// CodeReviewWalk.spec.js. Authorization stays on. The spec puts the demo's !1 back as it found it.
+// the draft and close moves, and a branch made for a work item. WorkItemDetail's Development tab and Commons' TaskDetail are rendered
+// in WorkItemDetail.spec.js, and Home's reviews waiting in Billing.spec.js, on their one render. The usable-when walk of P3b is
+// acceptance/Projects/CodeReviewWalk.spec.js. Authorization stays on. The spec puts the demo's !1 back as it found it.
 // Run: ./moq test mr-boss --spec MergeRequests
 const webroot = "component://webroot/screen/webroot.xml"
 
@@ -284,57 +285,23 @@ feature("work items linked and unlinked by hand; Edit; Mark as draft and ready; 
     },
 })
 
-feature("WorkItemDetail's Development tab: IRON-3's branch, merge request and commits; a branch made for IRON-10 by its pattern", {
+feature("a work item's development: IRON-3's branch, merge request and commits; a branch made for IRON-10 by its pattern", {
     when() {
-        const iron3 = render("apps/Projects/WorkItems/WorkItemDetail", { workEffortId: "IRON-3", tab: "development" })
-        const overview = render("apps/Projects/WorkItems/WorkItemDetail", { workEffortId: "IRON-3" })
         const dev = sys(() => call("ironstone.projects.CodeServices.get#WorkItemDevelopment", { workEffortId: "IRON-3" }).development)
         const made = post("WorkItems/WorkItemDetail/createBranch", { workEffortId: "IRON-10", repositoryId: "iron", branchName: "IRON-10-mr-spec" })
         settle()
         const iron10 = sys(() => call("ironstone.projects.CodeServices.get#WorkItemDevelopment", { workEffortId: "IRON-10" }).development)
-        const page10 = render("apps/Projects/WorkItems/WorkItemDetail", { workEffortId: "IRON-10", tab: "development" })
         const otherRepo = post("WorkItems/WorkItemDetail/createBranch", { workEffortId: "IRON-10", repositoryId: "acme-portal", branchName: "IRON-10-mr-spec-2" })
-        const commons = render("apps/Commons/Tasks/TaskDetail", { workEffortId: "IRON-3", tab: "development" })
-        return { iron3, overview, dev, made, iron10, page10, otherRepo, commons }
+        return { dev, made, iron10, otherRepo }
     },
-    then({ iron3, overview, dev, made, iron10, page10, otherRepo, commons }) {
-        for (const one of [iron3, overview, page10, commons]) {
-            assert(one.status == 200, one.errors)
-            assert(!one.broken, one.output.substring(0, 400))
-        }
+    then({ dev, made, iron10, otherRepo }) {
         dev.shown == true
         dev.branchList.map((row) => row.name).includes("IRON-3-expand-collapse")
         dev.branchList.find((row) => row.name == "IRON-3-expand-collapse").aheadBy == 2
         dev.mergeRequestList[0].numText == "!1"
         dev.commitList.some((row) => row.summary.includes("IRON-3"))
-        iron3.output.includes("WorkItemBranches")
-        iron3.output.includes("!1 ")
-        overview.output.includes('data-tab="development"')
         made.errors == ""
         iron10.branchList.map((row) => row.name).includes("IRON-10-mr-spec")
-        page10.output.includes("IRON-10-mr-spec")
         otherRepo.errors.includes("not one of the project")
-        // Commons has no Development tab
-        !commons.output.includes("WorkItemBranches")
-    },
-})
-
-feature("Projects Home: john.doe's reviews waiting, as a counter and a block", {
-    when() {
-        // ask john again, as a push that dismissed his approval would
-        sys(() => ec.entity.find("moqui.resource.GitMergeRequestReviewer").condition({ mergeRequestId: mrId, userId: "EX_JOHN_DOE" }).updateAll({ statusId: "GmrrRequested" }))
-        const home = render("apps/Projects/Home")
-        const counts = sys(() => call("mantle.work.ProjectServices.get#ProjectHomeCounts", {}).counts)
-        const bob = as("bob.developer", () => render("apps/Projects/Home"))
-        return { home, counts, bob }
-    },
-    then({ home, counts, bob }) {
-        home.status == 200
-        !home.broken
-        counts.reviewsWaiting >= 1
-        home.output.includes("Reviews waiting on me")
-        home.output.includes("ReviewsWaitingList")
-        home.output.includes("Expand and collapse rows")
-        bob.output.includes("No review is waiting for you")
     },
 })

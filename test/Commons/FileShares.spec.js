@@ -103,15 +103,17 @@ feature("a share with a group reaches its members", {
             }
         })
         const shared = post("share", { driveId: personalDriveId, path: "Share spec/readme.txt", shareWith: "group:BOSS_TEST_FILES_GROUP", permissionEnumId: "RspView" })
+        // the file's details as a member opens it (Files renders its download)
         login("bob.developer")
-        const text = render("Files/download", { driveId: personalDriveId, path: "Share spec/readme.txt" })
+        const opened = get("detail", { driveId: personalDriveId, path: "Share spec/readme.txt" })
         login("john.doe")
-        return { shared, text, targets: get("shareTargets", { term: "Files spec" }) }
+        return { shared, opened, targets: get("shareTargets", { term: "Files spec" }) }
     },
-    then({ shared, text, targets }) {
+    then({ shared, opened, targets }) {
         shared.status == 200
         shared.json.notifiedUserIds.includes("ORG_ZIZI_BD")
-        text.output == "Shared with Joe\n"
+        opened.status == 200
+        opened.errors == ""
         targets.json.some((option) => option.value === "group:BOSS_TEST_FILES_GROUP")
     },
 })

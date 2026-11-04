@@ -6,7 +6,7 @@
 // client invoice of it with its time detail; the time is no longer unbilled (Unbilled, the project's time); InvoiceDetail shows the
 // lines and the time behind them, john.doe approves the invoice and sends it to the client, and the printed invoice carries the time
 // detail; joe may not open Billing. The project and the invoice are cancelled after, so the other specs' lists keep their records.
-// Run: ./moq test mr-boss --spec BillingWalk
+// Run: ./moq accept mr-boss --spec BillingWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "BWK"
 // a moment of a day of June 2027, in the session's time zone

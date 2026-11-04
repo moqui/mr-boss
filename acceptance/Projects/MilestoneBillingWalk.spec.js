@@ -7,7 +7,7 @@
 // approval, john.doe records it and Design is reached; joe's approved week and Design's share become one client invoice with its time
 // detail (Unbilled's Milestones due, the invoice dialog, InvoiceDetail's milestone line, the print); the Money tab shows it all, the
 // OrderDetail the share billed; joe may not see the money. The project and its invoices are cancelled after.
-// Run: ./moq test mr-boss --spec MilestoneBillingWalk
+// Run: ./moq accept mr-boss --spec MilestoneBillingWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "MBW"
 const CLIENT = "MBW_CLIENT"

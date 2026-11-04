@@ -2,8 +2,8 @@
 // allocations and NewProject's Team step, §3 Home's allocation requests) on the resource demo (data/BossProjectsDemoDataTimeResources.xml,
 // dated from the week it was loaded), with authorization on: john.doe (a Projects manager, who approves allocations) sees the team
 // plan with Joe over-allocated this week and the placeholder UI designer to staff, Allocations' Requested list, Ana Designer's
-// PersonDetail tabs (impl-projects.md F52: AppStructure renders the tabs' header only), ACME's Team tab with its Allocations box, and
-// Home's Allocation requests counter and approvals; joe.developer sees the plan read only and may not move an allocation or open the
+// PersonDetail tabs (impl-projects.md F52: AppStructure renders the tabs' header only); ACME's Team tab with its Allocations box is
+// checked in ProjectDetail.spec.js and Home's Allocation requests in Billing.spec.js, on their one render; joe.developer sees the plan read only and may not move an allocation or open the
 // requests to decide; bob.developer may not open Ana, on no project he sees. NewProject's Team step allocates a member it adds with
 // hours a week. Nothing is changed but a draft project, cancelled after.
 // Run: ./moq test mr-boss --spec Resources
@@ -180,11 +180,8 @@ feature("Allocations' Requested list and the staffing dialog for john.doe; Ana's
     },
 })
 
-feature("ACME's Team tab lists its allocations with the placeholder; Home shows john.doe the allocation requests; NewProject's Team step allocates a member", {
+feature("NewProject's Team step allocates a member", {
     when() {
-        const team = render("apps/Projects/Projects/ProjectDetail/Team", { workEffortId: "ACME" })
-        const home = render("apps/Projects/Home", {})
-        const counts = sys(() => call("mantle.work.ProjectServices.get#ProjectHomeCounts", { managers: true }).counts)
         const started = sys(() => call("ironstone.projects.ProjectServices.create#NewProject", { workEffortName: "Resource draft", workEffortId: "RDR",
             estimatedStartDate: "2027-05-03 09:00:00", estimatedCompletionDate: "2027-05-28 17:00:00" }))
         made.draft = started.projectId
@@ -192,18 +189,9 @@ feature("ACME's Team tab lists its allocations with the placeholder; Home shows 
             hoursPerWeek: "12", allocFromDate: "2027-05-03", allocThruDate: "2027-05-28" })
         const step = render("apps/Projects/Projects/NewProject/Team", { workEffortId: made.draft })
         const rows = sys(() => Array.from(ec.entity.find("mantle.work.effort.WorkEffortAllocation").condition("rootWorkEffortId", made.draft).list()))
-        return { team, home, counts, added, step, rows }
+        return { added, step, rows }
     },
-    then({ team, home, counts, added, step, rows }) {
-        team.status == 200
-        !team.broken
-        team.output.includes("Allocations · 4")
-        team.output.includes("Ana Designer")
-        team.output.includes("To staff")
-        team.output.includes("Request allocation")
-        home.output.includes("Allocation requests")
-        home.output.includes("Allocation · Acme customer portal")
-        counts.allocationRequests == 2
+    then({ added, step, rows }) {
         added.errors == ""
         rows.length == 1
         rows[0].partyId == "ORG_ZIZI_BD"

@@ -1,11 +1,11 @@
-// Commons Settings/Calendars and the Calendar box of Settings/Preferences (screen/Commons/Settings/Calendars.xml, Preferences.xml,
+// Commons Settings/Calendars and the calendar defaults of Settings/Preferences (screen/Commons/Settings/Calendars.xml, Preferences.xml,
 // service/ironstone/commons/CalendarServices.xml; impl-drawers-commons.md M7, design-drawers-commons.md §11): john.doe's calendars on the
 // calendar demo (data/BossCalendarDemoData.xml, loaded again here). The page lists his own, the shared ones and the
 // subscription whose fetch failed; a calendar is created, renamed, colored, made the default and deleted; Family is shared with
 // Joe Developer, who then sees its events, and unshared; a feed is subscribed to, fetched now from an address that does not
 // answer (its status failed, with the reason) and stored from a feed's text (ok, its event on the grid); an .ics file is
-// imported into a calendar and a calendar exported. The calendar defaults are saved as preferences that the calendar reads. Joe
-// may not change or export john.doe's Family calendar.
+// imported into a calendar and a calendar exported. The calendar defaults are saved as preferences that the calendar reads (the
+// Calendar box itself is CommonsSettings' render of Preferences). Joe may not change or export john.doe's Family calendar.
 // Run: ./moq test mr-boss --spec CalendarSettings
 const webroot = "component://webroot/screen/webroot.xml"
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -65,6 +65,9 @@ feature("Settings/Calendars lists john.doe's calendars, the shared ones and the 
         page.output.includes("Joe Developer")
         page.output.includes("Holidays (demo feed)")
         page.output.includes("The feed answered 404 Not Found")
+        // the address a device uses
+        page.output.includes("Phones and desktop apps (CalDAV)")
+        page.output.includes("/dav/calendars/john.doe/")
         settings.mineList.map((calendar) => calendar.calendarId).includes("BOSS_DEMO_CAL_FAMILY")
         settings.subscriptionList[0].fetchStatus == "error"
         settings.sharedList.some((calendar) => calendar.calendarId === "BOSS_DEMO_CAL_TEAM" && calendar.canManage)
@@ -174,15 +177,14 @@ feature("the calendar defaults are saved as preferences the calendar reads; a ba
         const saved = call_("Settings/Preferences/saveCalendarDefaults", { view: "month", weekStart: "1", workStart: "08:30", workEnd: "18:00", workDays: ["1", "2", "3", "4"],
             defaultDuration: "30", defaultReminder: "", showDeclined: "Y", showWeekNumbers: "Y", defaultCalendarId: "BOSS_DEMO_CAL_FAMILY" }, "post")
         const defaults = call_("Calendar/calendarSetup", {}).json
-        const page = render("apps/Commons/Settings/Preferences")
         const backwards = call_("Settings/Preferences/saveCalendarDefaults", { workStart: "18:00", workEnd: "08:00" }, "post")
         const notMine = call_("Settings/Preferences/saveCalendarDefaults", { defaultCalendarId: "BOSS_DEMO_CAL_TEAM" }, "post")
         // back to the demo's
         call_("Settings/Preferences/saveCalendarDefaults", { view: "week", weekStart: "0", workStart: "09:00", workEnd: "17:00", workDays: ["1", "2", "3", "4", "5"],
             defaultDuration: "60", defaultReminder: "10", showDeclined: "N", showWeekNumbers: "N", defaultCalendarId: "BOSS_DEMO_CAL_JD" }, "post")
-        return { saved, defaults, page, backwards, notMine }
+        return { saved, defaults, backwards, notMine }
     },
-    then({ saved, defaults, page, backwards, notMine }) {
+    then({ saved, defaults, backwards, notMine }) {
         saved.errors == ""
         defaults.defaults.view == "month"
         defaults.defaults.weekStart == 1
@@ -194,7 +196,6 @@ feature("the calendar defaults are saved as preferences the calendar reads; a ba
         defaults.defaults.showDeclined
         defaults.defaults.showWeekNumbers
         defaults.defaultCalendarId == "BOSS_DEMO_CAL_FAMILY"
-        page.output.includes("Week starts on")
         backwards.errors.includes("end after they start")
         notMine.errors.includes("own personal calendars")
     },

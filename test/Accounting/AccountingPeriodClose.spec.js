@@ -90,7 +90,8 @@ feature("the invoice reconciliation report runs for the period and compares the 
     }
 })
 // Through the real app mount, whose shared links resolve //Accounting destinations: the approver's bank item is a disabled
-// link, since Banking is treasury's, and the finance admin's links to the bank account.
+// link, since Banking is treasury's, and the finance admin's links to the bank account; the page links to its print
+// (AccountingOutputs prints it).
 feature("through the app mount, the approver's bank item is unlinked and the finance admin's is linked", {
     when() {
         const render = user =>
@@ -124,6 +125,7 @@ feature("through the app mount, the approver's bank item is unlinked and the fin
     },
     then({approverBank, approverInvoice, adminBank, approver}) {
         approver.includes("Payroll account: 1 lines not on a finished statement")
+        approver.includes("PeriodClose/PeriodCloseDetail?renderMode=html-print&amp;timePeriodId=" + period.timePeriodId)
         !approverBank.includes("BankAccountDetail") && approverBank.includes("disabled")
         approverInvoice.includes("InvoiceDetail")
         adminBank.includes("BankAccountDetail")

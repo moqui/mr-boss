@@ -1,11 +1,12 @@
 // Manufacturing's subcontracting (impl-manufacturing P14 "Usable when", design-manufacturing §7 SubcontractOperations and
 // SubcontractDetail), through the Subcontracting screens and the shared SupplyPlanning with the Manufacturing context: the
 // planner requests outside processing for an operation of a released work order; the buyer (Purchasing's buyer group) converts
-// it on the Planning mount into a draft service purchase order line with OrderItemWorkEffort and RequirementSupply; the
-// planner cannot convert it, and a second conversion answers the same line; the demo places the order until Purchasing
-// does; a run reader without the buyer's grant sees no purchase price, the buyer does; Supplier360, OrderDetail and
-// ShipmentDetail show the subcontract with the Manufacturing context. The dispatch, output receipt, acceptance, accrual and
-// bill match are Mantle's ProductionSubcontract spec. The run is this spec's (setupSpec), of the demo's released method.
+// it through the Planning mount's convertSuggestions into a draft service purchase order line; the demo places the order
+// until Purchasing does; a run planner without the buyer's grant sees no purchase price on the screens, the buyer does;
+// Supplier360, OrderDetail and ShipmentDetail show the subcontract with the Manufacturing context. The conversion's lines
+// and links, the planner's refusal, a second conversion, the prices by reader, the dispatch, output receipt, acceptance,
+// accrual and bill match are Mantle's ProductionSubcontract spec; SupplyPlanning's other renders are ManufacturingPlanning's. The
+// run is this spec's (setupSpec), of the demo's released method.
 // Run: ./moq test mr-boss --spec ManufacturingSubcontracting
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -15,6 +16,18 @@ const state = {}
 const find = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz()
 const rowsOf = (entity, conditions) => Array.from(find(entity, conditions).list())
 const html = (path, parameters) => page(path, parameters, "html")
+// a transition as its form posts it, as the user with artifact authorization on: its error messages, "" when it succeeds
+function post(user, path, parameters) {
+    return asUser(user, () => {
+        const result = ec.screen
+            .makeTest()
+            .rootScreen("component://mr-boss/screen/Manufacturing.xml")
+            .render(path, parameters, "post")
+        const errors = Array.from(result.errorMessages || []).join(" | ")
+        ec.message.clearErrors()
+        return errors
+    })
+}
 
 spec({
     stepwise: true,
@@ -60,12 +73,7 @@ feature("the planner requests outside processing from SubcontractOperations; a r
             supplierPartyId: ids.supplierId,
             vendorFacilityId: ids.vendorFacilityId
         }
-        // with authz disabled, so the refusal is the service's own permission check
-        const reader = asUser(
-            users.read,
-            () => refusal(P + "request#SubcontractService", Object.assign({}, parameters, {operationKey: "spec-p14-reader"})),
-            false
-        )
+        // the mount's record check (the service's own refusal is Mantle's ProductionSubcontract)
         const readerCheck = asUser(users.read, () =>
             refusal("ironstone.manufacturing.AccessServices.check#Record", {
                 recordType: "operation",
@@ -79,10 +87,9 @@ feature("the planner requests outside processing from SubcontractOperations; a r
         )
         const list = asUser(users.plan, () => html("Subcontracting/SubcontractOperations"))
         const detail = asUser(users.plan, () => html("Subcontracting/SubcontractDetail", {workEffortId: state.operationId}))
-        return {reader, readerCheck, requested, subcontract, list, detail}
+        return {readerCheck, requested, subcontract, list, detail}
     },
-    then({reader, readerCheck, requested, subcontract, list, detail}) {
-        reader.includes("PERMISSION_DENIED")
+    then({readerCheck, requested, subcontract, list, detail}) {
         readerCheck.includes("PERMISSION_DENIED")
         requested.errors.length == 0
         subcontract.statusId == "PscRequested"
@@ -97,7 +104,7 @@ feature("the planner requests outside processing from SubcontractOperations; a r
     }
 })
 
-feature("a buyer converts it on the Planning mount to a draft service PO line; the planner cannot; again answers the line", {
+feature("a buyer converts it through the Planning mount's convertSuggestions to a draft service PO line; the scheduler may not", {
     when() {
         const subcontract = system(
             () => rowsOf("mantle.work.production.ProductionSubcontract", {operationWorkEffortId: state.operationId})[0]
@@ -110,66 +117,39 @@ feature("a buyer converts it on the Planning mount to a draft service PO line; t
                 })[0]
         )
         const parameters = {plantId: ids.plantId, planningSuggestionIdList: [suggestion.planningSuggestionId]}
+        // a second render of SupplyPlanning: only this plan has an outside-processing suggestion, the buyer's to convert
         const buyerPlan = asUser(users.buyer, () => page("Planning/SupplyPlanning", {plantId: ids.plantId}))
         const plannerPlan = asUser(users.plan, () => page("Planning/SupplyPlanning", {plantId: ids.plantId}))
-        const planner = asUser(users.plan, () =>
-            page("Planning/SupplyPlanning/convertSuggestions", Object.assign({operationKey: "spec-p14-planner"}, parameters))
+        // the buyer passes the mount's plan-or-buy check, which the scheduler (who reads the plan) does not
+        const scheduler = post(
+            users.schedule,
+            "Planning/SupplyPlanning/convertSuggestions",
+            Object.assign({operationKey: "spec-p14-scheduler"}, parameters)
         )
-        const afterPlanner = system(() => rowsOf("mantle.order.OrderItemWorkEffort", {workEffortId: state.operationId}).length)
-        const first = asUser(users.buyer, () =>
-            page("Planning/SupplyPlanning/convertSuggestions", Object.assign({operationKey: "spec-p14-first"}, parameters))
-        )
-        const again = asUser(
+        const first = post(
             users.buyer,
-            () =>
-                invoke(S + "convert#PlanningSuggestions", {
-                    operationKey: "spec-p14-again",
-                    planningSuggestionIds: [suggestion.planningSuggestionId]
-                }),
-            false
+            "Planning/SupplyPlanning/convertSuggestions",
+            Object.assign({operationKey: "spec-p14-first"}, parameters)
         )
         const links = system(() => rowsOf("mantle.order.OrderItemWorkEffort", {workEffortId: state.operationId}))
-        const supply = system(() =>
-            rowsOf("mantle.request.requirement.RequirementSupply", {
-                requirementId: subcontract.requirementId,
-                supplyTypeEnumId: "RstPurchaseOrder"
-            })
-        )
         state.orderId = links[0]?.orderId
-        return {buyerPlan, plannerPlan, planner, afterPlanner, first, again, links, supply}
+        return {buyerPlan, plannerPlan, scheduler, first, links}
     },
-    then({buyerPlan, plannerPlan, planner, afterPlanner, first, again, links, supply}) {
+    then({buyerPlan, plannerPlan, scheduler, first, links}) {
         buyerPlan.errors.length == 0
         buyerPlan.output.includes("Make draft purchase order lines")
         !buyerPlan.output.includes("Recalculate")
         !plannerPlan.output.includes("Make draft purchase order lines")
-        afterPlanner == 0
-        first.errors.length == 0
+        scheduler.includes("PRODUCTION_PLAN or PURCHASE_ORDER_EDIT is required")
+        first == ""
         links.length == 1
-        links[0].requiredWork == "Y"
-        supply.length == 1
-        supply[0].orderItemSeqId == links[0].orderItemSeqId
-        const header = system(() => find("mantle.order.OrderHeader", {orderId: links[0].orderId}).one())
-        header.statusId == "OrderOpen"
-        const item = system(() =>
-            find("mantle.order.OrderItem", {orderId: links[0].orderId, orderItemSeqId: links[0].orderItemSeqId}).one()
-        )
-        item.productId == ids.serviceProductId
-        Number(String(item.quantity)) == 2
-        Number(String(item.unitAmount)) == 3
-        again.results[0].resultCode == "EXISTING"
-        again.results[0].orderItemSeqId == links[0].orderItemSeqId
     }
 })
 
-feature("a run reader or planner without the buyer grant sees no purchase price; the buyer does", {
+feature("a run planner without the buyer grant sees no purchase price on the screens; the buyer does", {
     when() {
-        const read = username =>
-            asUser(username, () => invoke(P + "get#SubcontractStatus", {operationWorkEffortId: state.operationId}), false)
         const order = username => asUser(username, () => html("Subcontracting/OrderDetail", {orderId: state.orderId}))
         return {
-            reader: read(users.read),
-            buyer: read(users.buyer),
             // the planner reads the run without the buyer grant; the reader has no Subcontracting area
             readerOrder: order(users.plan),
             buyerOrder: order(users.buyer),
@@ -177,12 +157,7 @@ feature("a run reader or planner without the buyer grant sees no purchase price;
             buyerDetail: asUser(users.buyer, () => html("Subcontracting/SubcontractDetail", {workEffortId: state.operationId}))
         }
     },
-    then({reader, buyer, readerOrder, buyerOrder, readerDetail, buyerDetail}) {
-        reader.serviceLines.length == 1
-        reader.serviceLines[0].unitAmount === undefined
-        reader.priceRead == false
-        buyer.serviceLines[0].unitAmount == "3"
-        buyer.priceRead == true
+    then({readerOrder, buyerOrder, readerDetail, buyerDetail}) {
         readerOrder.errors.length == 0
         readerOrder.output.includes("Spec subcontracted assemblies") || readerOrder.output.includes(state.runId)
         !readerOrder.output.includes("$3.00")

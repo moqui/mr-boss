@@ -31,10 +31,13 @@ feature("the payables screens render in #mode for AP", {
                 ["Records/ShipmentDetail", {shipmentId: "BOSS_ACCT_NO_SHIPMENT"}, "Shipment not available"],
                 ["Records/ShipmentDetail", {shipmentId: lib().receivedShipmentId()}, "Bill accepted receipts"],
                 ["Approvals", {}, "Approvals"]
-            ].map(([path, parameters, text]) => {
-                const page = lib().page(path, parameters, mode)
-                return {path, status: page.status, errors: page.errors, found: page.output.includes(text)}
-            })
+            ]
+                // OrderDetail's qvt render is AccountingCollections'; its tui render is here
+                .filter(([path]) => mode == "tui" || path != "Records/OrderDetail")
+                .map(([path, parameters, text]) => {
+                    const page = lib().page(path, parameters, mode)
+                    return {path, status: page.status, errors: page.errors, found: page.output.includes(text)}
+                })
         )
         return {rows}
     },
@@ -43,7 +46,8 @@ feature("the payables screens render in #mode for AP", {
     }
 })
 
-feature("a reader sees the bills and a bill without its actions; AP sees Upload bill and Place hold", {
+// BillDetail's Approve over budget (a budget Stop's override) is for an approver who holds BUDGET_OVERRIDE only.
+feature("a reader sees the bills and a bill without its actions; AP sees Upload bill and Place hold; the approver approves", {
     when() {
         const read = lib().asUser("finance.read", () => ({
             bills: lib().page("Payables/Bills", {}, "qvt"),
@@ -66,7 +70,10 @@ feature("a reader sees the bills and a bill without its actions; AP sees Upload 
         ap.bills.output.includes("Upload bill")
         ap.bill.output.includes("Place hold")
         !ap.bill.output.includes("Approve bill")
+        !ap.bill.output.includes("Approve over budget")
+        approver.errors == []
         approver.output.includes("Approve bill")
+        approver.output.includes("Approve over budget")
     }
 })
 
@@ -178,32 +185,24 @@ feature("a held bill: AP asks for a release, the approver sees it in Approvals, 
     }
 })
 
-feature("the bill from an approved purchase order takes the supplier's 30-day term", {
+// The bill's term from the supplier and the refusal of a second bill are mr-mantle's AccountingPayables.
+feature("AP bills an approved purchase order; the order lists the bill and offers no second one", {
     when() {
         return lib().asUser("finance.ap", () => {
             const made = lib().call("mantle.account.InvoiceServices.create#InvoiceFromSource", {
                 orderId: "BOSS_ACCT_PO",
                 organizationPartyId: org
             })
-            const again = lib().refusal("mantle.account.InvoiceServices.create#InvoiceFromSource", {
+            const order = lib().call("ironstone.accounting.PayableScreenServices.get#OrderContext", {
                 orderId: "BOSS_ACCT_PO",
                 organizationPartyId: org
-            })
-            const bill = ec.entity
-                .find("mantle.account.invoice.Invoice")
-                .condition("invoiceId", made.invoiceId)
-                .disableAuthz()
-                .one()
-            const order = lib().page("Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "qvt")
-            return {made, again, bill, order}
+            }).orderDetail
+            return {made, order}
         })
     },
-    then({made, again, bill, order}) {
-        bill.settlementTermId == "BOSS_ACCT_NET30"
-        bill.statusId == "InvoiceIncoming"
-        again.includes("SOURCE_ALREADY_INVOICED")
-        order.output.includes(made.invoiceId)
-        !order.output.includes("Bill from order")
+    then({made, order}) {
+        order.invoices.some(row => row.invoiceId == made.invoiceId)
+        order.canInvoice == false
     }
 })
 
@@ -233,8 +232,14 @@ feature("with a Supplier site for the organization, AP gets an approved order's 
             })
         }
         ec.artifactExecution.enableAuthz()
-        const ap = lib().asUser("finance.ap", () => lib().page("Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "qvt"))
-        const reader = lib().asUser("finance.read", () => lib().page("Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "qvt"))
+        // the order's context, which OrderDetail's Supplier bill link shows on (its qvt render is AccountingCollections')
+        const order = () =>
+            lib().call("ironstone.accounting.PayableScreenServices.get#OrderContext", {
+                orderId: "BOSS_ACCT_PO",
+                organizationPartyId: org
+            }).orderDetail
+        const ap = lib().asUser("finance.ap", order)
+        const reader = lib().asUser("finance.read", order)
         const link = lib().asUser("finance.ap", () =>
             lib().call("mantle.party.ExternalAccessServices.create#AccessCapability", {
                 recordType: "Order",
@@ -245,9 +250,8 @@ feature("with a Supplier site for the organization, AP gets an approved order's 
         return {ap, reader, link}
     },
     then({ap, reader, link}) {
-        ap.errors == []
-        ap.output.includes("Supplier bill link")
-        !reader.output.includes("Supplier bill link")
+        ap.canIssueSupplierLink == true
+        reader.canIssueSupplierLink == false
         link.url.startsWith("https://suppliers.accounting.example/supplier/BillUpload?token=")
     }
 })

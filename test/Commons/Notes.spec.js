@@ -3,7 +3,7 @@
 // notes (data/BossKnowledgeDemoData.xml). The list pinned first, then the latest changed, with the tags and their counts; search
 // and a tag narrow it; a new note, saved on idle with no note and as a named version, a save that met another; pin, tags, a
 // linked request; delete; Move to a space (database files keep the rows, a git space gets the history replayed); QuickCreate's
-// note kind lands here; and Commons Home's recent pages. Joe Developer and Bob Developer may not read, change or find another
+// note kind lands here; and the recent pages (Commons Home lists them, CommonsSettings' render of Home). Joe Developer and Bob Developer may not read, change or find another
 // user's notes (the notes space's restrictView and restrictUpdate). Authorization stays on.
 // Run: ./moq test mr-boss --spec Notes
 const commons = "component://mr-boss/screen/Commons.xml"
@@ -172,7 +172,8 @@ feature("Move into a git space replays the note's history", {
     },
 })
 
-feature("delete takes a note away; QuickCreate's note kind without a record lands in the notes; Home lists the recent pages", {
+// Commons Home's list of the recent pages is on CommonsSettings' render of Home
+feature("delete takes a note away; QuickCreate's note kind without a record lands in the notes; the recent pages", {
     when() {
         const created = post("createNote", { title: `Spec delete ${RUN}` })
         const deleted = post("deleteNote", { wikiPageId: created.json.wikiPageId })
@@ -180,19 +181,15 @@ feature("delete takes a note away; QuickCreate's note kind without a record land
         const list = get("notes")
         call_("Knowledge/page", { wikiSpaceId: "BOSSKB", pagePath: "Office" }, null)
         const recent = sys(() => call("ironstone.commons.KnowledgeServices.get#RecentPages", { limit: 5 })).pageList
-        const home = ec.screen.makeTest().rootScreen(commons).renderMode("qvt").withStaticData().render("Home", { lastStandalone: "-2" }, null)
-        ec.message.clearErrors()
-        return { deleted, gone: pageId("NOTES_EX_JOHN_DOE", `Spec delete ${RUN}`), quick, list, recent, home: String(home.output || "") }
+        return { deleted, gone: pageId("NOTES_EX_JOHN_DOE", `Spec delete ${RUN}`), quick, list, recent }
     },
-    then({ deleted, gone, quick, list, recent, home }) {
+    then({ deleted, gone, quick, list, recent }) {
         deleted.errors == ""
         gone == null
         quick.url == "/qapps/Commons/Notes?wikiPageId=" + quick.wikiPageId
         titles(list).includes(`Spec quick ${RUN}`)
         recent.some((row) => row.pagePath === "Office" && row.kind === "opened" && row.url.startsWith("/qapps/Commons/Knowledge?wikiPageId="))
         recent.some((row) => row.isNotes && row.url.startsWith("/qapps/Commons/Notes?wikiPageId="))
-        home.includes("Recent pages")
-        home.includes("Office")
     },
 })
 

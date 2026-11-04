@@ -8,7 +8,6 @@
 // is refused, and a file location the composer did not store is refused.
 // Run: ./moq test mr-boss --spec Compose
 const comms = "component://mr-boss/screen/Comms.xml"
-const commons = "component://mr-boss/screen/Commons.xml"
 const MAIL = "org.moqui.impl.EmailClientServices"
 const capture = ec.factory.getTool("MailCapture")
 let accountId, identityValue
@@ -229,11 +228,10 @@ feature("an email with the record chip is filed on the record once sent and show
         settle()
         const event = list("mantle.party.communication.CommunicationEvent", { emailMessageId: sent.json.emailMessageId })[0] || null
         const join = event ? one("mantle.request.RequestCommEvent", { requestId: "BOSS_DEMO_REQUEST", communicationEventId: event.communicationEventId }) : null
-        const timeline = ec.screen.makeTest().rootScreen(commons).render("Chatter/timeline", { recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST",
-            kinds: "messages" }, null)
+        // the record's Chatter, as its timeline transition reads it (Chat renders the transition)
+        const entries = Array.from(sys(() => call("ironstone.shared.ChatterServices.get#Timeline", { recordEntityName: "mantle.request.Request",
+            recordId: "BOSS_DEMO_REQUEST", kinds: "messages" })).entryList || [])
         ec.message.clearErrors()
-        let entries = []
-        try { entries = JSON.parse(timeline.output).entryList || [] } catch (err) { entries = [] }
         const hidden = post("send", { fromValue: identityValue, toJson: chips(["bob.acme@test.com"]), subject: "x", body: "<p>x</p>",
             recordEntity: "mantle.request.Request", recordId: "BOSS_NO_SUCH_REQUEST", holdSeconds: "0" })
         return { sent, event, join, entries, hidden }

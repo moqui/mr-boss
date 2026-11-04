@@ -334,18 +334,24 @@ feature(
     }
 )
 
-feature("the team is still refused all of Billing, and john.doe's Billing still opens on Unbilled", {
+// Billing's Invoices are rendered for the team in Billing.spec.js; here the client filter is checked not to reach the team, by the
+// screen's own find
+feature("the team is still refused all of Billing, and john.doe's Billing still opens on Unbilled and lists every invoice", {
     when() {
-        const joe = as("joe.developer", () => ({invoices: render("Billing/Invoices", {})}))
-        const john = as("john.doe", () => ({billing: render("Billing", {}), list: render("Billing/Invoices", {})}))
+        const joe = as("joe.developer", () => ({invoices: hit("../menuData/apps/Projects/Billing/Invoices")}))
+        const john = as("john.doe", () => ({
+            billing: render("Billing", {}),
+            rows: service("ironstone.projects.BillingServices.find#InvoiceRows", {list: "all"})
+        }))
         return {joe, john}
     },
     then({joe, john}) {
-        joe.invoices.refused
+        joe.invoices.status == 403
         john.billing.status == 200
         john.billing.output.includes("All unbilled")
-        john.list.output.includes(INV.draft)
-        john.list.output.includes(INV.worker)
+        john.rows.clientView != true
+        john.rows.rowList.map(row => row.invoiceId).includes(INV.draft)
+        john.rows.rowList.map(row => row.invoiceId).includes(INV.worker)
     }
 })
 

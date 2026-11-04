@@ -6,7 +6,7 @@
 // them to the docs space and CHANGELOG.md, reads the page on the Docs tab, and releases the release with a tag, its unfinished
 // item taken out. bob.developer, not on the project, sees none of it: not on the Roadmap, not the release, not the docs page.
 // The project is cancelled and the repository archived after, so the other specs' lists keep their records.
-// Run: ./moq test mr-boss --spec ReleaseWalk
+// Run: ./moq accept mr-boss --spec ReleaseWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "RLW"
 const REPO = "rlw-walk"

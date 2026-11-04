@@ -3,8 +3,9 @@
 // the planner recalculates Retail's plant for a sales demand of a made product and sees a make suggestion and a buy
 // suggestion for its component; converting the make suggestion from the screen makes a draft work order with its supply
 // // link, and converting it again answers the same work order; after a recalculation the last plan is stale and the draft
-// work order's output nets the made product; the scheduler reads the plan without its actions; Home links the planner to it. The product, its released BOM and the
-// order are this spec's (setupSpec), so the demo's other demand does not enter the plan (it is planned for this product).
+// work order's output nets the made product; the scheduler reads the plan without its actions (Home's link for the planner
+// is on ManufacturingReports' Home render). The product, its released BOM and the order are this spec's (setupSpec), so the
+// demo's other demand does not enter the plan (it is planned for this product).
 // Run: ./moq test mr-boss --spec ManufacturingPlanning
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -120,7 +121,7 @@ feature("after a recalculation the last plan is stale and nothing of it converts
     }
 })
 
-feature("the scheduler reads the plan without its actions, and Home links the planner to it", {
+feature("the scheduler reads the plan without its actions", {
     when() {
         const scheduler = asUser(users.schedule, () => page("Planning/SupplyPlanning", {plantId: ids.plantId}))
         const runBySchedule = asUser(
@@ -128,19 +129,15 @@ feature("the scheduler reads the plan without its actions, and Home links the pl
             () => refusal(S + "run#SupplyPlan", {facilityIds: [ids.plantId], productIds: [fixture.finId]}),
             false
         )
-        const plannerHome = asUser(users.plan, () => page("Home", {}, "html"))
-        const schedulerHome = asUser(users.schedule, () => page("Home", {}, "html"))
-        return {scheduler, runBySchedule, plannerHome, schedulerHome}
+        return {scheduler, runBySchedule}
     },
-    then({scheduler, runBySchedule, plannerHome, schedulerHome}) {
+    then({scheduler, runBySchedule}) {
         scheduler.status == 200
         scheduler.errors.length == 0
         scheduler.output.includes("Spec planned part")
         !scheduler.output.includes("Recalculate")
         !scheduler.output.includes("Make draft work orders")
         runBySchedule.includes("PERMISSION_DENIED")
-        plannerHome.output.includes("Supply planning")
-        !schedulerHome.output.includes("Supply planning")
     }
 })
 

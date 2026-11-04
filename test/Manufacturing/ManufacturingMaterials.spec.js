@@ -193,11 +193,10 @@ feature("a short line's issue stays blocked after a supervisor's staged release,
                     .list()
             )
         )
-        const home = asUser(users.read, () => lib.page("Home", {}, "html"))
         const homeData = asUser(users.read, () => invoke("ironstone.manufacturing.HomeServices.get#Home", {}))
-        return {workEffortId, refused, approved, released, blocked, components, notices, home, homeData}
+        return {workEffortId, refused, approved, released, blocked, components, notices, homeData}
     },
-    then({workEffortId, refused, approved, released, blocked, components, notices, home, homeData}) {
+    then({workEffortId, refused, approved, released, blocked, components, notices, homeData}) {
         refused.includes("SHORTAGE")
         approved == ""
         released == ""
@@ -206,7 +205,6 @@ feature("a short line's issue stays blocked after a supervisor's staged release,
         components.errors.length == 0
         components.output.includes("Released short")
         notices.length == 1
-        home.errors.length == 0
         homeData.summary.openCount > 0
         homeData.summary.shortCount > 0
         homeData.summary.lateCount != null

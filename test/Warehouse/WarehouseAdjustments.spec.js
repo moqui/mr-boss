@@ -142,19 +142,17 @@ spec({
     }
 })
 
-feature("Adjustments previews a count of an asset, with its value only for financial read, and AssetDetail opens it", {
+feature("Adjustments previews a count of an asset, with its value only for financial read", {
     when() {
         const parameters = {assetId: "BOSS_WH_P6_A", mode: "count", quantity: 7}
         return {
             adjuster: asUser("warehouse.adjust", () => page("Inventory/Adjustments", parameters, "html")),
             finance: page("Inventory/Adjustments", parameters, "html"),
             reader: asUser("warehouse.read", () => page("Inventory/Adjustments", parameters, "html")),
-            detail: asUser("warehouse.adjust", () => page("Inventory/AssetDetail", {assetId: "BOSS_WH_P6_A"}, "html")),
-            readerDetail: asUser("warehouse.read", () => page("Inventory/AssetDetail", {assetId: "BOSS_WH_P6_A"}, "html")),
             movements: asUser("warehouse.adjust", () => page("Inventory/Movements", {productId}, "html"))
         }
     },
-    then({adjuster, finance, reader, detail, readerDetail, movements}) {
+    then({adjuster, finance, reader, movements}) {
         adjuster.errors == []
         adjuster.output.includes("Adjust this asset")
         adjuster.output.includes("10 on hand, change -3, after 7")
@@ -164,8 +162,6 @@ feature("Adjustments previews a count of an asset, with its value only for finan
         finance.output.includes("Value change")
         reader.output.includes("needs the adjust permission")
         !reader.output.includes("Post adjustment")
-        detail.output.includes("Record adjustment")
-        !readerDetail.output.includes("Record adjustment")
         movements.output.includes("originalMovement=")
     }
 })

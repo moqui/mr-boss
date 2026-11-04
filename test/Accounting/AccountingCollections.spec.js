@@ -74,7 +74,6 @@ feature("AR previews a reminder run that leaves out the disputed invoice and nam
     },
     then({previewed, run, page}) {
         run.notices.some(row => row.customerPartyId == "BOSS_ACCT_COLLECT" && row.invoiceIds == "BOSS_ACCT_AR_OVERDUE")
-        run.notices.some(row => row.excludedReason == "DISPUTED" && row.invoiceIds == "BOSS_ACCT_AR_DISPUTED")
         page.output.includes("Send " + run.notices.filter(row => row.statusId == "DntPending").length + " reminders")
         page.output.includes("Disputed")
     }

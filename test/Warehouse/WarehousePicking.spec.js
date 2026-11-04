@@ -1,6 +1,6 @@
-// Warehouse P11 in BOSS (impl-warehouse P11): the picker's overdue pick is a Today item; Home counts the picking queue; the
-// shared ShipmentDetail shows an outgoing shipment in its Warehouse outbound branch and a receipt still in its receipt branch;
-// OrderDetail shows the Warehouse fulfillment; the Pick task lists the demo picklist's line in pick order. The guarded picks,
+// Warehouse P11 in BOSS (impl-warehouse P11): the picker's overdue pick is a Today item; Home counts the picking queue;
+// OrderDetail shows the Warehouse fulfillment; the Pick task lists the demo picklist's line in pick order. The shared
+// ShipmentDetail's outbound branch is WarehousePacking's render, ReceiptDetail WarehouseReceiving's. The guarded picks,
 // the wave, short picks, put back and pick faces are mr-mantle's WarehousePicking spec; access is WarehouseAccess.
 const lib = ec.resource.script("component://mr-boss/test/Warehouse/WarehouseSpecLib.js")
 const {ids, asUser, invoke} = lib
@@ -23,7 +23,9 @@ feature("the picker's picklist still open from an earlier day is a Today item, a
         }
     },
     then({today, reader, queue}) {
-        today.some(item => item.title.includes("Pick Morning picks") && item.url.includes("PicklistDetail?workEffortId=BOSS_WH_LOAD"))
+        today.some(
+            item => item.title.includes("Pick Morning picks") && item.url.includes("PicklistDetail?workEffortId=BOSS_WH_LOAD")
+        )
         !reader.some(item => String(item.title).includes("Morning picks"))
         queue.readyCount >= 1
         queue.lateCount >= 1
@@ -31,23 +33,11 @@ feature("the picker's picklist still open from an earlier day is a Today item, a
     }
 })
 
-feature("ShipmentDetail shows an outgoing shipment's outbound branch and a receipt its receipt branch", {
+feature("OrderDetail shows the Warehouse fulfillment of the order's outgoing shipment", {
     when() {
-        return asUser("warehouse.read", () => ({
-            outbound: lib.page("Shipping/ShipmentDetail", {shipmentId: "BOSS_WH_SHIP_PICK"}, "html"),
-            receipt: lib.page("Receiving/ReceiptDetail", {shipmentId: "BOSS_WH_SHIP_IN"}, "html"),
-            foreign: lib.page("Shipping/ShipmentDetail", {shipmentId: ids.otherShipmentId}, "html"),
-            order: lib.page("Orders/OrderDetail", {orderId: "BOSS_WH_SO"}, "html")
-        }))
+        return asUser("warehouse.read", () => lib.page("Orders/OrderDetail", {orderId: "BOSS_WH_SO"}, "html"))
     },
-    then({outbound, receipt, foreign, order}) {
-        outbound.errors == []
-        outbound.output.includes("Items and sources")
-        outbound.output.includes("Pick demo bracket")
-        !outbound.output.includes("Unit price")
-        receipt.errors == []
-        receipt.output.includes("Lot-tracked sealant")
-        foreign.output.includes("is not available")
+    then(order) {
         order.errors == []
         order.output.includes("Fulfillment")
         order.output.includes("BOSS_WH_SHIP_PICK")

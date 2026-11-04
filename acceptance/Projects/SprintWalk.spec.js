@@ -6,7 +6,7 @@
 // it), makes Sprint 2, and completes Sprint 1 with the open items carried over to Sprint 2; SprintDetail and the sprint report
 // show it. The project is cancelled after, so the other specs' lists keep
 // their records.
-// Run: ./moq test mr-boss --spec SprintWalk
+// Run: ./moq accept mr-boss --spec SprintWalk
 const webroot = "component://webroot/screen/webroot.xml"
 const PROJECT = "SPW"
 

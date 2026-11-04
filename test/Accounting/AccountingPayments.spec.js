@@ -288,24 +288,55 @@ feature("payment list and all seven tabs render actual authorized fields in QVT 
     }
 })
 
+// A promised customer payment through the demo gateway (BOSS_ACCT_GW_TEST, Mantle's test gateway), whose header's primary
+// action is the gateway's Authorize payment.
+function gatewayPayment() {
+    return helper.asUser(
+        "john.doe",
+        () =>
+            helper.call(native + "create#Payment", {
+                fromPartyId: helper.ids.paymentPartyId,
+                toPartyId: organizationPartyId,
+                paymentTypeEnumId: "PtInvoicePayment",
+                paymentInstrumentEnumId: "PiAch",
+                paymentMethodId: "BOSS_ACCT_GW_CUSTOMER_BANK",
+                toPaymentMethodId: "BOSS_ACCT_GW_BANK",
+                paymentGatewayConfigId: "BOSS_ACCT_GW_TEST",
+                amount: "40",
+                amountUomId: "USD",
+                statusId: "PmntPromised",
+                effectiveDate: ec.user.nowTimestamp
+            }).paymentId,
+        false
+    )
+}
+
 feature("the payment header shows treasury its one primary action and More menu, and readers neither", {
     when() {
         const treasury = helper.asUser("finance.treasury", () => helper.page("Payments/PaymentDetail", request))
+        const gatewayPaymentId = gatewayPayment()
+        const gateway = helper.asUser("finance.treasury", () =>
+            helper.page("Payments/PaymentDetail", {organizationPartyId, paymentId: gatewayPaymentId})
+        )
         // each dialog and form of the header has its own id on the page
         const ids = [...treasury.output.matchAll(/<(?:m-form|m-container-dialog)\b[^>]*\bid="([^"]+)"/g)].map(match => match[1])
         return {
             treasury,
             ids,
+            gateway,
             reader: helper.asUser("finance.ar", () => helper.page("Payments/PaymentDetail", request))
         }
     },
-    then({treasury, ids, reader}) {
+    then({treasury, ids, gateway, reader}) {
         ids.length > 4
         new Set(ids).size == ids.length
         !treasury.errors.length
         !reader.errors.length
         treasury.output.includes("Validate payment")
         treasury.output.includes("Edit draft")
+        !treasury.output.includes("Authorize payment")
+        !gateway.errors.length
+        gateway.output.includes("Authorize payment")
         !reader.output.includes("Validate payment")
         !reader.output.includes("Edit draft")
         !reader.output.includes("Capture payment")

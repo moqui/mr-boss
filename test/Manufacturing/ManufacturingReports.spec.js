@@ -38,7 +38,8 @@ feature("Home shows the plant's Kpis this month, each opening its report with th
     when() {
         const reader = home(users.read)
         const finance = home(users.finance)
-        const page = asUser(users.read, () => lib.page("Home", {}, "html"))
+        // Home's one html render, as the planner (a production reader without financial read, with Supply planning)
+        const page = asUser(users.plan, () => lib.page("Home", {}, "html"))
         const oee = (reader.kpis || []).find(kpi => kpi.kpiId == "oee") || {}
         return {reader, finance, page, oee}
     },
@@ -57,6 +58,8 @@ feature("Home shows the plant's Kpis this month, each opening its report with th
         page.output.includes("On-time completion")
         page.output.includes("Scrap rate")
         page.output.includes("Left out without financial read: WIP value")
+        // the planner's link to the plant's supply plan (SUPPLY_PLAN_RUN)
+        page.output.includes("Supply planning")
     }
 })
 
@@ -153,13 +156,12 @@ feature("each report and Capacity print with the same filters as html-print", {
             if (print.errors.length || !print.output.includes("As of") || !print.output.includes(ids.plantId))
                 failures.push(name + " print: " + (print.errors.join(" | ") || "no scope"))
         }
-        const capacity = asUser(users.schedule, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html"))
+        // Capacity's Print link is checked on ManufacturingSchedule's html render
         const capacityPrint = asUser(users.schedule, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html-print"))
-        return {failures, capacity, capacityPrint}
+        return {failures, capacityPrint}
     },
-    then({failures, capacity, capacityPrint}) {
+    then({failures, capacityPrint}) {
         failures.join("\n") == ""
-        capacity.output.includes("renderMode=html-print")
         capacityPrint.errors == []
         capacityPrint.output.includes("Assembly line A")
     }
