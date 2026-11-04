@@ -34,10 +34,11 @@ feature("the supplier list shows each supplier's buying profile and finds by app
         })
     },
     then({pending, blocked, packaging, named, blockedRow, pendingRow, organizationName}) {
-        pending == [ids.pendingSupplierId]
-        blocked == [ids.blockedSupplierId]
-        packaging == [ids.pendingSupplierId]
-        named == [ids.blockedSupplierId]
+        // other specs add suppliers in the same database (a duplicate created anyway), so each find names the demo's
+        pending.includes(ids.pendingSupplierId) && !pending.includes(ids.blockedSupplierId)
+        blocked.includes(ids.blockedSupplierId) && !blocked.includes(ids.pendingSupplierId)
+        packaging.includes(ids.pendingSupplierId) && !packaging.includes(ids.blockedSupplierId)
+        named.includes(ids.blockedSupplierId) && !named.includes(ids.pendingSupplierId)
         blockedRow.blockText.includes("Quality hold")
         blockedRow.approvalText == "Approved"
         pendingRow.approvalText == "Pending approval"

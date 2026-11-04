@@ -603,6 +603,11 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
   the history.
 - Specs: mr-mantle PurchasePolicy, AccountingPayables, WarehouseReceiving; mr-boss PurchasingAccess, PurchasingSuppliers,
   AccountingAccess, AccountingPayables, ProductsSharedContext, ProductsAccess, WarehouseAccess; all pass.
+- **Wave 2 suites (Nov 4, on master after P2 and P14a merged):** standalone mr-mantle 1,579 passed, 2 failed (the
+  baseline), 11 skipped; `./moq test-apps` 2,806 server features passed, 1 failed: PurchasingSuppliers expected exact
+  find results and met another spec's supplier created anyway as a duplicate, so it now checks the demo suppliers are
+  found and the others are not (fixed); 13 client features passed (feature time mr-mantle 262 of 300 s, mr-boss 198 of
+  220 s server and 32 of 36 s client); `moqui lint --screens` clean.
 
 ### P3 — Purchase orders
 
