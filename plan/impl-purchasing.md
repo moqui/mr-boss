@@ -1955,7 +1955,7 @@ adjust#ExpectedReceipt's old callers. Fixes:
     route through `route#OrderItemToDropShip` for a line with a customer order line, DROP_SHIP_PENDING before that order's
     approval). The writes check the request's people (the filer or a party of it) or PURCHASE_ORDER_EDIT, and the organization.
   - Existing Mantle, refusing nothing new: `complete#RequestFromWork` leaves RqtPurchase, RqtPurchaseRfq and RqtInventory alone
-    (CX-REQUEST; F-P10-5); `PurchaseApprovals.js` knows the request as a source (topic, PasRequest, its message fields, the
+    (CX-REQUEST; F123); `PurchaseApprovals.js` knows the request as a source (topic, PasRequest, its message fields, the
     topic handlers' branch); `PurchaseOrders.js decide` calls `PurchaseRequests.js convertOrderCommitments` after P4's
     reservation (a request-sourced line converts the request's commitment, `convert#Commitment`) and exports `costCenterOf`.
   - Spec `test/order/PurchaseRequests.spec.js` (6 features, about 3 s).
@@ -1979,7 +1979,7 @@ adjust#ExpectedReceipt's old callers. Fixes:
     `template/PurchasingOrderSources.xml` (OrderDetail's Sources, one include in `PurchasingOrderDetail.xml`); the root's quick
     create and Today source; Approvals lists the request topic.
   - Data: BossSetupData's `BOSS_PUR_NEW_REQUEST` (requester, buyer, administrator) and the topic's link; BossUsersDemoData's
-    approved request `BOSS_PUR_REQ_A` of the requester (F-P10-10).
+    approved request `BOSS_PUR_REQ_A` of the requester (F128).
   - Specs: `PurchasingRequests` (4: the list's scope, views and html render; RequestDetail's html render for the approver;
     RequestSourcing's html render for the buyer with the Items link a buyer's only; Home's count and Today); PurchasingAccess
     gains the quick create per group, the `requestCreate` capability and a request feature (detail for its requester and
@@ -1995,9 +1995,9 @@ adjust#ExpectedReceipt's old callers. Fixes:
   once by hand). `moqui lint --screens`: no idiom or hazard site in the new and changed screens (informational anchors only).
 - Decisions:
   - A request's approval puts it In Progress (as Warehouse's stock request): Request has no Approved status and Reviewed is
-    triage; Awaiting sourcing is In Progress with quantity left. Completion stays by hand (F-P10-9).
+    triage; Awaiting sourcing is In Progress with quantity left. Completion stays by hand (F127).
   - A request's amount, for its approval steps and its budget, is its lines' maximum amounts (the most to pay for each
-    line), in the request's currency; no supplier price is read before sourcing (F-P10-2).
+    line), in the request's currency; no supplier price is read before sourcing (F120).
   - Lines are removed only while a draft; a submitted request's lines change (each change a new revision, sent to its
     approvers again, so a decision on the earlier one is refused).
   - RequestSourcing is the buyer's (the buy and list capabilities; Mantle checks PURCHASE_ORDER_EDIT); a requester and the
@@ -2005,33 +2005,33 @@ adjust#ExpectedReceipt's old callers. Fixes:
   - The request topic's approvals are decided in RequestDetail, Approvals and the Commons inbox, through the same Mantle
     service.
 - Findings (provisional):
-  - **F-P10-1** A request's revision is the time (epoch milliseconds) of the last audit row of its lines' six fields, kept in
+  - **F119** A request's revision is the time (epoch milliseconds) of the last audit row of its lines' six fields, kept in
     `PurchaseApprovalDecision.sourceRevision` (a long) and shown as a time; deleting a line writes no audit row, so a line is
     removed only from a draft, before any decision.
-  - **F-P10-2** RequestItem has no price; `maximumAmount` ("the maximum amount (price) to pay for the item") is taken as the
+  - **F120** RequestItem has no price; `maximumAmount` ("the maximum amount (price) to pay for the item") is taken as the
     line's not-to-exceed amount, so a line without one counts nothing toward the approval bands and reserves nothing.
-  - **F-P10-3** Sourcing prices a line at the supplier's price the buyer may read (`store#PurchaseOrderItem`); a supplier
+  - **F121** Sourcing prices a line at the supplier's price the buyer may read (`store#PurchaseOrderItem`); a supplier
     with none fails its group PRICE_UNAVAILABLE (retryable). RequestSourcing has no per-line price override yet (design
     SourceGroups' "price/override"). The demo's DEMO_1_1 has supplier prices from Ziddleman only, so the demo request names
     Ziddleman and the walk adds a Brightline price.
-  - **F-P10-4** The preview shows the supplier check and, for a supplier-price reader, the group's amount, but no
+  - **F122** The preview shows the supplier check and, for a supplier-price reader, the group's amount, but no
     `check#Budget`: the request's budget was decided at its approval and the PO stage is decided by the order's approval
     (`convert#Commitment`), and a buyer may not read budgets.
-  - **F-P10-5** Warehouse P15 left `complete#RequestFromWork` without a type check, so P10's check leaves RqtInventory alone
+  - **F123** Warehouse P15 left `complete#RequestFromWork` without a type check, so P10's check leaves RqtInventory alone
     too, with RqtPurchase and RqtPurchaseRfq. It refuses nothing, so it has no flag; WorkProjectRequests passes unchanged.
-  - **F-P10-6** A revision of a request-sourced order line after its approval holds the line again with `reserve#Commitment`
+  - **F124** A revision of a request-sourced order line after its approval holds the line again with `reserve#Commitment`
     (its earlier order commitment, converted from the request, already holds the request's share), not a second conversion.
-  - **F-P10-7** Customer demand on a request (for the drop-ship route) is a RequestItemOrder from the request line to a sales
+  - **F125** Customer demand on a request (for the drop-ship route) is a RequestItemOrder from the request line to a sales
     order line; nothing in BOSS writes one yet (P14b's conversion, or a later intake). `route#OrderItemToDropShip` buys only on
     an approved customer order, so the route fails DROP_SHIP_PENDING before it. The route has no regression spec (its drop-ship
     fixture is P7's); left for P14b's walk.
-  - **F-P10-8** `cancel#PurchaseRequest` keeps its reason as the status change's `changeReason` (Request has no note entity
+  - **F126** `cancel#PurchaseRequest` keeps its reason as the status change's `changeReason` (Request has no note entity
     of its own besides comments); the purchase orders made from the request stay and are named for the buyer.
-  - **F-P10-9** Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user
+  - **F127** Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user
     completes it (design RequestDetail: "fulfilled or explicitly closed with a reason"). Left for P17.
-  - **F-P10-10** The demo request is in BossUsersDemoData, after the requester's party: `Request.filedByPartyId` has a foreign
+  - **F128** The demo request is in BossUsersDemoData, after the requester's party: `Request.filedByPartyId` has a foreign
     key, and BossPurchasingDemoData loads before the users.
-  - **F-P10-11** AppStructure's placeholder floor is now 56 (Requests built).
+  - **F129** AppStructure's placeholder floor is now 56 (Requests built).
 
 **Review (Nov 4, P10).** Checked: `convert#PurchaseSourcing` (each group `convert#PurchaseSourcingGroup` in a new transaction,
 its requirements locked `forUpdate` in id order before the covered quantity is read again, so a second conversion waits and
@@ -2041,18 +2041,18 @@ the budget path (request approval reserves at BcsRequest, PO approval converts, 
 `convertOrderCommitments`, cancel releases what is left); requester scope (list, Home count, detail, record link and Mantle's
 `own` all the filer or a non-organization party; the palette is `listRead` only; RequestSourcing and "Create purchase order"
 need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons and Projects. Fixes:
-  - R1 (medium, budget) F-P10-6 was a double count where the request's commitment kept a remainder (a line priced below its
+  - R1 (medium, budget) F124 was a double count where the request's commitment kept a remainder (a line priced below its
     maximum): a revision raising the line reserved its new amount beside the request's open remainder (request 40, PO 30 then
     revised to 40 held 50). `convertOrderCommitments` now, for a revised line whose request commitment is still open, releases
     the line's earlier order commitment (as `reserve#Commitment` replaces an earlier revision's) and converts the request's
     remainder at the new revision; a line with a commitment at the current revision (a retry, a lowered line) and one whose
     request commitment is spent go through `reserve#Commitment` as before. PurchaseRequests' PO-approval feature revises the
     line and checks 40 held.
-  - R2 (low, approval) F-P10-2: a line with no maximum counts nothing, so it falls in the lowest band (every request still
+  - R2 (low, approval) F120: a line with no maximum counts nothing, so it falls in the lowest band (every request still
     needs one approval step, and the PO's own approval bands and budget reservation still apply at the PO stage). Not refused;
     the approvers are told: the request's approval message `amountText` ("$40.00 + lines 02, 03 with no amount", the topic's
     title) and `get#PurchaseRequestProgress` `approval.unpricedText`, shown in RequestDetail's Approval box.
-  - R3 (medium, compatibility) F-P10-5: Commons and Projects may raise a request of type RqtPurchase (QuickCreate's type
+  - R3 (medium, compatibility) F123: Commons and Projects may raise a request of type RqtPurchase (QuickCreate's type
     list; the demo's BOSS_DEMO_REQ_DRAFT) with no organization, which Purchasing cannot see or source; skipping every
     RqtPurchase stopped a project's Purchase-type request completing from its work. `complete#RequestFromWork` now leaves
     RqtPurchase alone only when it has an OrgInternal RequestParty (every Purchasing request); RqtPurchaseRfq and RqtInventory
@@ -2061,7 +2061,7 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - R4 (low, Projects behaviour) the shared Items tab replaced Projects' for a purchase request without its Maximum column;
     `itemRows` gives `maximumText` and the tab shows it.
   - Left for the lead: a request line priced below its maximum keeps the remainder reserved at BcsRequest until the request is
-    cancelled; nothing closes a fully sourced request (F-P10-9), so that remainder stays committed until P17 adds the close
+    cancelled; nothing closes a fully sourced request (F127), so that remainder stays committed until P17 adds the close
     (which should release it). No regression spec runs two conversions concurrently (the lock was checked by reading).
 
 ### P11 — RFQs and supplier quotes
@@ -2242,36 +2242,36 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
 - Decisions:
   - Agreement activation is approved as a PO is (§4): by the organization's purchase order (PasOrder) steps for the agreement's
     value (its items' value caps, else their quantities at the agreement's price); no agreement source type is added.
-  - An agreement's revision is a counter, `agreementRevision`, with its time (F-P13-1); every key-field change counts it once,
+  - An agreement's revision is a counter, `agreementRevision`, with its time (F130); every key-field change counts it once,
     supersedes earlier decisions and, on an active or submitted agreement, sends the new revision to its approvers. A changed
     active agreement takes no release until its revision is approved (AGREEMENT_CHANGE_PENDING); its earlier releases stay.
   - What a release uses is its allocation less its line's cancelled quantity (none for a cancelled or rejected order), so a
     cancelled line or a closed remainder gives its quantity and value back; a draft line raised past its allocation is not
     counted against the cap (the allocation is the record).
-  - The agreement's price is a ProductPrice row of the agreement and item written by store#AgreementItem (F-P13-3); the
+  - The agreement's price is a ProductPrice row of the agreement and item written by store#AgreementItem (F132); the
     resolver ranks agreement rows first only when the agreement is in its context, so it changes no other PO's price.
   - Expiry: a release checks the dates itself; the daily job sets Expired. Templates are never approved or released.
 - Findings (provisional):
-  - **F-P13-1** PurchaseApprovalDecision's `sourceRevision` is an integer bound to a counter, and design §17 made an
+  - **F130** PurchaseApprovalDecision's `sourceRevision` is an integer bound to a counter, and design §17 made an
     agreement's revision "the time of its last audit-logged change". Agreements get `agreementRevision` and its
     `revisionDate` (the release allocation keeps both); design §7 and §17 now say so.
-  - **F-P13-2** The PurchaseOrderApproval topic's title template names a purchase order (`${orderId}`) and is seed-initial;
+  - **F131** The PurchaseOrderApproval topic's title template names a purchase order (`${orderId}`) and is seed-initial;
     an agreement's notice sets its own title (`notify` reads `source.title`), and BOSS's link template picks AgreementDetail or
     OrderDetail by the message's `sourceEntityName`.
-  - **F-P13-3** `store#ProductPrice` needs SUPPLIER_PRICE_EDIT, which the buyer group does not hold; the agreement's price is
+  - **F132** `store#ProductPrice` needs SUPPLIER_PRICE_EDIT, which the buyer group does not hold; the agreement's price is
     part of the agreement, so `store#AgreementItem` writes the agreement-scoped row itself under PURCHASE_ORDER_EDIT (ending
     and starting rows, so the price as of a time reads back). Reading it still needs SUPPLIER_PRICE_VIEW (the resolver).
-  - **F-P13-4** mr-marble's agreement screens (F32) write raw: the audit log now covers what they write of the logged
+  - **F133** mr-marble's agreement screens (F32) write raw: the audit log now covers what they write of the logged
     fields, but a raw change does not count `agreementRevision`, so a marble change of an active agreement is not sent for
     approval again. No BOSS group reaches marble.
-  - **F-P13-5** The recurring-release rule (F49) is not built: a recurring release needs a schedule per agreement item (a
+  - **F134** The recurring-release rule (F49) is not built: a recurring release needs a schedule per agreement item (a
     frequency and next date) and a job calling `release#PurchaseAgreement`, which already checks the caps, dates and approval
     again each time; left to §7 with PurchasePolicy's field.
-  - **F-P13-6** AgreementFiles is AgreementDetail's own list and upload over `create#AgreementContent` with the record check,
+  - **F135** AgreementFiles is AgreementDetail's own list and upload over `create#AgreementContent` with the record check,
     not Commons' `record-files`, so the approved PDF is withheld from the reader as OrderDetail's issued PDF is (P3 R1).
-  - **F-P13-7** Supplier360's new Agreements tab is listed in every app's tab menu data though its condition keeps its
+  - **F136** Supplier360's new Agreements tab is listed in every app's tab menu data though its condition keeps its
     content to Purchasing (F50).
-  - **F-P13-8** The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF);
+  - **F137** The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF);
     mr-mantle's feature time was 294 of 300 s at wave 3, so the lead may move its third feature to acceptance.
 
 **Review Nov 4 (P13).** Checked: release#PurchaseAgreement's lock (the acceptance walk's two parallel releases), quantity and
@@ -2281,7 +2281,7 @@ decide#PurchaseApproval without orderId (neither id is RECORD_UNAVAILABLE; order
 PurchaseOrders, PurchaseRevisions pass); the Agreement status flow and audit-log changes against Mantle's other agreement
 users (no Mantle, marble or BOSS writer sets an Agreement status outside P13; marble's EditAgreement has no status field;
 the flow only adds transitions the entity-auto status check needed, so AgrSales and other agreements are unaffected);
-F-P13-3 (store#AgreementItem's rows always carry the agreement and item, the resolver matches them only with that agreement
+F132 (store#AgreementItem's rows always carry the agreement and item, the resolver matches them only with that agreement
 and item in its context, so no general supplier price is written: not an escalation); AgreementDetail's files. Fixes:
   - R1 (medium) A released draft line could be raised past its release, or repriced above it, and keep the agreement's
     price beyond the caps (the allocation is the record): `store#PurchaseOrderItem` and a revision (PurchaseRevisions.js)
@@ -2291,17 +2291,17 @@ and item in its context, so no general supplier price is written: not an escalat
   - R2 (medium) An item without the agreement's price was released at the supplier's general price; a release now needs
     the agreement's own price row (PRICE_UNAVAILABLE), and a release to an existing draft runs the buying policy's supplier
     check as a new draft does.
-  - R3 (medium, F-P13-3's other side) `store#`/`replace#`/`expire#ProductPrice` (SUPPLIER_PRICE_EDIT) could change an
+  - R3 (medium, F132's other side) `store#`/`replace#`/`expire#ProductPrice` (SUPPLIER_PRICE_EDIT) could change an
     approved purchase agreement's price row with no revision or approval; PricePolicy.js refuses writes to an AgrPurchase
     agreement's rows (the type is new, so no existing row is affected).
   - R4 (low) AgreementDetail's uploadFile took any content type, so a buyer could store a file as the approved agreement
     (AcntApprovedVersion); it now takes only the form's kinds. PurchasingAccess's agreement feature checks the reader's
     approved PDF withheld, another organization's file refused and the spoofed upload refused.
-  - R5 (F-P13-8) The Mantle spec's third feature kept only its rules (change pending, stale revision, the R1-R3 refusals,
+  - R5 (F137) The Mantle spec's third feature kept only its rules (change pending, stale revision, the R1-R3 refusals,
     expiry); the history, as-of print, reapproval and the expiry job are acceptance's PurchaseAgreementWalk. 3.2 s.
   - R6 AppStructure's placeholder floor is 56 (Agreements built).
   Left: a changed item product keeps the old product's price row until a price is set (the release then refuses
-  PRICE_UNAVAILABLE, which is safe); F-P13-4 (marble's raw writes count no revision) stands.
+  PRICE_UNAVAILABLE, which is safe); F133 (marble's raw writes count no revision) stands.
 
 ### P14 — Replenishment
 
@@ -2693,6 +2693,25 @@ is written there too.
 | F116 | P9: Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no address choice source) and adding a line by a revision (a new line is a new order or a later item). | See P9 |
 | F117 | P9: An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or sent outside Mantle) is unacknowledged but never overdue. | See P9 |
 | F118 | P9 review: a revision that changes the currency with a price or quantity has `lower#SourceCommitments` compare commitments in the old currency with amounts in the new; `record#Acknowledgement` accepts a response while an applied revision awaits approval; a reminder whose record write fails after the send can mail again | Open, for P17 or later |
+| F119 | P10: A request's revision is the time (epoch milliseconds) of the last audit row of its lines' six fields, kept in `PurchaseApprovalDecision.sourceRevision` (a long) and shown as a time; deleting a line writes no audit row, so a line is removed only from a draft, before any decision. | See P10 |
+| F120 | P10: RequestItem has no price; `maximumAmount` ("the maximum amount (price) to pay for the item") is taken as the line's not-to-exceed amount, so a line without one counts nothing toward the approval bands and reserves nothing. | See P10 |
+| F121 | P10: Sourcing prices a line at the supplier's price the buyer may read (`store#PurchaseOrderItem`); a supplier with none fails its group PRICE_UNAVAILABLE (retryable). RequestSourcing has no per-line price override yet (design SourceGroups' "price/override"). The demo's DEMO_1_1 has supplier prices from Ziddleman only, so the demo request names Ziddleman and the walk adds a Brightline price. | See P10 |
+| F122 | P10: The preview shows the supplier check and, for a supplier-price reader, the group's amount, but no `check#Budget`: the request's budget was decided at its approval and the PO stage is decided by the order's approval (`convert#Commitment`), and a buyer may not read budgets. | See P10 |
+| F123 | P10: Warehouse P15 left `complete#RequestFromWork` without a type check, so P10's check leaves RqtInventory alone too, with RqtPurchase and RqtPurchaseRfq. It refuses nothing, so it has no flag; WorkProjectRequests passes unchanged. | See P10 |
+| F124 | P10: A revision of a request-sourced order line after its approval holds the line again with `reserve#Commitment` (its earlier order commitment, converted from the request, already holds the request's share), not a second conversion. | See P10 |
+| F125 | P10: Customer demand on a request (for the drop-ship route) is a RequestItemOrder from the request line to a sales order line; nothing in BOSS writes one yet (P14b's conversion, or a later intake). `route#OrderItemToDropShip` buys only on an approved customer order, so the route fails DROP_SHIP_PENDING before it. The route has no regression spec (its drop-ship fixture is P7's); left for P14b's walk. | See P10 |
+| F126 | P10: `cancel#PurchaseRequest` keeps its reason as the status change's `changeReason` (Request has no note entity of its own besides comments); the purchase orders made from the request stay and are named for the buyer. | See P10 |
+| F127 | P10: Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user completes it (design RequestDetail: "fulfilled or explicitly closed with a reason"). Left for P17. | See P10 |
+| F128 | P10: The demo request is in BossUsersDemoData, after the requester's party: `Request.filedByPartyId` has a foreign key, and BossPurchasingDemoData loads before the users. | See P10 |
+| F129 | P10: AppStructure's placeholder floor is now 56 (Requests built). | See P10 |
+| F130 | P13: PurchaseApprovalDecision's `sourceRevision` is an integer bound to a counter, and design §17 made an agreement's revision "the time of its last audit-logged change". Agreements get `agreementRevision` and its `revisionDate` (the release allocation keeps both); design §7 and §17 now say so. | See P13 |
+| F131 | P13: The PurchaseOrderApproval topic's title template names a purchase order (`${orderId}`) and is seed-initial; an agreement's notice sets its own title (`notify` reads `source.title`), and BOSS's link template picks AgreementDetail or OrderDetail by the message's `sourceEntityName`. | See P13 |
+| F132 | P13: `store#ProductPrice` needs SUPPLIER_PRICE_EDIT, which the buyer group does not hold; the agreement's price is part of the agreement, so `store#AgreementItem` writes the agreement-scoped row itself under PURCHASE_ORDER_EDIT (ending and starting rows, so the price as of a time reads back). Reading it still needs SUPPLIER_PRICE_VIEW (the resolver). | See P13 |
+| F133 | P13: mr-marble's agreement screens (F32) write raw: the audit log now covers what they write of the logged fields, but a raw change does not count `agreementRevision`, so a marble change of an active agreement is not sent for approval again. No BOSS group reaches marble. | See P13 |
+| F134 | P13: The recurring-release rule (F49) is not built: a recurring release needs a schedule per agreement item (a frequency and next date) and a job calling `release#PurchaseAgreement`, which already checks the caps, dates and approval again each time; left to §7 with PurchasePolicy's field. | See P13 |
+| F135 | P13: AgreementFiles is AgreementDetail's own list and upload over `create#AgreementContent` with the record check, not Commons' `record-files`, so the approved PDF is withheld from the reader as OrderDetail's issued PDF is (P3 R1). | See P13 |
+| F136 | P13: Supplier360's new Agreements tab is listed in every app's tab menu data though its condition keeps its content to Purchasing (F50). | See P13 |
+| F137 | P13: The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF); mr-mantle's feature time was 294 of 300 s at wave 3, so the lead may move its third feature to acceptance. | See P13 |
 
 ## 7. Later
 
