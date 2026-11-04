@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the BOMs & routings section of IronStone Manufacturing (initial-design.md app table);
-    design-manufacturing.md decides its screens. -->
+<!-- The BOMs area of IronStone Manufacturing (design-manufacturing §1.2, §5): BillsOfMaterials and the shared method
+    screens with the Manufacturing context, BillOfMaterialsDetail, BillOfMaterialsExplosion, BillOfMaterialsCompare and
+    WhereUsed (impl-manufacturing P2). Open to every Manufacturing user; the method services check METHOD_VIEW. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="BOMs &amp; routings" default-menu-index="3" menu-image="sym_o_account_tree" menu-image-type="icon">
+        default-menu-title="BOMs" default-menu-index="4" menu-image="sym_o_account_tree" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: BOMs and routings." type="p"/>
+        <label text="Placeholder: Manufacturing methods, their explosion, comparison and where used." type="p"/>
     </widgets>
 </screen>

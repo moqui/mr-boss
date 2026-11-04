@@ -5,7 +5,7 @@
 // Run: ./moq test mr-boss --spec TuiRender
 const base = "component://mr-boss/screen"
 const webroot = "component://webroot/screen/webroot.xml"
-let screens, accountingFixtures, warehouseFixtures
+let screens, accountingFixtures, warehouseFixtures, manufacturingFixtures
 
 // [root screen location, path under it] of every screen file under the roots and in screen/Shared, as AppStructure finds them
 function findScreenFiles(appList) {
@@ -107,7 +107,7 @@ function tui(root, path, parameters) {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse"])
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing"])
         accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}
@@ -129,6 +129,13 @@ spec({
             demoParameters["Warehouse/" + path] = fixture.parameters || {}
         for (const [path] of warehouseFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Warehouse.xml"))) screens.push([`${base}/Warehouse.xml`, path])
+        // Manufacturing (P1): its routes on their demo records (ManufacturingSpecLib), its placeholder areas with none, and the
+        // shared screens under its root
+        manufacturingFixtures = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(manufacturingFixtures.routes))
+            demoParameters["Manufacturing/" + path] = fixture.parameters || {}
+        for (const [path] of manufacturingFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml"))) screens.push([`${base}/Manufacturing.xml`, path])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
@@ -154,7 +161,7 @@ spec({
     cleanup() { ec.artifactExecution.enableAuthz() },
 })
 
-feature("every Commons, Comms, Insights, Products, Accounting, Warehouse and Shared screen renders in tui as a model document with no error node", {
+feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing and Shared screen renders in tui as a model document with no error node", {
     when() {
         const failures = []
         for (const [root, path] of screens) {
@@ -172,6 +179,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse and Sha
             const warehouse = key.startsWith("Warehouse/") ? warehouseFixtures.routes[key.substring("Warehouse/".length)] : null
             const warehouseText = warehouse ? warehouse.tuiText || warehouse.text : null
             if (warehouseText && !got.output.includes(warehouseText)) failures.push(`${key}: no ${JSON.stringify(warehouseText)}`)
+            // a Manufacturing twin shows its demo record's text too
+            const manufacturing = key.startsWith("Manufacturing/") ? manufacturingFixtures.routes[key.substring("Manufacturing/".length)] : null
+            const manufacturingText = manufacturing ? manufacturing.tuiText || manufacturing.text : null
+            if (manufacturingText && !got.output.includes(manufacturingText)) failures.push(`${key}: no ${JSON.stringify(manufacturingText)}`)
         }
         // every Warehouse route fixture is a screen rendered here
         for (const path of Object.keys(warehouseFixtures.routes))
