@@ -301,7 +301,7 @@ Every stock movement carries the run's workEffortId; operation children never ca
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
 | Operations | list | Show readiness and actual progress | sequence, operation, center, predecessors, planned/actual dates, good/loss, status | readiness reason | `mantle.work.ProductionServices.get#ProductionOperations` (proposed) | Odoo mrp_workorder list; ERPNext Work Order operations |
-| Reschedule | dialog | Move an unstarted operation explicitly | operationWorkEffortId, center, start/end, expectedRevision, reason | capacity conflict preview | `mantle.work.ProductionPlanningServices.schedule#ProductionOperation` (proposed) | Odoo work-order scheduling |
+| Reschedule | dialog | Move an unstarted operation explicitly | operationWorkEffortId, center, start/end, expectedRevision, reason | capacity conflict preview | `mantle.work.ProductionPlanningServices.schedule#ProductionOperation` (built P12: the row's dialog previews, the preview box applies) | Odoo work-order scheduling |
 
 **Actions.** Open OperationExecution, instructions, MaterialIssueReceipt or QualityInspection. Unreleased draft operations derive from the chosen routing; release creates child WorkEfforts and immutable references. Dependency cycles are forbidden. In-flight operations may be paused or reworked, not reordered behind completed work. A simple run displays “No routing” and keeps run-level quantities/time, rather than manufacturing a fake operation.
 
@@ -733,7 +733,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 ### FacilityDetail
 
-**Context passed.** Pass `appRoot=Manufacturing`, facilityId, organization, plant and production role. Show identity, WorkCenter extension, production calendar, equipment, capacities by product/UOM, efficiency, effective cost/hour, alternatives, offline intervals, load, downtime and maintenance links. Identity/locations use shared facility actions; production attributes require resource-administrator grant; cost fields require cost grant. Calendar and approvals retain Commons ownership. Offline changes warn or reschedule affected operations with an explicit preview; they do not mutate posted labor or machine events. The mount embeds `chatter` and `record-files` on the Facility (`FacilityContent`) in Manufacturing context (R-MFG-28).
+**Context passed.** Pass `appRoot=Manufacturing`, facilityId, organization, plant and production role. Show identity, WorkCenter extension, production calendar, equipment, capacities by product/UOM, efficiency, effective cost/hour, alternatives, offline intervals, load, downtime and maintenance links. Identity/locations use shared facility actions; production attributes require resource-administrator grant; cost fields require cost grant. Calendar and approvals retain Commons ownership. Offline changes warn or reschedule affected operations with an explicit preview; they do not mutate posted labor or machine events (built P12: Take offline previews the open operations the block overlaps and where each moves, forward past it within the slots, then records a planned ResourceUnavailability of the center with or without the moves; Withdraw ends a planned block). The mount embeds `chatter` and `record-files` on the Facility (`FacilityContent`) in Manufacturing context (R-MFG-28).
 
 ### Equipment
 
@@ -914,6 +914,8 @@ Nothing yet holds an unapproved stop out of a total: the OEE and downtime report
 
 **Boundary.** Shared SupplyPlanning decides how much/where buy, make or transfer; this screen decides authorized dates/resources for production operations. Multi-order finite optimization is a later explicit proposal, not a claim about the current framework.
 
+**Built (P12).** The Projects Timeline component's resource mode: lanes per work center (closed, holiday and offline times shaded), operations as bars by hour with predecessors, a lock on started work and a mark on a conflict; a drag opens the Move dialog previewing the drop, and the dialog applies (Apply, Request override, Unschedule). Refusals, never overridden: an unqualified center (not the routing operation's or an alternate), started or done work, dates out of order, a changed operation or run revision. Conflicts, overridden only by a supervisor with a reason: calendar (outside work hours, a holiday), offline (stops and outages), capacity (more operations at once than the slots), predecessor and successor, equipment, skills. A scheduler without the authority asks (ProductionScheduleOverride) and a supervisor decides on the schedule; an override changes no capacity and stays on the ProductionScheduleChange. Each applied change notifies the run's people (ProductionScheduleChange). The terminal twin ProductionScheduleTui; the plan snapshot ScheduleSnapshot (print and CSV). Include tentative is not offered: a draft has no operations to place.
+
 **Source.** research §3, §6; Odoo `odoo/addons/mrp/views/mrp_workorder_views.xml`; Carbon `packages/planning/src/scheduling/run-schedule.ts`; [Projects Timeline](design-projects.md).
 
 **Needs.** M1, M4, M5, M10, M11.
@@ -930,6 +932,8 @@ Nothing yet holds an unapproved stop out of a total: the OEE and downtime report
 | Load | list | Show available and committed resource capacity | center, period, nominal, downtime, calendar-adjusted, booked, available, overload | quantity/time units; drill-down | `mantle.work.ProductionPlanningServices.get#WorkCenterLoad` (proposed) | Odoo Work Center capacity views |
 
 **Actions.** Open ProductionSchedule, offline intervals or responsible work order. Utilization is not OEE: report formula, denominator, timezone and missing-data state. Human headcount and machine throughput are separate columns when both constrain work.
+
+**Built (P12).** Parameters: plant, center text, from and through days, by the range, day or week. Load: per center and period nominal (slots over the period at efficiency), calendar-adjusted (over work hours less holidays), downtime (work hours offline: stops of the center and outages of the center or its equipment, a stop awaiting approval counted and named), available, booked (each operation's standard hours prorated over the work hours of its dates in the period), overload and utilization, with each center's missing data (no calendar, no slots, operations without hours or dates, open stop or outage); CSV. A stop or outage takes the whole center; the calendar version is the calendar as it is (no versions). Human headcount is not a column: Facility.capacity is not read.
 
 **Source.** research §3, §6; Odoo `odoo/addons/mrp/views/mrp_workcenter_views.xml`.
 

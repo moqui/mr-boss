@@ -218,7 +218,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
-| P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | — |
+| P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | — |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
@@ -1310,6 +1310,85 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
   - an offline interval on a line previews the operations it moves;
   - Capacity shows nominal, calendar-adjusted, downtime, booked and available hours, and names missing data;
   - the terminal twin makes the same move.
+
+**Built Nov 3 (P12).**
+- Mantle records (`entity/ProductionScheduleEntities.xml`, new): WorkEffort `scheduleRevision` (an operation's, audit-logged)
+  and `mantle.work.production.ProductionScheduleChange` (an operation's move or unschedule, applied or requested: from and to
+  center and dates, the revisions it was made at, reason, conflicts JSON, `overrideApplied`, requester and decider).
+  `data/ProductionScheduleData.xml` (statuses SchApplied, SchRequested, SchRefused; kinds SckMove, SckUnschedule) and
+  `ProductionScheduleNotificationData.xml` (topics ProductionScheduleOverride, an approval decided on the schedule, and
+  ProductionScheduleChange).
+- Mantle services (`ProductionPlanningServices.xml`): `ProductionCalendar.js` (new) is a center's time: work hours from its
+  calendar's WetAvailable efforts expanded by `get#EventInstances`, less the holidays of its calendar and organization; offline
+  intervals from its stops (not corrected; an open stop until now) and the ResourceUnavailability of the center or equipment
+  located at it (an open outage to the range's end, F-P11-4); slots, efficiency, an operation's standard hours, the open
+  operations, the end of given hours over free time and the next free time. `get#WorkCenterLoad` (`ProductionPlanning.js`)
+  completed: per center and period (range, day or week) nominal, calendar-adjusted, downtime, available and booked hours
+  (prorated over the work hours of each operation's dates: P3's open item), overload, utilization, missing data, next
+  available and the offline reason; `loadHours` is the booked hours. New over `ProductionSchedule.js`:
+  `get#ProductionSchedule` (lanes with closed, holiday and offline times; operations with predecessors, lock, revisions and
+  current conflicts; unscheduled; conflicts; override requests; rights), `schedule#ProductionOperation` (preview, apply,
+  unschedule, request, approve, refuse; the refusals and conflicts of the design note; operation key; the operation's and the
+  run's expected revisions) and `store#WorkCenterOffline` (preview of the operations a block moves, apply with or without
+  the moves, withdraw). F82: SupplyPlanning's routing lead time counts each operation's hours in its center's work hours a
+  day (the week's average by its calendar; 24 without one).
+- BOSS: `Planning/ProductionSchedule` (Projects' `Timeline.qvue` in a new resource mode: lanes, shading, bars by hour,
+  predecessor arrows, a preview-only drag that opens the Move dialog, the dialog's Preview, Apply, Request override and
+  Unschedule, Show conflicts, the override requests with Approve and Refuse; the work-item modes are untouched),
+  `Planning/ProductionScheduleTui` (its terminal twin: the resource and date table, Move with the same preview and
+  commands, Show conflicts, Decide override), `Planning/ScheduleSnapshot` (the plan snapshot print, CSV of its operations),
+  `Planning/Capacity` (Parameters, Load by period with CSV, missing data); `template/ManufacturingSchedule.xml` (the move
+  transitions and the MovePreview section); WorkOrderDetail Operations' Reschedule (a row dialog that previews; the preview
+  box applies, requests or unschedules); FacilityDetail's Work center tab (the completed load, Offline times, Take offline
+  with its preview, Withdraw); Centers' Available hours, Next available and Offline reason (F57, F-P11-6). Manufacturing.js P12
+  block (the `scheduleChange` record kind and the routes); the topics on the root and in Approvals, with their links
+  (BossSetupData).
+- Specs: Mantle `test/work/ProductionSchedule.spec.js` (6 features, about 1.5 s: the load by day, the override request and
+  approval with unchanged capacity, the refusals and conflicts, the offline preview, move and withdraw, the schedule's lanes
+  and unschedule, the work hours a day of F82). BOSS `ManufacturingSchedule` (6: the usable-when items through the screens'
+  transitions and pages), `ManufacturingScheduleFixtures` (the walk's runs), ManufacturingAccess's P12 section (3),
+  ManufacturingSpecLib's `scheduleFixture` and routes; client walk `ManufacturingScheduleWalk` (3, with 390 px).
+- Tests run: Mantle ProductionSchedule, WorkCenters, SupplyPlanning, ProductionOrders, ProductionDowntime,
+  ManufacturingServices, WarehouseProduction, ProductMethods (67 features, pass); BOSS ManufacturingSchedule,
+  ManufacturingScheduleFixtures, ManufacturingAccess, AppStructure, TuiRender, ManufacturingWorkCenters,
+  ManufacturingWorkOrders, ManufacturingShell, ManufacturingDowntime, ManufacturingPlanning, TimelineWalk, ProjectsTui,
+  ServerStatic (160 features, pass); walks ManufacturingScheduleWalk and ManufacturingWorkCentersWalk (6, pass), and a
+  one-off browser check that Projects' Timeline still draws its work items. `moqui lint --screens`: no flagged site in the
+  new or changed screens (informational anchors only).
+- Decisions:
+  - Refusals are never overridden (qualification, started work, dates, revisions); calendar, offline, capacity,
+    predecessor, successor, equipment and skills conflicts are, by PRODUCTION_SUPERVISE with a reason. Moving needs
+    PRODUCTION_SCHEDULE; deciding a request needs PRODUCTION_SUPERVISE only, so the BOSS supervisor (no SCHEDULE) decides
+    requests and the administrator may override at once.
+  - "Quantity and version" are the run's revision (its quantity and method) and the operation's schedule revision.
+  - A stop or outage takes the whole center; an open stop counts until now, an open outage until the range's end; a stop
+    awaiting approval counts as downtime and is named (F-P11-3).
+  - An operation with no dates counts whole in the load's first period, named; Unschedule clears its dates.
+  - A planned offline block is a ResourceUnavailability RukPlanned of the facility, written by store#WorkCenterOffline (the
+    minimal record; Maintenance MT-07 adopts it); recording needs PRODUCTION_SCHEDULE or METHOD_RESOURCES, the moves
+    PRODUCTION_SCHEDULE, each its own schedule#ProductionOperation.
+  - The schedule-change notice goes to the run's people, else the organization's supervisors; a refusal notifies no one.
+- Findings (provisional):
+  - **F-P12-1** A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has
+    no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's
+    start in the scheduler's zone. A plant calendar should carry its zone (WorkEffortRecurrence.timeZone, or a plant zone).
+  - **F-P12-2** A transition that answers JSON must call a Mantle verb that may refuse in a new transaction
+    (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an
+    exception, not the JSON.
+  - **F-P12-3** Release still copies the run's dates to every operation (F55), so a released run's operations overlap and
+    show predecessor conflicts until they are scheduled; release places nothing forward by the center's scheduling policy.
+    The offline change's forward placement is the only automatic one; a finite proposal is FiniteSchedule's (later).
+  - **F-P12-4** A refused override request leaves the requester no notice (it leaves the schedule's request list);
+    Capacity's list pages by work center (the service's center paging set on its rows); "include tentative" is not offered
+    (drafts have no operations); the terminal Move was verified by server renders and transition posts, not in the
+    `moqui tui` client.
+  - F57 and F-P11-6 (Centers' columns), F-P11-4 (the load reads stops and outages) and F82 (lead time on work days) are done.
+- For the merge: shared files touched append-only where possible: `ProductionPlanningServices.xml` (header and
+  get#WorkCenterLoad changed, three services appended), `SupplyPlanning.js` (`leadDaysOf`), `Manufacturing.js` (P12 block),
+  `Manufacturing.xml` (two topics), `Approvals.xml` (topic list), `BossSetupData.xml` (two links at the end),
+  `ManufacturingSpecLib.js` (P12 routes; `scheduleFixture` and the export line), `ManufacturingAccess.spec.js` (P12
+  section), `suite.js` (the walk and fixture), WorkOrderDetail's `Operations.xml` (P5b and P7 may edit it), FacilityDetail's
+  `WorkCenter.xml`, Centers and Projects' `Timeline.qvue`.
 
 ### P13 — Supply planning
 

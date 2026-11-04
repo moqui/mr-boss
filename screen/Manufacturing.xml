@@ -59,6 +59,9 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="Manufacturing/WorkOrders/QuickCreate" sequence="85"/>
         <notification-topic topic="ProductionRelease"/>
         <notification-topic topic="ProductionStagedRelease"/>
+        <!-- P12: the schedule override requests and the schedule-change notice -->
+        <notification-topic topic="ProductionScheduleOverride"/>
+        <notification-topic topic="ProductionScheduleChange"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

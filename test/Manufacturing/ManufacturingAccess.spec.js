@@ -1343,3 +1343,124 @@ feature("quick create's downtime report opens for the operator and the superviso
         operatorList.output.includes("Report stop")
     }
 })
+
+// ===== P12: scheduling and capacity =====
+// Each refusal on the parameters a permitted user passes with: a move's preview needs PRODUCTION_SCHEDULE or
+// PRODUCTION_SUPERVISE, an offline time's preview PRODUCTION_SCHEDULE or METHOD_RESOURCES, the schedule a production read;
+// the other organization's user reaches no Retail operation, lane or load; the Planning screens open for the scheduler, with
+// the Move form, and the planner reads them without it. The runs are ManufacturingSpecLib's scheduleFixture ("Access spec").
+const schedulePlanning = "mantle.work.ProductionPlanningServices."
+const p12 = {}
+function p12Fixture() {
+    if (!p12.runs) Object.assign(p12, lib.scheduleFixture("Access spec"))
+    return p12
+}
+feature("a move's and an offline time's previews and the schedule check their permissions on the same parameters", {
+    when() {
+        const fixtureRuns = p12Fixture().runs
+        const move = {action: "preview", workEffortId: fixtureRuns[0].test, facilityId: ids.lineBId}
+        const offline = {action: "preview", facilityId: ids.lineId, fromDate: p12.at(1, "05:00"), thruDate: p12.at(1, "07:00")}
+        const range = {plantFacilityId: ids.plantId}
+        return {
+            readerMove: asUser(users.read, () => refusal(schedulePlanning + "schedule#ProductionOperation", move), false),
+            planMove: asUser(users.plan, () => refusal(schedulePlanning + "schedule#ProductionOperation", move), false),
+            scheduleMove: asUser(users.schedule, () => refusal(schedulePlanning + "schedule#ProductionOperation", move), false),
+            superviseMove: asUser(users.supervise, () => refusal(schedulePlanning + "schedule#ProductionOperation", move), false),
+            readerOffline: asUser(users.read, () => refusal(schedulePlanning + "store#WorkCenterOffline", offline), false),
+            resourceOffline: asUser(users.resource, () => refusal(schedulePlanning + "store#WorkCenterOffline", offline), false),
+            displaySchedule: asUser(users.display, () => refusal(schedulePlanning + "get#ProductionSchedule", range), false),
+            readerSchedule: asUser(users.read, () => refusal(schedulePlanning + "get#ProductionSchedule", range), false),
+            planApply: asUser(
+                users.plan,
+                () =>
+                    refusal(
+                        schedulePlanning + "schedule#ProductionOperation",
+                        Object.assign({}, move, {action: "apply", operationKey: "p12-access-plan"})
+                    ),
+                false
+            ),
+            superviseDecide: asUser(
+                users.schedule,
+                () =>
+                    refusal(schedulePlanning + "schedule#ProductionOperation", {
+                        action: "approve",
+                        scheduleChangeId: "NONE",
+                        operationKey: "p12-access-decide"
+                    }),
+                false
+            ),
+            recordSchedule: asUser(users.plan, () =>
+                refusal(access + "check#Record", {recordType: "operation", recordId: fixtureRuns[0].test, capability: "schedule"})
+            ),
+            recordScheduleOk: asUser(users.schedule, () =>
+                refusal(access + "check#Record", {recordType: "operation", recordId: fixtureRuns[0].test, capability: "schedule"})
+            )
+        }
+    },
+    then(r) {
+        r.readerMove.includes("PERMISSION_DENIED")
+        r.planMove.includes("PERMISSION_DENIED")
+        r.scheduleMove == ""
+        r.superviseMove == ""
+        r.readerOffline.includes("PERMISSION_DENIED")
+        r.resourceOffline == ""
+        r.displaySchedule.includes("PERMISSION_DENIED")
+        r.readerSchedule == ""
+        r.planApply.includes("PERMISSION_DENIED")
+        r.superviseDecide.includes("PERMISSION_DENIED")
+        r.recordSchedule.includes("PERMISSION_DENIED")
+        r.recordScheduleOk == ""
+    }
+})
+feature("the other organization's user reaches no Retail operation, lane or load", {
+    when() {
+        const fixtureRuns = p12Fixture().runs
+        return {
+            lanes: asUser(
+                users.services,
+                () => invoke(schedulePlanning + "get#ProductionSchedule", {plantFacilityId: ids.plantId}),
+                false
+            ).laneList,
+            load: asUser(
+                users.services,
+                () => invoke(schedulePlanning + "get#WorkCenterLoad", {plantFacilityId: ids.plantId}),
+                false
+            ).centerList,
+            record: asUser(users.services, () =>
+                refusal(access + "check#Record", {recordType: "operation", recordId: fixtureRuns[0].test})
+            ),
+            plant: asUser(users.services, () => refusal(access + "check#Record", {recordType: "facility", recordId: ids.plantId}))
+        }
+    },
+    then({lanes, load, record, plant}) {
+        Array.from(lanes || []).length == 0
+        Array.from(load || []).length == 0
+        record.includes("RECORD_UNAVAILABLE")
+        plant.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("the schedule and Capacity open for the scheduler with the Move form, the planner reads them, a reader is refused", {
+    when() {
+        p12Fixture()
+        const tui = {plantId: ids.plantId, fromDay: p12.monday, days: 7}
+        return {
+            scheduler: asUser(users.schedule, () => lib.page("Planning/ProductionScheduleTui", tui, "tui")),
+            planner: asUser(users.plan, () => lib.page("Planning/ProductionScheduleTui", tui, "tui")),
+            capacity: asUser(users.plan, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html")),
+            reader: asUser(users.read, () => lib.page("Planning/Capacity", {plantId: ids.plantId}, "html")),
+            other: asUser(users.services, () => lib.page("Planning/ProductionScheduleTui", tui, "tui"))
+        }
+    },
+    then({scheduler, planner, capacity, reader, other}) {
+        scheduler.errors.length == 0
+        scheduler.output.includes("Move operation")
+        scheduler.output.includes("Access spec 1")
+        planner.errors.length == 0
+        planner.output.includes("Access spec 1")
+        !planner.output.includes("Move operation")
+        capacity.errors.length == 0
+        capacity.output.includes("Calendar-adjusted")
+        reader.status != 200 || !reader.output.includes("Calendar-adjusted")
+        other.status != 200 || !other.output.includes("Access spec 1")
+    }
+})
