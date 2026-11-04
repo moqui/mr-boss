@@ -2498,7 +2498,8 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   - The request route sends the request to its approval rather than making it approved: crosscut §4.2 routes plan buys
     "through request approval", and an approved request made by a conversion would skip its approvers and the request-stage
     budget reservation. The plan's demand is covered from the conversion (RstPurchaseRequest), so a submitted request is
-    neither converted again nor suggested again; a refused one stays submitted and keeps covering it until cancelled.
+    neither converted again nor suggested again; a refused one stays submitted but is no supply (review R1): shown in the
+    provenance, not netted, so its demand is suggested again, and its coverage of the old requirement ends when cancelled.
   - The request's approval makes its own requirements (P10) and the plan's requirement stays covered by the request line,
     so RequestSourcing reads the request's remaining quantity as P10 built it; the request line's ordered quantity moves to
     its purchase order line in the next plan.
@@ -2515,10 +2516,10 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   - **F-P14b-3** Warehouse's receive leaves stock AstOnHold at the dock until its putaway, and `receive#Asset` gives stock to
     waiting reservations only once it is available (`reserve#IncreasedAsset`, by priority then date), so a pegged line could
     lose its stock to another order. The receipt's Reserve reserves the on-hold stock for the pegged line; putaway's
-    `move#Asset` carries the reservation (read, not covered by a spec).
+    `move#Asset` carries the reservation (ReplenishmentRoutes covers it since the review).
   - **F-P14b-4** Request lines as plan supply count any approved purchase request of the organization at a facility of the
     set, in the line's quantity: a request line in a unit other than the stock unit is not converted (the request route
-    writes the stock unit; a hand-filed line in another unit would be miscounted). Open.
+    writes the stock unit; a hand-filed line in another unit would be miscounted). Fixed in the review (R2).
   - **F-P14b-5** The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which
     may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but
     Convert offers no supplier choice yet.
@@ -2526,6 +2527,38 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
     the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's.
   - **F-P14b-7** F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its
     customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route.
+
+**Review Nov 4 (P14b).** Checked both diffs against this section, §2, crosscut §4.2 and the brief, with the shared planning
+behaviour first. Manufacturing: netting is unchanged (`salesWaiting` lines are pegged, never netted; the shortage still nets
+as the negative available), so ManufacturingPlanning, SupplyPlanning and ProductionSubcontract results hold; two intended
+effects on made products: a make requirement now also keeps a placed (reserved) sales line as RequirementOrderItem, so a
+make conversion with one such line sets the work order's demand order (Quality's release then reserves for it), and with
+the schedule's held-quantity option a bought component nets held stock due within its supplier's lead time (before, only
+inspections already due). ManufacturingPlanningWalk's "Sales order …" text still matches the new label. No double count:
+request supply subtracts what its RequestItemOrder put on a live purchase line, that line counts once (a draft only with its
+RequirementSupply, P14a), and the plan's own requirement coverage (RstPurchaseRequest) is not supply. Drop-ship: approved
+orders only, the rest PssPartial; a supplier with no drop-ship price or facility is refused by name (P7's
+NOT_DROP_SHIPPABLE, NO_DROP_SHIP_FACILITY), now in the spec. Reserve: putaway keeps the reservation (a whole move updates
+the asset in place; a part moves reservations beyond its available), receiptOf limits the receipt to the user's
+organizations and NOT_PEGGED to the purchase line's own pegs. `planBuyToRequest` is empty N, no row takes the order route
+(Replenishment's default conversion). Fixes:
+- R1 (high): a refused purchase request kept covering the plan's demand with no cue, a silent shortage until someone
+  cancelled it. `requestSupply` shows a submitted request refused at its revision as "Refused purchase request …, not netted
+  until it is changed or cancelled" (kind `requestNotNetted`) and does not net it, so the shortage is suggested again. If the
+  requester changes and resubmits it while a second conversion covers the same demand, both count: the buyer cancels one.
+- R2 (medium, F-P14b-4): request lines in another unit are converted to the stock unit (MethodPolicy.convert); a line with
+  no conversion is shown with the reason and not netted.
+- R3 (medium): `convert#PlanningSuggestion` called directly with route `order` bypassed ROUTE_NOT_ALLOWED; convertOne checks
+  the route against the policy too.
+- R4 (medium): get#/reserve#ReceiptPeg offered another internal organization's sales line linked to the requirement; pegs are
+  now only the receipt organization's own sales lines.
+- Spec additions in ReplenishmentRoutes (6 features, about 2 s): the refusal, the unit, NOT_DROP_SHIPPABLE, and the pegged
+  reservation on dock stock (AstOnHold at a receiving location) kept through putaway#Stock.
+Left for the lead: Convert still offers no drop-ship supplier choice (F-P14b-5); `outsideRequirements` limits RqTpProduct
+requirements before filtering to outside processing, so P10's approved request requirements count toward that limit (P10's,
+low). Specs run: Mantle ReplenishmentRoutes (6), Replenishment, SupplyPlanning, ProductionSubcontract, PurchaseRequests,
+PurchasePolicy, DropShip, WarehouseReceiving (60, pass); BOSS PurchasingReplenishment, PurchasingReceiving,
+ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, PurchasingAccess (41, pass).
 
 ### P15 — Performance
 
