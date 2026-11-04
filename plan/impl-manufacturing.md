@@ -211,7 +211,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | built Nov 3 |
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
-| P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
+| P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b — |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
@@ -793,6 +793,99 @@ materials and stock.
     draft is cancelled;
   - two components are issued at two operations through the Manufacturing mount, an operator without `STOCK_ISSUE`
     for the facility is refused, and a backflush preview shows its lots and issues once.
+
+**Built Nov 3 (P5a, the runs).**
+- Mantle (`service/mantle/work/ProductionOrders.js`, ten services appended to `ProductionServices.xml`):
+  - `transition#ProductionOrder`, the one path to a run's status, by `action` or a board's `toStatusId`, with an operation
+    key (StockPosting's `begin`/`settled`/`complete`) and the required expected revision. Release (PRODUCTION_PLAN) runs the
+    gate, then P16a's `release#ProductionOrder`: `check#ProductUsable` (Produce), the method valid as of the method date
+    (`get#BomExplosion` findings, METHOD_INVALID), a later release of its methods (METHOD_CHANGED with `reexplodeOffered`;
+    `reexplode` answers REEXPLODED, a draft at the next revision to review), and the shortage policy in effect at the
+    release time (ProductionPolicy `effective`, F-P4-4): every material line covered by the run owner's free stock at the
+    run's facility and, for a line, its plant (F16), else SHORTAGE unless a supervisor approved a staged release at this
+    revision (PsrAllUsable) or the policy is PsrStaged. A staged release stamps each short line's `stagedShortQuantity`;
+    `issue#ProductionMaterial` (Production.js `issuePlan`, a local edit) refuses that line (LINE_STAGED_SHORT) until the
+    stock covers what it has left, then clears it. Release notifies the organization's PRODUCTION_SUPERVISE holders
+    (ProductionRelease). Unrelease (PRODUCTION_PLAN, no issuance, receipt or time entry: RUN_HAS_FACTS) cancels the operation
+    children, unfreezes the lines and clears the release time and standard; start, hold (a reason or an active reason code),
+    resume (to WeApproved before a start, WeInProgress after), cancel (a reason; a draft, released or held run with no fact)
+    need PRODUCTION_SUPERVISE; complete is refused (COMPLETE_UNAVAILABLE) until P7, close (CLOSE_BY_COST_CLOSE) is P15's,
+    and a generic move such as In Planning to Complete is TRANSITION_INVALID. `requestStaged` (PRODUCTION_PLAN) notifies the
+    supervisors (ProductionStagedRelease, in Approvals); `approveStaged` (PRODUCTION_SUPERVISE) stamps the approval at the
+    next revision. Status reasons go on the audit log (`statusId_changeReason`).
+  - `batch#ProductionAction` (each run its own transaction under `key/run`, a result per run: success, blocked or failed),
+    `get#ProductionLifecycle` (the run, each action open from its status with its impact or refusal, shortages, facts,
+    the status history), `find#ProductionOrders` (paged, display text, the saved finds' filters ready, late, blocked, mine,
+    product, and `demandOrderId`), `store#ProductionOrder` (the draft header), `store#ProductionEquipment` (blocked,
+    stock and overlapping equipment refused), `store#ProductionParty` (the guarded `add#`/`remove#WorkEffortParty`: a
+    supervisor or operator who is a person of the run's organization; a missing skill a warning), `get#ProductionResources`,
+    `get#ProductionOperations` (readiness and its reason; a draft's routing operations to come) and `get#ProductionPickList`.
+  - `entity/ProductionOrderEntities.xml` (the staged approval on WorkEffort, `stagedShortQuantity` on ProductionRunLine);
+    `data/ProductionOrderData.xml`: the WorkEffortProduction flow's WeApproved→WeInPlanning (PRODUCTION_PLAN),
+    WeApproved→WeOnHold and WeOnHold→WeApproved (PRODUCTION_SUPERVISE), each with its `userPermissionId`, which the
+    framework's status check honors, so a task or a user without the permission cannot take them; the two topics in
+    `ProductionNotificationSetupData.xml`. Production.js exports `laterReleases` and `routingsOf`.
+- BOSS: `WorkOrders` (Find by default): Find (WorkOrderList with the list, a board by status whose move posts
+  transition#ProductionOrder at the card's revision, a calendar, the saved finds Ready, Late, Blocked, Mine and the product
+  filter, the Selection's Release, Hold and Cancel with confirmations and a message per run); NewWorkOrder (Identity, Method,
+  Review with each requirement's free stock and short quantity and Producible now from `buildableQuantity` at the plant;
+  the operation key made at Identity answers a second Create); QuickCreate (the shell's quick create); WorkOrderDetail (record
+  header, the primary action by status with its impact, the Lifecycle dialog of every action, More: traveler, pick sheet,
+  product, BOM) with Overview (details, Edit for a draft, shortages, history, lines, equipment, people), Operations, P6's
+  Costs (ProductionCosts, index 6) and Notes and files; Traveler (with a QR of the run and revision) and PickSheet as
+  html-print. `template/ManufacturingWorkOrderParts.xml` (the lifecycle transition and row, and OrderRuns: a sales order's
+  supplying work orders, included in `Shared/OrderDetail` for PRODUCTION_VIEW holders in any context). Product360's Open
+  runs link (Manufacturing context). Manufacturing.js P5a block: run and operation destinations (so the palette, record
+  links and P13's converted runs open WorkOrderDetail), the routes, the choices madeProducts, releasedBoms, runFacilities,
+  runEquipment, runPeople, holdReasons (`get#Choices` takes `productId`). BossSetupData: `BOSS_MFG_NEW_WORK_ORDER`
+  (NewWorkOrder and QuickCreate for PLAN and ADMIN) and the two topics' links; the root's quick create and topics;
+  Approvals lists ProductionStagedRelease.
+- P6's F-P6-6 done: ProductionCosts is WorkOrderDetail's Costs tab (the root's item, Manufacturing.js's P6 link path and
+  ManufacturingSpecLib's `moved` removed, its title row dropped and its review dialog no longer a second primary), and
+  ManufacturingCostsWalk and ManufacturingAccess's P6 pages open the tab.
+- Specs: Mantle `test/work/ProductionOrders.spec.js` (11 features, about 5 s: the release with its retry and the policy
+  kept; the staged release, its approval and the blocked issue; the PsrStaged line; the later method release and
+  re-explosion; hold before start and resume; unrelease, cancel, refused complete, close, generic move and stale revision;
+  the guarded seeded transitions on a task; the bulk release; another organization and a reader; the header, equipment
+  and people; operations' readiness and the pick list). BOSS `ManufacturingWorkOrders` (4, the "usable when" items through
+  the screens and verbs), ManufacturingAccess's P5a section (4), ManufacturingShell's quick create, palette and links,
+  the route fixtures; client walk `ManufacturingWorkOrdersWalk` (2, with 390 px).
+- Tests run: Mantle ProductionOrders, SupplyPlanning, ProductionCosts, WarehouseProduction, ManufacturingServices,
+  ProductionPolicy, ProductMethods, MethodTemplates, WorkCenters (69, pass); BOSS ManufacturingWorkOrders,
+  ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, ManufacturingMethods, ManufacturingWorkCenters,
+  ManufacturingPlanning, ProductsSharedContext, WarehouseShell, WarehousePicking, AccountingPayables, ClientBilling,
+  Notifications (193, pass); walks ManufacturingWorkOrdersWalk, ManufacturingCostsWalk, ManufacturingPlanningWalk (8,
+  pass). `moqui lint --screens`: only informational anchor rows for the new screens.
+- Decisions:
+  - The seeded transitions live in their own status flow with `userPermissionId` (Warehouse P16 review B4's concern),
+    rather than an EECA guard; transition#ProductionOrder checks the state and facts.
+  - A staged release under PsrAllUsable is a supervisor's approval on the run at its revision (approveStaged), which the
+    planner's release then uses; any later change of the draft asks for it again. requestStaged notifies the supervisors.
+  - Cancel takes a draft, released or held run that has not started and has no fact; a run with facts waits for P9's
+    reviewed reversal. Unrelease cancels the operation children rather than deleting them.
+  - store#ProductionOrder edits a draft only; a released run's dates change with P12's schedule.
+  - The run nets against its facility and, for a line, the plant above it (F16), for the gate, the shortages, the pick
+    list and Producible now.
+  - batch#ProductionAction takes each run's revision from `expectedRevisions` or its current one (a row selection posts
+    ids only).
+  - OrderDetail's supplying work orders show in every context to a PRODUCTION_VIEW holder (§4's decision), before P14's
+    Manufacturing mount.
+- Deferred: Home's counts and queue (P16), Reschedule (P12), the start checks (P10, P8), Components, materials, stock
+  and the shortage notice (P5b); a copy of the policy on the run (F-P4-4 holds: no service back-dates a row).
+- Findings (provisional):
+  - **F-P5a-1** A section-include of a template section that itself section-includes another section of the same template
+    fails ("screen includes are nested too deeply"); WorkOrderDetail includes LifecycleActionRow directly.
+  - **F-P5a-2** A tab's content is not in a qvt render with `lastStandalone: -2` (the tab loads apart), so the tab routes'
+    texts are the header's, as FacilityDetail's are; the specs render a tab with `lastStandalone: "true"`.
+  - **F-P5a-3** Product360 under Manufacturing fails for the Manufacturing groups ("Catalog read access is required"):
+    Products' services need PRODUCT_CATALOG_VIEW, which no Manufacturing group holds. Not changed here (Products' or P17's).
+  - **F-P5a-4** `get#AvailableInventory` and `get#BomExplosion`'s buildable quantity read one facility; P5a passes the
+    plant for a line's run (stockFacilityIds). P13 nets by line and plant on its own.
+  - **F-P5a-5** StockPosting's `reasonOf` reads only codes with an underscore, so a batch row refused SHORTAGE read FAILED;
+    batch#ProductionAction reads the code itself.
+  - **F-P5a-6** For the merge: Production.js gained two exports and a staged-short check in `issuePlan` (P5b, P7 and P9
+    edit it too); BossSetupData's new artifact group sits before the record-link group.
+  - **F-P5a-7** Warehouse's BOSS_WH_RUN is still WetTask (F43); left, since the guards key on the purpose.
 
 ### P6 — Cost evidence
 
