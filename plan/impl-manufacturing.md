@@ -222,7 +222,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | built Nov 3, reviewed |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
-| P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | built Nov 4 (OEE and cost read P10's and P15's records when merged) |
+| P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | built Nov 4 (on P10; P15's cost close read through P6's allocation record) |
 | P17 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -1751,7 +1751,7 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
     field, the PartySkill name), ProductionSchedule.js (PartySkill), TimesheetServices.xml, TimeServices.xml,
     WorkEffortServices.xml (`get#UserTodayItems`), the P7 and P8 specs' complete calls; BOSS: Manufacturing.xml (today-source),
     Manufacturing.js, HomeServices.xml, Quantities.xml (the checkbox), BossManufacturingDemoData, BossUsersDemoData,
-    ManufacturingSpecLib (routes, `shopFloorFixture`), ManufacturingAccess, AppStructure's floor (63), suite.js and
+    ManufacturingSpecLib (routes, `shopFloorFixture`), ManufacturingAccess, AppStructure's floor (62), suite.js and
     docs/ManufacturingImplementation.md. P9 (in parallel) edits ProductionOrders.js and the Components screens.
 - **Review (Nov 4).** Findings and fixes:
   - Medium: the labor spec's costing rate lost to BOSS's demo `BOSS_MFG_RATE_RUN` in a runtime with BOSS data (RateAmount names
@@ -2440,22 +2440,28 @@ Design §9; the reporting part of M10.
   passes, the other organization's reader, the money, the work order choice; the Reports area by role with authz on),
   the route fixtures (AppStructure, TuiRender), ManufacturingShell's Home check (completed is counted now), and the walk
   `ManufacturingReportsWalk` (3: Home's OEE card opens the performance report; a reader's and a financial reader's cost
-  columns; 390 px) in suite.js. AppStructure's placeholder floor is 63.
+  columns; 390 px) in suite.js. AppStructure's placeholder floor is 62 after the merge with P10.
 - Tests run: Mantle ProductionReports with ProductionCosts (9 features, pass); BOSS ManufacturingReports,
   ManufacturingAccess, AppStructure, TuiRender, ManufacturingShell (passing after the fixes below: 93 features for Reports
   and Access, 23 for Reports and Shell, AppStructure and TuiRender in a 44-feature run); walk ManufacturingReportsWalk (3,
   pass). `moqui lint --screens`: the new screens show only informational anchor rows. `ss-inventory.md`'s RunList row
   names Home and the status report; no `usl-inventory.md` row is called (the report services are new).
-- Re-verify after P10 and P15 merge:
-  - P10: with `MachineRuntimeEvent` defined, ProductionReports' OEE feature records a runtime event over the period and
-    expects the report complete with 5.5 machine hours; ManufacturingReports then skips its "Incomplete: Machine runtime"
-    check. P10's operation completion counts are read through the same marker (`isEntityDefined(MachineRuntimeEvent)`) and
-    the fields' names in its plan's entity (`productionGoodQuantity`, `productionLossQuantity`); its runtime mode `MrmSetup`
-    splits machine setup hours, and labor setup hours are TimeEntry `WktpProductionSetup`. Check both names on merge.
-  - P15: the cost report reads ProductionCostAllocation's P6 fields (`destinationEnumId`, `allocatedAmount`,
-    `acctgTransId`; output and by-product to output, variance to variance) and the events' `closeAcctgTransId`; a closed
-    run shows "Closed". No spec covers a posted close here; P15's cost close spec or a P17 walk should read one through
-    the report. MyFinanceWork's runs awaiting close stay P15's.
+- Merged with master after P9 and P10 (Nov 4): OEE reads P10's records directly: `MachineRuntimeEvent` (unioned per
+  machine and asset at the work center; `MrmSetup` the machine setup hours), the operations' `productionGoodQuantity`
+  (good with the held, as complete#ProductionOperation writes it) and `productionLossQuantity`, and labor hours from the
+  TimeEntry rows on the operations (`WktpProductionSetup` the setup hours); P10's labor and machine cost events sum into
+  the cost report's labor and machine columns by component. ProductionReports records the machine's runtime through
+  `record#MachineRuntime` (the organization's policy PmrOptional, the run started) and expects the report complete with
+  3.5 run hours (6 machine hours less the planned changeover and the unioned downtime): availability 50%, performance
+  71.4%, quality 80%, OEE 28.6%. Conflicts kept both sides (Manufacturing.js's P10 and P16 blocks, suite.js's two walks,
+  AppStructure's comment), and the placeholder floor is 62 with ShopFloor and Reports both replaced.
+- After the merge: Mantle ProductionReports, ProductionShopFloor and ProductionCosts (18 features, pass); BOSS
+  ManufacturingReports, ManufacturingAccess, ManufacturingShopFloor, AppStructure, TuiRender and ManufacturingShell on a
+  fresh load (142 features, pass); walks ManufacturingReportsWalk and ManufacturingShopFloorWalk (5, pass).
+- Re-verify after P15 merges: the cost report reads ProductionCostAllocation's P6 fields (`destinationEnumId`,
+  `allocatedAmount`, `acctgTransId`; output and by-product to output, variance to variance) and the events'
+  `closeAcctgTransId`; a closed run shows "Closed". No spec covers a posted close here; P15's cost close spec or a P17 walk
+  should read one through the report. MyFinanceWork's runs awaiting close stay P15's.
 - Decisions:
   - `get#ProductionDashboard` is in `mantle.work.ProductionReportServices` (this plan), not ProductionServices (design
     Home's table, corrected there); it is the Kpi provider Insights registers (crosscut §3.17).
@@ -2467,8 +2473,10 @@ Design §9; the reporting part of M10.
   - A report's parameters default the facility to the selected plant, as Warehouse's reports do; the lot filter is a
     service parameter only (no lot drop-down), and the design's shift filter is not built (no shift record).
 - Findings (provisional):
-  - **F-P16-1** With P10 not on master, the performance report and the Home OEE Kpi are always incomplete (machine
-    runtime named as not in this build), and run time is planned time less downtime.
+  - **F-P16-1** A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time =
+    planned time less downtime, named on its row; P10's completion counts count held output as good
+    (`productionGoodQuantity` = good + pending), so a center's quality from completions is above the receipts' until the
+    held output is disposed.
   - **F-P16-2** In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render
     of a report; not investigated further: the reports use two form-lists by financial read instead. P6's ProductionCosts
     tab uses `hide` on its amount and ledger columns and may want the same check.
@@ -2479,7 +2487,7 @@ Design §9; the reporting part of M10.
   - **F-P16-5** For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where
     the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at
     the end of routeFixtures), ManufacturingAccess.spec.js (P16 section at the end), suite.js (the walk after
-    ManufacturingChangesWalk), AppStructure's floor (63), ManufacturingShell's Home check.
+    ManufacturingShopFloorWalk), AppStructure's floor (62), ManufacturingShell's Home check.
 
 ### P17 — Finish
 

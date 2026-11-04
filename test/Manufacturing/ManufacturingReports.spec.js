@@ -1,8 +1,7 @@
 // Manufacturing reports (impl-manufacturing P16, design-manufacturing §9 and Home's Kpis): Home shows the plant's Kpis this
 // month, each opening its report with the same filters, and counts the work orders completed this month; a production reader
 // gets the cost report's quantities and no money columns on screen and in the export, a financial reader the amounts; each
-// report renders with its scope and as-of time; a source this build does not have (P10's machine runtime) is named on the
-// performance report as incomplete. On the demo data (BossManufacturingDemoData.xml, BossWarehouseDemoData.xml).
+// report renders with its scope and as-of time, and the performance report its factors and downtime. On the demo data (BossManufacturingDemoData.xml, BossWarehouseDemoData.xml).
 // Run: ./moq test mr-boss --spec ManufacturingReports
 const lib = ec.resource.script("component://mr-boss/test/Manufacturing/ManufacturingSpecLib.js")
 const {ids, users, asUser, invoke} = lib
@@ -97,7 +96,7 @@ feature(
     }
 )
 
-feature("each report renders for a reader with its scope and as-of time, and a source not in this build is named", {
+feature("each report renders for a reader with its scope and as-of time, and the performance report its factors", {
     when() {
         const failures = []
         for (const name of reports) {
@@ -107,12 +106,12 @@ feature("each report renders for a reader with its scope and as-of time, and a s
         }
         const performance = asUser(users.read, () => lib.page("Reports/OperationPerformanceReport", plant, "html"))
         const index = asUser(users.read, () => lib.page("Reports/ReportIndex", {}, "html"))
-        return {failures, performance, index, runtime: ec.entity.isEntityDefined("mantle.work.production.MachineRuntimeEvent")}
+        return {failures, performance, index}
     },
-    then({failures, performance, index, runtime}) {
+    then({failures, performance, index}) {
         failures.join("\n") == ""
         performance.output.includes("Availability")
-        runtime || performance.output.includes("Incomplete: Machine runtime (shop floor)")
+        performance.output.includes("Machine") && performance.output.includes("Downtime by reason")
         index.errors == []
         reports.length == 8
         index.output.includes("BOM variance") && index.output.includes("their cost needs financial read")
