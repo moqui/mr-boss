@@ -1570,15 +1570,15 @@ BillOfMaterialsCompare's amendment action; M4.
   answers FORWARD_REPOST_REQUIRED until Accounting turns them on; a substitute's issue at a backflush follows P5b's lines as
   they are; merging drafts stays §7.
 - Findings (provisional):
-  - **F-P9-1** A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and
+  - **F120** A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and
     renders an empty page; SplitWorkOrder's Back and Next link to the screen with the step, and its forms post to `toStep`,
     as NewWorkOrder does.
-  - **F-P9-2** With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it
+  - **F121** With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it
     deletes the posted transaction and leaves the new one unposted in the error journal, so the history is lost (F31 expected
     an error); ReceiptAdjustments' spec asserts the forward delta posts and the legacy path keeps no posted history.
-  - **F-P9-3** `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's
+  - **F122** `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's
     internal release and an amendment's review need it too; a planner or supervisor without it is refused METHOD_INVALID.
-  - **F-P9-4** For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the
+  - **F123** For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the
     appended P9 section), AssetAutoPostServices.xml (`repost#AssetReceipt`'s first two actions), AccountingControlEntities.xml,
     AccountingSetup.js, SetupServices.xml; BOSS Components.xml, Quantities.xml (a link beside Labels), WorkOrderDetail.xml
     (a transition, two actions, two More items), Find.xml, Shared/BillOfMaterialsCompare.xml (an appended section),
@@ -1597,8 +1597,8 @@ BillOfMaterialsCompare's amendment action; M4.
     that lowers fewer kits than asked is refused (BREAKDOWN_SHORT) rather than cancelling the whole slices.
   - (low) an amendment removing a method line that has an applied substitute deleted it under the substitute; it is kept now,
     with a finding.
-  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F-P9-2).
-  - F-P9-2 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
+  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F121).
+  - F121 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
     source's refused posting goes to the error journal, so the unchanged legacy `repost#AssetReceipt` loses the locked day's
     posting. Recorded in impl-accounting §7; the forward flag avoids it.
   - (medium, after the merge with master) cancellation counted only issues, output receipts, time and losses, while the
@@ -1718,8 +1718,8 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
   required evidence (`methodRequiredEvidence`) is asked for at completion, not at start.
   - F96: the coupled output receipt needs STOCK_ISSUE (§2), refused before anything posts with STOCK_ISSUE_REQUIRED and its
     advice; a plain operator records only loss at the output operation. The demo's material handler holds both.
-  - Machine runtime follows the policy: none where `machineRuntimeEnumId` is Not recorded, the built-in default (F-P10-2).
-  - The labor event names its entry by `sourceId` and `timeEntryId` (no foreign key, F-P10-6), and freezes the rate at the
+  - Machine runtime follows the policy: none where `machineRuntimeEnumId` is Not recorded, the built-in default (F125).
+  - The labor event names its entry by `sourceId` and `timeEntryId` (no foreign key, F129), and freezes the rate at the
     approval; a RateAmount correction reaches a run through P15's review, while a change of what chooses the rate (work type,
     position class, date) or of the entry's operation or run reverses the recording and records it again (review).
   - Pause is the operation's own On hold with its reason and an optional timer stop; a stop of the line is reported apart in
@@ -1729,23 +1729,23 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
   (`timeLogEnforcementEnumId` PtlWarn, PtlRequired) at completion; backflush at the policy's operation issue points (P5b named P10
   its caller); the shared-station device credential (CX-DEVICE, §7); WorkOrderDetail Operations' link to the shop floor.
 - Findings (provisional):
-  - **F-P10-1** ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which
+  - **F124** ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which
     is no entity (`mantle.humanres.ability.PartySkill`), so an assignment's or a schedule's skill check errored once a template
     had a skill standard. Fixed in both.
-  - **F-P10-2** The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused
+  - **F125** The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused
     (MACHINE_RUNTIME_OFF) until a policy row records it; the demo's line A row does.
-  - **F-P10-3** A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate
+  - **F126** A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate
     completion leaves no time: the specs move a timer's start back, and the walk's fixture records earlier time.
-  - **F-P10-4** Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue
+  - **F127** Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue
     is the run's end until it is scheduled.
-  - **F-P10-5** (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt
+  - **F128** (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt
     closes them as before.
-  - **F-P10-6** ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened
+  - **F129** ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened
     week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). The
     review made the relationship `one-nofk`: the events keep the entry's id as their source after it is deleted.
-  - **F-P10-7** The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed
+  - **F130** The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed
     over, but a failure of the event's write would roll back the approval.
-  - **F-P10-8** For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s
+  - **F131** For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s
     `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s
     null event), ProductionQuantities.js (`completeCheck`, `afterReceipt`), ProductionOrders.js (`blockedReasons`, the request
     field, the PartySkill name), ProductionSchedule.js (PartySkill), TimesheetServices.xml, TimeServices.xml,
@@ -1756,7 +1756,7 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
 - **Review (Nov 4).** Findings and fixes:
   - Medium: the labor spec's costing rate lost to BOSS's demo `BOSS_MFG_RATE_RUN` in a runtime with BOSS data (RateAmount names
     no organization; the later started wins), so the labor feature failed there. The spec's rates now start yesterday.
-  - Medium: F-P10-6 fixed properly rather than leaving `timeEntryId` empty: `ProductionCostEvent`'s TimeEntry relationship is
+  - Medium: F129 fixed properly rather than leaving `timeEntryId` empty: `ProductionCostEvent`'s TimeEntry relationship is
     `one-nofk` and labor events set `timeEntryId`; a reversal, a deletion and the delete of the reopened week's entry
     tested.
   - Medium: the labor delta covered only an hours change (F35 names work type, position class, from date and work effort
@@ -1766,7 +1766,7 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
     last nothing), not the entry's first event ever.
   - Low: `get#ShopFloorQueue`'s `mine` (Today's source) filtered after the 100 work order limit, so an assignee's
     operations could be missed; it now limits to the user's work orders before the limit.
-  - Verified: F-P10-1's PartySkill checks had no spec; a new feature covers the assignment's warning and the schedule
+  - Verified: F124's PartySkill checks had no spec; a new feature covers the assignment's warning and the schedule
     preview's SKILLS conflict, with and without the skill. Machine runtime's Not recorded default stands (P4's policy
     default, consistent with §2's off by default; design TimeAndCost names no default).
   - Left: PmrRequired and the time-log enforcement are not enforced at completion (deferred above); completion does not
@@ -2572,6 +2572,18 @@ is written there too.
 | F117 | P14: `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order is placed and approved in Purchasing (and the bill match needs an approved order). | P14 Built note |
 | F118 | P14: Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the Subcontract orders tab is checked by ManufacturingSubcontracting's html render. | P14 Built note |
 | F119 | P14: A group whose mount offers an action must hold every permission the action's Mantle service checks; here the conversion's supplier-price read. | P14 Built note |
+| F120 | P9: A `link` to a transition that has actions (a wizard's Next) navigates the client to the transition's URL and renders an empty page; SplitWorkOrder's Back and Next link to the screen with the step, and its forms post to `toStep`, as NewWorkOrder does. | P9 Built note |
+| F121 | P9: With `postingGuardEnabled`, the legacy receipt repost under a hard lock of the receipt's day does not fail: it deletes the posted transaction and leaves the new one unposted in the error journal, so the history is lost (F31 expected an error); … | P9 Built note |
+| F122 | P9: `Production.js` `release` (the method's routings) and `get#BomExplosion` need METHOD_VIEW, so a split's internal release and an amendment's review need it too; a planner or supervisor without it is refused METHOD_INVALID. | P9 Built note |
+| F123 | P9: For the merge: Production.js (`keepMethod` in `release`, the `method` export), ProductionServices.xml (the appended P9 section), AssetAutoPostServices.xml (`repost#AssetReceipt`'s first two actions), AccountingControlEntities.xml, AccountingSetup.js, … | P9 Built note |
+| F124 | P10: ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which is no entity (`mantle.humanres.ability.PartySkill`), so an assignment's or a schedule's skill check errored once a template had a skill standard. | P10 Built note |
+| F125 | P10: The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused (MACHINE_RUNTIME_OFF) until a policy row records it; the demo's line A row does. | P10 Built note |
+| F126 | P10: A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate completion leaves no time: the specs move a timer's start back, and the walk's fixture records earlier time. | P10 Built note |
+| F127 | P10: Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue is the run's end until it is scheduled. | P10 Built note |
+| F128 | P10: (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt closes them as before. | P10 Built note |
+| F129 | P10: ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). | P10 Built note |
+| F130 | P10: The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed over, but a failure of the event's write would roll back the approval. | P10 Built note |
+| F131 | P10: For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s null event), … | P10 Built note |
 
 ## 7. Later
 
