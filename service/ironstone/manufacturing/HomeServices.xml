@@ -40,7 +40,15 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="summary" from="{openCount: null, inProgressCount: null, lateCount: null, shortCount: null,
                     completedCount: null}"/>
             <set field="queueRows" from="[]"/>
-            <!-- later phases: P5 counts the runs and lists the due ones (can.productionRead), with the shortages -->
+            <!-- P5b: the plant's open, in-progress, late and short work orders, and the due work and shortages, for production
+                readers (Materials.js home); completed this month comes with the reports (P16) -->
+            <if condition="can.productionRead">
+                <set field="materialsHome" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Materials.js')
+                        .execute('home', {plantId: plantId})"/>
+                <script>Object.assign(summary, materialsHome.summary)</script>
+                <set field="queueRows" from="materialsHome.queueRows"/>
+            </if>
+            <!-- later phases: P16 counts the completed runs -->
         </actions>
     </service>
 </services>

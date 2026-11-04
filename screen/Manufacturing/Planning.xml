@@ -14,12 +14,16 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Planning area of IronStone Manufacturing (design-manufacturing §1.2, §7), for the planner, scheduler and supervisor
     groups only (BOSS_MFG_PLANNING): the shared SupplyPlanning with the Manufacturing context (impl-manufacturing P13, the
-    default); InventoryAvailability, ProductionSchedule and Capacity come with P5 and P12, each a subscreens-item here. -->
+    default); Products' shared InventoryAvailability with the Manufacturing context (P5b), opened from a work order's
+    Components with the component and the plant, so not in the menu; ProductionSchedule and Capacity come with P12, each a
+    subscreens-item here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Planning" default-menu-index="8" menu-image="sym_o_view_timeline" menu-image-type="icon">
     <subscreens default-item="SupplyPlanning" always-use-full-path="true">
         <subscreens-item name="SupplyPlanning" location="component://mr-boss/screen/Shared/SupplyPlanning.xml"
                 menu-title="Supply planning" menu-index="1"/>
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
+                menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-menu id="ManufacturingPlanningTabs" type="tab"/>

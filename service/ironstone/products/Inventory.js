@@ -110,6 +110,9 @@ function run(op, parameters) {
                 focus.facilityId
             ]),
             unitText = one("moqui.basic.Uom", {uomId: focus.product.amountUomId})?.description || focus.product.amountUomId,
+            // Manufacturing counts held stock by status, each apart: quarantine, on hold and defective (R-MFG-24)
+            manufacturingRoot = focus.appRoot === "Manufacturing",
+            heldStatuses = {heldQuarantine: "AstQuarantine", heldOnHold: "AstOnHold", heldDefective: "AstDefective"},
             sum = {onHand: 0, reserved: 0, available: 0, held: 0, incoming: 0, transit: 0},
             stockRows = []
         for (const facility of focus.facilities.filter(row => used.has(row.facilityId))) {
@@ -119,6 +122,10 @@ function run(op, parameters) {
                         facilityId: facility.facilityId,
                         ownerPartyId: facility.ownerPartyId
                     }),
+                    byStatus = out.quantityByStatus || {},
+                    heldByStatus = Object.fromEntries(
+                        Object.entries(heldStatuses).map(([key, statusId]) => [key, toDecimal(byStatus[statusId] ?? 0)])
+                    ),
                     row = {
                         onHand: out.quantityOnHandTotal ?? 0,
                         reserved: out.reservedQuantity ?? 0,
@@ -126,7 +133,9 @@ function run(op, parameters) {
                         // Warehouse counts held stock by status, every status but available (a held asset keeps its ATP, F39)
                         held: focus.warehouseRoot
                             ? toDecimal(out.quantityOnHandTotal ?? 0).subtract(out.availableStatusQuantity ?? 0)
-                            : (out.heldQuantity ?? 0),
+                            : manufacturingRoot
+                              ? Object.values(heldByStatus).reduce((total, value) => total.add(value), toDecimal(0))
+                              : (out.heldQuantity ?? 0),
                         incoming: out.incomingQuantity ?? 0,
                         transit: out.transitQuantity ?? 0
                     }
@@ -142,6 +151,9 @@ function run(op, parameters) {
                             ownerPartyId: facility.ownerPartyId,
                             quantityUomText: unitText,
                             availableStatusOnHand: String(out.availableStatusQuantity ?? 0),
+                            heldQuarantine: Number(String(heldByStatus.heldQuarantine)),
+                            heldOnHold: Number(String(heldByStatus.heldOnHold)),
+                            heldDefective: Number(String(heldByStatus.heldDefective)),
                             focused: facility.facilityId === focus.facilityId
                         }
                     )
@@ -186,7 +198,9 @@ function run(op, parameters) {
                     ? "Kit availability includes assemblies possible from components."
                     : focus.warehouseRoot
                       ? "Held is stock in any status but available (on hold, quarantine, morgue): it may still count in available to promise. In transit is what shipped transfers still carry here; incoming is what open purchase orders still bring."
-                      : "Availability follows each facility’s order-pool rules. Held stock is separate from available stock; incoming is what open purchase orders still bring."
+                      : manufacturingRoot
+                        ? "Held is quarantined, on-hold and defective stock, each apart; production never issues it, so planning cannot count it. Available is what material may be issued from."
+                        : "Availability follows each facility’s order-pool rules. Held stock is separate from available stock; incoming is what open purchase orders still bring."
         })
     }
     function projection(p) {

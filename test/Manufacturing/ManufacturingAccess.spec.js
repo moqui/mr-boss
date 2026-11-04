@@ -1504,3 +1504,125 @@ feature(
         }
     }
 )
+
+// ===== P5b: materials and stock =====
+// The materials verbs as the screens run them (artifact authorization off, F-P3-2), each refusal against a success with the
+// same parameters; the drop-downs; the tabs and the Planning availability with artifact authorization enabled.
+const P5b = {
+    draft: () =>
+        asService(users.plan, () =>
+            invoke("mantle.work.ProductionServices.create#ProductionOrder", {
+                operationKey: "spec-p5b-" + Date.now(),
+                organizationPartyId: "ORG_ZIZI_RETAIL",
+                productId: ids.productId,
+                productBomId: ids.methodId,
+                quantity: 1,
+                facilityId: ids.lineId
+            })
+        ).workEffortId,
+    revision: workEffortId =>
+        Number(
+            system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one()).productionRevision || 0
+        )
+}
+feature("the materials verbs check their own permission and organization, on the same parameters", {
+    when() {
+        const workEffortId = P5b.draft()
+        const store = user =>
+            asService(user, () =>
+                refusal("mantle.work.ProductionServices.store#ProductionMaterial", {
+                    operationKey: "spec-p5b-store-" + user + "-" + Date.now(),
+                    workEffortId,
+                    expectedRevision: P5b.revision(workEffortId),
+                    productId: "DEMO_SA_1",
+                    quantity: 1
+                })
+            )
+        const preview = user =>
+            asService(user, () =>
+                refusal("mantle.work.ProductionServices.preview#ProductionBackflush", {workEffortId: ids.releasedRunId})
+            )
+        const read = user =>
+            asService(user, () => refusal("mantle.work.ProductionServices.get#ProductionMaterials", {workEffortId}))
+        const issueCheck = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "run", recordId: ids.releasedRunId, capability: "issue"})
+            )
+        return {
+            readerStore: store(users.read),
+            plannerStore: store(users.plan),
+            operatorPreview: preview(users.operate),
+            materialPreview: preview(users.material),
+            readerRead: read(users.read),
+            otherRead: read(users.services),
+            operatorIssue: issueCheck(users.operate),
+            materialIssue: issueCheck(users.material),
+            otherShortages: asService(users.services, () =>
+                invoke("mantle.work.ProductionServices.get#ProductionShortages", {}).shortRows.map(row => row.workEffortId)
+            )
+        }
+    },
+    then(r) {
+        r.readerStore.includes("PERMISSION_DENIED")
+        r.plannerStore == ""
+        r.operatorPreview.includes("PERMISSION_DENIED")
+        r.materialPreview == ""
+        r.readerRead == ""
+        r.otherRead.includes("RECORD_UNAVAILABLE")
+        r.operatorIssue.includes("PERMISSION_DENIED")
+        r.materialIssue == ""
+        !r.otherShortages.includes(ids.releasedRunId)
+    }
+})
+feature("each materials drop-down answers the user's options and a selected value of theirs, and not another organization's", {
+    when() {
+        const options = (user, choice, extra = {}) =>
+            asUser(user, () => invoke(access + "get#Choices", Object.assign({choice}, extra)).options.map(row => row.value))
+        return {
+            products: options(users.plan, "materialProducts", {term: "zzz-none", selected: "BOSS_WH_COATED"}),
+            otherProducts: options(users.services, "materialProducts", {term: "zzz-none", selected: "BOSS_WH_COATED"}),
+            shared: options(users.plan, "materialProducts", {term: "zzz-none", selected: "DEMO_SA_1"}),
+            facilities: options(users.plan, "stockFacilities", {term: "zzz-none", selected: ids.plantId}),
+            otherFacilities: options(users.services, "stockFacilities", {term: "zzz-none", selected: ids.plantId})
+        }
+    },
+    then(r) {
+        r.products.includes("BOSS_WH_COATED")
+        !r.otherProducts.includes("BOSS_WH_COATED")
+        r.shared.includes("DEMO_SA_1")
+        r.facilities.includes(ids.plantId)
+        !r.otherFacilities.includes(ids.plantId)
+    }
+})
+feature("the Materials and Components tabs and Planning's availability open by role, with authz enabled", {
+    when() {
+        const tab = (user, path) =>
+            asUser(user, () => lib.page(path, {workEffortId: ids.releasedRunId, lastStandalone: "true"}, "html"))
+        const stock = user =>
+            asUser(user, () =>
+                lib.page("Planning/InventoryAvailability", {productId: "BOSS_WH_COATED", facilityId: ids.plantId}, "html")
+            )
+        return {
+            material: tab(users.material, "WorkOrders/WorkOrderDetail/MaterialIssueReceipt"),
+            reader: tab(users.read, "WorkOrders/WorkOrderDetail/MaterialIssueReceipt"),
+            other: tab(users.services, "WorkOrders/WorkOrderDetail/MaterialIssueReceipt"),
+            components: tab(users.read, "WorkOrders/WorkOrderDetail/Components"),
+            planner: stock(users.plan),
+            readerStock: stock(users.read)
+        }
+    },
+    then(r) {
+        r.material.errors.length == 0
+        r.material.output.includes("Posted issues and receipts")
+        r.material.output.includes("Stage stock")
+        r.reader.errors.length == 0
+        !r.reader.output.includes("Stage stock")
+        r.other.output.includes("is not available")
+        r.components.errors.length == 0
+        r.components.output.includes("Components")
+        !r.components.output.includes("Add material")
+        r.planner.status == 200
+        r.planner.output.includes("Coated filter")
+        r.readerStock.status != 200 || !r.readerStock.output.includes("Coated filter")
+    }
+})

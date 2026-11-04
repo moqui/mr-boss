@@ -77,6 +77,21 @@ along with this software (see the LICENSE.md file). If not, see
                             <display format="#,##0.###"/>
                         </default-field>
                     </field>
+                    <field name="heldQuarantine" align="right" hide="appRoot != 'Manufacturing'">
+                        <default-field title="Quarantine">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="heldOnHold" align="right" hide="appRoot != 'Manufacturing'">
+                        <default-field title="On hold">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
+                    <field name="heldDefective" align="right" hide="appRoot != 'Manufacturing'">
+                        <default-field title="Defective">
+                            <display format="#,##0.###"/>
+                        </default-field>
+                    </field>
                     <field name="incoming" align="right">
                         <default-field title="Incoming">
                             <display format="#,##0.###"/>
