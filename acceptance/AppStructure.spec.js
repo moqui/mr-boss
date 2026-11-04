@@ -343,8 +343,6 @@ const demoRecords = {
 }
 
 spec({
-    // slow: renders every screen of every app, one feature about 51 s (test-all, 2026-11-04); run only with --slow, and a candidate for deletion
-    slow: true,
     setupSpec() {
         login("john.doe")
         placeholders = findScreenFiles(apps, isPlaceholder)

@@ -105,8 +105,6 @@ function tui(root, path, parameters) {
 }
 
 spec({
-    // slow: renders every screen in tui, one feature about 47 s (test-all, 2026-11-04); run only with --slow, and a candidate for deletion
-    slow: true,
     setupSpec() {
         login("john.doe")
         screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing"])

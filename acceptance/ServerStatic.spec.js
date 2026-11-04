@@ -43,8 +43,6 @@ function parametersOf(app, path) {
 }
 
 spec({
-    // slow: checks every screen's static render; the family was split per app to stay under 30 s, about 32 s together (test-all, 2026-11-04); run only with --slow, and a candidate for deletion
-    slow: true,
     setupSpec() {
         login("john.doe")
         screens = lib.screens(["Commons", "Comms", "Products"])
