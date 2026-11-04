@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SubcontractOperations (design-manufacturing §7 SubcontractOperations; style-guide §3.2 List): the outside-processing
+    worklist of the user's organizations (mantle.work.ProductionServices.find#SubcontractOperations): each operation with a
+    subcontract or a service purchase line, its work order, plant, supplier, service, purchase order and its status, quantity,
+    components sent, output received, service accepted, due date and state, the price only for a buyer or price reader;
+    filtered by supplier, plant, state and exceptions. New outside processing (the planner, PRODUCTION_PLAN) asks for an
+    operation of a released work order to be done by a supplier (request#SubcontractService), after
+    ironstone.manufacturing.AccessServices checks the operation; a buyer converts it in Planning's supply plan. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Outside processing" default-menu-include="false">
+    <parameter name="supplierPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="stateText"/>
+    <parameter name="exceptionsOnly"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition-include name="requestService" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
+    <actions>
+        <service-call name="mantle.work.ProductionServices.find#SubcontractOperations" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{supplierPartyId:supplierPartyId || null, facilityId:facilityId || null, stateText:stateText || null,
+                    exceptionsOnly:exceptionsOnly == 'Y', pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="operationList" from="found?.operationList || []"/>
+        <set field="operationListCount" from="found?.operationListCount"/>
+        <set field="operationListPageIndex" from="found?.operationListPageIndex"/>
+        <set field="operationListPageSize" from="found?.operationListPageSize"/>
+        <set field="operationListPageMaxIndex" from="found?.operationListPageMaxIndex"/>
+        <set field="operationListPageRangeLow" from="found?.operationListPageRangeLow"/>
+        <set field="operationListPageRangeHigh" from="found?.operationListPageRangeHigh"/>
+        <set field="canRequest" from="!!found?.canRequest &amp;&amp; !!manufacturing.capabilities.plan"/>
+        <set field="priceRead" from="operationList.some((row) =&gt; row.unitAmount != null)"/>
+        <set field="operationKey" from="'subcontract-' + ec.user.randomString(24)"/>
+        <set field="filtered" from="!!(supplierPartyId || facilityId || stateText || exceptionsOnly)"/>
+        <set field="emptyText" from="filtered ? 'No outside processing matches these filters.'
+                : (canRequest ? 'No operation is done by a supplier yet. Ask for one with New outside processing.'
+                    : 'No operation of your plants is done by a supplier.')"/>
+    </actions>
+    <widgets>
+        <context title="Outside processing"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Outside processing" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewOutsideProcessing" button-text="New outside processing" type="primary" icon="sym_o_add"
+                        width="760" title="Ask for an operation to be done by a supplier" condition="canRequest">
+                    <form-single name="RequestService" transition="requestService" map="{}">
+                        <field name="operationKey" from="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="operationWorkEffortId">
+                            <default-field title="Operation" tooltip="An operation of a released work order">
+                                <drop-down required-manual-select="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'subcontractOperations'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productId">
+                            <default-field title="Service">
+                                <drop-down required-manual-select="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'serviceProducts'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="quantity">
+                            <default-field title="Quantity" tooltip="In the service's unit">
+                                <text-line size="8" input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="supplierPartyId">
+                            <default-field title="Supplier">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="vendorFacilityId">
+                            <default-field title="Components go to" tooltip="The supplier's custody facility, which stays your organization's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'vendorFacilities'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="requiredByDate">
+                            <default-field title="Required by" tooltip="Empty takes the operation's due date">
+                                <date-time type="timestamp"/>
+                            </default-field>
+                        </field>
+                        <field name="leadTimeDays">
+                            <default-field title="Lead time in days">
+                                <text-line size="6" input-type="number"/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Note">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Request outside processing"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-ref name="operationWorkEffortId"/>
+                            <field-row>
+                                <field-ref name="productId"/>
+                                <field-ref name="quantity"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="supplierPartyId"/>
+                                <field-ref name="vendorFacilityId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="requiredByDate"/>
+                                <field-ref name="leadTimeDays"/>
+                            </field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <link url="." text="Exceptions" link-type="anchor-button" icon="sym_o_error" parameter-map="{exceptionsOnly:'Y'}"/>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SubcontractList" list="operationList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="supplierPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Plant">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'plants', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="stateText">
+                        <header-field title="State">
+                            <drop-down allow-empty="true">
+                                <option key="Requested" text="Requested"/>
+                                <option key="Draft purchase order" text="Draft purchase order"/>
+                                <option key="Ordered" text="Ordered"/>
+                                <option key="Components sent" text="Components sent"/>
+                                <option key="Output received" text="Output received"/>
+                                <option key="Accepted" text="Accepted"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="exceptionsOnly">
+                        <header-field title="Exceptions only"><check><option key="Y" text=" "/></check></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="operationName">
+                        <header-field title="Operation"/>
+                        <default-field>
+                            <link url="../SubcontractDetail" text="${operationName}" link-type="anchor"
+                                    parameter-map="{workEffortId:operationWorkEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Work order"/>
+                        <default-field>
+                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="supplierName">
+                        <header-field title="Supplier"/>
+                        <default-field>
+                            <link url="../Supplier360" text="${supplierName || 'No supplier yet'}" link-type="anchor"
+                                    parameter-map="{vendorPartyId:supplierPartyId}" condition="supplierPartyId"/>
+                            <label text="No supplier yet" type="span" style="text-warning" condition="!supplierPartyId"/>
+                        </default-field>
+                    </field>
+                    <field name="productName"><header-field title="Service"/><default-field><display/></default-field></field>
+                    <field name="orderId">
+                        <header-field title="Purchase order"/>
+                        <default-field>
+                            <link url="../OrderDetail" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"
+                                    condition="orderId"/>
+                            <label text="${orderStatusText}" type="div" style="text-caption m-muted" condition="orderId"/>
+                        </default-field>
+                    </field>
+                    <field name="quantity" align="right">
+                        <header-field title="Quantity"/>
+                        <default-field><display text="${quantity || ''} ${uomText || ''}"/></default-field>
+                    </field>
+                    <field name="unitAmount" align="right" hide="!priceRead">
+                        <header-field title="Price"/>
+                        <default-field><display currency-unit-field="currencyUomId"/></default-field>
+                    </field>
+                    <field name="dispatchCount" align="right">
+                        <header-field title="Dispatches"/>
+                        <default-field><display/></default-field>
+                    </field>
+                    <field name="receivedQuantity" align="right">
+                        <header-field title="Output received"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <header-field title="Accepted"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="requiredByText"><header-field title="Due"/><default-field><display/></default-field></field>
+                    <field name="facilityName"><header-field title="Plant or line"/><default-field><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="operationName"/><field-ref name="supplierName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="requiredByText"/></column>
+                    </columns>
+                </form-list>
+                <section name="NoSubcontracts" condition="!operationList.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

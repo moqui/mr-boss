@@ -28,7 +28,13 @@ const ids = {
     routingOperationIds: ["BOSS_MFG_ROUTING_A_10", "BOSS_MFG_ROUTING_A_20"],
     templateIds: ["BOSS_MFG_OPT_ASSEMBLE", "BOSS_MFG_OPT_TEST"],
     componentId: "DEMO_RM_1",
-    kitId: "DEMO_PA"
+    kitId: "DEMO_PA",
+    // P14: the Warehouse demo's subcontractor, its placed service order of the coating operation and the dispatch
+    supplierId: "ZiddlemanInc",
+    serviceProductId: "BOSS_WH_COATING",
+    serviceOrderId: "BOSS_WH_SUB_PO",
+    dispatchId: "BOSS_WH_SHIP_SUB",
+    vendorFacilityId: "BOSS_WH_VENDOR"
 }
 // The demo users of each capability group (each also in BOSS_MANUFACTURING), the administrator, the plant display (no
 // root) and the other organization's reader.
@@ -49,7 +55,9 @@ const users = {
     display: "manufacturing.display",
     services: "manufacturing.services",
     // P6: a production reader with Accounting's ACCOUNTING_VIEW
-    finance: "manufacturing.finance"
+    finance: "manufacturing.finance",
+    // P14: a production reader in Purchasing's buyer group (with Products' supplier-price read)
+    buyer: "manufacturing.buyer"
 }
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
@@ -199,6 +207,24 @@ function routeFixtures() {
     mounts.push(
         ["WorkCenters/RequestDetail", shared + "RequestDetail.xml"],
         ["WorkCenters/WorkItemDetail", shared + "WorkItemDetail.xml"]
+    )
+    // P14: the Subcontracting area (SubcontractOperations by default), the outside processing of the Warehouse demo's coating
+    // operation and its instructions, and the shared supplier, order and shipment screens with the Manufacturing context on
+    // Ziddleman, the demo's service order and its subcontract dispatch
+    const operation = {workEffortId: ids.operationId}
+    Object.assign(routes, {
+        Subcontracting: {text: "Outside processing"},
+        "Subcontracting/SubcontractOperations": {text: "Outside processing"},
+        "Subcontracting/SubcontractDetail": {parameters: operation, text: "Coating at Ziddleman"},
+        "Subcontracting/SubcontractInstructions": {parameters: Object.assign({kind: "dispatch"}, operation), text: "Coating"},
+        "Subcontracting/Supplier360": {parameters: {vendorPartyId: ids.supplierId}, text: "Ziddleman"},
+        "Subcontracting/OrderDetail": {parameters: {orderId: ids.serviceOrderId}, text: ids.serviceOrderId},
+        "Subcontracting/ShipmentDetail": {parameters: {shipmentId: ids.dispatchId}, text: ids.dispatchId}
+    })
+    mounts.push(
+        ["Subcontracting/Supplier360", shared + "Supplier360.xml"],
+        ["Subcontracting/OrderDetail", shared + "OrderDetail.xml"],
+        ["Subcontracting/ShipmentDetail", shared + "ShipmentDetail.xml"]
     )
     return {routes, mounts}
 }

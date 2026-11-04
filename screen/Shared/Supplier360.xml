@@ -17,20 +17,34 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="vendorPartyId"/>
     <parameter name="organizationPartyId"/>
     <always-actions>
-        <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
-        <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
-        <set field="appRoot" from="sharedMountContext.appRoot"/>
-        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
-        <set field="printBase" from="sharedMountContext.printBase"/>
-        <!-- Warehouse's mount (Warehouse/Receiving/Supplier360, crosscut §3.3 Warehouse row) has its own read: contact, orders,
-            receipts, rejections and returns, no price (ironstone.warehouse.ReceiptServices.get#SupplierReceiving) -->
-        <if condition="appRoot == 'Warehouse'">
+        <!-- Manufacturing's mount (Manufacturing/Subcontracting/Supplier360, crosscut §3.3 Manufacturing row, impl-manufacturing
+            P14) has its own read: contact and the supplier's subcontract orders, their price only for a buyer
+            (ironstone.manufacturing.SubcontractServices.get#SupplierContext over find#SubcontractOperations) -->
+        <if condition="appRoot == 'Manufacturing'">
             <then>
-                <service-call name="ironstone.warehouse.ReceiptServices.get#SupplierReceiving"
+                <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                        out-map="sharedMountContext"/>
+                <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+                <service-call name="ironstone.manufacturing.SubcontractServices.get#SupplierContext"
                         in-map="{vendorPartyId:vendorPartyId}" out-map="context"/>
             </then>
             <else>
-                <service-call name="ironstone.products.SupplierServices.get#SupplierDetail" in-map="context" out-map="context"/>
+                <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
+                <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
+                <set field="appRoot" from="sharedMountContext.appRoot"/>
+                <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+                <set field="printBase" from="sharedMountContext.printBase"/>
+                <!-- Warehouse's mount (Warehouse/Receiving/Supplier360, crosscut §3.3 Warehouse row) has its own read: contact,
+                    orders, receipts, rejections and returns, no price (ironstone.warehouse.ReceiptServices.get#SupplierReceiving) -->
+                <if condition="appRoot == 'Warehouse'">
+                    <then>
+                        <service-call name="ironstone.warehouse.ReceiptServices.get#SupplierReceiving"
+                                in-map="{vendorPartyId:vendorPartyId}" out-map="context"/>
+                    </then>
+                    <else>
+                        <service-call name="ironstone.products.SupplierServices.get#SupplierDetail" in-map="context" out-map="context"/>
+                    </else>
+                </if>
             </else>
         </if>
     </always-actions>
@@ -41,7 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
         <entity-find-one entity-name="mantle.party.Organization" value-field="buyerOrganization" cache="true">
             <field-map field-name="partyId" from="organizationPartyId"/>
         </entity-find-one>
-        <set field="canOffer" from="sharedMountContext.capabilities.supplierPriceEdit"/>
+        <set field="canOffer" from="appRoot != 'Manufacturing' &amp;&amp; !!sharedMountContext.capabilities.supplierPriceEdit"/>
+        <set field="subcontractSummary" from="appRoot == 'Manufacturing' ? (subcontractRows?.length ? subcontractRows.length
+                + ' outside-processing operations' : 'No outside processing yet') : ''"/>
         <set field="receivingSummary" from="[orderRows?.length ? orderRows.length + ' open orders' : 'No open order',
                 receiptRows?.length ? receiptRows.length + ' receipt lines' : '',
                 rejectionRows?.length ? rejectionRows.length + ' with rejections' : ''].filter(Boolean).join(' · ')"/>
@@ -54,7 +70,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <container style="col-12 col-md m-record-title">
                     <label text="${supplier.supplierName}" type="h5"/>
                     <label text="Supplier to ${buyerOrganization?.organizationName || organizationPartyId}" type="p"
-                            style="text-caption m-muted q-mb-none" condition="appRoot != 'Warehouse'"/>
+                            style="text-caption m-muted q-mb-none" condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"/>
+                    <label text="${subcontractSummary}" type="p" style="text-caption m-muted q-mb-none"
+                            condition="appRoot == 'Manufacturing'"/>
                     <label text="${receivingSummary}" type="p" style="text-caption m-muted q-mb-none"
                             condition="appRoot == 'Warehouse'"/>
                 </container>

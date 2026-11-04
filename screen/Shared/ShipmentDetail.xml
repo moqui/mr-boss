@@ -32,7 +32,11 @@ along with this software (see the LICENSE.md file). If not, see
     receipt and supplier return rows, impl-warehouse P14) a return's shipment: its return items, Receive into quarantine or
     Send back the stock each item names, Ship, receipts or issues, inspections, packages and tracking
     (ironstone.warehouse.ReturnServices.get#ReturnShipmentDetail; template/WarehouseReturnDetail.xml). The Warehouse branches
-    are tried in one order: transfer, return, receipt, outbound. -->
+    are tried in one order: transfer, return, receipt, outbound. Manufacturing mounts it at
+    Manufacturing/Subcontracting/ShipmentDetail (crosscut §3.8 Manufacturing row, impl-manufacturing P14), read only: a
+    subcontract dispatch or return of the user's work orders with its lines, run and operation, vendor-custody facility,
+    custodian and owner (mantle.work.ProductionServices.get#SubcontractShipment; template/ManufacturingSubcontractParts.xml);
+    dispatch and return happen at Warehouse's SubcontractShipmentDetail. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -89,6 +93,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="outboundFound" from="!!outboundFound"/>
             </if>
         </if>
+        <!-- Manufacturing (crosscut §3.8 Manufacturing row, impl-manufacturing P14): a subcontract dispatch or return, read only -->
+        <if condition="appRoot == 'Manufacturing'">
+            <service-call name="mantle.work.ProductionServices.get#SubcontractShipment" in-map="{shipmentId:shipmentId}"
+                    out-map="manufacturingShipmentOut" transaction="force-new" ignore-error="true"/>
+            <set field="manufacturingShipment" from="manufacturingShipmentOut?.subcontractShipment || null"/>
+        </if>
     </actions>
     <widgets>
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
@@ -96,7 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseOutbound" location="component://mr-boss/template/WarehouseShipmentDetail.xml"/>
         <section-include name="WarehouseReturnShipment" location="component://mr-boss/template/WarehouseReturnDetail.xml"/>
         <section-include name="WarehouseTransfer" location="component://mr-boss/template/WarehouseTransferDetail.xml"/>
+        <section-include name="ManufacturingShipment" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
         <label text="This shipment is not available in this app." type="p"
-                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse'"/>
+                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"/>
     </widgets>
 </screen>

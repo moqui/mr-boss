@@ -12,17 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- SupplyPlanning (design-crosscut §3.20, CX-PLANNING; design-manufacturing §7 SupplyPlanning; impl-manufacturing P13): the
-    shared supply plan of an organization's facility set, split as the design lays it out: the plan's parameters and
+<!-- SupplyPlanning (design-crosscut §3.20, CX-PLANNING; design-manufacturing §7 SupplyPlanning; impl-manufacturing P13):
+    the shared supply plan of an organization's facility set, split as the design lays it out: the plan's parameters and
     freshness above the suggestions (PlanSuggestions: buy, make and transfer, with their exceptions), the held quantity
-    pending release, and the selected suggestion's demand and supply (DemandSupply); Recalculate (PlanParameters), Schedule
-    (PlanSchedule) and Convert on the selected suggestions (ConvertSuggestions). It reads and writes through
+    pending release, and the selected suggestion's demand and supply (DemandSupply); Recalculate (PlanParameters),
+    Schedule (PlanSchedule) and Convert on the selected suggestions (ConvertSuggestions). It reads and writes through
     mantle.product.SupplyPlanningServices, which checks SUPPLY_PLAN_RUN to run and schedule, PRODUCTION_PLAN to convert
-    make suggestions and the organization again. Manufacturing mounts it at Manufacturing/Planning/SupplyPlanning with its
-    context: the plant (the selected one, or plantId) is the facility set, checked by
-    ironstone.manufacturing.AccessServices first; buy and transfer suggestions are shown with their supplier or source and
-    converted where Purchasing and Warehouse mount this screen (impl-manufacturing §7). Other apps add their contexts when
-    they are built. -->
+    make suggestions, PURCHASE_ORDER_EDIT to convert outside processing and the organization again. Manufacturing mounts
+    it at Manufacturing/Planning/SupplyPlanning with its context: the plant (the selected one, or plantId) is the
+    facility set, checked by ironstone.manufacturing.AccessServices first; buy and transfer suggestions are shown with
+    their supplier or source and converted where Purchasing and Warehouse mount this screen (impl-manufacturing §7); an
+    outside-processing request (P14) is converted here by a buyer (BOSS_PURCHASING_BUYER) into a draft service purchase
+    order line. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Supply planning"
@@ -72,8 +73,14 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="convertSuggestions">
         <actions>
             <if condition="appRoot == 'Manufacturing'">
+                <!-- a planner converts make suggestions, a buyer outside processing (P14); Mantle checks each suggestion's -->
                 <service-call name="ironstone.manufacturing.AccessServices.check#Record"
-                        in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'plan'}"/>
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId}"/>
+                <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" out-map="convertAccess"
+                        in-map="{appRoot:appRoot, plantId:plantId}"/>
+                <if condition="!convertAccess.capabilities.plan &amp;&amp; !convertAccess.capabilities.buy">
+                    <return error="true" message="PERMISSION_DENIED: PRODUCTION_PLAN or PURCHASE_ORDER_EDIT is required"/>
+                </if>
                 <if condition="runFacilityId">
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'facility', recordId:runFacilityId}"/>
@@ -87,8 +94,17 @@ along with this software (see the LICENSE.md file). If not, see
             <iterate list="converted.results" entry="result">
                 <if condition="result.ok">
                     <then>
-                        <message type="success">${result.resultCode == 'EXISTING' ? 'Already covered by' : 'Made'} work order
-                            ${result.workEffortId} for suggestion ${result.planningSuggestionId}</message>
+                        <if condition="result.orderId">
+                            <then>
+                                <message type="success">${result.resultCode == 'EXISTING' ? 'Already on' : 'Added to draft'}
+                                    purchase order ${result.orderId} line ${result.orderItemSeqId} for suggestion
+                                    ${result.planningSuggestionId}</message>
+                            </then>
+                            <else>
+                                <message type="success">${result.resultCode == 'EXISTING' ? 'Already covered by' : 'Made'} work
+                                    order ${result.workEffortId} for suggestion ${result.planningSuggestionId}</message>
+                            </else>
+                        </if>
                     </then>
                     <else>
                         <message type="warning">Suggestion ${result.planningSuggestionId}: ${result.message}</message>
@@ -128,8 +144,16 @@ along with this software (see the LICENSE.md file). If not, see
             server-derived capabilities, which its transitions check (as Shared/RequestDetail) -->
         <set field="mayRun" from="!!plan?.canRun &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
         <set field="maySchedule" from="!!plan?.canSchedule &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
-        <set field="convertible" from="appRoot == 'Manufacturing' &amp;&amp; !can.plan ? []
-                : suggestions.filter(row =&gt; row.canConvert)"/>
+        <!-- on the Manufacturing mount a planner converts make suggestions and a buyer outside processing (P14) -->
+        <set field="convertible" from="suggestions.filter(row =&gt; row.canConvert &amp;&amp; (appRoot != 'Manufacturing'
+                || (row.methodEnumId == 'PsmOutside' ? !!can.buy : !!can.plan)))"/>
+        <set field="convertsOutside" from="convertible.some(row =&gt; row.methodEnumId == 'PsmOutside')"/>
+        <set field="convertsMake" from="convertible.some(row =&gt; row.methodEnumId != 'PsmOutside')"/>
+        <set field="convertText" from="convertsOutside &amp;&amp; convertsMake ? 'Convert' : convertsOutside
+                ? 'Make draft purchase order lines' : 'Make draft work orders'"/>
+        <set field="convertConfirm" from="convertsOutside
+                ? 'Make a draft purchase order line of its supplier for each selected outside-processing request, and a draft work order for each make suggestion? The orders are placed in Purchasing; buy and transfer suggestions are left for Purchasing and Warehouse.'
+                : 'Make a draft work order for each selected make suggestion? Buy and transfer suggestions are left for Purchasing and Warehouse.'"/>
         <!-- the list's filter, apart from the rows' own method -->
         <set field="filterMethodEnumId" from="methodEnumId || null"/>
         <set field="filterExceptionsOnly" from="exceptionsOnly || null"/>
@@ -145,6 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appLinks" from="sharedLinks || {}"/>
         <set field="runLinkPath" from="appLinks['WorkOrders/WorkOrderDetail'] || appLinks.Home || '.'"/>
         <set field="runLinkDetail" from="!!appLinks['WorkOrders/WorkOrderDetail']"/>
+        <set field="orderLinkPath" from="appLinks['Subcontracting/OrderDetail'] || null"/>
         <set field="operationKey" from="'plan-' + ec.user.randomString(24)"/>
         <set field="scheduleDefaults" from="{intervalHours:schedule.intervalHours || 24, horizonDays:schedule.horizonDays,
                 active:schedule.active || 'N', netHeldQuantity:schedule.netHeldQuantity || 'N',
@@ -364,7 +389,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                     parameter="planningSuggestionIdList" list-mode="true"
                                                     condition="convertible.length">
                                                 <action>
-                                                    <dialog button-text="Convert" title="Convert the selected make suggestions"/>
+                                                    <dialog button-text="Convert" title="Convert the selected suggestions"/>
                                                     <form-single name="ConvertSuggestions" transition="convertSuggestions">
                                                         <field name="plantId" from="plantId">
                                                             <default-field title="">
@@ -394,8 +419,7 @@ along with this software (see the LICENSE.md file). If not, see
                                                         </field>
                                                         <field name="submit">
                                                             <default-field title="">
-                                                                <submit text="Make draft work orders"
-                                                                        confirmation="Make a draft work order for each selected make suggestion? Buy and transfer suggestions are left for Purchasing and Warehouse."/>
+                                                                <submit text="${convertText}" confirmation="${convertConfirm}"/>
                                                             </default-field>
                                                         </field>
                                                     </form-single>
@@ -477,6 +501,10 @@ along with this software (see the LICENSE.md file). If not, see
                                                             condition="supplies.length &amp;&amp; supplies[0].workEffortId"
                                                             parameter-map="runLinkDetail ? {workEffortId:supplies[0].workEffortId}
                                                                 : {lookupType:'run', lookupId:supplies[0].workEffortId}"/>
+                                                    <link url="${orderLinkPath}" text="${supplies.length ? 'Purchase order ' +
+                                                        supplies[0].orderId : ''}" link-type="anchor"
+                                                            condition="supplies.length &amp;&amp; supplies[0].orderId &amp;&amp; orderLinkPath"
+                                                            parameter-map="{orderId:supplies[0].orderId}"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">
