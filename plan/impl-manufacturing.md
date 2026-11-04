@@ -219,7 +219,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | — |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | — |
-| P13 Supply planning | Mantle, BOSS | SupplyPlanning | — |
+| P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | — |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
 | P16 Reports | Mantle, BOSS | Reports and its eight reports, Home's Kpis | — |
@@ -1118,6 +1118,129 @@ and service names, and `Shared/SupplyPlanning`, which Purchasing mounts when it 
   - converting the make suggestion creates a draft run with its RequirementSupply and lines, and a second conversion
     of the same demand answers the existing run;
   - a stale run is refused conversion until recalculated, and an obsolete product is an exception.
+
+**Built Nov 3 (P13).**
+- Mantle records (`entity/SupplyPlanningEntities.xml`, a new file): `PlanningRun` (organization, facility set key, plan
+  date, horizon, time fence, freshness limit, whether held stock was netted, `isCurrent`, revision, superseded by, counts,
+  findings), `PlanningRunFacility`, `PlanningSuggestion` (requirement, product, facility, method PsmMake/PsmBuy/PsmTransfer,
+  state PssProposed/Partial/Converted/Exception/Superseded, net, gross and available quantity, pending-release quantity
+  and date, required and release dates, lead and preparation days, level, parent suggestion, BOM, routing, supplier or
+  source facility, exception code and message, warnings, provenance JSON), `RequirementSupply` (RstProductionRun,
+  RstPurchaseOrder, RstPurchaseRequest, RstTransfer; quantity, operation key, dated) and `PlanSchedule` (one per
+  organization, audit-logged); `Requirement.quantityUomId`. The organization is a RequirementParty OrgInternal row.
+- `mantle.product.SupplyPlanningServices` over `SupplyPlanning.js`:
+  - `run#SupplyPlan` (SUPPLY_PLAN_RUN): under the organization's lock, supersedes the current run of the facility set
+    (its open suggestions PssSuperseded; their still-proposed requirements reused for the same facility and product, the
+    rest RqmtStRejected). Each facility of the set nets with the facilities under it (its lines). Demand: open firm sales
+    lines less cancelled, issued and reserved-against-stock (a kit's line as its kit components'), each production run's
+    remaining WeptConsume (drafts too), the minimum stock and the planned makes of the level above; supply: available
+    stock, remaining WeptProduce and open purchase lines; a kit assembly run's rows are shown, not netted; held
+    (quarantined) stock is a pending-release line with its inspection's due date, netted only by the schedule's option
+    when due within the lead time. Levels from each product's structure (the deepest parent plus one), each product netted
+    once; a shortage is a transfer from another facility of the set with a surplus, else make (released BOM; its
+    `get#BomExplosion` requirements, stopping at non-phantom sub-assemblies and blowing phantoms through, become the next
+    level's demand at its release date), else buy (a current purchase price of another party), else NO_SOURCE. Release
+    date = required date less the BOM's lead and preparation days, or with PltRouting the routing's standard hours as
+    days of 24 hours rounded up; LATE_RELEASE and INSIDE_TIME_FENCE warn. `check#ProductUsable` (Replenish, Produce,
+    Purchase) gives PRODUCT_NOT_USABLE; a cycle BOM_CYCLE, an explosion finding METHOD_INVALID, several released BOMs
+    METHOD_AMBIGUOUS. Horizon and fence from the schedule or the production policy (P4).
+  - `get#SupplyPlan` (SUPPLY_PLAN_RUN, PRODUCTION_PLAN or PRODUCTION_VIEW): the given or current run with stale (superseded
+    or past the freshness limit) and its reason, the suggestions with covered and remaining quantity, supply links and
+    `canConvert`, the held lines, a selected suggestion's demand and supply, the schedule and the user's actions.
+  - `store#PlanSchedule` (SUPPLY_PLAN_RUN) and `run#ScheduledSupplyPlans` with the `run_ScheduledSupplyPlans` job
+    (`data/SupplyPlanningSetupData.xml`, every 15 minutes): each due active schedule runs as the user who last kept it,
+    one failure named on its schedule.
+  - `convert#PlanningSuggestions` (PRODUCTION_PLAN for make): each suggestion its own transaction
+    (`convert#PlanningSuggestion`, key `operationKey/suggestion`): the requirement locked; covered already answers its
+    run (EXISTING, whoever covered it); otherwise PLAN_STALE, SUGGESTION_EXCEPTION, SUGGESTION_CLOSED and
+    PRODUCT_NOT_USABLE are refused, then `create#ProductionOrder` for the remaining quantity (method as of the plan date
+    or the given date, on the routing's last work center under the facility, else its only work center, else the
+    facility, with the requirement and its single sales line), RequirementSupply, WorkRequirementFulfillment WrfDelivers,
+    the requirement Approved then Ordered, the suggestion PssConverted. Buy and transfer: METHOD_NOT_CONVERTED.
+- BOSS: `Shared/SupplyPlanning` (PlanParameters as Recalculate, PlanSchedule as Schedule, PlanSuggestions with a filter and
+  the row selection's Convert (ConvertSuggestions), Held for inspection, DemandSupply for the product link chosen), taking
+  `appRoot`, its Manufacturing branch checking `ironstone.manufacturing.AccessServices` (`get#SharedContext` with the
+  plant, `check#Record` facility with `supplyPlan` or `plan`) before the Mantle verb; mounted as `Planning`'s default tab
+  at `Manufacturing/Planning/SupplyPlanning`. A converted suggestion links its work order to Home's lookup until
+  `WorkOrders/WorkOrderDetail` is in sharedLinks (P5a), then to it. `Manufacturing.js` P13 block: the route and the
+  `planningMethods` choice. Home's Due work and shortages box links Supply planning for SUPPLY_PLAN_RUN holders with the
+  plant; P5b's shortage rows link it the same way (the hook is commented in Home.xml).
+- Specs: Mantle `test/product/SupplyPlanning.spec.js` (9 features, about 9 s): make, sub-assembly and buy suggestions
+  with levels, the lead-time release date, the phantom blown through, the kit's demand and the kit run not netted,
+  pending release; obsolete and no-source exceptions; demand and supply; conversion with its run, lines,
+  RequirementSupply and WrfDelivers, the second conversion EXISTING and buy refused; permissions and the other
+  organization; a new run netting the draft on the line, superseding and PLAN_STALE; the held-quantity option on and off;
+  a transfer between two facilities; the scheduled run. BOSS `ManufacturingPlanning` (4: the usable-when items through the
+  screen and its transition), `ManufacturingPlanningFixtures` (the walk's demand), ManufacturingAccess's P13 section (2),
+  ManufacturingSpecLib's `planningFixture` and routes; the walk `ManufacturingPlanningWalk` (3, with 390 px).
+- Tests run: Mantle SupplyPlanning, ManufacturingServices, WarehouseProduction, ProductMethods, ProductionPolicy,
+  ReportLookups (47 features, pass); BOSS ManufacturingPlanning, ManufacturingPlanningFixtures, ManufacturingAccess,
+  ManufacturingShell, ManufacturingWorkCenters, AppStructure, TuiRender, WarehouseProductionFixtures, WarehouseAccess
+  (246 features, pass); the walk ManufacturingPlanningWalk (3, pass, also on a rerun over the kept database).
+  `moqui lint --screens`: no flagged site in the changed screens (informational anchors only). No `ss-inventory.md` row
+  maps to SupplyPlanning; `usl-inventory.md` gained the five services.
+- Decisions:
+  - Netting reads the sources `get#InventoryProjectedInfo` sums from the entities, in the run's transaction, rather than
+    calling it (F-P13-1); the formula is the same (available − open demand not reserved − remaining consumption +
+    remaining output), plus open purchase lines and the minimum stock.
+  - One requirement per facility and product while it is only proposed: a later run reuses it, so a requirement's
+    identity (and its RequirementOrderItem lines) survives recalculation; one no longer needed is rejected, never deleted.
+  - The held-quantity option is the schedule's only (not a run parameter), as §4 has it; it applies to a manual run too.
+  - A transfer suggestion comes only from the surplus of another facility of the same run's set.
+  - The schedule runs as the user who last kept it, with that user's permissions, so no system path skips the checks.
+  - Readers are SUPPLY_PLAN_RUN, PRODUCTION_PLAN or PRODUCTION_VIEW holders (`readPermissions`, which Purchasing and
+    Warehouse extend with their view permissions); converters by method in `convertPermissions` (P14 adds the
+    outside-processing buy).
+  - F27: Product360's Replenishment suggestions are not P13's. That tab is the Warehouse context; it reads
+    `get#SupplyPlan` with `productId` when Warehouse mounts SupplyPlanning (§7).
+- Findings (provisional):
+  - **F-P13-1** `get#InventoryProjectedInfo` reads the search index (available in specs on the Postgres search backend, but
+    filled by the data feed after commit, so a spec must index by hand). It is not called: the index lags the commit, so
+    a run just converted would be suggested again; its run documents carry no purpose, so kit assemblies cannot be told
+    apart; it files a run under its facility's parent, so a run on the warehouse itself is missed; it counts every sales
+    line not completed, quotes and carts too, and no purchase supply. Design §7 SupplyPlanning and crosscut §3.20 now
+    say netting reads those sources directly.
+  - **F-P13-2** `create#ProductionOrder` takes `planningSuggestionId` but stores only `demandRequirementId` (and the
+    order line); the suggestion's run is RequirementSupply's `workEffortId`, with its `planningSuggestionId`.
+  - **F-P13-3** `create#ProductionOrder`'s operation key is scoped per user (StockPosting `storedKey`), so it cannot keep
+    two users from covering one demand; the requirement's lock and covered quantity do.
+  - **F-P13-4** No supplier lead time exists to date a buy suggestion; its release date is its required date until
+    Purchasing adds supplier lead times (impl-purchasing).
+  - **F-P13-5** A kit assembled for an open order has issued its components (stock is lower) while its order is still
+    demand, so the components count twice until the order ships; kit assemblies are made at packing, so the window is
+    short. Left.
+  - **F-P13-6** In a form-list row, a link to `.` carries the row's field of the same name as a screen parameter
+    (`methodEnumId`), which made Explain filter the list to the row's method; the link passes the filter values
+    explicitly (an empty value clears).
+  - **F-P13-7** The routing lead time (PltRouting) is the standard hours as days of 24 hours, rounded up, until P12
+    brings the work calendar; the time fence only warns (INSIDE_TIME_FENCE).
+  - **F-P13-8** `ManufacturingPlanningFixtures` runs in the whole mr-boss suite as Warehouse's fixtures do, adding a
+    Retail sales order of its own product at ZIRET_WH (a new order id per load, since the walks' database outlives a
+    run, F-P4-3).
+- **Review (Nov 3).** Fixed (mr-mantle `Manufacturing P13 review` commit, BOSS screen in this one):
+  - (high) A sales line's reservation was subtracted less its unavailable part, which reserve#AssetForOrderItem already
+    leaves as a negative available to promise, so a backordered quantity counted twice (10 ordered on 6 in stock planned
+    8); the whole reservation not issued is subtracted now, as `get#InventoryProjectedInfo`'s orderNotReserved does.
+  - (medium) A kit's line subtracted its components' reservations (component units) and its own issuances from the kit
+    quantity; issuances are now taken in kit units and reservations from each component's demand.
+  - (medium) Transfers in transit were not supply: the origin's stock leaves its available to promise at issue, so a
+    transfer on its way to a planned facility was suggested again. Each ShpTpTransfer line to a facility of the node now
+    counts its issuances less its receipts (accepted and rejected) as supply ("Transfer in transit").
+    `get#InventoryProjectedInfo` counts no transfer.
+  - (medium) `run#ScheduledSupplyPlans`: a schedule whose user could not sign in (disabled, terminated, password to
+    change) left the login's error on the job's messages, so the next write threw and the whole job failed and rolled
+    back, every 15 minutes, with no message kept; the login is in its own error frame now (SCHEDULE_USER_UNAVAILABLE on
+    that schedule, the others run), and the job logs out after the last schedule when it had no user of its own.
+  - (low) `Shared/SupplyPlanning` showed Recalculate, Schedule and Convert from Mantle's answer only; on the Manufacturing
+    mount they also need the context's server-derived capabilities (`supplyPlan`, `plan`) its transitions check.
+  - Specs: SupplyPlanning gained the reservation-and-transfer and the schedule-user features (11, pass; both fail
+    without the fixes); ManufacturingPlanning and ManufacturingAccess (61, pass); the walk ManufacturingPlanningWalk (3,
+    pass); `moqui lint --screens` informational only.
+  - Left: the identity of a scheduled run is the user who last kept the schedule. It re-checks that user's
+    SUPPLY_PLAN_RUN and organization at run time, but the run stops (named on the schedule) when that user is disabled,
+    leaves or must change a password, and whoever saves the schedule takes it over; a planner should re-save it then.
+    The Warehouse kit assembly (WepAssembling) is not shown with the kit runs; a transfer line not yet issued is
+    neither demand nor supply (its stock is still at the origin).
 
 ### P14 — Subcontracting
 

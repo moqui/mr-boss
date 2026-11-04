@@ -846,6 +846,14 @@ function enumOptions(enumTypeId, term, selected) {
 // A work order's costs (ProductionCosts), mounted at the root until WorkOrderDetail (P5) has it as a tab.
 linkPaths.push("ProductionCosts")
 
+// ===== P13: supply planning =====
+// The Planning area's shared SupplyPlanning (impl-manufacturing P13), whose route is in sharedLinks, and the closed lists of
+// its forms: the suggestion methods.
+linkPaths.push("Planning/SupplyPlanning")
+Object.assign(choiceSources, {
+    planningMethods: (userScope, term, selected) => enumOptions("PlanningSuggestionMethod", term, selected)
+})
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

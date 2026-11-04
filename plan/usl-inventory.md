@@ -934,7 +934,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
 | EquipmentServices | update#AssetMaintenanceContent | Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
 | EquipmentServices | save#AssetMaintenanceContentFile | Shared/RecordFiles |  |
-| InventoryReportServices | get#InventoryProjectedInfo | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/SupplyPlanning; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; Shared/SupplyPlanning; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Shared/InventoryAvailability/Projection; Warehouse/Inventory/Availability/Projection |
+| InventoryReportServices | get#InventoryProjectedInfo | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/SupplyPlanning; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; Shared/SupplyPlanning; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Shared/InventoryAvailability/Projection; Warehouse/Inventory/Availability/Projection (Shared/SupplyPlanning nets the same sources from the entities, impl-manufacturing P13) |
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
@@ -1557,6 +1557,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/ProductionServices | record#ProductionCostEvent |  | (internal: issue#ProductionMaterial, return#UnusedMaterial and receive#ProductionOutput, so receive#SubcontractOutput too, call it inside their transaction; Manufacturing P6) |
 | work/ProductionServices | get#ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts | Manufacturing/ProductionCosts (Costs; the estimate with cost read, actuals with ACCOUNTING_VIEW; mounted at the root until WorkOrderDetail, P6) |
 | work/ProductionServices | review#ProductionCosts | Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts | Manufacturing/ProductionCosts (CloseReview, P6) |
+| product/SupplyPlanningServices | run#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Recalculate, Manufacturing P13) |
+| product/SupplyPlanningServices | get#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (suggestions, held stock, demand and supply) |
+| product/SupplyPlanningServices | store#PlanSchedule | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Schedule) |
+| product/SupplyPlanningServices | run#ScheduledSupplyPlans |  | the run_ScheduledSupplyPlans job |
+| product/SupplyPlanningServices | convert#PlanningSuggestions | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Convert, make suggestions through create#ProductionOrder) |
 | facility/FacilityServices | get#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products (with removeLocation) |
 | facility/FacilityServices | store#Facility | Maintenance/Facilities; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/Facilities; Warehouse/Locations/FacilityDetail; Warehouse/Locations/FacilityDetail/Children |

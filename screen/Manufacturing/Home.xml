@@ -74,6 +74,12 @@ along with this software (see the LICENSE.md file). If not, see
         </dashboard>
         <container-box>
             <box-header title="Due work and shortages${manufacturing.plantName ? ' at ' + manufacturing.plantName : ''}"/>
+            <!-- P13: shortages open the plant's supply plan (design Home Actions); P5b's shortage rows link it the same way -->
+            <box-toolbar>
+                <link url="${sharedLinks['Planning/SupplyPlanning']}" text="Supply planning" link-type="anchor"
+                        icon="sym_o_view_timeline" parameter-map="{plantId:manufacturing.plantId}"
+                        condition="manufacturing.capabilities.supplyPlan"/>
+            </box-toolbar>
             <box-body>
                 <label text="No work is due." type="p" condition="!queueRows.length"/>
                 <section name="QueueList" condition="queueRows.length">
