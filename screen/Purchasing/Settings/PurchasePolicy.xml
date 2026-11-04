@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
                         quoteExpiryWarnDays:quoteExpiryWarnDays, reminderDays:reminderDays, lockSentOrders:lockSentOrders,
                         supplierApprovalRequired:supplierApprovalRequired, unapprovedSupplierEnumId:unapprovedSupplierEnumId,
                         approvalGateEnabled:approvalGateEnabled, selfApprovalAllowed:selfApprovalAllowed,
-                        substitutionEnumId:substitutionEnumId}"/>
+                        substitutionEnumId:substitutionEnumId, planBuyToRequest:planBuyToRequest}"/>
             <message type="success">Buying policy saved</message>
         </actions>
         <default-response url=".">
@@ -291,6 +291,16 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <!-- P14b: the supply plan's buy conversion to purchase requests for approval -->
+                                <field name="planBuyToRequest">
+                                    <default-field title="Plan buys go to purchase requests"
+                                            tooltip="Converting a buy suggestion makes a purchase request sent for approval; empty takes No (a draft purchase order)">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="effectiveFromDate">
                                     <default-field title="Effective from" tooltip="Leave empty to start now">
                                         <date-time/>
@@ -321,7 +331,10 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field-ref name="selfApprovalAllowed"/>
                                         <field-ref name="lockSentOrders"/>
                                     </field-row>
-                                    <field-ref name="substitutionEnumId"/>
+                                    <field-row>
+                                        <field-ref name="substitutionEnumId"/>
+                                        <field-ref name="planBuyToRequest"/>
+                                    </field-row>
                                     <field-row>
                                         <field-ref name="effectiveFromDate"/>
                                         <field-ref name="changeReason"/>

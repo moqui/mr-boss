@@ -447,6 +447,9 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="!purchaseReceiptRows.length"/>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P14b: the customer order lines its lines were bought for, with Reserve (R-PUR-37) -->
+                        <section-include name="PurchasingReceiptPegs"
+                                location="component://mr-boss/template/PurchasingReceiptPegs.xml"/>
                         <section name="PurchaseReceiptInspections" condition="purchaseInspectionRows.length">
                             <widgets>
                                 <container-box>

@@ -71,6 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="purchaseFinishReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
     <transition-include name="purchaseReceiveAll" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
     <transition-include name="purchaseBillReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <!-- Purchasing (impl-purchasing P14b): reserve received stock for the customer order line it was bought for -->
+    <transition-include name="purchaseReservePeg" location="component://mr-boss/template/PurchasingReceiptPegs.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
