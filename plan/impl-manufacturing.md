@@ -376,6 +376,9 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   - Specs: ManufacturingAccess, ManufacturingShell, Tasks, TodayPanel, Requests, WorkItems, WorkItemDetail, TimeEntries,
     EventDetail, AppStructure, WarehouseAccess (BOSS, 294 features), ManufacturingServices, WarehouseProduction,
     ProductMethods (Mantle, 26), all pass.
+- **Wave 1 suites (Nov 3, on master after the merge):** standalone mr-mantle 1,437 passed, 2 failed (the baseline
+  WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,643 passed; `moqui lint --screens` clean; BOSS client walks
+  125 passed.
 
 ### P2 — Methods
 
