@@ -1,0 +1,4 @@
+# The regression budget in seconds of feature time (docs/Build-Test.md, "The regression budget"), set from
+# the measured ./moq test-all of Nov 4, 2026 (on 4 workers). Raise it only with the user's agreement.
+server = 220
+client = 36
