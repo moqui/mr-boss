@@ -842,6 +842,10 @@ function enumOptions(enumTypeId, term, selected) {
     )
 }
 
+// ===== P6: cost evidence =====
+// A work order's costs (ProductionCosts), mounted at the root until WorkOrderDetail (P5) has it as a tab.
+linkPaths.push("ProductionCosts")
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

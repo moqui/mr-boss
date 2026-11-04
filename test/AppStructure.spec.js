@@ -378,6 +378,10 @@ spec({
         for (const [path, location] of manufacturingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml")))
                 screens.push([`${base}/Manufacturing.xml`, path, location])
+        // a Manufacturing screen file mounted at another path for now (ManufacturingSpecLib moved, P6)
+        for (const screen of screens)
+            if (screen[0].endsWith("/Manufacturing.xml") && manufacturingFixtures.moved[screen[1]])
+                screen[1] = manufacturingFixtures.moved[screen[1]]
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"

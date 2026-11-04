@@ -212,7 +212,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
-| P6 Cost evidence | Mantle, BOSS | ProductionCosts | — |
+| P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
@@ -817,6 +817,96 @@ steps 19 and 20).
     transaction, and a retried issue writes none;
   - a cost estimator sees the frozen estimate and no actuals, and a financial reader sees both;
   - a review request notifies Accounting with the run and source revision.
+
+**Built Nov 3 (P6).**
+- Mantle records (`entity/ProductionCostEntities.xml`, a new file): `mantle.work.production.ProductionCostEvent`, unique by
+  source entity, source id, cost component and source revision (PRODCOSTEVT_SOURCE), with the organization, run, operation,
+  line, event type, component, product, quantity and unit, the rate and its rate row (`rateEntityName`, `rateId`: the asset's
+  cost, the frozen standard; later a WorkCenterRate or RateAmount), the amount signed for the run's WIP, the valuation
+  (`PcvValued`, `PcvUnvalued`) and ledger state (`PclPosted` by its movement's hook, `PclNotPosted`, `PclAwaitingClose`,
+  `PclClosePosted`), the hook's `acctgTransId` and P15's `closeAcctgTransId`, the stock, time, order and invoice references,
+  `originalCostEventId` for a delta or reversal, `reasonCode`, the event and accounting dates and `afterClose`;
+  `ProductionCostAllocation` (event, output line and receipt, policy row, destination, amount, operation key, ledger and
+  reversal links), with no writer until P15; the run's audit-logged `productionCostReviewStatusId`, date, user, revision,
+  proposed accounting date and note. `data/ProductionCostData.xml`: the event types (issue, return, output), the components
+  (`ProductionCostComponent`: material, labor, machine, outside processing, output), the valuation, ledger and destination
+  enumerations, the ProductionCostReview status type (`PcrRequested`) and the `ProductionCostReview` NotificationTopic.
+- Mantle services (`ProductionCosts.js`, three services appended to `ProductionServices.xml`):
+  `record#ProductionCostEvent` (internal, no permission: it derives the event from the source record alone, from a sources
+  table that P7, P10 and P14 extend; a second call answers the first event); `get#ProductionCosts` (PRODUCTION_VIEW,
+  PRODUCTION_COST_REVIEW or ACCOUNTING_VIEW): the events, the frozen estimate for the output quantity with its components
+  (PRODUCT_COST_VIEW or ACCOUNTING_VIEW), the actuals by component, issued, returned, output relief and WIP balance
+  (ACCOUNTING_VIEW), the estimate against the actual (both), the exceptions (unvalued, not posted, awaiting close) and the
+  review state; amounts, rates and ledger links are left out of each event row without ACCOUNTING_VIEW; `review#ProductionCosts`
+  (PRODUCTION_COST_REVIEW, operation key and expected revision): sets the review fields and sends ProductionCostReview with the
+  run, its revision, the accounting date and the exception counts to the organization's PRODUCTION_COST_POST holders
+  (Payables.js `notify`), a closed period of the accounting date a warning.
+- The hooks (`ProductionServices.xml` only; `Production.js` unchanged): issue#ProductionMaterial, return#UnusedMaterial and
+  receive#ProductionOutput call `recordAll` after their movement, inside its transaction, and answer `productionCostEventId(s)`;
+  return#UnusedMaterial refuses material without a cost before it posts (`requireCost`, COST_UNAVAILABLE). receive#SubcontractOutput
+  issues and receives through those guards, so its material and output write their events with no change.
+- BOSS: `screen/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts.xml` (Costs: the title row with the review chip and the
+  primary Request cost review dialog, CloseReview, with the accounting date, the note, the exception counts and a closed-period
+  warning; Frozen estimate; Actual cost with the estimate against it; Cost events with state chips, amounts and journal entry
+  links for financial readers; the not-available state), mounted hidden at the root as `Manufacturing/ProductionCosts`;
+  Manufacturing.js's P6 block (the link path); the demo user `manufacturing.finance` (Manufacturing reader and
+  `BOSS_ACCOUNTING_READ`).
+- Specs: Mantle `test/work/ProductionCosts.spec.js` (4 features, about 1.5 s: the issue, return, output and retry events with
+  their transactions; material without a cost unvalued, its return and an output receipt without a cost refused; the reads of
+  the estimator, finance reader, reader, another organization and no permission; the review with its refusals, audit row and
+  notice); WarehouseProduction's subcontract feature checks its events. ManufacturingAccess's P6 section (2 features: the three
+  readers through Mantle and the screen with authz enabled, the other organization; the review by the estimator and its refusal
+  for a reader, through check#Record and the verb). ManufacturingSpecLib's route `ProductionCosts` and `moved`, which
+  AppStructure and TuiRender apply to the file walk's path. Client walk `ManufacturingCostsWalk` (3, with 390 px), in suite.js.
+- Tests run: Mantle ProductionCosts, ManufacturingServices, WarehouseProduction, ProductMethods, ProductionPolicy (37, pass);
+  BOSS ManufacturingAccess, AppStructure, TuiRender (78, pass), ManufacturingShell, WarehouseAccess, WarehousePacking,
+  ClientIsolation, ManufacturingWorkCenters (181, pass); walks WarehouseProductionWalk (3) and ManufacturingCostsWalk (3), pass.
+  `moqui lint --screens`: ProductionCosts shows only informational anchor rows.
+- Decisions:
+  - An event is derived from its source, never from values a caller passes, so the internal writer needs no permission and a
+    repeated call is harmless; amounts are the hook transaction's debit total (the quantity times the asset's cost when it posted
+    nothing), signed for WIP.
+  - The output's relief is its own component (`PrcOutput`), so the unique key holds for every source; the other components are
+    the frozen estimate's, so estimate and actual compare by component.
+  - The estimate is read with Products' cost read (PRODUCT_COST_VIEW or ACCOUNTING_VIEW among it; the review aligned it with
+    CostPolicy), so a financial reader sees both.
+  - ProductionCostReview goes to the run organization's PRODUCTION_COST_POST holders, Accounting's cost close posters (F40).
+    It is decided on the record, so it has no approve service.
+  - A review needs a released, started, held or completed run with at least one event; a second request at the same revision
+    is refused until Accounting decides (P15) or the revision changes (P9).
+- Findings (provisional):
+  - **F-P6-1** ProductionCostReview has no BOSS `linkTemplate` and no `<notification-topic>` in a root: its readers are
+    Accounting's posters, who need not open Manufacturing. P15 sets the link to `Accounting/Inventory/ProductionCostClose`, lists
+    the topic in Accounting's shell, and adds the review decisions (returned, closed) to the ProductionCostReview status type.
+  - **F-P6-2** An issue of material without a cost is not refused (the plan names only output and return receipts): it posts
+    nothing (AtrNoAcquireCost) and its event is unvalued and not posted. P15's close should refuse a run with one, as it does
+    unvalued machine runtime.
+  - **F-P6-3** receive#ProductionOutput always has a cost (the frozen standard, else the WIP to date, COST_UNAVAILABLE without),
+    so the F13 output refusal is the event writer's backstop for another path; the return is refused before it posts.
+  - **F-P6-4** An output receipt that costLines splits (the last unit at the remainder) is two AssetReceipts with two
+    transactions, so it writes two events.
+  - **F-P6-5** Movements made before P6 (Warehouse's demo, earlier runs) have no events. Since an event derives from its source
+    alone, a backfill could call record#ProductionCostEvent per movement; not built.
+  - **F-P6-6** For the merge with P5a: ProductionCosts sits in `WorkOrders/WorkOrderDetail/`, so WorkOrderDetail's directory
+    mounts it as its Costs tab (`default-menu-index="6"`). Then remove the root's `ProductionCosts` item, Manufacturing.js's P6
+    link path and ManufacturingSpecLib's `moved`, move the route fixture to `WorkOrders/WorkOrderDetail/ProductionCosts`, drop
+    the page's own title row for WorkOrderDetail's header, and point ManufacturingCostsWalk at the tab.
+  - **F-P6-7** ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run
+    alone it sees no costs and checks the empty state instead of the review request.
+
+- **Review (Nov 3).** Checked: each guard's operation-key replay returns before the hook, so a retry writes no event;
+  `record#ProductionCostEvent` runs in the causing transaction, a refusal rolling back the movement; the unique key; each
+  material event's `acctgTransId` with nothing posted again; the WIP sign; the omitted values; review#ProductionCosts's
+  permission, organization, operation key and revision; the recipients (F40). Decided: the estimate's readers are Products'
+  cost read (CostPolicy: `PRODUCT_COST_VIEW`, `_ESTIMATE`, `_APPROVE`, `ACCOUNTING_VIEW`, `ACCOUNTING_GL_POST`), as
+  ProductStandardCost's owner reads it; BOSS's Accounting readers hold `PRODUCT_COST_VIEW` as well, so §2 holds there. An issue of
+  material without a cost stays unvalued and not posted (F-P6-2): the plan refuses only receipts, §2 lets an existing service gain
+  a refusal only behind a flag, and §4 records unvalued facts for P15 to refuse. Fixed: the estimate left out overhead, so its
+  components did not add to its total; it now lists `PrcOverhead` (seeded, estimate only) and leaves it out of the comparison;
+  the estimate's read widened to CostPolicy's set; the spec checks another organization's poster gets no notice. Left: a zero
+  acquire cost is unvalued on an issue (the hook posts nothing) but valued at zero on a return (the hook posts zero), a
+  difference of Mantle's hooks. Specs: Mantle ProductionCosts, WarehouseProduction, ManufacturingServices (19, pass); BOSS
+  ManufacturingAccess, AppStructure, TuiRender (78, pass).
 
 ### P7 — Quantities, by-products and loss
 

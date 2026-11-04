@@ -39,6 +39,10 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
         <!-- later phases: the shared screens mounted at the root, hidden from the menu (as Warehouse's QualityInspection) -->
+        <!-- P6: a work order's costs, at the root until WorkOrderDetail (P5) mounts it as its Costs tab from its directory -->
+        <subscreens-item name="ProductionCosts"
+                location="component://mr-boss/screen/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts.xml"
+                menu-include="false"/>
     </subscreens>
 
     <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records

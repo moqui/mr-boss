@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A work order's costs (design-manufacturing ProductionCosts, style-guide §3.9 Report; impl-manufacturing P6): Costs, the
+    run's cost events (every material issue, return and output receipt, each with the stock movement it came from, its
+    valuation and its place in the GL), the frozen estimate it was released with, the actual cost against it and what is
+    left in WIP; and CloseReview, the dialog that puts the run up for Accounting's cost close
+    (mantle.work.ProductionServices.get#ProductionCosts and review#ProductionCosts). The frozen estimate shows with
+    PRODUCT_COST_VIEW or ACCOUNTING_VIEW, the actual values and ledger links with ACCOUNTING_VIEW only; Mantle leaves out what
+    the user may not read. A WorkOrderDetail tab; until WorkOrderDetail is built the Manufacturing root mounts it hidden at
+    Manufacturing/ProductionCosts. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Costs" default-menu-index="6">
+    <parameter name="workEffortId"/>
+    <transition name="requestReview">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'costReview'}"/>
+            <service-call name="mantle.work.ProductionServices.review#ProductionCosts" out-map="reviewed"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        accountingDate:accountingDate || null, note:note || null}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Cost review requested for work order ${workEffortId}</message>
+                <iterate list="reviewed?.result?.warnings || []" entry="warning">
+                    <message type="warning">${warning.message}</message>
+                </iterate>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="runRecord" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId || '_NA_'}"/>
+        <set field="costs" from="null"/>
+        <if condition="runRecord?.recordId">
+            <service-call name="mantle.work.ProductionServices.get#ProductionCosts" out-map="costs" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="recordFound" from="!!costs?.run"/>
+        <set field="runInfo" from="costs?.run || {}"/>
+        <set field="eventRows" from="costs?.events || []"/>
+        <set field="estimate" from="costs?.estimate || null"/>
+        <set field="actuals" from="costs?.actuals || null"/>
+        <set field="comparisonRows" from="costs?.comparison || []"/>
+        <set field="exceptions" from="costs?.exceptions || {}"/>
+        <set field="review" from="costs?.review || {}"/>
+        <set field="financialRead" from="!!costs?.financialRead"/>
+        <set field="exceptionText" from="[exceptions.unvaluedCount ? exceptions.unvaluedCount + ' not valued' : null,
+                exceptions.notPostedCount ? exceptions.notPostedCount + ' not posted by their stock movement' : null,
+                exceptions.awaitingCloseCount ? exceptions.awaitingCloseCount + ' awaiting the cost close' : null]
+                .filter(Boolean).join(', ')"/>
+        <set field="runCaption" from="[runInfo.statusText, runInfo.productName ? runInfo.quantity + ' ' + runInfo.productName : null,
+                runInfo.facilityName, runInfo.revision ? 'Revision ' + runInfo.revision : null].filter(Boolean).join(' · ')"/>
+        <set field="reviewForm" from="{workEffortId:runInfo.workEffortId, expectedRevision:runInfo.revision,
+                accountingDate:review.accountingDateDefault, operationKey:'costreview-' + ec.user.randomString(24)}"/>
+        <set field="reviewWarnings" from="(review.warnings || []).map(warning =&gt; warning.message).join(' ')"/>
+    </actions>
+    <widgets>
+        <section name="CostsNotAvailable" condition="!recordFound">
+            <widgets>
+                <label text="This work order is not available." type="p"/>
+                <link url="${sharedLinks.WorkOrders}" text="Work orders" link-type="anchor" icon="sym_o_arrow_back"/>
+            </widgets>
+        </section>
+        <section name="Costs" condition="recordFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-x-md q-mb-sm">
+                    <container style="col-12 col-md">
+                        <label text="Costs of ${runInfo.workEffortName || runInfo.workEffortId}" type="h5"/>
+                        <label text="${runCaption}" type="p" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-x-sm">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${review.statusId ? 'primary' : 'grey'}">${
+                                WebUtilities.encodeHtml(review.statusText || '')}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Cost review: " + (review.statusText || "")})}]]></text>
+                            <text type="html">Cost review: ${review.statusText}</text>
+                        </render-mode>
+                        <!-- CloseReview: the one primary action, while the review can be requested -->
+                        <container-dialog id="CloseReviewDialog" condition="review.canRequest" type="primary"
+                                button-text="Request cost review" icon="sym_o_fact_check" width="640"
+                                title="Request the cost review of ${runInfo.workEffortName || runInfo.workEffortId}">
+                            <label text="Accounting reviews the costs and posts the cost close at an open accounting date. Not valued: ${exceptions.unvaluedCount || 0}; not posted by their stock movement: ${exceptions.notPostedCount || 0}."
+                                    type="p" style="text-caption"/>
+                            <label text="${reviewWarnings}" type="p" style="text-warning" condition="reviewWarnings"/>
+                            <form-single name="CloseReview" transition="requestReview" map="reviewForm">
+                                <field name="workEffortId">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="expectedRevision">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="operationKey">
+                                    <default-field>
+                                        <hidden/>
+                                    </default-field>
+                                </field>
+                                <field name="accountingDate">
+                                    <default-field title="Accounting date" tooltip="The date Accounting is asked to post the close at">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="note">
+                                    <default-field title="Note to Accounting" tooltip="Variance reasons, late costs to expect">
+                                        <text-area rows="3"/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="Request cost review"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <label text="${review.statusText} on ${review.requestedDateText} at revision ${review.revision}${review.accountingDate ? ', for ' + review.accountingDate : ''}${review.note ? ': ' + review.note : ''}"
+                        type="p" style="text-caption" condition="review.statusId"/>
+
+                <section name="Estimate" condition="estimate">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Frozen estimate"/>
+                            <box-body>
+                                <label text="No approved estimate was in effect when this work order was released."
+                                        type="p" style="m-muted" condition="!estimate.available"/>
+                                <section name="EstimateValues" condition="estimate.available">
+                                    <widgets>
+                                        <label text="${estimate.unitCost} ${estimate.currencyUomId || ''} a unit, ${estimate.totalCost} ${estimate.currencyUomId || ''} for ${estimate.quantity}; approved from ${estimate.fromDateText}"
+                                                type="p"/>
+                                        <form-list name="EstimateComponents" list="estimate.components" skip-form="true"
+                                                paginate="false">
+                                            <field name="componentText">
+                                                <default-field title="Component">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Estimate">
+                                                    <display currency-unit-field="estimate.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <section name="Actuals" condition="actuals">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Actual cost"/>
+                            <box-body>
+                                <label text="Issued ${actuals.issued}, returned ${actuals.returned}, relieved by output ${actuals.outputRelieved}; left in work in process ${actuals.wipBalance} ${actuals.currencyUomId || ''}"
+                                        type="p"/>
+                                <section name="ActualComponentRows" condition="!comparisonRows.length">
+                                    <widgets>
+                                        <form-list name="ActualComponents" list="actuals.components" skip-form="true" paginate="false">
+                                            <field name="componentText">
+                                                <default-field title="Component">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="amount">
+                                                <default-field title="Actual">
+                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="EstimateActualRows" condition="comparisonRows.length">
+                                    <widgets>
+                                        <form-list name="EstimateActual" list="comparisonRows" skip-form="true" paginate="false">
+                                            <field name="componentText">
+                                                <default-field title="Component">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="estimate">
+                                                <default-field title="Estimate">
+                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="actual">
+                                                <default-field title="Actual">
+                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="difference">
+                                                <default-field title="Difference">
+                                                    <display currency-unit-field="actuals.currencyUomId" align="right"/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Cost events"/>
+                    <box-body-nopad>
+                        <label text="Every material issue, return and output receipt of this work order, with the stock movement it came from."
+                                type="p" style="text-caption m-muted q-pa-md"/>
+                        <label text="Needs attention: ${exceptionText}." type="p" style="text-warning q-px-md"
+                                condition="exceptionText"/>
+                        <label text="No costs yet. Issuing material, returning it and receiving output each record one."
+                                type="p" style="q-pa-md" condition="!eventRows.length"/>
+                        <section name="CostEventRows" condition="eventRows.length">
+                            <widgets>
+                                <form-list name="CostEvents" list="eventRows" skip-form="true" paginate="false">
+                                    <field name="eventTypeText">
+                                        <default-field title="Event">
+                                            <display text="${eventTypeText} · ${eventDateText}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <display text="${productName || productId || ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="componentText">
+                                        <default-field title="Component">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="ledgerText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    valuationStatusEnumId == 'PcvUnvalued' || ledgerStatusEnumId == 'PclNotPosted' ? 'warning' : 'positive'}">${
+                                                    WebUtilities.encodeHtml(valuationStatusEnumId == 'PcvUnvalued' ? valuationText : ledgerText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: valuationStatusEnumId == 'PcvUnvalued' ? valuationText : ledgerText})}]]></text>
+                                                <text type="html">${valuationStatusEnumId == 'PcvUnvalued' ? valuationText : ledgerText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="amount" hide="!financialRead">
+                                        <default-field title="Amount">
+                                            <display currency-unit-field="amountUomId" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acctgTransId" hide="!financialRead">
+                                        <conditional-field condition="acctgTransId">
+                                            <link url="//Accounting/GeneralLedger/JournalEntryDetail" text="${acctgTransId}"
+                                                    link-type="anchor" parameter-map="{recordId:acctgTransId, organizationPartyId:runInfo.ownerPartyId}"/>
+                                        </conditional-field>
+                                        <default-field title="Ledger">
+                                            <display text=""/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="eventTypeText"/>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="ledgerText"/>
+                                            <field-ref name="amount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

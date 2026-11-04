@@ -62,7 +62,8 @@ Demo users (BossUsersDemoData.xml, password `moqui`), agents of Ziziwork Retail:
 `.method`, `.methodapprove`, `.operate` (assembly and coating skills), `.supervise`, `.inspect`, `.verify`,
 `.qualityadmin`, `.cost`, `.resource`, the reader `manufacturing.read` (no other business launcher) and
 `manufacturing.admin`; `manufacturing.display` (the display group alone, no root); `manufacturing.services`, a reader of
-Ziziwork Services.
+Ziziwork Services; `manufacturing.finance`, a reader who is also in `BOSS_ACCOUNTING_READ` (the financial reader of a work
+order's costs).
 
 Demo records (BossManufacturingDemoData.xml):
 
@@ -135,10 +136,20 @@ center, Files and Conversation; the Warehouse tabs say `appRoot != 'Manufacturin
 `screen/Commons/Calendar.qvue` in its resource mode (setup answers `resource`), read only. Manufacturing.js's P3 block sets
 the work center, facility and asset destinations, the `WorkCenters/*` sharedLinks and the forms' choices.
 
+## Cost evidence (P6)
+
+ProductionCosts (`screen/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts.xml`) takes `workEffortId`, checks the run
+with `check#Record` and reads `mantle.work.ProductionServices.get#ProductionCosts`: the frozen estimate shows with
+`PRODUCT_COST_VIEW` or `ACCOUNTING_VIEW`, the actual cost, amounts and ledger links (to Accounting's JournalEntryDetail) with
+`ACCOUNTING_VIEW` only, as Mantle leaves them out. Its Request cost review dialog (CloseReview) checks `costReview`, then calls
+`review#ProductionCosts`, which notifies Accounting on ProductionCostReview. Until WorkOrderDetail (P5) exists the root mounts
+it hidden at `Manufacturing/ProductionCosts`; then the WorkOrderDetail directory makes it that screen's Costs tab and the root
+item, the `ProductionCosts` link path and ManufacturingSpecLib's `moved` path go.
+
 ## Verification
 
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters`, `./moq test mr-mantle --spec
-WorkCenters`, the walk `ManufacturingWorkCentersWalk`; AppStructure and TuiRender cover the built screens and the area
+WorkCenters,ProductionCosts`, the walks `ManufacturingWorkCentersWalk` and `ManufacturingCostsWalk`; AppStructure and TuiRender cover the built screens and the area
 placeholders.
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingMethods`; AppStructure and TuiRender cover
 the built routes (ManufacturingSpecLib's `routeFixtures`) and the area placeholders; `./moq test mr-mantle --spec
