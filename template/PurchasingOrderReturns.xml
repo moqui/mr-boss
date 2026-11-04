@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Returns (crosscut §3.6 Purchasing row; design-purchasing §6 OrderDetail, §9; impl-purchasing P8),
+    section-included by the Purchasing branch (template/PurchasingOrderDetail.xml): the order's supplier returns
+    (ironstone.purchasing.ReturnServices.find#SupplierReturns with the order) with their RMA, dispatch and credit or
+    replacement state, each opening the shared ReturnDetail, and Return to supplier, which opens SupplierReturns with the
+    order chosen for New supplier return. No transition of its own. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PurchasingOrderReturns" condition="appRoot == 'Purchasing' &amp;&amp; po">
+            <actions>
+                <service-call name="ironstone.purchasing.ReturnServices.find#SupplierReturns" out-map="orderReturnsOut"
+                        in-map="{appRoot:appRoot, orderId:orderId, pageSize:20}" transaction="force-new" ignore-error="true"/>
+                <set field="orderReturnRows" from="orderReturnsOut?.returnRows || []"/>
+                <set field="orderReturnable" from="purchasing.capabilities.buy &amp;&amp; ['OrderApproved', 'OrderSent',
+                        'OrderProcessing', 'OrderCompleted'].includes(po.statusId)"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderReturnsShown" condition="orderReturnRows.length || orderReturnable">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Returns${orderReturnRows.length ? ' · ' + orderReturnRows.length : ''}"/>
+                            <box-toolbar>
+                                <link url="${sharedLinks['Returns/SupplierReturns']}" text="Return to supplier"
+                                        link-type="anchor-button" icon="sym_o_assignment_return" condition="orderReturnable"
+                                        parameter-map="{orderId:orderId, newOrderId:orderId}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!orderReturnRows.length"
+                                        text="Nothing of this order has gone back to the supplier."/>
+                                <form-list name="PurchaseOrderReturnList" list="orderReturnRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="returnId">
+                                        <default-field title="Return">
+                                            <link url="${sharedLinks['Returns/ReturnDetail']}" text="${returnId}"
+                                                    link-type="anchor" parameter-map="{returnId:returnId}"/>
+                                            <label text="RMA ${supplierRmaId}" type="div" style="text-caption m-muted"
+                                                    condition="supplierRmaId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="authorizedText" align="right">
+                                        <default-field title="Quantity"><display/></default-field>
+                                    </field>
+                                    <field name="physicalText"><default-field title="Dispatch"><display/></default-field></field>
+                                    <field name="settlementText">
+                                        <default-field title="Credit and replacement"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="returnId"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="authorizedText"/><field-ref name="settlementText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

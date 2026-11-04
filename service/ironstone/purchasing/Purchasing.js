@@ -17,6 +17,7 @@ const orders = () => ec.resource.script("component://mr-boss/service/ironstone/p
 const approvals = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Approvals.js")
 const receipts = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js")
 const bills = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Bills.js")
+const returns = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Returns.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -258,7 +259,11 @@ const linkPaths = [
     "Bills/BillList",
     "Bills/MatchExceptions",
     "Bills/InvoiceDetail",
-    "Bills/InvoiceMatch"
+    "Bills/InvoiceMatch",
+    // P8: the supplier returns, the shared ReturnDetail and the supplier return authorization print
+    "Returns/SupplierReturns",
+    "Returns/ReturnDetail",
+    "Returns/ReturnAuthorization"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -394,7 +399,13 @@ const recordKinds = {
     },
     rfq: {name: "RFQ", icon: "sym_o_contract", destination: null, read: id => readRequest(id, rfqRequestType)},
     agreement: {name: "Agreement", icon: "sym_o_handshake", destination: null, read: readAgreement},
-    supplierReturn: {name: "Supplier return", icon: "sym_o_assignment_return", destination: null, read: readSupplierReturn},
+    // P8: a supplier return opens the shared ReturnDetail under Returns
+    supplierReturn: {
+        name: "Supplier return",
+        icon: "sym_o_assignment_return",
+        destination: "Returns/ReturnDetail?returnId=",
+        read: readSupplierReturn
+    },
     supplier: {name: "Supplier", icon: "sym_o_corporate_fare", destination: null, read: readSupplier},
     // P14a: the facility a plan or reorder rule is for (no screen of its own)
     facility: {name: "Facility", icon: "sym_o_warehouse", destination: null, read: readFacility},
@@ -525,6 +536,17 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("vendorPartyId"),
         idField: "vendorPartyId"
+    },
+    // P8: a supplier return by its id, the supplier's RMA or their reference
+    {
+        kind: "supplierReturn",
+        query: (userScope, condition) =>
+            find("mantle.order.return.ReturnHeader")
+                .condition("customerPartyId", "in", buyerIds(userScope))
+                .condition(condition(["returnId", "supplierRmaId", "displayId"]))
+                .selectField("returnId")
+                .orderBy("-returnId"),
+        idField: "returnId"
     },
     {
         kind: "product",
@@ -677,6 +699,12 @@ const choiceSources = {
     receiptLocations: (userScope, term, selected, p) => receipts().receiptLocations(userScope, term, selected, p),
     // P6: the purchase orders a bill may be for, of a supplier when partyId is given (Bills.js)
     billOrders: (userScope, term, selected, p) => bills().orderChoices(userScope, term, selected, p),
+    // P8: the purchase orders a supplier return may come from (of a supplier when partyId is given), an order's eligible
+    // receipts by receipt and lot (orderId), and a supplier return item's reason and response (Returns.js)
+    returnOrders: (userScope, term, selected, p) => returns().orderChoices(userScope, term, selected, p),
+    returnReceipts: (userScope, term, selected, p) => returns().receiptChoices(userScope, p),
+    returnReasons: () => returns().reasonChoices(),
+    returnResponses: () => returns().responseChoices(),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

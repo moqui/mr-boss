@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Shared/ReturnDetail's Purchasing branch (crosscut §3.18 Purchasing row; design-purchasing §9 ReturnDetail; impl-purchasing
+    P8), section-included by Shared/ReturnDetail with its transitions: a supplier return of the user's organizations
+    (ironstone.purchasing.ReturnServices.get#ReturnDetail) with
+    - the record header: status, supplier, organization, facility, the supplier's RMA, Authorize (RETURN_AUTHORIZE:
+      mantle.order.ReturnServices.authorize#SupplierReturn, which makes the outbound shipment), Record RMA on an authorized
+      return, Print authorization, Cancel before authorization (cancel#Return);
+    - Eligible receipts by receipt and lot with Add (PURCHASE_ORDER_EDIT: add#ReceiptToReturn) while it is created or
+      requested;
+    - Items with what was authorized, sent back, credited (the amount for a finance reader only) and replaced, and Replace
+      (create#ReplacementOrder: a linked purchase order at no price with its expected receipt);
+    - Outbound shipment (Warehouse's: it sends back and ships through ship#SupplierReturn), Replacement orders, Credit (read
+      only: Accounting settles the billed part through settle#Return), Files (evidence on ReturnContent) and Conversation.
+    Each write checks the return with AccessServices.check#Record and the capability, then calls the Mantle service, which
+    checks its permission and the organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="purchasingReturnChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="purchasingAddReceipt">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplierReturn', recordId:returnId, capability:'buy'}"/>
+            <service-call name="mantle.order.ReturnServices.add#ReceiptToReturn" out-map="added"
+                    in-map="{returnId:returnId, assetReceiptId:assetReceiptId, returnQuantity:returnQuantity,
+                        returnReasonEnumId:returnReasonEnumId || null, returnResponseEnumId:returnResponseEnumId || null}"/>
+            <message type="success">Added item ${added.returnItemSeqId} to return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="purchasingAuthorizeReturn">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplierReturn', recordId:returnId, capability:'returnAuthorize'}"/>
+            <service-call name="mantle.order.ReturnServices.authorize#SupplierReturn" out-map="authorized"
+                    in-map="{returnId:returnId, supplierRmaId:supplierRmaId || null}"/>
+            <set field="authorizedText" from="authorized.result.resultCode == 'AUTHORIZED' ? 'Return ' + returnId
+                    + ' is authorized; the warehouse sends it back' : authorized.result.resultCode == 'RMA_RECORDED'
+                    ? 'Recorded the supplier RMA ' + authorized.result.supplierRmaId : 'Return ' + returnId
+                    + ' was already authorized'"/>
+            <message type="success">${authorizedText}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="purchasingCancelReturn">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplierReturn', recordId:returnId, capability:'buy'}"/>
+            <!-- before authorization only: nothing has been allocated to a shipment or credited yet -->
+            <set field="header" from="ec.entity.find('mantle.order.return.ReturnHeader').condition('returnId', returnId)
+                    .disableAuthz().one()"/>
+            <if condition="!['ReturnCreated', 'ReturnRequested'].includes(header?.statusId)">
+                <return error="true" message="RETURN_NOT_OPEN: Return ${returnId} is authorized; the warehouse or accounting
+                        reverses it now"/>
+            </if>
+            <service-call name="mantle.order.ReturnServices.cancel#Return" in-map="{returnId:returnId}"/>
+            <message type="success">Cancelled return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="purchasingReplaceReturn">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplierReturn', recordId:returnId, capability:'buy'}"/>
+            <service-call name="mantle.order.ReturnServices.create#ReplacementOrder" out-map="replaced"
+                    in-map="{operationKey:operationKey, returnId:returnId, estimatedArrivalDate:estimatedArrivalDate || null,
+                        lineList:returnItemSeqId ? [{returnItemSeqId:returnItemSeqId, quantity:quantity || null}] : null}"/>
+            <set field="orderId" from="replaced.result.orderId"/>
+            <message type="success">Replacement order ${orderId} is approved with its expected receipt</message>
+        </actions>
+        <default-response url="${sharedLinks['Orders/OrderDetail']}"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingReturn" condition="appRoot == 'Purchasing'">
+            <widgets>
+                <section name="PurchasingReturnMissing" condition="!returnFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Return not available"/>
+                            <box-body>
+                                <label type="p" text="Supplier return ${returnId} is not available: it does not exist, or it
+                                        is not a return of your organizations to a supplier you work with."/>
+                                <link url="${sharedLinks['Returns/SupplierReturns']}" text="Back to supplier returns"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PurchasingReturnFound" condition="returnFound">
+                    <actions>
+                        <set field="rh" from="returnHeader"/>
+                        <set field="replaceKey" from="'return-replace-' + ec.user.randomString(20)"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}"
+                                title="Supplier return ${returnId} · ${rh.supplierName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Supplier return ${returnId}" type="h5"/>
+                                    <label text="${['to ' + rh.supplierName, 'from ' + rh.organizationName,
+                                            rh.facilityName ? 'at ' + rh.facilityName : '', 'entered ' + rh.entryText,
+                                            rh.supplierRmaId ? 'supplier RMA ' + rh.supplierRmaId : 'no supplier RMA yet',
+                                            rh.displayId ? 'our reference ' + rh.displayId : '',
+                                            rh.orderIds.length ? 'order ' + rh.orderIds.join(', ') : '']
+                                            .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            rh.statusColor}">${WebUtilities.encodeHtml(rh.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "SupplierReturnStatus",
+                                            style: "strong", text: rh.statusText})}]]></text>
+                                        <text type="html">${rh.statusText}</text>
+                                        <text type="html-print">${rh.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <container-dialog id="AuthorizeSupplierReturn" button-text="Authorize" type="primary"
+                                            icon="sym_o_verified" title="Authorize return ${returnId}" width="560"
+                                            condition="rh.canAuthorize">
+                                        <form-single name="AuthorizeSupplierReturnForm" transition="purchasingAuthorizeReturn"
+                                                map="{returnId:returnId, supplierRmaId:rh.supplierRmaId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="supplierRmaId">
+                                                <default-field title="Supplier's RMA"
+                                                        tooltip="The supplier's return authorization number">
+                                                    <text-line size="20"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Authorize the return">
+                                                    <submit confirmation="Authorize return ${returnId}? The warehouse then
+                                                            sends it back, and its items no longer change."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="RecordSupplierRma" button-text="Record RMA" type="default"
+                                            title="The supplier's RMA for return ${returnId}" width="560"
+                                            condition="rh.canRecordRma">
+                                        <form-single name="RecordSupplierRmaForm" transition="purchasingAuthorizeReturn"
+                                                map="{returnId:returnId, supplierRmaId:rh.supplierRmaId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="supplierRmaId">
+                                                <default-field title="Supplier's RMA"><text-line size="20"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Record"><submit/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="${sharedLinks['Returns/ReturnAuthorization']}" text="Print authorization"
+                                            link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                                            parameter-map="{returnId:returnId, renderMode:'html-print'}"/>
+                                    <link url="purchasingCancelReturn" text="Cancel return" link-type="hidden-form"
+                                            condition="rh.canCancel" parameter-map="{returnId:returnId}"
+                                            confirmation="Cancel return ${returnId}? Nothing has been sent back or credited."/>
+                                </container>
+                            </container>
+                        </container>
+                        <dashboard min-width="160" style="q-mb-sm">
+                            <number-card title="Authorized" value="${rh.authorizedText}" icon="sym_o_assignment_return"
+                                    size="sm"/>
+                            <number-card title="Sent back" value="${rh.sentText}" icon="sym_o_local_shipping" size="sm"/>
+                            <number-card title="Credit and replacement" value="${rh.settlementText || 'Nothing yet'}"
+                                    icon="sym_o_request_quote" size="sm"/>
+                        </dashboard>
+                        <section name="PurchasingReturnEligible" condition="rh.canAddItems">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Eligible receipts"/>
+                                    <box-body-nopad>
+                                        <label text="No accepted receipt from this supplier is left to send back." type="p"
+                                                style="q-pa-sm m-muted" condition="!eligibleRows.length"/>
+                                        <form-list name="PurchasingReturnEligibleList" list="eligibleRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="productName">
+                                                <default-field title="Product"><display/></default-field>
+                                            </field>
+                                            <field name="sourceText">
+                                                <default-field title="Receipt"><display/></default-field>
+                                            </field>
+                                            <field name="lotText">
+                                                <default-field title="Lot"><display/></default-field>
+                                            </field>
+                                            <field name="acceptedText" align="right">
+                                                <default-field title="Accepted"><display/></default-field>
+                                            </field>
+                                            <field name="heldText" align="right">
+                                                <default-field title="Held"><display/></default-field>
+                                            </field>
+                                            <field name="returnedText" align="right">
+                                                <default-field title="Returned"><display/></default-field>
+                                            </field>
+                                            <field name="eligibleText" align="right">
+                                                <default-field title="Eligible"><display/></default-field>
+                                            </field>
+                                            <field name="add">
+                                                <default-field title="">
+                                                    <container-dialog id="AddReturnReceipt_${assetReceiptId}" button-text="Add"
+                                                            title="Add receipt ${assetReceiptId} to return ${returnId}">
+                                                        <form-single name="AddReturnReceipt_${assetReceiptId}"
+                                                                transition="purchasingAddReceipt"
+                                                                map="{returnId:returnId, assetReceiptId:assetReceiptId,
+                                                                    returnQuantity:eligibleQuantity}">
+                                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                                            <field name="assetReceiptId">
+                                                                <default-field><hidden/></default-field>
+                                                            </field>
+                                                            <field name="returnQuantity">
+                                                                <default-field title="Quantity"><text-line size="8"/></default-field>
+                                                            </field>
+                                                            <field name="returnReasonEnumId">
+                                                                <default-field title="Reason">
+                                                                    <drop-down no-current-selected-key="RrsnDefective">
+                                                                        <dynamic-options transition="purchasingReturnChoices"
+                                                                                parameter-map="{choice:'returnReasons'}"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="returnResponseEnumId">
+                                                                <default-field title="Asked for">
+                                                                    <drop-down no-current-selected-key="RrspCredit">
+                                                                        <dynamic-options transition="purchasingReturnChoices"
+                                                                                parameter-map="{choice:'returnResponses'}"/>
+                                                                    </drop-down>
+                                                                </default-field>
+                                                            </field>
+                                                            <field name="submitButton">
+                                                                <default-field title="Add"><submit/></default-field>
+                                                            </field>
+                                                        </form-single>
+                                                    </container-dialog>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="productName"/><field-ref name="sourceText"/></column>
+                                                <column><field-ref name="eligibleText"/><field-ref name="add"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <label text="This return has no items yet." type="p" style="q-pa-sm m-muted"
+                                        condition="!itemRows.length"/>
+                                <form-list name="PurchasingReturnItems" list="itemRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Product"><display/></default-field>
+                                    </field>
+                                    <field name="sourceText">
+                                        <default-field title="Source">
+                                            <display text="${sourceText}${lotText ? ' · lot ' + lotText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonText">
+                                        <default-field title="Reason">
+                                            <display text="${reasonText}${responseText ? ' · ' + responseText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status"><display/></default-field>
+                                    </field>
+                                    <field name="authorizedQuantity" align="right">
+                                        <default-field title="Authorized"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="sentQuantity" align="right">
+                                        <default-field title="Sent"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="creditedQuantity" align="right">
+                                        <default-field title="Credited">
+                                            <display text="${ec.l10n.format(creditedQuantity, '#,##0.###')}${creditText
+                                                    ? ' · ' + creditText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="replacedQuantity" align="right">
+                                        <default-field title="Replaced"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="replace">
+                                        <default-field title="">
+                                            <container-dialog id="ReplaceReturnItem_${returnItemSeqId}" button-text="Replace"
+                                                    title="Replace item ${returnItemSeqId} of return ${returnId}"
+                                                    condition="canReplace">
+                                                <form-single name="ReplaceReturnItem_${returnItemSeqId}"
+                                                        transition="purchasingReplaceReturn"
+                                                        map="{returnId:returnId, returnItemSeqId:returnItemSeqId,
+                                                            quantity:openQuantity, operationKey:replaceKey}">
+                                                    <field name="returnId"><default-field><hidden/></default-field></field>
+                                                    <field name="returnItemSeqId">
+                                                        <default-field><hidden/></default-field>
+                                                    </field>
+                                                    <field name="operationKey">
+                                                        <default-field><hidden/></default-field>
+                                                    </field>
+                                                    <field name="quantity">
+                                                        <default-field title="Quantity"><text-line size="8"/></default-field>
+                                                    </field>
+                                                    <field name="estimatedArrivalDate">
+                                                        <default-field title="Expected">
+                                                            <date-time type="date"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton">
+                                                        <default-field title="Order the replacement"><submit/></default-field>
+                                                    </field>
+                                                </form-single>
+                                                <label type="p" style="text-caption m-muted"
+                                                        text="A purchase order from the supplier at no price, approved, with its
+                                                            expected receipt; what it replaces is not credited."/>
+                                            </container-dialog>
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="PO ${replacementOrderId}"
+                                                    link-type="anchor" condition="replacementOrderId"
+                                                    parameter-map="{orderId:replacementOrderId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="statusText"/></column>
+                                        <column>
+                                            <field-ref name="authorizedQuantity"/>
+                                            <field-ref name="sentQuantity"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Outbound shipment"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-pa-sm m-muted" condition="!shipmentRows.length"
+                                        text="${rh.canAuthorize || rh.statusId == 'ReturnCreated' || rh.statusId == 'ReturnRequested'
+                                            ? 'Authorizing the return makes its shipment; the warehouse then sends it back.'
+                                            : 'No shipment.'}"/>
+                                <form-list name="PurchasingReturnShipments" list="shipmentRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="shipmentId">
+                                        <default-field title="Shipment"><display/></default-field>
+                                    </field>
+                                    <field name="statusText">
+                                        <default-field title="Status"><display/></default-field>
+                                    </field>
+                                    <field name="sentText">
+                                        <default-field title="Sent back"><display/></default-field>
+                                    </field>
+                                    <field name="trackingText">
+                                        <default-field title="Tracking"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="shipmentId"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="sentText"/><field-ref name="trackingText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="PurchasingReturnReplacements" condition="replacementRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Replacement orders"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchasingReturnReplacementList" list="replacementRows"
+                                                skip-form="true" paginate="false">
+                                            <field name="orderId">
+                                                <default-field title="Order">
+                                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}"
+                                                            link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText">
+                                                <default-field title="Status"><display/></default-field>
+                                            </field>
+                                            <field name="replacedText" align="right">
+                                                <default-field title="Replaces"><display/></default-field>
+                                            </field>
+                                            <field name="receiptText">
+                                                <default-field title="Receipt">
+                                                    <link url="${sharedLinks['Receiving/ShipmentDetail']}" text="${receiptText}"
+                                                            link-type="anchor" condition="receiptId"
+                                                            parameter-map="{shipmentId:receiptId}"/>
+                                                    <label text="${receiptText}" condition="!receiptId"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="orderId"/><field-ref name="statusText"/></column>
+                                                <column><field-ref name="receiptText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Credit"/>
+                            <box-body>
+                                <label type="p" text="${rh.settlementText || 'Nothing credited yet.'}"/>
+                                <label type="p" text="Credited ${rh.creditTotalText}." condition="rh.creditTotalText"/>
+                                <label type="p" style="text-caption m-muted" text="${rh.previewText}."
+                                        condition="rh.previewText"/>
+                                <label type="p" style="text-caption m-muted" condition="rh.financeReader"
+                                        text="Accounting settles the billed part of what was sent back; what was not billed
+                                            needs no credit and is taken out of the receipt match."/>
+                                <label type="p" style="text-caption m-muted" condition="!rh.financeReader"
+                                        text="Accounting settles the billed part; credit amounts are withheld from you."/>
+                            </box-body>
+                        </container-box>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="PurchasingReturnFiles"
+                                                record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="PurchasingReturnChatter" record-entity="mantle.order.return.ReturnHeader"
+                                                record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

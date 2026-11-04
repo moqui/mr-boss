@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's supplier return reads (design-purchasing §9 Returns and ReturnDetail; impl-purchasing P8, §2; Returns.js): the
+    supplier return list (also OrderDetail's and Supplier360's returns) and the Purchasing context of Shared/ReturnDetail. The
+    screens call the Mantle services after AccessServices.check#Record: mantle.order.ReturnServices.create#ReturnFromOrder and
+    add#ReceiptToReturn (the eligibility Warehouse P14 built), authorize#SupplierReturn and create#ReplacementOrder; Warehouse
+    ships the return and Accounting settles it. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="SupplierReturns" allow-remote="false">
+        <description>One page of the supplier returns of the user's organizations, newest first, by view (open, authorize,
+            dispatch, settle, completed, cancelled), supplier, purchase order, receipt, status, organization and text (the
+            return, the supplier's RMA or their reference, ignoring case): each with its supplier, RMA, orders, status, what was
+            authorized and sent back, its physical state (the outbound shipment) and its credit and replacement state apart. A
+            credit's amount shows to a finance reader only (Withheld otherwise). Refuses a user without the buying lists
+            (PERMISSION_DENIED) and another organization, order or supplier (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="assetReceiptId"/>
+            <parameter name="statusId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="returnRowsCount" type="Integer"/>
+            <parameter name="returnRowsPageIndex" type="Integer"/>
+            <parameter name="returnRowsPageSize" type="Integer"/>
+            <parameter name="returnRowsPageMaxIndex" type="Integer"/>
+            <parameter name="returnRowsPageRangeLow" type="Integer"/>
+            <parameter name="returnRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Returns.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findSupplierReturns', context)"/>
+            <script>for (const field of ['returnRows', 'returnRowsCount', 'returnRowsPageIndex', 'returnRowsPageSize',
+                'returnRowsPageMaxIndex', 'returnRowsPageRangeLow', 'returnRowsPageRangeHigh', 'viewLabel'])
+                context[field] = found[field]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnDetail" allow-remote="false">
+        <description>Shared/ReturnDetail's Purchasing branch (crosscut §3.18 Purchasing row): a supplier return of the user's
+            organizations and supplier scope (RECORD_UNAVAILABLE otherwise): its header with the supplier's RMA, the orders,
+            the physical and the credit and replacement states; its items by source receipt and lot with what was authorized,
+            sent back, credited (the amount for a finance reader only) and replaced; the outbound shipment with its tracking;
+            the replacement orders with their expected receipts; Accounting's settlement preview, read only, for a finance
+            reader; and, while it is created or requested, the receipts it may still take by receipt and lot.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="returnId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="returnFound" type="Boolean"/>
+            <parameter name="returnId"/>
+            <parameter name="returnHeader" type="Map"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="shipmentRows" type="List"/>
+            <parameter name="replacementRows" type="List"/>
+            <parameter name="eligibleRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Returns.js"/>
+            <set field="found" from="ec.resource.script(module).execute('returnDetail', context)"/>
+            <script>for (const field of ['returnFound', 'returnId', 'returnHeader', 'itemRows', 'shipmentRows',
+                'replacementRows', 'eligibleRows']) context[field] = found[field]</script>
+        </actions>
+    </service>
+</services>

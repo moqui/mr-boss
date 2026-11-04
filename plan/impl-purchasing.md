@@ -258,7 +258,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | built Nov 4, 2026 |
 | P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | built Nov 4, 2026 |
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | — |
-| P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | — |
+| P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | built Nov 4, 2026 |
 | P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | — |
 | P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | — |
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
@@ -1360,6 +1360,97 @@ P7 ports it into mr-mantle and finishes it.
   - Warehouse ships it and the return shows ReturnShipped; Accounting's settlement credits the billed portion only;
   - a replacement opens a linked PO with its expected receipt;
   - a return of unbilled quantity lowers the match-eligible receipt and needs no credit.
+
+**Built Nov 4 (P8).**
+- Mantle:
+  - `service/mantle/order/ReturnServices.xml` (appended) over the new `PurchaseReturns.js`: `authorize#SupplierReturn`
+    (RETURN_AUTHORIZE in the return's buying organization, FacilityScope; a created or requested supplier return with
+    items is approved with the supplier's RMA in `ReturnHeader.supplierRmaId`, so Mantle's ReturnApprovedProcess makes its
+    ShpTpPurchaseReturn shipment; on an authorized return a new RMA number only, RMA_RECORDED, else ALREADY_AUTHORIZED;
+    NOT_SUPPLIER_RETURN, RECORD_UNAVAILABLE, RETURN_CLOSED, RETURN_EMPTY) and `create#ReplacementOrder`
+    (PURCHASE_ORDER_EDIT; an authorized supplier return's items asking for a replacement, or the lines given, for at most
+    what was neither credited nor replaced: a purchase order from the supplier at no price, placed and approved, each item's
+    `replacementOrderId` and `replacedQuantity` (which `settle#Return` leaves out of the credit), an item shipped and fully
+    settled completed, and the expected receipt through `ensure#PurchaseReceipt` at the return's facility; operation key
+    replay on the posting guard; RETURN_NOT_APPROVED, RETURN_ITEM_UNAVAILABLE, DUPLICATE_LINE, NOTHING_TO_REPLACE,
+    QUANTITY_INVALID, QUANTITY_EXCEEDS_ELIGIBLE). No existing Mantle service or SECA changed.
+  - Spec `test/order/PurchaseReturns.spec.js` (2 features, about 0.6 s).
+- BOSS:
+  - `ironstone.purchasing.ReturnServices` (`ReturnServices.xml`, `Returns.js`): `find#SupplierReturns` (views Open, To
+    authorize, To dispatch, Awaiting credit or replacement, Completed, Cancelled; by supplier, order, receipt, status,
+    organization and text over the return, the supplier's RMA and our reference; the physical state from the outbound
+    shipment and the credit and replacement state apart; a credit's amount for a finance reader only, "Withheld"
+    otherwise) and `get#ReturnDetail` (Shared/ReturnDetail's Purchasing context: the header with the RMA, orders and
+    states; the items by source receipt and lot with authorized, sent back, credited and replaced; the outbound shipment
+    with its tracking; the replacement orders with their expected receipts; Accounting's `preview#ReturnSettlement` read
+    only for a finance reader; the eligible receipts by receipt and lot through `find#ReturnableReceipts` while it is
+    created or requested; the actions by capability and status). Choices `returnOrders` (approved, sent, processing or
+    completed purchase orders with a receipt, of a supplier), `returnReceipts` (an order's eligible receipts by receipt and
+    lot), `returnReasons`, `returnResponses` (Credit, Replace); `get#Choices` takes `orderId`. `Purchasing.js`: the
+    `supplierReturn` kind's destination `Returns/ReturnDetail` (so `get#RecordLink` now opens a supplier return under
+    Purchasing for a Purchasing user, and still falls through to Warehouse's for anyone else), its palette find (return,
+    RMA, reference), the P8 link paths.
+  - Screens: `Purchasing/Returns.xml` (tabs; the shared ReturnDetail hidden), `Returns/SupplierReturns.xml` (ReturnFind,
+    SupplierReturnList with saved finds and views, NewSupplierReturn: supplier, purchase order, receipt and lot with what it
+    allows, quantity, reason, credit or replacement, the supplier's RMA, our reference; `create#ReturnFromOrder` and
+    `add#ReceiptToReturn` after `check#Record` of the order with `buy`; opens ReturnDetail), `Returns/ReturnAuthorization.xml`
+    (the supplier return authorization, html-print, no prices); `template/PurchasingReturnDetail.xml` (Shared/ReturnDetail's
+    Purchasing branch and its transitions `purchasingReturnChoices`, `purchasingAddReceipt`, `purchasingAuthorizeReturn`,
+    `purchasingCancelReturn` (before authorization, `cancel#Return`), `purchasingReplaceReturn`: the record header with
+    Authorize (and the RMA), Record RMA, Print authorization and Cancel return; Eligible receipts with Add; Items with
+    Replace and the replacement order's link; Outbound shipment; Replacement orders with their expected receipts; Credit read
+    only; Files (ReturnContent) and Conversation); `template/PurchasingOrderReturns.xml` (OrderDetail's Returns: the
+    order's returns and Return to supplier, one section-include in `template/PurchasingOrderDetail.xml`);
+    `Shared/Supplier360/PurchasingReturns.xml` (the Returns tab, menu index 10, Purchasing only). Shared/ReturnDetail gains
+    the Purchasing branch (its service call, transition-includes and section-include).
+  - Specs: `PurchasingReturns` (3: NewSupplierReturn with the RMA, refused past the receipt's eligibility and without buy;
+    SupplierReturns' views and filters with its one html render; ReturnDetail's eligible receipts and item, the
+    authorization with the RMA, with its one html render; about 0.9 s); PurchasingAccess gains a supplier return's scope,
+    its authorization for RETURN_AUTHORIZE only and its record link (17 features); `PurchasingSpecLib.returnFixture` and the
+    Returns routes and mount. Acceptance `acceptance/Purchasing/PurchasingReturnsWalk` (4, the usable-when items);
+    AppStructure's placeholder floor 57.
+- Tests run: Mantle PurchaseReturns (2, pass); BOSS PurchasingReturns, PurchasingAccess, PurchasingOrders,
+  PurchasingSuppliers, PurchasingBills, WarehouseReturns, WarehouseAccess, AccountingAccess (all pass); acceptance
+  PurchasingReturnsWalk (4) and AppStructure (18), pass. `moqui lint --screens`: no idiom or hazard site in the changed
+  screens (informational anchors only).
+- Decisions:
+  - A buyer works supplier returns: creating one and adding receipts is `buy` (PURCHASE_ORDER_EDIT, which
+    `add#ReceiptToReturn` checks again), authorizing it is RETURN_AUTHORIZE (`BOSS_PURCHASING_BUYER` and the administrator
+    hold it, Manufacturing P14), cancelling it before authorization is `buy`. Warehouse sends back and ships
+    (`issue#SupplierReturnStock`, `ship#SupplierReturn`), Accounting settles; Purchasing shows both read only.
+  - Purchasing's authorization is its own Mantle service, `authorize#SupplierReturn`, not Customer Service's proposed
+    `ReturnPolicyServices.authorize#Return` (not built; its policy and `responseImmediate` concern customer returns, F-P8-2).
+  - A replacement is a purchase order at no price, approved by `create#ReplacementOrder` itself (as Mantle's customer
+    replacement is), not through `decide#PurchaseApproval`: it commits no new spend and replaces goods of an approved
+    order, so the buying policy's approval gate does not apply to it.
+  - A credit's amount (and the settlement preview) shows to a finance reader only (ACCOUNTING_VIEW or PAYABLE_VIEW); every
+    list reader sees the quantities authorized, sent back, credited and replaced.
+  - OrderDetail's Return to supplier opens SupplierReturns with the order chosen for New supplier return; OrderDetail has no
+    return transition of its own. The outbound shipment shows inside ReturnDetail (no Purchasing mount of a supplier return
+    shipment, F-P8-6).
+- Findings (provisional):
+  - **F-P8-1** `create#ReturnFromOrder` and `cancel#Return` check no permission (Mantle's raw mutators); Purchasing calls
+    them after `check#Record` with `buy`, as Warehouse calls `create#Return`, and `add#ReceiptToReturn` checks
+    PURCHASE_ORDER_EDIT again. A guarded Mantle create and cancel of a supplier return would make the rule Mantle's.
+  - **F-P8-2** Mantle's `respond#ReturnItems` answers nothing for a supplier return ("Cannot process return responses for
+    supplier purchase return"), so ReturnApprovedProcess only makes the shipment and a Replace response orders nothing by
+    itself: the replacement is `create#ReplacementOrder`'s, as design §9 says.
+  - **F-P8-3** ReturnHeader has the supplier's RMA number (`supplierRmaId`) but no RMA expiry or supplier instructions
+    field; design Returns' "RMA expiry, attachment and supplier-approved instructions are recorded" are a file
+    (ReturnContent, type Authorization) and the conversation for now.
+  - **F-P8-4** Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection
+    removed (scrapped, or sent back under a Return to supplier disposition). A rejected unit returned that way leaves the
+    receipt's match (the walk: 8 received, 7 match-eligible), but a supplier return of released, unbilled stock does not
+    lower the receipt's match base, so a later bill could still match it. Changing it is a new refusal in Accounting's
+    match (behind its flag); left for the lead and Accounting.
+  - **F-P8-5** An unbilled supplier return has nothing to settle (`preview#ReturnSettlement` answers no line), so it stays
+    ReturnShipped with its quantity open unless it is replaced; there is no "close without credit" for it.
+  - **F-P8-6** No Purchasing mount shows a supplier return's ShpTpPurchaseReturn shipment (Receiving/ShipmentDetail's
+    Purchasing branch is purchase receipts); ReturnDetail shows its status, quantity sent back and tracking.
+  - **F-P8-7** ReturnItem has one `replacementOrderId`: a second replacement of the same item moves the link to the new order
+    (`replacedQuantity` keeps the total).
+  - **F-P8-8** `settle#Return` refuses a credit against a bill not finalized (CREDIT_SOURCE_INVALID); the walk approves the
+    supplier's bill before Accounting settles.
 
 ### P9 — Revisions and acknowledgements
 
