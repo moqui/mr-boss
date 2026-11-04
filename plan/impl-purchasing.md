@@ -2128,9 +2128,9 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - `entity/SourcingEntities.xml`: the `RqtPurchaseRfq` request type and the `RqCntRfqPublished` request content type;
     the audit log on RequestItem's `description` ("true", F57; with P10's product, quantity, unit and date and Mantle's
     status, the RFQ items' material fields); the RFQ header's response date, text, facility and currency logged by
-    `store#QuoteRequest` itself, a first set included (F-P11-11, review R1); and
+    `store#QuoteRequest` itself, a first set included (F148, review R1); and
     on OrderPart's `validFromDate` and `validThruDate` ("true"); the `OctSupplierQuote` order content type; ProductPrice's `sourceOrderId` and `sourceOrderItemSeqId`
-    (audit-logged), which Products' `PricePolicy.js` now writes (F-P11-4). `data/SourcingSetupData.xml`: the
+    (audit-logged), which Products' `PricePolicy.js` now writes (F141). `data/SourcingSetupData.xml`: the
     `MANTLE_RFQ_EMAIL` template; `template/order/QuoteRequest.print.html.fancy` and `QuoteRequestEmail.html.fancy`.
   - `service/mantle/order/SourcingServices.xml` (`mantle.order.SourcingServices`) over the new `Sourcing.js`:
     `create#QuoteRequest` (a draft RFQ of the user's organization, its OrgInternal RequestParty; the buying policy's
@@ -2151,7 +2151,7 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
     through `store#ProductPrice` with the quote's dates and source, the tier's row in effect ended by `expire#ProductPrice`;
     QUOTE_NOT_PROPOSED, QUOTE_EXPIRED, PRICE_REQUIRED, PRICE_OVERLAP).
   - The request type's policy (R-PUR-13): `RequestTriageNotice` skips an RFQ, `get#IntakeSettings` never offers or
-    triages the type, `convert#RequestToProject` refuses it (REQUEST_TYPE_FIXED, F-P11-2); `complete#RequestFromWork`
+    triages the type, `convert#RequestToProject` refuses it (REQUEST_TYPE_FIXED, F139); `complete#RequestFromWork`
     already left it alone (P10, F123).
   - Spec `test/order/Sourcing.spec.js` (6 features, about 2 s).
 - BOSS:
@@ -2205,36 +2205,36 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - A request's line asked of suppliers stays to source: the RFQ links its item to the line (RequestItemAssoc), and only
     P12's award makes supply (RequirementSupply).
   - Quantity tiers are price rows: Publish price takes a line's price or a tier (from quantity, price) per call. The
-    promotion way is left to §7 (F-P11-3).
+    promotion way is left to §7 (F140).
   - Home's RFQs due are the sent RFQs whose response date is past or within a day with a supplier still to answer; quotes
     expiring are the proposed quotes within the buying policy's warning days. Quick create of an RFQ is the buyer's and the
     administrator's.
 - Findings (provisional):
-  - **F-P11-1** Commons listed and showed every request its user filed or was a party of, with no type rule, so a buyer's
+  - **F138** Commons listed and showed every request its user filed or was a party of, with no type rule, so a buyer's
     RFQ was in their Commons list; Projects showed one in a visible project or of a triaged type. Commons' access service
     (which Projects' builds on) and both lists now leave the type out; it refuses nothing existing (only P11 makes the type).
-  - **F-P11-2** `convert#RequestToProject` gains a refusal of the RFQ type (REQUEST_TYPE_FIXED) with no flag: the type is
+  - **F139** `convert#RequestToProject` gains a refusal of the RFQ type (REQUEST_TYPE_FIXED) with no flag: the type is
     new and no existing caller makes one (as P10's F123); the triage notice and the intake settings simply skip it.
-  - **F-P11-3** The promotion way of quantity tiers (F41) needs a purchasing ProductStore with tax and shipping calculation,
+  - **F140** The promotion way of quantity tiers (F41) needs a purchasing ProductStore with tax and shipping calculation,
     store emails and reservation turned off for purchase parts; not built (§7). Tiers are published price rows.
-  - **F-P11-4** ProductPrice named no source; `sourceOrderId` and `sourceOrderItemSeqId` are added and Products'
+  - **F141** ProductPrice named no source; `sourceOrderId` and `sourceOrderItemSeqId` are added and Products'
     `PricePolicy.js` writes them through `store#ProductPrice` (a widening that refuses nothing); a `replace#ProductPrice`
     successor names no source, as its price is not the quote's (review R3).
-  - **F-P11-5** `expire#ProductPrice` takes an end now or later, so a published price starts a second ahead at the earliest
+  - **F142** `expire#ProductPrice` takes an end now or later, so a published price starts a second ahead at the earliest
     and the tier's earlier row ends where it starts.
-  - **F-P11-6** Design QuoteRequestSuppliers' per-supplier contact, send channel, deadline and capability expiry are not
+  - **F143** Design QuoteRequestSuppliers' per-supplier contact, send channel, deadline and capability expiry are not
     built: the recipients are the supplier's order addresses, else its primary ones (as a PO's), the deadline the RFQ's, and
     P16 adds the capability and link.
-  - **F-P11-7** Quotes are never supply, checked by reading: `run#SupplyPlan` counts placed to sent parts and a
+  - **F144** Quotes are never supply, checked by reading: `run#SupplyPlan` counts placed to sent parts and a
     conversion's OrderOpen drafts (SupplyPlanning.js), P10's sourcing counts RequirementSupply, which no quote has; Mantle
     reserves only placed or approved parts with a store (F35), auto-approves only on Placed, and P3's gate and P7's drop-ship
     SECA act on Placed and Approved.
-  - **F-P11-8** A declined quote (OrderRejected) leaves Purchase orders' quote filter (quote statuses only) and shows in its
+  - **F145** A declined quote (OrderRejected) leaves Purchase orders' quote filter (quote statuses only) and shows in its
     Closed view; its record link stays QuoteDetail (`wasQuote`). P12's Not awarded (OrderCancelled) is the same case.
-  - **F-P11-9** Under Retail's `commercialRevisionOnly` a quote line's price change moves the quote's `orderRevision`
+  - **F146** Under Retail's `commercialRevisionOnly` a quote line's price change moves the quote's `orderRevision`
     (P3's rule on any purchase order); harmless, as no approval decision exists on a quote, and it counts amendments.
-  - **F-P11-10** AppStructure's placeholder count drops by one (Sourcing built): its floor is 54.
-  - **F-P11-11** Every request's audit-logged change shows in its Chatter timeline, so logging Request's response date
+  - **F147** AppStructure's placeholder count drops by one (Sourcing built): its floor is 54.
+  - **F148** Every request's audit-logged change shows in its Chatter timeline, so logging Request's response date
     and description on create ("true") gave every request with them a "Set to" entry (Chatter's paging spec failed). Built
     as "update", which left a text first set after create unlogged (no revision, a wrong as-of print). Review R1: Request
     has no audit-logged field again; `store#QuoteRequest` writes the RFQ header's EntityAuditLog rows itself (response date,
@@ -2252,7 +2252,7 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
     set after create (and any facility or currency change, not logged at all) moved no revision, needed no new send, and an
     as-of print showed the later text. `store#QuoteRequest` now logs the header's response date, text, facility and currency
     itself (`headerAudit`, a first set included), the as-of print reads facility and currency back too, and Request's
-    entity audit is removed, so no other request's timeline changes (F-P11-11). QuoteRequestDetail's history labels them.
+    entity audit is removed, so no other request's timeline changes (F148). QuoteRequestDetail's history labels them.
   - **R2** (medium) `publish#SupplierQuotePrice`: a thru date given past the quote's validity published a price the supplier
     never quoted; it is now capped at the quote's thru date. A per-term row (`termUomId`) of the scope is no longer ended
     (another scope, as a store's and an agreement's). An awarded quote (placed from OrderProposed, P12) still publishes.
@@ -2260,8 +2260,8 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
   - **R4** (tests) Sourcing.spec: the text first set after a send moves the revision and is absent from the earlier print; a
     tier of 100 is its own row and leaves the tier of 0, the supplier's agreement price and another supplier's price alone;
     a new feature runs `run#SupplyPlan` at a warehouse with a requested and a proposed quote of 20 and gets the whole
-    minimum of 30 suggested, nothing reserved, placed, approved or RequirementSupply (F-P11-7 now tested; about 0.3 s).
-  - Left for the lead: F-P11-8 stands. Purchase orders' Closed and All views still show a declined quote, and P12's Not
+    minimum of 30 suggested, nothing reserved, placed, approved or RequirementSupply (F144 now tested; about 0.3 s).
+  - Left for the lead: F145 stands. Purchase orders' Closed and All views still show a declined quote, and P12's Not
     awarded ones; a quote order carries no marker the PO list's find can test (a cancelled draft PO looks the same: no
     `placedDate`, OrderCancelled), and the audit-log test `wasQuote` uses is per order. P12 should add one (for instance a
     quote flag or the RFQ id on OrderHeader set by `quoteOrder`) and `Orders.js purchaseFind` exclude it. Also: an
@@ -2615,15 +2615,15 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
     conversion made, less what is ordered (RequestItemOrder to a live purchase line), are supply ("Purchase request" lines),
     so approved request demand is not suggested again; a sales line reserved without stock is shown and pegged (kind
     `salesWaiting`, not netted: its shortage nets as the negative availability) so customer demand keeps its sales line
-    (F-P14b-1); held quantity of a bought product nets within its supplier price's standard lead time where the schedule
-    nets held quantity (F-P14b-2; P13 had it for made products only).
+    (F149); held quantity of a bought product nets within its supplier price's standard lead time where the schedule
+    nets held quantity (F150; P13 had it for made products only).
 - Mantle, the receipt's reservation offer (R-PUR-37; new `service/mantle/order/PurchasePegServices.xml` over
   `PurchasePegs.js`): `get#ReceiptPegs` (PURCHASE_ORDER_EDIT or STOCK_RECEIVE, a purchase receipt of the user's organizations:
   each received line's sales lines through its RequirementSupply, the requirement's RequirementOrderItem and the request
   line's RequestItemOrder, with what is to ship, waits and is reserved on the received stock) and `reserve#ReceiptPeg`
   (STOCK_RECEIVE: what is not available of the line's reservations taken off up to the stock on hand, then
   `reserve#AssetForOrderItem` with the asset first, displacing other reservations of it; NOT_PEGGED, ASSET_UNAVAILABLE,
-  STOCK_HELD, STOCK_UNAVAILABLE; alreadyReserved). Stock on hold at the dock for its putaway may be reserved (F-P14b-3).
+  STOCK_HELD, STOCK_UNAVAILABLE; alreadyReserved). Stock on hold at the dock for its putaway may be reserved (F151).
 - BOSS: Shared/SupplyPlanning's Purchasing branch: Convert's Route ("Drop-ship customer orders" where a selected row has
   customer demand), the request route's wording where the policy says so, and messages for requests, drop-ship lines and the
   requests sent for approval. PurchasePolicy's controls form gains "Plan buys go to purchase requests". New
@@ -2634,7 +2634,7 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   submission, retry, DEMAND_ALREADY_COVERED and ROUTE_NOT_ALLOWED; request supply while submitted, approved and sourced, the
   request's drop-ship route through RequestSourcing (F-P10-7's missing spec) and a cancel ending the coverage; the plan's
   drop-ship route with NO_CUSTOMER_LINE and a pending order; the receipt's pegs, Reserve, PERMISSION_DENIED and NOT_PEGGED;
-  held netting within the supplier's lead time). No BOSS regression spec (F-P14b-6). Acceptance
+  held netting within the supplier's lead time). No BOSS regression spec (F154). Acceptance
   `acceptance/Purchasing/PurchasingReplenishmentRoutesWalk` (3: a customer-order shortage converted to a purchase order keeps
   its sales line and its receipt reserves for it from ShipmentDetail; the drop-ship route from SupplyPlanning; under the
   request policy the request's demand, submitted and approved, is not suggested again).
@@ -2655,26 +2655,26 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   - The drop-ship route is the buyer's choice per conversion, never the policy's; it moves only lines of approved orders,
     as RequestSourcing's (P10).
 - Findings (provisional):
-  - **F-P14b-1** Mantle reserves a sales line when its order is placed, its shortage reserved without stock (negative
+  - **F149** Mantle reserves a sales line when its order is placed, its shortage reserved without stock (negative
     availability), so the plan's sales lines left out every placed order: a customer-order shortage had no sales line in its
     provenance or RequirementOrderItem. Such a line is now shown and pegged (`salesWaiting`), not netted; the netting is
     unchanged.
-  - **F-P14b-2** Held quantity was netted "within the lead time" only for a made product (its BOM's lead days); a bought
+  - **F150** Held quantity was netted "within the lead time" only for a made product (its BOM's lead days); a bought
     product had none, so only inspections already due were netted. Its supplier price's `standardLeadTimeDays` is now its
     lead time for that rule.
-  - **F-P14b-3** Warehouse's receive leaves stock AstOnHold at the dock until its putaway, and `receive#Asset` gives stock to
+  - **F151** Warehouse's receive leaves stock AstOnHold at the dock until its putaway, and `receive#Asset` gives stock to
     waiting reservations only once it is available (`reserve#IncreasedAsset`, by priority then date), so a pegged line could
     lose its stock to another order. The receipt's Reserve reserves the on-hold stock for the pegged line; putaway's
     `move#Asset` carries the reservation (ReplenishmentRoutes covers it since the review).
-  - **F-P14b-4** Request lines as plan supply count any approved purchase request of the organization at a facility of the
+  - **F152** Request lines as plan supply count any approved purchase request of the organization at a facility of the
     set, in the line's quantity: a request line in a unit other than the stock unit is not converted (the request route
     writes the stock unit; a hand-filed line in another unit would be miscounted). Fixed in the review (R2).
-  - **F-P14b-5** The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which
+  - **F153** The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which
     may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but
     Convert offers no supplier choice yet.
-  - **F-P14b-6** No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is
+  - **F154** No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is
     the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's.
-  - **F-P14b-7** F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its
+  - **F155** F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its
     customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route.
 
 **Review Nov 4 (P14b).** Checked both diffs against this section, §2, crosscut §4.2 and the brief, with the shared planning
@@ -2695,7 +2695,7 @@ organizations and NOT_PEGGED to the purchase line's own pegs. `planBuyToRequest`
   cancelled it. `requestSupply` shows a submitted request refused at its revision as "Refused purchase request …, not netted
   until it is changed or cancelled" (kind `requestNotNetted`) and does not net it, so the shortage is suggested again. If the
   requester changes and resubmits it while a second conversion covers the same demand, both count: the buyer cancels one.
-- R2 (medium, F-P14b-4): request lines in another unit are converted to the stock unit (MethodPolicy.convert); a line with
+- R2 (medium, F152): request lines in another unit are converted to the stock unit (MethodPolicy.convert); a line with
   no conversion is shown with the reason and not netted.
 - R3 (medium): `convert#PlanningSuggestion` called directly with route `order` bypassed ROUTE_NOT_ALLOWED; convertOne checks
   the route against the policy too.
@@ -2703,7 +2703,7 @@ organizations and NOT_PEGGED to the purchase line's own pegs. `planBuyToRequest`
   now only the receipt organization's own sales lines.
 - Spec additions in ReplenishmentRoutes (6 features, about 2 s): the refusal, the unit, NOT_DROP_SHIPPABLE, and the pegged
   reservation on dock stock (AstOnHold at a receiving location) kept through putaway#Stock.
-Left for the lead: Convert still offers no drop-ship supplier choice (F-P14b-5); `outsideRequirements` limits RqTpProduct
+Left for the lead: Convert still offers no drop-ship supplier choice (F153); `outsideRequirements` limits RqTpProduct
 requirements before filtering to outside processing, so P10's approved request requirements count toward that limit (P10's,
 low). Specs run: Mantle ReplenishmentRoutes (6), Replenishment, SupplyPlanning, ProductionSubcontract, PurchaseRequests,
 PurchasePolicy, DropShip, WarehouseReceiving (60, pass); BOSS PurchasingReplenishment, PurchasingReceiving,
@@ -2983,6 +2983,24 @@ is written there too.
 | F135 | P13: AgreementFiles is AgreementDetail's own list and upload over `create#AgreementContent` with the record check, not Commons' `record-files`, so the approved PDF is withheld from the reader as OrderDetail's issued PDF is (P3 R1). | See P13 |
 | F136 | P13: Supplier360's new Agreements tab is listed in every app's tab menu data though its condition keeps its content to Purchasing (F50). | See P13 |
 | F137 | P13: The Mantle regression spec takes about 3 s (up to 6 s when its first approval renders the run's first PDF); mr-mantle's feature time was 294 of 300 s at wave 3, so the lead may move its third feature to acceptance. | See P13 |
+| F138 | P11: Commons listed and showed every request its user filed or was a party of, with no type rule, so a buyer's RFQ was in their Commons list; Projects showed one in a visible project or of a triaged type. Commons' access service (which Projects' builds on) and both lists now leave the type out; it refuses nothing existing (only P11 makes the type). | See P11 |
+| F139 | P11: `convert#RequestToProject` gains a refusal of the RFQ type (REQUEST_TYPE_FIXED) with no flag: the type is new and no existing caller makes one (as P10's F123); the triage notice and the intake settings simply skip it. | See P11 |
+| F140 | P11: The promotion way of quantity tiers (F41) needs a purchasing ProductStore with tax and shipping calculation, store emails and reservation turned off for purchase parts; not built (§7). Tiers are published price rows. | See P11 |
+| F141 | P11: ProductPrice named no source; `sourceOrderId` and `sourceOrderItemSeqId` are added and Products' `PricePolicy.js` writes them through `store#ProductPrice` (a widening that refuses nothing); a `replace#ProductPrice` successor names no source, as its price is not the quote's (review R3). | See P11 |
+| F142 | P11: `expire#ProductPrice` takes an end now or later, so a published price starts a second ahead at the earliest and the tier's earlier row ends where it starts. | See P11 |
+| F143 | P11: Design QuoteRequestSuppliers' per-supplier contact, send channel, deadline and capability expiry are not built: the recipients are the supplier's order addresses, else its primary ones (as a PO's), the deadline the RFQ's, and P16 adds the capability and link. | See P11 |
+| F144 | P11: Quotes are never supply, checked by reading: `run#SupplyPlan` counts placed to sent parts and a conversion's OrderOpen drafts (SupplyPlanning.js), P10's sourcing counts RequirementSupply, which no quote has; Mantle reserves only placed or approved parts with a store (F35), auto-approves only on Placed, and P3's gate and P7's drop-ship SECA act on Placed and Approved. | See P11 |
+| F145 | P11: A declined quote (OrderRejected) leaves Purchase orders' quote filter (quote statuses only) and shows in its Closed view; its record link stays QuoteDetail (`wasQuote`). P12's Not awarded (OrderCancelled) is the same case. | See P11 |
+| F146 | P11: Under Retail's `commercialRevisionOnly` a quote line's price change moves the quote's `orderRevision` (P3's rule on any purchase order); harmless, as no approval decision exists on a quote, and it counts amendments. | See P11 |
+| F147 | P11: AppStructure's placeholder count drops by one (Sourcing built): its floor is 54. | See P11 |
+| F148 | P11: Every request's audit-logged change shows in its Chatter timeline, so logging Request's response date and description on create ("true") gave every request with them a "Set to" entry (Chatter's paging spec failed). Built as "update", which left a text first set after create unlogged (no revision, a wrong as-of print). Review R1: Request has no audit-logged field again; `store#QuoteRequest` writes the RFQ header's EntityAuditLog rows itself (response date, text, facility, currency; a first set included), so only an RFQ's timeline shows them. | See P11 |
+| F149 | P14b: Mantle reserves a sales line when its order is placed, its shortage reserved without stock (negative availability), so the plan's sales lines left out every placed order: a customer-order shortage had no sales line in its provenance or RequirementOrderItem. Such a line is now shown and pegged (`salesWaiting`), not netted; the netting is unchanged. | See P14b |
+| F150 | P14b: Held quantity was netted "within the lead time" only for a made product (its BOM's lead days); a bought product had none, so only inspections already due were netted. Its supplier price's `standardLeadTimeDays` is now its lead time for that rule. | See P14b |
+| F151 | P14b: Warehouse's receive leaves stock AstOnHold at the dock until its putaway, and `receive#Asset` gives stock to waiting reservations only once it is available (`reserve#IncreasedAsset`, by priority then date), so a pegged line could lose its stock to another order. The receipt's Reserve reserves the on-hold stock for the pegged line; putaway's `move#Asset` carries the reservation (ReplenishmentRoutes covers it since the review). | See P14b |
+| F152 | P14b: Request lines as plan supply count any approved purchase request of the organization at a facility of the set, in the line's quantity: a request line in a unit other than the stock unit is not converted (the request route writes the stock unit; a hand-filed line in another unit would be miscounted). Fixed in the review (R2). | See P14b |
+| F153 | P14b: The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but Convert offers no supplier choice yet. | See P14b |
+| F154 | P14b: No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's. | See P14b |
+| F155 | P14b: F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route. | See P14b |
 
 ## 7. Later
 
@@ -2998,9 +3016,9 @@ Designed, not in this build:
   - variant-matrix PO entry (PRD-VARIANT-UI);
   - vendor-owned consignment stock (R-PUR-38);
   - rebates and retrospective settlements on agreements;
-  - quantity tiers by a purchase promotion's auto-adjust (F41, F-P11-3): a purchasing ProductStore with calculation,
+  - quantity tiers by a purchase promotion's auto-adjust (F41, F140): a purchasing ProductStore with calculation,
     emails and reservation off, and its promotions scoped to purchase orders;
-  - an RFQ invitation's own contact, channel and deadline (F-P11-6).
+  - an RFQ invitation's own contact, channel and deadline (F143).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
