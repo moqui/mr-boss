@@ -1360,14 +1360,14 @@ P7 ports it into mr-mantle and finishes it.
     purchase order per sales part and facility (P3's one purchase part per PO): `parentOrderId` the sales order, the part
     from the facility's owner to the selling organization at the facility with the sales part's ship-to address, phone and
     shipping, the end customer as `CustomerShipTo`, the ship-to contact mechs; each line at the supplier's current price
-    read by the order's own rule (F-P7-2, review R2) with `otherPartyProductId` the supplier's item code and the link; the lines'
+    read by the order's own rule (F91, review R2) with `otherPartyProductId` the supplier's item code and the link; the lines'
     content and work efforts and the order's notes that are not internal copied; placed; with the buying organization's
     gate on left at Placed and sent to its first step's approvers (P4's notice), else approved at once (F40). A line already
     on a live drop-ship order answers it (a retry); a line meant to drop that cannot is named in `skippedItems`
     (NO_RESERVATION, RESERVATION_SPLIT, NO_SUPPLIER, INTERNAL_OWNER, or the buying policy's stop such as SUPPLIER_BLOCKED,
     review R4) and logged; an order with a line with no price stays Open, named in `unpricedItems` (review R3). An order
     approval with no drop-ship facility anywhere costs one count of them (review R1).
-  - finalize (PURCHASE_ORDER_EDIT in the buying organization, F-P7-8): the order's own delivery, a ShpTpPurchase shipment
+  - finalize (PURCHASE_ORDER_EDIT in the buying organization, F97): the order's own delivery, a ShpTpPurchase shipment
     from the drop-ship facility to the customer's address with the confirmed lines, package and tracking code, shipped and
     never received (F38); the linked sales lines packed by their link on their part's open sales shipment or a new one
     (F38's part fix), the tracking code on its package, packed (Mantle's pack SECA invoices the customer) and shipped; the
@@ -1383,23 +1383,23 @@ P7 ports it into mr-mantle and finishes it.
     debits Unreceived Inventory as for any stock purchase (the bill path, its item types and the match are unchanged), the
     cost reaches COGS when the goods reach the customer, the period the sale is invoiced (the pack SECA), whatever the
     bill's timing, and the sales issuance of the shell asset posts nothing (AtrNoAcquireCost), so nothing is counted twice.
-    A bill price differing from the order's stays in Unreceived Inventory, as for a received line (F-P7-6).
+    A bill price differing from the order's stays in Unreceived Inventory, as for a received line (F95).
   - F40, the send: `service/DropShip.secas.xml` OrderApprovedDropShip (tx-commit on `update#OrderHeader` to Approved) calls
     `mantle.order.DropShipServices.handle#OrderApprovedDropShip`, which makes a sales order's drop-ship orders (review R1)
     or calls `send#DropShipPurchaseOrder` once an approval commits, the sales order's (gate
     off) or `decide#PurchaseApproval`'s (gate on): the facility's remote's send service, then Sent, else email by
     `send#PurchaseOrder`'s path (`PurchaseOrderDocuments.js issue`, the send without the user's checks: the approver need not
-    be a buyer). A failure is logged and the order stays Approved for the buyer to send (F-P7-3).
+    be a buyer). A failure is logged and the order stays Approved for the buyer to send (F92).
   - `service/mantle/order/DropShipServices.xml` over `DropShip.js`: `route#OrderItemToDropShip` ("Drop-ship from
     supplier", PURCHASE_ORDER_EDIT in the selling organization: a supplier the organization may buy from and the policy
     does not stop, a current canDropShip price (NOT_DROP_SHIPPABLE), a drop-ship facility (NO_DROP_SHIP_FACILITY); the line
     moves to its part at the facility (the part itself when it is the part's only line, else a new part with the customer,
-    ship-to and shipping, F-P7-4), is reserved there again and, on an approved order, bought at once; LINE_SHIPPED,
+    ship-to and shipping, F93), is reserved there again and, on an approved order, bought at once; LINE_SHIPPED,
     ALREADY_DROP_SHIPPED, ORDER_STATE), `send#DropShipPurchaseOrder`, `get#OrderDropShip` (an order's drop-ship state for a
     purchasing user of its organization: a customer order's lines with their state, purchase order and the suppliers a
     buyer may drop each from; a drop-ship order's customer, ship-to, parent order, tracking and delivered and remaining
     quantities), `store#DropShipFacility` (PURCHASE_POLICY_EDIT; FcTpDropShip owned by the supplier with
-    `assetAllowOtherOwner` and `assetAllowIssueOverQoh` Y, F-P7-1; REMOTE_INVALID, FACILITY_INVALID) and `get#DropShipSetup`.
+    `assetAllowOtherOwner` and `assetAllowIssueOverQoh` Y, F90; REMOTE_INVALID, FACILITY_INVALID) and `get#DropShipSetup`.
   - The match (Accounting's contract, PUR-MATCH): `InvoiceMatch.js` takes a drop-ship line's confirmed delivery as its
     evidence on the received basis, as a receipt (proposal, base, MISSING_RECEIPT naming the delivery, the ordered basis's
     receipt-required exception), read through `DropShip.js deliveredQuantity`; every other line is unchanged.
@@ -1449,32 +1449,32 @@ P7 ports it into mr-mantle and finishes it.
     SECA runs as the sales order's approver.
   - The confirmation without line quantities confirms every line left; Confirm line takes one line's quantity.
 - Findings (provisional):
-  - **F-P7-1** Mantle's pack issues a reservation only up to its asset's quantity on hand unless the facility has
+  - **F90** Mantle's pack issues a reservation only up to its asset's quantity on hand unless the facility has
     `assetAllowIssueOverQoh` Y; the shell asset holds nothing, so a drop-ship facility needs it beside `assetAllowOtherOwner`
     (the branch's README leaves it out). `store#DropShipFacility` and the demo set both; the design's setup says so.
-  - **F-P7-2** `recalc#OrderItemAmount` resolves a price as the current user, and the SECA runs as the sales order's
+  - **F91** `recalc#OrderItemAmount` resolves a price as the current user, and the SECA runs as the sales order's
     approver, who seldom reads supplier prices: the branch's PO line kept the sales price. create reads the supplier's
     current price row itself with the resolver's eligibility (review R2: the order's currency, no store, agreement or term
     scope, the line's unit; the organization's row before the supplier's general one, the highest minimum quantity
     reached, the latest), and leaves an order with an unpriced line Open (R3).
-  - **F-P7-3** A tx-commit SECA runs on a service worker in a context of its own, so the drop-ship send is not in the
+  - **F92** A tx-commit SECA runs on a service worker in a context of its own, so the drop-ship send is not in the
     approver's request: specs wait for the worker (`ec.factory.waitWorkerPoolEmpty`), and a send that fails leaves the
     order in Approved, not sent for the buyer.
-  - **F-P7-4** Drop-ship from supplier on a line that shares its part makes a new sales part; `update#OrderPartTotal`
+  - **F93** Drop-ship from supplier on a line that shares its part makes a new sales part; `update#OrderPartTotal`
     lowers a single promised payment of the original part to its new total, so route gives the new part a payment by the
     same method for its total (review R5). An authorized payment cannot be split and stays on the original part, so a
     moved line's share of it is the order's to settle.
-  - **F-P7-5** A customer line changed or cancelled after its drop-ship order is made does not change that order; the
+  - **F94** A customer line changed or cancelled after its drop-ship order is made does not change that order; the
     buyer revises or cancels it (P9's revisions); cancelling the sales order leaves its drop-ship orders open.
-  - **F-P7-6** A bill price above or below the order's leaves the difference in Unreceived Inventory, as for a received
+  - **F95** A bill price above or below the order's leaves the difference in Unreceived Inventory, as for a received
     line (Mantle posts no purchase price variance); Accounting's price tolerance holds such a bill.
-  - **F-P7-7** The delivery's transaction is in the order's currency; `post#AcctgTrans` converts it to the organization's
+  - **F96** The delivery's transaction is in the order's currency; `post#AcctgTrans` converts it to the organization's
     base currency (AC-19), or holds it in the error journal with no rate.
-  - **F-P7-8** finalize is refused to an integration user without PURCHASE_ORDER_EDIT in the buying organization; a
+  - **F97** finalize is refused to an integration user without PURCHASE_ORDER_EDIT in the buying organization; a
     supplier integration's user needs the permission (the Supplier app's report for review is P16's).
-  - **F-P7-9** Mantle's receipts worklist and the bills' received-not-billed and billed-not-received views read receipts:
+  - **F98** Mantle's receipts worklist and the bills' received-not-billed and billed-not-received views read receipts:
     drop-ship lines are left out of the first and read their delivery in the others.
-  - **F-P7-10** ss-inventory.md and usl-inventory.md have no rows for the drop-ship forms and services (the branch's
+  - **F99** ss-inventory.md and usl-inventory.md have no rows for the drop-ship forms and services (the branch's
     services were never in Mantle's master), so P7 fills no Implemented-in cell.
 
 **Review Nov 4 (P7).** Checked the diff in both repos against this section, §2, design §18, F21 and F37–F40, AGENTS.md and
@@ -1490,7 +1490,7 @@ failure tolerance, the supplier price row, finalize's permission and route. Fixe
   no partial purchase order, the line named). create locks the sales order so the approval's run and a route's make one
   order per line. `ProductAsset.secas.xml` is back to master's; one worker dispatch per approval, as the send already had.
   The specs wait for the purchase order as they did for the send.
-- **R2 (medium)** create's price row (F-P7-2) took rows `get#ProductPrice` never would: a store's, an agreement's or a
+- **R2 (medium)** create's price row (F91) took rows `get#ProductPrice` never would: a store's, an agreement's or a
   term's price, a row with no currency, another unit's, and a null price; ties went to whichever row came first. It now
   uses the resolver's eligibility (PriceResolver.js `typed`) and order. Reusing `get#ProductPrice` is not feasible: it
   withholds supplier rows from a user without SUPPLIER_PRICE_VIEW, and the create runs for no particular user.
@@ -1499,28 +1499,28 @@ failure tolerance, the supplier price row, finalize's permission and route. Fixe
   in `unpricedItems`, for the buyer to price and place; its approval then sends it.
 - **R4 (medium)** create bought from a supplier the buying policy stops (blocked, suspended, unapproved under Stop), which
   route and the purchase order screens refuse; such lines are now passed over with the policy's reason code.
-- **R5 (medium)** route (F-P7-4) moved a line to a new part without its child items (discounts, tax), so both parts' totals
+- **R5 (medium)** route (F93) moved a line to a new part without its child items (discounts, tax), so both parts' totals
   were wrong, and the original part's promised payment was lowered with nothing to collect the moved line; the children
   now move with it and the new part gets a payment by the same method for its total.
 - **R6 (low)** `get#DropShipSetup` read any supplier's facilities; another organization's supplier is now refused
   (SUPPLIER_UNAVAILABLE), as `store#DropShipFacility` does.
 Checked and kept:
-- GL (F39, F-P7-6): a received line behaves the same. Its receipt credits Unreceived Inventory at the asset's acquire cost
+- GL (F39, F95): a received line behaves the same. Its receipt credits Unreceived Inventory at the asset's acquire cost
   (the order price) and the bill debits it at the bill price, and nothing in matching or approval clears a difference
   (Mantle posts no purchase price variance; landed cost only spreads charge lines). So drop-ship leaves no residue a
   received line would not. A PPV posting for both belongs to Accounting, not P7. The delivery's posting goes through
   `post#AcctgTrans` (period checks, the review guard, currency conversion to the base currency with AC-19's error-journal
-  fallback, F-P7-7); a closed period refuses the confirmation as a whole.
+  fallback, F96); a closed period refuses the confirmation as a whole.
 - F40: in create's transaction the gate leaves the purchase order at Placed and notifies; with the gate off it is approved
   by `update#OrderStatus` (no `approve#Order`); the send is on its own approval's commit.
-- F-P7-8: finalize's PURCHASE_ORDER_EDIT is acceptable without a flag. The service is new to mr-mantle, with no Mantle or
+- F97: finalize's PURCHASE_ORDER_EDIT is acceptable without a flag. The service is new to mr-mantle, with no Mantle or
   BOSS caller before P7, and §2 asks a new Mantle service to check its permission; the branch's integrations never ran
-  against Mantle master. Recorded as F-P7-8.
+  against Mantle master. Recorded as F97.
 - Mantle defaults: InvoiceMatch.js, PurchaseReceipts.js and the PO print change only lines with `salesOrderId` or orders
   with a parent order. Every other line reads one field and loads nothing.
 - Left for the lead: OrderDetail shows a drop-ship line whose order could not be made (R1's failure, a stop) as "drops
   when approved" on an approved order. The buyer's way back is create#DropShipPurchaseOrder again (idempotent) or route,
-  and no screen offers it. F-P7-5 stands.
+  and no screen offers it. F94 stands.
 - Specs: Mantle DropShip (6 features, 3.3 s; adds the unpriced and blocked lines, decoy price rows, the payment split and
   the setup refusal), OrderToCashBasicFlow, OrderProcureToPayBasicFlow, AssetReservationMisc,
   AssetReservationMultipleThreads, ReturnToResponseBasicFlow, AccountingMatching, AccountingValuation, AccountingDelivery,
@@ -1606,7 +1606,7 @@ Checked and kept:
     hold it, Manufacturing P14), cancelling it before authorization is `buy`. Warehouse sends back and ships
     (`issue#SupplierReturnStock`, `ship#SupplierReturn`), Accounting settles; Purchasing shows both read only.
   - Purchasing's authorization is its own Mantle service, `authorize#SupplierReturn`, not Customer Service's proposed
-    `ReturnPolicyServices.authorize#Return` (not built; its policy and `responseImmediate` concern customer returns, F-P8-2).
+    `ReturnPolicyServices.authorize#Return` (not built; its policy and `responseImmediate` concern customer returns, F101).
   - A replacement is a purchase order at no price, approved by `create#ReplacementOrder` itself (as Mantle's customer
     replacement is), not through `decide#PurchaseApproval`: it commits no new spend and replaces goods of an approved
     order, so the buying policy's approval gate does not apply to it.
@@ -1614,29 +1614,29 @@ Checked and kept:
     list reader sees the quantities authorized, sent back, credited and replaced.
   - OrderDetail's Return to supplier opens SupplierReturns with the order chosen for New supplier return; OrderDetail has no
     return transition of its own. The outbound shipment shows inside ReturnDetail (no Purchasing mount of a supplier return
-    shipment, F-P8-6).
+    shipment, F105).
 - Findings (provisional):
-  - **F-P8-1** `create#ReturnFromOrder` and `cancel#Return` check no permission (Mantle's raw mutators); Purchasing calls
+  - **F100** `create#ReturnFromOrder` and `cancel#Return` check no permission (Mantle's raw mutators); Purchasing calls
     them after `check#Record` with `buy`, as Warehouse calls `create#Return`, and `add#ReceiptToReturn` checks
     PURCHASE_ORDER_EDIT again. A guarded Mantle create and cancel of a supplier return would make the rule Mantle's.
-  - **F-P8-2** Mantle's `respond#ReturnItems` answers nothing for a supplier return ("Cannot process return responses for
+  - **F101** Mantle's `respond#ReturnItems` answers nothing for a supplier return ("Cannot process return responses for
     supplier purchase return"), so ReturnApprovedProcess only makes the shipment and a Replace response orders nothing by
     itself: the replacement is `create#ReplacementOrder`'s, as design §9 says.
-  - **F-P8-3** ReturnHeader has the supplier's RMA number (`supplierRmaId`) but no RMA expiry or supplier instructions
+  - **F102** ReturnHeader has the supplier's RMA number (`supplierRmaId`) but no RMA expiry or supplier instructions
     field; design Returns' "RMA expiry, attachment and supplier-approved instructions are recorded" are a file
     (ReturnContent, type Authorization) and the conversation for now.
-  - **F-P8-4** (decided Nov 4 by the user: a correction of the match base, no flag; built in the P8 review, R2) Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection
+  - **F103** (decided Nov 4 by the user: a correction of the match base, no flag; built in the P8 review, R2) Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection
     removed (scrapped, or sent back under a Return to supplier disposition). A rejected unit returned that way leaves the
     receipt's match (the walk: 8 received, 7 match-eligible), but a supplier return of released, unbilled stock does not
     lower the receipt's match base, so a later bill could still match it. Changing it is a new refusal in Accounting's
     match (behind its flag); left for the lead and Accounting.
-  - **F-P8-5** An unbilled supplier return has nothing to settle (`preview#ReturnSettlement` answers no line), so it stays
+  - **F104** An unbilled supplier return has nothing to settle (`preview#ReturnSettlement` answers no line), so it stays
     ReturnShipped with its quantity open unless it is replaced; there is no "close without credit" for it.
-  - **F-P8-6** No Purchasing mount shows a supplier return's ShpTpPurchaseReturn shipment (Receiving/ShipmentDetail's
+  - **F105** No Purchasing mount shows a supplier return's ShpTpPurchaseReturn shipment (Receiving/ShipmentDetail's
     Purchasing branch is purchase receipts); ReturnDetail shows its status, quantity sent back and tracking.
-  - **F-P8-7** ReturnItem has one `replacementOrderId`: a second replacement of the same item moves the link to the new order
+  - **F106** ReturnItem has one `replacementOrderId`: a second replacement of the same item moves the link to the new order
     (`replacedQuantity` keeps the total).
-  - **F-P8-8** `settle#Return` refuses a credit against a bill not finalized (CREDIT_SOURCE_INVALID); the walk approves the
+  - **F107** `settle#Return` refuses a credit against a bill not finalized (CREDIT_SOURCE_INVALID); the walk approves the
     supplier's bill before Accounting settles.
 
 **Review Nov 4 (P8).**
@@ -1648,7 +1648,7 @@ Checked and kept:
   `unitAmount` 0 (not null, so no price lookup; isModifiedPrice Y), and a purchase order gets no adjustment on place; its
   `update#OrderStatus` to OrderApproved is reached only for that new order. Purchasing edits a purchase order only while
   OrderOpen, so the approved replacement cannot be repriced today (a P9 note below). Every Purchasing path to the raw
-  `create#ReturnFromOrder` and `cancel#Return` (F-P8-1) runs `check#Record` with `buy` first: `newSupplierReturn` (the order)
+  `create#ReturnFromOrder` and `cancel#Return` (F100) runs `check#Record` with `buy` first: `newSupplierReturn` (the order)
   and `purchasingCancelReturn` (the return, before authorization); the other transitions (`purchasingAddReceipt`,
   `purchasingAuthorizeReturn`, `purchasingReplaceReturn`) do too, and Shared/ReturnDetail's Purchasing transitions posted
   under another app's mount meet the same check#Record (which needs the Purchasing capability whatever the appRoot).
@@ -1657,7 +1657,7 @@ Checked and kept:
 - R1 (low, test): `PurchaseReturns.spec.js` now turns the buying policy's approval gate on before the replacement and
   checks the order's grand total is zero and the part approved (the deliberate exception to the gate, D8), and its header
   no longer says Mantle orders a replacement at authorization.
-- F-P8-4 confirmed (the analysis that went to the lead; decided Nov 4 and built as R2 below): the match base is
+- F103 confirmed (the analysis that went to the lead; decided Nov 4 and built as R2 below): the match base is
   `mantle/account/InvoiceMatch.js` `receiptsOf` / `checkAllocation` (`accepted - held - inspectionRejected`, both the
   order-line `base` and the `receiptBase`), fed by `mantle/product/Quality.js` `sourceStatus` (get#SourceInspectionStatus),
   whose `inspectionRemovedQuantity` counts only scrap and a Return to supplier disposition's `returnedQuantity` (raised by
@@ -1673,7 +1673,7 @@ Checked and kept:
   match re-evaluation when released stock ships back or a return is credited or replaced (only the disposition path calls
   `queue#MatchReevaluation`). It changes the eligible quantity of bills of organizations already using Warehouse P14's
   supplier returns, so Accounting should decide it (as a base correction like P8 review B2, or behind a match-policy flag).
-- R2 (medium, F-P8-4 as decided): `InvoiceMatch.js` `receiptsOf` now takes `supplierReturned` out of each receipt's base
+- R2 (medium, F103 as decided): `InvoiceMatch.js` `receiptsOf` now takes `supplierReturned` out of each receipt's base
   (`checkAllocation`'s line and receipt bases, `propose`), from the new `supplierReturnedOf`: per receipt, what supplier
   return items naming it issued to their return shipments, less the Return to supplier dispositions' `returnedQuantity`
   (`get#SourceInspectionStatus` now gives it apart as `returnedToSupplierQuantity`), less `replacedQuantity`, less what
@@ -1808,14 +1808,14 @@ Checked and kept:
     refusal); the approval of the new revision is `decide#PurchaseApproval` on the held order, whose last step releases the
     revision's Change hold (to Approved, or to Placed and approve#Order for an order not approved yet); the buyer resends it
     through `send#PurchaseOrder`, which stores the new revision's PDF. The Change hold is the revision's lock: its approval or
-    the buyer's cancel of an unapplied change releases it, not `release#OrderHold` (F-P9-2).
+    the buyer's cancel of an unapplied change releases it, not `release#OrderHold` (F109).
   - Receiving goes on while an order changes; ReceiptInProgress is a receipt or bill posted since the change was reviewed
     (the preview's basis key), and the apply locks the open receipts first, so a receive under way finishes before it
-    (F-P9-1).
-  - A revision counts once: its writes do not move the revision one by one (F-P9-3); an acknowledgement and the Change hold
+    (F108).
+  - A revision counts once: its writes do not move the revision one by one (F110); an acknowledgement and the Change hold
     move none.
   - The budget delta at apply: a lowered line's commitment is released to what it still needs (`lower#SourceCommitments`); a
-    raised line is reserved by the approval of the new revision, where Warn and Stop apply (F-P9-4). P10 adds a request's
+    raised line is reserved by the approval of the new revision, where Warn and Stop apply (F111). P10 adds a request's
     conversion.
   - A supplier's promise is per line (`promisedDate`, `promisedQuantity`); the requested date stays `requiredByDate` for on-time
     delivery, and a promise changes no ordered quantity. A changed or rejected response needs the supplier's reason.
@@ -1823,34 +1823,34 @@ Checked and kept:
   - The substitution rule (F49) is `PurchasePolicy.substitutionEnumId`: not allowed by default; allowed puts a product usable
     for buying on a line nothing was received, billed or expected on.
 - Findings (provisional):
-  - **F-P9-1** No skip-locked find in scripts (impl-warehouse F175), so a revision cannot tell at once that a receive holds the
+  - **F108** No skip-locked find in scripts (impl-warehouse F175), so a revision cannot tell at once that a receive holds the
     receipt; Warehouse's receive guard also receives on a held order. ReceiptInProgress is therefore the preview's basis key
     (each line's received and billed quantities): `apply#PurchaseRevision` locks the open receipts first, waits for a receive
     under way, and fails by name when anything was posted since the review.
-  - **F-P9-2** OhtChange's release permission (`enumCode`) is ORDER_APPROVE, which no Purchasing group holds (the design's
+  - **F109** OhtChange's release permission (`enumCode`) is ORDER_APPROVE, which no Purchasing group holds (the design's
     ORDER_CHANGE_HOLD_RELEASE is not seeded), and nothing in mr-mantle, mr-boss or mr-pass placed a Change hold before P9. The
     approval of the revision releases its Change hold and the buyer's cancel an unapplied one; `release#OrderHold` still
     releases it for an ORDER_APPROVE holder.
-  - **F-P9-3** Under `commercialRevisionOnly` each changed line moved `orderRevision` by one (`handle#OrderItemChange`'s item
+  - **F110** Under `commercialRevisionOnly` each changed line moved `orderRevision` by one (`handle#OrderItemChange`'s item
     kind), and without the flag the part's fields, the internal note and the acknowledgement's OrderPart writes each moved it
     too (`handle#OrderPartChange`, the note and content rules); `increment#OrderRevision` returns while the order's count is
     held (`ec.context.sharedMap['PurchaseRevisionCount:<orderId>']`), and the OrderRevisionPurchaseApproval SECA still runs
     on those returns (harmless: nothing is superseded at the same revision).
-  - **F-P9-4** `reserve#Commitment` at a new revision replaces only the lines the approval reserves, so a line lowered to zero
+  - **F111** `reserve#Commitment` at a new revision replaces only the lines the approval reserves, so a line lowered to zero
     kept its earlier commitment until close or cancel (P4 review), and a buyer holds no budget permission; Accounting's
     `BudgetServices` gains the internal `lower#SourceCommitments` (no permission of its own, as
     `release#ClosedSourceCommitments`), written into design-accounting's budget contract list below.
-  - **F-P9-5** `adjust#ExpectedReceipt` refused a held order (`Receiving.purchasePart` took Approved or Sent only); it now
+  - **F112** `adjust#ExpectedReceipt` refused a held order (`Receiving.purchasePart` took Approved or Sent only); it now
     takes the hold a revision places. The receive guard is unchanged.
-  - **F-P9-6** The framework writes a `<field>_changeReason` in the context to each audit row (as Moqui Java does), so the
+  - **F113** The framework writes a `<field>_changeReason` in the context to each audit row (as Moqui Java does), so the
     revision's reason is on each change, read back by OrderDetail's Revisions and the print's "Changes in this revision".
-  - **F-P9-7** OrderPart's reference, dates and terms logged with "true" write an audit row for each new part's first value
+  - **F114** OrderPart's reference, dates and terms logged with "true" write an audit row for each new part's first value
     of them; the as-of print needs the first set.
-  - **F-P9-8** RecordAcknowledgement takes one promised date for every line (a dialog form has no per-line grid); a line's own
+  - **F115** RecordAcknowledgement takes one promised date for every line (a dialog form has no per-line grid); a line's own
     promise is its row's Promise on OrderDetail, which keeps the revision's recorded response.
-  - **F-P9-9** Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no
+  - **F116** Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no
     address choice source) and adding a line by a revision (a new line is a new order or a later item).
-  - **F-P9-10** An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or
+  - **F117** An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or
     sent outside Mantle) is unacknowledged but never overdue.
 
 **Review Nov 4 (P9).** Checked: apply#PurchaseRevision's one transaction, lock order (the open receipts, then the order; the
@@ -2390,6 +2390,35 @@ is written there too.
 | F87 | P6: F30 checked with a service PO: a service line's bill (item type ItemServiceProduct; there is no ItemService) has no eligible source until `accept#ServiceItem`, then matches on the accepted quantity. | See P6 |
 | F88 | P6: Supplier360's Bills tab, like F50's, shows in the other apps' tab menus with its content hidden. | See P6 |
 | F89 | P6: PurchaseOrders' Received, not billed view reads the orders of the newest 500 receipts that name no bill (all organizations, then the buyers' filter), and MatchExceptions' line views the newest 100 approved orders: bounded reads, so an older unbilled receipt can fall outside them. | See P6 |
+| F90 | P7: Mantle's pack issues a reservation only up to its asset's quantity on hand unless the facility has `assetAllowIssueOverQoh` Y; the shell asset holds nothing, so a drop-ship facility needs it beside `assetAllowOtherOwner` (the branch's README leaves it out). `store#DropShipFacility` and the demo set both; the design's setup says so. | See P7 |
+| F91 | P7: `recalc#OrderItemAmount` resolves a price as the current user, and the SECA runs as the sales order's approver, who seldom reads supplier prices: the branch's PO line kept the sales price. create reads the supplier's current price row itself with the resolver's eligibility (review R2: the order's currency, no store, agreement or term scope, the line's unit; the organization's row before the supplier's general one, the highest minimum quantity reached, the latest), and leaves an order with an unpriced line Open (R3). | See P7 |
+| F92 | P7: A tx-commit SECA runs on a service worker in a context of its own, so the drop-ship send is not in the approver's request: specs wait for the worker (`ec.factory.waitWorkerPoolEmpty`), and a send that fails leaves the order in Approved, not sent for the buyer. | See P7 |
+| F93 | P7: Drop-ship from supplier on a line that shares its part makes a new sales part; `update#OrderPartTotal` lowers a single promised payment of the original part to its new total, so route gives the new part a payment by the same method for its total (review R5). An authorized payment cannot be split and stays on the original part, so a moved line's share of it is the order's to settle. | See P7 |
+| F94 | P7: A customer line changed or cancelled after its drop-ship order is made does not change that order; the buyer revises or cancels it (P9's revisions); cancelling the sales order leaves its drop-ship orders open. | See P7 |
+| F95 | P7: A bill price above or below the order's leaves the difference in Unreceived Inventory, as for a received line (Mantle posts no purchase price variance); Accounting's price tolerance holds such a bill. | See P7 |
+| F96 | P7: The delivery's transaction is in the order's currency; `post#AcctgTrans` converts it to the organization's base currency (AC-19), or holds it in the error journal with no rate. | See P7 |
+| F97 | P7: finalize is refused to an integration user without PURCHASE_ORDER_EDIT in the buying organization; a supplier integration's user needs the permission (the Supplier app's report for review is P16's). | See P7 |
+| F98 | P7: Mantle's receipts worklist and the bills' received-not-billed and billed-not-received views read receipts: drop-ship lines are left out of the first and read their delivery in the others. | See P7 |
+| F99 | P7: ss-inventory.md and usl-inventory.md have no rows for the drop-ship forms and services (the branch's services were never in Mantle's master), so P7 fills no Implemented-in cell. | See P7 |
+| F100 | P8: `create#ReturnFromOrder` and `cancel#Return` check no permission (Mantle's raw mutators); Purchasing calls them after `check#Record` with `buy`, as Warehouse calls `create#Return`, and `add#ReceiptToReturn` checks PURCHASE_ORDER_EDIT again. A guarded Mantle create and cancel of a supplier return would make the rule Mantle's. | See P8 |
+| F101 | P8: Mantle's `respond#ReturnItems` answers nothing for a supplier return ("Cannot process return responses for supplier purchase return"), so ReturnApprovedProcess only makes the shipment and a Replace response orders nothing by itself: the replacement is `create#ReplacementOrder`'s, as design §9 says. | See P8 |
+| F102 | P8: ReturnHeader has the supplier's RMA number (`supplierRmaId`) but no RMA expiry or supplier instructions field; design Returns' "RMA expiry, attachment and supplier-approved instructions are recorded" are a file (ReturnContent, type Authorization) and the conversation for now. | See P8 |
+| F103 | P8: (decided Nov 4 by the user: a correction of the match base, no flag; built in the P8 review, R2) Accounting's match base (`InvoiceMatch.js`, `get#SourceInspectionStatus`) takes out only what inspection removed (scrapped, or sent back under a Return to supplier disposition). A rejected unit returned that way leaves the receipt's match (the walk: 8 received, 7 match-eligible), but a supplier return of released, unbilled stock does not lower the receipt's match base, so a later bill could still match it. Changing it is a new refusal in Accounting's match (behind its flag); left for the lead and Accounting. | See P8 |
+| F104 | P8: An unbilled supplier return has nothing to settle (`preview#ReturnSettlement` answers no line), so it stays ReturnShipped with its quantity open unless it is replaced; there is no "close without credit" for it. | See P8 |
+| F105 | P8: No Purchasing mount shows a supplier return's ShpTpPurchaseReturn shipment (Receiving/ShipmentDetail's Purchasing branch is purchase receipts); ReturnDetail shows its status, quantity sent back and tracking. | See P8 |
+| F106 | P8: ReturnItem has one `replacementOrderId`: a second replacement of the same item moves the link to the new order (`replacedQuantity` keeps the total). | See P8 |
+| F107 | P8: `settle#Return` refuses a credit against a bill not finalized (CREDIT_SOURCE_INVALID); the walk approves the supplier's bill before Accounting settles. | See P8 |
+| F108 | P9: No skip-locked find in scripts (impl-warehouse F175), so a revision cannot tell at once that a receive holds the receipt; Warehouse's receive guard also receives on a held order. ReceiptInProgress is therefore the preview's basis key (each line's received and billed quantities): `apply#PurchaseRevision` locks the open receipts first, waits for a receive under way, and fails by name when anything was posted since the review. | See P9 |
+| F109 | P9: OhtChange's release permission (`enumCode`) is ORDER_APPROVE, which no Purchasing group holds (the design's ORDER_CHANGE_HOLD_RELEASE is not seeded), and nothing in mr-mantle, mr-boss or mr-pass placed a Change hold before P9. The approval of the revision releases its Change hold and the buyer's cancel an unapplied one; `release#OrderHold` still releases it for an ORDER_APPROVE holder. | See P9 |
+| F110 | P9: Under `commercialRevisionOnly` each changed line moved `orderRevision` by one (`handle#OrderItemChange`'s item kind), and without the flag the part's fields, the internal note and the acknowledgement's OrderPart writes each moved it too (`handle#OrderPartChange`, the note and content rules); `increment#OrderRevision` returns while the order's count is held (`ec.context.sharedMap['PurchaseRevisionCount:<orderId>']`), and the OrderRevisionPurchaseApproval SECA still runs on those returns (harmless: nothing is superseded at the same revision). | See P9 |
+| F111 | P9: `reserve#Commitment` at a new revision replaces only the lines the approval reserves, so a line lowered to zero kept its earlier commitment until close or cancel (P4 review), and a buyer holds no budget permission; Accounting's `BudgetServices` gains the internal `lower#SourceCommitments` (no permission of its own, as `release#ClosedSourceCommitments`), written into design-accounting's budget contract list below. | See P9 |
+| F112 | P9: `adjust#ExpectedReceipt` refused a held order (`Receiving.purchasePart` took Approved or Sent only); it now takes the hold a revision places. The receive guard is unchanged. | See P9 |
+| F113 | P9: The framework writes a `<field>_changeReason` in the context to each audit row (as Moqui Java does), so the revision's reason is on each change, read back by OrderDetail's Revisions and the print's "Changes in this revision". | See P9 |
+| F114 | P9: OrderPart's reference, dates and terms logged with "true" write an audit row for each new part's first value of them; the as-of print needs the first set. | See P9 |
+| F115 | P9: RecordAcknowledgement takes one promised date for every line (a dialog form has no per-line grid); a line's own promise is its row's Promise on OrderDetail, which keeps the revision's recorded response. | See P9 |
+| F116 | P9: Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no address choice source) and adding a line by a revision (a new line is a new order or a later item). | See P9 |
+| F117 | P9: An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or sent outside Mantle) is unacknowledged but never overdue. | See P9 |
+| F118 | P9 review: a revision that changes the currency with a price or quantity has `lower#SourceCommitments` compare commitments in the old currency with amounts in the new; `record#Acknowledgement` accepts a response while an applied revision awaits approval; a reminder whose record write fails after the send can mail again | Open, for P17 or later |
 
 ## 7. Later
 
