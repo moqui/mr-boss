@@ -1138,8 +1138,9 @@ Design §3 Quantities and ByProducts, §6 ScrapLoss and §12.2; M2, M4, M6 and M
 - Findings (provisional):
   - **F-P7-1** A status field on a new record needs its StatusFlowTransition rows: the framework's status check refused
     PlsPending → PlsApproved until `ProductionLoss`'s flow was seeded.
-  - **F-P7-2** receive#ProductionOutput's limit now counts losses (a process loss lowers what may be received, an output
-    scrapped back raises it); with no policy row and no loss it is the old target − received.
+  - **F-P7-2** receive#ProductionOutput's limit now counts losses (a process loss or a loss waiting lowers what may be
+    received; an output scrapped back stays counted, as scrap in place of good, so it frees nothing); with no policy row and
+    no loss it is the old target − received (WarehouseProduction's over-receipt case, which has no policy row).
   - **F-P7-3** Nothing completes an operation before P10, so complete closes the untouched operations with the run; P10's
     `complete#ProductionOperation` should make OPERATION_OPEN the usual refusal.
   - **F-P7-4** Products' label contract (`prepare#ProductLabels`) labels a product by its identifier for catalog scope; a
@@ -1152,6 +1153,29 @@ Design §3 Quantities and ByProducts, §6 ScrapLoss and §12.2; M2, M4, M6 and M
     Quality.xml (now a parent: P8's Inspections and P11's Downtime add files under `Quality/`), Approvals.xml, the root's
     topics, BossSetupData's topic links, ManufacturingSpecLib, AppStructure's floor (65) and suite.js.
   - **F-P7-7** ManufacturingAccess's P7 tab feature reads the process loss its first P7 feature records.
+- **Review (Nov 3).** Verified against the "usable when" items, R-MFG-20's three paths, F8 (no
+  set#ProducedProductQuantity), the change floor and its Wept delta, the §12.2 refusals, the completeOnFinalReceipt flag (one
+  transaction, off by default, both tested), the tolerance and approval, BYPRODUCT_NOT_COSTED and the permissions. Fixed:
+  approve#ProductionException takes the `workEffortId` the screen checked and refuses a loss or overproduction request of
+  another work order (RECORD_UNAVAILABLE; Quantities and ScrapLoss pass it), so the record check and the decision are of the
+  same run (low: Mantle still checked the organization). Specs added: a retry of record#ProductionLoss writes no second loss
+  or cost event; record#ProductionQuantity refused for a reader and another organization; the overproduction notice reaches
+  the supervisor and not the operator or the other organization; a decision naming another work order is refused;
+  WarehouseProduction's over-receipt case named as F-P7-2's no-policy test. F-P7-2's wording corrected. Left, for later
+  phases:
+  - **F-P7-8** (P10) Complete marks operations never reported WeComplete with no time, which reports (P16) and scheduling
+    (P12) would read as done work. Once complete#ProductionOperation exists, completeCheck should refuse an operation not
+    complete (or offer an explicit "close unreported operations" the supervisor accepts, as with the material variance)
+    rather than closing them silently.
+  - **F-P7-9** Good and pending output need STOCK_ISSUE (Warehouse's grant, §2 P1), which BOSS_MFG_OPERATOR lacks: an
+    operator alone can record losses but not receive output; the Quantities dialog still offers good and pending. Either the
+    operator holds the Warehouse issue group or the dialog hides the receipt fields without `can.issue` (P10's shop floor).
+  - **F-P7-10** (P5b merge) change#ProductionQuantity scales every PrlrMaterial line, so P5b's manual material lines scale
+    too; the merge should decide whether a manual line keeps its quantity. The Mantle collisions with P5b are append-only
+    (Production.js's export list, ProductionServices.xml's appended sections); BOSS collides with master (P11) only in
+    appended blocks (Manufacturing.js, ManufacturingAccess, ManufacturingSpecLib, suite.js).
+  - Review specs: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction (32, then the two
+    touched again, 17, pass); BOSS ManufacturingAccess (73, pass); `moqui lint --screens` informational anchors only.
 
 ### P8 — Quality
 

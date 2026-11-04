@@ -114,7 +114,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'supervise'}"/>
             <service-call name="mantle.work.ProductionServices.approve#ProductionException" out-map="decided"
-                    in-map="{operationKey:operationKey, productionLossId:productionLossId || null,
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId,
+                        productionLossId:productionLossId || null,
                         productionQuantityEventId:productionQuantityEventId || null, decision:decision || 'approve',
                         reason:reason || null}"/>
             <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? 'Refused' : 'Approved', 'success')</script>
