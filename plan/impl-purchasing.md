@@ -1879,6 +1879,11 @@ adjust#ExpectedReceipt's old callers. Fixes:
   against amounts in the new one (lower#SourceCommitments compares them as one currency); record#Acknowledgement accepts a
   response while an applied revision waits for its approval (the supplier has not been sent it yet); a reminder's mail is
   sent in its own transaction before its OrderEmailMessage is written, so a failure after the send can repeat it.
+- **Wave 5 suites (Nov 4, on master after P7, P8 and P9 merged):** standalone mr-mantle 1,615 passed, 2 failed (the
+  baseline), 11 skipped; `./moq test-apps` 2,870 server and 14 client features passed, none failed. The run shared the
+  machine with wave 6's two workers, so its feature times (mr-mantle 996 s, mr-boss 601 s server and 56 s client, and
+  four specs over 15 s) measure the load, not the suite; later waves run their suites before launching workers.
+  `moqui lint --screens` clean.
 
 ### P10 — Purchase requests
 
