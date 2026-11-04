@@ -29,6 +29,12 @@ const ids = {
     templateIds: ["BOSS_MFG_OPT_ASSEMBLE", "BOSS_MFG_OPT_TEST"],
     componentId: "DEMO_RM_1",
     kitId: "DEMO_PA",
+    // P8: the running work order with its in-process weld gate, the gate, its draft inspection and the weld template
+    qualityRunId: "BOSS_MFG_RUN_Q",
+    qualityOperationIds: ["BOSS_MFG_RUN_Q_10", "BOSS_MFG_RUN_Q_20"],
+    qualityGateId: "BOSS_MFG_QGATE_1",
+    inspectionId: "BOSS_MFG_INSP",
+    qualityTemplateId: "BOSS_MFG_QTMPL",
     // P14: the Warehouse demo's subcontractor, its placed service order of the coating operation and the dispatch
     supplierId: "ZiddlemanInc",
     serviceProductId: "BOSS_WH_COATING",
@@ -234,9 +240,33 @@ function routeFixtures() {
         "WorkOrders/WorkOrderDetail/Quantities": {parameters: released, text: "Coated filters"},
         "WorkOrders/WorkOrderDetail/ByProducts": {parameters: released, text: "Coated filters"},
         "WorkOrders/WorkOrderDetail/OutputLabels": {parameters: released, text: "Coated filters"},
-        Quality: {text: "Scrap and loss"},
         "Quality/ScrapLoss": {text: "Scrap and loss"}
     })
+    // P8: the Quality area (Inspections by default), the shared inspection and templates with the Manufacturing context, the
+    // inspection station and its operator mode, the certificate, and the quality work order's Quality tab and checklist (a
+    // tab and a station mount show their parent's text, F63)
+    const qualityRun = {workEffortId: ids.qualityRunId}
+    const inspection = {qualityInspectionId: ids.inspectionId}
+    Object.assign(routes, {
+        Quality: {text: "Inspections"},
+        "Quality/Inspections": {text: "Inspections"},
+        "Quality/QualityInspection": {parameters: inspection, text: "Weld bead even"},
+        "Quality/InspectionTemplates": {parameters: {inspectionTemplateId: ids.qualityTemplateId}, text: "Weld check"},
+        "Quality/InspectionStation": {text: "Inspection station"},
+        "Quality/InspectionStation/Scan": {text: "Scan the inspection"},
+        "Quality/InspectionStation/Inspection": {parameters: inspection, text: "Inspection station"},
+        "Quality/QualityCertificate": {parameters: inspection, text: "Inspection evidence"},
+        "WorkOrders/WorkOrderDetail/Quality": {parameters: qualityRun, text: "Welded frames"},
+        "WorkOrders/WorkOrderDetail/QualityChecklist": {
+            parameters: {workEffortId: ids.qualityRunId, productionQualityGateId: ids.qualityGateId},
+            text: "Welded frames"
+        }
+    })
+    mounts.push(
+        ["Quality/QualityInspection", shared + "QualityInspection.xml"],
+        ["Quality/InspectionTemplates", shared + "InspectionTemplates.xml"],
+        ["Quality/InspectionStation/Inspection", shared + "QualityInspection.xml"]
+    )
     // P14: the Subcontracting area (SubcontractOperations by default), the outside processing of the Warehouse demo's coating
     // operation and its instructions, and the shared supplier, order and shipment screens with the Manufacturing context on
     // Ziddleman, the demo's service order and its subcontract dispatch
@@ -255,6 +285,14 @@ function routeFixtures() {
         ["Subcontracting/OrderDetail", shared + "OrderDetail.xml"],
         ["Subcontracting/ShipmentDetail", shared + "ShipmentDetail.xml"]
     )
+    // P12: the production schedule (a .qvue: its component) with its terminal twin and plan snapshot, and Capacity, on
+    // Retail's plant
+    Object.assign(routes, {
+        "Planning/ProductionSchedule": {parameters: {plantId: ids.plantId}},
+        "Planning/ProductionScheduleTui": {parameters: {plantId: ids.plantId}, text: "Operations by work center"},
+        "Planning/ScheduleSnapshot": {parameters: {plantId: ids.plantId}, text: "Production schedule snapshot"},
+        "Planning/Capacity": {parameters: {plantId: ids.plantId}, text: "Calendar-adjusted"}
+    })
     // P9: the Changes tab and SplitWorkOrder of the Warehouse demo's released run (a tab shows its header's text, F63), and
     // the Work orders area's Disassembly
     Object.assign(routes, {
@@ -343,4 +381,122 @@ function planningFixture(fixture) {
     return productBomId
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, routeFixtures, planningFixture})
+// P12: three released runs of DEMO_1_1 on the demo method (Assemble on line A, then Test on line B), named prefix and 1 to 3,
+// with their operations placed on a Monday a week or more on, in the scheduler's zone: run 1 Assemble on line A 6:00 to 6:12
+// and Test on line B 10:00 to 10:18; run 2 Assemble on line A 6:30 to 6:42 and Test on line B 8:00 to 8:18; run 3 Assemble
+// on line A on Tuesday 6:00 to 6:12 and Test on line B on Wednesday 10:00 to 10:18. Earlier runs of the same prefix (the
+// walks' database outlives a run) are taken off the schedule first. Answers {monday, day(offset), at(offset, clock), runs}.
+function scheduleFixture(prefix) {
+    const P = "mantle.work.ProductionServices."
+    const find = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz()
+    system(() => {
+        for (const old of Array.from(
+            ec.entity
+                .find("mantle.work.effort.WorkEffort")
+                .condition("purposeEnumId", "WepProductionRun")
+                .condition("workEffortName", "like", prefix + " %")
+                .disableAuthz()
+                .list()
+        ))
+            for (const op of Array.from(find("mantle.work.effort.WorkEffort", {rootWorkEffortId: old.workEffortId}).list()))
+                invoke("update#mantle.work.effort.WorkEffort", {
+                    workEffortId: op.workEffortId,
+                    estimatedStartDate: null,
+                    estimatedCompletionDate: null
+                })
+        for (const productId of ["DEMO_SA_1", "DEMO_SA_2", "DEMO_RM_1"])
+            invoke("mantle.product.AssetServices.receive#Asset", {
+                productId,
+                quantity: 40,
+                facilityId: ids.plantId,
+                ownerPartyId: "ORG_ZIZI_RETAIL",
+                assetTypeEnumId: "AstTpInventory",
+                statusId: "AstAvailable",
+                acquireCost: 1
+            })
+    })
+    // the days and times in the scheduler's zone, as the schedule shows them to the scheduler
+    return asUser(
+        users.schedule,
+        () => {
+            const today = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
+            const [y, m, d] = today.split("-").map(Number)
+            let monday = null
+            for (let offset = 7; offset < 14 && !monday; offset++) {
+                const day = new Date(Date.UTC(y, m - 1, d + offset))
+                if (day.getUTCDay() === 1) monday = day
+            }
+            const day = offset => new Date(monday.getTime() + offset * 86400000).toISOString().slice(0, 10)
+            const at = (offset, clock) => ec.l10n.parseTimestamp(day(offset) + " " + clock + ":00.000", "yyyy-MM-dd HH:mm:ss.SSS")
+            const placements = [
+                [
+                    [ids.lineId, at(0, "06:00"), at(0, "06:12")],
+                    [ids.lineBId, at(0, "10:00"), at(0, "10:18")]
+                ],
+                [
+                    [ids.lineId, at(0, "06:30"), at(0, "06:42")],
+                    [ids.lineBId, at(0, "08:00"), at(0, "08:18")]
+                ],
+                [
+                    [ids.lineId, at(1, "06:00"), at(1, "06:12")],
+                    [ids.lineBId, at(2, "10:00"), at(2, "10:18")]
+                ]
+            ]
+            const runs = placements.map((placement, index) => {
+                const created = asUser(
+                    users.plan,
+                    () =>
+                        invoke(P + "create#ProductionOrder", {
+                            operationKey: prefix + "-create-" + Date.now() + "-" + index,
+                            organizationPartyId: "ORG_ZIZI_RETAIL",
+                            productId: ids.productId,
+                            productBomId: ids.methodId,
+                            quantity: 4,
+                            facilityId: ids.lineId,
+                            workEffortName: prefix + " " + (index + 1),
+                            estimatedStartDate: placement[0][1],
+                            estimatedCompletionDate: placement[1][2]
+                        }),
+                    false
+                )
+                const runId = created.workEffortId
+                asUser(
+                    users.plan,
+                    () =>
+                        invoke(P + "transition#ProductionOrder", {
+                            operationKey: prefix + "-release-" + runId,
+                            workEffortId: runId,
+                            action: "release",
+                            expectedRevision: Number(
+                                find("mantle.work.effort.WorkEffort", {workEffortId: runId}).one().productionRevision || 0
+                            )
+                        }),
+                    false
+                )
+                const children = Array.from(find("mantle.work.effort.WorkEffort", {rootWorkEffortId: runId}).list()).sort(
+                    (a, b) => Number(a.operationSequenceNum) - Number(b.operationSequenceNum)
+                )
+                system(() =>
+                    placement.forEach(([facilityId, from, thru], i) =>
+                        invoke("update#mantle.work.effort.WorkEffort", {
+                            workEffortId: children[i].workEffortId,
+                            workCenterFacilityId: facilityId,
+                            estimatedStartDate: from,
+                            estimatedCompletionDate: thru
+                        })
+                    )
+                )
+                return {
+                    runId,
+                    name: prefix + " " + (index + 1),
+                    assemble: children[0].workEffortId,
+                    test: children[1].workEffortId
+                }
+            })
+            return {monday: day(0), day, at, runs}
+        },
+        false
+    )
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, routeFixtures, planningFixture, scheduleFixture})

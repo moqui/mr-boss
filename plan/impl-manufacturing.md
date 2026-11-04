@@ -214,11 +214,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b built Nov 3 (materials and stock) |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
-| P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
+| P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | built Nov 3 |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | built Nov 3 |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
-| P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | — |
+| P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | built Nov 3, reviewed |
 | P15 Cost close | Mantle, BOSS | ProductionCostClose (both mounts), CostingPolicies | — |
@@ -390,6 +390,12 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   baseline), 11 skipped; mr-boss 1,704 passed, 1 failed: ManufacturingShell expected the demo's released run among Home's
   first ten due work orders, which other specs' runs can fill, so it now checks a due row is listed (fixed);
   `moqui lint --screens` clean; BOSS client walks 150 passed.
+- **Wave 5 suites (Nov 4, on master after P8, P12 and P14 merged):** standalone mr-mantle 1,521 passed, 3 failed (the
+  baseline two, and AccountingCollections' credit aging read 9 overdue days for 10 when run at 23:37 CST, after UTC
+  midnight: a date-boundary issue in Accounting's Credit.js, which Manufacturing does not touch), 13 skipped; mr-boss
+  1,724 passed, 1 failed: ManufacturingWorkOrders' find by product paged past its run once other specs' DEMO_1_1 runs
+  filled the first page (it now asks for a larger page; fixed); `moqui lint --screens` clean; BOSS client walks 159
+  passed, 1 failed (AccountingCloseWalk's dialog timed out; it passed alone).
 
 ### P2 — Methods
 
@@ -1324,6 +1330,131 @@ Warehouse P8's CX-QUALITY and its `QUALITY_*` permissions, which P1 grants to th
   - an in-process failure blocks the dependent operation's start, naming the inspection;
   - a template revision leaves the released run's gate as it was.
 
+**Built Nov 3 (P8).**
+- Mantle records (`entity/ProductionQualityEntities.xml`, a new file): `ProductionQualityGate` (a released run's gate: the
+  operation (in-process) or output line (final), the template and `templateAsOfDate` = the release time, the sample policy,
+  size, percent and basis as of then, where the template came from, ended by an unrelease); `InspectionTemplate` gains
+  `productionStageEnumId` (QpsInProcess, QpsFinal), `sampleBasisEnumId` (QsbReceipt, QsbRun), `productBomId` and
+  `operationWorkEffortId` (attachment); `QualityInspection` gains the operation, output line and gate;
+  `QualityInspectionDisposition.productionLossId`; `WorkEffort.productionGatesDate`. `data/ProductionQualityData.xml`: the
+  stage, basis and gate source enumerations and the ProductionQualityBlock topic.
+- Mantle logic (`ProductionQuality.js`, new): at release the gates (an operation's from its routing operation's
+  `methodInspectionTemplateId`, copied from P2's operation template, or a production template attached to the operation; an
+  output line's final gate from a template attached to the run's BOM, else one that applies by product, category and
+  facility), refusing a named template that is not published (TEMPLATE_UNAVAILABLE, in the release gate's preview too); each
+  gate's state from its inspections (required, pending, failed, passed; an in-process gate by its latest inspection, a
+  reinspection superseding with the failure kept in history; a final gate by the worst of its receipts'); the guards: start and
+  resume refuse a failed in-process gate (QUALITY_BLOCKED, naming the inspection), complete refuses a final inspection pending
+  or failed and an in-process gate not passed (INSPECTION_PENDING, INSPECTION_FAILED, QUALITY_GATE_OPEN; first in
+  completeCheck, so the completeOnFinalReceipt path obeys it too), and an operation after an in-process gate not passed is not
+  ready, naming the inspection (`operationBlocks`; `operationGate` for P10's start); `create#ProductionInspection`
+  (QUALITY_INSPECT) for an in-process gate; the output receipt's gate (`outputInspection`, `inspectionPlan`); the
+  quality-block notice to the run's supervisors when a production inspection is verified with a rejection; and a scrap
+  disposition of an open run's output through P7's loss path (`scrapToRun`: an approved PltOutputScrap loss, `applyLoss`).
+- Edits to shared Mantle files: `Quality.js` (applicableTemplate leaves out in-process and attached templates; createInspection
+  takes a gate: its template as of the release, sample and links, and the run's own `demandOrderId` as the peg when no
+  OrderItemWorkEffort; a reinspection keeps the gate; outputInspections passes the gate; verify calls `afterVerify`; Scrap of an
+  open run's output takes `scrapToRun` instead of the morgue and `scrap#Asset`; get#SourceInspectionStatus answers a run,
+  operation or output line; find#Inspections filters by run, operation, gate and context; store#InspectionTemplate takes the
+  production fields only with `productionApplicability`); `QualityServices.xml` (the parameters, descriptions);
+  `Production.js` (release writes the gates; outputPlan holds a gated line's output; `operationsOf` exported);
+  `ProductionOrders.js` (release gate, start and resume, unrelease ends the gates, inspections count as facts, operations
+  readiness); `ProductionQuantities.js` (completeCheck's gate first; outputFigures: an inspected receipt is held by its
+  inspections' heldQuantity, so a part released from a held asset counts good at once; `applyLoss` exported);
+  `ProductionServices.xml` (release and transition descriptions, the appended `create#ProductionInspection`).
+- BOSS: WorkOrderDetail's Quality tab (index 8; Gates with state, template as of the release, sample, inspection, held,
+  disposition, Inspect, Checklist; the run's inspections) and `WorkOrderDetail/QualityChecklist` (html-print, open to the
+  floor); the Quality area now defaults to Inspections (Find and list; the station link), with Templates (`Shared/
+  InspectionTemplates`, index 2) and, hidden, `Shared/QualityInspection`, `InspectionStation` (density handheld, a scan-input
+  over `resolve#InspectionScan`, the assigned inspections, and the shared inspection in operator mode: one characteristic and
+  sample at a time with Pass and Fail or the value) and `QualityCertificate` (html-print; "evidence, not verified" until
+  verified). `ironstone.manufacturing.QualityServices` (`Quality.js`): get#QualityGates, get#InspectionList,
+  get#InspectionDetail, get#QualityChecklist, get#QualityCertificate, get#TemplateList, get#TemplateDetail,
+  get#InspectionChoices, resolve#InspectionScan. Manufacturing.js's P8 block (record kinds inspection and inspectionTemplate,
+  links). The shared screens' Manufacturing context: `Shared/QualityInspection` (detail, run and operation links, gate text,
+  the certificate, operator steps), `Shared/InspectionTemplates` (list and detail, the stage, basis, method and operation
+  fields, a production new template); `template/WarehouseInspectionParts.xml`'s transitions check the record through
+  Manufacturing's check#Record under the Manufacturing root (Warehouse's otherwise) and take its choices. The root's
+  ProductionQualityBlock topic and BossSetupData's link to the Quality tab. Demo: the weld template `BOSS_MFG_QTMPL`, the
+  running work order `BOSS_MFG_RUN_Q` (Weld then Pack) with its gate and the draft inspection `BOSS_MFG_INSP`.
+- Specs: Mantle `test/work/ProductionQuality.spec.js` (6 features, about 5 s: the held receipt with its gate's inspection and
+  INSPECTION_PENDING, held never good; the inspector submits and cannot verify, the verifier verifies, the block notice; Release
+  of 5 reserved to the pegged order item and Scrap of 1 through the loss path, good 5, scrap 1, complete; the in-process
+  failure blocking Assemble's readiness and start status, the resume and the completion, cleared by Rework; the template
+  revision leaving the released gate's items and sample; the unpublished template blocking the release). BOSS
+  ManufacturingAccess P8 (2: each verb's permission and organization on the demo gate; the screens by role with authz on),
+  the route fixtures (AppStructure, TuiRender), client walk `ManufacturingQualityWalk` (3, 390 px).
+- Tests run: Mantle ProductionQuality, ProductionQuantities, ProductionOrders, WarehouseProduction, WarehouseQuality,
+  ManufacturingServices, ProductionPolicy, ProductMethods, ProductionCosts, MethodTemplates (74, pass); BOSS ManufacturingAccess,
+  AppStructure, TuiRender, WarehouseInspections, WarehouseAccess, ManufacturingWorkOrders, ManufacturingShell, Notifications
+  (276, pass); walks ManufacturingQualityWalk, ManufacturingQuantitiesWalk, WarehouseInspectionWalk (9, pass). `moqui lint
+  --screens`: only informational anchor rows for the P8 screens. No new Shared screen (ClientIsolation unchanged).
+- Decisions:
+  - A gate is a snapshot record (`ProductionQualityGate`) written at release with the template id, the release time as the
+    items' as-of and the header's sample plan, rather than reading the template's audit log: the header fields are not
+    effective-dated, so a later sample change would otherwise reach a released run.
+  - A run released under P8 reads its gates only (`productionGatesDate`), so a template published after its release adds no
+    gate; the tracking policy's `inspectionRequired` still holds output (a facility rule, not a template). A run released
+    before P8 keeps P16's rule (a production template that applies now).
+  - In-process failure holds the run (start, resume) and the operations after the gate; a final failure holds the output
+    only (it is received held) and the completion. "After" is the routing's predecessors when the routing names any, else
+    the sequence.
+  - A verified rejection is failed until its rejected quantity is disposed (scrapped, reworked, used as is) or a later
+    inspection passes; a final inspection is pending while any of its stock is still held.
+  - The dispose#Inspection change (Scrap through the loss path) is behind its condition, a production run's open output
+    (the asset is a receipt of the run's output line), not a ProductionPolicy flag: the plan's P8 makes it the rule, and stock
+    of a closed run or any other source still scraps as before (WarehouseQuality unchanged).
+  - The pegged order item is the run's OrderItemWorkEffort, else its own demand (`demandOrderId`, create#ProductionOrder's
+    sourceOrderId).
+- Deferred: the operation start itself (P10's start#ProductionOperation calls `operationGate`; the readiness and
+  get#SourceInspectionStatus's `startAllowed` name the inspection now); a gauge on a reading (later, Gauges); the
+  Purchasing and Customer Service contexts of the shared screens.
+- Findings (provisional):
+  - **F104** There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is
+    the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. The spec
+    marks an operation done directly, as P10 would (F90).
+  - **F105** (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a
+    production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. The topic could
+    carry the app in its message, or Manufacturing could seed its own decision topic.
+  - **F106** RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads
+    OrderItemWorkEffort and the run's own demand fields. A make suggestion converted from an order's demand should carry it
+    to the run (P13's conversion).
+  - **F107** P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the
+    released units off and leaves the receipt's asset quarantined, so they counted held. An inspected receipt is now held by
+    its inspections' heldQuantity (bounded by what is left after scrap).
+  - **F108** store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the
+    production fields are taken only with `productionApplicability`, so Warehouse's form, which does not show them, never
+    clears them (the template revision spec checks it).
+  - **F109** For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output
+    through `outputInspections`, which now takes a gate argument), Production.js (`release`, `outputPlan`, `postOutput`, the
+    export list), ProductionOrders.js (releaseGate, check, apply, factsOf, operations), ProductionQuantities.js
+    (completeCheck, outputFigures, exports), ProductionServices.xml (two descriptions, the appended section),
+    WarehouseInspectionParts.xml, Shared/QualityInspection and Shared/InspectionTemplates, Quality.xml (default item
+    Inspections), Manufacturing.js, Manufacturing.xml, BossSetupData's topic link, BossManufacturingDemoData, ManufacturingSpecLib,
+    ManufacturingAccess and suite.js. P12's scheduling reads operations; the readiness text now can name an inspection.
+- **Review (Nov 3).** Verified against the "usable when" items, §2 and the design's R-MFG-20:
+  - The dispose#Inspection change has no ProductionPolicy flag, and that stands: design-manufacturing Quantities and
+    ScrapLoss make the loss path the rule for held output of an open run ("not a Warehouse adjustment"), the old path
+    booked a run's scrap to shrinkage, and Warehouse's own scrap (receipts, returns, a closed run's stock) is unchanged (WarehouseQuality and
+    WarehouseReturns pass). A flag off would also need outputFigures to subtract a disposition's scrap, which only the loss
+    path records. The loss is approved by the disposer (QUALITY_DISPOSE after a verified rejection), not a supervisor.
+  - F105 fixed: Mantle's decision notice carries the inspection's context, and BOSS's QualityInspectionDecision link
+    opens a production inspection at Manufacturing/Quality/QualityInspection and any other in Warehouse; the Manufacturing
+    shell lists the topic. The submit notice still goes to every QUALITY_VERIFY holder of the organization, Warehouse's
+    quality managers too, who get the Manufacturing link.
+  - Specs added to ProductionQuality: the peg now comes from create#ProductionOrder's sourceOrderId through the receipt's
+    inspection (the spec had written the inspection's demand itself); the older-run branch (no productionGatesDate: P16's
+    applicable template holds the output, no gate) and a gated run whose final gate is gone (not held); unrelease refused
+    with the inspection as a fact (RUN_HAS_FACTS), then allowed once it is cancelled, ending the gates and clearing
+    productionGatesDate; the decision notice's context and link.
+  - Left: create#ProductionInspection has no operation key (as Warehouse's create#Inspection); a retry is refused
+    INSPECTION_EXISTS rather than answering the first. A P7 loss recorded from held output outside a disposition does not
+    lower the inspection's heldQuantity, so its gate stays pending (outputFigures bounds the held count, so it is never
+    good twice).
+  - Tests run: Mantle ProductionQuality (8), WarehouseQuality, ProductionQuantities, ProductionOrders, WarehouseProduction
+    (43, pass), WarehouseReturns; BOSS ManufacturingAccess, WarehouseInspections, WarehouseAccess, AppStructure, Notifications (249, pass);
+    walk ManufacturingQualityWalk (3, pass).
+
 ### P9 — Controlled changes
 
 Design §3 Components' Substitute, SplitWorkOrder, Disassembly and WorkOrderDetail's cancellation and clone, §5
@@ -1470,7 +1601,11 @@ BillOfMaterialsCompare's amendment action; M4.
   - F-P9-2 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
     source's refused posting goes to the error journal, so the unchanged legacy `repost#AssetReceipt` loses the locked day's
     posting. Recorded in impl-accounting §7; the forward flag avoids it.
-  - Cancellation counts P8's production inspections as facts (after the merge with master).
+  - (medium, after the merge with master) cancellation counted only issues, output receipts, time and losses, while the
+    lifecycle's cancel also refuses P7's quantity events and P8's inspections and a started run (RUN_STARTED): a split's
+    source (its target change), an inspected run or a started run with no fact could be cancelled by neither. The plan now
+    counts the same facts, reverses a started run with none, and keeps the inspections as records (spec: all three
+    cancelled, a plain released run still NO_FACTS).
 
 ### P10 — Shop floor and time
 
@@ -1670,6 +1805,99 @@ Design §7 ProductionSchedule and Capacity, §3 Operations' Reschedule; M5, the 
   - an offline interval on a line previews the operations it moves;
   - Capacity shows nominal, calendar-adjusted, downtime, booked and available hours, and names missing data;
   - the terminal twin makes the same move.
+
+**Built Nov 3 (P12).**
+- Mantle records (`entity/ProductionScheduleEntities.xml`, new): WorkEffort `scheduleRevision` (an operation's, audit-logged)
+  and `mantle.work.production.ProductionScheduleChange` (an operation's move or unschedule, applied or requested: from and to
+  center and dates, the revisions it was made at, reason, conflicts JSON, `overrideApplied`, requester and decider).
+  `data/ProductionScheduleData.xml` (statuses SchApplied, SchRequested, SchRefused; kinds SckMove, SckUnschedule) and
+  `ProductionScheduleNotificationData.xml` (topics ProductionScheduleOverride, an approval decided on the schedule, and
+  ProductionScheduleChange).
+- Mantle services (`ProductionPlanningServices.xml`): `ProductionCalendar.js` (new) is a center's time: work hours from its
+  calendar's WetAvailable efforts expanded by `get#EventInstances`, less the holidays of its calendar and organization; offline
+  intervals from its stops (not corrected; an open stop until now) and the ResourceUnavailability of the center or equipment
+  located at it (an open outage to the range's end, F101); slots, efficiency, an operation's standard hours, the open
+  operations, the end of given hours over free time and the next free time. `get#WorkCenterLoad` (`ProductionPlanning.js`)
+  completed: per center and period (range, day or week) nominal, calendar-adjusted, downtime, available and booked hours
+  (prorated over the work hours of each operation's dates: P3's open item), overload, utilization, missing data, next
+  available and the offline reason; `loadHours` is the booked hours. New over `ProductionSchedule.js`:
+  `get#ProductionSchedule` (lanes with closed, holiday and offline times; operations with predecessors, lock, revisions and
+  current conflicts; unscheduled; conflicts; override requests; rights), `schedule#ProductionOperation` (preview, apply,
+  unschedule, request, approve, refuse; the refusals and conflicts of the design note; operation key; the operation's and the
+  run's expected revisions) and `store#WorkCenterOffline` (preview of the operations a block moves, apply with or without
+  the moves, withdraw). F82: SupplyPlanning's routing lead time counts each operation's hours in its center's work hours a
+  day (the week's average by its calendar; 24 without one).
+- BOSS: `Planning/ProductionSchedule` (Projects' `Timeline.qvue` in a new resource mode: lanes, shading, bars by hour,
+  predecessor arrows, a preview-only drag that opens the Move dialog, the dialog's Preview, Apply, Request override and
+  Unschedule, Show conflicts, the override requests with Approve and Refuse; the work-item modes are untouched),
+  `Planning/ProductionScheduleTui` (its terminal twin: the resource and date table, Move with the same preview and
+  commands, Show conflicts, Decide override), `Planning/ScheduleSnapshot` (the plan snapshot print, CSV of its operations),
+  `Planning/Capacity` (Parameters, Load by period with CSV, missing data); `template/ManufacturingSchedule.xml` (the move
+  transitions and the MovePreview section); WorkOrderDetail Operations' Reschedule (a row dialog that previews; the preview
+  box applies, requests or unschedules); FacilityDetail's Work center tab (the completed load, Offline times, Take offline
+  with its preview, Withdraw); Centers' Available hours, Next available and Offline reason (F57, F103). Manufacturing.js P12
+  block (the `scheduleChange` record kind and the routes); the topics on the root and in Approvals, with their links
+  (BossSetupData).
+- Specs: Mantle `test/work/ProductionSchedule.spec.js` (6 features, about 1.5 s: the load by day, the override request and
+  approval with unchanged capacity, the refusals and conflicts, the offline preview, move and withdraw, the schedule's lanes
+  and unschedule, the work hours a day of F82). BOSS `ManufacturingSchedule` (6: the usable-when items through the screens'
+  transitions and pages), `ManufacturingScheduleFixtures` (the walk's runs), ManufacturingAccess's P12 section (3),
+  ManufacturingSpecLib's `scheduleFixture` and routes; client walk `ManufacturingScheduleWalk` (3, with 390 px).
+- Tests run: Mantle ProductionSchedule, WorkCenters, SupplyPlanning, ProductionOrders, ProductionDowntime,
+  ManufacturingServices, WarehouseProduction, ProductMethods (67 features, pass); BOSS ManufacturingSchedule,
+  ManufacturingScheduleFixtures, ManufacturingAccess, AppStructure, TuiRender, ManufacturingWorkCenters,
+  ManufacturingWorkOrders, ManufacturingShell, ManufacturingDowntime, ManufacturingPlanning, TimelineWalk, ProjectsTui,
+  ServerStatic (160 features, pass); walks ManufacturingScheduleWalk and ManufacturingWorkCentersWalk (6, pass), and a
+  one-off browser check that Projects' Timeline still draws its work items. `moqui lint --screens`: no flagged site in the
+  new or changed screens (informational anchors only).
+- Decisions:
+  - Refusals are never overridden (qualification, started work, dates, revisions); calendar, offline, capacity,
+    predecessor, successor, equipment and skills conflicts are, by PRODUCTION_SUPERVISE with a reason. Moving needs
+    PRODUCTION_SCHEDULE; deciding a request needs PRODUCTION_SUPERVISE only, so the BOSS supervisor (no SCHEDULE) decides
+    requests and the administrator may override at once.
+  - "Quantity and version" are the run's revision (its quantity and method) and the operation's schedule revision.
+  - A stop or outage takes the whole center; an open stop counts until now, an open outage until the range's end; a stop
+    awaiting approval counts as downtime and is named (F100).
+  - An operation with no dates counts whole in the load's first period, named; Unschedule clears its dates.
+  - A planned offline block is a ResourceUnavailability RukPlanned of the facility, written by store#WorkCenterOffline (the
+    minimal record; Maintenance MT-07 adopts it); recording needs PRODUCTION_SCHEDULE or METHOD_RESOURCES, the moves
+    PRODUCTION_SCHEDULE, each its own schedule#ProductionOperation.
+  - The schedule-change notice goes to the run's people, else the organization's supervisors; a refusal notifies no one.
+- Findings (provisional):
+  - **F110** A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has
+    no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's
+    start in the scheduler's zone. A plant calendar should carry its zone (WorkEffortRecurrence.timeZone, or a plant zone).
+    Review: holidays now start in `Calendar.timeZone`; the demo data's zone is still open.
+  - **F111** A transition that answers JSON must call a Mantle verb that may refuse in a new transaction
+    (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an
+    exception, not the JSON.
+  - **F112** Release still copies the run's dates to every operation (F55), so a released run's operations overlap and
+    show predecessor conflicts until they are scheduled; release places nothing forward by the center's scheduling policy.
+    The offline change's forward placement is the only automatic one; a finite proposal is FiniteSchedule's (later).
+  - **F113** A refused override request leaves the requester no notice (it leaves the schedule's request list);
+    Capacity's list pages by work center (the service's center paging set on its rows); "include tentative" is not offered
+    (drafts have no operations); the terminal Move was verified by server renders and transition posts, not in the
+    `moqui tui` client.
+  - F57 and F103 (Centers' columns), F101 (the load reads stops and outages) and F82 (lead time on work days) are done.
+- Review (Nov 3): checked the commit's rechecks (refusals never overridden; conflicts only with PRODUCTION_SUPERVISE and a
+  reason, recorded on the change, no capacity written), both revisions and the operation key on every write, the request,
+  approve and refuse flow and its topics and recipients (F40), the offline block as a RukPlanned ResourceUnavailability of
+  the facility, the JSON transitions' new transactions (F111, used throughout) and the Timeline's work-item modes.
+  Fixed in Mantle: get#WorkCenterLoad prorated an operation that runs past the range over only its work hours inside the
+  range (the calendar was read for the range alone), so it counted whole; the calendar is now read over the operation's
+  dates. F110 partly fixed: a holiday's day now starts in the calendar's zone (`Calendar.timeZone`, else the user's); a
+  recurring shift already expands in its recurrence's zone, which the calendar services write. The BOSS demo shift and
+  calendar still carry no zone (seed data), so they read in the viewer's zone; giving them a plant zone needs
+  ManufacturingSchedule's clock reads in that zone. New Mantle feature (7 now): the part of an operation inside the range
+  and a zoned holiday. Reran Mantle ProductionSchedule, WorkCenters, SupplyPlanning (24); BOSS ManufacturingSchedule,
+  ManufacturingAccess, ManufacturingWorkCenters, ProjectsTui, ServerStatic, TimelineWalk, AppStructure, TuiRender (125);
+  walk ManufacturingScheduleWalk (3): all pass.
+- For the merge: shared files touched append-only where possible: `ProductionPlanningServices.xml` (header and
+  get#WorkCenterLoad changed, three services appended), `SupplyPlanning.js` (`leadDaysOf`), `Manufacturing.js` (P12 block),
+  `Manufacturing.xml` (two topics), `Approvals.xml` (topic list), `BossSetupData.xml` (two links at the end),
+  `ManufacturingSpecLib.js` (P12 routes; `scheduleFixture` and the export line), `ManufacturingAccess.spec.js` (P12
+  section), `suite.js` (the walk and fixture), WorkOrderDetail's `Operations.xml` (P5b and P7 may edit it), FacilityDetail's
+  `WorkCenter.xml`, Centers and Projects' `Timeline.qvue`.
 
 ### P13 — Supply planning
 
@@ -1946,16 +2174,16 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
   - The Supplier360 tab and the Subcontracting area are for the planner, supervisor, administrator and buyer groups
     (BOSS_MFG_SUBCONTRACTING); a production reader reads the same records through Mantle, not the screens.
 - Findings (provisional):
-  - **F-P14-1** BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row
+  - **F114** BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row
     on a Warehouse demo product fails its foreign key and skips the whole file, and the user file after it; the coating price
     is at the end of BossWarehouseDemoData.
-  - **F-P14-2** `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close
+  - **F115** `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close
     should reverse a variance whose match line is reversed (the event names its match line).
-  - **F-P14-3** ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take
+  - **F116** ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take
     `find#PartyAcctgPreference`'s ancestor walk.
-  - **F-P14-4** `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order
+  - **F117** `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order
     is placed and approved in Purchasing (and the bill match needs an approved order).
-  - **F-P14-5** Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the
+  - **F118** Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the
     Subcontract orders tab is checked by ManufacturingSubcontracting's html render.
 - **Review (Nov 3).** Findings and fixes:
   - (medium, fixed) The service-acceptance rule, Y by default, took over every PtService line, also one received with an
@@ -1966,7 +2194,7 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
     rule feature now checks the default's refusal (MISSING_RECEIPT with nothing accepted) before the rule is turned off.
   - (medium, fixed) BOSS_PURCHASING_BUYER alone could not convert: the resolver withheld the supplier price, so every
     conversion the mount offered it was refused. SUPPLIER_PRICE_VIEW is granted to the buyer and Purchasing admin groups,
-    and the demo buyer's borrowed Products group is dropped (F-P14-6).
+    and the demo buyer's borrowed Products group is dropped (F119).
   - Checked and left: the accrual is written once per acceptance (a retry answers the first through the operation key);
     the variance only on `apply#InvoiceMatch` for a line with an OrderItemWorkEffort to a run; the conversion makes one
     draft PO per supplier, never places or approves it, answers EXISTING the second time and refuses the planner;
@@ -1974,7 +2202,7 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
     and ShipmentDetail branches leave the Products, Projects, Accounting and Warehouse paths as they were;
     `run#SupplyPlan` carries open requests forward and supersede never rejects them. `outsideRequirements` reads every
     OrgInternal requirement id of the organization before filtering; fine at demo scale, a candidate for a join later.
-  - **F-P14-6** A group whose mount offers an action must hold every permission the action's Mantle service checks; here
+  - **F119** A group whose mount offers an action must hold every permission the action's Mantle service checks; here
     the conversion's supplier-price read. Purchasing P1 keeps SUPPLIER_PRICE_VIEW on its buyer group.
 
 ### P15 — Cost close
@@ -2194,6 +2422,22 @@ is written there too.
 | F101 | P11: A correction does not move or end the outage it carries: MT-07's `correct#` and `end#ResourceUnavailability` own that. | P11 Built note |
 | F102 | P11: The maintenance request's RequestWorkEffort link to the stopped operation makes the operation a row of the Commons and Projects request's Tasks or Work tab; F38's guards refuse its changes there, and the Manufacturing context links it to its work order … | P11 Built note |
 | F103 | P11: F57's Centers columns (next available, offline reason) are not built; P12 adds them with the load. | P11 Built note |
+| F104 | P8: There is no operation start before P10, so "an in-process failure blocks the dependent operation's start" is the operation's readiness and its `startAllowed` (and the run's resume); P10's start must call `operationGate`. | P8 Built note |
+| F105 | P8: (fixed in review) QualityInspectionDecision had one link template, Warehouse's (`/qapps/Warehouse/QualityInspection`), so a production inspection's decision notice opens Warehouse, which a Manufacturing inspector may not reach. | P8 Built note |
+| F106 | P8: RequirementSupply has no sales order item, so a planned run's demand cannot be pegged from it; R-SA-10 reads OrderItemWorkEffort and the run's own demand fields. | P8 Built note |
+| F107 | P8: P7's get#ProductionQuantities counted a receipt held by its asset's status; a partial Release splits the released units off and leaves the receipt's asset quarantined, so they counted held. | P8 Built note |
+| F108 | P8: store#InspectionTemplate takes every header field when templateName is given, an empty one clearing it; the production fields are taken only with `productionApplicability`, so Warehouse's form, which does not show them, never clears them (the template … | P8 Built note |
+| F109 | P8: For the merge: Quality.js and QualityServices.xml (Warehouse P8's; P14's subcontract receipt holds output through `outputInspections`, which now takes a gate argument), Production.js (`release`, `outputPlan`, `postOutput`, the export list), … | P8 Built note |
+| F110 | P12: A center's recurring work hours expand in the viewing user's time zone (the BOSS demo shift's recurrence has no `timeZone`), so users in two zones see a plant's shift at different wall times, and the BOSS spec reads the shift's start in the scheduler's zone. | P12 Built note |
+| F111 | P12: A transition that answers JSON must call a Mantle verb that may refuse in a new transaction (`requireNewTransaction`): a refusal marks the transition's transaction rollback-only and the screen answers an exception, not the JSON. | P12 Built note |
+| F112 | P12: Release still copies the run's dates to every operation (F55), so a released run's operations overlap and show predecessor conflicts until they are scheduled; release places nothing forward by the center's scheduling policy. | P12 Built note |
+| F113 | P12: A refused override request leaves the requester no notice (it leaves the schedule's request list); Capacity's list pages by work center (the service's center paging set on its rows); "include tentative" is not offered (drafts have no operations); the … | P12 Built note |
+| F114 | P14: BossManufacturingDemoData loads before BossWarehouseDemoData (alphabetical), so a Manufacturing demo row on a Warehouse demo product fails its foreign key and skips the whole file, and the user file after it; the coating price is at the end of … | P14 Built note |
+| F115 | P14: `unapply#InvoiceMatch` and `reevaluate#InvoiceMatch` write no reversal of the variance event; P15's cost close should reverse a variance whose match line is reversed (the event names its match line). | P14 Built note |
+| F116 | P14: ORG_ZIZI_RETAIL has no PartyAcctgPreference of its own; a currency read of an organization must take `find#PartyAcctgPreference`'s ancestor walk. | P14 Built note |
+| F117 | P14: `approve#Order` needs ORDER_APPROVE, which no Manufacturing or buyer group holds; a converted service order is placed and approved in Purchasing (and the bill match needs an approved order). | P14 Built note |
+| F118 | P14: Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the Subcontract orders tab is checked by ManufacturingSubcontracting's html render. | P14 Built note |
+| F119 | P14: A group whose mount offers an action must hold every permission the action's Mantle service checks; here the conversion's supplier-price read. | P14 Built note |
 
 ## 7. Later
 

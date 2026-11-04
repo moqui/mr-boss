@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The quality checklist of a work order's gate (design-manufacturing §11 outputs: operator instructions and quality
+    checklist; impl-manufacturing P8): the work order, the gate's operation and stage, its sample plan and the template's
+    characteristics as of the run's release, each with its limits and a blank reading per sample, to fill at the station.
+    Printed from WorkOrderDetail's Quality tab as html-print (WorkOrderDetail/QualityChecklist, hidden from the menu, so the
+    floor reaches it), read through ironstone.manufacturing.QualityServices.get#QualityChecklist; it posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quality checklist" default-menu-include="false">
+    <parameter name="workEffortId" required="true"/>
+    <parameter name="productionQualityGateId" required="true"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.QualityServices.get#QualityChecklist" out-map="checklist"
+                in-map="{workEffortId:workEffortId, productionQualityGateId:productionQualityGateId}"
+                transaction="force-new" ignore-error="true"/>
+        <set field="recordFound" from="!!checklist?.gate"/>
+        <set field="gate" from="checklist?.gate || {}"/>
+        <set field="itemRows" from="checklist?.itemRows || []"/>
+        <set field="printedText" from="ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="ChecklistMissing" condition="!recordFound">
+            <widgets>
+                <label text="This quality gate is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Checklist" condition="recordFound">
+            <widgets>
+                <label text="Quality checklist · ${checklist.templateName}" type="h5"/>
+                <label text="${['Work order ' + workEffortId + (checklist.run.workEffortName ? ' ' + checklist.run.workEffortName :
+                        ''), gate.stageText + (gate.operationName ? ' at ' + gate.operationName : ''), 'sample ' +
+                        gate.sampleText, 'template as of ' + checklist.asOfText, 'printed ' + printedText].join(' · ')}"
+                        type="p"/>
+                <form-list name="ChecklistItems" list="itemRows" skip-form="true" paginate="false">
+                    <field name="characteristicName">
+                        <default-field title="Characteristic">
+                            <display text="${characteristicName}${mandatory == 'N' ? ' (optional)' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="limitsText">
+                        <default-field title="Check">
+                            <display text="${readingTypeText}${limitsText ? ': ' + limitsText : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="blanks">
+                        <default-field title="Readings">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="characteristicName"/>
+                        </column>
+                        <column>
+                            <field-ref name="blanks"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="Inspector ______________________   Date __________   Result: accepted ____  rejected ____" type="p"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

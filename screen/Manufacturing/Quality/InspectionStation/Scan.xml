@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The inspection station's start (impl-manufacturing P8): what to scan, and the user's open inspections to pick from. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Scan" default-menu-include="false">
+    <actions>
+        <service-call name="ironstone.manufacturing.QualityServices.get#InspectionList" out-map="found"
+                transaction="force-new" ignore-error="true" in-map="{assignedOnly:'Y', pageSize:20}"/>
+        <set field="mine" from="found?.inspections || []"/>
+    </actions>
+    <widgets>
+        <label text="Scan the inspection's label, its held stock or its lot to record its readings one at a time." type="p"/>
+        <form-list name="MyInspections" list="mine" skip-form="true" paginate="false">
+            <field name="qualityInspectionId">
+                <default-field title="Inspection">
+                    <link url="../Inspection" text="${qualityInspectionId} · ${productName}" link-type="anchor"
+                            parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                </default-field>
+            </field>
+            <field name="statusText"><default-field title="State"><display/></default-field></field>
+        </form-list>
+    </widgets>
+</screen>

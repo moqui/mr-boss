@@ -1248,9 +1248,10 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection -->
+    <!-- an inspection's decision (Mantle's QualityInspectionDecision, impl-warehouse P8) opens the inspection: a production
+        inspection in Manufacturing's Quality (impl-manufacturing P8, F-P8-2), any other in Warehouse -->
     <moqui.security.user.NotificationTopic topic="QualityInspectionDecision"
-            linkTemplate="/qapps/Warehouse/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>
+            linkTemplate="/qapps/${inspectionContextEnumId == 'QicProduction' ? 'Manufacturing/Quality' : 'Warehouse'}/QualityInspection?qualityInspectionId=${qualityInspectionId}"/>
     <!-- due counts (Mantle's notify#DueCounts, impl-warehouse P10) open the Due saved find of the facility -->
     <moqui.security.user.NotificationTopic topic="WarehouseCountsDue"
             linkTemplate="/qapps/Warehouse/Counts/Counts?view=due&amp;facilityId=${facilityId}"/>
@@ -1283,6 +1284,10 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
     <moqui.security.user.NotificationTopic topic="ProductionOverproduction"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quantities?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P8: the quality-block notice (a production inspection verified with a rejection) opens the work order's
+        Quality tab -->
+    <moqui.security.user.NotificationTopic topic="ProductionQualityBlock"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Quality?workEffortId=${workEffortId}"/>
     <!-- Manufacturing P9: a substitute decided on the work order's Components, an amendment reviewed on its Changes tab -->
     <moqui.security.user.NotificationTopic topic="ProductionSubstitution"
             linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Components?workEffortId=${workEffortId}"/>
@@ -1304,4 +1309,10 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PAYABLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PROFILE_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="RETURN_AUTHORIZE" fromDate="0"/>
+
+    <!-- Manufacturing P12: an override request opens the schedule on it; a schedule change the operation in its work order -->
+    <moqui.security.user.NotificationTopic topic="ProductionScheduleOverride"
+            linkTemplate="/qapps/Manufacturing/Planning/ProductionSchedule?scheduleChangeId=${scheduleChangeId}"/>
+    <moqui.security.user.NotificationTopic topic="ProductionScheduleChange"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail/Operations?workEffortId=${workEffortId}&amp;selectedOperationId=${operationWorkEffortId}"/>
 </entity-facade-xml>

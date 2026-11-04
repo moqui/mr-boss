@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Capacity (design-manufacturing §7 Capacity: Parameters, Load; style-guide §3.8 Report; impl-manufacturing P12): the work
+    centers of the plant (or found by name) over the days chosen, whole or by day or week, with their nominal, calendar-adjusted,
+    downtime, booked and available hours, the overload and the utilization (booked over available, not OEE: the formula, time
+    zone and missing data are on the page), each center naming its missing data (no calendar, no slots, operations without hours
+    or dates, stops awaiting approval, an open stop or outage) - mantle.work.ProductionPlanningServices.get#WorkCenterLoad, which
+    checks PRODUCTION_VIEW and the organization. A center opens FacilityDetail (its offline times) and the production schedule
+    of its plant; the list exports as CSV. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Capacity" default-menu-index="3">
+    <parameter name="plantId"/>
+    <parameter name="text"/>
+    <parameter name="fromDay"/>
+    <parameter name="thruDay"/>
+    <parameter name="bucket"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <set field="plant" from="plantId || manufacturing.plantId || null"/>
+        <if condition="plant">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:plant}"/>
+        </if>
+        <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(fromDay || '')) ? String(fromDay) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="lastDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(thruDay || '')) ? String(thruDay) : new Date(Date.UTC(Number(firstDay.substring(0, 4)),
+                Number(firstDay.substring(5, 7)) - 1, Number(firstDay.substring(8, 10)) + 14)).toISOString().substring(0, 10)"/>
+        <set field="theBucket" from="['day', 'week'].includes(bucket) ? bucket : 'range'"/>
+        <service-call name="mantle.work.ProductionPlanningServices.get#WorkCenterLoad" out-map="load" transaction="force-new"
+                ignore-error="true" in-map="{plantFacilityId:plant, text:text, bucket:theBucket == 'range' ? null : theBucket,
+                    pageIndex:pageIndex,
+                    fromDate:ec.l10n.parseTimestamp(firstDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'),
+                    thruDate:ec.l10n.parseTimestamp(lastDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')}"/>
+        <set field="loadError" from="load ? '' : ec.message.getErrorsString()"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="loadRows" from="[]"/>
+        <iterate list="load?.centerList || []" entry="center">
+            <iterate list="center.periodList || []" entry="period">
+                <script>loadRows.push(Object.assign({}, period, {facilityId: center.facilityId, facilityName: center.facilityName,
+                    plantName: center.plantName, slotsText: center.slotsConfigured ? String(center.parallelSlots) : '1 (not set)',
+                    efficiencyPercent: center.efficiencyPercent, missingText: center.missingText,
+                    overloadColor: period.overloaded ? 'negative' : 'positive',
+                    utilizationText: period.utilizationPercent == null ? 'No available hours' : period.utilizationPercent + '%'}))</script>
+            </iterate>
+        </iterate>
+        <set field="missingRows" from="(load?.centerList || []).filter((center) =&gt; (center.missingList || []).length)
+                .map((center) =&gt; ({facilityId: center.facilityId, facilityName: center.facilityName, missingText: center.missingText}))"/>
+        <!-- the list pages by work center: the service's paging of the centers -->
+        <set field="loadRowsCount" from="load?.centerListCount || 0"/>
+        <set field="loadRowsPageIndex" from="load?.centerListPageIndex || 0"/>
+        <set field="loadRowsPageSize" from="load?.centerListPageSize || 20"/>
+        <set field="loadRowsPageMaxIndex" from="load?.centerListPageMaxIndex || 0"/>
+        <set field="loadRowsPageRangeLow" from="load?.centerListPageRangeLow || 0"/>
+        <set field="loadRowsPageRangeHigh" from="load?.centerListPageRangeHigh || 0"/>
+        <set field="parameterValues" from="{plantId: plant, text: text, fromDay: firstDay, thruDay: lastDay, bucket: theBucket}"/>
+        <set field="scheduleLink" from="{plantId: plant, fromDay: firstDay}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Capacity" type="h5"/>
+                <label text="${load ? load.rangeText + ' · ' + (load.timeZone || 'server time') : ''}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row q-gutter-sm">
+                <link url="${sharedLinks['Planning/ProductionSchedule']}" text="Production schedule" icon="sym_o_view_timeline"
+                        link-type="anchor-button" parameter-map="scheduleLink"/>
+            </container>
+        </container>
+        <!-- Parameters -->
+        <form-single name="CapacityParameters" transition="." map="parameterValues">
+            <field name="plantId">
+                <default-field title="Plant">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'plants', selected:plantId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="text"><default-field title="Work center"><text-line size="16"/></default-field></field>
+            <field name="fromDay"><default-field title="From"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+            <field name="thruDay"><default-field title="Through" tooltip="The day after the last"><date-time type="date" format="yyyy-MM-dd"/></default-field></field>
+            <field name="bucket">
+                <default-field title="By">
+                    <drop-down><option key="range" text="The whole range"/><option key="day" text="Day"/><option key="week" text="Week"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show load"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="plantId"/>
+                    <field-ref name="text"/>
+                    <field-ref name="fromDay"/>
+                    <field-ref name="thruDay"/>
+                    <field-ref name="bucket"/>
+                    <field-ref name="submit"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label text="The load could not be read: ${loadError}" type="p" style="text-negative" condition="!load"/>
+        <section name="CapacityLoad" condition="load">
+            <widgets>
+                <label text="${load.utilizationFormula} Calendar-adjusted hours are the slots over the work hours less holidays, at the center's efficiency; downtime is the work hours it is offline (stops and outages); booked hours prorate each released operation's standard hours over the work hours of its dates."
+                        type="p" style="text-caption m-muted"/>
+                <!-- Load -->
+                <form-list name="CapacityLoadList" list="loadRows" skip-form="true" paginate="true"
+                        show-csv-button="true" select-columns="true">
+                    <field name="facilityName">
+                        <default-field title="Work center">
+                            <link url="${sharedLinks['WorkCenters/FacilityDetail']}" text="${facilityName}" link-type="anchor"
+                                    parameter-map="{facilityId:facilityId}"/>
+                        </default-field>
+                    </field>
+                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                    <field name="slotsText"><default-field title="Slots"><display align="right"/></default-field></field>
+                    <field name="nominalHours"><default-field title="Nominal"><display align="right"/></default-field></field>
+                    <field name="calendarHours"><default-field title="Calendar-adjusted"><display align="right"/></default-field></field>
+                    <field name="downtimeHours"><default-field title="Downtime"><display align="right"/></default-field></field>
+                    <field name="availableHours"><default-field title="Available"><display align="right"/></default-field></field>
+                    <field name="bookedHours"><default-field title="Booked"><display align="right"/></default-field></field>
+                    <field name="overloadHours">
+                        <default-field title="Overload">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${overloadColor}">${overloadHours}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: overloaded ? overloadHours + ' over' : overloadHours})}]]></text>
+                                <text type="html,csv">${overloadHours}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="utilizationText"><default-field title="Utilization"><display align="right"/></default-field></field>
+                    <field name="missingText"><default-field title="Missing data"><display style="text-warning"/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="facilityName"/><field-ref name="periodText"/></column>
+                        <column><field-ref name="availableHours"/><field-ref name="overloadHours"/></column>
+                    </columns>
+                </form-list>
+                <label text="No work center matches. A resource administrator adds work centers in Work centers." type="p" style="m-muted"
+                        condition="!loadRows.length"/>
+                <section name="CapacityMissing" condition="missingRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Missing data"/>
+                            <box-body-nopad>
+                                <form-list name="CapacityMissingList" list="missingRows" skip-form="true" paginate="false">
+                                    <field name="facilityName"><default-field title="Work center"><display/></default-field></field>
+                                    <field name="missingText"><default-field title="What is missing"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

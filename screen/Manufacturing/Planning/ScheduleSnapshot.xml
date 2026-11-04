@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The plan snapshot of ProductionSchedule (design-manufacturing §11 "Reports and plan snapshots"): the same authorized schedule
+    (get#ProductionSchedule for the plant and days) as of now, with its work centers (slots, calendar, offline times), every
+    operation with its work order, product, dates, hours, status and conflicts, and the conflicts listed; the operations list
+    exports as CSV. A print (html-print) opened from the schedule's Snapshot; it renders in every mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Schedule snapshot" default-menu-include="false">
+    <parameter name="plantId"/>
+    <parameter name="fromDay"/>
+    <parameter name="days"/>
+    <actions>
+        <set field="plant" from="plantId || manufacturing.plantId || null"/>
+        <set field="span" from="Math.max(1, Math.min(92, Number(days) || 14))"/>
+        <set field="firstDay" from="/^\d{4}-\d{2}-\d{2}$/.test(String(fromDay || '')) ? String(fromDay) : ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')"/>
+        <set field="lastDay" from="new Date(Date.UTC(Number(firstDay.substring(0, 4)), Number(firstDay.substring(5, 7)) - 1,
+                Number(firstDay.substring(8, 10)) + span)).toISOString().substring(0, 10)"/>
+        <if condition="plant">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="plantChecked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'facility', recordId:plant}"/>
+        </if>
+        <set field="snapshot" from="null"/>
+        <if condition="!plant || plantChecked?.recordId">
+            <service-call name="mantle.work.ProductionPlanningServices.get#ProductionSchedule" out-map="snapshot"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{plantFacilityId:plant,
+                        fromDate:ec.l10n.parseTimestamp(firstDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS'),
+                        thruDate:ec.l10n.parseTimestamp(lastDay + ' 00:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS')}"/>
+        </if>
+        <set field="laneNames" from="Object.fromEntries((snapshot?.laneList || []).map((lane) =&gt; [lane.facilityId, lane.facilityName]))"/>
+        <set field="laneRows" from="(snapshot?.laneList || []).map((lane) =&gt; ({facilityId: lane.facilityId,
+                facilityName: lane.facilityName, slots: lane.parallelSlots, calendarText: lane.calendarConfigured ? 'Yes' : 'No work calendar',
+                offlineText: (lane.offlineList || []).map((row) =&gt; row.kindText + ' ' + row.fromText + ' to ' + row.thruText + ': '
+                + row.reasonText).join('; ')}))"/>
+        <set field="snapshotRows" from="(snapshot?.operationList || []).concat(snapshot?.unscheduledList || []).map((row) =&gt; ({
+                workCenter: laneNames[row.facilityId] || row.facilityId, operationId: row.workEffortId, operation: row.operationName,
+                workOrder: row.runWorkEffortId, workOrderName: row.runName, product: row.productName, quantity: row.quantityText,
+                start: row.startText, end: row.endText, hours: row.hours, status: row.statusText, pinned: row.locked ? 'Yes' : '',
+                conflicts: row.conflictText}))"/>
+    </actions>
+    <widgets>
+        <section name="SnapshotFound" condition="snapshot">
+            <widgets>
+                <label text="Production schedule snapshot" type="h5"/>
+                <label text="${plant ? (manufacturing.plantName || plant) + ' · ' : ''}${snapshot.fromText} to ${snapshot.thruText} · as of ${snapshot.nowText} (${ec.user.timeZone || 'server time'})"
+                        type="p"/>
+                <label text="${snapshotRows.length} operations, ${(snapshot.conflictList || []).length} conflicts${snapshot.truncated ? '; only the first 300 operations' : ''}"
+                        type="p" style="m-muted"/>
+                <form-list name="SnapshotCenters" list="laneRows" skip-form="true" paginate="false">
+                    <field name="facilityName"><default-field title="Work center"><display/></default-field></field>
+                    <field name="slots"><default-field title="Slots"><display align="right"/></default-field></field>
+                    <field name="calendarText"><default-field title="Work calendar"><display/></default-field></field>
+                    <field name="offlineText"><default-field title="Offline"><display/></default-field></field>
+                </form-list>
+                <form-list name="SnapshotOperations" list="snapshotRows" skip-form="true" paginate="false" show-csv-button="true">
+                    <field name="workCenter"><default-field title="Work center"><display/></default-field></field>
+                    <field name="operation"><default-field title="Operation"><display/></default-field></field>
+                    <field name="workOrder"><default-field title="Work order"><display/></default-field></field>
+                    <field name="workOrderName"><default-field title="Work order name"><display/></default-field></field>
+                    <field name="product"><default-field title="Product"><display/></default-field></field>
+                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                    <field name="start"><default-field title="Start"><display/></default-field></field>
+                    <field name="end"><default-field title="End"><display/></default-field></field>
+                    <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
+                    <field name="status"><default-field title="Status"><display/></default-field></field>
+                    <field name="pinned"><default-field title="Pinned"><display/></default-field></field>
+                    <field name="conflicts"><default-field title="Conflicts"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="operation"/><field-ref name="workCenter"/></column>
+                        <column><field-ref name="start"/><field-ref name="status"/></column>
+                    </columns>
+                </form-list>
+                <label text="No operation at these work centers in these days." type="p" style="m-muted"
+                        condition="!snapshotRows.length"/>
+            </widgets>
+            <fail-widgets>
+                <label text="This schedule is not available: the plant is not one of yours." type="p" style="m-muted"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Manufacturing's quality reads (impl-manufacturing P8; Quality.js): WorkOrderDetail's Quality tab, the Quality area's
+    Inspections, the shared QualityInspection and InspectionTemplates with the Manufacturing context and the operator mode's
+    scan, the quality checklist and certificate prints, and their drop-downs. Each runs the Manufacturing scope and its record
+    check before Mantle's mantle.product.QualityServices reads, which check their permission and organization again. The
+    writes are the Mantle verbs, called by the screens' transitions after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="QualityGates" allow-remote="false">
+        <description>A run's quality gates as WorkOrderDetail's Quality tab shows them: each gate (in-process on its
+            operation, final on its output) with its template as of the release, sample, state, the inspection that decides
+            it, the held quantity and its dispositions (get#SourceInspectionStatus), the worst state and what blocks, every
+            inspection of the run, and whether the user may open an in-process gate's inspection (inspect). Refuses a user
+            without Manufacturing (MANUFACTURING_UNAVAILABLE) and a run outside the scope (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="workEffortId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="gated" type="Boolean"/>
+            <parameter name="gateRows" type="List"/>
+            <parameter name="gateStatus"/>
+            <parameter name="gateStatusText"/>
+            <parameter name="gateStatusColor"/>
+            <parameter name="blockingText"/>
+            <parameter name="blockingInspectionId"/>
+            <parameter name="heldQuantity"/>
+            <parameter name="inspections" type="List"/>
+            <parameter name="canInspect" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('gates', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionList" allow-remote="false">
+        <description>The production inspections (in-process and final) of the user's organizations, at a plant's facilities
+            when one is given, open by default, by status, run, product, lot, inspector and due date, the nearest due first;
+            with assignedOnly the user's own. Empty for a user outside the quality groups and the supervisors. Refuses a
+            plant outside the scope (PLANT_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="plantId"/>
+            <parameter name="qualityInspectionId"/>
+            <parameter name="statusId"/>
+            <parameter name="openOnly"/>
+            <parameter name="workEffortId"/>
+            <parameter name="productId"/>
+            <parameter name="lotId"/>
+            <parameter name="inspectorPartyId"/>
+            <parameter name="assignedOnly"/>
+            <parameter name="dueBefore" type="Timestamp"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canAssign" type="Boolean"/>
+            <parameter name="inspections" type="List"/>
+            <parameter name="inspectionsCount" type="Integer"/>
+            <parameter name="inspectionsPageIndex" type="Integer"/>
+            <parameter name="inspectionsPageSize" type="Integer"/>
+            <parameter name="inspectionsPageMaxIndex" type="Integer"/>
+            <parameter name="inspectionsPageRangeLow" type="Integer"/>
+            <parameter name="inspectionsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('inspectionList', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionDetail" allow-remote="false">
+        <description>A production inspection as Shared/QualityInspection shows it in Manufacturing: Mantle's read of it
+            (get#Inspection: the header, the items as of its template time, readings, dispositions, history), what the user
+            may do now, its gate, run and operation links, the disposition defaults and the operator mode's steps (each
+            characteristic for each sample, the next without a reading). Refuses a user without Manufacturing
+            (MANUFACTURING_UNAVAILABLE) and an inspection that is not production or not the user's (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="qualityInspectionId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="inspection" type="Map"/>
+            <parameter name="actions" type="Map"/>
+            <parameter name="links" type="Map"/>
+            <parameter name="items" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="dispositions" type="List"/>
+            <parameter name="history" type="List"/>
+            <parameter name="acceptedLeft"/>
+            <parameter name="rejectedLeft"/>
+            <parameter name="missingReadings" type="List"/>
+            <parameter name="submitDefaults" type="Map"/>
+            <parameter name="disposeDefaults" type="Map"/>
+            <parameter name="operator" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('inspectionDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="QualityChecklist" allow-remote="false">
+        <description>A run's gate as the quality checklist prints it: the run, the gate (stage, operation, sample) and its
+            template's characteristics as of the release, each with a blank reading per sample. Refuses a run outside the
+            scope or a gate of another run (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="workEffortId" required="true"/>
+            <parameter name="productionQualityGateId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="run" type="Map"/>
+            <parameter name="gate" type="Map"/>
+            <parameter name="templateName"/>
+            <parameter name="asOfText"/>
+            <parameter name="itemRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('checklist', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="QualityCertificate" allow-remote="false">
+        <description>A production inspection as the quality certificate prints it: the header with its result and
+            verification, the template's characteristics as of the inspection with their readings, and the dispositions;
+            verified only once it is verified or disposed. Refuses as get#InspectionDetail.</description>
+        <in-parameters>
+            <parameter name="qualityInspectionId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="inspection" type="Map"/>
+            <parameter name="items" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="dispositions" type="List"/>
+            <parameter name="verified" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('certificate', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateList" allow-remote="false">
+        <description>The production inspection templates of the user's organizations by state, product and name, a page at
+            a time, with each one's stage, and whether the user edits them (QUALITY_TEMPLATE_EDIT).</description>
+        <in-parameters>
+            <parameter name="statusId"/>
+            <parameter name="productId"/>
+            <parameter name="templateName"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="templates" type="List"/>
+            <parameter name="templatesCount" type="Integer"/>
+            <parameter name="templatesPageIndex" type="Integer"/>
+            <parameter name="templatesPageSize" type="Integer"/>
+            <parameter name="templatesPageMaxIndex" type="Integer"/>
+            <parameter name="templatesPageRangeLow" type="Integer"/>
+            <parameter name="templatesPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('templateList', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateDetail" allow-remote="false">
+        <description>A production template of the user's organizations as Shared/InspectionTemplates shows it in
+            Manufacturing: Mantle's read as of a date, with its stage, sample basis and the method or operation it attaches
+            to, and what the user may do. Refuses a template that is not production or not the user's
+            (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="inspectionTemplateId" required="true"/>
+            <parameter name="asOfDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="template" type="Map"/>
+            <parameter name="asOfDate" type="Timestamp"/>
+            <parameter name="asOfText"/>
+            <parameter name="items" type="List"/>
+            <parameter name="draftItems" type="List"/>
+            <parameter name="revisionRows" type="List"/>
+            <parameter name="changeRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPublish" type="Boolean"/>
+            <parameter name="canRetire" type="Boolean"/>
+            <parameter name="published" type="Boolean"/>
+            <parameter name="editItems" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('templateDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionChoices" allow-remote="false">
+        <description>The options of a Manufacturing inspection drop-down: inspectors, organizations, products, facilities,
+            methods and operations (a template's attachment), locations of an inspection's facility, the production stages
+            and sample bases, the production context, and the shared lists (statuses, template states, dispositions, sample
+            policies, reading types, source types, scrap reasons, categories). Refuses an unknown choice.</description>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="resolve" noun="InspectionScan" allow-remote="false">
+        <description>The resolver of the operator mode's scan-input: the user's production inspections a scanned or typed
+            code names (the inspection id, the held stock of an open inspection, or a lot with one), each checked again
+            (the parameters are client input, F145). Answers the scan-input's matches (identityType inspection, id, label,
+            detail).</description>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Quality.js')
+                    .execute('scan', context)"/>
+            <set field="matches" from="found.matches"/>
+        </actions>
+    </service>
+</services>
