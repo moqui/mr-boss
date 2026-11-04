@@ -396,6 +396,12 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   1,724 passed, 1 failed: ManufacturingWorkOrders' find by product paged past its run once other specs' DEMO_1_1 runs
   filled the first page (it now asks for a larger page; fixed); `moqui lint --screens` clean; BOSS client walks 159
   passed, 1 failed (AccountingCloseWalk's dialog timed out; it passed alone).
+- **Wave 6 suites (Nov 4, on master after P9 and P10 merged):** standalone mr-mantle 1,549 passed, 3 failed (the
+  baseline two, and InvoicePaymentMisc: its spec moved a payment past midnight while its application stayed on the day
+  before, when run between 00:15 and 00:30; fixed in the spec), 11 skipped; mr-boss 1,734 passed, 2 failed: ManufacturingMethods
+  and ManufacturingShopFloor published instructions on the same demo template (each now checks its own; fixed);
+  `moqui lint --screens` clean; BOSS client walks 165 passed, 1 failed: ManufacturingShopFloorWalk could not complete a
+  lot-required output (F145; fixed).
 
 ### P2 — Methods
 
@@ -2459,34 +2465,34 @@ steps 20–23.
   preview's blocks, the single transaction through `transition#ProductionOrder`, the retry and the closed period, the
   preview's PRODUCTION_COST_POST (design ProductionCostClose: "GL/finance approvers preview, approve and post"; the
   estimator holds neither) and BOSS_ACCOUNTING_APPROVE on Inventory (it holds ACCOUNTING_VIEW; revaluation and cost repair
-  still need glPost and ACCOUNTING_ADMIN in Mantle, so it adds only reads). Fixed F-P15-6 to F-P15-8. Not covered by a spec:
+  still need glPost and ACCOUNTING_ADMIN in Mantle, so it adds only reads). Fixed F137 to F139. Not covered by a spec:
   PcmFixedShare and PcmSalesValue in a close. Specs rerun: Mantle ProductionCostClose, ProductionQuantities, ProductionCosts,
   WarehouseProduction (31, pass); BOSS AccountingProductionCostClose, ManufacturingAccess (95, pass); walk
   ManufacturingCostCloseWalk (4, pass); lint shows only anchor rows for the screen.
 - Deferred: CostingPolicies' LaborCostingRates form (People's get#CostingRate; P10 values labor with its own rate rows);
   posted allocations' reversal actions; a demo run awaiting the close (the walk reads the released Warehouse demo run).
 - Findings (provisional):
-  - **F-P15-1** The cost close data file sorted before ProductionCostData (alphabetical load order) and failed on the
+  - **F132** The cost close data file sorted before ProductionCostData (alphabetical load order) and failed on the
     missing enumeration type, skipping the whole file; it is `ProductionCostingData.xml`.
-  - **F-P15-2** BOSS_ACCOUNTING_APPROVE (PRODUCTION_COST_POST) had no authz on Accounting Inventory; granted, so the
+  - **F133** BOSS_ACCOUNTING_APPROVE (PRODUCTION_COST_POST) had no authz on Accounting Inventory; granted, so the
     approvers' menu shows Inventory (AccountingShell updated).
-  - **F-P15-3** The Accounting demo users work in BOSS_ACCT_ORG, not Retail, where the Manufacturing demo runs are; the
+  - **F134** The Accounting demo users work in BOSS_ACCT_ORG, not Retail, where the Manufacturing demo runs are; the
     BOSS spec makes Retail finance users of its own, and the demo adds `manufacturing.costclose` for the Manufacturing mount.
-  - **F-P15-4** A Mantle spec that counts every event of a type (ProductionSubcontract's variances) breaks when another
+  - **F135** A Mantle spec that counts every event of a type (ProductionSubcontract's variances) breaks when another
     spec of the run writes one; scoped to its organization.
-  - **F-P15-6** (review) The by-product was received at its share of the primary's standard × target (2/12 of 50 = 4.165 a
+  - **F137** (review) The by-product was received at its share of the primary's standard × target (2/12 of 50 = 4.165 a
     unit), but Products' rollup already nets the primary's standard of the by-products' shares (Costs.js scales its lines by
     the main share) and the primary is received at that standard, so receipts relieved more than the estimate and a
     quantity-method by-product unit cost less than a primary unit. `byproductCost` now shares the run's whole estimate (the
     primary's target at its standard over the primary's weight): 5 a unit, as the primary; P7's AllocationReview estimate
     (`allocationEstimate`) shows the same whole (60, not 50).
-  - **F-P15-7** (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a
+  - **F138** (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a
     fraction of one (Boms.js, Costs.js), so a 0.2 by-product took 0.2 % of the cost; the primary now takes `1 −` the others.
-  - **F-P15-8** (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's,
+  - **F139** (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's,
     likely a closed period by then), and the screen hid the date after the close; an adjustment is now dated today unless
     given, and ProductionCostClose offers the date in adjustment mode too. The overhead rate lookup takes only approved
     WorkCenterRate rows, as P10's machine rate does (a row with no state was taken as approved).
-  - **F-P15-5** For the merge: ProductionOrders.js (close action), ProductionCosts.js (the source signature now
+  - **F136** For the merge: ProductionOrders.js (close action), ProductionCosts.js (the source signature now
     `(id, removed, revision)`), Production.js (`outputPlan`), BossAccountingSetupData (Inventory authz, artifact group,
     topic link), BossManufacturingDemoData and BossUsersDemoData (appended), ManufacturingAccess and ManufacturingSpecLib
     (appended P15 blocks), AppStructure and TuiRender (the Accounting Inventory mount), suite.js.
@@ -2591,18 +2597,18 @@ Design §9; the reporting part of M10.
   - A report's parameters default the facility to the selected plant, as Warehouse's reports do; the lot filter is a
     service parameter only (no lot drop-down), and the design's shift filter is not built (no shift record).
 - Findings (provisional):
-  - **F-P16-1** A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time =
+  - **F140** A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time =
     planned time less downtime, named on its row; P10's completion counts count held output as good
     (`productionGoodQuantity` = good + pending), so a center's quality from completions is above the receipts' until the
     held output is disposed.
-  - **F-P16-2** In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render
+  - **F141** In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render
     of a report; not investigated further: the reports use two form-lists by financial read instead. P6's ProductionCosts
     tab uses `hide` on its amount and ledger columns and may want the same check.
-  - **F-P16-3** Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale,
+  - **F142** Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale,
     a cache or a scheduled snapshot (Insights) later.
-  - **F-P16-4** Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are
+  - **F143** Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are
     the providers it registers.
-  - **F-P16-5** For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where
+  - **F144** For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where
     the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at
     the end of routeFixtures), ManufacturingAccess.spec.js (P16 section at the end), suite.js (the walk after
     ManufacturingShopFloorWalk), AppStructure's floor (62), ManufacturingShell's Home check.
@@ -2614,10 +2620,10 @@ Design §9; the reporting part of M10.
     scrapped from held, is counted but not good (its scrap event not again), a released one is good (Quantities'
     `outputFigures` held now and the approved `fromHeld` scrap of the output line), with a note on the center's row; spec
     "OEE's quality does not count held output as good" (a shop-floor completion of 1 good and 1 held: 12 counted, 9 good,
-    quality 75%). F-P16-1's second half is resolved by it.
+    quality 75%). F140's second half is resolved by it.
   - (Low, fixed) The loss, quality and planning reads and the work centers were capped (5000, 2000, 500 rows) silently;
     a read over its cap is now a named partition (`cappedList`), the report incomplete.
-  - (Low, fixed; framework issue recorded) F-P16-2 investigated: `hide` works for the table header, cells, csv, xlsx and
+  - (Low, fixed; framework issue recorded) F141 investigated: `hide` works for the table header, cells, csv, xlsx and
     tui, but with `select-columns="true"` the column chooser lists every field, a hidden one under "Do Not Display" with
     its title: `runtime/base-component/framework/template/screen/ScreenHtml.js` `allFields` (about line 2029, used by
     `columnsDialog` about line 1164) and `ScreenQvt.js` `allFields` (about line 2600, `m-form-column-config` about line
@@ -2840,6 +2846,20 @@ is written there too.
 | F129 | P10: ProductionCostEvent.timeEntryId was a foreign key to TimeEntry, so a labor event naming it kept a reopened week's entry from being deleted (`delete#TimeEntry` runs the reversal, then deletes the entry its events name). | P10 Built note |
 | F130 | P10: The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed over, but a failure of the event's write would roll back the approval. | P10 Built note |
 | F131 | P10: For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s null event), … | P10 Built note |
+| F132 | P15: The cost close data file sorted before ProductionCostData (alphabetical load order) and failed on the missing enumeration type, skipping the whole file; it is `ProductionCostingData.xml`. | P15 Built note |
+| F133 | P15: BOSS_ACCOUNTING_APPROVE (PRODUCTION_COST_POST) had no authz on Accounting Inventory; granted, so the approvers' menu shows Inventory (AccountingShell updated). | P15 Built note |
+| F134 | P15: The Accounting demo users work in BOSS_ACCT_ORG, not Retail, where the Manufacturing demo runs are; the BOSS spec makes Retail finance users of its own, and the demo adds `manufacturing.costclose` for the Manufacturing mount. | P15 Built note |
+| F135 | P15: A Mantle spec that counts every event of a type (ProductionSubcontract's variances) breaks when another spec of the run writes one; scoped to its organization. | P15 Built note |
+| F136 | P15: For the merge: ProductionOrders.js (close action), ProductionCosts.js (the source signature now `(id, removed, revision)`), Production.js (`outputPlan`), BossAccountingSetupData (Inventory authz, artifact group, topic link), BossManufacturingDemoData and … | P15 Built note |
+| F137 | P15: (review) The by-product was received at its share of the primary's standard × target (2/12 of 50 = 4.165 a unit), but Products' rollup already nets the primary's standard of the by-products' shares (Costs.js scales its lines by the main share) and the … | P15 Built note |
+| F138 | P15: (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a fraction of one (Boms.js, Costs.js), so a 0.2 by-product took 0.2 % of the cost; the primary now takes `1 −` the others. | P15 Built note |
+| F139 | P15: (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's, likely a closed period by then), and the screen hid the date after the close; an adjustment is now dated today unless given, and ProductionCostClose … | P15 Built note |
+| F140 | P16: A center whose machines record no runtime (a manual line, or a policy of PmrNotRecorded) has run time = planned time less downtime, named on its row; P10's completion counts count held output as good (`productionGoodQuantity` = good + pending), so a … | P16 Built note |
+| F141 | P16: In a first try, a field's `hide="!financialRead"` left a money column's header in the reader's html render of a report; not investigated further: the reports use two form-lists by financial read instead. | P16 Built note |
+| F142 | P16: Home's Kpis read the OEE, loss, load and (financial read) cost reports on each render; fine at demo scale, a cache or a scheduled snapshot (Insights) later. | P16 Built note |
+| F143 | P16: Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are the providers it registers. | P16 Built note |
+| F144 | P16: For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at the end of routeFixtures), … | P16 Built note |
+| F145 | W6: the shop floor's Complete form had no Lot field, so a lot-required output (WarehousePoliciesWalk makes DEMO_1_1 lot required) could not be completed from OperationExecution (LOT_REQUIRED) | The form takes the lot on the output operation, as Quantities does |
 
 ## 7. Later
 
