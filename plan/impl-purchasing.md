@@ -1286,6 +1286,12 @@ services check INVOICE_MATCH again.
 - Specs run: Mantle PurchaseBills (2), AccountingMatching (14), AccountingPayables (10), OrderProcureToPayBasicFlow (24);
   BOSS PurchasingBills (4), PurchasingAccess (14), AccountingMatching (4), AccountingPayables (8), AccountingAccess (8),
   ClientBilling (8), Billing (5). All pass.
+- **Wave 4 suites (Nov 4, on master after P4, P5 and P6 merged):** standalone mr-mantle 1,596 passed, 2 failed (the
+  baseline), 11 skipped; `./moq test-apps` 2,840 server features passed, 1 failed: ProjectsAccess found P6's
+  `reevaluate#Matches` outside the client deny pattern, whose verb list now has `reevaluate` (fixed); client walks 12
+  passed, 2 failed: WarehouseReceivingWalk's purchase order list stayed open over "Open receipt" once Purchasing's demo
+  added order parts, so its `choose()` now closes the list as the other walks do (fixed); feature time mr-mantle 291 of
+  300 s, mr-boss 236 of 220 s server (a warning, for the end's measured budget); `moqui lint --screens` clean.
 
 ### P7 — Drop-ship
 
