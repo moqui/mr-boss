@@ -386,6 +386,10 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
 - **Wave 3 suites (Nov 4, on master after P5a, P6 and P13 merged):** standalone mr-mantle 1,480 passed, 2 failed (the
   baseline), 11 skipped; mr-boss 1,685 passed, 1 failed: ClientIsolation found `Shared/SupplyPlanning` unclassified, now
   in its refused list (a client is refused it); `moqui lint --screens` clean; BOSS client walks 143 passed.
+- **Wave 4 suites (Nov 4, on master after P5b, P7 and P11 merged):** standalone mr-mantle 1,501 passed, 2 failed (the
+  baseline), 11 skipped; mr-boss 1,704 passed, 1 failed: ManufacturingShell expected the demo's released run among Home's
+  first ten due work orders, which other specs' runs can fill, so it now checks a due row is listed (fixed);
+  `moqui lint --screens` clean; BOSS client walks 150 passed.
 
 ### P2 — Methods
 

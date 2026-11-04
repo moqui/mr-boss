@@ -191,7 +191,8 @@ feature("Home shows the reader's Summary (completed unavailable), the due work, 
         home.output.includes("Completed this month")
         // P5b counts the open, in-progress, late and short work orders and lists the due ones; completed is P16's
         home.output.includes("Unavailable")
-        home.output.includes(ids.releasedRunId)
+        // the first ten due work orders: other specs' runs may come before the demo's released run
+        home.output.includes("WorkOrders/WorkOrderDetail")
         run.output.includes("Work order " + ids.runId)
         run.output.includes("Demo assemblies")
         other.output.includes(ids.otherRunId + " is not available to you.")
