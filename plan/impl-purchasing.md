@@ -1020,6 +1020,36 @@ Purchasing's mounts over Accounting's intake, holds and match (P6, P7), with the
     organizations, then the buyers' filter), and MatchExceptions' line views the newest 100 approved orders: bounded reads, so
     an older unbilled receipt can fall outside them.
 
+**Review Nov 4 (P6).** Checked the Mantle and BOSS diffs against this section, §2, the brief, AGENTS.md and
+Practices-App-Dev. `request#HoldRelease` (F-P6-1) only records the request and notifies INVOICE_HOLD_RELEASE holders; it
+releases nothing. The bill's organization is checked and locked through InvoiceWorkflowLib `invoice`, and AP's path is
+unchanged. The new PAYABLE_ONLY refusal can't be reached, because `placeHold` puts no hold on a receivable. Bills.js
+(F-P6-2) withholds the total from a user who sees no amounts, and the unpaid amount and payments from anyone who is not a
+finance reader ("Withheld", never zero). It shows no payment method or bank detail. Another organization's bill is refused
+(RECORD_UNAVAILABLE), and Supplier360's bills go through `recordOf(supplier)`. `request#SupplierPrepayment` checks
+PAYABLE_EDIT in the buying organization under lock, caps the amount at the part total less linked live payments, replays
+the operation key, and its state check comes after the replay. The notify#MatchException SECAs skip a replayed apply
+(`alreadyApplied`). They fire on reevaluate only when a hold is newly placed (`held` = placed). Notice failures are
+caught and logged, and the SECAs use only Mantle (the topic is Mantle seed data; BOSS adds only the link). Recipients are
+the PURCHASE_ORDER_EDIT agents of the bill's organization, excluding the actor. The Purchasing branches of
+Shared/InvoiceDetail and InvoiceMatch apply only when appRoot is Purchasing. In Accounting, `orderDetailPath` still
+resolves to Records/OrderDetail. The legacy backfill box and ReevaluateMatch show only for `can.match`, and the Mantle
+services check INVOICE_MATCH again.
+- R1 (medium, fixed in mr-mantle): `request#HoldRelease`'s widened check called `ec.user.hasPermission`, which refused a
+  system administrator that `writeInvoice` had admitted and admitted a PROJECT_CLIENT user who held one of the
+  permissions. It now uses InvoiceWorkflowLib `has`, the domain check. PurchaseBills now also checks that another
+  organization's buyer is refused (ORGANIZATION_DENIED) and gets no notice, and that a replayed apply sends no second
+  notice.
+- Left for the lead (not changed): BillList and MatchExceptions don't narrow bills by supplier scope, the same as
+  PurchaseOrders' lists. A bill from a supplier owned by another organization therefore lists, but opening it is refused.
+  An apply that reuses an open match-exception hold (after an unapply) sends the notice again. The notice is sent inside
+  the match's transaction, as Accounting's BillHoldRelease notice is. `reevaluate#Matches` calls
+  `reevaluate#InvoiceMatch`, which has no permission check of its own, after BOSS's INVOICE_MATCH and organization check
+  and Mantle's `evaluate#InvoiceMatch` for the same bill.
+- Specs run: Mantle PurchaseBills (2), AccountingMatching (14), AccountingPayables (10), OrderProcureToPayBasicFlow (24);
+  BOSS PurchasingBills (4), PurchasingAccess (14), AccountingMatching (4), AccountingPayables (8), AccountingAccess (8),
+  ClientBilling (8), Billing (5). All pass.
+
 ### P7 — Drop-ship
 
 PUR-DROPSHIP (design §18, R-PUR-17, R-SB-20), brought forward as an actively used Moqui Java feature, done the way Moqui
