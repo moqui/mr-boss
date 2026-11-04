@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Sources (crosscut §3.6 Purchasing row; design-purchasing §6 OrderDetail; impl-purchasing P10),
+    section-included by the Purchasing branch (template/PurchasingOrderDetail.xml): the purchase request lines the order's
+    lines were sourced from (ironstone.purchasing.RequestServices.get#OrderSources), each opening its request, with the
+    requirement it covers. Shown only when the order has sources; P12 adds an award. No transition of its own. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PurchasingOrderSources" condition="appRoot == 'Purchasing' &amp;&amp; po">
+            <actions>
+                <service-call name="ironstone.purchasing.RequestServices.get#OrderSources" out-map="orderSourcesOut"
+                        in-map="{appRoot:appRoot, orderId:orderId}" transaction="force-new" ignore-error="true"/>
+                <set field="orderSourceRows" from="orderSourcesOut?.sourceRows || []"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderSourcesShown" condition="orderSourceRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Sources · ${orderSourceRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderSourceList" list="orderSourceRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="Line"><display/></default-field></field>
+                                    <field name="requestId">
+                                        <default-field title="Purchase request">
+                                            <link url="${requestUrl}" url-type="plain" text="${requestId} line ${requestItemSeqId}"
+                                                    link-type="anchor" condition="requestUrl"/>
+                                            <label text="${requestId} line ${requestItemSeqId}" condition="!requestUrl"/>
+                                            <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity"><display/></default-field>
+                                    </field>
+                                    <field name="requirementId"><default-field title="Requirement"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="requestId"/></column>
+                                        <column><field-ref name="quantityText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

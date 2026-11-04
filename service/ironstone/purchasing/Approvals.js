@@ -7,8 +7,8 @@ const purchasing = ec.resource.script("component://mr-boss/service/ironstone/pur
 const {find, one, rows, denied, ms} = lib
 
 const POLICY = "mantle.order.purchase.PurchaseApprovalPolicy"
-// the approval topics Purchasing lists (Approvals.xml); P10 and P12 add theirs
-const topics = ["PurchaseOrderApproval", "PurchaseSupplierApproval"]
+// the approval topics Purchasing lists (Approvals.xml); P10 adds the purchase request's and P12 the award's
+const topics = ["PurchaseOrderApproval", "PurchaseSupplierApproval", "PurchaseRequestApproval"]
 const blank = value => value == null || String(value).trim() === ""
 const enumText = enumId => (enumId ? one("moqui.basic.Enumeration", {enumId})?.description || enumId : "")
 const userName = userId => (userId ? one("moqui.security.UserAccount", {userId})?.userFullName || userId : "")
@@ -139,17 +139,23 @@ function today(p) {
             ec.logger.warn("Approval notification " + row.notificationMessageId + " message is not JSON: " + error.message)
         }
         const order = row.recordEntityName === "mantle.order.OrderHeader"
+        // P10: a purchase request's approval opens its RequestDetail
+        const request = row.recordEntityName === "mantle.request.Request"
         const url = order
             ? purchasing.recordUrl("order", row.recordId)
-            : purchasing.recordUrl("supplier", row.recordId) +
-              (message.organizationPartyId ? "&organizationPartyId=" + encodeURIComponent(message.organizationPartyId) : "")
+            : request
+              ? purchasing.recordUrl("request", row.recordId)
+              : purchasing.recordUrl("supplier", row.recordId) +
+                (message.organizationPartyId ? "&organizationPartyId=" + encodeURIComponent(message.organizationPartyId) : "")
         items.push({
             kind: "purchaseApproval",
             workEffortId: null,
             requestId: null,
             title: order
                 ? "Approve purchase order " + row.recordId + (message.supplierName ? " · " + message.supplierName : "")
-                : "Approve supplier " + (message.supplierName || row.recordId),
+                : request
+                  ? "Approve purchase request " + row.recordId + (message.requestName ? " · " + message.requestName : "")
+                  : "Approve supplier " + (message.supplierName || row.recordId),
             dueDate: row.sentDate,
             startDate: null,
             endDate: null,
@@ -163,7 +169,11 @@ function today(p) {
             record: {
                 recordEntityName: row.recordEntityName,
                 recordId: row.recordId,
-                recordName: order ? "Purchase order " + row.recordId : message.supplierName || row.recordId
+                recordName: order
+                    ? "Purchase order " + row.recordId
+                    : request
+                      ? message.requestName || row.recordId
+                      : message.supplierName || row.recordId
             }
         })
     }

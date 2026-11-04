@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestSourcing (design-purchasing §4 RequestSourcing; style-guide wizard; impl-purchasing P10, R-PUR-01): a buyer's sourcing
+    of approved purchase request lines, over mantle.request.RequestServices preview#PurchaseSourcing and
+    convert#PurchaseSourcing. SourceDemand: the lines of the requests given (or of the requests awaiting sourcing), each with
+    its required, remaining quantity, due date and supplier, ready or why not, with Choose supplier and, for a line for a
+    customer order line, Drop-ship from supplier (P7's route). SourceGroups: the draft purchase order each supplier group
+    makes, its supplier check and, for a supplier-price reader, its amount. ConvertDemand: Create purchase orders, one
+    transaction per group; the same page then shows each group's result (the order made, or the failure by name), and Retry the
+    failed groups repeats only those under the same operation key. Nothing is placed or approved. For a buyer (the buy
+    capability; Mantle checks PURCHASE_ORDER_EDIT); P11 adds the RFQ route. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Source requests" default-menu-include="false">
+    <parameter name="requestId"/>
+    <parameter name="requestIds"/>
+    <parameter name="requestItemKeys"/>
+    <parameter name="operationKey"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <!-- the groups converted, each in its own transaction; a retry with the same operation key repeats only the failures -->
+    <transition name="convertSourcing">
+        <actions>
+            <set field="convertIn" from="dropShipKey ? {lines: [{requestId: dropShipKey.split(':')[0],
+                    requestItemSeqId: dropShipKey.split(':')[1], supplierPartyId: supplierPartyId || null, route: 'dropship'}]}
+                    : {requestItemKeys: requestItemKeys}"/>
+            <service-call name="mantle.request.RequestServices.convert#PurchaseSourcing" out-map="converted"
+                    in-map="Object.assign({operationKey: operationKey}, convertIn)"/>
+            <script><![CDATA[
+                if (converted?.results) {
+                    const failed = converted.results.filter((row) => row.resultStatus == 'FAILED')
+                    const made = converted.results.filter((row) => row.resultStatus == 'CREATED').map((row) => row.orderId)
+                    ec.message.addMessage((made.length ? 'Made draft purchase order' + (made.length > 1 ? 's ' : ' ') + made.join(', ') : 'No new purchase order')
+                        + (failed.length ? '; ' + failed.length + ' group' + (failed.length > 1 ? 's' : '') + ' failed: '
+                            + failed.map((row) => (row.supplierName || 'no supplier') + ' (' + row.errorCode + ')').join(', ') : ''),
+                        failed.length ? 'warning' : 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestIds"/>
+            <parameter name="requestItemKeys"/>
+            <parameter name="operationKey"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a line's supplier chosen for sourcing (store#PurchaseRequestItem, a buyer's choice on an approved request) -->
+    <transition name="chooseSupplier">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:lineKey.split(':')[0], capability:'buy'}"/>
+            <service-call name="mantle.request.RequestServices.store#PurchaseRequestItem"
+                    in-map="{requestId:lineKey.split(':')[0], requestItemSeqId:lineKey.split(':')[1],
+                        supplierPartyId:supplierPartyId}"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestIds"/>
+            <parameter name="requestItemKeys"/>
+            <parameter name="operationKey"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="sourcingAllowed" from="!!(can.buy &amp;&amp; can.listRead)"/>
+        <set field="requestIds" from="[requestIds, requestId].filter((value) =&gt; value).join(',')"/>
+        <set field="demandGiven" from="String(requestIds || '').length + String(requestItemKeys || '').length &gt; 0"/>
+        <if condition="sourcingAllowed &amp;&amp; !demandGiven">
+            <!-- no request given: the requests awaiting sourcing -->
+            <service-call name="ironstone.purchasing.RequestServices.find#PurchaseRequests" out-map="awaiting"
+                    in-map="{appRoot:appRoot, view:'sourcing', pageSize:20}" transaction="force-new" ignore-error="true"/>
+            <set field="requestIds" from="(awaiting?.requestRows || []).map((row) =&gt; row.requestId).join(',')"/>
+            <set field="demandGiven" from="requestIds.length &gt; 0"/>
+        </if>
+        <set field="operationKey" from="operationKey || ('sourcing-' + ec.user.randomString(16))"/>
+        <set field="sourcing" from="null"/>
+        <if condition="sourcingAllowed &amp;&amp; demandGiven">
+            <service-call name="mantle.request.RequestServices.preview#PurchaseSourcing" out-map="sourcing"
+                    in-map="{requestIds:(requestIds ? requestIds.split(',') : null), requestItemKeys:(requestItemKeys || null),
+                        operationKey:operationKey}" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="demandRows" from="(sourcing?.demandRows || []).map((row) =&gt; Object.assign({}, row, {
+                stateColor: row.state == 'READY' ? 'primary' : row.state == 'EXISTING' ? 'positive' : 'negative',
+                stateText: row.state == 'READY' ? 'Ready' : row.state == 'EXISTING' ? 'Sourced' : row.state.replace(/_/g, ' ').toLowerCase()}))"/>
+        <set field="groupRows" from="(sourcing?.groupRows || []).map((row) =&gt; Object.assign({}, row, {
+                linesText: row.requestItemKeys.join(', '),
+                routeText: row.route == 'dropship' ? 'Drop-ship' : 'Purchase order',
+                resultColor: row.resultStatus == 'READY' ? 'primary' : row.resultStatus == 'FAILED' ? 'negative' : 'positive',
+                resultText: row.resultStatus == 'READY' ? 'Ready' : row.resultStatus == 'EXISTING' ? 'Made'
+                    : (row.errorCode || 'Failed').replace(/_/g, ' ').toLowerCase()}))"/>
+        <set field="convertKeys" from="demandRows.filter((row) =&gt; !['EXISTING', 'NOT_APPROVED', 'ALREADY_SOURCED'].includes(row.state))
+                .map((row) =&gt; row.requestItemKey).join(',')"/>
+        <set field="readyCount" from="groupRows.filter((row) =&gt; row.resultStatus == 'READY').length"/>
+        <set field="madeCount" from="groupRows.filter((row) =&gt; row.resultStatus == 'EXISTING').length"/>
+        <set field="convertText" from="madeCount ? 'Retry the failed groups' : 'Create purchase orders'"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-xs">
+            <link url="${sharedLinks['Requests/PurchaseRequests']}" link-type="anchor" text="Purchase requests" icon="arrow_back"/>
+        </container>
+        <section name="SourcingRefused" condition="!sourcingAllowed">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Sourcing purchase requests is for buyers."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SourcingShown" condition="sourcingAllowed">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Source purchase requests" type="h5"/>
+                        <label text="Each supplier group becomes a draft purchase order; place and approve each on its own." type="p"
+                                style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-auto">
+                        <link url="convertSourcing" link-type="hidden-form" text="${convertText}" btn-type="primary"
+                                icon="sym_o_receipt_long" condition="readyCount"
+                                parameter-map="{requestIds:requestIds, requestItemKeys:convertKeys, operationKey:operationKey}"
+                                confirmation="Make a draft purchase order for each of the ${readyCount} supplier groups ready?"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Request lines"/>
+                    <box-body-nopad>
+                        <form-list name="SourceDemand" list="demandRows" skip-form="true" paginate="false">
+                            <field name="requestItemKey">
+                                <default-field title="Request line">
+                                    <link url="${sharedLinks['Requests/RequestDetail']}" text="${requestItemKey}" link-type="anchor"
+                                            parameter-map="{requestId:requestId}"/>
+                                    <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="requiredText" align="right"><default-field title="Required"><display/></default-field></field>
+                            <field name="remainingText" align="right">
+                                <default-field title="Left to source"><label text="${remainingText} ${uomText}" type="span"/></default-field>
+                            </field>
+                            <field name="requiredByText"><default-field title="Due"><display/></default-field></field>
+                            <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                    <label text="${message}" type="div" style="text-caption m-muted" condition="message"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="SourceSupplier_${requestId}_${requestItemSeqId}" button-text="Choose supplier"
+                                            icon="sym_o_storefront" width="520" title="Supplier for ${requestItemKey}"
+                                            condition="state != 'EXISTING' &amp;&amp; state != 'NOT_APPROVED' &amp;&amp; state != 'ALREADY_SOURCED'">
+                                        <form-single name="ChooseSourceSupplier" transition="chooseSupplier"
+                                                map="{lineKey:requestItemKey, supplierPartyId:supplierPartyId, requestIds:requestIds,
+                                                    requestItemKeys:requestItemKeys, operationKey:operationKey}">
+                                            <field name="lineKey"><default-field><hidden/></default-field></field>
+                                            <field name="requestIds"><default-field><hidden/></default-field></field>
+                                            <field name="requestItemKeys"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="supplierPartyId">
+                                                <default-field title="Supplier">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="SourceDropShip_${requestId}_${requestItemSeqId}" button-text="Drop-ship"
+                                            icon="sym_o_local_shipping" width="520" title="Drop-ship ${requestItemKey} from a supplier"
+                                            condition="canDropShip &amp;&amp; state != 'EXISTING' &amp;&amp; state != 'NOT_APPROVED'
+                                                &amp;&amp; state != 'ALREADY_SOURCED'">
+                                        <form-single name="DropShipSource" transition="convertSourcing"
+                                                map="{dropShipKey:requestItemKey, supplierPartyId:supplierPartyId, requestIds:requestIds,
+                                                    requestItemKeys:requestItemKeys, operationKey:operationKey}">
+                                            <field name="dropShipKey"><default-field><hidden/></default-field></field>
+                                            <field name="requestIds"><default-field><hidden/></default-field></field>
+                                            <field name="requestItemKeys"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="supplierPartyId">
+                                                <default-field title="Supplier">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Drop-ship from supplier">
+                                                    <submit confirmation="Move the customer's line to the supplier's drop-ship facility and buy it there?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                        <label type="p" style="text-caption m-muted" text="The customer's order line moves to the
+                                                supplier's drop-ship facility, which ships it to the customer."/>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestItemKey"/><field-ref name="productName"/></column>
+                                <column><field-ref name="remainingText"/><field-ref name="state"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!demandRows.length"
+                                text="No approved request lines are waiting to be sourced."/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="SourceGroupsShown" condition="groupRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Supplier groups"/>
+                            <box-body-nopad>
+                                <form-list name="SourceGroups" list="groupRows" skip-form="true" paginate="false">
+                                    <field name="supplierName">
+                                        <default-field title="Supplier">
+                                            <label text="${supplierName || 'No supplier'}" type="div"/>
+                                            <label text="${routeText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="linesText"><default-field title="Request lines"><display/></default-field></field>
+                                    <field name="requestedQuantity" align="right">
+                                        <default-field title="Quantity"><display/></default-field>
+                                    </field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="resultStatus">
+                                        <default-field title="Result">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${
+                                                    WebUtilities.encodeHtml(resultText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: resultText})}]]></text>
+                                                <text type="html">${resultText}</text>
+                                            </render-mode>
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor"
+                                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                                            <label text="${errorMessage || supplierMessage || ''}" type="div"
+                                                    style="text-caption m-muted" condition="errorMessage || supplierMessage"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="supplierName"/><field-ref name="linesText"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="resultStatus"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

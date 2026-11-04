@@ -1511,4 +1511,29 @@ along with this software (see the LICENSE.md file). If not, see
         sent to the buyers of the bill's organization) -->
     <moqui.security.user.NotificationTopic topic="PurchaseMatchException"
             linkTemplate="/qapps/Purchasing/Bills/InvoiceDetail?invoiceId=${invoiceId}"/>
+    <!-- Purchasing P10: the shell's quick create of a purchase request (NewPurchaseRequest, at the root as NewPurchaseOrder) for
+        the groups that file requests: the requester, the buyer and the administrator (Requests' New purchase request follows
+        the same grant, Purchasing.js requestCreate); create#PurchaseRequest checks the user's organization -->
+    <artifactGroups artifactGroupId="BOSS_PUR_NEW_REQUEST">
+        <artifacts artifactName="component://mr-boss/screen/Purchasing/NewPurchaseRequest.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_REQUEST_DENY" userGroupId="BOSS_PURCHASING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_PUR_NEW_REQUEST_REQUESTER" userGroupId="BOSS_PURCHASING_REQUESTER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_NEW_REQUEST_BUYER" userGroupId="BOSS_PURCHASING_BUYER" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_PUR_NEW_REQUEST_ADMIN" userGroupId="BOSS_PURCHASING_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Purchasing P10: a purchase request's approval (Mantle's PurchaseRequestApproval topic, PurchaseRequestSetupData.xml)
+        opens the request under Purchasing, decided there or from Approvals -->
+    <moqui.security.user.NotificationTopic topic="PurchaseRequestApproval"
+            linkTemplate="/qapps/Purchasing/Requests/RequestDetail?requestId=${requestId}"/>
 </entity-facade-xml>
