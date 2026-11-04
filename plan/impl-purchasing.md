@@ -581,6 +581,26 @@ organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppli
     is still listed in the tab menu data of every app; the condition hides only its content. Pre-existing in Warehouse
     and Manufacturing; left as is.
 
+**Review Nov 4 (P2).** Checked the diff in both repos against §2 and this phase: PRODUCT_CATALOG_VIEW to the five
+Purchasing groups opens no Products-root screen (the root and its areas are artifact grants the groups lack) and no cost or
+price beyond §2 (SharedContext's Purchasing branch lists no Prices or Costs tab, Suppliers needs SUPPLIER_PRICE_VIEW,
+cost and method stay their permissions); store#SupplierProfile keeps Accounting's finance path, codes and callers;
+SupplierProfile and PurchasePolicy changes end the row in effect and start the next with the earlier rows kept; the
+get#RecordLink and SharedContext edits come after the Products and Warehouse branches, so their users are unchanged; the
+BOSS screens call the Mantle writes after check#Record. Fixes:
+- R1 (medium) store#SupplierBuyer, set#SupplierCategory and store#SupplierProfile's buying fields accepted another
+  organization's supplier from a plain Mantle caller (BOSS checked the scope only in its own services); they now refuse a
+  supplier owned by another organization (SUPPLIER_UNAVAILABLE). set#SupplierCategory reported an unchanged category as
+  changed; it now answers no change, and PurchasingAccess expects Brightline's unchanged category.
+- R2 (medium) a buyer could clear a Rejected or Suspended supplier's status, which check#SupplierUsable then passes where
+  the policy does not require approval; clearing a status now needs PURCHASE_APPROVE like a decision.
+- Left for the lead: a supplier's category is a PartyClassification, so for a shared (_NA_) supplier one organization's
+  category is every organization's (F11's design); store#SupplierBuyer and Supplier360's buyer history find the
+  organization's buyers by their membership now, so a buyer who has left keeps an open Buyer relationship and drops out of
+  the history.
+- Specs: mr-mantle PurchasePolicy, AccountingPayables, WarehouseReceiving; mr-boss PurchasingAccess, PurchasingSuppliers,
+  AccountingAccess, AccountingPayables, ProductsSharedContext, ProductsAccess, WarehouseAccess; all pass.
+
 ### P3 — Purchase orders
 
 - **PUR-ORDER, the order.**

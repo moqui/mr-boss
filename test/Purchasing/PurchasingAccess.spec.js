@@ -414,7 +414,8 @@ feature("suppliers, their bulk changes and the settings keep to the supplier sco
         if (!readBulk.includes("PERMISSION_DENIED")) problems.push(`the reader changes suppliers: ${readBulk || "accepted"}`)
         const results = asUser(users.buyer, () => invoke(supplierService + "bulk#SupplierChanges", bulk).results || [])
         const result = partyId => results.find(row => row.partyId === partyId)?.resultCode
-        if (result(ids.supplierId) !== "CHANGED") problems.push(`the buyer's change of Brightline: ${result(ids.supplierId)}`)
+        // Brightline is already in Components (the demo), so the buyer's change passes and leaves the demo as it is
+        if (result(ids.supplierId) !== "UNCHANGED") problems.push(`the buyer's change of Brightline: ${result(ids.supplierId)}`)
         if (result(ids.otherSupplierId) !== "REFUSED")
             problems.push(`the other organization's supplier: ${result(ids.otherSupplierId)}`)
         // the settings: the administrator reads and writes them, the buyer neither
