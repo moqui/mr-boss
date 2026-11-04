@@ -9,7 +9,7 @@
 // the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link; P3 the quick create of a
 // purchase order, a purchase order's record link to OrderDetail and its detail's record scope; P5 a purchase receipt's scope and
 // the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
-// render) and its re-evaluation.
+// render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture} = lib
@@ -683,5 +683,37 @@ feature("a supplier bill is its organization's; its match and re-evaluation are 
     },
     then({problems}) {
         problems.join("\n") == ""
+    }
+})
+
+// P7: a supplier's drop-ship setup (Supplier360's Drop-ship tab) is the purchase administrator's (policyEdit) on a supplier in
+// scope: the buyer is refused on the same supplier, and another organization's supplier is refused to the administrator
+feature("a supplier's drop-ship setup is the purchase administrator's, on a supplier of the organization", {
+    when() {
+        const check = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {
+                    recordType: "supplier",
+                    recordId: ids.sharedSupplierId,
+                    capability: "policyEdit"
+                })
+            )
+        // the Mantle service as the screen's transition calls it (no artifact authorization of its own)
+        const other = asUser(
+            users.admin,
+            () =>
+                refusal("mantle.order.DropShipServices.store#DropShipFacility", {
+                    organizationPartyId: ids.organizationId,
+                    supplierPartyId: ids.otherSupplierId,
+                    facilityName: "Spec drop-ship"
+                }),
+            false
+        )
+        return {admin: check(users.admin), buyer: check(users.buyer), other}
+    },
+    then({admin, buyer, other}) {
+        admin == ""
+        buyer.includes("PERMISSION_DENIED")
+        other.includes("SUPPLIER_UNAVAILABLE")
     }
 })

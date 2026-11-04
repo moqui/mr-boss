@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Drop-ship tab, in the Purchasing context (design-purchasing §18 PUR-DROPSHIP; impl-purchasing P7): the
+    supplier's drop-ship facilities (where a customer line reserved drops to the supplier) and the integration each sends its
+    purchase orders through, a SystemMessageRemote, or email when none (mantle.order.DropShipServices.get#DropShipSetup). A
+    purchase administrator (PURCHASE_POLICY_EDIT) adds one or changes its name and remote through store#DropShipFacility,
+    after the supplier's check#Record. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Drop-ship" default-menu-index="12">
+    <transition name="storeDropShipFacility">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'policyEdit'}"/>
+            <service-call name="mantle.order.DropShipServices.store#DropShipFacility" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId, facilityId:facilityId || null,
+                        facilityName:facilityName, dropShipRemoteId:dropShipRemoteId || null}"/>
+            <message type="success">${stored.created ? 'Drop-ship facility added' : 'Drop-ship facility saved'}</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="mantle.order.DropShipServices.get#DropShipSetup" out-map="dropShipSetup" transaction="force-new"
+                ignore-error="true" in-map="{supplierPartyId:vendorPartyId}"/>
+        <set field="dropShipFacilities" from="dropShipSetup?.facilities || []"/>
+        <set field="dropShipRemotes" from="dropShipSetup?.remotes || []"/>
+        <set field="canEditDropShip" from="!!dropShipSetup?.canEdit &amp;&amp; !!organizationPartyId"/>
+        <set field="newDropShip" from="{vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId,
+                facilityName:(supplier?.supplierName || 'Supplier') + ' drop-ship'}"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Drop-ship facilities · ${dropShipFacilities.length}"/>
+            <box-toolbar>
+                <container-dialog id="NewDropShipFacility" button-text="Add drop-ship facility" icon="sym_o_add" width="520"
+                        title="Add a drop-ship facility of ${supplier?.supplierName || vendorPartyId}" condition="canEditDropShip">
+                    <form-single name="NewDropShipFacilityForm" transition="storeDropShipFacility" map="newDropShip">
+                        <field name="vendorPartyId"><default-field><hidden/></default-field></field>
+                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                        <field name="facilityName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="dropShipRemoteId">
+                            <default-field title="Integration" tooltip="Empty: its purchase orders are emailed to the supplier">
+                                <drop-down allow-empty="true"><list-options list="dropShipRemotes" key="${key}" text="${text}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="DropShipFacilityList" list="dropShipFacilities" skip-form="true" paginate="false">
+                    <field name="facilityName">
+                        <default-field title="Facility">
+                            <label text="${facilityName}" type="div"/>
+                            <label text="${facilityId}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="remoteText"><default-field title="Purchase orders go by"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="EditDropShip_${facilityId}" button-text="Change" icon="sym_o_edit" width="520"
+                                    title="Change drop-ship facility ${facilityName}" condition="canEditDropShip">
+                                <form-single name="EditDropShipFacilityForm" transition="storeDropShipFacility">
+                                    <field name="vendorPartyId" from="vendorPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationPartyId" from="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="facilityId"><default-field><hidden/></default-field></field>
+                                    <field name="facilityName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="dropShipRemoteId">
+                                        <default-field title="Integration" tooltip="Empty: its purchase orders are emailed to the supplier">
+                                            <drop-down allow-empty="true"><list-options list="dropShipRemotes" key="${key}" text="${text}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="facilityName"/></column>
+                        <column><field-ref name="remoteText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label text="This supplier does not drop-ship for you: add its drop-ship facility to buy customer lines from it."
+                        type="p" style="m-muted q-pa-sm q-mb-none" condition="!dropShipFacilities.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -248,7 +248,8 @@ function findBills(p) {
 
 // ===== Match exceptions =====
 // The purchase order lines of the buyers' approved orders (newest orders first, up to lineLimit lines), by supplier and
-// order, with what was ordered, accepted (receipts, or service acceptances for a service line) and billed.
+// order, with what was ordered, accepted (receipts, service acceptances for a service line, the confirmed delivery for a
+// drop-ship line) and billed.
 function orderLines(userScope, buyers, p) {
     let orderQuery = find("mantle.order.OrderHeaderAndPart")
         .condition("customerPartyId", "in", buyers.length ? buyers : ["_NA_"])
@@ -280,6 +281,17 @@ function orderLines(userScope, buyers, p) {
     const received = sums("mantle.product.receipt.AssetReceipt", "quantityAccepted")
     const accepted = sums("mantle.order.purchase.ServiceAcceptance", "acceptedQuantity")
     const billed = sums("mantle.order.OrderItemBilling", "quantity")
+    // P7: a drop-ship line is never received; its evidence is the supplier's confirmed delivery (shipped purchase shipments)
+    const delivered = {}
+    if (items.some(item => item.salesOrderId))
+        for (const row of find("mantle.shipment.ShipmentAndItemSource")
+            .condition("orderId", "in", orderIds)
+            .condition("shipmentTypeEnumId", "ShpTpPurchase")
+            .condition("shipmentStatusId", "in", ["ShipShipped", "ShipDelivered"])
+            .list()) {
+            const key = row.orderId + ":" + row.orderItemSeqId
+            delivered[key] = (delivered[key] || toDecimal(0)).add(dec(row.quantity))
+        }
     const lastReceipt = {}
     for (const row of find("mantle.product.receipt.AssetReceipt").condition("orderId", "in", orderIds).list()) {
         const key = row.orderId + ":" + row.orderItemSeqId
@@ -300,7 +312,7 @@ function orderLines(userScope, buyers, p) {
             productText: product ? (product.pseudoId || product.productId) + " · " + (product.productName || "") : "",
             service,
             ordered: dec(item.quantity).subtract(dec(item.quantityCancelled)),
-            accepted: (service ? accepted[key] : received[key]) || toDecimal(0),
+            accepted: (item.salesOrderId ? delivered[key] : service ? accepted[key] : received[key]) || toDecimal(0),
             billed: billed[key] || toDecimal(0),
             lastReceiptDate: lastReceipt[key] || null,
             entryDate: order.entryDate

@@ -229,7 +229,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </if>
             </actions>
             <widgets>
-                <section name="PurchasingOrderMissing" condition="!po">
+                <section name="PurchasingOrderMissing" condition="!po &amp;&amp; dropShip?.kind != 'sales'">
                     <widgets>
                         <container-box type="warning">
                             <box-header title="Not available"/>
@@ -595,6 +595,8 @@ along with this software (see the LICENSE.md file). If not, see
                             </widgets>
                         </section>
                         <section-include name="PurchasingOrderBills" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
+                        <!-- P7: a drop-ship order's customer, parent order and delivery -->
+                        <section-include name="PurchasingOrderDropShip" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
                         <container-box>
                             <box-header title="Documents and emails"/>
                             <box-body-nopad>
