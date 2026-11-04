@@ -12,12 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Work centers area of IronStone Manufacturing (design-manufacturing §1.2, §6): WorkCenters, the shared
-    FacilityDetail and EquipmentDetail with the Manufacturing context, Equipment and ResourceCalendar (impl-manufacturing
-    P3). Open to every Manufacturing user; edits check METHOD_RESOURCES and PRODUCTION_POLICY_EDIT. -->
+<!-- The Work centers area of IronStone Manufacturing (design-manufacturing §1.2, §6; impl-manufacturing P3): Centers, the
+    work centers with their capacity and load and New work center; Equipment, the equipment at the user's facilities; and
+    ResourceCalendar, the Commons calendar of the centers' work hours, holidays and released operations, read only. The
+    shared FacilityDetail and EquipmentDetail are mounted here with the Manufacturing context, hidden from the menu. Open to
+    every Manufacturing user; changes check METHOD_RESOURCES, and a rate the cost authority, in Mantle. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Work centers" default-menu-index="6" menu-image="sym_o_factory" menu-image-type="icon">
+    <subscreens default-item="Centers" always-use-full-path="true">
+        <subscreens-item name="FacilityDetail" location="component://mr-boss/screen/Shared/FacilityDetail.xml"
+                menu-include="false"/>
+        <subscreens-item name="EquipmentDetail" location="component://mr-boss/screen/Shared/EquipmentDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Lines, equipment and their calendars." type="p"/>
+        <subscreens-panel id="WorkCentersPanel" type="tab"/>
     </widgets>
 </screen>

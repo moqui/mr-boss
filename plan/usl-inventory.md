@@ -1520,8 +1520,12 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/RoutingServices | store#RoutingResource |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
 | work/RoutingServices | validate#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
 | work/RoutingServices | release#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
+| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/WorkCenters/Centers (New work center, with a new line); Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/WorkCenterServices | get#WorkCenter | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/FacilityDetail/WorkCenter (rates with cost read only) |
+| work/WorkCenterServices | store#WorkCenterCapacity | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/Centers; Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/WorkCenterServices | store#WorkCenterAlternate | Manufacturing/WorkCenters/FacilityDetail | Manufacturing/WorkCenters/FacilityDetail/WorkCenter |
+| work/ProductionPlanningServices | get#WorkCenterLoad | Manufacturing/WorkCenters | Manufacturing/WorkCenters/Centers; Manufacturing/WorkCenters/FacilityDetail/WorkCenter (capacity and released operations; P12 adds the calendar) |
 | facility/FacilityServices | get#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products (with removeLocation) |
 | facility/FacilityServices | store#Facility | Maintenance/Facilities; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/Facilities; Warehouse/Locations/FacilityDetail; Warehouse/Locations/FacilityDetail/Children |

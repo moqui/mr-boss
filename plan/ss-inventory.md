@@ -496,7 +496,7 @@ is unchanged.
 | EditRun | NewNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
 | EditRun | UpdateNoteForm | Shared/Chatter; Manufacturing/Chatter; Manufacturing/WorkOrders/WorkOrderDetail |  |
 | EditRun | AddEquipment | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
-| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment |  |
+| EditRun | EquipmentList | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Manufacturing/WorkCenters/Equipment | Manufacturing/WorkCenters/Equipment (the equipment at the user's facilities with its assigned operation; a run's own list is P5) |
 | EditRun | AddPartyAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
 | EditRun | UpdateAssignForm | Manufacturing/WorkOrders/WorkOrderDetail/Overview; Maintenance/WorkOrders/WorkOrderDetail |  |
 | FindRun | NewRunForm | Manufacturing/WorkOrders/NewWorkOrder |  |

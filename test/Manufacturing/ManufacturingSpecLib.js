@@ -11,6 +11,9 @@ const ids = {
     releasedRunId: "BOSS_WH_RUN",
     operationId: "BOSS_WH_RUN_OP",
     equipmentId: "EQUIP_AB4_1",
+    // P3: line A's calendar, capacities, alternate and machine rate (BossManufacturingDemoData.xml)
+    lineCalendarId: "BOSS_MFG_CAL_LINE_A",
+    lineRateId: "BOSS_MFG_LINE_A_MACHINE",
     // the other organization's (ORG_ZIZI_SERVICES) plant, line and run
     otherPlantId: "BOSS_MFG_SVC_PLANT",
     otherLineId: "BOSS_MFG_SVC_LINE",
@@ -106,7 +109,27 @@ function routeFixtures() {
         "Settings/ProductionSettings": {text: "Show policy"},
         "Settings/ReasonCodes": {text: "Show reasons"}
     }
-    const mounts = []
+    // P3: the Work centers area (Centers by default) on Retail's demo lines and robot, the calendar (a .qvue: its component)
+    // and its terminal twin, and the shared facility and equipment screens with the Manufacturing context and FacilityDetail's
+    // Manufacturing tabs on line A
+    Object.assign(routes, {
+        WorkCenters: {text: "Assembly line A"},
+        "WorkCenters/Centers": {text: "Assembly line A"},
+        "WorkCenters/Equipment": {text: "Assembly Bot 4 1234"},
+        "WorkCenters/ResourceCalendar": {},
+        "WorkCenters/ResourceCalendarTui": {parameters: {date: "2026-11-02"}, text: "Work centers"},
+        "WorkCenters/FacilityDetail": {parameters: {facilityId: ids.lineId}, text: "Assembly line A"},
+        "WorkCenters/EquipmentDetail": {parameters: {assetId: ids.equipmentId}, text: "Assembly Bot 4 1234"}
+    })
+    const shared = "component://mr-boss/screen/Shared/"
+    const mounts = [
+        ["WorkCenters/FacilityDetail", shared + "FacilityDetail.xml"],
+        ["WorkCenters/EquipmentDetail", shared + "EquipmentDetail.xml"]
+    ]
+    for (const tab of ["Overview", "WorkCenter", "Files", "Conversation"]) {
+        mounts.push(["WorkCenters/FacilityDetail/" + tab, shared + "FacilityDetail/" + tab + ".xml"])
+        routes["WorkCenters/FacilityDetail/" + tab] = {parameters: {facilityId: ids.lineId}, text: "Assembly line A"}
+    }
     return {routes, mounts}
 }
 

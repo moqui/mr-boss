@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Equipment (design-manufacturing §6 Equipment: Find and the list; style-guide §3.2 List): the equipment at the user's
+    facilities (assets that are not stock and have not left), found by plant, facility, type and id, name or serial, each
+    with its facility, its current production assignment (WorkEffortAssetAssign), its availability and its next service
+    (ironstone.manufacturing.WorkCenterServices.find#Equipment). A row opens EquipmentDetail with the Manufacturing context.
+    No cost or book value. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Equipment" default-menu-index="2">
+    <parameter name="text"/>
+    <parameter name="plantId"/>
+    <parameter name="facilityId"/>
+    <parameter name="assetTypeEnumId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.WorkCenterServices.find#Equipment"
+                in-map="{plantId:plantId, facilityId:facilityId, assetTypeEnumId:assetTypeEnumId, text:text, pageIndex:pageIndex}"
+                out-map="context"/>
+    </actions>
+    <widgets>
+        <label text="Equipment" type="h5"/>
+        <form-list name="EquipmentList" list="equipmentList" skip-form="true" paginate="true" header-dialog="true"
+                select-columns="true">
+            <field name="text">
+                <header-field title="Id, name or serial">
+                    <text-line size="20"/>
+                </header-field>
+            </field>
+            <field name="plantId">
+                <header-field title="Plant">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'plants', selected:plantId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="facilityId">
+                <header-field title="Work center">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'workCenters', plantId:plantId, selected:facilityId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="assetTypeEnumId">
+                <header-field title="Type">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'equipmentTypes', selected:assetTypeEnumId}"/>
+                    </drop-down>
+                </header-field>
+            </field>
+            <field name="assetName">
+                <default-field title="Equipment">
+                    <link url="${sharedLinks['WorkCenters/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                            parameter-map="{assetId:assetId}"/>
+                </default-field>
+            </field>
+            <field name="serialNumber">
+                <default-field title="Serial">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="typeText">
+                <default-field title="Type">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="facilityName">
+                <default-field title="At">
+                    <link url="${sharedLinks['WorkCenters/FacilityDetail']}" text="${facilityName}" link-type="anchor"
+                            parameter-map="{facilityId:facilityId}"/>
+                </default-field>
+            </field>
+            <field name="assignedText">
+                <default-field title="Assigned operation">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="availabilityText">
+                <default-field title="Availability">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${availabilityColor}">${
+                            availabilityText}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: availabilityText})}]]></text>
+                        <text type="html">${availabilityText}</text>
+                    </render-mode>
+                </default-field>
+            </field>
+            <field name="nextServiceText">
+                <default-field title="Next service">
+                    <display/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="assetName"/>
+                    <field-ref name="facilityName"/>
+                </column>
+                <column>
+                    <field-ref name="availabilityText"/>
+                    <field-ref name="assignedText"/>
+                </column>
+            </columns>
+        </form-list>
+        <label text="No equipment matches at your facilities." type="p" style="m-muted" condition="!equipmentList.length"/>
+    </widgets>
+</screen>

@@ -102,9 +102,10 @@ feature("the palette finds the reader's own runs, work centers and equipment and
     then({retail, services, outsider, outsiderRows}) {
         retail.runs.some(row => row.url.includes("lookupType=run&lookupId=" + ids.runId))
         !retail.runs.some(row => row.url.includes(ids.otherRunId) || row.url.includes(ids.otherLineId))
-        retail.lines.some(row => row.url.includes("lookupType=workCenter&lookupId=" + ids.lineId))
-        retail.lines.some(row => row.url.includes("lookupId=" + ids.lineBId))
-        retail.equipment.some(row => row.url.includes("lookupType=asset&lookupId=" + ids.equipmentId))
+        // P3: a work center opens FacilityDetail and equipment EquipmentDetail under Work centers
+        retail.lines.some(row => row.url.includes("WorkCenters/FacilityDetail?facilityId=" + ids.lineId))
+        retail.lines.some(row => row.url.includes("facilityId=" + ids.lineBId))
+        retail.equipment.some(row => row.url.includes("WorkCenters/EquipmentDetail?assetId=" + ids.equipmentId))
         services.runs.some(row => row.url.includes("lookupId=" + ids.otherRunId))
         !services.runs.some(row => row.url.includes("lookupId=" + ids.runId))
         outsider.includes("not authorized")
@@ -115,9 +116,28 @@ const link = (recordEntityName, id) =>
     invoke("ironstone.commons.PaletteServices.get#RecordLink", {recordEntityName, id}).url || null
 feature("a #kind record link opens under Manufacturing for its reader, not another organization's, not another app's user", {
     where: [
-        {kind: "run", entity: "mantle.work.effort.WorkEffort", id: ids.runId, otherId: ids.otherRunId},
-        {kind: "operation", entity: "mantle.work.effort.WorkEffort", id: ids.operationId, otherId: "BOSS_MFG_NO_SUCH"},
-        {kind: "workCenter", entity: "mantle.work.production.WorkCenter", id: ids.lineId, otherId: ids.otherLineId}
+        {
+            kind: "run",
+            entity: "mantle.work.effort.WorkEffort",
+            id: ids.runId,
+            otherId: ids.otherRunId,
+            opens: "Home?lookupType=run&lookupId="
+        },
+        {
+            kind: "operation",
+            entity: "mantle.work.effort.WorkEffort",
+            id: ids.operationId,
+            otherId: "BOSS_MFG_NO_SUCH",
+            opens: "Home?lookupType=operation&lookupId="
+        },
+        // P3: FacilityDetail
+        {
+            kind: "workCenter",
+            entity: "mantle.work.production.WorkCenter",
+            id: ids.lineId,
+            otherId: ids.otherLineId,
+            opens: "WorkCenters/FacilityDetail?facilityId="
+        }
     ],
     when({entity, id, otherId}) {
         return {
@@ -126,9 +146,9 @@ feature("a #kind record link opens under Manufacturing for its reader, not anoth
             finance: asUser("finance.read", () => link(entity, id))
         }
     },
-    then({own, other, finance, kind, id}) {
-        // P1 builds no record screen, so every kind opens Home's lookup; the phases that build them set the destinations
-        own == "/qapps/Manufacturing/Home?lookupType=" + kind + "&lookupId=" + id
+    then({own, other, finance, opens, id}) {
+        // a kind opens its screen once its phase builds it, until then Home's lookup
+        own == "/qapps/Manufacturing/" + opens + id
         other == null
         finance == null
     }

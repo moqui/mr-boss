@@ -22,6 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="facilityId"/>
     <transition-include name="facilityChoices" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
     <transition-include name="createFacility" location="component://mr-boss/template/WarehouseFacilityParts.xml"/>
+    <!-- Warehouse's tab: the Manufacturing context has its own Work center tab -->
+    <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
         <!-- FacilityDetail's actions read the facility when it renders with the tab -->
         <if condition="detail == null">

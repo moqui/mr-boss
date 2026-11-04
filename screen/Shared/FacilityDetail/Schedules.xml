@@ -20,6 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
         default-menu-title="Schedules"
         default-menu-index="8">
     <parameter name="facilityId"/>
+    <!-- Warehouse's tab: the Manufacturing context has its own Work center tab -->
+    <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
         <set field="schedule" from="null"/>
         <if condition="appRoot == 'Warehouse'">

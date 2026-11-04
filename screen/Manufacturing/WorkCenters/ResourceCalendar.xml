@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ResourceCalendar (design-manufacturing §6 ResourceCalendar; design-drawers-commons §7 Calendar, crosscut §3.13): the
+    Commons Calendar component (screen/Commons/Calendar.qvue) in its resource mode, read only, with the transitions it calls
+    answered for the work centers at the selected plant (every one of the user's without one): calendarSetup names the plant
+    (so the component leaves out its rail, search and New), and calendarEvents gives each center's work hours and holidays
+    from its calendar, the organization's holidays and the released operations by their estimated dates
+    (ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents). Nothing moves or opens an editor here: schedule
+    changes are ProductionSchedule's. The terminal: an agenda of the next two weeks (ResourceCalendarTui). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Calendar" default-menu-index="3" render-modes="vue,qvue,tui" server-static="vue,qvue">
+
+    <parameter name="view"/>
+    <parameter name="date"/>
+
+    <transition name="calendarSetup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarSetup').call() || {}
+            ec.message.clearErrors()
+            const plantName = ec.context.get('manufacturing')?.plantName || ''
+            ec.web.sendJsonResponse({calendarList: [], defaultCalendarId: null, defaults: out.defaults || {}, timeZone: out.timeZone,
+                todayText: out.todayText, nowText: out.nowText, me: out.me, roomOptions: [], failedSources: [],
+                resource: {title: plantName ? ec.l10n.localize('Work centers at') + ' ' + plantName : ec.l10n.localize('Work centers'),
+                    readOnly: true}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="calendarEvents" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.manufacturing.WorkCenterServices.get#ResourceCalendarEvents').parameters({
+                plantId: ec.context.get('manufacturing')?.plantId || null, start: start || '', end: end || ''}).call() || {}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {eventList: out.eventList || [], failedSources: out.failedSources || [],
+                skippedCalendarIdList: []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- no item here is an event with a popover; an answer keeps the component from failing on a stray click -->
+    <transition name="eventSummary" method="get" read-only="true">
+        <actions><script>ec.web.sendJsonResponse({visible: false})</script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Calendar.qvue" template="false"/>
+            <!-- the terminal: ResourceCalendarTui, the plain screen beside this one, an agenda of the next two weeks -->
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "ResourceCalendarTui",
+                url: sri.buildUrl("../ResourceCalendarTui").addParameters({date: date || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">The work-center calendar is a .qvue screen: open it under /qapps.</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

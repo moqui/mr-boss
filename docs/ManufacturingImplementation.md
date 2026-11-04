@@ -2,15 +2,16 @@
 
 The Manufacturing app calls Mantle's production, method, quality and stock services, which check their own permissions
 and organization. BOSS owns the app's access (`ironstone.manufacturing.AccessServices`), its routes, choices, Home and
-forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation) of
-[impl-manufacturing](../plan/impl-manufacturing.md) is built; each later phase extends the tables and sections below.
+forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation) and P3 (work centers and equipment) of
+[impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
 
 ## Routes and users
 
 | Area | Implemented destinations |
 | --- | --- |
 | Home | The plant picker, the Summary (open, in progress, late, short, completed this month: each "Unavailable" until its phase counts it), the Queue of due work and shortages (empty until P5) and the lookup of a record (`lookupType`, `lookupId`) |
-| Work orders, BOMs, Routings, Work centers, Reports | Placeholders, open to every Manufacturing user |
+| Work centers | `WorkCenters/Centers` (Find, the load, New work center), `Equipment`, `ResourceCalendar` (and `ResourceCalendarTui`); `FacilityDetail` and `EquipmentDetail`, the shared screens with the Manufacturing context, hidden from the menu |
+| Work orders, BOMs, Routings, Reports | Placeholders, open to every Manufacturing user |
 | Shop floor, Quality, Planning, Subcontracting, Settings, Approvals | Placeholders, for their groups only (below) |
 
 All routes are under `/qapps/Manufacturing`, in design §1.2's order by `default-menu-index`. The root
@@ -56,6 +57,7 @@ Demo records (BossManufacturingDemoData.xml):
 | Retail's plant | Mantle's `ZIRET_WH`, a plant by its lines; lines `BOSS_MFG_LINE_A`, `BOSS_MFG_LINE_B` (FcTpLine under ZIRET_WH, with WorkCenter rows); equipment `EQUIP_AB4_1`, `EQUIP_AB4_2` (Mantle) |
 | Runs | the draft `BOSS_MFG_RUN_A` on line A; Warehouse's released `BOSS_WH_RUN` with its operation `BOSS_WH_RUN_OP` |
 | Skill types | `BOSS_MFG_SKILL_ASSEMBLY`, `_COATING`, `_INSPECTION` |
+| Line A's resources (P3) | calendar `BOSS_MFG_CAL_LINE_A` (the weekday `BOSS_MFG_LINE_A_SHIFT`, the shutdown day `BOSS_MFG_LINE_A_SHUTDOWN` on 2026-11-27), capacities `BOSS_MFG_LINE_A_SLOTS` (2 slots) and `BOSS_MFG_LINE_A_RATE` (30 DEMO_1_1 an hour), alternate `BOSS_MFG_LINE_A_ALT_B`, approved machine rate `BOSS_MFG_LINE_A_MACHINE` |
 | Ziziwork Services (isolation) | plant `BOSS_MFG_SVC_PLANT` (FcTpPlant), line `BOSS_MFG_SVC_LINE`, run `BOSS_MFG_SVC_RUN` |
 
 ## Access contract
@@ -93,7 +95,8 @@ create, Today source or notification topic yet: P5 adds the draft work order, P1
 report.
 
 `ironstone.commons.PaletteServices.get#RecordLink` (by `recordEntityName`): a run, its operation and a work center open
-under Manufacturing for a user who may work with them (Home's lookup until their screens are built); a method or routing
+under Manufacturing for a user who may work with them (a work center its FacilityDetail, the others Home's lookup until
+their screens are built); a method or routing
 opens there once `recordKinds` gives it a destination (`hasScreen`), else in Products as before. A run or operation is
 never a Commons task or event: without Manufacturing, a run opens Warehouse's MaterialIssueReceipt for a Warehouse user
 who may work with it, else nothing.
@@ -103,7 +106,22 @@ A production run's operation is no task: Commons' `get#TaskAccess` answers `canU
 production run is no event: `get#EventAccessInfo` does not find it, so EventDetail, its edits and `duplicate#Event` refuse
 it (F39).
 
+## Work centers (P3)
+
+The screens call `ironstone.manufacturing.AccessServices.check#Record` (facility or workCenter, `methodResources` for a
+change), then Mantle: `mantle.work.RoutingServices.store#WorkCenter` (also a new FcTpLine under a plant) and
+`store#WorkCenterRate`, `mantle.work.WorkCenterServices` (`get#WorkCenter`, `store#WorkCenterCapacity`,
+`store#WorkCenterAlternate`) and `mantle.work.ProductionPlanningServices.get#WorkCenterLoad`. BOSS's
+`ironstone.manufacturing.WorkCenterServices` (`WorkCenters.js`) reads FacilityDetail's header, the Equipment list,
+EquipmentDetail's Manufacturing context (`template/ManufacturingEquipment.xml`) and the calendar's items; none reads a cost,
+rate or book value. A rate shows only to a reader of costs (`get#WorkCenter` leaves `rateList` out otherwise) and is added
+by a user with `METHOD_RESOURCES` and the cost authority. In FacilityDetail the Manufacturing context has Overview, Work
+center, Files and Conversation; the Warehouse tabs say `appRoot != 'Manufacturing'`. ResourceCalendar is
+`screen/Commons/Calendar.qvue` in its resource mode (setup answers `resource`), read only. Manufacturing.js's P3 block sets
+the work center, facility and asset destinations, the `WorkCenters/*` sharedLinks and the forms' choices.
+
 ## Verification
 
-`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess`; AppStructure and TuiRender cover Home and the area
+`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters`, `./moq test mr-mantle --spec
+WorkCenters`, the walk `ManufacturingWorkCentersWalk`; AppStructure and TuiRender cover the built screens and the area
 placeholders.
