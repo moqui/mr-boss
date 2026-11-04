@@ -56,6 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
                 screen="Manufacturing/WorkOrders/QuickCreate" sequence="85"/>
         <notification-topic topic="ProductionRelease"/>
         <notification-topic topic="ProductionStagedRelease"/>
+        <!-- P5b: the shortage notice to the planners -->
+        <notification-topic topic="ProductionShortage"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

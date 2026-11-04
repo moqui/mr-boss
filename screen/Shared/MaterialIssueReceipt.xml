@@ -24,7 +24,13 @@ along with this software (see the LICENSE.md file). If not, see
     output lines with Receive (receive#ProductionOutput: the frozen standard cost, quarantine and an inspection when one
     applies, serials generated from a first value), Tracking (the output's serials, lots, status and inspection), Unused
     returns with Return (return#UnusedMaterial) and the run's files; its lines issue from a chosen asset
-    (issue#ProductionMaterial). Manufacturing and Maintenance add their contexts. Any other app sees "not available". -->
+    (issue#ProductionMaterial). Manufacturing (impl-manufacturing P5b) mounts it as WorkOrderDetail's Materials tab, at
+    Manufacturing/WorkOrders/WorkOrderDetail/MaterialIssueReceipt with the run's workEffortId: the same run source read with
+    the Manufacturing scope (ironstone.manufacturing.MaterialServices.get#MaterialSource after its check#Record), its lines'
+    required, issued, returned and left apart with what is short or held, Stage (Warehouse's Move with the run fixed, for
+    STOCK_MOVE holders) and, when the run's policy backflushes, the backflush preview with its lots and Confirm
+    (backflush#ProductionMaterials); its postings run after Manufacturing's check#Record of the run with issue
+    (STOCK_ISSUE). Maintenance adds its context. Any other app sees "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Material issue and receipt" default-menu-include="false">
@@ -33,17 +39,29 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- a line's posting: the source's entry names the record to check, the capability and the Mantle entry point -->
     <transition name="materialAction">
         <actions>
-            <if condition="appRoot != 'Warehouse'">
+            <if condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'">
                 <return error="true" message="This material work is not available here"/>
             </if>
-            <service-call name="ironstone.warehouse.PackingServices.get#MaterialAction" out-map="action"
-                    in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId, lineKey:lineKey,
-                        assemblyProductId:assemblyProductId || null, quantity:quantity, operationKey:operationKey,
-                        shipmentPackageSeqId:shipmentPackageSeqId || null, actionKind:actionKind || null,
-                        assetId:assetId || null, toLocationSeqId:toLocationSeqId || null,
-                        firstSerialNumber:firstSerialNumber || null, lotNumber:lotNumber || null}"/>
-            <service-call name="ironstone.warehouse.AccessServices.check#Record"
-                    in-map="{recordType:action.recordType, recordId:action.recordId, capability:action.capability}"/>
+            <if condition="appRoot == 'Manufacturing'">
+                <service-call name="ironstone.manufacturing.MaterialServices.get#MaterialAction" out-map="action"
+                        in-map="{workEffortId:workEffortId || sourceId, lineKey:lineKey || null, quantity:quantity || null,
+                            operationKey:operationKey, actionKind:actionKind || null, assetId:assetId || null,
+                            toLocationSeqId:toLocationSeqId || null, firstSerialNumber:firstSerialNumber || null,
+                            lotNumber:lotNumber || null, previewKey:previewKey || null}"/>
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:action.recordType, recordId:action.recordId,
+                            capability:action.capability}"/>
+                <else>
+                    <service-call name="ironstone.warehouse.PackingServices.get#MaterialAction" out-map="action"
+                            in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId, lineKey:lineKey,
+                                assemblyProductId:assemblyProductId || null, quantity:quantity, operationKey:operationKey,
+                                shipmentPackageSeqId:shipmentPackageSeqId || null, actionKind:actionKind || null,
+                                assetId:assetId || null, toLocationSeqId:toLocationSeqId || null,
+                                firstSerialNumber:firstSerialNumber || null, lotNumber:lotNumber || null}"/>
+                    <service-call name="ironstone.warehouse.AccessServices.check#Record"
+                            in-map="{recordType:action.recordType, recordId:action.recordId, capability:action.capability}"/>
+                </else>
+            </if>
             <script>ec.service.sync().name(action.serviceName).parameters(action.parameters).call()</script>
             <if condition="!ec.message.hasError()">
                 <message type="success">${action.doneText}</message>
@@ -52,8 +70,11 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url=".">
             <parameter name="sourceType"/>
             <parameter name="sourceId"/>
+            <parameter name="workEffortId"/>
         </default-response>
-        <error-response url="."/>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
     </transition>
     <actions>
         <set field="material" from="null"/>
@@ -62,6 +83,19 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new" ignore-error="true"
                     in-map="{sourceType:sourceType || 'shipmentAssembly', sourceId:sourceId || null}"/>
         </if>
+        <!-- Manufacturing: WorkOrderDetail's run, checked again here for a tab rendered on its own -->
+        <if condition="appRoot == 'Manufacturing' &amp;&amp; workEffortId">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="materialRunCheck"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId}"/>
+            <if condition="materialRunCheck?.recordId">
+                <service-call name="ironstone.manufacturing.MaterialServices.get#MaterialSource" out-map="material"
+                        transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            </if>
+        </if>
+        <set field="manufacturingRoot" from="appRoot == 'Manufacturing'"/>
+        <set field="backflush" from="material?.backflush || null"/>
+        <set field="backflushRows" from="backflush?.lineRows || []"/>
         <set field="recordFound" from="!!material?.found"/>
         <set field="materialRows" from="material?.materialRows || []"/>
         <set field="movementRows" from="material?.movementRows || []"/>
@@ -81,22 +115,31 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="This material work is not available." type="p"/>
                 <link url="${sharedLinks['Shipping/Pack']}" text="Open Pack" link-type="anchor-button" icon="sym_o_inventory_2"
                         condition="appRoot == 'Warehouse'"/>
+                <link url="${sharedLinks['WorkOrders/Find']}" text="Back to the work orders" link-type="anchor"
+                        condition="appRoot == 'Manufacturing'"/>
             </widgets>
         </section>
         <section name="MaterialWork" condition="recordFound">
             <widgets>
                 <container style="m-record-header">
-                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
-                        <container style="col-12 col-md m-record-title">
-                            <label text="${material.source.title}" type="h5"/>
-                            <label text="${material.source.caption}" type="p" style="text-caption m-muted"/>
-                            <label text="${material.source.detailText}" type="p" style="text-caption"
-                                    condition="material.source.detailText"/>
-                        </container>
-                        <container style="col-12 col-md-auto m-record-status">
-                            <label text="${material.source.statusText}" type="span" style="text-weight-medium"/>
-                        </container>
-                    </container>
+                    <!-- in Manufacturing, WorkOrderDetail's header names the run; the policy shows here -->
+                    <label text="${material.source.policyText}" type="p" style="text-caption m-muted"
+                            condition="manufacturingRoot &amp;&amp; material.source.policyText"/>
+                    <section name="SourceTitle" condition="!manufacturingRoot">
+                        <widgets>
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${material.source.title}" type="h5"/>
+                                    <label text="${material.source.caption}" type="p" style="text-caption m-muted"/>
+                                    <label text="${material.source.detailText}" type="p" style="text-caption"
+                                            condition="material.source.detailText"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${material.source.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                        </widgets>
+                    </section>
                     <container style="row items-center q-gutter-sm m-record-foot">
                         <section-iterate name="SourceLinks" list="sourceLinks" entry="sourceLink">
                             <widgets>
@@ -105,7 +148,11 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="sourceLink.primary"/>
                                 <link url="${sharedLinks[sourceLink.path]}" text="${sourceLink.text}" link-type="anchor-button"
                                         icon="${sourceLink.icon}" parameter-map="sourceLink.parameters"
-                                        condition="!sourceLink.primary"/>
+                                        condition="!sourceLink.primary &amp;&amp; !sourceLink.url"/>
+                                <!-- another app's screen (Manufacturing's Stage opens Warehouse's Move) -->
+                                <link url="${sourceLink.url}" url-type="plain" text="${sourceLink.text}" link-type="anchor-button"
+                                        icon="${sourceLink.icon}" parameter-map="sourceLink.parameters"
+                                        condition="!sourceLink.primary &amp;&amp; sourceLink.url"/>
                             </widgets>
                         </section-iterate>
                     </container>
@@ -136,9 +183,19 @@ along with this software (see the LICENSE.md file). If not, see
                                     <display format="#,##0.###"/>
                                 </default-field>
                             </field>
+                            <field name="returned" align="right" hide="!manufacturingRoot">
+                                <default-field title="Returned">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
                             <field name="left" align="right">
                                 <default-field title="Left">
                                     <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="stockText" hide="!manufacturingRoot">
+                                <default-field title="Stock">
+                                    <display text="${[shortText, heldText, stagedText].filter(Boolean).join(' · ')}"/>
                                 </default-field>
                             </field>
                             <field name="packComponent">
@@ -154,7 +211,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                     assemblyProductId:assemblyProductId, quantity:left,
                                                     sourceType:material.sourceType,
                                                     operationKey:'material-' + lineKey + '-' + pageKey,
-                                                    shipmentPackageSeqId:material.activePackageSeqId}">
+                                                    shipmentPackageSeqId:material.activePackageSeqId,
+                                                    workEffortId:workEffortId || null}">
+                                            <!-- Manufacturing: WorkOrderDetail's run -->
+                                            <field name="workEffortId">
+                                                <default-field>
+                                                    <hidden/>
+                                                </default-field>
+                                            </field>
                                             <field name="sourceId">
                                                 <default-field>
                                                     <hidden/>
@@ -227,6 +291,72 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- Manufacturing: the backflush the run's policy issues, its lines and lots, and Confirm through the issue guard -->
+                <section name="Backflush" condition="manufacturingRoot &amp;&amp; backflush">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Backflush · ${backflushRows.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="ConfirmBackflush" button-text="Backflush" icon="sym_o_playlist_add_check"
+                                        title="Backflush the material of work order ${material.source.sourceId}" width="520"
+                                        condition="backflush.canConfirm">
+                                    <label text="Issues each line's remaining quantity from the lots shown, once. If any line cannot be issued, nothing is."
+                                            type="p"/>
+                                    <form-single name="ConfirmBackflushForm" transition="materialAction"
+                                            map="{workEffortId:material.source.sourceId, actionKind:'backflush',
+                                                previewKey:backflush.previewKey, operationKey:'backflush-' + backflush.previewKey}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="actionKind"><default-field><hidden/></default-field></field>
+                                        <field name="previewKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="Confirm backflush"
+                                                        confirmation="Issue the material of work order ${material.source.sourceId} from these lots?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label text="${backflush.findingText}" type="p" style="q-pa-md m-muted"
+                                        condition="backflush.findingText"/>
+                                <form-list name="BackflushLines" list="backflushRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Component">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Issues">
+                                            <display format="#,##0.###"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="pickText">
+                                        <default-field title="From">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <field name="shortText">
+                                        <default-field title="Short">
+                                            <display/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                            <field-ref name="pickText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="quantity"/>
+                                            <field-ref name="shortText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <section name="ProductionOutput" condition="material.sourceType == 'productionRun'">
                     <widgets>
                         <container-box>
@@ -268,7 +398,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-single name="ReceiveOutputForm" transition="materialAction"
                                                         map="{sourceId:material.source.sourceId, sourceType:material.sourceType,
                                                             lineKey:lineKey, actionKind:'receive', quantity:left,
-                                                            operationKey:'output-' + lineKey + '-' + pageKey}">
+                                                            operationKey:'output-' + lineKey + '-' + pageKey,
+                                                            workEffortId:workEffortId || null}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
                                                     <field name="sourceId"><default-field><hidden/></default-field></field>
                                                     <field name="sourceType"><default-field><hidden/></default-field></field>
                                                     <field name="lineKey"><default-field><hidden/></default-field></field>
@@ -413,7 +545,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <form-single name="ReturnUnusedForm" transition="materialAction"
                                                         map="{sourceId:material.source.sourceId, sourceType:material.sourceType,
                                                             lineKey:assetIssuanceId, actionKind:'return', quantity:returnable,
-                                                            operationKey:'return-' + assetIssuanceId + '-' + pageKey}">
+                                                            operationKey:'return-' + assetIssuanceId + '-' + pageKey,
+                                                            workEffortId:workEffortId || null}">
+                                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
                                                     <field name="sourceId"><default-field><hidden/></default-field></field>
                                                     <field name="sourceType"><default-field><hidden/></default-field></field>
                                                     <field name="lineKey"><default-field><hidden/></default-field></field>

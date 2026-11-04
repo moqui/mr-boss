@@ -211,7 +211,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | built Nov 3 |
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
-| P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b — |
+| P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b built Nov 3 (materials and stock) |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
@@ -870,8 +870,8 @@ materials and stock.
     ids only).
   - OrderDetail's supplying work orders show in every context to a PRODUCTION_VIEW holder (§4's decision), before P14's
     Manufacturing mount.
-- Deferred: Home's counts and queue (P16), Reschedule (P12), the start checks (P10, P8), Components, materials, stock
-  and the shortage notice (P5b); a copy of the policy on the run (F61 holds: no service back-dates a row).
+- Deferred: Home's counts and queue (P16; P5b fills open, in progress, late and short), Reschedule (P12), the start checks
+  (P10, P8), Components, materials, stock and the shortage notice (P5b); a copy of the policy on the run (F61 holds: no service back-dates a row).
 - Findings (provisional):
   - **F62** A section-include of a template section that itself section-includes another section of the same template
     fails ("screen includes are nested too deeply"); WorkOrderDetail includes LifecycleActionRow directly.
@@ -904,6 +904,95 @@ materials and stock.
   - Tests: Mantle ProductionOrders, WarehouseProduction, ManufacturingServices (26, pass); BOSS ManufacturingWorkOrders,
     ManufacturingAccess, ManufacturingShell, ProductsAccess, ProductsSharedContext, AppStructure, TuiRender,
     ManufacturingMethods (154, pass); `moqui lint --screens` clean for the P5a screens.
+
+**Built Nov 3 (P5b, materials and stock).**
+- Mantle (`service/mantle/work/ProductionMaterials.js`, five services appended to `ProductionServices.xml`;
+  `entity/ProductionMaterialEntities.xml`: `manualLine`, `sourceFacilityId` and `instructionText` on ProductionRunLine, audit-logged):
+  - `get#ProductionMaterials` (PRODUCTION_VIEW or STOCK_ISSUE): each material line's operation, required quantity with the
+    policy's scrap allowance, issued, returned and remaining, the free stock at the run's facility and plant (F16) shared in
+    line order, the short quantity, the owner's held stock there by status apart (AstQuarantine, AstOnHold, AstDefective;
+    R-MFG-24), the staged short quantity, manual or method; `withStock` the available assets to issue from (oldest lot expiry,
+    then oldest receipt); the run's consumption policy, a draft's routing operations, `canAdd` and `canIssue`.
+  - `store#ProductionMaterial` (PRODUCTION_PLAN, operation key, expected revision): add, change or remove a manual line of a
+    draft (a stocked product of the organization's or a shared one, not the output, in its stock unit, a routing operation of
+    the draft, a source facility of the run owner's); method lines refused (LINE_NOT_MANUAL). It rewrites the WeptConsume rows
+    and counts the revision up, so a staged approval is asked again. Production.js's re-explosion keeps manual lines (a local
+    edit) and exports `writeProducts` and `lineAnswer`.
+  - `preview#ProductionBackflush` and `backflush#ProductionMaterials` (STOCK_ISSUE): the preview gives each line's exact
+    remaining quantity (one operation's lines or all) with the lots chosen oldest expiry first, expired stock left out, and its
+    findings (BACKFLUSH_NOT_POLICY when the run's policy issues by hand, SHORTFALL, LINE_STAGED_SHORT, NOTHING_TO_ISSUE) and a
+    previewKey over the revision and every pick; the confirmation makes the preview again, refuses a changed one
+    (PREVIEW_CHANGED) and issues each pick through `issue#ProductionMaterial` (its key under the backflush's) in its own
+    transaction, so any refusal issues nothing; a retry answers the first. Held stock is never chosen, also where the facility
+    allows issue beyond on hand (F12).
+  - `get#ProductionShortages` (PRODUCTION_VIEW): the open runs at a facility and its lines, earliest due first (100 checked),
+    with their short lines (ProductionOrders.js `shortagesOf`). The shortage notice: a release that stamps staged short lines
+    sends `ProductionShortage` (seeded in `ProductionNotificationSetupData.xml`) to the organization's PRODUCTION_PLAN holders
+    (`notifyShortage`, called from ProductionOrders.js's release, a one-line local edit).
+- BOSS:
+  - WorkOrderDetail's Components tab (`WorkOrders/WorkOrderDetail/Components.xml`, index 2): the lines with state chips (covered,
+    short, released short) and held by status; Add material, Edit and Remove of a manual line for a planner on a draft; Issue and
+    return opens the Materials tab; Stage stock opens Warehouse's Move with the run and facility (STOCK_MOVE, the new `move`
+    capability); Availability opens Planning's InventoryAvailability for planners, schedulers and supervisors.
+  - The Materials tab (index 3): Warehouse's `Shared/MaterialIssueReceipt` mounted in WorkOrderDetail's subscreens with its
+    Manufacturing context: `ironstone.manufacturing.MaterialServices.get#MaterialSource` (Materials.js) reads Warehouse's run
+    source with the Manufacturing scope and record check (Production.js `runSource` takes the app, a local edit) and replaces its
+    material lines with get#ProductionMaterials' (returned and stock apart; a staged short line not offered), Stage for STOCK_MOVE
+    holders and, when the policy backflushes, the Backflush box with its lots and Confirm backflush; `get#MaterialAction` maps
+    issue, return, receive (Warehouse's run actions) and backflush, which the screen's materialAction runs after Manufacturing's
+    check#Record with `issue` (STOCK_ISSUE). The forms carry `workEffortId` for WorkOrderDetail.
+  - Products' `Shared/InventoryAvailability` at `Manufacturing/Planning/InventoryAvailability` (not in the menu; opened from
+    Components): Inventory.js counts held by status for Manufacturing with Quarantine, On hold and Defective columns in Summary,
+    and the Policy tab is not shown (crosscut §3.7's row: Summary, Projection, lots).
+  - Home: get#Home's P5b block (Materials.js `home`): Open, In progress, Late (linked to the filtered Find) and Short counted
+    for production readers; the queue lists the earliest due open work orders and the short ones with their shortage, a short
+    one opening Components. The ProductionShortage topic in the root and its link to Components.
+  - Manufacturing.js P5b block: `move` (STOCK_MOVE), the routes, the choices `materialProducts` and `stockFacilities`. Demo user
+    `manufacturing.material` (operator with BOSS_WAREHOUSE, _ISSUE and _MOVE).
+- Specs: Mantle `test/work/ProductionMaterials.spec.js` (4 features, about 3 s: the lines' quantities, free, short and held by
+  status; manual lines with their refusals and release keeping them; the backflush preview's lots, the confirmation once and its
+  retry, a stale preview and a manual policy; the shortfall with held stock at a facility allowing issue beyond on hand, the
+  staged line, the notice and get#ProductionShortages). BOSS `ManufacturingMaterials` (5: two components issued at two
+  operations through the Manufacturing mount and the operator without STOCK_ISSUE refused the same posting; the backflush preview
+  and Confirm once; the short line blocked after the staged release with the notice and Home's counts and queue; a manual line
+  on Components; InventoryAvailability held by status), ManufacturingAccess's P5b section (3), the route fixtures (Components,
+  MaterialIssueReceipt, InventoryAvailability and Projection), ManufacturingShell's Home feature updated for the counts; client
+  walk `ManufacturingMaterialsWalk` (2, with 390 px).
+- Tests run: Mantle ProductionMaterials, ProductionOrders, ProductionCosts, WarehouseProduction, ManufacturingServices,
+  ProductionPolicy, ProductMethods, SupplyPlanning (63, pass); BOSS ManufacturingMaterials, ManufacturingAccess,
+  ManufacturingWorkOrders, AppStructure, TuiRender (104, pass), ProductsInventory, ProductsSharedContext, ProductsAccess,
+  ClientIsolation, ManufacturingShell, ManufacturingPlanning, WarehouseAccess, WarehousePacking, WarehouseProductionFixtures,
+  WarehouseMoves, WarehouseShell (258, pass after the two fixes below); walks ManufacturingMaterialsWalk,
+  ManufacturingWorkOrdersWalk, WarehouseProductionWalk (7, pass). `moqui lint --screens`: informational anchors only.
+- Decisions:
+  - Backflush is a confirmed action: the preview chooses the lots, the confirmation issues exactly that preview (previewKey) or
+    nothing. It is offered only under the PcmBackflush policy; issuing it at the policy's issue point (operation start or
+    completion, output receipt) is the phase that builds that event's caller (P10, P7), which calls backflush#ProductionMaterials
+    with the operation.
+  - A manual line is entered in the component's stock unit; another unit is refused (UNIT_CONVERSION). An empty field of an edit
+    keeps the line's value.
+  - The shortage notice goes to the planners when a release leaves lines short; the planner who released is the actor and is not
+    notified (Payables `notify`). Home counts drafts among the short runs, as planning does.
+  - InventoryAvailability is opened from a work order's component with the plant, not a menu tab, since the shared screen needs a
+    product; the reader groups (no Planning area) do not see the link.
+  - Warehouse's run source is shared, its app (scope, record check, stock options) a parameter, rather than copied.
+- Deferred: ReceiveOutput's GenerateTracking dialog (F27) stays with P7, which changes receive#ProductionOutput and owns the output
+  quantities; the receive dialog keeps Warehouse's first serial and lot. Substitute is P9's; loss columns are P7's; completed this
+  month is P16's.
+- Fixed along the way: ClientIsolation did not classify P13's `Shared/SupplyPlanning` (refused to clients now); ManufacturingShell's
+  Home feature expected the P1 empty queue.
+- Findings (provisional):
+  - **F-P5b-1** Declared but absent in-parameters arrive as null in a JS service module, so `p.field !== undefined` cannot tell
+    "not given" from "cleared"; store#ProductionMaterial treats an empty field as "keep".
+  - **F-P5b-2** Payables `notify` leaves the actor out of the recipients, so a planner's own staged release does not notify that
+    planner; the spec checks a second planner.
+  - **F-P5b-3** The method's material lines come from the explosion in no fixed order (lineSeqNum follows it), so specs find a
+    line by product, not position.
+  - **F-P5b-4** For the merge: Production.js (re-explosion keeps manual lines; two exports), ProductionOrders.js (the notice call in
+    release's apply), Warehouse's Production.js (`runSource(p, app)`), Products' Inventory.js and InventoryAvailability Summary and
+    Policy, Shared/MaterialIssueReceipt (the Manufacturing branch), WorkOrderDetail's subscreens, Home.xml and HomeServices.xml's
+    P5b block, the ManufacturingShell Home feature, ClientIsolation's Shared list. P7 edits receive#ProductionOutput and may add
+    WorkOrderDetail tabs; P11 nothing of these.
 
 ### P6 — Cost evidence
 

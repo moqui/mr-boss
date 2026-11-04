@@ -38,6 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
         </default-response>
         <error-response url="."/>
     </transition>
+    <!-- not in Manufacturing's context (crosscut §3.7: Summary, Projection, lots when issuing) -->
+    <condition><expression>appRoot != 'Manufacturing'</expression></condition>
     <actions>
         <service-call name="ironstone.products.InventoryServices.get#InventoryPolicy" in-map="context" out-map="context"/>
     </actions>

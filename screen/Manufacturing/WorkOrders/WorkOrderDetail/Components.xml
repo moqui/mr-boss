@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Components (design-manufacturing §3 Components; impl-manufacturing P5b): the run's material lines
+    (mantle.work.ProductionServices.get#ProductionMaterials): each line's operation, component, required quantity (with the
+    scrap allowance of the run's policy), issued, returned and remaining, the unit, the stock free for it at the run's
+    facility and plant, what is short and what is held by status apart (R-MFG-24), a staged release's short line. A
+    planner adds a manual line to a draft, changes or removes it (store#ProductionMaterial; a method line changes only through
+    the method). Issue and Return open the Materials tab (Shared/MaterialIssueReceipt); Stage opens Warehouse's Move with the
+    run fixed for those who move stock (there is no WIP location, R-MFG-03); a component's availability opens the Planning
+    area's InventoryAvailability for those who plan. Substitute comes with P9. It reads the run when the client loads the tab
+    alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Components" default-menu-index="2">
+    <parameter name="workEffortId"/>
+    <transition name="storeMaterial">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.store#ProductionMaterial" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        productionRunLineId:productionRunLineId || null, productId:productId || null,
+                        quantity:quantity || null, routingOperationWorkEffortId:routingOperationWorkEffortId || null,
+                        sourceFacilityId:sourceFacilityId || null, instructionText:instructionText || null,
+                        remove:remove == 'true'}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Material line removed'
+                    : productionRunLineId ? 'Material line saved' : 'Material line added', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionMaterials" out-map="materials"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="materialRun" from="materials?.run || {}"/>
+        <set field="canAdd" from="!!materials?.canAdd &amp;&amp; !!manufacturing.capabilities.plan"/>
+        <set field="canStage" from="!!manufacturing.capabilities.move &amp;&amp; !!materialRun.released"/>
+        <set field="canIssue" from="!!materials?.canIssue &amp;&amp; !!manufacturing.capabilities.issue"/>
+        <!-- the Planning area (and its InventoryAvailability) is the planners', schedulers' and supervisors' -->
+        <set field="canPlanStock" from="!!(manufacturing.capabilities.plan || manufacturing.capabilities.schedule
+                || manufacturing.capabilities.supervise)"/>
+        <!-- availability at the stock facility the run nets against last (the plant above a line) -->
+        <set field="stockFacilityId" from="(materialRun.stockFacilityIds || []).slice(-1)[0] || materialRun.facilityId"/>
+        <set field="keyBase" from="'wo-' + workEffortId + '-' + (materialRun.revision ?? 0)"/>
+        <set field="routingOperations" from="materials?.routingOperations || []"/>
+        <set field="componentRows" from="(materials?.materialRows || []).map((row) =&gt; Object.assign({}, row, {
+                quantityText: row.required + ' ' + (row.unitText || ''),
+                allowanceText: Number(row.allowance || 0) &gt; 0 ? 'Scrap allowance ' + row.allowance : '',
+                stateText: row.stagedShort ? 'Released short' : row.short ? 'Short ' + row.short : 'Covered',
+                stateColor: row.stagedShort || row.short ? 'negative' : 'positive',
+                heldText: Number(row.held || 0) &gt; 0 ? 'Held ' + row.held + ' (quarantine ' + row.heldQuarantine
+                    + ', on hold ' + row.heldOnHold + ', defective ' + row.heldDefective + ')' : ''}))"/>
+        <set field="policyText" from="materials?.policy ? materials.policy.consumptionText
+                + (materials.policy.issuePointText ? ' · ' + materials.policy.issuePointText : '') : ''"/>
+        <set field="stageParameters" from="{workEffortId:workEffortId, facilityId:materialRun.facilityId}"/>
+    </actions>
+    <widgets>
+        <section name="ComponentsFound" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Components · ${componentRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="AddMaterialDialog" button-text="Add material" icon="sym_o_add" width="680"
+                                title="Add material to the draft work order ${workEffortId}" condition="canAdd">
+                            <form-single name="AddMaterial" transition="storeMaterial"
+                                    map="{workEffortId:workEffortId, expectedRevision:materialRun.revision,
+                                        operationKey:keyBase + '-add'}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Component">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'materialProducts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="quantity">
+                                    <default-field title="Quantity" tooltip="In the component's stock unit">
+                                        <text-line size="8" input-type="number" required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="routingOperationWorkEffortId">
+                                    <default-field title="Operation">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="routingOperations" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sourceFacilityId">
+                                    <default-field title="Staged from" tooltip="Where its stock is staged from">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'stockFacilities'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="instructionText">
+                                    <default-field title="Instruction"><text-area rows="2"/></default-field>
+                                </field>
+                                <field name="submit"><default-field title=""><submit text="Add material"/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="productId"/><field-ref name="quantity"/></field-row>
+                                    <field-row><field-ref name="routingOperationWorkEffortId"/><field-ref name="sourceFacilityId"/></field-row>
+                                    <field-ref name="instructionText"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <link url="../MaterialIssueReceipt" text="Issue and return" icon="sym_o_input" link-type="anchor-button"
+                                parameter-map="{workEffortId:workEffortId}" condition="canIssue"/>
+                        <link url="/qapps/Warehouse/Transfers/Move" url-type="plain" text="Stage stock" icon="sym_o_move_down"
+                                link-type="anchor-button" parameter-map="stageParameters" condition="canStage"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="${policyText}" type="p" style="q-px-md q-pt-sm text-caption m-muted" condition="policyText"/>
+                        <label text="This work order has no material lines." type="p" style="q-pa-md m-muted"
+                                condition="!componentRows.length"/>
+                        <form-list name="ComponentLines" list="componentRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Component">
+                                    <display text="${pseudoId} · ${productName}"/>
+                                </default-field>
+                            </field>
+                            <field name="operationName">
+                                <default-field title="Operation"><display/></default-field>
+                            </field>
+                            <field name="quantityText" align="right">
+                                <default-field title="Required" tooltip="Includes the scrap allowance where the method has one">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="issued" align="right">
+                                <default-field title="Issued"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="returned" align="right">
+                                <default-field title="Returned"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="remaining" align="right">
+                                <default-field title="Remaining"><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="available" align="right">
+                                <default-field title="Free" tooltip="Available stock of the owner at the run's facility and plant">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="Stock">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="heldText">
+                                <default-field title="Held"><display/></default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditMaterial_${productionRunLineId}" button-text="Edit" icon="sym_o_edit"
+                                            width="560" title="Edit material ${productName}" condition="canEdit">
+                                        <form-single name="EditMaterial" transition="storeMaterial"
+                                                map="{workEffortId:workEffortId, expectedRevision:materialRun.revision,
+                                                    operationKey:keyBase + '-edit-' + productionRunLineId,
+                                                    productionRunLineId:productionRunLineId, quantity:required,
+                                                    routingOperationWorkEffortId:routingOperationWorkEffortId,
+                                                    instructionText:instructionText}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                                            <field name="quantity">
+                                                <default-field title="Quantity"><text-line size="8" input-type="number"/></default-field>
+                                            </field>
+                                            <field name="routingOperationWorkEffortId">
+                                                <default-field title="Operation">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="routingOperations" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="instructionText">
+                                                <default-field title="Instruction"><text-area rows="2"/></default-field>
+                                            </field>
+                                            <field name="submit"><default-field title=""><submit text="Save"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeMaterial" text="Remove" link-type="hidden-form-link" btn-type="danger"
+                                            condition="canEdit" confirmation="Remove ${productName} from work order ${workEffortId}?"
+                                            parameter-map="{workEffortId:workEffortId, expectedRevision:materialRun.revision,
+                                                operationKey:keyBase + '-remove-' + productionRunLineId,
+                                                productionRunLineId:productionRunLineId, remove:'true'}"/>
+                                    <link url="${sharedLinks['Planning/InventoryAvailability']}" text="Availability"
+                                            icon="sym_o_inventory" link-type="anchor"
+                                            parameter-map="{productId:productId, facilityId:stockFacilityId}" condition="canPlanStock"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="operationName"/>
+                                </column>
+                                <column>
+                                    <field-ref name="remaining"/>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

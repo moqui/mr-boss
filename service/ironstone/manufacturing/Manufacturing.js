@@ -1014,6 +1014,44 @@ Object.assign(choiceSources, {
     planningMethods: (userScope, term, selected) => enumOptions("PlanningSuggestionMethod", term, selected)
 })
 
+// ===== P5b: materials and stock =====
+// WorkOrderDetail's Components and Materials (Shared/MaterialIssueReceipt) tabs and the Planning area's shared
+// InventoryAvailability (impl-manufacturing P5b), whose routes are in sharedLinks; Stage opens Warehouse's Move for those
+// who move stock (STOCK_MOVE, Warehouse's grant); and the drop-downs of Add material.
+capabilityPermissions.move = "STOCK_MOVE"
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Components",
+    "WorkOrders/WorkOrderDetail/MaterialIssueReceipt",
+    "Planning/InventoryAvailability"
+)
+Object.assign(choiceSources, {
+    // the stocked products of the user's organizations and the shared ones (owner _NA_ or none) a manual material line may
+    // take (not kits), as store#ProductionMaterial allows
+    materialProducts: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product", {productTypeEnumId: "PtAsset"}).orderBy("productName")
+        if (userScope.ownerIds)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("ownerPartyId", "in", userScope.ownerIds.concat(["_NA_"])),
+                        factory.makeCondition("ownerPartyId", "is-null", null)
+                    ],
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        return rowOptions(query, "productId", label, ["productId", "pseudoId", "productName"], term, selected, productId => {
+            const row = one("mantle.product.Product", {productId})
+            const shared = !row?.ownerPartyId || row.ownerPartyId === "_NA_"
+            return row && row.productTypeEnumId === "PtAsset" && (shared || owns(userScope, row.ownerPartyId)) ? row : null
+        })
+    },
+    // the facilities of the user's organizations a material line's stock is staged from
+    stockFacilities: (userScope, term, selected) =>
+        facilityOptions(facilityFind(userScope), term, selected, facility => inScope(userScope, facility))
+})
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

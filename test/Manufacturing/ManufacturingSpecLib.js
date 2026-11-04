@@ -47,7 +47,9 @@ const users = {
     display: "manufacturing.display",
     services: "manufacturing.services",
     // P6: a production reader with Accounting's ACCOUNTING_VIEW
-    finance: "manufacturing.finance"
+    finance: "manufacturing.finance",
+    // P5b: an operator who issues and moves stock (Warehouse's issue and move groups)
+    material: "manufacturing.material"
 }
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
@@ -186,6 +188,23 @@ function routeFixtures() {
         "Planning/SupplyPlanning": {parameters: {plantId: ids.plantId}, text: "Supply planning"}
     })
     mounts.push(["Planning/SupplyPlanning", shared + "SupplyPlanning.xml"])
+    // P5b: the Components and Materials tabs (Shared/MaterialIssueReceipt) on the Warehouse demo's released run, and the
+    // Planning area's shared InventoryAvailability with the Manufacturing context on its output at Retail's plant
+    const stockProduct = {productId: "BOSS_WH_COATED", facilityId: ids.plantId}
+    Object.assign(routes, {
+        "WorkOrders/WorkOrderDetail/Components": {parameters: {workEffortId: ids.releasedRunId}, text: "Coated filters"},
+        "WorkOrders/WorkOrderDetail/MaterialIssueReceipt": {
+            parameters: {workEffortId: ids.releasedRunId},
+            text: "Coated filters"
+        },
+        "Planning/InventoryAvailability": {parameters: stockProduct, text: "Coated filter"},
+        "Planning/InventoryAvailability/Projection": {parameters: stockProduct, text: "Coated filter"}
+    })
+    mounts.push(
+        ["WorkOrders/WorkOrderDetail/MaterialIssueReceipt", shared + "MaterialIssueReceipt.xml"],
+        ["Planning/InventoryAvailability", shared + "InventoryAvailability.xml"],
+        ["Planning/InventoryAvailability/Projection", shared + "InventoryAvailability/Projection.xml"]
+    )
     return {routes, mounts}
 }
 
