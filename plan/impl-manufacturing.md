@@ -383,6 +383,9 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   baseline WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,668 passed, 1 failed: WarehouseFacilities expected
   ZIRET_WH's exact children and met ManufacturingWorkCenters' spec cell, so it now checks the demo children are there
   (fixed); `moqui lint --screens` clean; BOSS client walks 135 passed.
+- **Wave 3 suites (Nov 4, on master after P5a, P6 and P13 merged):** standalone mr-mantle 1,480 passed, 2 failed (the
+  baseline), 11 skipped; mr-boss 1,685 passed, 1 failed: ClientIsolation found `Shared/SupplyPlanning` unclassified, now
+  in its refused list (a client is refused it); `moqui lint --screens` clean; BOSS client walks 143 passed.
 
 ### P2 — Methods
 
