@@ -466,7 +466,7 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
         // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns)
-        placeholders.length >= 68
+        placeholders.length >= 67
         failures.join("\n") == ""
     },
 })
