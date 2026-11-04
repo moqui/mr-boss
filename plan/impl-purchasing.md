@@ -2063,6 +2063,11 @@ need `buy` and `listRead`, Mantle PURCHASE_ORDER_EDIT); RequestDetail in Commons
   - Left for the lead: a request line priced below its maximum keeps the remainder reserved at BcsRequest until the request is
     cancelled; nothing closes a fully sourced request (F127), so that remainder stays committed until P17 adds the close
     (which should release it). No regression spec runs two conversions concurrently (the lock was checked by reading).
+- **Wave 6 suites (Nov 4, on master after P10 and P13 merged, run alone):** standalone mr-mantle 1,624 passed, 2 failed
+  (the baseline), 11 skipped; `./moq test-apps` 2,887 server and 14 client features passed, none failed; feature time
+  mr-mantle 340 of 300 s in the apps run (250 s standalone), mr-boss 272 of 220 s server and 42 of 36 s client, mr-pass
+  17 of 15 s (no Purchasing change there): warnings, none over 1.5 times, for the end's measured budget; no spec over
+  15 s; `moqui lint --screens` clean.
 
 ### P11 — RFQs and supplier quotes
 
