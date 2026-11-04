@@ -1,0 +1,174 @@
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The shop floor station (design-manufacturing ShopFloor; style-guide §3.6 Board, §8.2 handheld): a scan field, the plant
+    and My work above the selected operation's card (Open, the one primary; Start with the person timer, a timer elsewhere
+    switched after a confirmation; Instructions) and the board of the plant's operations by state. Served by Station.xml in
+    the qvue render mode, its data and actions from Station.xml's transitions (queueRows, scanOperation, startOperation);
+    navigation through the shell's root. Controls are 48 px high and the scan text 18 px. -->
+<template><div>
+    <div class="row items-center q-col-gutter-sm q-mb-sm">
+        <div class="col-12 col-md-5">
+            <q-input ref="scanField" v-model="scanText" outlined autofocus clearable label="Scan an operation or work order"
+                    input-style="font-size:18px" @keyup.enter="scan">
+                <template v-slot:append><q-btn flat round icon="qr_code_scanner" aria-label="Find the scanned code" @click="scan"></q-btn></template>
+            </q-input>
+        </div>
+        <div class="col-12 col-sm-6 col-md-3" v-if="plantOptions.length > 1">
+            <q-select v-model="plantId" :options="plantOptions" option-value="value" option-label="label" emit-value map-options
+                    outlined label="Plant" @update:model-value="load"></q-select>
+        </div>
+        <div class="col-auto">
+            <q-toggle v-model="mine" label="My work" style="min-height:48px" @update:model-value="load"></q-toggle>
+        </div>
+        <div class="col-auto">
+            <q-btn flat no-caps icon="refresh" label="Refresh" style="min-height:48px" :loading="loading" @click="load"></q-btn>
+        </div>
+    </div>
+    <div v-if="scanMessage" class="text-body2 text-negative q-mb-sm" role="alert">{{scanMessage}}</div>
+    <div v-if="timer" class="text-body2 q-mb-sm" :class="mutedClass">
+        <q-icon name="timer" class="q-mr-xs"></q-icon>Your timer runs{{timer.workEffortName ? ' on ' + timer.workEffortName : ''}} since {{timer.fromText}}
+    </div>
+    <div v-if="matches.length > 1" class="q-mb-sm">
+        <div class="text-caption q-mb-xs">The code names several operations: choose one</div>
+        <q-btn v-for="match in matches" :key="match.id" outline no-caps class="q-mr-sm q-mb-sm" style="min-height:48px"
+                :label="match.label + (match.detail ? ' · ' + match.detail : '')" @click="selectId(match.id)"></q-btn>
+    </div>
+
+    <q-card v-if="selected" flat bordered class="q-mb-md" id="SelectedOperation">
+        <q-card-section>
+            <div class="text-h6">{{selected.operationName}}</div>
+            <div class="text-body2" :class="mutedClass">{{selected.runName}} · {{selected.productName}} · {{selected.workCenterName}}</div>
+            <div class="row items-center q-mt-xs">
+                <q-chip dense square class="q-ml-none m-tonal" :class="'text-' + colorOf(selected.state)">{{selected.stateText}}</q-chip>
+                <span class="text-body2">{{selected.readinessText}}</span>
+            </div>
+            <div v-if="selected.dueText" class="text-caption" :class="mutedClass">Due {{selected.dueText}}</div>
+        </q-card-section>
+        <q-card-actions class="q-gutter-sm">
+            <q-btn unelevated color="primary" no-caps icon="open_in_new" label="Open" style="min-height:48px" @click="open(selected)"></q-btn>
+            <q-btn v-if="canStart(selected)" outline no-caps icon="play_arrow" label="Start" style="min-height:48px"
+                    :loading="starting" @click="start(selected, false)"></q-btn>
+            <q-btn flat no-caps icon="menu_book" label="Instructions" style="min-height:48px" @click="instructions(selected)"></q-btn>
+        </q-card-actions>
+    </q-card>
+
+    <div v-if="!loading && !rows.length" class="text-body2 q-pa-md" :class="mutedClass">
+        {{failed ? failed : 'No released or running work order has operations here' + (mine ? ' assigned to you' : '') + '.'}}
+    </div>
+    <!-- the columns side by side from sm, stacked on a phone (no sideways scroll) -->
+    <div class="q-pb-sm" :class="$q.screen.lt.sm ? 'column q-gutter-y-sm' : 'row no-wrap scroll'">
+        <q-card v-for="group in groups" :key="group.id" flat bordered class="column no-wrap"
+                :class="$q.screen.lt.sm ? '' : 'col q-mr-sm'" :style="$q.screen.lt.sm ? '' : 'min-width:240px;max-width:340px;'">
+            <q-card-section class="q-py-xs q-px-sm row items-center no-wrap">
+                <div class="text-subtitle2 text-weight-medium">{{group.label}}</div>
+                <q-badge class="q-ml-xs" :color="group.color" :text-color="group.color === 'warning' ? 'dark' : 'white'">{{cardsIn(group.id).length}}</q-badge>
+            </q-card-section>
+            <q-separator></q-separator>
+            <q-card-section class="q-pa-xs col">
+                <q-card v-for="row in cardsIn(group.id)" :key="row.id" flat bordered class="q-mb-xs cursor-pointer"
+                        :class="selected && selected.id === row.id ? 'shadow-4' : ''" @click="select(row)">
+                    <q-card-section class="q-pa-sm" style="min-height:48px">
+                        <div class="row items-start no-wrap">
+                            <div class="col text-body2 text-weight-medium">{{row.operationName}}</div>
+                            <q-icon v-if="row.timerHere" name="timer" color="primary" size="sm"><q-tooltip>Your timer runs here</q-tooltip></q-icon>
+                        </div>
+                        <div class="text-caption ellipsis" :class="mutedClass">{{row.runName}} · {{row.productName}}</div>
+                        <div class="text-caption ellipsis">{{row.readinessText}}</div>
+                        <div class="text-caption" :class="mutedClass" v-if="row.dueText">Due {{row.dueText}}</div>
+                    </q-card-section>
+                </q-card>
+                <div v-if="!cardsIn(group.id).length" class="text-caption text-center q-pa-xs" :class="mutedClass">{{loading ? 'Loading' : 'None'}}</div>
+            </q-card-section>
+        </q-card>
+    </div>
+</div></template>
+
+<script>
+module.exports = {
+    data() {
+        return {
+            scanText: '', scanMessage: null, matches: [], groups: [], rows: [], timer: null, plantId: null, plantOptions: [],
+            mine: false, can: {}, selectedId: null, loading: false, starting: false, failed: null
+        };
+    },
+    computed: {
+        screenPath() { return this.$root.basePath + '/' + this.$root.currentPathList.join('/'); },
+        mutedClass() { return this.$q.dark.isActive ? 'text-grey-5' : 'text-grey-7'; },
+        selected() { return this.rows.find((row) => row.id === this.selectedId) || null; }
+    },
+    methods: {
+        siblingUrl(name, search) {
+            const path = this.$root.currentPathList.slice(0, -1).concat([name]).join('/');
+            return this.$root.linkBasePath + '/' + path + (search ? '?' + search : '');
+        },
+        cardsIn(groupId) { return this.rows.filter((row) => row.state === groupId); },
+        colorOf(state) { const group = this.groups.find((row) => row.id === state); return group ? group.color : 'grey'; },
+        canStart(row) { return !!this.can.operate && ['ready', 'paused', 'running'].includes(row.state) && !row.timerHere; },
+        load() {
+            this.loading = true;
+            const params = { mine: this.mine ? 'true' : 'false' };
+            if (this.plantId) params.facilityId = this.plantId;
+            moqui.request(this.screenPath + '/queueRows', { params }).then((result) => {
+                this.loading = false;
+                const json = result.json || {};
+                this.failed = json.failed ? (json.messageInfos || []).map((info) => info.message).join(' ') : null;
+                this.groups = json.groups || [];
+                this.rows = json.rows || [];
+                this.timer = json.timer || null;
+                this.can = json.can || {};
+                this.plantOptions = json.plantOptions || [];
+                if (!this.plantId && json.plantId) this.plantId = json.plantId;
+            }, (err) => { this.loading = false; moqui.handleAjaxError(err); });
+        },
+        select(row) { this.selectedId = row.id; this.matches = []; this.scanMessage = null; },
+        selectId(id) {
+            this.matches = [];
+            if (this.rows.some((row) => row.id === id)) { this.selectedId = id; return; }
+            this.$root.setUrl(this.siblingUrl('OperationExecution', 'operationWorkEffortId=' + encodeURIComponent(id)));
+        },
+        scan() {
+            const text = String(this.scanText || '').trim();
+            if (!text) return;
+            this.scanMessage = null;
+            moqui.request(this.screenPath + '/scanOperation', { params: { scanText: text } }).then((result) => {
+                const json = result.json || {};
+                const matches = json.matches || [];
+                this.scanText = '';
+                if (!matches.length) { this.scanMessage = json.message || ('No operation of yours is ' + text); return; }
+                if (matches.length === 1) this.selectId(matches[0].id);
+                else this.matches = matches;
+            }, (err) => moqui.handleAjaxError(err));
+        },
+        open(row) { this.$root.setUrl(this.siblingUrl('OperationExecution', 'operationWorkEffortId=' + encodeURIComponent(row.id))); },
+        instructions(row) { this.$root.setUrl(this.siblingUrl('Instructions', 'operationWorkEffortId=' + encodeURIComponent(row.id))); },
+        start(row, confirmSwitch) {
+            this.starting = true;
+            const params = { operationWorkEffortId: row.id, operationKey: 'sf-start-' + row.id + '-' + moqui.randomId(), confirmSwitch: confirmSwitch ? 'true' : 'false' };
+            moqui.request(this.screenPath + '/startOperation', { method: 'POST', params }).then((result) => {
+                this.starting = false;
+                const json = result.json || {};
+                if (json.failed && json.reasonCode === 'TIMER_SWITCH_REQUIRED') {
+                    this.$q.dialog({ title: 'Switch your timer?', message: json.message, cancel: true, persistent: true,
+                        ok: { label: 'Stop it and start', color: 'primary', noCaps: true }, cancel: { label: 'Keep it', flat: true, noCaps: true } })
+                        .onOk(() => this.start(row, true));
+                    return;
+                }
+                moqui.notifyMessages(json.messageInfos, null);
+                this.load();
+            }, (err) => { this.starting = false; moqui.handleAjaxError(err); });
+        }
+    },
+    mounted() { this.load(); }
+};
+</script>

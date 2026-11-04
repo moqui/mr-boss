@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The operator instructions print (design-manufacturing §11, Instructions; impl-manufacturing P10): an operation's
+    instructions as of its work order's release, in order, each with its text, file and checksum, the evidence the operation
+    requires, and the acknowledgments recorded so far, with the work order, operation and work center for the station. A print
+    (html-print) opened from Instructions' Print; it renders in every mode. Read through
+    mantle.work.ProductionServices.get#ProductionInstructions after the operation's record check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Instructions print" default-menu-include="false">
+    <parameter name="operationWorkEffortId" required="true"/>
+    <actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="operationCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId || '_NA_'}"/>
+        <if condition="operationCheck?.recordId">
+            <service-call name="mantle.work.ProductionServices.get#ProductionInstructions" out-map="instructionsFound"
+                    transaction="force-new" ignore-error="true" in-map="{operationWorkEffortId:operationWorkEffortId}"/>
+        </if>
+        <set field="instructions" from="instructionsFound?.productionInstructions || null"/>
+        <set field="stepRows" from="instructions?.instructionRows || []"/>
+        <set field="acknowledgmentRows" from="instructions?.acknowledgmentRows || []"/>
+    </actions>
+    <widgets>
+        <label text="Operation ${operationWorkEffortId} is not available to you." type="p" condition="!instructions"/>
+        <section name="InstructionsPrintBody" condition="instructions">
+            <widgets>
+                <label text="Operator instructions: ${instructions.operationName}" type="h4"/>
+                <label text="Operation ${operationWorkEffortId} · work order ${instructions.workEffortId} · ${instructions.runName} · as released ${instructions.releaseText}"
+                        type="p"/>
+                <label text="${instructions.revisionWarning}" type="p" condition="instructions.revisionWarning"/>
+                <label text="This operation has no published instruction." type="p" condition="!stepRows.length"/>
+                <section-iterate name="PrintSteps" list="stepRows" entry="step">
+                    <widgets>
+                        <label text="Step ${step.stepNumber}: ${step.title}" type="h5"/>
+                        <label text="${step.body}" type="pre" condition="step.body"/>
+                        <label text="File ${step.fileName} · checksum ${step.contentChecksum || 'none'} · published ${step.fromText}" type="p"/>
+                    </widgets>
+                </section-iterate>
+                <label text="Evidence required: ${instructions.evidence.text}" type="p" condition="instructions.evidence?.required"/>
+                <section name="PrintAcknowledgments" condition="acknowledgmentRows.length">
+                    <widgets>
+                        <label text="Recorded" type="h5"/>
+                        <form-list name="PrintAcknowledgmentList" list="acknowledgmentRows" skip-form="true" paginate="false">
+                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                            <field name="personName"><default-field title="By"><display/></default-field></field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

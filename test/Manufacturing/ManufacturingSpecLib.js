@@ -293,6 +293,17 @@ function routeFixtures() {
         "Planning/ScheduleSnapshot": {parameters: {plantId: ids.plantId}, text: "Production schedule snapshot"},
         "Planning/Capacity": {parameters: {plantId: ids.plantId}, text: "Calendar-adjusted"}
     })
+    // P10: the Shop floor area (the station, a .qvue: its component, by default), and the quality work order's Pack in
+    // OperationExecution, Instructions and the instructions print, and its time
+    const pack = {operationWorkEffortId: ids.qualityOperationIds[1]}
+    Object.assign(routes, {
+        ShopFloor: {},
+        "ShopFloor/Station": {},
+        "ShopFloor/OperationExecution": {parameters: pack, text: "Pack"},
+        "ShopFloor/Instructions": {parameters: pack, text: "Pack"},
+        "ShopFloor/InstructionsPrint": {parameters: pack, text: "Pack"},
+        "ShopFloor/ProductionTime": {parameters: {workEffortId: ids.qualityRunId}, text: "Welded frames"}
+    })
     // P9: the Changes tab and SplitWorkOrder of the Warehouse demo's released run (a tab shows its header's text, F63), and
     // the Work orders area's Disassembly
     Object.assign(routes, {
@@ -499,4 +510,115 @@ function scheduleFixture(prefix) {
     )
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, routeFixtures, planningFixture, scheduleFixture})
+// P10: a running work order of six DEMO_1_1 on line A from the demo method (Assemble, then Test and pack on line B), named
+// prefix with a time stamp, the supervisor its Manager (its time's approver, F33), its components received at the plant and
+// issued, and Assemble's operation template with a published instruction (published once: the walks' database outlives a
+// run, F60). Answers {runId, name, assemble, test}.
+function shopFloorFixture(prefix) {
+    const P = "mantle.work.ProductionServices."
+    const find = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz()
+    const revision = runId => Number(find("mantle.work.effort.WorkEffort", {workEffortId: runId}).one().productionRevision || 0)
+    const templateId = ids.templateIds[0]
+    const instructions = system(() =>
+        Array.from(
+            find("mantle.work.effort.WorkEffortContent", {workEffortId: templateId, contentTypeEnumId: "WectInstruction"}).list()
+        )
+    )
+    if (!instructions.length)
+        asUser(
+            users.method,
+            () =>
+                invoke("mantle.work.RoutingServices.store#OperationInstruction", {
+                    workEffortId: templateId,
+                    contentText: "# Assemble\nSeat both subassemblies, then fasten the four screws to 2 Nm.",
+                    filename: "assemble.md",
+                    description: "Assemble the pilot unit",
+                    changeReason: "Shop floor demo instruction"
+                }),
+            false
+        )
+    const stamp = Date.now()
+    const received = {}
+    system(() => {
+        for (const productId of ["DEMO_SA_1", "DEMO_SA_2", "DEMO_RM_1"])
+            received[productId] = invoke("mantle.product.AssetServices.receive#Asset", {
+                productId,
+                quantity: 40,
+                facilityId: ids.plantId,
+                ownerPartyId: "ORG_ZIZI_RETAIL",
+                assetTypeEnumId: "AstTpInventory",
+                statusId: "AstAvailable",
+                acquireCost: 1
+            }).assetId
+    })
+    const name = prefix + " " + stamp
+    const runId = asUser(
+        users.plan,
+        () =>
+            invoke(P + "create#ProductionOrder", {
+                operationKey: prefix + "-create-" + stamp,
+                organizationPartyId: "ORG_ZIZI_RETAIL",
+                productId: ids.productId,
+                productBomId: ids.methodId,
+                quantity: 6,
+                facilityId: ids.lineId,
+                workEffortName: name,
+                estimatedStartDate: new Date(stamp - 3600000),
+                estimatedCompletionDate: new Date(stamp + 3600000)
+            }).workEffortId,
+        false
+    )
+    asUser(
+        users.plan,
+        () => {
+            invoke(P + "transition#ProductionOrder", {
+                operationKey: prefix + "-release-" + runId,
+                workEffortId: runId,
+                action: "release",
+                expectedRevision: revision(runId)
+            })
+            invoke(P + "store#ProductionParty", {
+                operationKey: prefix + "-manager-" + runId,
+                workEffortId: runId,
+                expectedRevision: revision(runId),
+                partyId: "BOSS_MFG_SUPERVISE",
+                roleTypeId: "Manager"
+            })
+        },
+        false
+    )
+    asUser(
+        users.supervise,
+        () =>
+            invoke(P + "transition#ProductionOrder", {
+                operationKey: prefix + "-start-" + runId,
+                workEffortId: runId,
+                action: "start",
+                expectedRevision: revision(runId)
+            }),
+        false
+    )
+    asUser(
+        users.material,
+        () => {
+            for (const line of Array.from(find("mantle.work.production.ProductionRunLine", {workEffortId: runId}).list()))
+                if (line.lineRoleEnumId === "PrlrMaterial")
+                    invoke(P + "issue#ProductionMaterial", {
+                        operationKey: prefix + "-issue-" + line.productionRunLineId,
+                        workEffortId: runId,
+                        productionRunLineId: line.productionRunLineId,
+                        assetId: received[line.productId],
+                        quantity: line.stockQuantity
+                    })
+        },
+        false
+    )
+    const children = system(() =>
+        Array.from(find("mantle.work.effort.WorkEffort", {parentWorkEffortId: runId}).list()).sort(
+            (a, b) => Number(a.operationSequenceNum) - Number(b.operationSequenceNum)
+        )
+    )
+    return {runId, name, assemble: children[0].workEffortId, test: children[1].workEffortId}
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, routeFixtures, planningFixture, scheduleFixture, shopFloorFixture})

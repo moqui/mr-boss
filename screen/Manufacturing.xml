@@ -74,6 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P9: a substitute and an amendment waiting for review -->
         <notification-topic topic="ProductionSubstitution"/>
         <notification-topic topic="ProductionAmendment"/>
+        <!-- P10: the user's due operations in Today (F41) -->
+        <today-source service="ironstone.manufacturing.HomeServices.get#TodayItems" label="Manufacturing"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Manufacturing shop floor's screen context (impl-manufacturing P10; ShopFloor.js): the station's board of the selected
+    plant and the scan of an operation. The operations themselves are Mantle's mantle.work.ProductionServices
+    (get#ShopFloorQueue, get#ProductionOperation, start#, pause#, complete#ProductionOperation, record#MachineRuntime,
+    get#ProductionInstructions, record#InstructionStep, get#ProductionTime), which the ShopFloor screens call after
+    ironstone.manufacturing.AccessServices; nothing here passes them through. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Station" allow-remote="false">
+        <description>The station's board (design-manufacturing ShopFloor Station and Queue): the operations of the user's selected
+            plant (or the plant given) as cards in the board's groups (running, ready, paused, blocked, and done with
+            includeDone), each with its link to OperationExecution; with mine, only the user's assigned work; the user's
+            timer, the plants to choose from and what the user may do. Refuses a user without Manufacturing
+            (MANUFACTURING_UNAVAILABLE), one without a production permission (PERMISSION_DENIED) and a plant outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.manufacturing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="mine" type="Boolean"/>
+            <parameter name="includeDone" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="station" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="station" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/ShopFloor.js')
+                    .execute('station', context)"/>
+        </actions>
+    </service>
+    <service verb="resolve" noun="OperationScan" allow-remote="false">
+        <description>The resolver of the shop floor's scan-input: the user's operations a scanned or typed code names (the
+            operation's id, or a work order's id for its open operations), each checked again (the parameters are client
+            input). Answers the scan-input's matches (identityType operation, id, label, detail).</description>
+        <in-parameters>
+            <parameter name="scanText"/>
+            <parameter name="allowedTypes" type="List"/>
+            <parameter name="scanId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="matches" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/manufacturing/ShopFloor.js')
+                    .execute('scan', context)"/>
+            <set field="matches" from="found.matches"/>
+        </actions>
+    </service>
+</services>
