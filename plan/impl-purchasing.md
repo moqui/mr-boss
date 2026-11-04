@@ -823,6 +823,11 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     organization's policy.
   - Budget: the client walk is 6.8 s, nearly all of it steps of 0.2 to 0.7 s and the send's PDF and mail (1.3 s); a trim
     saves well under the 3 s over mr-boss's client budget, so it is unchanged.
+- **Wave 3 suites (Nov 4, on master after P3 merged):** standalone mr-mantle 1,587 passed, 2 failed (the baseline), 11
+  skipped; `./moq test-apps` 2,819 server features passed, 1 failed: PurchasingAccess read the reader's suppliers from
+  the first page of 30, which other specs' suppliers filled, so it now checks each supplier's scope by itself (fixed); 14
+  client features passed (feature time mr-mantle 294 of 300 s, mr-boss 200 of 220 s server and 38 of 36 s client, a
+  warning from P3's golden walk, left for the end's measured budget); `moqui lint --screens` clean.
 
 ### P4 — Approvals and budgets
 

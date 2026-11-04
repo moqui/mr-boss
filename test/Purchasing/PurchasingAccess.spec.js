@@ -220,14 +220,17 @@ feature("a user's suppliers are their organization's and the shared ones, in the
         const problems = []
         const choices = (user, choice, extra = {}) =>
             asUser(user, () => values(invoke(access + "get#Choices", Object.assign({choice}, extra))))
-        const retail = choices(users.read, "suppliers", {term: ""})
-        const services = choices(users.services, "suppliers", {term: ""})
+        // each supplier by itself (other specs add suppliers past the first page): offered when in the user's scope
+        const offered = (user, supplierId) =>
+            choices(user, "suppliers", {term: "zzz-none", selected: supplierId}).includes(supplierId)
         for (const supplierId of [ids.supplierId, ids.sharedSupplierId, ids.commonSupplierId])
-            if (!retail.includes(supplierId)) problems.push(`the reader is not offered ${supplierId}`)
-        if (retail.includes(ids.otherSupplierId)) problems.push("the reader is offered the other organization's supplier")
-        if (!services.includes(ids.otherSupplierId) || !services.includes(ids.sharedSupplierId))
-            problems.push(`the other organization's suppliers: ${services}`)
-        if (services.includes(ids.supplierId)) problems.push("the other organization is offered Retail's supplier")
+            if (!offered(users.read, supplierId)) problems.push(`the reader is not offered ${supplierId}`)
+        if (offered(users.read, ids.otherSupplierId)) problems.push("the reader is offered the other organization's supplier")
+        if (!offered(users.services, ids.otherSupplierId) || !offered(users.services, ids.sharedSupplierId))
+            problems.push("the other organization is not offered its own and the shared suppliers")
+        if (offered(users.services, ids.supplierId)) problems.push("the other organization is offered Retail's supplier")
+        const retail = choices(users.read, "suppliers", {term: ""})
+        if (retail.includes(ids.otherSupplierId)) problems.push("the reader's first page has the other organization's supplier")
         // a selected value outside the page: Retail's supplier for its user, not for the other organization's
         const selected = user => choices(user, "suppliers", {term: "zzz-none", selected: ids.supplierId})
         if (!selected(users.read).includes(ids.supplierId)) problems.push("the reader's selected supplier is left out")
