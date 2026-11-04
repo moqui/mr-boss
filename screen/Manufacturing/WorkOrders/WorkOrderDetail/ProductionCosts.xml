@@ -175,8 +175,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         type="p"/>
                                 <section name="ActualComponentRows" condition="!comparisonRows.length">
                                     <widgets>
-                                        <form-list name="ActualComponents" list="actuals.components" skip-form="true" paginate="false"
-                                               >
+                                        <form-list name="ActualComponents" list="actuals.components" skip-form="true" paginate="false">
                                             <field name="componentText">
                                                 <default-field title="Component">
                                                     <display/>
@@ -192,8 +191,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </section>
                                 <section name="EstimateActualRows" condition="comparisonRows.length">
                                     <widgets>
-                                        <form-list name="EstimateActual" list="comparisonRows" skip-form="true" paginate="false"
-                                               >
+                                        <form-list name="EstimateActual" list="comparisonRows" skip-form="true" paginate="false">
                                             <field name="componentText">
                                                 <default-field title="Component">
                                                     <display/>
@@ -233,8 +231,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 type="p" style="q-pa-md" condition="!eventRows.length"/>
                         <section name="CostEventRows" condition="eventRows.length">
                             <widgets>
-                                <form-list name="CostEvents" list="eventRows" skip-form="true" paginate="false"
-                                       >
+                                <form-list name="CostEvents" list="eventRows" skip-form="true" paginate="false">
                                     <field name="eventTypeText">
                                         <default-field title="Event">
                                             <display text="${eventTypeText} · ${eventDateText}"/>

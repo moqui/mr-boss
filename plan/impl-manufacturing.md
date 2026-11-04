@@ -777,7 +777,8 @@ steps 19 and 20).
     nothing), signed for WIP.
   - The output's relief is its own component (`PrcOutput`), so the unique key holds for every source; the other components are
     the frozen estimate's, so estimate and actual compare by component.
-  - The estimate is read with PRODUCT_COST_VIEW or ACCOUNTING_VIEW (MethodPolicy's cost read), so a financial reader sees both.
+  - The estimate is read with Products' cost read (PRODUCT_COST_VIEW or ACCOUNTING_VIEW among it; the review aligned it with
+    CostPolicy), so a financial reader sees both.
   - ProductionCostReview goes to the run organization's PRODUCTION_COST_POST holders, Accounting's cost close posters (F40).
     It is decided on the record, so it has no approve service.
   - A review needs a released, started, held or completed run with at least one event; a second request at the same revision
@@ -801,6 +802,20 @@ steps 19 and 20).
     the page's own title row for WorkOrderDetail's header, and point ManufacturingCostsWalk at the tab.
   - **F-P6-7** ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run
     alone it sees no costs and checks the empty state instead of the review request.
+
+- **Review (Nov 3).** Checked: each guard's operation-key replay returns before the hook, so a retry writes no event;
+  `record#ProductionCostEvent` runs in the causing transaction, a refusal rolling back the movement; the unique key; each
+  material event's `acctgTransId` with nothing posted again; the WIP sign; the omitted values; review#ProductionCosts's
+  permission, organization, operation key and revision; the recipients (F40). Decided: the estimate's readers are Products'
+  cost read (CostPolicy: `PRODUCT_COST_VIEW`, `_ESTIMATE`, `_APPROVE`, `ACCOUNTING_VIEW`, `ACCOUNTING_GL_POST`), as
+  ProductStandardCost's owner reads it; BOSS's Accounting readers hold `PRODUCT_COST_VIEW` as well, so §2 holds there. An issue of
+  material without a cost stays unvalued and not posted (F-P6-2): the plan refuses only receipts, §2 lets an existing service gain
+  a refusal only behind a flag, and §4 records unvalued facts for P15 to refuse. Fixed: the estimate left out overhead, so its
+  components did not add to its total; it now lists `PrcOverhead` (seeded, estimate only) and leaves it out of the comparison;
+  the estimate's read widened to CostPolicy's set; the spec checks another organization's poster gets no notice. Left: a zero
+  acquire cost is unvalued on an issue (the hook posts nothing) but valued at zero on a return (the hook posts zero), a
+  difference of Mantle's hooks. Specs: Mantle ProductionCosts, WarehouseProduction, ManufacturingServices (19, pass); BOSS
+  ManufacturingAccess, AppStructure, TuiRender (78, pass).
 
 ### P7 — Quantities, by-products and loss
 
