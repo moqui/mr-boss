@@ -1497,4 +1497,7 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- a late purchase receipt (Mantle's notify#LateReceipts, impl-purchasing P5) opens the order in Purchasing -->
+    <moqui.security.user.NotificationTopic topic="PurchaseLateReceipt"
+            linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
 </entity-facade-xml>

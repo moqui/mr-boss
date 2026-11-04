@@ -95,6 +95,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="choice" required="true"/>
             <parameter name="term"/>
             <parameter name="selected"/>
+            <!-- P5: the receipt whose facility's locations a receiver chooses from (receiptLocations) -->
+            <parameter name="shipmentId"/>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

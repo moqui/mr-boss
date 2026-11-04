@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Receipts (design-purchasing §9 Receipts; style-guide §3.2 List; impl-purchasing P5): ReceiptFind and ExpectedReceipts over
+    ironstone.purchasing.ReceiptServices.find#ExpectedReceipts (the stock lines of the user's purchase orders by view:
+    Expected, Partly received, Late, Held, Completed, All; expected, received, accepted, rejected and held apart in the stock
+    unit), each line opening its order and its receipt (the shared ShipmentDetail); and PrepareReceipt, "Expected receipt
+    (ASN)", for a buyer or a receiver: the order part's one open receipt through Warehouse's
+    mantle.shipment.WarehouseTaskServices.ensure#PurchaseReceipt (a second request opens the same receipt), then
+    ShipmentDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receipts" default-menu-index="1">
+    <parameter name="view"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="orderId"/>
+    <parameter name="facilityId"/>
+    <parameter name="dueFrom"/>
+    <parameter name="dueThru"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition-include name="purchaseReceiptChoices" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <transition-include name="prepareReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <actions>
+        <service-call name="ironstone.purchasing.ReceiptServices.find#ExpectedReceipts" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, supplierPartyId:supplierPartyId, organizationPartyId:organizationPartyId,
+                    orderId:orderId, facilityId:facilityId, dueFrom:dueFrom || null, dueThru:dueThru || null,
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="receiptRows" from="found?.receiptRows || []"/>
+        <set field="receiptRowsCount" from="found?.receiptRowsCount"/>
+        <set field="receiptRowsPageIndex" from="found?.receiptRowsPageIndex"/>
+        <set field="receiptRowsPageSize" from="found?.receiptRowsPageSize"/>
+        <set field="receiptRowsPageMaxIndex" from="found?.receiptRowsPageMaxIndex"/>
+        <set field="receiptRowsPageRangeLow" from="found?.receiptRowsPageRangeLow"/>
+        <set field="receiptRowsPageRangeHigh" from="found?.receiptRowsPageRangeHigh"/>
+        <set field="viewLabel" from="found?.viewLabel || 'Expected'"/>
+        <set field="truncated" from="!!found?.truncated"/>
+        <set field="viewLinks" from="[['', 'Expected'], ['partial', 'Partly received'], ['late', 'Late'], ['held', 'Held'],
+                ['completed', 'Completed'], ['all', 'All']]
+                .map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+        <set field="filtered" from="!!(view || supplierPartyId || orderId || facilityId || dueFrom || dueThru)"/>
+        <set field="emptyText" from="filtered ? 'No purchase order line matches these filters.'
+                : 'Nothing is expected from your suppliers. The lines of approved purchase orders show here until they arrive.'"/>
+    </actions>
+    <widgets>
+        <context title="Receipts"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Receipts" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <section-include name="PrepareReceiptDialog" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="ReceiptViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <label text="Only the first 2,000 open lines are read; narrow the list by supplier or order." type="p"
+                style="text-warning" condition="truncated"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ExpectedReceipts" list="receiptRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <field name="orderId">
+                        <header-field title="Purchase order">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                        <default-field title="Order line">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${lineText}" link-type="anchor"
+                                    parameter-map="{orderId:orderId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="supplierPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Supplier">
+                            <display text="${supplierName}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Receive at">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'planFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Receive at">
+                            <display text="${facilityName}"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Buying organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="dueFrom">
+                        <header-field title="Due from">
+                            <date-time type="date"/>
+                        </header-field>
+                    </field>
+                    <field name="dueThru">
+                        <header-field title="Due through">
+                            <date-time type="date"/>
+                        </header-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <display style="${late ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Receipt">
+                            <link url="${sharedLinks['Receiving/ShipmentDetail']}" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}" condition="shipmentId"/>
+                            <label text="${arrivalText ? 'arrives ' + arrivalText : ''}" type="div" style="text-caption m-muted"
+                                    condition="arrivalText"/>
+                        </default-field>
+                    </field>
+                    <field name="expectedQuantity" align="right">
+                        <default-field title="Expected">
+                            <display/>
+                            <label text="${orderedText}" type="div" style="text-caption m-muted" condition="orderedText"/>
+                        </default-field>
+                    </field>
+                    <field name="receivedQuantity" align="right">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="acceptedQuantity" align="right">
+                        <default-field title="Accepted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="rejectedQuantity" align="right">
+                        <default-field title="Rejected">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="heldQuantity" align="right">
+                        <default-field title="Held">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="remainingQuantity" align="right">
+                        <default-field title="To come">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="unitText">
+                        <default-field title="Unit">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="stateText"/>
+                            <field-ref name="remainingQuantity"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!receiptRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

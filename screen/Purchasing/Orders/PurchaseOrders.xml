@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PurchaseOrders (design-purchasing §6 PurchaseOrders; style-guide §3.2 List; impl-purchasing P3): OrderFind and
     PurchaseOrderList over ironstone.purchasing.OrderServices.find#PurchaseOrders (the purchase orders of the user's
     organizations, by view: Draft, Awaiting approval, Approved not sent, Open, On hold, Closed; ordered, received, billed and
-    balance kept apart), with saved finds; CreatePurchaseOrder (New purchase order: mantle.order.PurchaseServices
+    balance kept apart; P5's Late, the open orders with a line past its due date), with saved finds; CreatePurchaseOrder (New purchase order: mantle.order.PurchaseServices
     create#PurchaseOrder, for a buyer; it opens the draft in OrderDetail); and the selected orders' ApprovePurchaseOrders (a
     purchase approver's decide#PurchaseApproval) and ClosePurchaseOrders (a buyer's close#PurchaseRemainders with a reason),
     each with a result per order (bulk#PurchaseOrderActions). -->
@@ -71,7 +71,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="newOrder" from="{organizationPartyId:purchasing.activeOrganizationPartyId || purchasing.organizationPartyIds[0]
                 || ''}"/>
         <set field="viewLinks" from="[['', 'All'], ['draft', 'Draft'], ['approval', 'Awaiting approval'],
-                ['unsent', 'Approved, not sent'], ['open', 'Open'], ['held', 'On hold'], ['closed', 'Closed']]
+                ['unsent', 'Approved, not sent'], ['open', 'Open'], ['late', 'Late'], ['held', 'On hold'],
+                ['closed', 'Closed']]
                 .map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
         <set field="filtered" from="!!(view || statusId || vendorPartyId || facilityId || text)"/>
         <set field="emptyText" from="filtered ? 'No purchase order matches these filters.' : (can.buy

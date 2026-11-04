@@ -56,6 +56,8 @@ along with this software (see the LICENSE.md file). If not, see
             and every organization's) -->
         <quick-create kind="purchasingPurchaseOrder" label="Purchase order" screen="Purchasing/NewPurchaseOrder"
                 icon="sym_o_receipt_long" sequence="72"/>
+        <!-- P5: a purchase order past its due date with something still to come (Mantle's notify#LateReceipts) -->
+        <notification-topic topic="PurchaseLateReceipt"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

@@ -38,6 +38,11 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.QualityServices.get#InspectionChoices" in-map="context"
                             out-map="found"/>
                 </then>
+                <!-- Purchasing (impl-purchasing P5): its readers' status filters, else Warehouse's choices -->
+                <else-if condition="appRoot == 'Purchasing'">
+                    <service-call name="ironstone.purchasing.ReceiptServices.get#InspectionChoices" in-map="context"
+                            out-map="found"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.InspectionServices.get#InspectionChoices" in-map="context"
                             out-map="found"/>

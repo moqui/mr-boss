@@ -16,13 +16,14 @@ const choiceLimit = 30
 const quoteStatuses = ["OrderRequested", "OrderProposed"]
 const openStatuses = ["OrderApproved", "OrderSent", "OrderProcessing", "OrderHold"]
 const closedStatuses = ["OrderCompleted", "OrderCancelled", "OrderRejected"]
-// the list's views (design §6 PurchaseOrders); late, received not billed and drop-ship come with receiving (P5), bills (P6)
-// and drop-ship (P7)
+// the list's views (design §6 PurchaseOrders); received not billed and drop-ship come with bills (P6) and drop-ship (P7)
 const views = {
     draft: {label: "Draft", statuses: ["OrderOpen"]},
     approval: {label: "Awaiting approval", statuses: ["OrderPlaced"]},
     unsent: {label: "Approved, not sent", statuses: ["OrderApproved"]},
     open: {label: "Open", statuses: openStatuses},
+    // P5: the open orders with a stock line past its due date and something still to come (Receipts.js lateOrderIds)
+    late: {label: "Late", statuses: openStatuses, late: true},
     held: {label: "On hold", statuses: ["OrderHold"]},
     closed: {label: "Closed", statuses: closedStatuses}
 }
@@ -79,10 +80,14 @@ function findOrders(p) {
     }
     const factory = ec.entity.conditionFactory
     const view = Object.hasOwn(views, p.view || "") ? views[p.view] : null
+    const lateIds = view?.late
+        ? ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js").lateOrderIds(userScope, buyers)
+        : null
     // a find for the count and another for the page (a find is used once)
     const build = () => {
         let query = purchaseFind(buyers)
         if (view) query = query.condition("statusId", "in", view.statuses)
+        if (lateIds) query = query.condition("orderId", "in", lateIds.length ? lateIds : ["_NA_"])
         if (!blank(p.statusId)) query = query.condition("statusId", String(p.statusId))
         if (!blank(p.vendorPartyId)) query = query.condition("vendorPartyId", String(p.vendorPartyId))
         if (!blank(p.facilityId)) query = query.condition("facilityId", String(p.facilityId))

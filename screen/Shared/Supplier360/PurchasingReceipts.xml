@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Receipts and quality tab, in the Purchasing context (crosscut §3.3 Purchasing row, SupplierReceipts form;
+    impl-purchasing P5): the supplier's purchase order lines of the user's organizations with expected, received, accepted,
+    rejected and held apart, the late ones first, and the inspections of its receipts with their outcome (the quality
+    evidence), over ironstone.purchasing.ReceiptServices find#ExpectedReceipts and find#PurchaseInspections. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Receipts &amp; quality" default-menu-index="8">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReceiptServices.find#ExpectedReceipts" out-map="supplierReceiptsOut"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, supplierPartyId:vendorPartyId, view:'all', pageSize:50}"/>
+        <service-call name="ironstone.purchasing.ReceiptServices.find#PurchaseInspections" out-map="supplierInspectionsOut"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, supplierPartyId:vendorPartyId, view:'all', pageSize:50}"/>
+        <set field="supplierReceiptRows" from="supplierReceiptsOut?.receiptRows || []"/>
+        <set field="supplierInspectionRows" from="supplierInspectionsOut?.inspectionRows || []"/>
+        <set field="lateRows" from="supplierReceiptRows.filter(row =&gt; row.late)"/>
+        <set field="qualitySummary" from="[supplierReceiptRows.length + ' order lines', lateRows.length ? lateRows.length
+                + ' late' : '', supplierInspectionRows.length ? supplierInspectionRows.length + ' inspections' : '']
+                .filter(Boolean).join(' · ')"/>
+    </actions>
+    <widgets>
+        <label text="${qualitySummary}" type="p" style="text-caption m-muted"/>
+        <container-box>
+            <box-header title="Receipts"/>
+            <box-body-nopad>
+                <form-list name="SupplierPurchaseReceipts" list="supplierReceiptRows" skip-form="true" paginate="false">
+                    <field name="lineText">
+                        <default-field title="Order line">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${lineText}" link-type="anchor"
+                                    parameter-map="{orderId:orderId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                    <field name="dueText">
+                        <default-field title="Due"><display style="${late ? 'text-negative' : ''}"/></default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Receipt">
+                            <link url="${sharedLinks['Receiving/ShipmentDetail']}" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}" condition="shipmentId"/>
+                        </default-field>
+                    </field>
+                    <field name="expectedQuantity" align="right"><default-field title="Expected"><display/></default-field></field>
+                    <field name="receivedQuantity" align="right"><default-field title="Received"><display/></default-field></field>
+                    <field name="acceptedQuantity" align="right"><default-field title="Accepted"><display/></default-field></field>
+                    <field name="rejectedQuantity" align="right"><default-field title="Rejected"><display/></default-field></field>
+                    <field name="heldQuantity" align="right"><default-field title="Held"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="lineText"/><field-ref name="productName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="acceptedQuantity"/></column>
+                    </columns>
+                </form-list>
+                <label text="No purchase order of your organizations from this supplier is expected or received." type="p"
+                        style="q-pa-md m-muted" condition="!supplierReceiptRows.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Quality"/>
+            <box-body-nopad>
+                <form-list name="SupplierPurchaseInspections" list="supplierInspectionRows" skip-form="true" paginate="false">
+                    <field name="qualityInspectionId">
+                        <default-field title="Inspection">
+                            <link url="${sharedLinks['Receiving/QualityInspection']}" text="${qualityInspectionId}"
+                                    link-type="anchor" parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                    <field name="lineText"><default-field title="Order line"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                    <field name="heldText" align="right"><default-field title="Held"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="qualityInspectionId"/><field-ref name="productName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="outcomeText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No receipt of this supplier has been inspected." type="p" style="q-pa-md m-muted"
+                        condition="!supplierInspectionRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

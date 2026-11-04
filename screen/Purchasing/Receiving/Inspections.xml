@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Inspections (design-purchasing §9 Inspections; style-guide §3.2 List; impl-purchasing P5): InspectionFind and
+    InspectionList over ironstone.purchasing.ReceiptServices.find#PurchaseInspections, the inspections of the user's purchase
+    receipts (open by default, or all; by status, supplier and order), each opening the shared QualityInspection under
+    Receiving, where the holders of the inspect, verify and dispose permissions act and others read. The list records no
+    reading. The receipt templates are Settings' Inspection templates. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Inspections" default-menu-index="2">
+    <parameter name="view"/>
+    <parameter name="statusId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="orderId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <actions>
+        <service-call name="ironstone.purchasing.ReceiptServices.find#PurchaseInspections" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, statusId:statusId, supplierPartyId:supplierPartyId, orderId:orderId,
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="inspectionRows" from="found?.inspectionRows || []"/>
+        <set field="inspectionRowsCount" from="found?.inspectionRowsCount"/>
+        <set field="inspectionRowsPageIndex" from="found?.inspectionRowsPageIndex"/>
+        <set field="inspectionRowsPageSize" from="found?.inspectionRowsPageSize"/>
+        <set field="inspectionRowsPageMaxIndex" from="found?.inspectionRowsPageMaxIndex"/>
+        <set field="inspectionRowsPageRangeLow" from="found?.inspectionRowsPageRangeLow"/>
+        <set field="inspectionRowsPageRangeHigh" from="found?.inspectionRowsPageRangeHigh"/>
+        <set field="viewLinks" from="[['', 'Open'], ['all', 'All']]
+                .map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+        <set field="filtered" from="!!(view || statusId || supplierPartyId || orderId)"/>
+        <set field="emptyText" from="filtered ? 'No inspection matches these filters.'
+                : 'No receipt is waiting for inspection. A receipt that needs one is held here until it is decided.'"/>
+    </actions>
+    <widgets>
+        <context title="Inspections"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Inspections" type="h5"/>
+                <label text="Purchase receipts held for inspection, with their result" type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="InspectionViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="InspectionList" list="inspectionRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <field name="qualityInspectionId">
+                        <default-field title="Inspection">
+                            <link url="${sharedLinks['Receiving/QualityInspection']}" text="${qualityInspectionId}"
+                                    link-type="anchor" parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName">
+                        <default-field title="Product">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="shipmentId">
+                        <default-field title="Receipt">
+                            <link url="${sharedLinks['Receiving/ShipmentDetail']}" text="${shipmentId}" link-type="anchor"
+                                    parameter-map="{shipmentId:shipmentId}" condition="shipmentId"/>
+                        </default-field>
+                    </field>
+                    <field name="orderId">
+                        <header-field title="Purchase order">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                        <default-field title="Order line">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${lineText}" link-type="anchor"
+                                    parameter-map="{orderId:orderId}"/>
+                        </default-field>
+                    </field>
+                    <field name="supplierPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Supplier">
+                            <display text="${supplierName}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${statusId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.StatusItem">
+                                        <econdition field-name="statusTypeId" value="QualityInspection"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="quantityText" align="right">
+                        <default-field title="Inspected">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="heldText" align="right">
+                        <default-field title="Held">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="outcomeText">
+                        <default-field title="Outcome">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <display style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="inspectorName">
+                        <default-field title="Inspector">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="qualityInspectionId"/>
+                            <field-ref name="productName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusId"/>
+                            <field-ref name="heldText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!inspectionRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

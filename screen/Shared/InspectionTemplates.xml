@@ -23,7 +23,11 @@ along with this software (see the LICENSE.md file). If not, see
     Manufacturing (impl-manufacturing P8) mounts it at Manufacturing/Quality/InspectionTemplates with its production templates
     (ironstone.manufacturing.QualityServices.get#TemplateList and get#TemplateDetail): a new template is a production one,
     and the editor adds its stage (in-process or final), sample basis (each receipt or the run's quantity) and the method or
-    operation it attaches to; publishing never changes what a released run's gate reads as of its release. -->
+    operation it attaches to; publishing never changes what a released run's gate reads as of its release.
+    Purchasing (impl-purchasing P5, crosscut §3.19 Purchasing row) mounts it at Purchasing/Receiving/InspectionTemplates, its
+    menu entry in Settings, with the receipt templates (ironstone.purchasing.ReceiptServices.get#TemplateList and
+    get#TemplateDetail): a holder of the template edit permission with Warehouse's scope edits them (Warehouse's choices),
+    others read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Templates"
@@ -42,7 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <set field="warehouseContext" from="appRoot == 'Warehouse'"/>
         <set field="manufacturingContext" from="appRoot == 'Manufacturing'"/>
-        <set field="templatesContext" from="warehouseContext || manufacturingContext"/>
+        <set field="purchasingContext" from="appRoot == 'Purchasing'"/>
+        <set field="templatesContext" from="warehouseContext || manufacturingContext || purchasingContext"/>
         <if condition="manufacturingContext">
             <service-call name="ironstone.manufacturing.QualityServices.get#TemplateList" out-map="list"
                     transaction="force-new" ignore-error="true"
@@ -63,6 +68,18 @@ along with this software (see the LICENSE.md file). If not, see
                         in-map="{inspectionTemplateId:inspectionTemplateId, asOfDate:asOfDate || null}"/>
             </if>
         </if>
+        <!-- Purchasing (impl-purchasing P5): the receipt templates -->
+        <if condition="purchasingContext">
+            <service-call name="ironstone.purchasing.ReceiptServices.get#TemplateList" out-map="list"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, statusId:statusId, templateName:templateName, pageIndex:pageIndex,
+                        pageSize:pageSize}"/>
+            <if condition="inspectionTemplateId">
+                <service-call name="ironstone.purchasing.ReceiptServices.get#TemplateDetail" out-map="detail"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{appRoot:appRoot, inspectionTemplateId:inspectionTemplateId, asOfDate:asOfDate || null}"/>
+            </if>
+        </if>
         <set field="templates" from="list?.templates || []"/>
         <set field="templatesCount" from="list?.templatesCount || 0"/>
         <set field="canEdit" from="!!list?.canEdit"/>
@@ -79,7 +96,7 @@ along with this software (see the LICENSE.md file). If not, see
                 samplePercent:template.samplePercent, productionStageEnumId:template.productionStageEnumId,
                 sampleBasisEnumId:template.sampleBasisEnumId, productBomId:template.productBomId,
                 templateOperationId:template.operationWorkEffortId}"/>
-        <set field="appScope" from="manufacturingContext ? manufacturing : warehouse"/>
+        <set field="appScope" from="manufacturingContext ? manufacturing : purchasingContext ? purchasing : warehouse"/>
         <set field="newTemplateDefaults" from="{inspectionContextEnumId:manufacturingContext ? 'QicProduction' : 'QicReceipt',
                 samplePolicyEnumId:'QspAll', productionStageEnumId:manufacturingContext ? 'QpsFinal' : null,
                 sampleBasisEnumId:manufacturingContext ? 'QsbReceipt' : null,

@@ -7,7 +7,8 @@
 // access and isolation walk is the acceptance PurchasingFoundationWalk. A later phase adds a case only for an access rule it
 // adds, and its quick creates, Today sources and notification topics to the menu feature's rows; P2 adds the supplier scope of
 // the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link; P3 the quick create of a
-// purchase order, a purchase order's record link to OrderDetail and its detail's record scope.
+// purchase order, a purchase order's record link to OrderDetail and its detail's record scope; P5 a purchase receipt's scope and
+// the receive permission on it.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell} = lib
@@ -545,5 +546,30 @@ feature("a replenishment facility is the organization's; plan and buy on it need
     },
     then({problems}) {
         problems.join("\n") == ""
+    }
+})
+
+// P5: a purchase receipt is its orders' organization's; receiving on it is Warehouse's receive permission (STOCK_RECEIVE), which
+// purchasing.buyreceive holds and the buyer does not
+feature("a purchase receipt is its organization's, and receiving on it needs Warehouse's receive permission", {
+    when() {
+        const check = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "receipt", recordId: ids.receiptId, capability: "receive"})
+            )
+        return {
+            holder: check(users.buyReceive),
+            buyer: check(users.buyer),
+            other: asUser(users.services, () =>
+                refusal(access + "check#Record", {recordType: "receipt", recordId: ids.receiptId})
+            ),
+            forged: asUser(users.buyer, () => refusal(access + "check#Record", {recordType: "inspection", recordId: "NO_SUCH"}))
+        }
+    },
+    then({holder, buyer, other, forged}) {
+        holder == ""
+        buyer.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        forged.includes("RECORD_UNAVAILABLE")
     }
 })

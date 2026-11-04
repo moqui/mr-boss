@@ -36,7 +36,12 @@ along with this software (see the LICENSE.md file). If not, see
     Manufacturing/Subcontracting/ShipmentDetail (crosscut §3.8 Manufacturing row, impl-manufacturing P14), read only: a
     subcontract dispatch or return of the user's work orders with its lines, run and operation, vendor-custody facility,
     custodian and owner (mantle.work.ProductionServices.get#SubcontractShipment; template/ManufacturingSubcontractParts.xml);
-    dispatch and return happen at Warehouse's SubcontractShipmentDetail. -->
+    dispatch and return happen at Warehouse's SubcontractShipmentDetail. Purchasing mounts it at Purchasing/Receiving/ShipmentDetail
+    (crosscut §3.8 Purchasing row, impl-purchasing P5): a purchase receipt of the user's orders with its lines (expected,
+    received, accepted, rejected, held and due), receipts, inspections, files and conversation; Receive per line, Finish
+    receipt and Receive all as expected for a holder of Warehouse's receive permission through Warehouse's receive guard,
+    Create draft bill for AP intake, progress only for others (ironstone.purchasing.ReceiptServices.get#ReceiptDetail;
+    template/PurchasingReceiptDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -60,6 +65,12 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="receiveTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="dispatchTransferLine" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="receiveSubcontractOutput" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <!-- Purchasing (impl-purchasing P5): a purchase receipt's actions -->
+    <transition-include name="purchaseReceiptChoices" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <transition-include name="purchaseReceive" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <transition-include name="purchaseFinishReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <transition-include name="purchaseReceiveAll" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+    <transition-include name="purchaseBillReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.PayableScreenServices.get#ShipmentContext"
@@ -99,6 +110,13 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="manufacturingShipmentOut" transaction="force-new" ignore-error="true"/>
             <set field="manufacturingShipment" from="manufacturingShipmentOut?.subcontractShipment || null"/>
         </if>
+        <!-- Purchasing (crosscut §3.8 Purchasing row, impl-purchasing P5): a purchase receipt of the user's orders -->
+        <if condition="appRoot == 'Purchasing'">
+            <service-call name="ironstone.purchasing.ReceiptServices.get#ReceiptDetail"
+                    in-map="{appRoot:appRoot, shipmentId:shipmentId}" out-map="purchaseReceiptOut" transaction="force-new"
+                    ignore-error="true"/>
+            <set field="purchaseReceipt" from="purchaseReceiptOut?.receiptFound ? purchaseReceiptOut : null"/>
+        </if>
     </actions>
     <widgets>
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
@@ -107,7 +125,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseReturnShipment" location="component://mr-boss/template/WarehouseReturnDetail.xml"/>
         <section-include name="WarehouseTransfer" location="component://mr-boss/template/WarehouseTransferDetail.xml"/>
         <section-include name="ManufacturingShipment" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
+        <section-include name="PurchasingReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
         <label text="This shipment is not available in this app." type="p"
-                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"/>
+                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'
+                    &amp;&amp; appRoot != 'Purchasing'"/>
     </widgets>
 </screen>

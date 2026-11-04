@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="find" noun="PurchaseOrders" allow-remote="false">
         <description>One page of the purchase orders of the user's organizations (quotes are Sourcing's), newest first, by view
-            (draft, approval, unsent, open, held, closed), status, supplier, facility, organization and text (order, name,
+            (draft, approval, unsent, open, late, held, closed), status, supplier, facility, organization and text (order, name,
             supplier or external reference, ignoring case): each with its supplier, organization, status, entry and due dates,
             ordered and received quantities, and total, billed and balance kept apart (withheld from a user who neither works
             the orders nor reads supplier prices or the books). Refuses a user without the buying lists (PERMISSION_DENIED)
