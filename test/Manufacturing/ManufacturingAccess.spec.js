@@ -719,3 +719,138 @@ feature("a work-center change needs METHOD_RESOURCES: the reader is refused what
         resource == ""
     }
 })
+
+// ===== P6: cost evidence =====
+// The spec run's costs: an approved estimate of 4 a unit frozen on it, an output line of 5 and one material cost event,
+// written once by the first feature that needs them.
+const costFixture = {standardId: "BOSS_MFG_SPEC_STD", outputLineId: "BOSS_MFG_SPEC_RUN_OUT", eventId: "BOSS_MFG_SPEC_COST"}
+function costedRun() {
+    system(() => {
+        store("mantle.product.cost.ProductStandardCost", {
+            productStandardCostId: costFixture.standardId,
+            productId: fixture.productId,
+            organizationPartyId: "ORG_ZIZI_RETAIL",
+            state: "approved",
+            fromDate: "2026-01-01 00:00:00",
+            quantity: 1,
+            quantityUomId: "OTH_ea",
+            priceUomId: "USD",
+            unitCost: 4,
+            totalCost: 4,
+            materialCost: 4,
+            complete: "Y"
+        })
+        store("mantle.work.effort.WorkEffort", {workEffortId: fixture.runId, productStandardCostId: costFixture.standardId})
+        store("mantle.work.production.ProductionRunLine", {
+            productionRunLineId: costFixture.outputLineId,
+            workEffortId: fixture.runId,
+            lineRoleEnumId: "PrlrOutput",
+            productId: fixture.productId,
+            quantity: 5,
+            quantityUomId: "OTH_ea",
+            stockQuantity: 5,
+            stockUomId: "OTH_ea"
+        })
+        store("mantle.work.production.ProductionCostEvent", {
+            productionCostEventId: costFixture.eventId,
+            organizationPartyId: "ORG_ZIZI_RETAIL",
+            workEffortId: fixture.runId,
+            costEventTypeEnumId: "PcetMaterialIssue",
+            costComponentEnumId: "PrcMaterial",
+            sourceEntityName: "mantle.product.issuance.AssetIssuance",
+            sourceId: "BOSS_MFG_SPEC_ISSUE",
+            sourceRevision: 1,
+            productId: fixture.productId,
+            quantity: 2,
+            quantityUomId: "OTH_ea",
+            rateAmount: 3,
+            amount: 6,
+            amountUomId: "USD",
+            valuationStatusEnumId: "PcvValued",
+            ledgerStatusEnumId: "PclNotPosted",
+            eventDate: ec.user.nowTimestamp,
+            afterClose: "N"
+        })
+    })
+    return fixture.runId
+}
+feature("a work order's costs: the estimator reads the estimate and no actuals, the finance reader both, a reader neither", {
+    when() {
+        const workEffortId = costedRun()
+        // the Mantle read the screen calls after the check (inheriting the screen's authorization), and the screen itself
+        // with authorization enabled
+        const read = user => asUser(user, () => invoke(production + "get#ProductionCosts", {workEffortId}), false)
+        const screen = user => asUser(user, () => lib.page("ProductionCosts", {workEffortId}))
+        return {
+            cost: read(users.cost),
+            finance: read(users.finance),
+            reader: read(users.read),
+            services: asUser(users.services, () => refusal(production + "get#ProductionCosts", {workEffortId}), false),
+            costPage: screen(users.cost),
+            financePage: screen(users.finance),
+            readerPage: screen(users.read),
+            servicesPage: screen(users.services)
+        }
+    },
+    then({cost, finance, reader, services, costPage, financePage, readerPage, servicesPage}) {
+        cost.estimate.unitCost == "4"
+        cost.estimate.totalCost == "20"
+        cost.actuals == null
+        !Object.keys(cost.events[0]).includes("amount")
+        finance.estimate.unitCost == "4"
+        finance.actuals.issued == "6"
+        finance.events[0].amount == "6"
+        reader.estimate == null
+        reader.actuals == null
+        reader.events.length == 1
+        services.includes("RECORD_UNAVAILABLE")
+        costPage.errors.length == 0
+        costPage.output.includes("Frozen estimate")
+        !costPage.output.includes("Actual cost")
+        costPage.output.includes("Request cost review")
+        financePage.errors.length == 0
+        financePage.output.includes("Frozen estimate")
+        financePage.output.includes("Actual cost")
+        !financePage.output.includes("Request cost review")
+        readerPage.errors.length == 0
+        readerPage.output.includes("Cost events")
+        !readerPage.output.includes("Frozen estimate")
+        !readerPage.output.includes("Actual cost")
+        !readerPage.output.includes("Request cost review")
+        servicesPage.output.includes("This work order is not available.")
+    }
+})
+feature("the cost estimator requests a work order's cost review; a reader is refused the same request", {
+    when() {
+        const workEffortId = costedRun()
+        const request = {
+            operationKey: "spec-p6-review",
+            workEffortId,
+            expectedRevision: 0,
+            note: "Spec review"
+        }
+        // as the screen's transition: the record check with the capability, then the Mantle verb
+        const check = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "run", recordId: workEffortId, capability: "costReview"})
+            )
+        const review = user => asUser(user, () => refusal(production + "review#ProductionCosts", request), false)
+        const readerCheck = check(users.read)
+        const reader = review(users.read)
+        const costCheck = check(users.cost)
+        const cost = review(users.cost)
+        const run = system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one())
+        const after = asUser(users.cost, () => lib.page("ProductionCosts", {workEffortId}))
+        return {readerCheck, reader, costCheck, cost, run, after}
+    },
+    then({readerCheck, reader, costCheck, cost, run, after}) {
+        readerCheck.includes("PERMISSION_DENIED")
+        reader.includes("PERMISSION_DENIED")
+        costCheck == ""
+        cost == ""
+        run.productionCostReviewStatusId == "PcrRequested"
+        run.productionCostReviewNote == "Spec review"
+        after.output.includes("Review requested")
+        !after.output.includes("Request cost review")
+    }
+})

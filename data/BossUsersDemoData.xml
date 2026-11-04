@@ -466,4 +466,16 @@ along with this software (see the LICENSE.md file). If not, see
             currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_SERVICES" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_SERVICES" fromDate="0"/>
+    <!-- P6: a production reader who is also an Accounting reader (ACCOUNTING_VIEW), the financial reader of a work order's
+        costs -->
+    <mantle.party.Party partyId="BOSS_MFG_FINANCE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_MFG_FINANCE" firstName="Manufacturing" lastName="Finance reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_FINANCE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_MFG_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_MFG_FINANCE" username="manufacturing.finance"
+            userFullName="Manufacturing Finance reader" partyId="BOSS_MFG_FINANCE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_FINANCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
 </entity-facade-xml>

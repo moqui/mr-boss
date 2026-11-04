@@ -136,6 +136,10 @@ spec({
             demoParameters["Manufacturing/" + path] = fixture.parameters || {}
         for (const [path] of manufacturingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml"))) screens.push([`${base}/Manufacturing.xml`, path])
+        // a Manufacturing screen file mounted at another path for now (ManufacturingSpecLib moved, P6)
+        for (const screen of screens)
+            if (screen[0].endsWith("/Manufacturing.xml") && manufacturingFixtures.moved[screen[1]])
+                screen[1] = manufacturingFixtures.moved[screen[1]]
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])

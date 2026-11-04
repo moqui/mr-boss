@@ -37,7 +37,9 @@ const users = {
     resource: "manufacturing.resource",
     admin: "manufacturing.admin",
     display: "manufacturing.display",
-    services: "manufacturing.services"
+    services: "manufacturing.services",
+    // P6: a production reader with Accounting's ACCOUNTING_VIEW
+    finance: "manufacturing.finance"
 }
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
@@ -130,7 +132,11 @@ function routeFixtures() {
         mounts.push(["WorkCenters/FacilityDetail/" + tab, shared + "FacilityDetail/" + tab + ".xml"])
         routes["WorkCenters/FacilityDetail/" + tab] = {parameters: {facilityId: ids.lineId}, text: "Assembly line A"}
     }
-    return {routes, mounts}
+    // P6: a work order's costs on the Warehouse demo's released run, mounted at the root until WorkOrderDetail (P5) has it
+    // as a tab; the file walk finds it under WorkOrders/WorkOrderDetail, which is moved to the root's path (moved)
+    routes.ProductionCosts = {parameters: {workEffortId: ids.releasedRunId}, text: "Cost events"}
+    const moved = {"WorkOrders/WorkOrderDetail/ProductionCosts": "ProductionCosts"}
+    return {routes, mounts, moved}
 }
 
 ;({ids, users, asUser, system, refusal, invoke, page, routeFixtures})
