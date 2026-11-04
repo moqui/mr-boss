@@ -1543,9 +1543,8 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
   requirement Ordered, the subcontract PscOrdered; never placed or approved; a second conversion answers EXISTING with the
   line. The currency is the organization's (or an ancestor's) accounting preference.
 - BOSS: `BOSS_PURCHASING_BUYER` (seeded without Purchasing's launcher) with PURCHASE_ORDER_EDIT, PAYABLE_IMPORT,
-  SUPPLIER_PROFILE_EDIT and RETURN_AUTHORIZE, all four to BOSS_PURCHASING_ADMIN; the buyer's authz on BOSS_MFG_PLANNING and
-  BOSS_MFG_SUBCONTRACTING; the demo buyer `manufacturing.buyer` (BOSS_MANUFACTURING, _READ, BOSS_PURCHASING_BUYER and
-  Products' BOSS_PRODUCTS_SUPPLIER_PRICE_READ); Ziddleman's price of BOSS_WH_COATING (BossWarehouseDemoData, after the
+  SUPPLIER_PROFILE_EDIT and RETURN_AUTHORIZE, all four to BOSS_PURCHASING_ADMIN (and SUPPLIER_PRICE_VIEW to both, review); the buyer's authz on BOSS_MFG_PLANNING and
+  BOSS_MFG_SUBCONTRACTING; the demo buyer `manufacturing.buyer` (BOSS_MANUFACTURING, _READ and BOSS_PURCHASING_BUYER); Ziddleman's price of BOSS_WH_COATING (BossWarehouseDemoData, after the
   product). Manufacturing.js P14 block: the `buy` capability, the routes, choices `subcontractOperations`,
   `serviceProducts`, `suppliers`, `vendorFacilities`. Screens: `Subcontracting` (placeholder replaced),
   `Subcontracting/SubcontractOperations` (worklist, New outside processing), `SubcontractDetail` (header with state and
@@ -1575,8 +1574,9 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
   - A request joins the current plans at once (`planOutside`) and every later calculation, so the buyer converts it
     without waiting for a recalculation; supersede never rejects it.
   - The buyer prices the line through the shared resolver with the buyer's own reads: supplier prices need
-    SUPPLIER_PRICE_VIEW, which a buyer borrows from Products' BOSS_PRODUCTS_SUPPLIER_PRICE_READ (the demo buyer is in it);
-    BOSS_PURCHASING_BUYER holds the plan's four permissions only.
+    SUPPLIER_PRICE_VIEW. The review grants it to BOSS_PURCHASING_BUYER and BOSS_PURCHASING_ADMIN (pricing a PO line is
+    the buyer's own work, and the group alone must convert what its mount offers it), and the demo buyer is in the buyer
+    group alone.
   - The price variance is written at `apply#InvoiceMatch` (evaluate reads, apply records the match); a zero variance is no
     event.
   - SubcontractDetail is keyed by the operation (design §2), so an operation bought before P14 (the Warehouse demo's) reads
@@ -1597,6 +1597,25 @@ CX-SUBCONTRACT; review §4.1 steps 26–31.
     is placed and approved in Purchasing (and the bill match needs an approved order).
   - **F-P14-5** Shared/Supplier360's subscreen tabs render client side in qvt, so AppStructure checks the root mount and the
     Subcontract orders tab is checked by ManufacturingSubcontracting's html render.
+- **Review (Nov 3).** Findings and fixes:
+  - (medium, fixed) The service-acceptance rule, Y by default, took over every PtService line, also one received with an
+    AssetReceipt, whose receipt rules changed. It now applies only to a service line with no receipt, so the default
+    changes nothing for existing data: without a ServiceAcceptance (written only by `accept#ServiceItem` and
+    `receive#SubcontractOutput`, which name the rule) the line is refused as before, and the ordered basis is unchanged.
+    The default stays Y, since it is Accounting's planned contract (PUR-MATCH), not a new refusal. ProductionSubcontract's
+    rule feature now checks the default's refusal (MISSING_RECEIPT with nothing accepted) before the rule is turned off.
+  - (medium, fixed) BOSS_PURCHASING_BUYER alone could not convert: the resolver withheld the supplier price, so every
+    conversion the mount offered it was refused. SUPPLIER_PRICE_VIEW is granted to the buyer and Purchasing admin groups,
+    and the demo buyer's borrowed Products group is dropped (F-P14-6).
+  - Checked and left: the accrual is written once per acceptance (a retry answers the first through the operation key);
+    the variance only on `apply#InvoiceMatch` for a line with an OrderItemWorkEffort to a run; the conversion makes one
+    draft PO per supplier, never places or approves it, answers EXISTING the second time and refuses the planner;
+    PsmOutside as its own method keeps Purchasing's PsmBuy conversion free (crosscut §3.20); the Supplier360, OrderDetail
+    and ShipmentDetail branches leave the Products, Projects, Accounting and Warehouse paths as they were;
+    `run#SupplyPlan` carries open requests forward and supersede never rejects them. `outsideRequirements` reads every
+    OrgInternal requirement id of the organization before filtering; fine at demo scale, a candidate for a join later.
+  - **F-P14-6** A group whose mount offers an action must hold every permission the action's Mantle service checks; here
+    the conversion's supplier-price read. Purchasing P1 keeps SUPPLIER_PRICE_VIEW on its buyer group.
 
 ### P15 — Cost close
 

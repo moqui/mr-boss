@@ -478,8 +478,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_MFG_FINANCE" fromDate="0"/>
-    <!-- Manufacturing P14: a buyer of Retail's (Purchasing's buyer group, with Products' supplier-price read borrowed) who
-        converts outside processing on Manufacturing's Planning mount and reads its prices; a production reader too -->
+    <!-- Manufacturing P14: a buyer of Retail's (Purchasing's buyer group alone, which reads supplier prices) who converts
+        outside processing on Manufacturing's Planning mount and reads its prices; a production reader too -->
     <mantle.party.Party partyId="BOSS_MFG_BUYER" partyTypeEnumId="PtyPerson"/>
     <mantle.party.Person partyId="BOSS_MFG_BUYER" firstName="Manufacturing" lastName="Buyer"/>
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_MFG_BUYER_ORG" relationshipTypeEnumId="PrtAgent"
@@ -490,5 +490,4 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_BUYER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_BUYER" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_MFG_BUYER" fromDate="0"/>
-    <moqui.security.UserGroupMember userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" userId="BOSS_MFG_BUYER" fromDate="0"/>
 </entity-facade-xml>

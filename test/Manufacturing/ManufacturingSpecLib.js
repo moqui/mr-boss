@@ -56,7 +56,7 @@ const users = {
     services: "manufacturing.services",
     // P6: a production reader with Accounting's ACCOUNTING_VIEW
     finance: "manufacturing.finance",
-    // P14: a production reader in Purchasing's buyer group (with Products' supplier-price read)
+    // P14: a production reader in Purchasing's buyer group (which reads supplier prices)
     buyer: "manufacturing.buyer"
 }
 

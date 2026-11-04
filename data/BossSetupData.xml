@@ -1278,7 +1278,10 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Manufacturing P14 (impl-manufacturing §4): the buyer's permissions, which Purchasing's buyer group holds when
         Purchasing is built (its P1 adds SUPPLIER_SCORECARD_EDIT): the purchase order edit that converts outside processing to
         a draft service line, bill import, the buyer fields of a supplier profile and the return authorization; all four to
-        the Purchasing administrator. A buyer reads supplier prices through Products' borrowed BOSS_PRODUCTS_SUPPLIER_PRICE_READ. -->
+        the Purchasing administrator. Both also read supplier prices (SUPPLIER_PRICE_VIEW), which pricing a converted line
+        through the shared resolver needs, so the buyer group converts on its own (P14 review). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PURCHASE_ORDER_EDIT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PAYABLE_IMPORT" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PROFILE_EDIT" fromDate="0"/>
