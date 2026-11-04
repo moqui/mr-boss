@@ -492,6 +492,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_ISSUE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_MOVE" userId="BOSS_MFG_MATERIAL" fromDate="0"/>
+    <!-- Manufacturing P10: the material handler runs line A's Assemble on the shop floor (its skill standard) -->
+    <mantle.humanres.ability.PartySkill partyId="BOSS_MFG_MATERIAL" skillTypeEnumId="BOSS_MFG_SKILL_ASSEMBLY" skillLevel="2"
+            startedUsingDate="2025-06-02 00:00:00"/>
     <!-- Manufacturing P14: a buyer of Retail's (Purchasing's buyer group alone, which reads supplier prices) who converts
         outside processing on Manufacturing's Planning mount and reads its prices; a production reader too -->
     <mantle.party.Party partyId="BOSS_MFG_BUYER" partyTypeEnumId="PtyPerson"/>

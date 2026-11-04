@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Work orders area of IronStone Manufacturing (design-manufacturing §1.2, §3; impl-manufacturing P5a): Find (the work
     order list with its board, calendar, saved finds and bulk actions), NewWorkOrder (the wizard of a draft run), QuickCreate
     (the shell's quick create of a draft) and WorkOrderDetail with its tabs (Overview, Operations, Notes and files; later
-    phases add theirs), and its traveler and pick sheet. SplitWorkOrder and Disassembly come with P9. Open to every
+    phases add theirs), and its traveler and pick sheet; SplitWorkOrder under it and Disassembly, the reversal of a pick
+    assembly kit (P9). Open to every
     Manufacturing user; NewWorkOrder and QuickCreate for the planners (BOSS_MFG_NEW_WORK_ORDER), and the run services check
     PRODUCTION_VIEW, PRODUCTION_PLAN or PRODUCTION_SUPERVISE and the organization. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"

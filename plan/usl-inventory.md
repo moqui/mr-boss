@@ -482,7 +482,7 @@ Added in Accounting P17 (returns and order changes):
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AssetAutoPostServices | post#AssetReceipt |  |  |
-| AssetAutoPostServices | repost#AssetReceipt |  |  |
+| AssetAutoPostServices | repost#AssetReceipt |  | Manufacturing/WorkOrders/Disassembly (a dated delta with forwardReceiptRepostEnabled, ReceiptAdjustments.js, Manufacturing P9) |
 | AssetAutoPostServices | post#AssetIssuance |  |  |
 | AssetAutoPostServices | revert#AssetIssuanceOnCancel |  |  |
 | AssetAutoPostServices | repost#AssetIssuance |  |  |
@@ -549,7 +549,7 @@ Added in Accounting P17 (returns and order changes):
 | LedgerServices | update#GlJournal | Accounting/GeneralLedger/JournalBatches | Accounting/GeneralLedger/JournalBatches (through mantle.ledger.JournalServices.store#Batch and post#Batch) |
 | LedgerServices | calculate#GlJournalTrialBalance |  |  |
 | LedgerServices | post#GlJournal |  |  |
-| OtherAutoPostServices | post#WorkEffortCost |  | Accounting/PeriodClose/PeriodRuns (the project cost run); Projects timesheet approval (approve#Timesheet, reopen#Timesheet) |
+| OtherAutoPostServices | post#WorkEffortCost |  | Accounting/PeriodClose/PeriodRuns (the project cost run); Projects timesheet approval (approve#Timesheet, reopen#Timesheet); — beside it at its four call sites, mantle.work.ProductionServices.sync#ProductionLaborCost (Manufacturing P10, F34) |
 | OtherAutoPostServices | post#FinancialAccountTrans |  |  |
 | OtherAutoPostServices | get#FinancialAccountGlAccount |  |  |
 | OtherAutoPostServices | get#FinancialAccountTransGlAccount |  |  |
@@ -1210,11 +1210,11 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | set#ProducedProductQuantity |  | — never called (F8): a target change is mantle.work.ProductionServices.change#ProductionQuantity (P7) |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
 | ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
-| ManufacturingServices | breakDown#Assembly |  |  |
+| ManufacturingServices | breakDown#Assembly |  | Manufacturing/WorkOrders/Disassembly (inside mantle.work.ProductionServices.reverse#SupportedAssembly, without its unissue, Manufacturing P9) |
 | ManufacturingServices | unissue#AssemblyComponents |  |  |
-| ManufacturingServices | unissue#Component |  |  |
+| ManufacturingServices | unissue#Component |  | — not used by Disassembly: reverse#SupportedAssembly cancels the kit slices newest first itself (F30, Manufacturing P9) |
 | ManufacturingServices | cancel#AssemblyWorkEffort |  |  |
-| ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly |  |
+| ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly | — Manufacturing/WorkOrders/Disassembly reads preview#SupportedAssemblyReversal (the kit slices, Manufacturing P9) |
 | ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly | — not used by Quantities: it reads mantle.work.ProductionServices.get#ProductionQuantities (the run lines and receipts, P7) |
 | ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt | — Manufacturing/WorkOrders/WorkOrderDetail/Components and MaterialIssueReceipt: get#ProductionMaterials over the run's own lines (P5b) |
 | ManufacturingServices | get#ProductBomDetail | Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion |  |
@@ -1321,7 +1321,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
 | WorkEffortServices | unlink#WorkEffortRecord | Projects/WorkItems/WorkItemDetail | Commons/Calendar/EventDetail |
-| WorkEffortServices | get#UserTodayItems |  | Commons/Home; Commons/Panel/Today |
+| WorkEffortServices | get#UserTodayItems |  | Commons/Home; Commons/Panel/Today; — a production run and its operations left out (Manufacturing P10, F41); Manufacturing's today-source ironstone.manufacturing.HomeServices.get#TodayItems lists the due operations |
 | WorkEffortServices | snooze#UserTodayItem |  | Commons/Panel/Today; Commons/Tasks/List; Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -1408,25 +1408,25 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | TaskServices | set#TaskStatus |  | Projects/WorkItems/List; Projects/WorkItems/SprintDetail; Projects/WorkItems/WorkItemDetail |
 | TimeServices | find#TimeEntries | People/Time/TimeEntries | Projects/Resources/PersonDetail/Time; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimeServices | import#TimeEntryCsv | People/Time/TimeImport; People/Time/TimeEntries | Projects/Time/Import/Preview; Projects/Time/Import/Result; Projects/Time/Import/Source |
-| TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | approve#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the work order's supervisor; with it sync#ProductionLaborCost writes the labor cost events, Manufacturing P10) |
 | TimesheetServices | find#Timesheets | People/Time/Timesheets | Projects/Home; Projects/Resources/PersonDetail/Time; Projects/Time/Timesheets |
 | TimesheetServices | get#PartyTimesheet | People/Time/MyTime | Projects/QuickCreate; Projects/Time/MyTime; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#PartyWeek | People/Time/MyTime | Projects/Time/MyTime |
 | TimesheetServices | get#TimeKeepers |  | Projects/Billing/Rates; Projects/Projects/ProjectDetail/Team; Projects/Resources/Allocations/EditAllocation; Projects/Resources/TeamPlanner; Projects/Time/Import/Source; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime |
+| TimesheetServices | get#Timer | Manufacturing/ShopFloor; Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Manufacturing/ShopFloor/Station, OperationExecution and ProductionTime (through get#ShopFloorQueue, get#ProductionOperation and get#ProductionTime, Manufacturing P10) |
 | TimesheetServices | get#TimesheetAccess |  | Projects/QuickCreate; Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#TimesheetPolicy |  | Projects/Resources/PersonDetail/Time; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#TimesheetSummary | People/Employees/Employee360; People/Time/TimesheetDetail | Projects/Time/TimesheetDetail; Projects/Time/TimesheetPrint |
 | TimesheetServices | get#WeekRange |  | Projects/Resources/PersonDetail/Time; Projects/Time/MyTime; Projects/Time/TeamTimesheet; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
 | TimesheetServices | get#WorkTypes |  | Projects/Billing/Rates; Projects/QuickCreate; Projects/Settings/Time; Projects/Time/MyTime; Projects/Time/TimeEntries; Projects/Time/TimeEntries/EditEntry |
-| TimesheetServices | reopen#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | reopen#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (with it sync#ProductionLaborCost reverses the labor cost events, Manufacturing P10) |
 | TimesheetServices | return#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
 | TimesheetServices | send#MissingTimeReminders | People/MyTeam; People/Time/Timesheets | Projects/Time/Timesheets |
-| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
-| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail |
+| TimesheetServices | start#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/Station and OperationExecution (through start#ProductionOperation: the switch from a timer elsewhere after the confirmation, Manufacturing P10) |
+| TimesheetServices | stop#Timer | Manufacturing/ShopFloor/OperationExecution; Manufacturing/WorkOrders/WorkOrderDetail/Time; People/Time/MyTime; Maintenance/WorkOrders/WorkOrderDetail | Projects/Home; Projects/Time/MyTime; Projects/WorkItems/WorkItemDetail; Manufacturing/ShopFloor/OperationExecution and ProductionTime (Stop timer; through pause# and complete#ProductionOperation, Manufacturing P10) |
 | TimesheetServices | store#TimesheetPolicy |  | Projects/Settings/Time |
 | TimesheetServices | store#WorkTypes |  | Projects/Settings/Time |
-| TimesheetServices | submit#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail |
+| TimesheetServices | submit#Timesheet | People/Time/MyTime; People/Time/TimesheetDetail | Projects/Time/MyTime; Projects/Time/TimesheetDetail; Manufacturing/ShopFloor/ProductionTime (the week of a work order's time, Manufacturing P10) |
 | TimesheetServices | update#Timer | Manufacturing/ShopFloor/OperationExecution; People/Time/MyTime | Projects/Time/MyTime |
 | WorkItemImportServices | import#WorkItems |  | Projects/WorkItems/Import/Result |
 | WorkItemImportServices | parse#WorkItemFile |  | Projects/WorkItems/Import/Mapping; Projects/WorkItems/Import/Source |
@@ -1590,6 +1590,17 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | ledger/ProductionCostServices | get#CostClose |  | Shared/ProductionCostClose (posted allocations); Manufacturing/WorkOrders/WorkOrderDetail/ByProducts (actual allocation) (P15) |
 | ledger/ProductionCostServices | return#CostReview |  | Shared/ProductionCostClose (More, Return to production; P15) |
 | ledger/ProductionCostServices | check#ProductionClose |  | Accounting/PeriodClose/PeriodCloseDetail (the PccProductionWip and PccProductionCostClose rows; P15) |
+| work/ProductionServices | get#ShopFloorQueue | Manufacturing/ShopFloor | Manufacturing/ShopFloor/Station (the board, through ironstone.manufacturing.ShopFloorServices.get#Station); the Manufacturing today-source (P10) |
+| work/ProductionServices | get#ProductionOperation | Manufacturing/ShopFloor/OperationExecution | Manufacturing/ShopFloor/OperationExecution (Work, start checks, PersonTimer, MachineRuntime) (P10) |
+| work/ProductionServices | get#ProductionInstructions | Manufacturing/ShopFloor/Instructions | Manufacturing/ShopFloor/Instructions (Steps, Evidence), InstructionsPrint (P10) |
+| work/ProductionServices | record#InstructionStep | Manufacturing/ShopFloor/Instructions | Manufacturing/ShopFloor/Instructions (Acknowledge, Record evidence) (P10) |
+| work/ProductionServices | override#ProductionOperationStart |  | Manufacturing/ShopFloor/OperationExecution (Override start checks, supervisors) (P10) |
+| work/ProductionServices | start#ProductionOperation |  | Manufacturing/ShopFloor/Station (Start) and OperationExecution (Start) (P10) |
+| work/ProductionServices | pause#ProductionOperation |  | Manufacturing/ShopFloor/OperationExecution (Pause, then Downtime's ReportStopDialog) (P10) |
+| work/ProductionServices | complete#ProductionOperation | Manufacturing/ShopFloor/OperationExecution | Manufacturing/ShopFloor/OperationExecution (CompleteStep: the quantities through record#ProductionQuantity, coupled to the output receipt) (P10) |
+| work/ProductionServices | record#MachineRuntime | Manufacturing/ShopFloor/OperationExecution | Manufacturing/ShopFloor/OperationExecution (Start machine, Stop machine, Record runtime) (P10) |
+| work/ProductionServices | sync#ProductionLaborCost |  | (internal: TimesheetServices approve# and reopen#Timesheet, TimeServices store# and delete#TimeEntry, under the laborCostSync policy flag; P10) |
+| work/ProductionServices | get#ProductionTime |  | Manufacturing/ShopFloor/ProductionTime (P10) |
 | product/SupplyPlanningServices | run#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Recalculate, Manufacturing P13) |
 | product/SupplyPlanningServices | get#SupplyPlan | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (suggestions, held stock, demand and supply) |
 | product/SupplyPlanningServices | store#PlanSchedule | Shared/SupplyPlanning | Manufacturing/Planning/SupplyPlanning (Schedule) |

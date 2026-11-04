@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Changes (design-manufacturing §3 WorkOrderDetail cancellation and clone, §5 BillOfMaterialsCompare's
+    amendment, §12.1 amend#ProductionOrder; impl-manufacturing P9): the run's controlled changes. Amendment: what the method as
+    of a date would remap (mantle.work.ProductionServices.preview#ProductionAmendment: only the unexecuted lines and
+    operations; issued lines and started operations keep their facts) and Request amendment for planners and method engineers
+    (amend#ProductionOrder); the requests with their reviews, which a method approver and a production supervisor each give
+    here, the amendment applying once both have, or refuse (F40: decided on the record). Close out: a released, running or
+    held run with postings is cancelled only by its reviewed plan (preview#ProductionCancellation: a reversal that returns
+    every issue, or a residual close that writes off what is left and completes it), for supervisors (cancel#ProductionOrder).
+    Strict release refuses amendments; the tab says so. It reads the run when the client loads the tab alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Changes" default-menu-index="11">
+    <parameter name="workEffortId"/>
+    <parameter name="methodDate"/>
+    <parameter name="returnUnused"/>
+    <transition name="amendOrder">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.amend#ProductionOrder" out-map="amended"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, action:amendAction || 'request',
+                        expectedRevision:expectedRevision || null, methodDate:methodDate || null, previewKey:previewKey || null,
+                        changeNoticeId:changeNoticeId || null, reason:reason || null,
+                        productionChangeId:productionChangeId || null, refusalReason:refusalReason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage({REQUESTED: 'Amendment sent for review',
+                    REVIEWED: 'Review given; the amendment waits for ' + (amended.result?.waitingFor || 'another review'),
+                    APPLIED: 'Amendment applied to the remaining work', REFUSED: 'Amendment refused'}[amended.result?.resultCode]
+                    || 'Saved', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="closeOut">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="mantle.work.ProductionServices.cancel#ProductionOrder" out-map="closed"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        previewKey:previewKey, returnUnused:returnUnused == 'true', reason:reason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(closed.result?.resultCode == 'CANCELLED'
+                    ? 'Work order ' + workEffortId + ' cancelled; its issues were returned'
+                    : 'Work order ' + workEffortId + ' closed out; the cost close settles it', 'success')</script>
+        </actions>
+        <default-response url=".."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionChanges" out-map="changes"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="released" from="['WeApproved', 'WeInProgress', 'WeOnHold'].includes(changes?.statusId)"/>
+        <set field="amendmentRows" from="(changes?.changeRows || []).filter((row) =&gt; row.changeTypeEnumId === 'PchtAmendment')"/>
+        <set field="canAmend" from="!!changes?.canAmend &amp;&amp; !changes?.amendmentPending"/>
+        <if condition="canAmend">
+            <service-call name="mantle.work.ProductionServices.preview#ProductionAmendment" out-map="amendment"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId, methodDate:methodDate || null}"/>
+        </if>
+        <set field="remapRows" from="(amendment?.lineRows || []).map((row) =&gt; Object.assign({}, row, {kind: 'Line',
+                name: row.productName, beforeText: row.before ?? '', afterText: row.after ?? ''})).concat(
+                (amendment?.operationRows || []).map((row) =&gt; Object.assign({}, row, {kind: 'Operation',
+                name: row.workEffortName, beforeText: row.statusText || '', afterText: ''})))"/>
+        <set field="amendmentFindings" from="(amendment?.findings || []).map((row) =&gt; row.message).join(' ')"/>
+        <set field="canCloseOut" from="released &amp;&amp; !!manufacturing.capabilities.supervise"/>
+        <if condition="canCloseOut">
+            <service-call name="mantle.work.ProductionServices.preview#ProductionCancellation" out-map="cancellation"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{workEffortId:workEffortId, returnUnused:returnUnused == 'true'}"/>
+        </if>
+        <set field="closeOutShown" from="canCloseOut &amp;&amp; !!cancellation &amp;&amp; cancellation.reasonCode !== 'NO_FACTS'"/>
+        <set field="keyBase" from="'wo-' + workEffortId + '-' + (changes?.revision ?? 0)"/>
+    </actions>
+    <widgets>
+        <section name="ChangesFound" condition="recordFound">
+            <widgets>
+                <label text="${changes?.sourceText}" type="p" style="text-caption m-muted" condition="changes?.sourceText"/>
+                <label text="This work order is released under strict release: its method is not amended; make a linked new work order for a change."
+                        type="p" style="m-muted" condition="changes?.strictRelease"/>
+                <label text="A draft takes a method change when it is re-exploded at its release; nothing here applies to it."
+                        type="p" style="m-muted" condition="changes?.statusId == 'WeInPlanning'"/>
+                <section name="AmendmentPreview" condition="canAmend &amp;&amp; amendment">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Amendment to the method as of ${amendment.methodDateText || 'now'}"/>
+                            <box-toolbar>
+                                <container-dialog id="RequestAmendment" button-text="Request amendment"
+                                        icon="sym_o_published_with_changes" width="560"
+                                        title="Request an amendment of work order ${workEffortId}" condition="amendment.allowed">
+                                    <label text="${(amendment.impact || []).join(' · ')}" type="p" style="text-caption"/>
+                                    <label text="A method approver and a production supervisor review it; the remaining work changes once both have."
+                                            type="p" style="text-caption m-muted"/>
+                                    <form-single name="RequestAmendmentForm" transition="amendOrder"
+                                            map="{workEffortId:workEffortId, amendAction:'request', expectedRevision:changes.revision,
+                                                methodDate:amendment.methodDate, previewKey:amendment.previewKey,
+                                                operationKey:keyBase + '-amend-' + amendment.previewKey}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="amendAction"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="methodDate"><default-field><hidden/></default-field></field>
+                                        <field name="previewKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="changeNoticeId">
+                                            <default-field title="Change notice" tooltip="Products' change notice, when the organization uses them">
+                                                <text-line size="16"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                        <field name="submit"><default-field title=""><submit text="Request amendment"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <form-single name="AmendmentDate" transition=".">
+                                    <field name="workEffortId" from="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="methodDate" from="methodDate || null">
+                                        <default-field title="Method as of" tooltip="Now when empty"><date-time/></default-field>
+                                    </field>
+                                    <field name="submit"><default-field title=""><submit text="Show the remap"/></default-field></field>
+                                    <field-layout><field-row><field-ref name="methodDate"/><field-ref name="submit"/></field-row></field-layout>
+                                </form-single>
+                                <label text="${amendment.message}" type="p" style="m-muted" condition="!amendment.allowed &amp;&amp; amendment.message"/>
+                                <label text="${amendmentFindings}" type="p" style="text-caption text-warning" condition="amendmentFindings"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="AmendmentRemap" list="remapRows" skip-form="true" paginate="false">
+                                    <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="name"><default-field title="Line or operation"><display/></default-field></field>
+                                    <field name="change"><default-field title="Change"><display/></default-field></field>
+                                    <field name="beforeText" align="right"><default-field title="Now"><display/></default-field></field>
+                                    <field name="afterText" align="right"><default-field title="After"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="kind"/></column>
+                                        <column><field-ref name="change"/><field-ref name="afterText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Amendments · ${amendmentRows.length}"/>
+                    <box-body-nopad>
+                        <label text="No amendment was asked for this work order." type="p" style="q-pa-md m-muted"
+                                condition="!amendmentRows.length"/>
+                        <form-list name="AmendmentRequests" list="amendmentRows" skip-form="true" paginate="false">
+                            <field name="summary"><default-field title="Amendment"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="reviewText"><default-field title="Reviews"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="amendOrder" text="Approve" link-type="hidden-form-link" condition="canApprove"
+                                            confirmation="Give your review of amendment ${productionChangeId} of work order ${workEffortId}?"
+                                            parameter-map="{workEffortId:workEffortId, amendAction:'approve',
+                                                productionChangeId:productionChangeId,
+                                                operationKey:'wo-' + workEffortId + '-amend-approve-' + productionChangeId}"/>
+                                    <container-dialog id="RefuseAmendment_${productionChangeId}" button-text="Refuse" icon="sym_o_block"
+                                            width="480" title="Refuse amendment ${productionChangeId}" condition="canDecide">
+                                        <form-single name="RefuseAmendment" transition="amendOrder"
+                                                map="{workEffortId:workEffortId, amendAction:'refuse', productionChangeId:productionChangeId,
+                                                    operationKey:'wo-' + workEffortId + '-amend-refuse-' + productionChangeId}">
+                                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                            <field name="amendAction"><default-field><hidden/></default-field></field>
+                                            <field name="productionChangeId"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="refusalReason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="Refuse" type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="summary"/><field-ref name="reviewText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="CloseOut" condition="closeOutShown">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Cancel with postings"/>
+                            <box-toolbar>
+                                <container-dialog id="CloseOutDialog" button-text="${cancellation.mode == 'reversal' ? 'Reverse and cancel' : 'Close out'}"
+                                        icon="sym_o_cancel" width="560" title="Cancel work order ${workEffortId}" condition="cancellation.allowed">
+                                    <label text="${cancellation.modeText}" type="p" style="text-caption"/>
+                                    <form-single name="CloseOutForm" transition="closeOut"
+                                            map="{workEffortId:workEffortId, expectedRevision:cancellation.revision,
+                                                previewKey:cancellation.previewKey, returnUnused:returnUnused || 'false',
+                                                operationKey:keyBase + '-closeout-' + cancellation.previewKey}">
+                                        <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="previewKey"><default-field><hidden/></default-field></field>
+                                        <field name="returnUnused"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                        <field name="submit">
+                                            <default-field title="">
+                                                <submit text="${cancellation.mode == 'reversal' ? 'Reverse and cancel' : 'Close out'}" type="danger"
+                                                        confirmation="Cancel work order ${workEffortId} by this plan? Its postings stay as history."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="." text="${returnUnused == 'true' ? 'Keep unused issues' : 'Return unused issues first'}"
+                                        link-type="anchor-button" condition="cancellation.mode == 'residual' &amp;&amp; cancellation.returnRows?.length"
+                                        parameter-map="{workEffortId:workEffortId, returnUnused:returnUnused == 'true' ? 'false' : 'true'}"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="Its stock, time and quantity postings stay; the plan reverses or closes them out, never deletes them."
+                                        type="p" style="text-caption m-muted"/>
+                                <label text="${cancellation.message}" type="p" style="text-negative" condition="!cancellation.allowed"/>
+                                <section-iterate name="CloseOutSteps" list="cancellation.steps || []" entry="step">
+                                    <widgets><label text="${step}" type="div" style="text-caption"/></widgets>
+                                </section-iterate>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

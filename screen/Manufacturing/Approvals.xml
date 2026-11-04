@@ -21,13 +21,15 @@ along with this software (see the LICENSE.md file). If not, see
     (ProductionStagedRelease, to PRODUCTION_SUPERVISE holders), decided on WorkOrderDetail. P7's are a loss above its reason's threshold
     (ProductionLossApproval) and output beyond the overproduction tolerance (ProductionOverproduction), decided on the work
     order's Quantities tab (approve#ProductionException). P12's is a scheduler's request that a supervisor override a move's
-    conflicts (ProductionScheduleOverride), decided on ProductionSchedule. Later phases add their topics (amendments,
-    substitutions). -->
+    conflicts (ProductionScheduleOverride), decided on ProductionSchedule. P9's are a substitute component
+    (ProductionSubstitution, to PRODUCTION_SUPERVISE holders), decided on the work order's Components, and an amendment of a
+    released work order (ProductionAmendment, to METHOD_APPROVE holders and then PRODUCTION_SUPERVISE holders), reviewed on
+    its Changes tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="11" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
         <set field="notificationTopics" from="['BomRelease', 'RoutingRelease', 'ProductionStagedRelease', 'ProductionLossApproval',
-                'ProductionOverproduction', 'ProductionScheduleOverride']"/>
+                'ProductionOverproduction', 'ProductionScheduleOverride', 'ProductionSubstitution', 'ProductionAmendment']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

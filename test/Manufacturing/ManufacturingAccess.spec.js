@@ -1958,6 +1958,242 @@ feature("the schedule and Capacity open for the scheduler with the Move form, th
     }
 })
 
+// ===== P10: the shop floor and production time =====
+// The operation's verbs check PRODUCTION_OPERATE (an override PRODUCTION_SUPERVISE) and the run's organization themselves, with
+// artifact authorization disabled as a screen's transition inherits it (F53); the Shop floor area opens for the operator and
+// supervisor groups only (BOSS_MFG_SHOP_FLOOR), with authz enabled.
+const p10 = {}
+function p10Fixture() {
+    if (!p10.f) p10.f = lib.shopFloorFixture("Access spec P10")
+    return p10.f
+}
+const p10Key = () => "spec-access-p10-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
+feature("the shop floor verbs check their own permission on the same parameters, and another organization reaches none", {
+    when() {
+        const f = p10Fixture()
+        const production = "mantle.work.ProductionServices."
+        const runtime = {
+            operationWorkEffortId: f.assemble,
+            action: "record",
+            fromDate: new Date(Date.now() - 3600000),
+            thruDate: new Date(Date.now() - 1800000)
+        }
+        const override = {operationWorkEffortId: f.assemble, reason: "Certified on the line"}
+        return {
+            readerRuntime: asUser(
+                users.read,
+                () => refusal(production + "record#MachineRuntime", Object.assign({operationKey: p10Key()}, runtime)),
+                false
+            ),
+            operatorRuntime: asUser(
+                users.operate,
+                () => refusal(production + "record#MachineRuntime", Object.assign({operationKey: p10Key()}, runtime)),
+                false
+            ),
+            operatorOverride: asUser(
+                users.operate,
+                () =>
+                    refusal(production + "override#ProductionOperationStart", Object.assign({operationKey: p10Key()}, override)),
+                false
+            ),
+            supervisorOverride: asUser(
+                users.supervise,
+                () =>
+                    refusal(production + "override#ProductionOperationStart", Object.assign({operationKey: p10Key()}, override)),
+                false
+            ),
+            readerStart: asUser(
+                users.read,
+                () => refusal(production + "start#ProductionOperation", {operationKey: p10Key(), operationWorkEffortId: f.test}),
+                false
+            ),
+            readerRead: asUser(
+                users.read,
+                () => refusal(production + "get#ProductionOperation", {operationWorkEffortId: f.assemble}),
+                false
+            ),
+            otherRead: asUser(
+                users.services,
+                () => refusal(production + "get#ProductionOperation", {operationWorkEffortId: f.assemble}),
+                false
+            ),
+            otherTime: asUser(users.services, () => refusal(production + "get#ProductionTime", {workEffortId: f.runId}), false),
+            otherQueue: asUser(users.services, () => invoke(production + "get#ShopFloorQueue", {}), false),
+            otherScan: asUser(
+                users.services,
+                () => invoke("ironstone.manufacturing.ShopFloorServices.resolve#OperationScan", {scanText: f.runId}),
+                false
+            ),
+            readerCheck: asUser(
+                users.read,
+                () => refusal(access + "check#Record", {recordType: "operation", recordId: f.assemble, capability: "operate"}),
+                false
+            )
+        }
+    },
+    then(x) {
+        x.readerRuntime.includes("PERMISSION_DENIED")
+        x.operatorRuntime == ""
+        x.operatorOverride.includes("PERMISSION_DENIED")
+        x.supervisorOverride == ""
+        x.readerStart.includes("PERMISSION_DENIED")
+        x.readerRead == ""
+        x.otherRead.includes("RECORD_UNAVAILABLE")
+        x.otherTime.includes("RECORD_UNAVAILABLE")
+        x.otherQueue.operationRows.every(row => row.workEffortId != p10.f.runId)
+        x.otherScan.matches.length == 0
+        x.readerCheck.includes("PERMISSION_DENIED")
+    }
+})
+feature("the Shop floor opens for the operator and the supervisor and not for a reader, with authz enabled", {
+    when() {
+        const f = p10Fixture()
+        const operation = {operationWorkEffortId: f.test}
+        return {
+            operator: asUser(users.operate, () => lib.page("ShopFloor/OperationExecution", operation, "html")),
+            supervisor: asUser(users.supervise, () => lib.page("ShopFloor/ProductionTime", {workEffortId: f.runId}, "html")),
+            supervisorStation: asUser(users.supervise, () => lib.page("ShopFloor/Station", {}, "tui")),
+            reader: asUser(users.read, () => lib.page("ShopFloor/OperationExecution", operation, "html")),
+            other: asUser(users.services, () => lib.page("ShopFloor/OperationExecution", operation, "html"))
+        }
+    },
+    then({operator, supervisor, supervisorStation, reader, other}) {
+        operator.errors.length == 0
+        operator.output.includes("Start checks")
+        operator.output.includes("Test and pack")
+        supervisor.errors.length == 0
+        supervisor.output.includes("Time entries")
+        supervisorStation.errors.length == 0
+        reader.status != 200 || !reader.output.includes("Start checks")
+        other.status != 200 || !other.output.includes("Start checks")
+    }
+})
+
+// ===== P9: controlled changes =====
+// A released run of one DEMO_1_1 made and released by the planner; each change verb as the screens run it (artifact
+// authorization off, F-P3-2), refused for the permission on the parameters a permitted user gets past it with (that user's
+// answer names a reason of the record instead); the other organization's reader is refused Retail's run; the Changes tab,
+// SplitWorkOrder and Disassembly open by role with authz enabled.
+const P9 = {state: {}}
+P9.run = () => {
+    if (P9.state.workEffortId) return P9.state.workEffortId
+    const created = asService(users.plan, () =>
+        invoke(production + "create#ProductionOrder", {
+            operationKey: "spec-p9-run-" + Date.now(),
+            organizationPartyId: "ORG_ZIZI_RETAIL",
+            productId: ids.productId,
+            productBomId: ids.methodId,
+            quantity: 2,
+            facilityId: ids.lineId
+        })
+    )
+    const workEffortId = created.workEffortId
+    asService(users.plan, () =>
+        invoke(production + "transition#ProductionOrder", {
+            operationKey: "spec-p9-release-" + Date.now(),
+            workEffortId,
+            action: "release",
+            expectedRevision: 1
+        })
+    )
+    P9.state.workEffortId = workEffortId
+    return workEffortId
+}
+P9.call = (user, service, parameters) =>
+    asService(user, () =>
+        refusal(production + service, Object.assign({operationKey: "spec-p9-" + user + "-" + Date.now()}, parameters))
+    )
+feature("the change verbs check their own permission and organization, on the same parameters", {
+    when() {
+        const workEffortId = P9.run()
+        const revision = Number(
+            system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one()).productionRevision || 0
+        )
+        const line = system(
+            () =>
+                Array.from(
+                    ec.entity
+                        .find("mantle.work.production.ProductionRunLine")
+                        .condition({workEffortId, lineRoleEnumId: "PrlrMaterial"})
+                        .list()
+                )[0]
+        )
+        const substitute = {
+            workEffortId,
+            expectedRevision: revision,
+            productionRunLineId: line?.productionRunLineId,
+            substituteProductId: "DEMO_2_1",
+            quantity: 1,
+            reason: "Spec"
+        }
+        const amend = {workEffortId, expectedRevision: revision, reason: "Spec"}
+        const split = {workEffortId, mode: "split", quantity: 1}
+        const close = {workEffortId, expectedRevision: revision, reason: "Spec", previewKey: "x"}
+        const reverse = {assetId: "BOSS_MFG_SPEC_NO_KIT", quantity: 1, previewKey: "x", reason: "Spec"}
+        return {
+            readerSubstitute: P9.call(users.read, "substitute#ProductionMaterial", substitute),
+            plannerSubstitute: P9.call(users.plan, "substitute#ProductionMaterial", substitute),
+            readerAmend: P9.call(users.read, "amend#ProductionOrder", amend),
+            plannerAmend: P9.call(users.plan, "amend#ProductionOrder", amend),
+            readerSplit: P9.call(users.read, "preview#ProductionSplit", split),
+            plannerSplit: P9.call(users.plan, "preview#ProductionSplit", split),
+            plannerClose: P9.call(users.plan, "cancel#ProductionOrder", close),
+            supervisorClose: P9.call(users.supervise, "cancel#ProductionOrder", close),
+            readerClone: P9.call(users.read, "clone#ProductionOrder", {workEffortId}),
+            otherChanges: P9.call(users.services, "get#ProductionChanges", {workEffortId}),
+            plannerReverse: P9.call(users.plan, "reverse#SupportedAssembly", reverse),
+            supervisorReverse: P9.call(users.supervise, "reverse#SupportedAssembly", reverse)
+        }
+    },
+    then(r) {
+        r.readerSubstitute.includes("PERMISSION_DENIED")
+        r.plannerSubstitute.includes("SUBSTITUTE_NOT_ALLOWED")
+        r.readerAmend.includes("PERMISSION_DENIED")
+        r.plannerAmend.includes("NO_CHANGE")
+        r.readerSplit.includes("PERMISSION_DENIED")
+        r.plannerSplit == ""
+        r.plannerClose.includes("PERMISSION_DENIED")
+        r.supervisorClose.includes("NO_FACTS")
+        r.readerClone.includes("PERMISSION_DENIED")
+        r.otherChanges.includes("RECORD_UNAVAILABLE")
+        r.plannerReverse.includes("PERMISSION_DENIED")
+        r.supervisorReverse.includes("RECORD_UNAVAILABLE")
+    }
+})
+feature("the Changes tab, SplitWorkOrder and Disassembly open by role, with authz enabled", {
+    when() {
+        const tab = (user, path, parameters = {workEffortId: P9.run(), lastStandalone: "true"}) =>
+            asUser(user, () => lib.page(path, parameters, "html"))
+        return {
+            plannerChanges: tab(users.plan, "WorkOrders/WorkOrderDetail/Changes"),
+            readerChanges: tab(users.read, "WorkOrders/WorkOrderDetail/Changes"),
+            plannerSplit: tab(users.plan, "WorkOrders/WorkOrderDetail/SplitWorkOrder"),
+            readerSplit: tab(users.read, "WorkOrders/WorkOrderDetail/SplitWorkOrder"),
+            otherChanges: tab(users.services, "WorkOrders/WorkOrderDetail/Changes"),
+            supervisorKits: tab(users.supervise, "WorkOrders/Disassembly", {}),
+            readerKits: tab(users.read, "WorkOrders/Disassembly", {}),
+            kitChoice: asUser(users.supervise, () => refusal(access + "get#Choices", {choice: "kitAssets", term: ""}))
+        }
+    },
+    then(r) {
+        r.plannerChanges.errors.length == 0
+        r.plannerChanges.output.includes("Amendment to the method")
+        r.plannerChanges.output.includes("Amendments")
+        r.readerChanges.errors.length == 0
+        r.readerChanges.output.includes("Amendments")
+        !r.readerChanges.output.includes("Amendment to the method")
+        r.plannerSplit.errors.length == 0
+        r.plannerSplit.output.includes("Allocate what is left")
+        r.readerSplit.output.includes("Splitting a work order is for planners")
+        r.otherChanges.errors.length == 0
+        !r.otherChanges.output.includes("Amendments")
+        r.supervisorKits.errors.length == 0
+        r.supervisorKits.output.includes("Preview")
+        r.readerKits.output.includes("Disassembly is for production supervisors")
+        r.kitChoice == ""
+    }
+})
+
 // ===== P15: cost close =====
 // Accounting's ProductionCostClose: the Cost close tab needs the finance groups and not the Accounting launcher, the
 // estimator requests the review and neither previews nor posts, and the queue is Accounting's read.
