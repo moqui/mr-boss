@@ -5,7 +5,8 @@
 // the Mantle REST order paths and the bulk status change (F9). One feature per rule, each case of it a line of its problems,
 // with artifact authorization enabled. The Mantle services' own permission checks are Mantle's (mr-mantle test/order). The
 // access and isolation walk is the acceptance PurchasingFoundationWalk. A later phase adds a case only for an access rule it
-// adds, and its quick creates, Today sources and notification topics to the menu feature's rows.
+// adds, and its quick creates, Today sources and notification topics to the menu feature's rows; P2 adds the supplier scope of
+// the supplier list, Supplier360 and the bulk changes, the settings' permissions and the product link.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell} = lib
@@ -236,7 +237,7 @@ feature("a user's suppliers are their organization's and the shared ones, in the
             problems.push(`the reader's palette orders: ${orders}`)
         if (orders.some(url => url.includes(ids.otherOrderId))) problems.push("the reader's palette has the other order")
         const suppliers = search(users.read, "ziddleman")
-        if (!suppliers.some(url => url.includes("lookupId=" + ids.sharedSupplierId)))
+        if (!suppliers.some(url => url.includes("Suppliers/Supplier360?vendorPartyId=" + ids.sharedSupplierId)))
             problems.push(`the reader's palette suppliers: ${suppliers}`)
         if (search(users.services, "boss_pur_po").some(url => url.includes(ids.orderId)))
             problems.push("the other organization's palette has Retail's order")
@@ -374,6 +375,69 @@ feature("the areas a group guards refuse a Purchasing user without it", {
         }
         const opened = screenRefusal(users.requester, "Requests")
         if (opened !== "") problems.push(`the requester is refused Requests: ${opened}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+// P2: the supplier list and Supplier360's context keep to the user's supplier scope; the bulk changes need
+// SUPPLIER_PROFILE_EDIT and answer per supplier, refusing one out of scope; the settings need the Settings area and their
+// writes PURCHASE_POLICY_EDIT; a product's record link opens Purchasing's Product360 for a Purchasing reader
+feature("suppliers, their bulk changes and the settings keep to the supplier scope and their permissions", {
+    when() {
+        const problems = []
+        const supplierService = "ironstone.purchasing.SupplierServices.",
+            settingsService = "ironstone.purchasing.SettingsServices."
+        const list = user =>
+            asUser(user, () => Array.from(invoke(supplierService + "find#Suppliers", {pageSize: 50}).supplierRows || []))
+        if (!list(users.read).some(row => row.partyId === ids.supplierId)) problems.push("the reader's list lacks Brightline")
+        if (list(users.services).some(row => row.partyId === ids.supplierId))
+            problems.push("the other organization lists Brightline")
+        const requester = asUser(users.requester, () => refusal(supplierService + "find#Suppliers", {}))
+        if (!requester.includes("PERMISSION_DENIED")) problems.push(`the requester lists suppliers: ${requester || "accepted"}`)
+        const context = user =>
+            asUser(user, () => refusal(supplierService + "get#SupplierContext", {vendorPartyId: ids.supplierId}))
+        const readContext = context(users.read)
+        if (readContext !== "") problems.push(`the reader is refused Brightline's 360: ${readContext}`)
+        const otherContext = context(users.services)
+        if (!otherContext.includes("RECORD_UNAVAILABLE"))
+            problems.push(`the other organization reads Brightline: ${otherContext}`)
+        // the bulk change: the same request refused for the reader and answered per supplier for the buyer
+        const bulk = {
+            change: "category",
+            partyIds: [ids.supplierId, ids.otherSupplierId],
+            partyClassificationId: "BOSS_PUR_CAT_COMPONENTS"
+        }
+        const readBulk = asUser(users.read, () => refusal(supplierService + "bulk#SupplierChanges", bulk))
+        if (!readBulk.includes("PERMISSION_DENIED")) problems.push(`the reader changes suppliers: ${readBulk || "accepted"}`)
+        const results = asUser(users.buyer, () => invoke(supplierService + "bulk#SupplierChanges", bulk).results || [])
+        const result = partyId => results.find(row => row.partyId === partyId)?.resultCode
+        if (result(ids.supplierId) !== "CHANGED") problems.push(`the buyer's change of Brightline: ${result(ids.supplierId)}`)
+        if (result(ids.otherSupplierId) !== "REFUSED")
+            problems.push(`the other organization's supplier: ${result(ids.otherSupplierId)}`)
+        // the settings: the administrator reads and writes them, the buyer neither
+        const settings = user => asUser(user, () => refusal(settingsService + "get#PurchasingSettings", {}))
+        if (settings(users.admin) !== "") problems.push(`the administrator is refused the settings: ${settings(users.admin)}`)
+        if (!settings(users.buyer).includes("PERMISSION_DENIED")) problems.push("the buyer reads the settings")
+        const category = {description: "Access spec category"}
+        const buyerCategory = asUser(users.buyer, () => refusal(settingsService + "store#SupplierCategory", category))
+        if (!buyerCategory.includes("PERMISSION_DENIED"))
+            problems.push(`the buyer adds a category: ${buyerCategory || "accepted"}`)
+        const adminCategory = asUser(users.admin, () => refusal(settingsService + "store#SupplierCategory", category))
+        if (adminCategory !== "") problems.push(`the administrator is refused a category: ${adminCategory}`)
+        // a product opens Purchasing's Product360 for a reader who opens neither Products nor Warehouse
+        const productLink = asUser(
+            users.read,
+            () =>
+                invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                    recordEntityName: "mantle.product.Product",
+                    id: "DEMO_1_1"
+                }).url || null
+        )
+        if (productLink !== "/qapps/Purchasing/Products/Product360?productId=DEMO_1_1")
+            problems.push(`the reader's product link: ${productLink}`)
         return {problems}
     },
     then({problems}) {

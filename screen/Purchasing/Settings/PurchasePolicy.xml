@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The buying policy (design-purchasing §12 PurchasePolicy; impl-purchasing P2): the policy in effect of an organization in
+    two forms, BuyingDefaults and PurchaseControls (the approval gate's flag among them, off by default), each value with
+    its source, the dated rows (an administrator starts a row from a date and the earlier row stays with its history), and
+    PolicyDependencies: Accounting's match and budget policies and Warehouse's receiving read only with their owners' links
+    (ironstone.purchasing.SettingsServices.get#PurchasingSettings). mantle.order.PurchaseServices.get#PurchasePolicy reads
+    it and store#PurchasePolicy makes a dated change of one form's fields (PURCHASE_POLICY_EDIT). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Buying policy" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.order.PurchaseServices.store#PurchasePolicy"
+                    in-map="{organizationPartyId:organizationPartyId || null, fromDate:effectiveFromDate || null,
+                        expectedFromDate:expectedFromDate || null, policyGroup:policyGroup, changeReason:changeReason,
+                        currencyUomId:currencyUomId, priceListId:priceListId, facilityId:facilityId, buyerPartyId:buyerPartyId,
+                        settlementTermId:settlementTermId, incotermEnumId:incotermEnumId, rfqResponseDays:rfqResponseDays,
+                        quoteExpiryWarnDays:quoteExpiryWarnDays, reminderDays:reminderDays, lockSentOrders:lockSentOrders,
+                        supplierApprovalRequired:supplierApprovalRequired, unapprovedSupplierEnumId:unapprovedSupplierEnumId,
+                        approvalGateEnabled:approvalGateEnabled, selfApprovalAllowed:selfApprovalAllowed}"/>
+            <message type="success">Buying policy saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.order.PurchaseServices.get#PurchasePolicy" out-map="policy" transaction="force-new"
+                ignore-error="true" in-map="{organizationPartyId:organizationPartyId || null}"/>
+        <set field="policyAvailable" from="!!policy?.organizationPartyId"/>
+        <set field="traceRows" from="policy?.traceRows || []"/>
+        <set field="historyRows" from="policy?.history || []"/>
+        <set field="groupRows" from="Object.fromEntries(['defaults', 'controls'].map((group) =&gt;
+                [group, traceRows.filter((row) =&gt; row.group === group)]))"/>
+        <set field="formScope" from="{organizationPartyId:policy?.organizationPartyId, expectedFromDate:policy?.expectedFromDate}"/>
+        <if condition="policyAvailable">
+            <service-call name="ironstone.purchasing.SettingsServices.get#PurchasingSettings" out-map="settings"
+                    transaction="force-new" ignore-error="true" in-map="{organizationPartyId:policy.organizationPartyId}"/>
+        </if>
+        <set field="dependencyRows" from="settings?.dependencyRows || []"/>
+    </actions>
+    <widgets>
+        <form-single name="PolicyScope" transition="." map="{organizationPartyId:organizationPartyId || policy?.organizationPartyId}">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show policy"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="This buying policy is not available to you." type="p" condition="!policyAvailable"/>
+        <section name="Policy" condition="policyAvailable">
+            <widgets>
+                <label text="Buying policy of ${policy.organizationName}: each change starts a dated policy and ends the one before it; a document keeps the policy it was checked against."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Buying defaults"/>
+                    <box-toolbar>
+                        <container-dialog id="BuyingDefaultsDialog" condition="policy.canEdit" button-text="Change defaults"
+                                icon="sym_o_edit" width="760" title="Change the buying defaults of ${policy.organizationName}">
+                            <form-single name="BuyingDefaults" transition="storePolicy"
+                                    map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'defaults'})">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedFromDate"><default-field><hidden/></default-field></field>
+                                <field name="policyGroup"><default-field><hidden/></default-field></field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency" tooltip="Empty: none set">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                <entity-find entity-name="moqui.basic.Uom">
+                                                    <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="priceListId">
+                                    <default-field title="Purchase price list">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${priceListId}" text="${listName}">
+                                                <entity-find entity-name="mantle.product.ProductPriceList">
+                                                    <econdition field-name="direction" value="purchase"/>
+                                                    <order-by field-name="listName"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="facilityId">
+                                    <default-field title="Receiving facility">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${facilityId}" text="${facilityName}">
+                                                <entity-find entity-name="mantle.facility.Facility">
+                                                    <econdition field-name="ownerPartyId" from="policy.organizationPartyId"/>
+                                                    <order-by field-name="facilityName"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="buyerPartyId">
+                                    <default-field title="Default buyer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'buyers', selected:buyerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="settlementTermId">
+                                    <default-field title="Payment term">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${settlementTermId}" text="${description}">
+                                                <entity-find entity-name="mantle.account.invoice.SettlementTerm">
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="incotermEnumId">
+                                    <default-field title="Incoterm">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="parentEnumId" value="TtInco"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="Effective from" tooltip="Leave empty to start now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save defaults">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="currencyUomId"/>
+                                        <field-ref name="priceListId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="facilityId"/>
+                                        <field-ref name="buyerPartyId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="settlementTermId"/>
+                                        <field-ref name="incotermEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="effectiveFromDate"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DefaultsTrace" list="groupRows.defaults" skip-form="true" paginate="false">
+                            <field name="fieldLabel"><default-field title="Setting"><display/></default-field></field>
+                            <field name="valueText"><default-field title="In effect"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fieldLabel"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="valueText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Purchase controls"/>
+                    <box-toolbar>
+                        <container-dialog id="PurchaseControlsDialog" condition="policy.canEdit" button-text="Change controls"
+                                icon="sym_o_edit" width="760" title="Change the purchase controls of ${policy.organizationName}">
+                            <form-single name="PurchaseControls" transition="storePolicy"
+                                    map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'controls'})">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedFromDate"><default-field><hidden/></default-field></field>
+                                <field name="policyGroup"><default-field><hidden/></default-field></field>
+                                <field name="rfqResponseDays">
+                                    <default-field title="RFQ response days" tooltip="Days a supplier has to answer an RFQ; empty takes 7">
+                                        <text-line input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="quoteExpiryWarnDays">
+                                    <default-field title="Quote expiry warning days" tooltip="Empty takes 7">
+                                        <text-line input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="reminderDays">
+                                    <default-field title="Acknowledgement reminder days" tooltip="Days after sending an unacknowledged order is reminded; empty takes 3">
+                                        <text-line input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="lockSentOrders">
+                                    <default-field title="Sent orders change by revision" tooltip="Empty takes No">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="supplierApprovalRequired">
+                                    <default-field title="New suppliers need approval" tooltip="A new supplier starts Pending approval; empty takes No">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="unapprovedSupplierEnumId">
+                                    <default-field title="Unapproved supplier" tooltip="What an RFQ or order to a supplier that is not approved gets; empty takes Warn">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="PurchaseUnapprovedSupplier"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approvalGateEnabled">
+                                    <default-field title="Purchase approval gate" tooltip="Orders are approved only through purchase approval; empty takes No">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="selfApprovalAllowed">
+                                    <default-field title="Buyers approve their own orders" tooltip="Under the approval gate; empty takes No">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="Effective from" tooltip="Leave empty to start now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save controls">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="rfqResponseDays"/>
+                                        <field-ref name="quoteExpiryWarnDays"/>
+                                        <field-ref name="reminderDays"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="supplierApprovalRequired"/>
+                                        <field-ref name="unapprovedSupplierEnumId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="approvalGateEnabled"/>
+                                        <field-ref name="selfApprovalAllowed"/>
+                                        <field-ref name="lockSentOrders"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="effectiveFromDate"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ControlsTrace" list="groupRows.controls" skip-form="true" paginate="false">
+                            <field name="fieldLabel"><default-field title="Setting"><display/></default-field></field>
+                            <field name="valueText"><default-field title="In effect"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="Since"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fieldLabel"/><field-ref name="sourceText"/></column>
+                                <column><field-ref name="valueText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Policies of other areas"/>
+                    <box-body-nopad>
+                        <label text="Purchasing reads these and does not change them; their owners do." type="p"
+                                style="q-px-md q-pt-md text-caption m-muted"/>
+                        <form-list name="PolicyDependencies" list="dependencyRows" skip-form="true" paginate="false">
+                            <field name="area">
+                                <default-field title="Area">
+                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor" condition="url"/>
+                                    <display condition="!url"/>
+                                </default-field>
+                            </field>
+                            <field name="setting"><default-field title="Setting"><display/></default-field></field>
+                            <field name="valueText"><default-field title="In effect"><display/></default-field></field>
+                            <field name="owner"><default-field title="Owner"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="area"/><field-ref name="setting"/></column>
+                                <column><field-ref name="valueText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Policies set"/>
+                    <box-body-nopad>
+                        <label text="No policy is set; the built-in defaults are in effect." type="p" style="q-pa-md m-muted"
+                                condition="!historyRows.length"/>
+                        <form-list name="PolicyHistory" list="historyRows" skip-form="true" paginate="false">
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="summary"><default-field title="Set"><display/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fromDateText"/><field-ref name="changeReason"/></column>
+                                <column><field-ref name="summary"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

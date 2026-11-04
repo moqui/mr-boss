@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's settings forms (design-purchasing §12 Settings and PurchasePolicy; impl-purchasing P2; Settings.js): the
+    settings landing with the policies Purchasing depends on read only, the purchase request purposes and the supplier
+    categories. For the purchasing administrator (the Settings area); the writes need PURCHASE_POLICY_EDIT. The buying
+    policy is Mantle's mantle.order.PurchaseServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="PurchasingSettings" allow-remote="false">
+        <description>The settings of an organization (SettingsLinks): the buying policy in effect, the request purposes and the
+            supplier categories with their rows, and the policies Purchasing reads but does not own (PolicyDependencies):
+            Accounting's match policy and budget control at the purchase order and Warehouse's receiving steps, read only,
+            each with its owner's link for a user who may open that app. Refuses a user without the Settings area
+            (PERMISSION_DENIED) and an organization not theirs (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="settingsRows" type="List"/>
+            <parameter name="dependencyRows" type="List"/>
+            <parameter name="purposeRows" type="List"/>
+            <parameter name="categoryRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Settings.js"/>
+            <set field="found" from="ec.resource.script(module).execute('settings', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizationName" from="found.organizationName"/>
+            <set field="settingsRows" from="found.settingsRows"/>
+            <set field="dependencyRows" from="found.dependencyRows"/>
+            <set field="purposeRows" from="found.purposeRows"/>
+            <set field="categoryRows" from="found.categoryRows"/>
+            <set field="canEdit" from="found.canEdit"/>
+        </actions>
+    </service>
+    <service verb="store" noun="RequestPurpose" allow-remote="false">
+        <description>A new purchase request purpose or a change of one (RequestCategory): its name, parent purpose and the party
+            responsible for its requests. Requires PURCHASE_POLICY_EDIT (PERMISSION_DENIED); refuses an empty name, a parent
+            that does not exist or is itself and an unknown party (PURPOSE_INVALID).</description>
+        <in-parameters>
+            <parameter name="requestCategoryId"/>
+            <parameter name="description"/>
+            <parameter name="parentCategoryId"/>
+            <parameter name="responsiblePartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="requestCategoryId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Settings.js"/>
+            <set field="requestCategoryId" from="ec.resource.script(module).execute('storeRequestPurpose', context).requestCategoryId"/>
+        </actions>
+    </service>
+    <service verb="store" noun="SupplierCategory" allow-remote="false">
+        <description>A new supplier category or a change of one (a PartyClassification of PcltSupplierCategory): its name,
+            parent category and standard code. Requires PURCHASE_POLICY_EDIT (PERMISSION_DENIED); refuses an empty name, a
+            parent of another type or itself and a classification of another type (CATEGORY_INVALID).</description>
+        <in-parameters>
+            <parameter name="partyClassificationId"/>
+            <parameter name="description"/>
+            <parameter name="parentClassificationId"/>
+            <parameter name="standardCode"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="partyClassificationId"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Settings.js"/>
+            <set field="partyClassificationId"
+                    from="ec.resource.script(module).execute('storeSupplierCategory', context).partyClassificationId"/>
+        </actions>
+    </service>
+</services>

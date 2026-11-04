@@ -12,12 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Suppliers area of IronStone Purchasing (design-purchasing §1, §3): Suppliers (the list), and the
-    shared Supplier360, SupplierPrices and PriceExplain in the Purchasing context (impl-purchasing P2), for the buying
-    lists' groups (BOSS_PUR_LISTS). -->
+<!-- The Suppliers area of IronStone Purchasing (design-purchasing §1, §3; impl-purchasing P2), for the buying lists' groups
+    (BOSS_PUR_LISTS): SupplierList (the default: find, the new supplier dialogs with their duplicate check and the bulk
+    buyer and category changes), and Products' shared SupplierPrices and PriceExplain (crosscut §3.21, the purchase direction
+    only) and Supplier360 (crosscut §3.3, hidden from the menu) in the Purchasing context
+    (ironstone.products.SharedContext.js and Supplier360's Purchasing branch). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Suppliers" default-menu-index="2" menu-image="sym_o_corporate_fare" menu-image-type="icon">
+    <subscreens default-item="SupplierList" always-use-full-path="true">
+        <subscreens-item name="SupplierPrices" menu-index="2" menu-title="Supplier prices"
+                location="component://mr-boss/screen/Shared/SupplierPrices.xml"/>
+        <subscreens-item name="PriceExplain" menu-index="3" menu-title="Explain price"
+                location="component://mr-boss/screen/Shared/PriceExplain.xml"/>
+        <subscreens-item name="Supplier360" location="component://mr-boss/screen/Shared/Supplier360.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Suppliers, their prices and buying terms." type="p"/>
+        <subscreens-menu id="PurchasingSupplierTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

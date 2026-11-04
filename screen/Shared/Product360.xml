@@ -139,6 +139,13 @@ along with this software (see the LICENSE.md file). If not, see
                 virtualProduct = product.productTypeEnumId === 'PtVirtual'
                 kitProduct = product.productTypeEnumId === 'PtPickAssembly'
             ]]></script>
+            <!-- Purchasing (impl-purchasing P2, crosscut §3.5): whether the product may be bought, with the lifecycle's reason -->
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="mantle.product.ProductServices.check#ProductUsable" out-map="buyingUsable"
+                        transaction="force-new" ignore-error="true" in-map="{productId:productId, usage:'Purchase'}"/>
+                <set field="buyingRefusedText" from="buyingUsable &amp;&amp; buyingUsable.usable === false
+                        ? 'Not for buying: ' + (buyingUsable.reason || 'the product may not be purchased') : ''"/>
+            </if>
         </if>
     </actions>
     <widgets>
@@ -159,6 +166,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <label text="${product.productName}" type="h5"/>
                             </container>
                             <label text="${factsText}" type="p" style="text-caption m-muted q-mb-none"/>
+                            <label text="${buyingRefusedText}" type="p" style="text-negative q-mb-none" condition="buyingRefusedText"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <status-bar id="ProductStatus" status-id="${detail.effectiveStatusId}" status-flow-id="Default" stages="PrdDraft,PrdActive,PrdDiscontinued,PrdObsolete" read-only="true"/>

@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's supplier reads and bulk changes (design-purchasing Suppliers and Supplier360; impl-purchasing P2;
+    Suppliers.js): the supplier list, the duplicate candidates of a new supplier, Supplier360's Purchasing context and the
+    bulk buyer and category changes. Each reads within the user's supplier scope (Purchasing.js) and needs the buying lists
+    (listRead); a supplier's profile, buyer and category are written by mantle.party.SupplierServices, which checks
+    SUPPLIER_PROFILE_EDIT and the organization itself. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Suppliers" allow-remote="false">
+        <description>The suppliers in the user's scope (their organizations' and the shared ones), paged, by name, ID or
+            external ID ignoring case, and by category, buyer, approval status or a purchase block, each with the buying
+            organization's profile in effect (approval status and its chip color, the block, currency), its buyer, category,
+            primary email and owner. Refuses a user without the buying lists (PERMISSION_DENIED) and an organization not
+            theirs (RECORD_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="partyClassificationId"/>
+            <parameter name="buyerPartyId"/>
+            <parameter name="approvalStatusId"/>
+            <parameter name="blocked"><description>Y: only suppliers under a purchase block</description></parameter>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="supplierRows" type="List"/>
+            <parameter name="supplierRowsCount" type="Integer"/>
+            <parameter name="supplierRowsPageIndex" type="Integer"/>
+            <parameter name="supplierRowsPageSize" type="Integer"/>
+            <parameter name="supplierRowsPageMaxIndex" type="Integer"/>
+            <parameter name="supplierRowsPageRangeLow" type="Integer"/>
+            <parameter name="supplierRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Suppliers.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findSuppliers', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizationName" from="found.organizationName"/>
+            <set field="supplierRows" from="found.supplierRows"/>
+            <set field="supplierRowsCount" from="found.supplierRowsCount"/>
+            <set field="supplierRowsPageIndex" from="found.supplierRowsPageIndex"/>
+            <set field="supplierRowsPageSize" from="found.supplierRowsPageSize"/>
+            <set field="supplierRowsPageMaxIndex" from="found.supplierRowsPageMaxIndex"/>
+            <set field="supplierRowsPageRangeLow" from="found.supplierRowsPageRangeLow"/>
+            <set field="supplierRowsPageRangeHigh" from="found.supplierRowsPageRangeHigh"/>
+        </actions>
+    </service>
+    <service verb="find" noun="SupplierDuplicates" allow-remote="false">
+        <description>The suppliers in the user's scope a new supplier may duplicate: by its organization name, or its person's
+            first and last name, ignoring case, its external ID or its email; at most ten. Refuses a user without the buying
+            lists (PERMISSION_DENIED).</description>
+        <in-parameters>
+            <parameter name="organizationName"/>
+            <parameter name="firstName"/>
+            <parameter name="lastName"/>
+            <parameter name="externalId"/>
+            <parameter name="emailAddress"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="duplicateRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Suppliers.js"/>
+            <set field="duplicateRows" from="ec.resource.script(module).execute('duplicates', context).duplicateRows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierContext" allow-remote="false">
+        <description>Supplier360's Purchasing context (crosscut §3.3 Purchasing row): the supplier's contact, roles and owner,
+            the buying organization's profile in effect with its display text and its rows newest first (the profile's
+            history, the audit log holding each field's changes), the buyer in effect and the buyers before, the category,
+            the supplier check against the buying policy (OK, WARN or STOP with its message), and what the user may change.
+            Refuses a supplier out of the user's scope like a missing one (RECORD_UNAVAILABLE) and a user without the buying
+            lists (PERMISSION_DENIED).</description>
+        <in-parameters>
+            <parameter name="vendorPartyId" required="true"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="supplier" type="Map"/>
+            <parameter name="contactRows" type="List"/>
+            <parameter name="addressRows" type="List"/>
+            <parameter name="roleRows" type="List"/>
+            <parameter name="profile" type="Map"/>
+            <parameter name="profileRows" type="List"/>
+            <parameter name="buyer" type="Map"/>
+            <parameter name="buyerRows" type="List"/>
+            <parameter name="category" type="Map"/>
+            <parameter name="supplierCheck" type="Map"/>
+            <parameter name="purchasingCapabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Suppliers.js"/>
+            <set field="found" from="ec.resource.script(module).execute('supplierContext', context)"/>
+            <set field="vendorPartyId" from="found.vendorPartyId"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizationName" from="found.organizationName"/>
+            <set field="supplier" from="found.supplier"/>
+            <set field="contactRows" from="found.contactRows"/>
+            <set field="addressRows" from="found.addressRows"/>
+            <set field="roleRows" from="found.roleRows"/>
+            <set field="profile" from="found.profile"/>
+            <set field="profileRows" from="found.profileRows"/>
+            <set field="buyer" from="found.buyer"/>
+            <set field="buyerRows" from="found.buyerRows"/>
+            <set field="category" from="found.category"/>
+            <set field="supplierCheck" from="found.supplierCheck"/>
+            <set field="purchasingCapabilities" from="found.purchasingCapabilities"/>
+        </actions>
+    </service>
+    <service verb="bulk" noun="SupplierChanges" allow-remote="false">
+        <description>The buyer (from a date) or the category of several suppliers, each in its own transaction through
+            mantle.party.SupplierServices.store#SupplierBuyer or set#SupplierCategory: a supplier out of the user's scope or
+            refused by Mantle is named in the results (REFUSED, with its reason) and the others are changed. Requires
+            SUPPLIER_PROFILE_EDIT (PERMISSION_DENIED); refuses an unknown change and an empty selection.</description>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="change" required="true"><description>buyer or category</description></parameter>
+            <parameter name="partyIds"><description>A list or a comma list of supplier ids</description></parameter>
+            <parameter name="buyerPartyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="partyClassificationId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="summary"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Suppliers.js"/>
+            <set field="changed" from="ec.resource.script(module).execute('bulkChange', context)"/>
+            <set field="results" from="changed.results"/>
+            <set field="summary" from="changed.summary"/>
+        </actions>
+    </service>
+</services>

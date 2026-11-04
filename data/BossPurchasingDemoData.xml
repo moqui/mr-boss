@@ -18,8 +18,9 @@ along with this software (see the LICENSE.md file). If not, see
         purchase order BOSS_WH_PO (Retail from Ziddleman, BossWarehouseDemoData.xml). Suppliers by owner (§4): Ziddleman and
         Common Fasteners are shared (_NA_), the others Retail's, and a supplier of Ziziwork Services that Retail's users never
         reach (isolation). The buyers' PartyRelationship rows and the demo users are in BossUsersDemoData.xml. Later phases
-        give the suppliers what their walks need, each in a block named for its phase: P2 the approval and block states of
-        the awaiting-approval and blocked suppliers (SupplierProfile), P7 the drop-ship supplier and its facility. -->
+        give the suppliers what their walks need, each in a block named for its phase: P2 Retail's buying policy, the supplier
+        categories and the approval and block states of the awaiting-approval and blocked suppliers (SupplierProfile), P7
+        the drop-ship supplier and its facility. -->
 
     <!-- P1: Ziddleman, which Mantle's demo leaves unowned (no organization filter passes it, F43), as a shared supplier, with
         an order email (EmailOrder, the address a purchase order is sent to, P3) -->
@@ -73,4 +74,46 @@ along with this software (see the LICENSE.md file). If not, see
             vendorPartyId="BOSS_PUR_SUP_SVC_ORG" customerPartyId="ORG_ZIZI_SERVICES" partTotal="40"/>
     <mantle.order.OrderItem orderId="BOSS_PUR_PO_SVC" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemExpense"
             itemDescription="Printer paper" quantity="4" unitAmount="10"/>
+
+    <!-- P2: Retail's buying policy (approval gate off, F34: the Accounting demo and OrderProcureToPayBasicFlow place and approve
+        Retail's purchase orders directly; supplier approval required, an unapproved supplier warned), the supplier
+        categories, the buying profiles (Ziddleman approved, Brightline approved in USD, Northwind awaiting approval,
+        Halvorsen blocked from Nov 1, 2026 with its reason) and each supplier's category. Demo.js of Accounting keeps its own
+        supplier's profile. -->
+    <mantle.order.purchase.PurchasePolicy organizationPartyId="ORG_ZIZI_RETAIL" fromDate="1265184000000" currencyUomId="USD"
+            facilityId="ZIRET_WH" incotermEnumId="TtFOB" rfqResponseDays="5" quoteExpiryWarnDays="7" reminderDays="3"
+            supplierApprovalRequired="Y" unapprovedSupplierEnumId="PusWarn" approvalGateEnabled="N" selfApprovalAllowed="N"
+            changeReason="Purchasing demo: Retail's buying policy"/>
+    <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_COMPONENTS" classificationTypeEnumId="PcltSupplierCategory"
+            description="Components"/>
+    <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_PACKAGING" classificationTypeEnumId="PcltSupplierCategory"
+            description="Packaging"/>
+    <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_METALS" classificationTypeEnumId="PcltSupplierCategory"
+            description="Raw metals"/>
+    <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_SERVICES" classificationTypeEnumId="PcltSupplierCategory"
+            description="Services"/>
+    <mantle.party.PartyClassificationAppl partyId="ZiddlemanInc" partyClassificationId="BOSS_PUR_CAT_COMPONENTS"
+            fromDate="1265184000000"/>
+    <mantle.party.PartyClassificationAppl partyId="BOSS_PUR_SUP_B" partyClassificationId="BOSS_PUR_CAT_COMPONENTS"
+            fromDate="1265184000000"/>
+    <mantle.party.PartyClassificationAppl partyId="BOSS_PUR_SUP_PENDING" partyClassificationId="BOSS_PUR_CAT_PACKAGING"
+            fromDate="1265184000000"/>
+    <mantle.party.PartyClassificationAppl partyId="BOSS_PUR_SUP_BLOCKED" partyClassificationId="BOSS_PUR_CAT_METALS"
+            fromDate="1265184000000"/>
+    <mantle.party.PartyClassificationAppl partyId="BOSS_PUR_SUP_SERVICE" partyClassificationId="BOSS_PUR_CAT_SERVICES"
+            fromDate="1265184000000"/>
+    <mantle.party.supplier.SupplierProfile supplierProfileId="BOSS_PUR_PROF_ZIDDLEMAN" organizationPartyId="ORG_ZIZI_RETAIL"
+            supplierPartyId="ZiddlemanInc" fromDate="1265184000000" currencyUomId="USD" incotermEnumId="TtFOB"
+            approvalStatusId="SupaApproved" selfBillingIndicator="N" changeReason="Purchasing demo: approved supplier"/>
+    <mantle.party.supplier.SupplierProfile supplierProfileId="BOSS_PUR_PROF_B" organizationPartyId="ORG_ZIZI_RETAIL"
+            supplierPartyId="BOSS_PUR_SUP_B" fromDate="1265184000000" currencyUomId="USD" incotermEnumId="TtEXW"
+            approvalStatusId="SupaApproved" selfBillingIndicator="N" changeReason="Purchasing demo: approved supplier"/>
+    <mantle.party.supplier.SupplierProfile supplierProfileId="BOSS_PUR_PROF_PENDING" organizationPartyId="ORG_ZIZI_RETAIL"
+            supplierPartyId="BOSS_PUR_SUP_PENDING" fromDate="1265184000000" currencyUomId="USD"
+            approvalStatusId="SupaPending" selfBillingIndicator="N" changeReason="Purchasing demo: new supplier"/>
+    <mantle.party.supplier.SupplierProfile supplierProfileId="BOSS_PUR_PROF_BLOCKED" organizationPartyId="ORG_ZIZI_RETAIL"
+            supplierPartyId="BOSS_PUR_SUP_BLOCKED" fromDate="1265184000000" currencyUomId="USD"
+            approvalStatusId="SupaApproved" purchaseBlockFromDate="2026-11-01 00:00:00"
+            purchaseBlockReason="Quality hold: failed incoming inspection" selfBillingIndicator="N"
+            changeReason="Purchasing demo: blocked supplier"/>
 </entity-facade-xml>

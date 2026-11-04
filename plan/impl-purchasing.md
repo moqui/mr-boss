@@ -252,7 +252,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 4 (§6 F1–F43) |
 | P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | built Nov 4, 2026 |
-| P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | — |
+| P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | built Nov 4, 2026 |
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | — |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
@@ -486,6 +486,100 @@ organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppli
   - a dated purchase block shows on Supplier360 and cancels no order;
   - PriceExplain explains ZiddlemanInc's tier for ORG_ZIZI_RETAIL, and a buyer without supplier-price read sees none;
   - an administrator starts a PurchasePolicy row from a date, and the earlier row stays with its history.
+
+**Built Nov 4 (P2).**
+- Mantle:
+  - `entity/AccountingPayableEntities.xml`: SupplierProfile's buying fields `currencyUomId`, `incotermEnumId` (a TermType
+    under TtInco), `approvalStatusId` (StatusType `SupplierApproval`: SupaPending, SupaApproved, SupaRejected,
+    SupaSuspended) and the dated purchase block `purchaseBlockFromDate`, `purchaseBlockThruDate`, `purchaseBlockReason`,
+    all audit-logged (F25).
+  - `entity/PurchasePolicyEntities.xml`: `mantle.order.purchase.PurchasePolicy`, dated by organization on
+    ProductionPolicy's pattern (empty takes the built-in default): the buying defaults (currency, purchase price list,
+    receiving facility, default buyer, payment term, Incoterm) and the controls (`rfqResponseDays` 7,
+    `quoteExpiryWarnDays` 7, `reminderDays` 3, `lockSentOrders` N, `supplierApprovalRequired` N,
+    `unapprovedSupplierEnumId` PusWarn/PusStop, `approvalGateEnabled` N, `selfApprovalAllowed` N); the
+    `PurchaseUnapprovedSupplier` enumeration and `PcltSupplierCategory` (F11).
+  - `service/mantle/order/PurchaseServices.xml` over `PurchasePolicy.js`: `get#PurchasePolicy` (the policy in effect for
+    an organization and date, with `policyFromDate`, the row a document keeps), `store#PurchasePolicy`
+    (PURCHASE_POLICY_EDIT; POLICY_CHANGED, POLICY_INVALID) and `check#SupplierUsable` (OK, WARN or STOP:
+    SUPPLIER_BLOCKED, SUPPLIER_SUSPENDED, SUPPLIER_UNAPPROVED). Reading takes PURCHASE_POLICY_EDIT,
+    PURCHASE_ORDER_EDIT, PURCHASE_APPROVE, PURCHASE_ORDER_APPROVE or SUPPLIER_PROFILE_EDIT in the user's organizations.
+    The rules of later phases (P3's `check#PurchaseApprovalRequired` SECA, the order and RFQ checks) read
+    `PurchasePolicy.js`'s `effective(organizationPartyId, at)` and `supplierUsable(organizationPartyId, supplierPartyId,
+    at)`, which check no permission.
+  - `service/mantle/party/SupplierServices.xml` over `SupplierProfile.js`: `store#SupplierProfile` now takes the buying
+    fields under SUPPLIER_PROFILE_EDIT beside the finance fields under SUPPLIER_TERMS_EDIT (an approval decision, a change
+    to Approved or Rejected, also PURCHASE_APPROVE), its codes and callers unchanged; `create#Supplier` (an organization or
+    person owned by the organization, in the Supplier role, with its email, phone and category, Pending where the policy
+    requires approval); `store#SupplierBuyer` (the dated PrtSupplier relationship from a Buyer of the organization, ending
+    the organization's buyer in effect, never another organization's); `set#SupplierCategory`.
+  - Spec `test/order/PurchasePolicy` (5 features).
+- BOSS:
+  - `ironstone.purchasing.SupplierServices` (`Suppliers.js`): `find#Suppliers`, `find#SupplierDuplicates`,
+    `get#SupplierContext` (Supplier360's Purchasing read) and `bulk#SupplierChanges` (buyer or category, a result per
+    supplier); `ironstone.purchasing.SettingsServices` (`Settings.js`): `get#PurchasingSettings` (the settings rows and
+    PolicyDependencies: Accounting's match and budget control and Warehouse's receiving read only, with their owners'
+    links), `store#RequestPurpose` and `store#SupplierCategory`.
+  - `Purchasing.js`: the supplier record's destination (Supplier360), a `product` kind (Product360), the capabilities
+    `payableRead`, `termsEdit`, `supplierPriceEdit` and `catalogRead`, the choices `buyers` and `supplierCategories`, the
+    palette's supplier item code and product finds, and the P2 link paths. `PaletteServices.get#RecordLink` opens a
+    product in Purchasing's Product360 for a Purchasing user who opens neither Products nor Warehouse.
+  - Products' `SharedContext.js` gets the Purchasing branch (crosscut §3.5, §3.21): the master read only, the tabs Summary,
+    Identifiers, Dimensions, Packaging, Suppliers (supplier-price readers), Stock, Documents and BOM (method readers), no
+    sales price. `PRODUCT_CATALOG_VIEW` to the buyer, planner, approver, reader and administrator groups (BossSetupData).
+  - Screens: `Purchasing/Suppliers.xml` (SupplierList, the shared SupplierPrices and PriceExplain as tabs, Supplier360
+    hidden), `Suppliers/SupplierList.xml` (find, New supplier and New individual supplier with the duplicate check first
+    and Create anyway, Pending approval and Blocked links, the bulk Assign buyer and Set category), `Purchasing/Products.xml`
+    with `Products/ProductFind.xml` and Product360, `Purchasing/Settings.xml` with `Settings/SettingsHome.xml`
+    (SettingsLinks, RequestPurposes, SupplierClassifications) and `Settings/PurchasePolicy.xml` (BuyingDefaults,
+    PurchaseControls, PolicyDependencies, the dated rows); `template/PurchasingParts.xml` (the choices transition).
+  - Shared screens, each change kept to its Purchasing branch: `Shared/Supplier360.xml` (the Purchasing read, the approval
+    chip and the supplier check under the title, a not-available state), `Supplier360/Buying.xml` (the buying profile with
+    the payment term and self-billing read only, the buyer and its history, the category, the profile's history) and
+    `Supplier360/Finance.xml` (Accounting's `get#SupplierFinance` for a finance reader, masked), the Conversation tab;
+    `Shared/SupplierPrices.xml` and `Shared/PriceExplain.xml` for a supplier-price reader only, PriceExplain in the
+    purchase direction asking for the supplier first; `Shared/Product360.xml`'s "Not for buying" reason from
+    `check#ProductUsable` (usage Purchase).
+  - Demo (`BossPurchasingDemoData.xml` P2 block): Retail's PurchasePolicy (gate off, supplier approval required, Warn),
+    four supplier categories, the profiles of Ziddleman and Brightline (Approved), Northwind (`BOSS_PUR_SUP_PENDING`,
+    Pending) and Halvorsen (`BOSS_PUR_SUP_BLOCKED`, blocked from Nov 1, 2026 for a quality hold), and their categories.
+  - Specs: `PurchasingAccess` gains one feature (the supplier scope of the list, Supplier360 and the bulk changes, the
+    settings' permissions, the product link; 11 features); `PurchasingSuppliers` (3: the list's profile columns and
+    finds, the duplicates in scope, Supplier360's one html render). Acceptance: `acceptance/Purchasing/PurchasingSuppliersWalk`
+    (the five usable-when items through the screens' transitions); `PurchasingSpecLib.routeFixtures` lists the P2 routes
+    and shared mounts, and AppStructure's placeholder floor is 60 (63 left).
+- Tests run: PurchasePolicy, AccountingPayables, WarehouseReceiving, OrderProcureToPayBasicFlow, CrmMiscServices,
+  OrderLifecycle, OrderBulk, PurchaseHoldPermission (Mantle, 72 features, all pass); PurchasingAccess,
+  PurchasingSuppliers, AccountingAccess, AccountingPayables, ManufacturingAccess, ManufacturingSubcontracting,
+  ProductsAccess, ProductsSharedContext, ProductsSuppliers, ProductsPriceLists, ProductsFinish, ProductsInventory,
+  WarehouseReceiving, WarehouseAccess (BOSS, 130 features, all pass); acceptance PurchasingSuppliersWalk (5),
+  PurchasingFoundationWalk (3) and AppStructure (18), all pass. `moqui lint --screens`: no idiom or hazard site in the
+  changed screens.
+- Decisions:
+  - Approved and Rejected are the purchase approver's decision (PURCHASE_APPROVE) in `store#SupplierProfile` until P4's
+    `decide#PurchaseApproval` routes it; a buyer puts a supplier to Pending or Suspended. Giving the status already in
+    effect is no decision.
+  - `check#SupplierUsable`: a purchase block and Suspended always stop; Pending and Rejected, and no status where the
+    policy requires approval, get the policy's Warn or Stop; a supplier with no profile and no approval required is OK, so
+    nothing changes for Mantle's callers. It refuses nothing itself; P3's order and P11's RFQ services stop on STOP.
+  - The supplier's buyer is the organization's: `store#SupplierBuyer` ends only the relationships from people of the
+    organization (agents, employees, members), so a shared supplier keeps each organization's buyer.
+  - The supplier list, Supplier360 and the duplicate search read through `ironstone.purchasing` (the app's reads, §2);
+    the writes are the Mantle services, called by the screens after `check#Record` with the profileEdit capability.
+  - Supplier360's Purchasing tabs (Buying profile, Payment details) come after the existing ones (menu index 6 and 7), so
+    the other apps' tab order is unchanged.
+- Findings (provisional):
+  - **F-P2-1** PriceExplain's purchase explanation needs the external vendor: `PriceResolver.context` infers the sales
+    direction with no vendor and refuses a purchase direction ("Price direction does not match the transaction parties").
+    Purchasing's PriceExplain asks for the supplier first.
+  - **F-P2-2** A Purchasing user held no catalog read, so Products' shared Product360, SupplierPrices and PriceExplain
+    refused them; P2 grants PRODUCT_CATALOG_VIEW to the list-reading groups (as Manufacturing P2 did to its groups).
+  - **F-P2-3** The design's PurchaseControls also name a substitution rule and a recurring-release rule; no phase before
+    P9 (substitution on a revision) and P13 (agreement releases) reads them, so PurchasePolicy leaves them to those
+    phases. The PurchaseSupplierApproval notification of a new Pending supplier is P4's (with its topic).
+  - **F-P2-4** A shared tab whose screen has a `condition` (Supplier360's Receiving, Subcontract orders, Payment details)
+    is still listed in the tab menu data of every app; the condition hides only its content. Pre-existing in Warehouse
+    and Manufacturing; left as is.
 
 ### P3 — Purchase orders
 

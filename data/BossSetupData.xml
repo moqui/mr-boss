@@ -1460,4 +1460,16 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_POLICY_EDIT"
             fromDate="0"/>
+    <!-- Purchasing P2: the catalog read of Product360, SupplierPrices and PriceExplain under Purchasing (crosscut §3.5, §3.21)
+        for the groups of the buying lists; the master stays read only there (Products' SharedContext.js Purchasing branch) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
 </entity-facade-xml>

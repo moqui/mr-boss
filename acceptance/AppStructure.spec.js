@@ -471,8 +471,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders, P7 Quality, P14 Subcontracting, P10 ShopFloor, P16 Reports; Purchasing P1 replaces Home and adds Agreements, Receiving, Bills, Approvals and Products, 66, which its phases replace)
-        placeholders.length >= 62
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders, P7 Quality, P14 Subcontracting, P10 ShopFloor, P16 Reports; Purchasing P1 replaces Home and adds Agreements, Receiving, Bills, Approvals and Products, 66, which its phases replace; Purchasing P2 replaces Suppliers, Settings and Products, 63)
+        placeholders.length >= 60
         failures.join("\n") == ""
     },
 })

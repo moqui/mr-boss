@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing settings (design-purchasing §12 Settings; style-guide §3 settings landing; impl-purchasing P2): SettingsLinks
+    (the buying policy in effect, the request purposes and the supplier categories; the policies Purchasing depends on are
+    PurchasePolicy's), RequestPurposes (RequestCategory, editable rows: ironstone.purchasing.SettingsServices.
+    store#RequestPurpose) and SupplierClassifications (PartyClassification of PcltSupplierCategory, editable rows:
+    store#SupplierCategory), all read by get#PurchasingSettings. Writes need PURCHASE_POLICY_EDIT. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="storePurpose">
+        <actions>
+            <service-call name="ironstone.purchasing.SettingsServices.store#RequestPurpose"
+                    in-map="{requestCategoryId:requestCategoryId, description:description, parentCategoryId:parentCategoryId,
+                        responsiblePartyId:responsiblePartyId}"/>
+            <message type="success">Request purpose saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCategory">
+        <actions>
+            <service-call name="ironstone.purchasing.SettingsServices.store#SupplierCategory"
+                    in-map="{partyClassificationId:partyClassificationId, description:description,
+                        parentClassificationId:parentClassificationId, standardCode:standardCode}"/>
+            <message type="success">Supplier category saved</message>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.SettingsServices.get#PurchasingSettings" out-map="settings"
+                transaction="force-new" ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+        <set field="settingsFound" from="!!settings?.organizationPartyId"/>
+        <set field="settingsRows" from="settings?.settingsRows || []"/>
+        <set field="purposeRows" from="settings?.purposeRows || []"/>
+        <set field="categoryRows" from="settings?.categoryRows || []"/>
+        <set field="canEdit" from="!!settings?.canEdit"/>
+        <set field="purposeOptions" from="purposeRows.map((row) =&gt; ({value:row.requestCategoryId, label:row.description}))"/>
+        <set field="categoryOptions" from="categoryRows.map((row) =&gt; ({value:row.partyClassificationId, label:row.description}))"/>
+    </actions>
+    <widgets>
+        <label text="Purchasing settings are not available to you." type="p" condition="!settingsFound"/>
+        <section name="Settings" condition="settingsFound">
+            <widgets>
+                <label text="Purchasing settings of ${settings.organizationName}" type="h5"/>
+                <container-box>
+                    <box-header title="Settings"/>
+                    <box-body-nopad>
+                        <form-list name="SettingsLinks" list="settingsRows" skip-form="true" paginate="false">
+                            <field name="area">
+                                <default-field title="Area">
+                                    <link url="${url}" url-type="plain" text="${area}" link-type="anchor" condition="url"/>
+                                    <display condition="!url"/>
+                                </default-field>
+                            </field>
+                            <field name="description">
+                                <default-field title="What it sets">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="effectiveText">
+                                <default-field title="In effect">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="area"/></column>
+                                <column><field-ref name="effectiveText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Request purposes"/>
+                    <box-toolbar>
+                        <container-dialog id="NewPurposeDialog" button-text="New purpose" icon="sym_o_add" width="640"
+                                title="New request purpose" condition="canEdit">
+                            <form-single name="NewPurpose" transition="storePurpose">
+                                <field name="description">
+                                    <default-field title="Purpose">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="parentCategoryId">
+                                    <default-field title="Under">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="purposeOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="responsiblePartyId">
+                                    <default-field title="Handled by">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'buyers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save purpose">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="RequestPurposes" list="purposeRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Purpose">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="parentText">
+                                <default-field title="Under">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="responsibleText">
+                                <default-field title="Handled by">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="edit">
+                                <default-field title="">
+                                    <container-dialog id="EditPurpose_${requestCategoryId}" button-text="Edit" icon="sym_o_edit"
+                                            width="640" title="Edit ${description}" condition="canEdit">
+                                        <form-single name="EditPurpose" transition="storePurpose"
+                                                map="{requestCategoryId:requestCategoryId, description:description,
+                                                    parentCategoryId:parentCategoryId, responsiblePartyId:responsiblePartyId}">
+                                            <field name="requestCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="description">
+                                                <default-field title="Purpose">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="parentCategoryId">
+                                                <default-field title="Under">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="purposeOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="responsiblePartyId">
+                                                <default-field title="Handled by">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'buyers', selected:responsiblePartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Save purpose">
+                                                    <submit/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="parentText"/></column>
+                                <column><field-ref name="responsibleText"/><field-ref name="edit"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No request purpose yet." type="p" style="q-pa-md m-muted" condition="!purposeRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Supplier categories"/>
+                    <box-toolbar>
+                        <container-dialog id="NewCategoryDialog" button-text="New category" icon="sym_o_add" width="640"
+                                title="New supplier category" condition="canEdit">
+                            <form-single name="NewCategory" transition="storeCategory">
+                                <field name="description">
+                                    <default-field title="Category">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="parentClassificationId">
+                                    <default-field title="Under">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="categoryOptions" key="${value}" text="${label}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="standardCode">
+                                    <default-field title="Standard code" tooltip="A code of an industry classification, if any">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save category">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierClassifications" list="categoryRows" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Category">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="parentText">
+                                <default-field title="Under">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="standardCode">
+                                <default-field title="Standard code">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="edit">
+                                <default-field title="">
+                                    <container-dialog id="EditCategory_${partyClassificationId}" button-text="Edit"
+                                            icon="sym_o_edit" width="640" title="Edit ${description}" condition="canEdit">
+                                        <form-single name="EditCategory" transition="storeCategory"
+                                                map="{partyClassificationId:partyClassificationId, description:description,
+                                                    parentClassificationId:parentClassificationId, standardCode:standardCode}">
+                                            <field name="partyClassificationId"><default-field><hidden/></default-field></field>
+                                            <field name="description">
+                                                <default-field title="Category">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="parentClassificationId">
+                                                <default-field title="Under">
+                                                    <drop-down allow-empty="true">
+                                                        <list-options list="categoryOptions" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="standardCode">
+                                                <default-field title="Standard code">
+                                                    <text-line/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Save category">
+                                                    <submit/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="parentText"/></column>
+                                <column><field-ref name="standardCode"/><field-ref name="edit"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No supplier category yet. Add one with New category." type="p" style="q-pa-md m-muted"
+                                condition="!categoryRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

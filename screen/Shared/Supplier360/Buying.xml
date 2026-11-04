@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Buying profile tab, in the Purchasing context (crosscut §3.3 Purchasing row, SupplierProfile form;
+    impl-purchasing P2): the buying organization's profile in effect (approval status, currency, Incoterm, a dated purchase
+    block with its reason, and Accounting's payment term and self-billing flag read only), its rows newest first (the
+    profile's history), the buyer as a dated Buyer-to-Supplier relationship with the buyers before, and the category. Read by
+    Supplier360's always-actions (ironstone.purchasing.SupplierServices.get#SupplierContext); the changes are
+    mantle.party.SupplierServices' store#SupplierProfile, store#SupplierBuyer and set#SupplierCategory
+    (SUPPLIER_PROFILE_EDIT, an approval decision PURCHASE_APPROVE), after the supplier's check#Record. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Buying profile" default-menu-index="6">
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="storeProfile">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'profileEdit'}"/>
+            <service-call name="mantle.party.SupplierServices.store#SupplierProfile" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId, currencyUomId:currencyUomId,
+                        incotermEnumId:incotermEnumId, approvalStatusId:approvalStatusId,
+                        purchaseBlockFromDate:purchaseBlockFromDate, purchaseBlockThruDate:purchaseBlockThruDate,
+                        purchaseBlockReason:purchaseBlockReason, fromDate:effectiveFromDate || null, changeReason:changeReason}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(stored?.changed ? 'Buying profile saved'
+                : 'Nothing changed', stored?.changed ? 'success' : 'info')</script>
+        </actions>
+        <default-response url=".">
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeBuyer">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'profileEdit'}"/>
+            <service-call name="mantle.party.SupplierServices.store#SupplierBuyer"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId, buyerPartyId:buyerPartyId,
+                        fromDate:fromDate || null}"/>
+            <message type="success">Buyer saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCategory">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'profileEdit'}"/>
+            <service-call name="mantle.party.SupplierServices.set#SupplierCategory"
+                    in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId,
+                        partyClassificationId:partyClassificationId}"/>
+            <message type="success">Category saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <set field="canEdit" from="!!purchasingCapabilities?.profileEdit"/>
+        <!-- a buyer puts a supplier through approval or suspends it; Approved and Rejected are the approver's decision -->
+        <set field="statusChoices" from="purchasingCapabilities?.approve ? ['SupaPending', 'SupaApproved', 'SupaRejected',
+                'SupaSuspended'] : ['SupaPending', 'SupaSuspended'].concat(profile.approvalStatusId &amp;&amp;
+                !['SupaPending', 'SupaSuspended'].includes(profile.approvalStatusId) ? [profile.approvalStatusId] : [])"/>
+        <set field="profileForm" from="{currencyUomId:profile.currencyUomId, incotermEnumId:profile.incotermEnumId,
+                approvalStatusId:profile.approvalStatusId, purchaseBlockFromDate:profile.purchaseBlockFromDate,
+                purchaseBlockThruDate:profile.purchaseBlockThruDate, purchaseBlockReason:profile.purchaseBlockReason,
+                vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId}"/>
+        <set field="facts" from="[{label:'Approval', value:profile.approvalText}, {label:'Currency', value:profile.currencyUomId || 'Not set'},
+                {label:'Incoterm', value:profile.incotermText || 'Not set'}, {label:'Purchase block', value:profile.blockText || 'None'},
+                {label:'Payment term', value:(profile.termText || 'Not set') + ' (set by finance)'},
+                {label:'Self-billing', value:profile.selfBillingText + ' (set by finance)'}]"/>
+        <set field="buyerText" from="buyer ? buyer.buyerName + ' since ' + buyer.fromDateText : 'No buyer is assigned.'"/>
+        <set field="categoryText" from="category?.text || 'No category.'"/>
+    </actions>
+    <widgets>
+        <container-row>
+            <row-col lg="6">
+                <container-box>
+                    <box-header title="Buying profile of ${organizationName}"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeProfileDialog" button-text="Change profile" icon="sym_o_edit" width="760"
+                                title="Change the buying profile of ${supplier.supplierName}" condition="canEdit">
+                            <form-single name="SupplierProfile" transition="storeProfile" map="profileForm">
+                                <field name="vendorPartyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                <entity-find entity-name="moqui.basic.Uom">
+                                                    <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="incotermEnumId">
+                                    <default-field title="Incoterm">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="parentEnumId" value="TtInco"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approvalStatusId">
+                                    <default-field title="Approval" tooltip="Approved and Rejected are the purchase approver's decision">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${statusId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.StatusItem">
+                                                    <econdition field-name="statusId" operator="in" from="statusChoices"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="purchaseBlockFromDate">
+                                    <default-field title="Block purchasing from" tooltip="No new RFQ or order while blocked; it cancels no order">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="purchaseBlockThruDate">
+                                    <default-field title="Block until" tooltip="Empty blocks until removed">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="purchaseBlockReason">
+                                    <default-field title="Block reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="Effective from" tooltip="Leave empty to start now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason">
+                                    <default-field title="Reason">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save profile">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="currencyUomId"/>
+                                        <field-ref name="incotermEnumId"/>
+                                    </field-row>
+                                    <field-ref name="approvalStatusId"/>
+                                    <field-row>
+                                        <field-ref name="purchaseBlockFromDate"/>
+                                        <field-ref name="purchaseBlockThruDate"/>
+                                    </field-row>
+                                    <field-ref name="purchaseBlockReason"/>
+                                    <field-row>
+                                        <field-ref name="effectiveFromDate"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ProfileFacts" list="facts" skip-form="true" skip-header="true" paginate="false">
+                            <field name="label">
+                                <default-field>
+                                    <display style="m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="value">
+                                <default-field>
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/></column>
+                                <column><field-ref name="value"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </row-col>
+            <row-col lg="6">
+                <container-box>
+                    <box-header title="Buyer"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeBuyerDialog" button-text="Change buyer" icon="sym_o_person" width="560"
+                                title="The buyer of ${supplier.supplierName}" condition="canEdit">
+                            <form-single name="SupplierBuyer" transition="storeBuyer"
+                                    map="{vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId, buyerPartyId:buyer?.buyerPartyId}">
+                                <field name="vendorPartyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="buyerPartyId">
+                                    <default-field title="Buyer" tooltip="Empty ends the current buyer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'buyers', selected:buyerPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="Leave empty to start now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save buyer">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${buyerText}" type="p"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="BuyerHistory" list="buyerRows" skip-form="true" paginate="false">
+                            <field name="buyerName">
+                                <default-field title="Buyer">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruDateText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="buyerName"/></column>
+                                <column><field-ref name="fromDateText"/><field-ref name="thruDateText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Category"/>
+                    <box-toolbar>
+                        <container-dialog id="ChangeCategoryDialog" button-text="Change category" icon="sym_o_category"
+                                width="560" title="The category of ${supplier.supplierName}" condition="canEdit">
+                            <form-single name="SupplierCategory" transition="storeCategory"
+                                    map="{vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId,
+                                        partyClassificationId:category?.partyClassificationId}">
+                                <field name="vendorPartyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="partyClassificationId">
+                                    <default-field title="Category" tooltip="Empty removes the category">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'supplierCategories', selected:partyClassificationId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Save category">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${categoryText}" type="p"/>
+                    </box-body>
+                </container-box>
+            </row-col>
+        </container-row>
+        <container-box>
+            <box-header title="Profile history"/>
+            <box-body-nopad>
+                <form-list name="ProfileHistory" list="profileRows" skip-form="true" paginate="false">
+                    <field name="fromDateText">
+                        <default-field title="From">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="thruDateText">
+                        <default-field title="Through">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="approvalText">
+                        <default-field title="Approval">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="incotermText">
+                        <default-field title="Incoterm">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="blockText">
+                        <default-field title="Purchase block">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="termText">
+                        <default-field title="Payment term">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="changeReason">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="changedByText">
+                        <default-field title="Changed by">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="fromDateText"/><field-ref name="changeReason"/></column>
+                        <column><field-ref name="approvalText"/><field-ref name="blockText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No buying profile is kept for this supplier yet; it is bought from on the organization's defaults."
+                        type="p" style="q-pa-md m-muted" condition="!profileRows?.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>
