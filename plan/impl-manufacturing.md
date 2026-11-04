@@ -2422,9 +2422,9 @@ steps 20–23.
 - Specs: Mantle `test/ledger/ProductionCostClose.spec.js` (10 features, about 3 s of features: policy store and
   refusals with its audit row; the by-product at its share; a completed run with material, labor, P10 machine runtime
   through its MachineRuntimeEvent source and outside accrual previewing absorption 15/20/30, overhead 20, split 87.5/17.5
-  and variance 46.67; closed period refused and the run not closable outside the close; estimator and GL poster refusals,
+  and variance 45 (after the review); closed period refused and the run not closable outside the close; estimator and GL poster refusals,
   another organization; one post closing the run, the retry, the notices read; the adjustment; unapproved time and unvalued
-  machine runtime blocking; the F115 reversal; the close-check rows); ProductionQuantities' by-product now received at 4.165;
+  machine runtime blocking; the F115 reversal; the close-check rows); ProductionQuantities' by-product now received at 5 (after the review);
   ProductionSubcontract's variance counts scoped to its organization. BOSS `test/Accounting/AccountingProductionCostClose`
   (3: queue, Home and checklist; preview and post through the Accounting screen closing the run, GL poster without post;
   CostingPolicies and ProductionSettings' read only policy), ManufacturingAccess P15 (2), AccountingShell (approver menu),
@@ -2451,6 +2451,18 @@ steps 20–23.
     rows (PccOverhead) and Accounting's fallback policy rate, so the cost group needs no new grant.
   - CostingPolicies stays the finance administrator's (Accounting Settings); Manufacturing reads the policy in effect
     without rates on ProductionSettings.
+- Review (Nov 4): checked the GL entries (each absorption, overhead, scrap and residual line is its own balanced pair; the
+  per-line variances sum to the residual, so the run's WIP nets to zero, now asserted by a preview after the close), the
+  co-product split booked as variance by line against design ByProducts' "never retroactive edits of receipts" (kept), the
+  §4 default allocation (machine hours else labor hours per operation: setup labor on an operation with machine runtime
+  takes no overhead unless the runtime covers it, left as built), the policy's effective dating and the kept row, the
+  preview's blocks, the single transaction through `transition#ProductionOrder`, the retry and the closed period, the
+  preview's PRODUCTION_COST_POST (design ProductionCostClose: "GL/finance approvers preview, approve and post"; the
+  estimator holds neither) and BOSS_ACCOUNTING_APPROVE on Inventory (it holds ACCOUNTING_VIEW; revaluation and cost repair
+  still need glPost and ACCOUNTING_ADMIN in Mantle, so it adds only reads). Fixed F-P15-6 to F-P15-8. Not covered by a spec:
+  PcmFixedShare and PcmSalesValue in a close. Specs rerun: Mantle ProductionCostClose, ProductionQuantities, ProductionCosts,
+  WarehouseProduction (31, pass); BOSS AccountingProductionCostClose, ManufacturingAccess (95, pass); walk
+  ManufacturingCostCloseWalk (4, pass); lint shows only anchor rows for the screen.
 - Deferred: CostingPolicies' LaborCostingRates form (People's get#CostingRate; P10 values labor with its own rate rows);
   posted allocations' reversal actions; a demo run awaiting the close (the walk reads the released Warehouse demo run).
 - Findings (provisional):
@@ -2462,6 +2474,18 @@ steps 20–23.
     BOSS spec makes Retail finance users of its own, and the demo adds `manufacturing.costclose` for the Manufacturing mount.
   - **F-P15-4** A Mantle spec that counts every event of a type (ProductionSubcontract's variances) breaks when another
     spec of the run writes one; scoped to its organization.
+  - **F-P15-6** (review) The by-product was received at its share of the primary's standard × target (2/12 of 50 = 4.165 a
+    unit), but Products' rollup already nets the primary's standard of the by-products' shares (Costs.js scales its lines by
+    the main share) and the primary is received at that standard, so receipts relieved more than the estimate and a
+    quantity-method by-product unit cost less than a primary unit. `byproductCost` now shares the run's whole estimate (the
+    primary's target at its standard over the primary's weight): 5 a unit, as the primary; P7's AllocationReview estimate
+    (`allocationEstimate`) shows the same whole (60, not 50).
+  - **F-P15-7** (review) PcmFixedShare gave the primary `100 −` the others' shares, but a BOM line's `allocationShare` is a
+    fraction of one (Boms.js, Costs.js), so a 0.2 by-product took 0.2 % of the cost; the primary now takes `1 −` the others.
+  - **F-P15-8** (review) An adjustment after the close defaulted to the review's proposed accounting date (the close's,
+    likely a closed period by then), and the screen hid the date after the close; an adjustment is now dated today unless
+    given, and ProductionCostClose offers the date in adjustment mode too. The overhead rate lookup takes only approved
+    WorkCenterRate rows, as P10's machine rate does (a row with no state was taken as approved).
   - **F-P15-5** For the merge: ProductionOrders.js (close action), ProductionCosts.js (the source signature now
     `(id, removed, revision)`), Production.js (`outputPlan`), BossAccountingSetupData (Inventory authz, artifact group,
     topic link), BossManufacturingDemoData and BossUsersDemoData (appended), ManufacturingAccess and ManufacturingSpecLib

@@ -1710,7 +1710,9 @@ event is absorbed as it is. Overhead per work-center hour is on the hours of eac
 labor events, at the center's approved `WorkCenterRate` of `PccOverhead` on the event's date, else the policy's rate. The
 co-product reallocation is shown per output line (its share of the run's cost against what its receipts relieved) and
 posted with the residual as variance by line: receipts and stock are never revalued (ByProducts). A by-product is received
-at its share of the frozen estimate under the policy in effect, and refused without one (`BYPRODUCT_NOT_COSTED`). The
+at its share of the run's frozen estimate under the policy in effect (the primary's standard is already its own share, so
+the whole is the primary's target at its standard over the primary's weight), and refused without one
+(`BYPRODUCT_NOT_COSTED`). The
 preview takes `ACCOUNTING_GL_POST` or `PRODUCTION_COST_POST` (the approvers who post see what they post); a requested review
 can be returned to production (`return#CostReview`, PcrReturned) and a close sets PcrClosed. A subcontract bill variance whose
 match was unapplied is reversed at the close (its next revision, impl-manufacturing F115). The queue is

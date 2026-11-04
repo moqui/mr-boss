@@ -268,7 +268,8 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                 </container>
 
-                <section name="DateChoice" condition="canPreview &amp;&amp; !closeInfo.closed">
+                <!-- an adjustment after the close is dated too (today by default, an open period) -->
+                <section name="DateChoice" condition="canPreview">
                     <widgets>
                         <form-single name="CostCloseScope" transition="." map="context">
                             <field name="workEffortId">
@@ -277,7 +278,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="accountingDate">
-                                <default-field title="Accounting date" tooltip="The review's proposed date when empty">
+                                <default-field title="Accounting date"
+                                        tooltip="The review's proposed date when empty; today for an adjustment after the close">
                                     <date-time type="date"/>
                                 </default-field>
                             </field>
