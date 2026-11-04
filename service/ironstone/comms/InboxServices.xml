@@ -761,7 +761,8 @@ along with this software (see the LICENSE.md file). If not, see
             them (mantle.party.CommunicationServices.find#InternalThreads): isRead (every message read), isFlagged (any
             flagged; for a flag the caller names the message it flags), archived (every message archived), snoozedThruDate
             (millis or null: the latest snooze still to come of the messages not archived), labelIds (the user's labels of
-            any message, only those in onlyLabelIds when given) and latestMessageId (the newest message the user sees).
+            any message, only those in onlyLabelIds when given) and latestMessageId (the newest of the messages checked: the
+            thread's the user sees, or the message). A snooze that has ended is none, on either side.
             conflict is true when one differs (differentList names them), and current has the state now. Other names in
             seen are not compared. A message the user does not see answers found false, with no error and no conflict.</description>
         <in-parameters>
@@ -814,16 +815,18 @@ along with this software (see the LICENSE.md file). If not, see
                     : delivery.length > 0 && delivery.every((row) => row.archivedDate != null),
                 snoozedThruDate: snoozes.length ? Math.max(...snoozes) : null,
                 labelIds: Array.from(labels).sort(),
-                latestMessageId: all[all.length - 1].communicationEventId,
+                latestMessageId: messages[messages.length - 1].communicationEventId,
                 messageCount: messages.length}
             const wanted = seen || {}
             const only = onlyLabelIds && Array.from(onlyLabelIds).length ? new Set(Array.from(onlyLabelIds).map(String)) : null
             const labelView = (list) => JSON.stringify(Array.from(list || []).map(String).filter((id) => !only || only.has(id)).sort())
+            // a snooze that has run out is no snooze, as the Inbox shows it: one the client saw that has ended since is not a change
+            const snoozeOf = (value) => value == null || value === '' || Number(value) <= nowMillis ? null : Number(value)
             const differs = {
                 isRead: () => truth(wanted.isRead) !== current.isRead,
                 isFlagged: () => truth(wanted.isFlagged) !== current.isFlagged,
                 archived: () => truth(wanted.archived) !== current.archived,
-                snoozedThruDate: () => (wanted.snoozedThruDate == null || wanted.snoozedThruDate === '' ? null : Number(wanted.snoozedThruDate)) !== current.snoozedThruDate,
+                snoozedThruDate: () => snoozeOf(wanted.snoozedThruDate) !== current.snoozedThruDate,
                 labelIds: () => labelView(wanted.labelIds) !== labelView(current.labelIds),
                 latestMessageId: () => wanted.latestMessageId != null && String(wanted.latestMessageId) !== String(current.latestMessageId)
             }

@@ -309,8 +309,18 @@ feature("an internal send queued offline goes once by its clientRef: a retry ans
         const failed = post("send", { fromValue: "internal", toJson: "[]", subject: failedSubject, body: "<p>x</p>", clientRef: failedRef })
         const keptAfterFailure = list("moqui.basic.client.ClientRequestRef", { clientRef: failedRef })
         const fixed = post("send", { fromValue: "internal", toJson: chips(["party:ORG_ZIZI_JD"]), subject: failedSubject, body: "<p>x</p>", clientRef: failedRef })
+        // Undo, then the same message sent again by its clientRef: it goes again, and a retry of that answers the new messages
+        const undoRef = ref + "-undo"
+        const undoSubject = "Offline undo " + ref
+        const undoRequest = { fromValue: "internal", toJson: chips(["party:ORG_ZIZI_JD"]), subject: undoSubject, body: "<p>x</p>", clientRef: undoRef }
+        const beforeUndo = post("send", undoRequest)
+        const undone = post("cancelSend", { communicationEventIdsJson: JSON.stringify(beforeUndo.json.communicationEventIdList) })
+        const afterUndo = post("send", undoRequest)
+        const afterUndoRetry = post("send", undoRequest)
+        const undoLive = list("mantle.party.communication.CommunicationEvent", { fromPartyId: "EX_JOHN_DOE", subject: undoSubject })
+                .filter((event) => event.statusId != "CeCancelled")
         const features = sys(() => call("ironstone.comms.InboxServices.get#InboxSource", { operation: "features" }))
-        return { first, retry, made, failed, keptAfterFailure, fixed, features, failedMade: list("mantle.party.communication.CommunicationEvent", { fromPartyId: "EX_JOHN_DOE", subject: failedSubject }) }
+        return { first, retry, made, failed, keptAfterFailure, fixed, features, beforeUndo, undone, afterUndo, afterUndoRetry, undoLive, failedMade: list("mantle.party.communication.CommunicationEvent", { fromPartyId: "EX_JOHN_DOE", subject: failedSubject }) }
     },
     then(v) {
         v.first.status == 200
@@ -325,6 +335,14 @@ feature("an internal send queued offline goes once by its clientRef: a retry ans
         v.keptAfterFailure.length == 0
         v.fixed.json.duplicate == false
         v.failedMade.length == 1
+        v.undone.json.statusId == "CeCancelled"
+        v.afterUndo.json.duplicate == false
+        v.afterUndo.json.sent == true
+        v.afterUndo.json.communicationEventIdList != v.beforeUndo.json.communicationEventIdList
+        v.afterUndoRetry.json.duplicate == true
+        v.afterUndoRetry.json.communicationEventIdList == v.afterUndo.json.communicationEventIdList
+        v.afterUndoRetry.json.statusId != "CeCancelled"
+        v.undoLive.length == 1
         // what IronStone tells a client it may queue
         v.features.handled == true
         v.features.result.internalSendRef == true
@@ -333,19 +351,16 @@ feature("an internal send queued offline goes once by its clientRef: a retry ans
 
 feature("a draft saved elsewhere since the client's copy is a conflict: the save and the send keep the server's, and a save retried by its saveRef is not", {
     when() {
-        const wait = () => { const start = Date.now(); while (Date.now() - start < 5) {} }
         const ref = "draft-conflict-" + Date.now()
         const draft = { fromValue: identityValue, toJson: chips(["ada@math.example"]), subject: "Offline draft", body: "<p>One</p>", clientRef: ref }
         const first = post("saveDraft", Object.assign({ saveRef: ref + "-1" }, draft))
         const opened = get("composeData", { emailMessageId: first.json.emailMessageId })
-        wait()
         // another device saves it
         const elsewhere = post("saveDraft", { emailMessageId: first.json.emailMessageId, fromValue: identityValue, toJson: chips(["ada@math.example"]),
             subject: "Saved elsewhere", body: "<p>Two</p>", baseStamp: String(first.json.draftStamp), saveRef: ref + "-2" })
-        // the same save sent again after a lost answer: its saveRef is the draft's last, so no conflict with itself
+        // that save sent again after a lost answer, from the old stamp and not as stored: its saveRef is the draft's last, so no conflict with itself
         const resent = post("saveDraft", { emailMessageId: first.json.emailMessageId, fromValue: identityValue, toJson: chips(["ada@math.example"]),
-            subject: "Saved elsewhere", body: "<p>Two</p>", baseStamp: String(first.json.draftStamp), saveRef: ref + "-2" })
-        wait()
+            subject: "Saved elsewhere", body: "<p>Two, again</p>", baseStamp: String(first.json.draftStamp), saveRef: ref + "-2" })
         // the offline copy, edited from the first stamp
         const stale = post("saveDraft", Object.assign({}, draft, { emailMessageId: first.json.emailMessageId, subject: "Offline edit", baseStamp: String(first.json.draftStamp),
             saveRef: ref + "-3" }))
@@ -360,7 +375,8 @@ feature("a draft saved elsewhere since the client's copy is a conflict: the save
         v.first.json.conflict == false
         v.opened.json.compose.draftStamp == v.first.json.draftStamp
         v.elsewhere.json.conflict == false
-        v.elsewhere.json.draftStamp >= v.first.json.draftStamp
+        // stamps that did not move would let a stale copy through
+        v.elsewhere.json.draftStamp > v.first.json.draftStamp
         v.resent.json.conflict == false
         v.stale.status == 200
         v.stale.json.conflict == true
@@ -370,6 +386,7 @@ feature("a draft saved elsewhere since the client's copy is a conflict: the save
         v.staleSend.json.compose.subject == "Saved elsewhere"
         v.row.statusId == "ES_DRAFT"
         v.row.subject == "Saved elsewhere"
+        v.row.body.includes("Two, again")
         v.captured == null
     },
 })

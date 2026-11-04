@@ -1061,7 +1061,9 @@ along with this software (see the LICENSE.md file). If not, see
             draft saved elsewhere since the client's copy is not sent (conflict true, with compose, the server's draft).
             clientRef (internal) makes an internal send once too (ClientSyncServices.claim#ClientRequest, keyed on the send,
             as one send makes several CommunicationEvents): a retry answers the first send's communicationEventIdList with
-            duplicate true and sends nothing. A send that fails keeps no reference, so a retry with it sends.
+            duplicate true and sends nothing, with the messages' status now. A send that fails keeps no reference, and one
+            whose messages were all taken back since (cancel#ComposeSend) sends again, so a retry or a resend after Undo
+            with the same clientRef sends.
         </description>
         <in-parameters>
             <parameter name="fromValue" required="true"/>
@@ -1165,13 +1167,24 @@ along with this software (see the LICENSE.md file). If not, see
                     const claim = ec.service.sync().name('org.moqui.impl.ClientSyncServices.claim#ClientRequest').parameters({clientRef: ref, serviceName: SEND_REF}).call()
                     if (ec.message.hasError()) return
                     if (claim.duplicate) {
-                        const kept = claim.result || {}
-                        communicationEventIdList = Array.from(kept.communicationEventIdList || [])
-                        sent = kept.sent === true
-                        statusId = kept.statusId || 'CeReceived'
-                        message = kept.message || L('Sent')
-                        duplicate = true
-                        return
+                        // the ref's row locked, and its answer read again under the lock, so an overlapping resend sees this one's
+                        const row = ec.entity.find('moqui.basic.client.ClientRequestRef').condition({userId: ec.user.userId, serviceName: SEND_REF, clientRef: ref})
+                                .forUpdate(true).disableAuthz().one()
+                        let kept = claim.result || {}
+                        try { kept = row?.resultJson ? JSON.parse(row.resultJson) : kept } catch (err) { kept = claim.result || {} }
+                        const keptIds = Array.from(kept.communicationEventIdList || []).map(String)
+                        const live = keptIds.length ? Array.from(ec.entity.find('mantle.party.communication.CommunicationEvent').condition('communicationEventId', 'in', keptIds)
+                                .condition('statusId', 'not-equals', 'CeCancelled').selectField('communicationEventId').selectField('statusId').disableAuthz().list()) : []
+                        if (live.length) {
+                            // the first send's messages, as they are now
+                            communicationEventIdList = keptIds
+                            sent = true
+                            statusId = live[0].statusId || 'CeReceived'
+                            message = L('Sent')
+                            duplicate = true
+                            return
+                        }
+                        // every message of the first send was taken back (Undo) or is gone: this send goes, and its answer replaces the ref's
                     }
                 }
                 const resolve = (json) => {
