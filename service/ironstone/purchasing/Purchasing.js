@@ -56,15 +56,19 @@ const areas = {
 // The user's authorizations on a Purchasing screen (the root, or an area under it), read directly so disabled or inherited
 // artifact authorization cannot widen them: whether they may open it and whether an authorization that opens it has the
 // active organization filter (the administrator's). A screen with no authorization of its own is the root's. As
-// Manufacturing.js's rootGrants.
-function screenGrants(location, groupIds) {
-    const grants = Array.from(
+// Manufacturing.js's rootGrants. screenAuthz reads the groups' screen authorizations once, and screenGrants picks a
+// screen's from them, so the root and every area cost one query.
+function screenAuthz(groupIds) {
+    return Array.from(
         find("moqui.security.ArtifactAuthzCheckView")
             .condition("userGroupId", "in", groupIds)
             .condition("artifactTypeEnumId", "AT_XML_SCREEN")
             .condition("authzActionEnumId", "in", ["AUTHZA_ALL", "AUTHZA_VIEW"])
             .list()
-    ).filter(row =>
+    )
+}
+function screenGrants(location, authzRows) {
+    const grants = authzRows.filter(row =>
         row.nameIsPattern === "Y" ? new RegExp("^(?:" + row.artifactName + ")$").test(location) : row.artifactName === location
     )
     const always = grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALWAYS")
@@ -79,23 +83,24 @@ function screenGrants(location, groupIds) {
 // reaches every organization (the active one when there is one); any other grant is limited to the user's organizations, so
 // a grant set up without filters fails closed.
 function rootGrants() {
-    const none = {read: false, unrestricted: false, groupIds: []}
+    const none = {read: false, unrestricted: false, authzRows: []}
     if (!ec.user.userId || ec.user.hasPermission("PROJECT_CLIENT")) return none
-    if (access.systemAdmin()) return {read: true, unrestricted: true, groupIds: [], systemAdmin: true}
+    if (access.systemAdmin()) return {read: true, unrestricted: true, authzRows: [], systemAdmin: true}
     const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
     if (!groupIds.length) return none
-    const root = screenGrants(rootLocation, groupIds)
+    const authzRows = screenAuthz(groupIds)
+    const root = screenGrants(rootLocation, authzRows)
     if (!root.allowed.length) return none
     const activeOrg = authzId =>
         rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).some(
             row => row.entityFilterSetId === "MANTLE_ACTIVE_ORG"
         )
-    return {read: true, unrestricted: root.allowed.some(row => activeOrg(row.artifactAuthzId)), groupIds}
+    return {read: true, unrestricted: root.allowed.some(row => activeOrg(row.artifactAuthzId)), authzRows}
 }
 function areaGrant(grants, area) {
     if (!grants.read) return false
     if (grants.systemAdmin) return true
-    const found = screenGrants(areaLocation(area), grants.groupIds)
+    const found = screenGrants(areaLocation(area), grants.authzRows)
     return found.found ? found.allowed.length > 0 : true
 }
 
@@ -106,7 +111,8 @@ function areaGrant(grants, area) {
 // one with none active (MANTLE_ACTIVE_ORG).
 function scope() {
     const grants = rootGrants()
-    const organization = ec.user.userId ? call("mantle.party.PartyServices.get#PartyOrganizationInfo") : {}
+    // a user without Purchasing has no organizations here (record links ask this of every user)
+    const organization = grants.read ? call("mantle.party.PartyServices.get#PartyOrganizationInfo") : {}
     const memberIds = Array.from(organization.userOrgIds || [])
     const filterIds = Array.from(organization.filterOrgIds || []).filter(partyId => memberIds.includes(partyId))
     const ownerIds = grants.unrestricted

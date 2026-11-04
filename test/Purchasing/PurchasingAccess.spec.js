@@ -1,13 +1,14 @@
-// Purchasing access (impl-purchasing §2, §4, P1): who may open Purchasing, the capabilities from the Mantle permissions and
-// the area authorizations, the organization and supplier scope, the record check against another organization's and forged
-// ids, a requester's own requests, a capability on a record, the screens a group guards, and the paths around the Mantle
-// purchasing services that no Purchasing group reaches: the Mantle REST order paths and the bulk status change (F9). One
-// feature per rule, each case of it a line of its problems, with artifact authorization enabled. The Mantle services' own
-// permission checks are Mantle's (mr-mantle test/order). The access and isolation walk is the acceptance
-// PurchasingFoundationWalk. A later phase adds a case only for an access rule it adds.
+// Purchasing access (impl-purchasing §2, §4, P1): who may open Purchasing, the menu, providers and launcher per group, Home's
+// one render (qvt), the capabilities from the Mantle permissions and the area authorizations, the organization and supplier
+// scope, the record check against another organization's and forged ids, a requester's own requests, a capability on a
+// record, the screens a group guards, and the paths around the Mantle purchasing services that no Purchasing group reaches:
+// the Mantle REST order paths and the bulk status change (F9). One feature per rule, each case of it a line of its problems,
+// with artifact authorization enabled. The Mantle services' own permission checks are Mantle's (mr-mantle test/order). The
+// access and isolation walk is the acceptance PurchasingFoundationWalk. A later phase adds a case only for an access rule it
+// adds, and its quick creates, Today sources and notification topics to the menu feature's rows.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
-const {ids, users, asUser, system, refusal, invoke} = lib
+const {ids, users, asUser, system, refusal, invoke, shell} = lib
 const access = "ironstone.purchasing.AccessServices."
 // a refusal of a user without Purchasing: the service is not authorized for them, or it refuses them
 const refused = message => /PURCHASING_UNAVAILABLE|is not authorized/.test(message)
@@ -72,6 +73,83 @@ feature("a Purchasing user gets the context; a user without the root group is re
     },
     then({problems}) {
         problems.join("\n") == ""
+    }
+})
+
+// the menu of design §1; Home and Requests open to every Purchasing user, the others by group (BOSS_PUR_<Area>)
+const order = [
+    "Home",
+    "Suppliers",
+    "Requests",
+    "Sourcing",
+    "Orders",
+    "Approvals",
+    "Agreements",
+    "Replenishment",
+    "Receiving",
+    "Returns",
+    "Bills",
+    "Performance",
+    "Settings"
+]
+const lists = ["Suppliers", "Sourcing", "Orders", "Agreements", "Receiving", "Returns", "Bills", "Performance"]
+const menuOf = extra => order.filter(name => ["Home", "Requests"].includes(name) || extra.includes(name))
+
+// no area of P1 creates a record, so quick create offers nothing yet: P3 adds the purchase order, P10 the request, P11 the RFQ
+feature("the Purchasing menu and providers follow each group's areas; the launcher shows Purchasing to its users only", {
+    when() {
+        const rows = [
+            {user: users.requester, extra: []},
+            {user: users.read, extra: lists.concat(["Replenishment"])},
+            {user: users.buyer, extra: lists.concat(["Replenishment"])},
+            {user: users.planner, extra: lists.concat(["Replenishment"])},
+            {user: users.approve, extra: lists.concat(["Approvals"])},
+            {user: users.admin, extra: order}
+        ]
+        const problems = []
+        for (const {user, extra} of rows) {
+            const found = shell(user)
+            const quickKinds = (found.providers?.quickCreate || []).map(item => item.kind)
+            if (found.status != 200) problems.push(`${user}'s menu: ${found.status}`)
+            if (JSON.stringify(found.names) !== JSON.stringify(menuOf(extra)))
+                problems.push(`${user}'s menu is ${found.names}, not ${menuOf(extra)}`)
+            if (quickKinds.length) problems.push(`${user} is offered quick create ${quickKinds}`)
+            if (!(found.providers?.paletteSources || []).some(source => source.group === "Purchasing"))
+                problems.push(`${user} has no Purchasing palette source`)
+            if (!(found.providers?.keymaps || []).some(keymap => keymap.scope === "purchasing"))
+                problems.push(`${user} has no purchasing key scope`)
+        }
+        // the launcher: the reader has Purchasing and no other business app; Purchasing's buyer group alone, without the root
+        // user group (Manufacturing's buyer), opens no Purchasing
+        const readerApps = shell(users.read).apps
+        if (!readerApps.includes("Purchasing")) problems.push(`the reader's launcher has no Purchasing: ${readerApps}`)
+        const otherApps = readerApps.filter(app =>
+            ["Products", "Accounting", "Manufacturing", "Warehouse", "Projects", "Sales"].includes(app)
+        )
+        if (otherApps.length) problems.push(`the reader's launcher has ${otherApps}`)
+        if (shell("manufacturing.buyer").apps.includes("Purchasing")) problems.push("Manufacturing's buyer has Purchasing")
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+feature("Home shows the reader's counters as unavailable, no work yet, spend unavailable and the lookup of their order", {
+    when() {
+        return asUser(users.read, () => lib.page("Home", {lookupType: "order", lookupId: ids.orderId}))
+    },
+    then({status, errors, output}) {
+        status == 200
+        errors == []
+        output.includes("Unacknowledged orders")
+        output.includes("Unavailable")
+        output.includes("Nothing is waiting for you.")
+        output.includes("Committed and billed spend is unavailable.")
+        output.includes("Purchase order " + ids.orderId)
+        output.includes("Brightline restock")
+        // the approver's card is not the reader's
+        !output.includes("Approvals waiting")
     }
 })
 

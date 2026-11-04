@@ -347,10 +347,10 @@ check:
   - `BossUsersDemoData.xml` gains a user per group, a buyer who also holds `BOSS_ACCOUNTING_MATCH`, a buyer with the
     Warehouse receive group, and a Purchasing reader with no other launcher.
 - **Specs.**
-  - `PurchasingShell`: the menu per group, the palette, record links, quick create.
-  - `PurchasingAccess`: the app's one access spec, about seven features run once with authorization on: organization
-    and supplier scope, the groups through the services and their permissions, and the refused REST and bulk paths. A
-    later phase adds a case only for an access rule it adds.
+  - `PurchasingAccess`: the app's one access spec, about ten features run once with authorization on: the menu,
+    providers and launcher per group, Home's one render, organization and supplier scope, the groups through the services
+    and their permissions, record links, and the refused REST and bulk paths. A later phase adds a case only for an access
+    rule it adds (no separate Shell spec, as the test reduction left the other apps).
 - **Usable when** (an acceptance test to write): the menu renders for each group, and quick create offers only what the
   group may create. A reader sees their organization's POs and suppliers but not another organization's, in lists, the
   palette and record links, and sees shared suppliers too. A forged order or supplier ID is refused.
@@ -387,9 +387,8 @@ check:
   admin (in `BOSS_PURCHASING_ADMIN` alone), buymatch (with `BOSS_ACCOUNTING_MATCH`), buyreceive (with Warehouse's receive
   group) and services (Ziziwork Services' reader); the buyer's Buyer-to-Supplier PartyRelationships (`PrtSupplier`) to
   Brightline and Ziddleman. The drop-ship supplier and its facility are P7's.
-- Specs: `test/Purchasing/PurchasingSpecLib.js` (ids, users, `shell`, `routeFixtures`), `PurchasingShell` (3 features:
-  the menu and providers per group, the launcher, Home's one qvt render) and `PurchasingAccess` (8: the context, the
-  capabilities per group, supplier scope in choices and palette, the record check with the requester's own requests, a
+- Specs: `test/Purchasing/PurchasingSpecLib.js` (ids, users, `shell`, `routeFixtures`) and `PurchasingAccess` (10: the
+  context, the menu, providers and launcher per group, Home's one qvt render, the capabilities per group, supplier scope in choices and palette, the record check with the requester's own requests, a
   capability on a record, record links, the guarded areas, REST and bulk refused). Acceptance:
   `acceptance/Purchasing/PurchasingFoundationWalk` (the usable-when: every area per group, the reader's and the other
   organization's orders and suppliers, forged ids) and `AppStructure` renders Purchasing's built screens
@@ -410,13 +409,33 @@ check:
   - The buyer relationship is `PrtSupplier`, from the buyer in the Buyer role to the supplier in the Supplier role.
   - No quick create, Today source or notification topic in P1: the phases that build their records add them.
 - Findings (provisional):
-  - **F-P1-1** The per-app Shell specs were deleted from the regression suite in mr-moqui's test reduction (step 1);
-    PurchasingShell is kept to the menu-per-group rule and Home's one render, and the launcher's other checks stay with
-    the acceptance walk. The plan's "Specs." block still names it; the lead may fold it into PurchasingAccess.
+  - **F-P1-1** The per-app Shell specs were deleted from the regression suite in mr-moqui's test reduction (step 1), and
+    Products and Accounting check their menus per group in their Access specs; the review folded PurchasingShell into
+    PurchasingAccess (R2).
   - **F-P1-2** `get#PartyOrganizationInfo`'s organizations for a Retail agent include `BOSS_WH_RETURNS` (Warehouse's demo
     organization under Retail), so the organizations choice lists it beside ORG_ZIZI_RETAIL.
   - **F-P1-3** `get#RecordLink` answered no link for any OrderHeader or Agreement before P1; a sales order still gets
     none (Sales has no order screen).
+
+**Review Nov 4 (P1).** Checked the Mantle and BOSS diffs against this phase, §2, design-purchasing §1, AGENTS.md and
+Practices-App-Dev: the groups, root and area authorizations against Manufacturing's pattern (ALWAYS for each group over the
+root user group's DENY, as Moqui's ALWAYS > DENY > ALLOW, which `screenGrants` mirrors); no authz for the raw Mantle
+mutators, REST paths or `change#OrderPartsStatus`; the `ironstone.purchasing` pattern in the client deny list; every
+Purchasing screen behind the root's `get#SharedContext`; the requester limited to their own and assigned requests (the
+filer or a non-OrgInternal RequestParty) and refused orders, suppliers, the palette and record links; record links for a
+sales order, request and return falling through as before; ZiddlemanInc's shared owner, which only widens what the
+organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppliers passes (below).
+- **R1** (low, cost) `Purchasing.js` read the user's screen authorizations once per screen, five queries for every
+  `scope()` (three per Home render, one per record link), and asked `get#PartyOrganizationInfo` of a user without
+  Purchasing on every OrderHeader or Agreement link. It now reads them once per scope (`screenAuthz`) and skips the
+  organizations when there is no root grant.
+- **R2** (low, tests) `PurchasingShell` folded into `PurchasingAccess` (the menu and launcher in one feature, Home's render
+  in another) and deleted: one Purchasing regression spec, 10 features, about 2.2 s.
+- Left for the lead: OhtPurchase's `enumCode` change is a new refusal in Mantle's `hold#Order`/`release#OrderHold` for a
+  non-ADMIN `ORDER_APPROVE` holder with no flag; X4 decides it, so it stays, but §2's flag rule does not cover it as
+  written. No caller in mr-mantle, mr-boss, mr-marble or mr-pass places a Purchase hold.
+- Specs run: PurchasingAccess, ManufacturingAccess, AccountingAccess, WarehouseReports, ProductsSuppliers, ProductsAccess,
+  ProductsPricing, ProductsImport, ProductsFinish (BOSS, all pass).
 
 ### P2 — Suppliers and buying policy
 
