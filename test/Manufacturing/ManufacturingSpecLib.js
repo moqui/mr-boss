@@ -15,7 +15,15 @@ const ids = {
     otherPlantId: "BOSS_MFG_SVC_PLANT",
     otherLineId: "BOSS_MFG_SVC_LINE",
     otherRunId: "BOSS_MFG_SVC_RUN",
-    otherFacilityId: "BOSS_PRD_WH"
+    otherFacilityId: "BOSS_PRD_WH",
+    // P2: the released demo method of DEMO_1_1 (method code PILOT), its routing, operations and the operation templates
+    productId: "DEMO_1_1",
+    methodId: "BOSS_MFG_BOM_PILOT",
+    routingId: "BOSS_MFG_ROUTING_A",
+    routingOperationIds: ["BOSS_MFG_ROUTING_A_10", "BOSS_MFG_ROUTING_A_20"],
+    templateIds: ["BOSS_MFG_OPT_ASSEMBLE", "BOSS_MFG_OPT_TEST"],
+    componentId: "DEMO_RM_1",
+    kitId: "DEMO_PA"
 }
 // The demo users of each capability group (each also in BOSS_MANUFACTURING), the administrator, the plant display (no
 // root) and the other organization's reader.
@@ -100,9 +108,29 @@ function page(path, parameters = {}, mode = "qvt") {
 function routeFixtures() {
     const routes = {
         // P1: Home's Summary (counted by later phases) and the lookup of the demo draft run
-        Home: {parameters: {lookupType: "run", lookupId: ids.runId}, text: "Demo assemblies"}
+        Home: {parameters: {lookupType: "run", lookupId: ids.runId}, text: "Demo assemblies"},
+        // P2: the method lists, the demo method and routing in the shared method screens, a template and Approvals
+        BillsOfMaterials: {text: "BOMs"},
+        "BillsOfMaterials/Find": {text: "BOMs"},
+        "BillsOfMaterials/BillOfMaterialsDetail": {parameters: {productBomId: ids.methodId}, text: "Line A pilot assembly"},
+        "BillsOfMaterials/WhereUsed": {parameters: {productId: ids.componentId}, text: "Where used"},
+        "BillsOfMaterials/Product360": {parameters: {productId: ids.productId}, text: "Demo Product One-One"},
+        "BillsOfMaterials/CostRollup": {parameters: {productId: ids.productId}, text: "Cost roll-up"},
+        Routings: {text: "Routings"},
+        "Routings/Find": {text: "Routings"},
+        "Routings/RoutingDetail": {parameters: {workEffortId: ids.routingId}, text: "Line A assembly"},
+        "Routings/OperationTemplates": {parameters: {workEffortId: ids.templateIds[0]}, text: "Photo of the fastened assembly"},
+        Approvals: {text: "Approvals"}
     }
-    const mounts = []
+    const shared = "component://mr-boss/screen/Shared/"
+    const mounts = [
+        // P2: Products' shared method and product screens under BillsOfMaterials and Routings
+        ["BillsOfMaterials/BillOfMaterialsDetail", shared + "BillOfMaterialsDetail.xml"],
+        ["BillsOfMaterials/WhereUsed", shared + "WhereUsed.xml"],
+        ["BillsOfMaterials/Product360", shared + "Product360.xml"],
+        ["BillsOfMaterials/CostRollup", shared + "CostRollup.xml"],
+        ["Routings/RoutingDetail", shared + "RoutingDetail.xml"]
+    ]
     return {routes, mounts}
 }
 

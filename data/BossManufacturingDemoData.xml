@@ -51,4 +51,111 @@ along with this software (see the LICENSE.md file). If not, see
             purposeEnumId="WepProductionRun" statusId="WeInPlanning" facilityId="BOSS_MFG_SVC_LINE"
             workEffortName="Services kits" ownerPartyId="ORG_ZIZI_SERVICES" estimatedStartDate="2026-11-11 08:00:00"
             estimatedCompletionDate="2026-11-11 17:00:00"/>
+
+    <!-- P2: a released demo method of DEMO_1_1 (F42; Products P8's are spec fixtures): the operation templates Assemble and
+        Test and pack (line A, line B), the routing BOSS_MFG_ROUTING_A copied from them and released, and the BOM
+        BOSS_MFG_BOM_PILOT (method code PILOT, so Products' MAIN fixture method stays its own) released with that routing,
+        DEMO_RM_1 consumed at the second operation. A release is its MethodReleaseDecision, whose audit references name the
+        approved header values (the EntityAuditLog rows below); the lines and WeatRoutingComp rows carry their dates. -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_OPT_ASSEMBLE" workEffortTypeEnumId="WetTask" purposeEnumId="WepRoutingTask"
+            ownerPartyId="ORG_ZIZI_RETAIL" isTemplate="Y" workEffortName="Assemble" description="Join the subassemblies and fasten"
+            estimatedSetupTime="0.25" estimatedWorkTime="0.1" timeUomId="TF_hr" methodMachineSetupTime="0" methodMachineRunTime="0.05"
+            methodBatchQuantity="1" methodQuantityUomId="OTH_ea" methodWorkCenterId="BOSS_MFG_LINE_A" methodArchived="N"
+            methodRequiredEvidence="Photo of the fastened assembly" methodChangeReason="Demo template"/>
+    <mantle.work.effort.WorkEffortSkillStandard workEffortId="BOSS_MFG_OPT_ASSEMBLE" skillTypeEnumId="BOSS_MFG_SKILL_ASSEMBLY"
+            estimatedNumPeople="1" estimatedDuration="0.1"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_OPT_TEST" workEffortTypeEnumId="WetTask" purposeEnumId="WepRoutingTask"
+            ownerPartyId="ORG_ZIZI_RETAIL" isTemplate="Y" workEffortName="Test and pack" description="Run the function test and box"
+            estimatedSetupTime="0.1" estimatedWorkTime="0.05" timeUomId="TF_hr" methodMachineSetupTime="0" methodMachineRunTime="0"
+            methodBatchQuantity="1" methodQuantityUomId="OTH_ea" methodWorkCenterId="BOSS_MFG_LINE_B" methodArchived="N"
+            methodRequiredEvidence="Test result" methodChangeReason="Demo template"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_ROUTING_A" workEffortTypeEnumId="WetTask" purposeEnumId="WepRouting"
+            ownerPartyId="ORG_ZIZI_RETAIL" isTemplate="Y" methodDraft="N" workEffortName="Line A assembly"
+            methodChangeReason="Demo routing"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_ROUTING_A_10" parentWorkEffortId="BOSS_MFG_ROUTING_A"
+            workEffortTypeEnumId="WetTask" purposeEnumId="WepRoutingTask" ownerPartyId="ORG_ZIZI_RETAIL" isTemplate="Y"
+            methodDraft="N" methodRemoved="N" methodFromDate="2026-11-01 00:00:00" methodSourceWorkEffortId="BOSS_MFG_OPT_ASSEMBLE"
+            workEffortName="Assemble" sequenceNum="10" estimatedSetupTime="0.25" estimatedWorkTime="0.1" timeUomId="TF_hr"
+            methodMachineSetupTime="0" methodMachineRunTime="0.05" methodBatchQuantity="1" methodQuantityUomId="OTH_ea"
+            methodWorkCenterId="BOSS_MFG_LINE_A" methodRequiredEvidence="Photo of the fastened assembly"
+            methodChangeReason="Demo routing"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_ROUTING_A_20" parentWorkEffortId="BOSS_MFG_ROUTING_A"
+            workEffortTypeEnumId="WetTask" purposeEnumId="WepRoutingTask" ownerPartyId="ORG_ZIZI_RETAIL" isTemplate="Y"
+            methodDraft="N" methodRemoved="N" methodFromDate="2026-11-01 00:00:00" methodSourceWorkEffortId="BOSS_MFG_OPT_TEST"
+            workEffortName="Test and pack" sequenceNum="20" estimatedSetupTime="0.1" estimatedWorkTime="0.05" timeUomId="TF_hr"
+            methodMachineSetupTime="0" methodMachineRunTime="0" methodBatchQuantity="1" methodQuantityUomId="OTH_ea"
+            methodWorkCenterId="BOSS_MFG_LINE_B" methodPredecessorIds="BOSS_MFG_ROUTING_A_10" methodRequiredEvidence="Test result"
+            methodChangeReason="Demo routing"/>
+    <mantle.work.effort.WorkEffortAssoc workEffortId="BOSS_MFG_ROUTING_A" toWorkEffortId="BOSS_MFG_ROUTING_A_10"
+            workEffortAssocTypeEnumId="WeatRoutingComp" fromDate="2026-11-01 00:00:00" sequenceNum="10" setupTime="0.25" runTime="0.1"
+            machineSetupTime="0" machineRunTime="0.05" batchQuantity="1" quantityUomId="OTH_ea" timeUomId="TF_hr"
+            workCenterFacilityId="BOSS_MFG_LINE_A" methodReleaseDecisionId="BOSS_MFG_MRD_ROUTING_A"/>
+    <mantle.work.effort.WorkEffortAssoc workEffortId="BOSS_MFG_ROUTING_A" toWorkEffortId="BOSS_MFG_ROUTING_A_20"
+            workEffortAssocTypeEnumId="WeatRoutingComp" fromDate="2026-11-01 00:00:00" sequenceNum="20" setupTime="0.1" runTime="0.05"
+            machineSetupTime="0" machineRunTime="0" batchQuantity="1" quantityUomId="OTH_ea" timeUomId="TF_hr"
+            workCenterFacilityId="BOSS_MFG_LINE_B" predecessorWorkEffortIds="BOSS_MFG_ROUTING_A_10"
+            methodReleaseDecisionId="BOSS_MFG_MRD_ROUTING_A"/>
+    <mantle.work.method.MethodReleaseDecision methodReleaseDecisionId="BOSS_MFG_MRD_ROUTING_A" methodEntityName="mantle.work.effort.WorkEffort"
+            methodId="BOSS_MFG_ROUTING_A" fromDate="2026-11-01 00:00:00" approvedDate="2026-11-01 00:00:00" approvedByUserId="BOSS_MFG_METHOD_APPROVE"
+            changeReason="Demo routing released" auditRefsJson="{&quot;header&quot;:{&quot;workEffortName&quot;:&quot;BOSS_MFG_AUD_R1&quot;,&quot;description&quot;:null},&quot;operations&quot;:{&quot;BOSS_MFG_ROUTING_A_10&quot;:{&quot;names&quot;:{&quot;workEffortName&quot;:&quot;BOSS_MFG_AUD_R2&quot;,&quot;description&quot;:null},&quot;resources&quot;:[]},&quot;BOSS_MFG_ROUTING_A_20&quot;:{&quot;names&quot;:{&quot;workEffortName&quot;:&quot;BOSS_MFG_AUD_R3&quot;,&quot;description&quot;:null},&quot;resources&quot;:[]}}}"/>
+    <mantle.work.method.MethodReleaseItem methodReleaseDecisionId="BOSS_MFG_MRD_ROUTING_A" itemSeqId="1"
+            lineEntityName="mantle.work.effort.WorkEffortAssoc" lineId="BOSS_MFG_ROUTING_A_10" action="start" fromDate="2026-11-01 00:00:00"/>
+    <mantle.work.method.MethodReleaseItem methodReleaseDecisionId="BOSS_MFG_MRD_ROUTING_A" itemSeqId="2"
+            lineEntityName="mantle.work.effort.WorkEffortAssoc" lineId="BOSS_MFG_ROUTING_A_20" action="start" fromDate="2026-11-01 00:00:00"/>
+    <mantle.product.bom.ProductBom productBomId="BOSS_MFG_BOM_PILOT" productId="DEMO_1_1" organizationPartyId="ORG_ZIZI_RETAIL"
+            methodCode="PILOT" bomName="Line A pilot assembly" baseQuantity="1" quantityUomId="OTH_ea" isPhantom="N"
+            routingWorkEffortId="BOSS_MFG_ROUTING_A" leadTimeDays="2" prepareDays="1" legacyImportComplete="Y"
+            changeReason="Demo method"/>
+    <mantle.product.bom.ProductBomItem bomItemId="BOSS_MFG_BOM_PILOT_1" productBomId="BOSS_MFG_BOM_PILOT" productId="DEMO_SA_1"
+            roleEnumId="BmirConsume" quantity="1" quantityUomId="OTH_ea" scrapFactor="0" sequenceNum="10"
+            operationWorkEffortId="BOSS_MFG_ROUTING_A_10" substitutionRuleEnumId="BsrNone" state="released" removeOnRelease="N"
+            fromDate="2026-11-01 00:00:00" changeReason="Demo method"/>
+    <mantle.product.bom.ProductBomItem bomItemId="BOSS_MFG_BOM_PILOT_2" productBomId="BOSS_MFG_BOM_PILOT" productId="DEMO_SA_2"
+            roleEnumId="BmirConsume" quantity="2" quantityUomId="OTH_ea" scrapFactor="0" sequenceNum="20"
+            operationWorkEffortId="BOSS_MFG_ROUTING_A_10" substitutionRuleEnumId="BsrNone" state="released" removeOnRelease="N"
+            fromDate="2026-11-01 00:00:00" changeReason="Demo method"/>
+    <mantle.product.bom.ProductBomItem bomItemId="BOSS_MFG_BOM_PILOT_3" productBomId="BOSS_MFG_BOM_PILOT" productId="DEMO_RM_1"
+            roleEnumId="BmirConsume" quantity="4" quantityUomId="OTH_ea" scrapFactor="0.05" sequenceNum="30"
+            operationWorkEffortId="BOSS_MFG_ROUTING_A_20" substitutionRuleEnumId="BsrNone" state="released" removeOnRelease="N"
+            fromDate="2026-11-01 00:00:00" changeReason="Demo method"/>
+    <mantle.work.method.MethodReleaseDecision methodReleaseDecisionId="BOSS_MFG_MRD_BOM_PILOT" methodEntityName="mantle.product.bom.ProductBom"
+            methodId="BOSS_MFG_BOM_PILOT" fromDate="2026-11-01 00:00:00" approvedDate="2026-11-01 00:00:00" approvedByUserId="BOSS_MFG_METHOD_APPROVE"
+            changeReason="Demo method released" auditRefsJson="{&quot;header&quot;:{&quot;bomName&quot;:&quot;BOSS_MFG_AUD_B1&quot;,&quot;baseQuantity&quot;:&quot;BOSS_MFG_AUD_B2&quot;,&quot;quantityUomId&quot;:&quot;BOSS_MFG_AUD_B3&quot;,&quot;isPhantom&quot;:&quot;BOSS_MFG_AUD_B4&quot;,&quot;routingWorkEffortId&quot;:&quot;BOSS_MFG_AUD_B5&quot;,&quot;leadTimeDays&quot;:&quot;BOSS_MFG_AUD_B6&quot;,&quot;prepareDays&quot;:&quot;BOSS_MFG_AUD_B7&quot;}}"/>
+    <mantle.work.method.MethodReleaseItem methodReleaseDecisionId="BOSS_MFG_MRD_BOM_PILOT" itemSeqId="1"
+            lineEntityName="mantle.product.bom.ProductBomItem" lineId="BOSS_MFG_BOM_PILOT_1" action="start" fromDate="2026-11-01 00:00:00"/>
+    <mantle.work.method.MethodReleaseItem methodReleaseDecisionId="BOSS_MFG_MRD_BOM_PILOT" itemSeqId="2"
+            lineEntityName="mantle.product.bom.ProductBomItem" lineId="BOSS_MFG_BOM_PILOT_2" action="start" fromDate="2026-11-01 00:00:00"/>
+    <mantle.work.method.MethodReleaseItem methodReleaseDecisionId="BOSS_MFG_MRD_BOM_PILOT" itemSeqId="3"
+            lineEntityName="mantle.product.bom.ProductBomItem" lineId="BOSS_MFG_BOM_PILOT_3" action="start" fromDate="2026-11-01 00:00:00"/>
+    <!-- the approved values the release decisions name -->
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_R1" changedEntityName="mantle.work.effort.WorkEffort" changedFieldName="workEffortName"
+            pkPrimaryValue="BOSS_MFG_ROUTING_A" newValueText="Line A assembly" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_R2" changedEntityName="mantle.work.effort.WorkEffort" changedFieldName="workEffortName"
+            pkPrimaryValue="BOSS_MFG_ROUTING_A_10" newValueText="Assemble" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_R3" changedEntityName="mantle.work.effort.WorkEffort" changedFieldName="workEffortName"
+            pkPrimaryValue="BOSS_MFG_ROUTING_A_20" newValueText="Test and pack" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B1" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="bomName"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="Line A pilot assembly" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B2" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="baseQuantity"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="1" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B3" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="quantityUomId"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="OTH_ea" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B4" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="isPhantom"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="N" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B5" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="routingWorkEffortId"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="BOSS_MFG_ROUTING_A" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B6" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="leadTimeDays"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="2" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
+    <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B7" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="prepareDays"
+            pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="1" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
+            changeReason="Demo method"/>
 </entity-facade-xml>

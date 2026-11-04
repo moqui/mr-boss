@@ -95,6 +95,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="rightReleaseId"/>
             <parameter name="manualLeftDate" type="Timestamp"/>
             <parameter name="manualRightDate" type="Timestamp"/>
+            <parameter name="sourceWorkEffortIds" type="List"/>
+            <parameter name="replaceExisting" type="Boolean"/>
         </in-parameters>
         <out-parameters>
             <parameter name="canCostRead" type="Boolean"/>
@@ -174,6 +176,9 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="rateSettings" type="Map"/>
             <parameter name="manualLeftDate"/>
             <parameter name="manualRightDate"/>
+            <parameter name="copiedOperationIds" type="List"/>
+            <parameter name="notified" type="Boolean"/>
+            <parameter name="message"/>
         </out-parameters>
     </service>
     <service verb="get" noun="MethodContext" allow-remote="false">
@@ -279,6 +284,40 @@ along with this software (see the LICENSE.md file). If not, see
         <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('storeRate',context))</script>
+        </actions>
+    </service>
+    <!-- Manufacturing P2: copy operations into the routing, and the engineer's release requests (Mantle checks METHOD_EDIT and
+        sends the approvers' BomRelease and RoutingRelease notices) -->
+    <service verb="copy" noun="RoutingOperations" allow-remote="false">
+        <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
+        <actions>
+            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('copyOperations', context)"/>
+            <set field="copiedOperationIds" from="result.copiedOperationIds"/>
+            <set field="operationRows" from="result.operationRows"/>
+            <set field="expectedRevision" from="result.expectedRevision"/>
+            <set field="workEffortId" from="result.workEffortId"/>
+        </actions>
+    </service>
+    <service verb="request" noun="BomRelease" allow-remote="false">
+        <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
+        <actions>
+            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('requestRelease', context)"/>
+            <set field="valid" from="result.valid"/>
+            <set field="findings" from="result.findings"/>
+            <set field="notified" from="result.notified"/>
+            <set field="message" from="result.message"/>
+            <set field="productBomId" from="result.productBomId"/>
+        </actions>
+    </service>
+    <service verb="request" noun="RoutingRelease" allow-remote="false">
+        <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
+        <actions>
+            <set field="result" from="ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('requestRoutingRelease', context)"/>
+            <set field="valid" from="result.valid"/>
+            <set field="findings" from="result.findings"/>
+            <set field="notified" from="result.notified"/>
+            <set field="message" from="result.message"/>
+            <set field="workEffortId" from="result.workEffortId"/>
         </actions>
     </service>
 </services>

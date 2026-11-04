@@ -1503,25 +1503,34 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/CostServices | save#ProductCostRollup |  | Shared/StandardCosts; Shared/CostRollup; Shared/CostHistory; Shared/PriceExplain |
 | product/CostServices | get#StandardCostPrint |  | Shared/StandardCosts; Shared/CostRollup; Shared/CostHistory; Shared/PriceExplain |
 | product/CostServices | get#ProductMargin |  | Shared/StandardCosts; Shared/CostRollup; Shared/CostHistory; Shared/PriceExplain |
-| product/BomServices | find#Boms |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | get#BomDetail |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | store#Bom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | store#BomItem |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | validate#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | release#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | get#BomExplosion |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | compare#BomDates |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | get#BomWhereUsed |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| product/BomServices | import#LegacyBom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed |
-| work/RoutingServices | find#Routings |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | get#RoutingDetail |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#Routing |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#RoutingOperation |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#RoutingResource |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | validate#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | release#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
-| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail |
+| product/BomServices | find#Boms |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2, get#BomList) |
+| product/BomServices | get#BomDetail |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | store#Bom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2) |
+| product/BomServices | store#BomItem |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | validate#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | release#BomDraft |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | get#BomExplosion |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | compare#BomDates |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | get#BomWhereUsed |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials (P2) |
+| product/BomServices | import#LegacyBom |  | Shared/BillOfMaterialsDetail; Shared/BillOfMaterialsExplosion; Shared/BillOfMaterialsCompare; Shared/WhereUsed; Manufacturing/BillsOfMaterials/Find (P2) |
+| work/RoutingServices | find#Routings |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/Find (P2, get#RoutingList) |
+| work/RoutingServices | get#RoutingDetail |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#Routing |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/Find (P2) |
+| work/RoutingServices | store#RoutingOperation |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#RoutingResource |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | validate#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | release#RoutingDraft |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#WorkCenter |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | store#WorkCenterRate |  | Shared/RoutingDetail; Shared/BillOfMaterialsDetail; Manufacturing/Routings/RoutingDetail (P2) |
+| work/RoutingServices | find#OperationTemplates |  | Manufacturing/Routings/OperationTemplates (P2, get#TemplateList) |
+| work/RoutingServices | store#OperationTemplate |  | Manufacturing/Routings/OperationTemplates (P2: EditTemplate, Archive) |
+| work/RoutingServices | store#OperationInstruction |  | Manufacturing/Routings/OperationTemplates (P2: InstructionVersion) |
+| work/RoutingServices | copy#RoutingOperations |  | Shared/RoutingDetail (P2, Manufacturing context: Copy operations) |
+| work/RoutingServices | request#RoutingRelease |  | Shared/RoutingDetail (P2: Request release; RoutingRelease topic in Manufacturing/Approvals) |
+| work/RoutingServices | import#RoutingCsv |  | Manufacturing/Routings/Find (P2: Import from CSV, with preview) |
+| product/BomServices | request#BomRelease |  | Shared/BillOfMaterialsDetail (P2: Request release; BomRelease topic in Manufacturing/Approvals) |
+| product/BomServices | clone#Bom |  | Manufacturing/BillsOfMaterials/Find (P2: Clone) |
+| product/BomServices | import#BomCsv |  | Manufacturing/BillsOfMaterials/Find (P2: Import from CSV, with preview) |
 | facility/FacilityServices | get#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy |
 | facility/FacilityServices | store#ProductFacilityPolicy | Maintenance/Facilities/FacilityDetail | Shared/InventoryAvailability/Policy; Products/Products/Product360/Stock/Policy; Warehouse/Locations/FacilityDetail/Products (with removeLocation) |
 | facility/FacilityServices | store#Facility | Maintenance/Facilities; Maintenance/Facilities/FacilityDetail | Warehouse/Locations/Facilities; Warehouse/Locations/FacilityDetail; Warehouse/Locations/FacilityDetail/Children |

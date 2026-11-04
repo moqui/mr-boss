@@ -102,9 +102,55 @@ function warehouseContext() {
         facilityIds: read ? warehouse.facilityIds(userScope) : []
     }
 }
+// Manufacturing's mounts (impl-manufacturing P2; crosscut §3.5, §3.23): Shared/Product360 under BillsOfMaterials and the five
+// method screens. A Manufacturing user who reads methods (METHOD_VIEW) reads the product master of their organizations'
+// products read only, with the crosscut's Manufacturing tabs: Summary, Identifiers, Dimensions & units, BOM (with where used
+// and the routing), Costs with cost read only, Stock and Documents, and Kit components read only (a kit's components, which
+// where used links to). Method edit, release and cost write stay their own permissions, checked again in Mantle.
+const manufacturingTabs = ["Summary", "Identifiers", "Dimensions", "BOM", "Costs", "Stock", "KitComponents", "Documents"]
+const manufacturingPaths = {
+    "": "BillsOfMaterials",
+    "Products/Product360": "BillsOfMaterials/Product360",
+    BillOfMaterialsDetail: "BillsOfMaterials/BillOfMaterialsDetail",
+    WhereUsed: "BillsOfMaterials/WhereUsed",
+    "Prices/CostRollup": "BillsOfMaterials/CostRollup",
+    Routings: "Routings",
+    RoutingDetail: "Routings/RoutingDetail",
+    OperationTemplates: "Routings/OperationTemplates"
+}
+function manufacturingContext() {
+    const manufacturing = ec.resource.script("component://mr-boss/service/ironstone/manufacturing/Manufacturing.js")
+    const userScope = manufacturing.scope()
+    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {},
+        read = !!source.methodRead
+    const capabilities = {systemAdmin: !!source.systemAdmin, read}
+    for (const name of ["catalogEdit", "catalogAdmin", "priceRead", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
+        capabilities[name] = false
+    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
+        capabilities[name] = read && !!source[name]
+    Object.assign(capabilities, {stockPlan: false, stockManage: false, glPost: false, marginRead: false})
+    return {
+        capabilities,
+        appRoot: "Manufacturing",
+        linkBase: "//Manufacturing",
+        webBase: "/qapps/Manufacturing",
+        printBase: "/apps/Manufacturing",
+        sharedLinks: Object.fromEntries(
+            Object.entries(manufacturingPaths).map(([key, path]) => [key, "//Manufacturing/" + path])
+        ),
+        productTabs: read ? manufacturingTabs.filter(tab => tab !== "Costs" || capabilities.costRead) : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
     if (appRoot === "Warehouse") return warehouseContext()
+    if (appRoot === "Manufacturing") return manufacturingContext()
     if (appRoot !== "Products") throw new Error("Shared catalog context is not available")
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,

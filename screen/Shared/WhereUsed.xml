@@ -33,6 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <actions>
         <service-call name="ironstone.products.MethodServices.get#BomWhereUsed" in-map="context" out-map="context" />
+        <set field="kitComponentsUrl" from="sharedLinks['Products/Product360'] + '/KitComponents'"/>
     </actions>
     <widgets>
         <label text="Where used" type="h5"/>
@@ -83,8 +84,11 @@ along with this software (see the LICENSE.md file). If not, see
         <form-list name="WhereUsedRows" list="whereUsedRows || []" skip-form="true" paginate="false" show-csv-button="true" views="tree,list">
             <view-tree parent-field="parentPath" key-fields="path" />
             <field name="productId">
+                <!-- a kit's usage is read only here: its link opens Products' Kit components pane of the kit (D15) -->
                 <default-field title="Parent product">
-                    <display />
+                    <link url="${kitComponentsUrl}" text="${productId}" link-type="anchor" condition="readOnly"
+                            parameter-map="{productId:productId}"/>
+                    <label text="${productId}" condition="!readOnly"/>
                 </default-field>
             </field>
             <field name="depth">

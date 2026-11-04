@@ -2,21 +2,33 @@
 
 The Manufacturing app calls Mantle's production, method, quality and stock services, which check their own permissions
 and organization. BOSS owns the app's access (`ironstone.manufacturing.AccessServices`), its routes, choices, Home and
-forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation) of
-[impl-manufacturing](../plan/impl-manufacturing.md) is built; each later phase extends the tables and sections below.
+forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation) and P2 (methods) of
+[impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
 
 ## Routes and users
 
 | Area | Implemented destinations |
 | --- | --- |
 | Home | The plant picker, the Summary (open, in progress, late, short, completed this month: each "Unavailable" until its phase counts it), the Queue of due work and shortages (empty until P5) and the lookup of a record (`lookupType`, `lookupId`) |
-| Work orders, BOMs, Routings, Work centers, Reports | Placeholders, open to every Manufacturing user |
-| Shop floor, Quality, Planning, Subcontracting, Settings, Approvals | Placeholders, for their groups only (below) |
+| BOMs | `BillsOfMaterials/Find` (the list, New BOM, Clone, legacy and CSV import), and Products' shared `BillOfMaterialsDetail` (with its explosion, compare, where used and routing tabs), `WhereUsed`, `Product360` and `CostRollup` with the Manufacturing context |
+| Routings | `Routings/Find` (the list, New routing, CSV import), `Routings/OperationTemplates` (the catalogue, instructions, archive) and the shared `RoutingDetail` (copy operations, release request, notes) |
+| Approvals | Commons Notifications with the `BomRelease` and `RoutingRelease` topics, for the approval groups (below) |
+| Work orders, Work centers, Reports | Placeholders, open to every Manufacturing user |
+| Shop floor, Quality, Planning, Subcontracting, Settings | Placeholders, for their groups only (below) |
 
 All routes are under `/qapps/Manufacturing`, in design §1.2's order by `default-menu-index`. The root
 (`screen/Manufacturing.xml`) runs `get#SharedContext` in its always-actions into `manufacturing` (capabilities, the
 selected plant, `sharedLinks`) and sets `appRoot` to `Manufacturing`. Shared screen parts are in
 `template/ManufacturingParts.xml`: the `choices` and `selectPlant` transitions and the `PlantPicker` section.
+
+Methods (P2). The shared method screens take the Manufacturing context from Products' `SharedContext.js`
+(`manufacturingContext()`: read with `METHOD_VIEW`, the product master read only, tabs Summary, Identifiers, Dimensions,
+BOM, Costs with cost read, Stock, Kit components and Documents). The lists read `ironstone.manufacturing.MethodServices`
+(`get#BomList`, `get#RoutingList`, `get#TemplateList`) over Mantle's finds; the screens' writes call the Mantle verbs
+(`store#Bom`, `clone#Bom`, `import#BomCsv`, `store#Routing`, `import#RoutingCsv`, `store#OperationTemplate`,
+`store#OperationInstruction`) after the root's access check, and the shared screens call Products' method layer
+(`ironstone.products.MethodServices`). A method engineer without `METHOD_APPROVE` asks for a release (`request#BomRelease`,
+`request#RoutingRelease`), which notifies the organization's approvers; the release on the method marks it read.
 
 Groups (data/BossSetupData.xml). `BOSS_MANUFACTURING` is the root user group: its authorization on the root
 (`BOSS_MANUFACTURING_ROOT`) has `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, and the artifact group covers
@@ -56,6 +68,7 @@ Demo records (BossManufacturingDemoData.xml):
 | Retail's plant | Mantle's `ZIRET_WH`, a plant by its lines; lines `BOSS_MFG_LINE_A`, `BOSS_MFG_LINE_B` (FcTpLine under ZIRET_WH, with WorkCenter rows); equipment `EQUIP_AB4_1`, `EQUIP_AB4_2` (Mantle) |
 | Runs | the draft `BOSS_MFG_RUN_A` on line A; Warehouse's released `BOSS_WH_RUN` with its operation `BOSS_WH_RUN_OP` |
 | Skill types | `BOSS_MFG_SKILL_ASSEMBLY`, `_COATING`, `_INSPECTION` |
+| Methods (P2) | operation templates `BOSS_MFG_OPT_ASSEMBLE`, `BOSS_MFG_OPT_TEST`; the released routing `BOSS_MFG_ROUTING_A` (operations `_10`, `_20`); the released BOM `BOSS_MFG_BOM_PILOT` of DEMO_1_1 (method code PILOT) |
 | Ziziwork Services (isolation) | plant `BOSS_MFG_SVC_PLANT` (FcTpPlant), line `BOSS_MFG_SVC_LINE`, run `BOSS_MFG_SVC_RUN` |
 
 ## Access contract
@@ -105,5 +118,6 @@ it (F39).
 
 ## Verification
 
-`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess`; AppStructure and TuiRender cover Home and the area
-placeholders.
+`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingMethods`; AppStructure and TuiRender cover
+the built routes (ManufacturingSpecLib's `routeFixtures`) and the area placeholders; `./moq test mr-mantle --spec
+MethodTemplates`; the walk `./moq test-client mr-boss --serve -- --spec ManufacturingMethodsWalk`.
