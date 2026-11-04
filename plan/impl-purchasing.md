@@ -2271,6 +2271,11 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
   - Specs: Mantle Sourcing (7), ProductPricePolicy, ProductEffectivePrices, ProductPriceLists, OrderProcureToPayBasicFlow,
     PurchaseRequests, PurchaseOrders, SupplyPlanning, DropShip, WorkProjectRequests (87 features, pass); BOSS
     PurchasingSourcing, PurchasingAccess, PurchasingOrders, Requests, ProjectRequests, ProjectsAccess, Chatter (88, pass).
+- **Wave 7 suites (Nov 4, on master after P11 and P14b merged):** standalone mr-mantle 1,637 passed, 2 failed (the
+  baseline), 11 skipped; `./moq test-apps` 2,905 server and 14 client features passed, none failed. A cargo clippy run of
+  another checkout (mr-moqui-base) loaded the machine during the apps run, so its feature times (mr-mantle 597 s against
+  254 s standalone, mr-boss 261 s server and 42 s client, ProductionChanges 15.5 s and AccountingPaymentCorrections
+  15.2 s) measure that load; `moqui lint --screens` clean.
 
 ### P12 — Comparison and award
 
