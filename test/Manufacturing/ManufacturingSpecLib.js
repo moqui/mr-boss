@@ -100,7 +100,11 @@ function page(path, parameters = {}, mode = "qvt") {
 function routeFixtures() {
     const routes = {
         // P1: Home's Summary (counted by later phases) and the lookup of the demo draft run
-        Home: {parameters: {lookupType: "run", lookupId: ids.runId}, text: "Demo assemblies"}
+        Home: {parameters: {lookupType: "run", lookupId: ids.runId}, text: "Demo assemblies"},
+        // P4: the production policy (the organization's default) and the reason codes
+        Settings: {text: "Show policy"},
+        "Settings/ProductionSettings": {text: "Show policy"},
+        "Settings/ReasonCodes": {text: "Show reasons"}
     }
     const mounts = []
     return {routes, mounts}

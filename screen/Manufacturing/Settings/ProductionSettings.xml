@@ -1,0 +1,658 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Production settings (design-manufacturing ProductionSettings; impl-manufacturing P4): the production policy in effect
+    at the organization's default or a plant's override, in three forms (Consumption, Time and cost, Planning), each value
+    with its source, and the dated rows set at that scope. mantle.work.ProductionServices.get#ProductionPolicy reads it
+    and store#ProductionPolicy makes a dated change of one form's fields (PRODUCTION_POLICY_EDIT); a released work order
+    keeps the policy of its release time. The overhead basis and co-product method are Accounting's costing policies. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Production settings" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="plantId"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="storeProductionPolicy">
+        <actions>
+            <if condition="facilityId">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'policyEdit'}"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.store#ProductionPolicy"
+                    in-map="{organizationPartyId:facilityId ? null : organizationPartyId || null, facilityId:facilityId || null,
+                        fromDate:effectiveFromDate || null, expectedFromDate:expectedFromDate || null,
+                        policyGroup:policyGroup, changeReason:changeReason,
+                        consumptionMethodEnumId:consumptionMethodEnumId, issuePointEnumId:issuePointEnumId,
+                        overConsumePercent:overConsumePercent, overProducePercent:overProducePercent,
+                        substituteApproval:substituteApproval, outputInspection:outputInspection,
+                        firstPieceInspection:firstPieceInspection, completeOnFinalReceipt:completeOnFinalReceipt,
+                        strictRelease:strictRelease,
+                        timeLogEnforcementEnumId:timeLogEnforcementEnumId, machineRuntimeEnumId:machineRuntimeEnumId,
+                        workTypeEnumId:workTypeEnumId, pieceRate:pieceRate, laborCostSync:laborCostSync,
+                        estimateRefresh:estimateRefresh, closeApproval:closeApproval,
+                        planningHorizonDays:planningHorizonDays, timeFenceDays:timeFenceDays,
+                        shortageReleaseEnumId:shortageReleaseEnumId, calendarId:calendarId,
+                        leadTimeBasisEnumId:leadTimeBasisEnumId, freshnessLimitHours:freshnessLimitHours}"/>
+            <message type="success">Production policy saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="plantId" from="facilityId"/>
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="plantId">
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="plant" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId}"/>
+        </if>
+        <set field="plantFound" from="!plantId || !!plant?.recordId"/>
+        <if condition="plantFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionPolicy" out-map="policy"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:plantId ? null : organizationPartyId || null, facilityId:plantId || null}"/>
+        </if>
+        <set field="policyAvailable" from="plantFound &amp;&amp; !!policy?.organizationPartyId"/>
+        <set field="traceRows" from="policy?.traceRows || []"/>
+        <set field="historyRows" from="policy?.history || []"/>
+        <set field="organizationName" from="policy?.organizationName || ''"/>
+        <set field="scopeText" from="plantId ? policy?.facilityName || plantId : organizationName"/>
+        <set field="scopeNote" from="plantId ? 'Plant override at ' + scopeText + ': an empty value inherits the default of '
+                + organizationName + '.' : 'Organization default of ' + scopeText
+                + ': a plant override takes its place where it sets a value.'"/>
+        <set field="groupRows" from="Object.fromEntries(['consumption', 'timeAndCost', 'planning'].map(group =&gt;
+                [group, traceRows.filter(row =&gt; row.group === group)]))"/>
+        <set field="formScope" from="{organizationPartyId:policy?.organizationPartyId, facilityId:policy?.facilityId,
+                expectedFromDate:policy?.expectedFromDate}"/>
+    </actions>
+    <widgets>
+        <section name="Scope">
+            <widgets>
+                <form-single name="PolicyScope" transition="." map="{plantId:plantId,
+                        organizationPartyId:organizationPartyId || policy?.organizationPartyId}">
+                    <field name="plantId">
+                        <default-field title="Plant" tooltip="Leave empty for the organization's default">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'plants', selected:plantId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show policy"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="plantId"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <label text="This production policy is not available to you." type="p" condition="!policyAvailable"/>
+        <section name="Policy" condition="policyAvailable">
+            <widgets>
+                <label text="${scopeNote}" type="p"/>
+                <container-box>
+                    <box-header title="Consumption"/>
+                    <box-toolbar>
+                        <container-dialog id="ConsumptionPolicyDialog" condition="policy.canEdit" button-text="Change consumption"
+                                icon="sym_o_edit" width="760" title="Change consumption at ${scopeText}">
+                            <form-single name="ConsumptionPolicy" transition="storeProductionPolicy"
+                                    map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'consumption'})">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="expectedFromDate">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="policyGroup">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="consumptionMethodEnumId">
+                                <default-field title="Consumption" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionConsumption"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="issuePointEnumId">
+                                <default-field title="Issue point" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionIssuePoint"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="overConsumePercent">
+                                <default-field title="Over-consumption tolerance %" tooltip="0 to 100: how far past a material line an issue may go; empty inherits">
+                                    <text-line input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="overProducePercent">
+                                <default-field title="Overproduction tolerance %" tooltip="0 to 100: how far past the output quantity a receipt may go without approval; empty inherits">
+                                    <text-line input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="substituteApproval">
+                                <default-field title="Substitutes need approval" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="outputInspection">
+                                <default-field title="Inspect output" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="firstPieceInspection">
+                                <default-field title="First-piece inspection" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="completeOnFinalReceipt">
+                                <default-field title="Complete on final receipt" tooltip="The final output receipt reconciles and completes the work order; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="strictRelease">
+                                <default-field title="Strict release" tooltip="A released work order is never amended; a method change needs a new work order; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="effectiveFromDate">
+                                <default-field title="Effective from" tooltip="Leave empty to start now">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Save consumption">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="consumptionMethodEnumId"/>
+                                    <field-ref name="issuePointEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="overConsumePercent"/>
+                                    <field-ref name="overProducePercent"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="substituteApproval"/>
+                                    <field-ref name="outputInspection"/>
+                                    <field-ref name="firstPieceInspection"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="completeOnFinalReceipt"/>
+                                    <field-ref name="strictRelease"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="effectiveFromDate"/>
+                                    <field-ref name="changeReason"/>
+                                </field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Material and output" type="p" style="text-caption m-muted"/>
+                        <form-list name="ConsumptionTrace" list="groupRows.consumption" skip-form="true" paginate="false">
+                            <field name="fieldLabel">
+                                <default-field title="Setting">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="valueText">
+                                <default-field title="In effect">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="Since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fieldLabel"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="valueText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Time and cost"/>
+                    <box-toolbar>
+                        <container-dialog id="TimeAndCostPolicyDialog" condition="policy.canEdit" button-text="Change time and cost"
+                                icon="sym_o_edit" width="760" title="Change time and cost at ${scopeText}">
+                            <form-single name="TimeAndCostPolicy" transition="storeProductionPolicy"
+                                    map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'timeAndCost'})">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="expectedFromDate">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="policyGroup">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="timeLogEnforcementEnumId">
+                                <default-field title="Time logging" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionTimeLog"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="machineRuntimeEnumId">
+                                <default-field title="Machine runtime" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionMachineRuntime"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="workTypeEnumId">
+                                <default-field title="Work type" tooltip="The work type of production time; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="WorkType"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="pieceRate">
+                                <default-field title="Record pieces on time" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="laborCostSync">
+                                <default-field title="Labor cost from approved time" tooltip="Approved timesheets record the labor cost of production time; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="estimateRefresh">
+                                <default-field title="Propose estimate refresh" tooltip="A method or rate change proposes a new standard estimate for review; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="closeApproval">
+                                <default-field title="Cost close needs review" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <option key="Y" text="Yes"/>
+                                        <option key="N" text="No"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="effectiveFromDate">
+                                <default-field title="Effective from" tooltip="Leave empty to start now">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Save time and cost">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="timeLogEnforcementEnumId"/>
+                                    <field-ref name="machineRuntimeEnumId"/>
+                                    <field-ref name="workTypeEnumId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="pieceRate"/>
+                                    <field-ref name="laborCostSync"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="estimateRefresh"/>
+                                    <field-ref name="closeApproval"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="effectiveFromDate"/>
+                                    <field-ref name="changeReason"/>
+                                </field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Time evidence and estimates" type="p" style="text-caption m-muted"/>
+                        <label text="Overhead and co-product allocation are Accounting's costing policies, not set here."
+                                type="p" style="text-caption m-muted"/>
+                        <form-list name="TimeAndCostTrace" list="groupRows.timeAndCost" skip-form="true" paginate="false">
+                            <field name="fieldLabel">
+                                <default-field title="Setting">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="valueText">
+                                <default-field title="In effect">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="Since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fieldLabel"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="valueText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Planning"/>
+                    <box-toolbar>
+                        <container-dialog id="PlanningPolicyDialog" condition="policy.canEdit" button-text="Change planning"
+                                icon="sym_o_edit" width="760" title="Change planning at ${scopeText}">
+                            <form-single name="PlanningPolicy" transition="storeProductionPolicy"
+                                    map="Object.assign({}, policy.configuredPolicy, formScope, {policyGroup:'planning'})">
+                            <field name="organizationPartyId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="facilityId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="expectedFromDate">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="policyGroup">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="planningHorizonDays">
+                                <default-field title="Planning horizon (days)" tooltip="Empty inherits">
+                                    <text-line input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="timeFenceDays">
+                                <default-field title="Time fence (days)" tooltip="Inside it planning changes no firm work order; empty inherits">
+                                    <text-line input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="shortageReleaseEnumId">
+                                <default-field title="Shortage release" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionShortageRelease"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="calendarId">
+                                <default-field title="Work calendar" tooltip="Used where a work center has no calendar; empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${calendarId}" text="${calendarName}">
+                                            <entity-find entity-name="mantle.work.calendar.Calendar" limit="200">
+                                                <econdition field-name="ownerPartyId" from="policy.organizationPartyId"/>
+                                                                            <order-by field-name="calendarName"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="leadTimeBasisEnumId">
+                                <default-field title="Lead time basis" tooltip="Empty inherits">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="ProductionLeadTimeBasis"/>
+                                                <order-by field-name="sequenceNum,description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="freshnessLimitHours">
+                                <default-field title="Plan freshness limit (hours)" tooltip="Empty inherits">
+                                    <text-line input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="effectiveFromDate">
+                                <default-field title="Effective from" tooltip="Leave empty to start now">
+                                    <date-time/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Save planning">
+                                    <submit/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="planningHorizonDays"/>
+                                    <field-ref name="timeFenceDays"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="shortageReleaseEnumId"/>
+                                    <field-ref name="calendarId"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="leadTimeBasisEnumId"/>
+                                    <field-ref name="freshnessLimitHours"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="effectiveFromDate"/>
+                                    <field-ref name="changeReason"/>
+                                </field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Scheduling and supply planning" type="p" style="text-caption m-muted"/>
+                        <form-list name="PlanningTrace" list="groupRows.planning" skip-form="true" paginate="false">
+                            <field name="fieldLabel">
+                                <default-field title="Setting">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="valueText">
+                                <default-field title="In effect">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText">
+                                <default-field title="Since">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fieldLabel"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="valueText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Policies set here"/>
+                    <box-body>
+                        <label text="Each change starts a dated policy and ends the one before it; a released work order keeps the policy of its release."
+                                type="p" style="text-caption m-muted"/>
+                        <label text="Nothing is set here; every value is inherited." type="p" condition="!historyRows.length"/>
+                        <form-list name="PolicyHistory" list="historyRows" skip-form="true" paginate="false">
+                            <field name="fromDateText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruDateText">
+                                <default-field title="Through">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="summary">
+                                <default-field title="Set here">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fromDateText"/>
+                                    <field-ref name="changeReason"/>
+                                </column>
+                                <column>
+                                    <field-ref name="summary"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

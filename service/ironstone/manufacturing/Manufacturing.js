@@ -530,6 +530,33 @@ const choiceSources = {
             selected,
             facility => centerIds.includes(facility.facilityId) && inScope(userScope, facility)
         )
+    },
+    // P4: the organizations whose production policy and reasons the user works with (their own, or every internal
+    // organization for a user in every plant)
+    organizations: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.PartyDetailAndRole", {roleTypeId: "OrgInternal"})
+            .selectField("partyId,organizationName")
+            .orderBy("organizationName")
+            .limit(choiceLimit)
+        if (userScope.ownerIds) query = query.condition("partyId", "in", userScope.ownerIds)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("partyId", "like", likeText(term)).ignoreCase(),
+                        factory.makeCondition("organizationName", "like", likeText(term)).ignoreCase()
+                    ],
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({value: row.partyId, label: row.organizationName || row.partyId}))
+        if (selected && !options.some(option => option.value === selected) && owns(userScope, selected)) {
+            const organization = one("mantle.party.Organization", {partyId: selected})
+            if (organization && one("mantle.party.PartyRole", {partyId: selected, roleTypeId: "OrgInternal"}))
+                options.push({value: selected, label: organization.organizationName || selected})
+        }
+        return options
     }
 }
 function choices(p) {

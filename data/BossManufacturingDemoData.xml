@@ -51,4 +51,25 @@ along with this software (see the LICENSE.md file). If not, see
             purposeEnumId="WepProductionRun" statusId="WeInPlanning" facilityId="BOSS_MFG_SVC_LINE"
             workEffortName="Services kits" ownerPartyId="ORG_ZIZI_SERVICES" estimatedStartDate="2026-11-11 08:00:00"
             estimatedCompletionDate="2026-11-11 17:00:00"/>
+
+    <!-- P4: Retail's production reason codes (ReasonCodes); no ProductionPolicy row, so every policy value is the built-in
+        default and the demo runs keep Mantle's issue guard -->
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="SCRAP_DAMAGE"
+            fromDate="2026-01-01 00:00:00" reasonName="Damaged in handling" reasonCategoryEnumId="PrcScrap"
+            equipmentFault="N" plannedStop="N" approvalThreshold="5" sequenceNum="10" changeReason="Demo reasons"/>
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="PROCESS_LOSS"
+            fromDate="2026-01-01 00:00:00" reasonName="Normal process loss" reasonCategoryEnumId="PrcProcessLoss"
+            equipmentFault="N" plannedStop="N" sequenceNum="20" changeReason="Demo reasons"/>
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="ROBOT_FAULT"
+            fromDate="2026-01-01 00:00:00" reasonName="Assembly robot fault" reasonCategoryEnumId="PrcDowntime"
+            equipmentFault="Y" plannedStop="N" approvalThreshold="60" sequenceNum="30" changeReason="Demo reasons"/>
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="CHANGEOVER"
+            fromDate="2026-01-01 00:00:00" reasonName="Changeover" reasonCategoryEnumId="PrcDowntime"
+            equipmentFault="N" plannedStop="Y" sequenceNum="40" changeReason="Demo reasons"/>
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="MATERIAL_HOLD"
+            fromDate="2026-01-01 00:00:00" reasonName="Waiting for material" reasonCategoryEnumId="PrcHold"
+            equipmentFault="N" plannedStop="N" sequenceNum="50" changeReason="Demo reasons"/>
+    <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="METHOD_CHANGE"
+            fromDate="2026-01-01 00:00:00" reasonName="Method change" reasonCategoryEnumId="PrcAmendment"
+            equipmentFault="N" plannedStop="N" sequenceNum="60" changeReason="Demo reasons"/>
 </entity-facade-xml>

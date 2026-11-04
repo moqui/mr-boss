@@ -210,7 +210,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Manufacturing root and menu, Home | built Nov 3 |
 | P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | — |
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | — |
-| P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | — |
+| P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | — |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
@@ -467,6 +467,84 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   - a referenced reason can be deactivated, not deleted;
   - a policy change reaches no released run (checked in P5);
   - an issue within the over-consumption tolerance passes, and one beyond it is refused.
+
+**Built Nov 3 (P4).**
+- Mantle: `entity/ProductionPolicyEntities.xml` (a new file, so it merges apart from `ProductionEntities.xml`):
+  `mantle.work.production.ProductionPolicy`, keyed by organization, facility (`_NA_` for the organization's default) and
+  `fromDate`, every field audit-logged; and `ProductionReason`, keyed by organization, `reasonCode` and `fromDate`
+  (name, category, `equipmentFault`, `plannedStop`, `approvalThreshold`, sequence). The seeded enumerations:
+  ProductionConsumption, ProductionIssuePoint, ProductionTimeLog, ProductionMachineRuntime, ProductionShortageRelease
+  (`PsrAllUsable`, the default: all components usable, with staged release by supervisor approval; `PsrStaged`),
+  ProductionLeadTimeBasis and ProductionReasonCategory.
+  - Policy fields: consumption (`consumptionMethodEnumId`, `issuePointEnumId`, `overConsumePercent`,
+    `overProducePercent`, `substituteApproval`, `outputInspection`, `firstPieceInspection`, and the flags
+    `completeOnFinalReceipt` for P7 and `strictRelease` for P9); time and cost (`timeLogEnforcementEnumId`,
+    `machineRuntimeEnumId`, `workTypeEnumId`, `pieceRate`, `laborCostSync` (the F34 hook flag P10 reads), `estimateRefresh`,
+    `closeApproval`); planning (`planningHorizonDays`, `timeFenceDays`, `shortageReleaseEnumId`, `calendarId`,
+    `leadTimeBasisEnumId`, `freshnessLimitHours`). The built-in defaults are Mantle's behavior with no row, and every
+    flag is N.
+  - `service/mantle/work/ProductionPolicy.js`, with four services appended to `ProductionServices.xml`:
+    `get#ProductionPolicy` (PRODUCTION_VIEW or PRODUCTION_POLICY_EDIT). It resolves the built-in defaults, then the
+    organization's row, then each facility's row from the topmost down to the given facility. So a line inherits its
+    plant's override. It answers each value's source (`sources`, and `traceRows` with display text), the row at the exact
+    scope with its `expectedFromDate`, the history and `canEdit`. With `workEffortId` it reads the run's owner and facility
+    as of its release time; with `asOfDate`, any other time.
+  - `store#ProductionPolicy` (PRODUCTION_POLICY_EDIT) makes a dated change of the given fields. With `policyGroup` it
+    changes only that form's group. It refuses a stale `expectedFromDate` (POLICY_CHANGED), a start before now, a second
+    row at the same time and invalid values (POLICY_INVALID).
+  - `find#ProductionReasons`: the active codes, or with `includeInactive` the inactive ones too; `reasonCode` gives that
+    code's history.
+  - `store#ProductionReasons` takes a list. It adds, changes (by a dated row) or deactivates each reason on its own,
+    and names a refused row in `results` while it stores the others. Nothing is deleted.
+  - Internal helpers for later phases: `effective(org, facility, at)`, `runPolicy(run)`, `overConsumeAllowance(run, line)`
+    and `activeReason(org, code, at)`.
+  - The issue guard (`Production.js` `issuePlan`, a local edit): a line may be issued up to its quantity plus
+    `overConsumePercent` of it, minus what was already issued net. The percent comes from the policy as of the run's
+    release. With no row the allowance is zero, and QUANTITY_EXCEEDS_REMAINING is unchanged. Subcontract output's own
+    remainder check (`subcontractPlan`) is unchanged.
+- BOSS: `Settings` became the tab parent of `Settings/ProductionSettings` and `Settings/ReasonCodes`, behind P1's
+  BOSS_MFG_SETTINGS area. ProductionSettings has a plant and organization picker and three boxes (Consumption, Time and
+  cost, Planning). Each box lists its values with their sources and has a Change dialog that saves its own `policyGroup`.
+  Below them is the history of the dated rows. ReasonCodes has an organization picker, an Active or All filter, Add reason
+  (the primary action), and Edit, Deactivate (danger, confirmed) and Reactivate on each row. `Manufacturing.js` gained the
+  `organizations` choice. BossManufacturingDemoData seeds six Retail reasons and no policy row, so the demo runs keep
+  Mantle's issue guard.
+- Specs: Mantle `test/work/ProductionPolicy.spec.js` (7 features, about 3 s). It covers the defaults; an organization
+  default and a plant override of the overproduction tolerance with their sources, and a line's inheritance; stale,
+  back-dated, invalid and unpermitted changes; a group-only change; an issue within the 10% allowance passing and one
+  beyond it refused, alongside a run released before any policy keeping the default; a run keeping the policy of its release
+  through a later change, with a run released afterwards taking the change (P5's check, ready for it); and reasons stored,
+  changed, refused, deactivated and kept.
+  - ManufacturingAccess gained a P4 section (3 features: the resource administrator against a reader and the other
+    organization; the Settings pages with authz enabled).
+  - ManufacturingSpecLib's routes cover the three Settings paths in AppStructure and TuiRender.
+  - Client walk `test/client/Manufacturing/ManufacturingPolicyWalk.spec.js` (2 features), added to `suite.js`.
+- Tests run: Mantle ProductionPolicy, ManufacturingServices, WarehouseProduction and ProductMethods (33 features, all
+  pass). BOSS ManufacturingAccess, ManufacturingShell, AppStructure, TuiRender, WarehouseProductionFixtures and
+  WarehouseAccess (230 features, all pass). The walk ManufacturingPolicyWalk passes (2). `moqui lint --screens` shows only
+  informational anchor rows for the new screens.
+- Decisions:
+  - Reason codes are an organization's own dated rows keyed by code, not Enumerations. An event names the code and
+    copies the classification of the row in effect at its date, so later changes apply going forward. There is no delete
+    service, so "referenced" needs no check. Translated labels are not built.
+  - Reasons are edited with row dialogs. The design's editable grid is not built.
+  - The resolution walks the facility's parents, so an override on a line under a plant works too. The screen offers
+    plants only.
+  - TimeAndCost's link to CostingPolicies is a note until P15 builds that screen. P15 replaces the note with the
+    read-only link.
+- Findings (provisional):
+  - **F-P4-1** The design's TimeAndCost "production approver rule" flag is not built: F33 dropped it, since the run's
+    supervisor in a Manager role is enough under the default timesheet policy. The design's TimeAndCost row and Actions
+    now name the labor cost flag in its place.
+  - **F-P4-2** F38's optional Mantle refusal in `update#Task` and `set#TaskStatus` behind a ProductionPolicy flag is not
+    built. P1's BOSS guards cover the paths, and no phase asked for it.
+  - **F-P4-3** The walks' database outlives a `test-client --serve` run, so a walk that adds a record by a fixed code
+    fails on its second run. ManufacturingPolicyWalk uses a code made for each run.
+  - **F-P4-4** For P5: `release#ProductionOrder` already stamps `productionReleaseDate`, and no policy row can start
+    before now. So `ProductionPolicy.js` `runPolicy(run)`, or `get#ProductionPolicy` with `workEffortId`, is the policy
+    the run keeps, with no copy on the run. P5's release gate reads `shortageReleaseEnumId` there. P7 reads
+    `overProducePercent` and `completeOnFinalReceipt`, P9 `strictRelease` and `substituteApproval`, and P10
+    `laborCostSync`, `pieceRate` and `timeLogEnforcementEnumId`.
 
 ### P5 — Work orders
 
