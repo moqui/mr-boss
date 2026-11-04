@@ -1,7 +1,7 @@
 // Drop-ship fixtures the Purchasing specs share (impl-purchasing P7): a customer order of Retail's to Joe Q Public whose lines
 // reserve at Ziddleman's drop-ship facility (BOSS_PUR_DROPSHIP, BossPurchasingDemoData.xml) or ZIRET_WH, placed and approved by
-// john.doe, whose approval makes the drop-ship purchase order (Retail's approval gate off in the demo: approved and emailed
-// once the approval commits, on a worker of its own). Each call makes a new order.
+// john.doe, whose approval makes the drop-ship purchase order once it commits, on a worker of its own (Retail's approval gate
+// off in the demo: approved and emailed). Each call makes a new order.
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, system, invoke} = lib
 const facilityId = "BOSS_PUR_DROPSHIP",
@@ -62,7 +62,13 @@ function customerOrder(lines = [[productId, 2, facilityId]], approve = true) {
                 .call()
         )
     ec.message.clearErrors()
-    fixture.purchaseOrderId = rows("mantle.order.OrderHeader", {parentOrderId: fixture.orderId})[0]?.orderId || null
+    // the drop-ship order is made after the approval commits: wait for it (a placed order, or one with no drop-ship line, has
+    // none)
+    const deadline = Date.now() + (approve && lines.some(line => line[2] === facilityId) ? 5000 : 0)
+    if (approve) ec.factory.waitWorkerPoolEmpty(50)
+    const purchaseOrderOf = () => rows("mantle.order.OrderHeader", {parentOrderId: fixture.orderId})[0]?.orderId || null
+    while (!purchaseOrderOf() && Date.now() < deadline) ec.factory.waitWorkerPoolEmpty(50)
+    fixture.purchaseOrderId = purchaseOrderOf()
     return fixture
 }
 // the order's status once the drop-ship send has run (it goes out after the approval commits, on a worker)

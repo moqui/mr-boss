@@ -600,7 +600,9 @@ that supplier's drop-ship facility and reserves there, so the same service makes
 RequestSourcing and SupplyPlanning route customer demand the same way. As built (impl-purchasing P7): one PO per sales
 part and drop-ship facility; each PO line keeps its sales line (`OrderItem.salesOrderId`, `salesOrderItemSeqId`), which the
 delivery, the match and the screens read; the drop-ship facility also needs `assetAllowIssueOverQoh` Y, since the sales
-shipment issues the shell asset; the PO goes to the supplier once its approval commits; the confirmation posts the
+shipment issues the shell asset; the PO is made once the sales order's approval commits, in a transaction of its own, so
+that a failure never undoes the sales approval, and goes to the supplier once its own approval commits; a line with no
+supplier price leaves its PO Open for the buyer, and a supplier the buying policy stops is passed over; the confirmation posts the
 delivered lines' cost from Unreceived Inventory to the cost of goods sold (`AttDropShipDelivery`), the supplier's bill
 debiting Unreceived Inventory as for any stock purchase; Supplier360's Drop-ship tab keeps the facility and its remote
 (`store#DropShipFacility`, PURCHASE_POLICY_EDIT).

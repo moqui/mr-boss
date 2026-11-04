@@ -1348,17 +1348,19 @@ P7 ports it into mr-mantle and finishes it.
     roles in RgpOrder, and the transaction type `AttDropShipDelivery`.
   - `OrderServices.xml` (appended, the branch's names kept for integrations): the `send#DropShipPurchaseOrderPart`
     interface, `create#DropShipPurchaseOrder` and `finalize#DropShipPurchaseOrder`, over the new `DropShip.js`.
-    `ProductAsset.secas.xml` OrderApprovedReserveAssets calls create after `reserve#AssetsForOrder`.
+    `DropShip.secas.xml` OrderApprovedDropShip calls create once the sales approval (with its `reserve#AssetsForOrder`)
+    commits (review R1).
   - create: the lines of an approved sales order reserved at a drop-ship facility (its stock or the shell asset), one
     purchase order per sales part and facility (P3's one purchase part per PO): `parentOrderId` the sales order, the part
     from the facility's owner to the selling organization at the facility with the sales part's ship-to address, phone and
     shipping, the end customer as `CustomerShipTo`, the ship-to contact mechs; each line at the supplier's current price
-    read by the order's own rule (F-P7-2) with `otherPartyProductId` the supplier's item code and the link; the lines'
+    read by the order's own rule (F-P7-2, review R2) with `otherPartyProductId` the supplier's item code and the link; the lines'
     content and work efforts and the order's notes that are not internal copied; placed; with the buying organization's
     gate on left at Placed and sent to its first step's approvers (P4's notice), else approved at once (F40). A line already
     on a live drop-ship order answers it (a retry); a line meant to drop that cannot is named in `skippedItems`
-    (NO_RESERVATION, RESERVATION_SPLIT, NO_SUPPLIER, INTERNAL_OWNER) and logged; a line with no price is bought at zero and
-    named in `unpricedItems`. An order with no drop-ship reservation returns after one reservation query.
+    (NO_RESERVATION, RESERVATION_SPLIT, NO_SUPPLIER, INTERNAL_OWNER, or the buying policy's stop such as SUPPLIER_BLOCKED,
+    review R4) and logged; an order with a line with no price stays Open, named in `unpricedItems` (review R3). An order
+    approval with no drop-ship facility anywhere costs one count of them (review R1).
   - finalize (PURCHASE_ORDER_EDIT in the buying organization, F-P7-8): the order's own delivery, a ShpTpPurchase shipment
     from the drop-ship facility to the customer's address with the confirmed lines, package and tracking code, shipped and
     never received (F38); the linked sales lines packed by their link on their part's open sales shipment or a new one
@@ -1376,8 +1378,9 @@ P7 ports it into mr-mantle and finishes it.
     cost reaches COGS when the goods reach the customer, the period the sale is invoiced (the pack SECA), whatever the
     bill's timing, and the sales issuance of the shell asset posts nothing (AtrNoAcquireCost), so nothing is counted twice.
     A bill price differing from the order's stays in Unreceived Inventory, as for a received line (F-P7-6).
-  - F40, the send: `service/DropShip.secas.xml` OrderApprovedSendDropShip (tx-commit on `update#OrderHeader` to Approved)
-    calls `mantle.order.DropShipServices.send#DropShipPurchaseOrder` once an approval commits, the sales order's (gate
+  - F40, the send: `service/DropShip.secas.xml` OrderApprovedDropShip (tx-commit on `update#OrderHeader` to Approved) calls
+    `mantle.order.DropShipServices.handle#OrderApprovedDropShip`, which makes a sales order's drop-ship orders (review R1)
+    or calls `send#DropShipPurchaseOrder` once an approval commits, the sales order's (gate
     off) or `decide#PurchaseApproval`'s (gate on): the facility's remote's send service, then Sent, else email by
     `send#PurchaseOrder`'s path (`PurchaseOrderDocuments.js issue`, the send without the user's checks: the approver need not
     be a buyer). A failure is logged and the order stays Approved for the buyer to send (F-P7-3).
@@ -1434,7 +1437,8 @@ P7 ports it into mr-mantle and finishes it.
     part); a sales part has one facility, so a part's drop-ship lines share a supplier.
   - The F39 posting at the delivery (above), not a COGS item type on the bill.
   - The send after the approval commits, whichever approval it is, so a supplier's integration or mail server never undoes
-    a sales or purchase approval; the branch called the remote inside the sales approval.
+    a sales or purchase approval; the branch called the remote inside the sales approval. Since review R1 the purchase
+    order is also made after the sales approval commits, not inside it.
   - finalize needs PURCHASE_ORDER_EDIT (the branch checked nothing); `create#DropShipPurchaseOrder` checks none, as the
     SECA runs as the sales order's approver.
   - The confirmation without line quantities confirms every line left; Confirm line takes one line's quantity.
@@ -1444,14 +1448,16 @@ P7 ports it into mr-mantle and finishes it.
     (the branch's README leaves it out). `store#DropShipFacility` and the demo set both; the design's setup says so.
   - **F-P7-2** `recalc#OrderItemAmount` resolves a price as the current user, and the SECA runs as the sales order's
     approver, who seldom reads supplier prices: the branch's PO line kept the sales price. create reads the supplier's
-    current price row itself (the organization's row before the supplier's general one, the highest minimum quantity
-    reached), and names a line with none.
+    current price row itself with the resolver's eligibility (review R2: the order's currency, no store, agreement or term
+    scope, the line's unit; the organization's row before the supplier's general one, the highest minimum quantity
+    reached, the latest), and leaves an order with an unpriced line Open (R3).
   - **F-P7-3** A tx-commit SECA runs on a service worker in a context of its own, so the drop-ship send is not in the
     approver's request: specs wait for the worker (`ec.factory.waitWorkerPoolEmpty`), and a send that fails leaves the
     order in Approved, not sent for the buyer.
   - **F-P7-4** Drop-ship from supplier on a line that shares its part makes a new sales part; `update#OrderPartTotal`
-    lowers a single promised payment of the original part to its new total, and an authorized payment stays on the
-    original part, so a moved line's payment is the order's to settle (Mantle's split of payments by part).
+    lowers a single promised payment of the original part to its new total, so route gives the new part a payment by the
+    same method for its total (review R5). An authorized payment cannot be split and stays on the original part, so a
+    moved line's share of it is the order's to settle.
   - **F-P7-5** A customer line changed or cancelled after its drop-ship order is made does not change that order; the
     buyer revises or cancels it (P9's revisions); cancelling the sales order leaves its drop-ship orders open.
   - **F-P7-6** A bill price above or below the order's leaves the difference in Unreceived Inventory, as for a received
@@ -1464,6 +1470,56 @@ P7 ports it into mr-mantle and finishes it.
     drop-ship lines are left out of the first and read their delivery in the others.
   - **F-P7-10** ss-inventory.md and usl-inventory.md have no rows for the drop-ship forms and services (the branch's
     services were never in Mantle's master), so P7 fills no Implemented-in cell.
+
+**Review Nov 4 (P7).** Checked the diff in both repos against this section, §2, design §18, F21 and F37–F40, AGENTS.md and
+Practices-App-Dev: Mantle's defaults for an organization with no drop-ship facility, the GL of F39, F40's transactions and
+failure tolerance, the supplier price row, finalize's permission and route. Fixes:
+- **R1 (high)** create ran inside the sales order's approval (OrderApprovedReserveAssets, post-service): any failure in it
+  (a write, a SECA of the purchase order) marked the transaction for rollback and undid the sales approval, and the
+  framework has no savepoint to contain it. The purchase order is now made once the sales approval commits:
+  `DropShip.secas.xml` OrderApprovedDropShip (tx-commit) calls the new `handle#OrderApprovedDropShip`, which sends a
+  drop-ship purchase order or, for any other order, counts the drop-ship facilities (0: returns; the one query an
+  organization without drop-ship pays, off the approval's transaction) and runs create in a transaction of its own; a
+  failure is logged naming the sales order and its lines (verified with an injected throw: the sales order stays Approved,
+  no partial purchase order, the line named). create locks the sales order so the approval's run and a route's make one
+  order per line. `ProductAsset.secas.xml` is back to master's; one worker dispatch per approval, as the send already had.
+  The specs wait for the purchase order as they did for the send.
+- **R2 (medium)** create's price row (F-P7-2) took rows `get#ProductPrice` never would: a store's, an agreement's or a
+  term's price, a row with no currency, another unit's, and a null price; ties went to whichever row came first. It now
+  uses the resolver's eligibility (PriceResolver.js `typed`) and order. Reusing `get#ProductPrice` is not feasible: it
+  withholds supplier rows from a user without SUPPLIER_PRICE_VIEW, and the create runs for no particular user.
+- **R3 (medium)** A line with no supplier price was bought at zero, and with the gate off the order was approved and
+  emailed at zero (Mantle's auto-approval also approves a placed order of zero total). Such an order now stays Open, named
+  in `unpricedItems`, for the buyer to price and place; its approval then sends it.
+- **R4 (medium)** create bought from a supplier the buying policy stops (blocked, suspended, unapproved under Stop), which
+  route and the purchase order screens refuse; such lines are now passed over with the policy's reason code.
+- **R5 (medium)** route (F-P7-4) moved a line to a new part without its child items (discounts, tax), so both parts' totals
+  were wrong, and the original part's promised payment was lowered with nothing to collect the moved line; the children
+  now move with it and the new part gets a payment by the same method for its total.
+- **R6 (low)** `get#DropShipSetup` read any supplier's facilities; another organization's supplier is now refused
+  (SUPPLIER_UNAVAILABLE), as `store#DropShipFacility` does.
+Checked and kept:
+- GL (F39, F-P7-6): a received line behaves the same. Its receipt credits Unreceived Inventory at the asset's acquire cost
+  (the order price) and the bill debits it at the bill price, and nothing in matching or approval clears a difference
+  (Mantle posts no purchase price variance; landed cost only spreads charge lines). So drop-ship leaves no residue a
+  received line would not. A PPV posting for both belongs to Accounting, not P7. The delivery's posting goes through
+  `post#AcctgTrans` (period checks, the review guard, currency conversion to the base currency with AC-19's error-journal
+  fallback, F-P7-7); a closed period refuses the confirmation as a whole.
+- F40: in create's transaction the gate leaves the purchase order at Placed and notifies; with the gate off it is approved
+  by `update#OrderStatus` (no `approve#Order`); the send is on its own approval's commit.
+- F-P7-8: finalize's PURCHASE_ORDER_EDIT is acceptable without a flag. The service is new to mr-mantle, with no Mantle or
+  BOSS caller before P7, and §2 asks a new Mantle service to check its permission; the branch's integrations never ran
+  against Mantle master. Recorded as F-P7-8.
+- Mantle defaults: InvoiceMatch.js, PurchaseReceipts.js and the PO print change only lines with `salesOrderId` or orders
+  with a parent order. Every other line reads one field and loads nothing.
+- Left for the lead: OrderDetail shows a drop-ship line whose order could not be made (R1's failure, a stop) as "drops
+  when approved" on an approved order. The buyer's way back is create#DropShipPurchaseOrder again (idempotent) or route,
+  and no screen offers it. F-P7-5 stands.
+- Specs: Mantle DropShip (6 features, 3.3 s; adds the unpriced and blocked lines, decoy price rows, the payment split and
+  the setup refusal), OrderToCashBasicFlow, OrderProcureToPayBasicFlow, AssetReservationMisc,
+  AssetReservationMultipleThreads, ReturnToResponseBasicFlow, AccountingMatching, AccountingValuation, AccountingDelivery,
+  PurchaseApprovals, PurchaseOrders, OrderLifecycle; BOSS PurchasingDropShip, PurchasingAccess, PurchasingOrders,
+  PurchasingBills, WarehousePicking: all pass; acceptance PurchasingDropShipWalk (5, its lib changed): pass.
 
 ### P8 — Supplier returns
 
