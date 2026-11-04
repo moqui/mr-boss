@@ -1,0 +1,425 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A work order's quantities (design-manufacturing §3 Quantities and §12.2; impl-manufacturing P7), WorkOrderDetail's
+    Quantities tab: OutputPlan, each output line's target, accepted good, produced-held, process loss, scrap, rework and what
+    is left, with the overproduction tolerance (mantle.work.ProductionServices.get#ProductionQuantities); the material lines'
+    issue and scrap; the reconciliation the completion needs; and its dialogs, each after
+    ironstone.manufacturing.AccessServices.check#Record with its capability: Reconcile (record#ProductionQuantity, the operator:
+    good and pending output received with it, process loss, scrap, rework), Record loss (record#ProductionLoss: an issued
+    component scrapped in WIP, an output asset scrapped back to the run), ChangeQuantity (change#ProductionQuantity, the
+    planner: a new target as a delta, never below the facts), AddOutput (store#ProductionOutput on a draft), Complete
+    (transition#ProductionOrder complete, the supervisor, with Finish remainder and the material variance) and the supervisor's
+    decisions on a loss or an overproduction waiting for approval (approve#ProductionException); and the output labels. Each
+    form carries its own operation key, so a resubmit answers the first. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quantities" default-menu-index="5">
+    <parameter name="workEffortId"/>
+    <transition name="recordQuantity">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.record#ProductionQuantity" out-map="recorded"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, productionRunLineId:productionRunLineId || null,
+                        expectedRevision:expectedRevision || null, good:good || null, pending:pending || null,
+                        processLoss:processLoss || null, scrap:scrap || null, rework:rework || null,
+                        reasonCode:reasonCode || null, reason:reason || null, toLocationSeqId:toLocationSeqId || null,
+                        heldLocationSeqId:heldLocationSeqId || null, lotNumber:lotNumber || null}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const result = recorded.result || {}
+                    if (result.resultCode === 'APPROVAL_REQUESTED') ec.message.addMessage(result.message, 'warning')
+                    else ec.message.addMessage('Recorded: good ' + result.good + ', held ' + result.held + ', remaining ' +
+                        result.remaining + (result.completed ? '; the work order is complete' : ''), 'success')
+                    if ((result.pendingLossIds || []).length) ec.message.addMessage('A loss waits for a supervisor\'s approval', 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="recordLoss">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.record#ProductionLoss" out-map="recorded"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, lossTypeEnumId:lossTypeEnumId,
+                        productionRunLineId:productionRunLineId || null, assetId:assetId || null, quantity:quantity,
+                        reasonCode:reasonCode || null, reason:reason || null, comments:comments || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(recorded.result?.pendingApproval ? 'The loss waits for a supervisor\'s approval'
+                    : 'Loss ' + recorded.result?.productionLossId + ' recorded', recorded.result?.pendingApproval ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="changeQuantity">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'plan'}"/>
+            <service-call name="mantle.work.ProductionServices.change#ProductionQuantity" out-map="changed"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        productionRunLineId:productionRunLineId || null, targetQuantity:targetQuantity, reason:reason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Target changed from ' + changed.result?.previousTarget + ' to ' +
+                    changed.result?.target, 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="storeOutput">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'plan'}"/>
+            <service-call name="mantle.work.ProductionServices.store#ProductionOutput" out-map="stored"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, expectedRevision:expectedRevision,
+                        productionRunLineId:productionRunLineId || null, lineRoleEnumId:lineRoleEnumId || null,
+                        productId:productId || null, quantity:quantity || null, quantityUomId:quantityUomId || null,
+                        remove:remove == 'true'}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Output removed' : 'Output saved', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="completeRun">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.transition#ProductionOrder" out-map="completed"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, action:'complete',
+                        expectedRevision:expectedRevision, reason:reason || null, finishRemainder:finishRemainder == 'true',
+                        acceptMaterialVariance:acceptMaterialVariance == 'true'}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Work order ' + workEffortId + ' completed', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition name="decide">
+        <actions>
+            <if condition="!recordFound"><return error="true" message="Work order ${workEffortId} is not available"/></if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'run', recordId:workEffortId, capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.approve#ProductionException" out-map="decided"
+                    in-map="{operationKey:operationKey, productionLossId:productionLossId || null,
+                        productionQuantityEventId:productionQuantityEventId || null, decision:decision || 'approve',
+                        reason:reason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(decided.result?.resultCode == 'REFUSED' ? 'Refused' : 'Approved', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="workEffortId"/></default-response>
+        <error-response url="."><parameter name="workEffortId"/></error-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <set field="quantities" from="null"/>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionQuantities" out-map="quantities"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="found" from="!!quantities?.run"/>
+        <set field="runInfo" from="quantities?.run || {}"/>
+        <set field="outputRows" from="quantities?.outputRows || []"/>
+        <set field="materialRows" from="quantities?.materialRows || []"/>
+        <set field="eventRows" from="quantities?.eventRows || []"/>
+        <set field="lossRows" from="quantities?.lossRows || []"/>
+        <set field="reconciliation" from="quantities?.reconciliation || {}"/>
+        <set field="can" from="quantities?.can || {}"/>
+        <set field="financialRead" from="!!quantities?.financialRead"/>
+        <set field="primary" from="outputRows.find((row) =&gt; row.primary) || {}"/>
+        <set field="pendingLossRows" from="lossRows.filter((row) =&gt; row.pending)"/>
+        <set field="pendingOverRows" from="eventRows.filter((row) =&gt; row.pending)"/>
+        <set field="keyBase" from="'wo-q-' + ec.user.randomString(20)"/>
+        <set field="reconcileForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision,
+                productionRunLineId:primary.productionRunLineId, operationKey:keyBase + '-r'}"/>
+        <set field="lossForm" from="{workEffortId:workEffortId, operationKey:keyBase + '-l', lossTypeEnumId:'PltComponentScrap'}"/>
+        <set field="changeForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision,
+                productionRunLineId:primary.productionRunLineId, targetQuantity:primary.target, operationKey:keyBase + '-c'}"/>
+        <set field="outputForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision, lineRoleEnumId:'PrlrByproduct',
+                operationKey:keyBase + '-o'}"/>
+        <set field="completeForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision, operationKey:keyBase + '-x'}"/>
+        <set field="lineOptions" from="materialRows.map((row) =&gt; ({key: row.productionRunLineId,
+                text: row.productName + ' (issued ' + row.net + ')'}))
+                .concat(outputRows.map((row) =&gt; ({key: row.productionRunLineId, text: row.productName + ' (' + row.roleText + ')'})))"/>
+        <set field="decideRows" from="pendingLossRows.map((row) =&gt; ({kind: 'Loss', productionLossId: row.productionLossId,
+                text: row.lossTypeText + ': ' + row.quantity + ' ' + row.productName + ' · ' + (row.reasonName || ''),
+                operationKey: keyBase + '-d' + row.productionLossId, workEffortId: workEffortId}))
+                .concat(pendingOverRows.map((row) =&gt; ({kind: 'Overproduction', productionQuantityEventId: row.productionQuantityEventId,
+                text: row.quantity + ' beyond the target and tolerance' + (row.reason ? ' · ' + row.reason : ''),
+                operationKey: keyBase + '-d' + row.productionQuantityEventId, workEffortId: workEffortId})))"/>
+        <set field="labelParameters" from="{workEffortId:workEffortId, renderMode:'html-print', lastStandalone:'true'}"/>
+    </actions>
+    <widgets>
+        <section name="QuantitiesNotAvailable" condition="!found">
+            <widgets>
+                <label text="This work order is not available." type="p"/>
+                <link url="${sharedLinks.WorkOrders}" text="Work orders" link-type="anchor" icon="sym_o_arrow_back"/>
+            </widgets>
+        </section>
+        <section name="QuantitiesFound" condition="found">
+            <widgets>
+                <container style="row items-center q-gutter-x-sm q-gutter-y-xs q-mb-sm">
+                    <label text="${reconciliation.reconciled ? 'Reconciled: the work order can complete' : (reconciliation.message || '')}"
+                            type="span" style="${reconciliation.reconciled ? 'text-positive' : 'm-muted'}"/>
+                </container>
+                <container style="row items-center q-gutter-x-xs q-gutter-y-xs q-mb-md">
+                    <!-- Reconcile: the operator's quantity event, the screen's primary action while the run takes output -->
+                    <container-dialog id="ReconcileDialog" condition="can.record" button-text="Record quantities" type="primary"
+                            icon="sym_o_add_task" width="680" title="Record quantities of ${runInfo.productName || workEffortId}">
+                        <label text="Good and pending output is received with it; pending goes into quarantine until its disposition. Planned ${primary.target}, accounted ${primary.good} good, ${primary.held} held; ${primary.remaining} remaining, ${primary.receivable} may still be received."
+                                type="p" style="text-caption"/>
+                        <form-single name="Reconcile" transition="recordQuantity" map="reconcileForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                            <field name="good"><default-field title="Good"><text-line size="8" input-type="number"/></default-field></field>
+                            <field name="pending"><default-field title="Pending inspection" tooltip="Produced and held until its disposition">
+                                <text-line size="8" input-type="number"/></default-field></field>
+                            <field name="processLoss"><default-field title="Process loss"><text-line size="8" input-type="number"/></default-field></field>
+                            <field name="scrap"><default-field title="Scrap" tooltip="Scrapped before it was stock"><text-line size="8" input-type="number"/></default-field></field>
+                            <field name="rework"><default-field title="Rework"><text-line size="8" input-type="number"/></default-field></field>
+                            <field name="reasonCode">
+                                <default-field title="Loss reason">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lossReasons'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                            <field name="toLocationSeqId"><default-field title="Good to location" tooltip="The putaway location when empty"><text-line size="10"/></default-field></field>
+                            <field name="heldLocationSeqId"><default-field title="Pending to quarantine location"><text-line size="10"/></default-field></field>
+                            <field name="lotNumber"><default-field title="Lot"><text-line size="12"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Record"/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="good"/><field-ref name="pending"/></field-row>
+                                <field-row><field-ref name="processLoss"/><field-ref name="scrap"/><field-ref name="rework"/></field-row>
+                                <field-row><field-ref name="reasonCode"/><field-ref name="reason"/></field-row>
+                                <field-row><field-ref name="toLocationSeqId"/><field-ref name="heldLocationSeqId"/><field-ref name="lotNumber"/></field-row>
+                                <field-ref name="submit"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="RecordLossDialog" condition="can.recordLoss" button-text="Record loss" icon="sym_o_delete_sweep"
+                            width="640" title="Record a loss on work order ${workEffortId}">
+                        <label text="An issued component scrapped in work in process writes a scrap cost event and moves no stock; an output asset of this work order scrapped is issued back to it, so the loss reaches production variance. Free stock is scrapped in Warehouse."
+                                type="p" style="text-caption"/>
+                        <form-single name="RecordLoss" transition="recordLoss" map="lossForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="lossTypeEnumId">
+                                <default-field title="Loss">
+                                    <drop-down allow-empty="false">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lossTypes'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productionRunLineId">
+                                <default-field title="Line" tooltip="The material line of a component scrap">
+                                    <drop-down allow-empty="true"><list-options list="lineOptions" key="${key}" text="${text}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="assetId"><default-field title="Asset or lot" tooltip="The output asset scrapped"><text-line size="14"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="reasonCode">
+                                <default-field title="Reason">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'lossReasons'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Record loss"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="ChangeQuantityDialog" condition="can.change" button-text="Change quantity" icon="sym_o_edit"
+                            width="560" title="Change the target of work order ${workEffortId}">
+                        <label text="A new target is recorded as a change from ${primary.target}; it cannot go below the ${primary.good} good, ${primary.held} held and the losses already recorded. The materials scale with it, never below what was issued."
+                                type="p" style="text-caption"/>
+                        <form-single name="ChangeQuantity" transition="changeQuantity" map="changeForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                            <field name="targetQuantity"><default-field title="New target"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Change target"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="AddOutputDialog" condition="can.storeOutput" button-text="Add output" icon="sym_o_add"
+                            width="560" title="Add an output to the draft work order ${workEffortId}">
+                        <form-single name="AddOutput" transition="storeOutput" map="outputForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="lineRoleEnumId">
+                                <default-field title="Kind">
+                                    <drop-down allow-empty="false">
+                                        <option key="PrlrByproduct" text="By-product"/>
+                                        <option key="PrlrOutput" text="Secondary output"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId"><default-field title="Product"><text-line size="16" required="true"/></default-field></field>
+                            <field name="quantity"><default-field title="Quantity"><text-line size="8" input-type="number" required="true"/></default-field></field>
+                            <field name="quantityUomId"><default-field title="Unit" tooltip="The product's stock unit when empty"><text-line size="8"/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Add output"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <container-dialog id="CompleteDialog" condition="can.complete" button-text="Complete" icon="sym_o_task_alt"
+                            width="600" title="Complete work order ${workEffortId}">
+                        <label text="${reconciliation.reconciled ? 'The quantities reconcile.' : reconciliation.message}" type="p"
+                                style="text-caption"/>
+                        <form-single name="Complete" transition="completeRun" map="completeForm">
+                            <field name="workEffortId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="finishRemainder">
+                                <default-field title="Finish remainder"><check><option key="true" text="Record what is left as an approved loss"/></check></default-field>
+                            </field>
+                            <field name="acceptMaterialVariance">
+                                <default-field title="Material"><check><option key="true" text="Accept the material not issued as a variance"/></check></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-line/></default-field></field>
+                            <field name="submit"><default-field title=""><submit text="Complete" confirmation="Complete the work order?"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                    <link url="../OutputLabels" text="Labels" icon="sym_o_label" target-window="_blank" parameter-map="labelParameters"/>
+                </container>
+
+                <container-box>
+                    <box-header title="Output plan"/>
+                    <box-body-nopad>
+                        <form-list name="OutputPlan" list="outputRows" skip-form="true" paginate="false">
+                            <field name="productName">
+                                <default-field title="Product"><display text="${productName} · ${roleText}"/></default-field>
+                            </field>
+                            <field name="target"><default-field title="Planned"><display align="right"/></default-field></field>
+                            <field name="good"><default-field title="Good"><display align="right"/></default-field></field>
+                            <field name="held"><default-field title="Held" tooltip="Produced, awaiting disposition: not available"><display align="right"/></default-field></field>
+                            <field name="processLoss"><default-field title="Process loss"><display align="right"/></default-field></field>
+                            <field name="scrap"><default-field title="Scrap"><display align="right"/></default-field></field>
+                            <field name="rework"><default-field title="Rework"><display align="right"/></default-field></field>
+                            <field name="remaining"><default-field title="Remaining"><display align="right"/></default-field></field>
+                            <field name="over">
+                                <default-field title="Over"><display text="${over}${tolerance != '0' ? ' (tolerance ' + tolerance + ')' : ''}${approvedOver != '0' ? ', approved ' + approvedOver : ''}" align="right"/></default-field>
+                            </field>
+                            <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="target"/></column>
+                                <column><field-ref name="good"/><field-ref name="remaining"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="Approvals" condition="can.approve &amp;&amp; decideRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Waiting for your approval"/>
+                            <box-body-nopad>
+                                <form-list name="Decisions" list="decideRows" transition="decide">
+                                    <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="productionLossId"><default-field><hidden/></default-field></field>
+                                    <field name="productionQuantityEventId"><default-field><hidden/></default-field></field>
+                                    <field name="text"><default-field title="Request"><display text="${kind}: ${text}"/></default-field></field>
+                                    <field name="decision">
+                                        <default-field title="Decision">
+                                            <drop-down allow-empty="false"><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="20"/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Decide"/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <container-box>
+                    <box-header title="Materials"/>
+                    <box-body-nopad>
+                        <label text="Required material against what was issued less unused returns; scrap in work in process does not lower what is required."
+                                type="p" style="text-caption m-muted q-pa-md"/>
+                        <form-list name="MaterialQuantities" list="materialRows" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Component"><display/></default-field></field>
+                            <field name="required"><default-field title="Required"><display align="right"/></default-field></field>
+                            <field name="issued"><default-field title="Issued"><display align="right"/></default-field></field>
+                            <field name="returned"><default-field title="Returned"><display align="right"/></default-field></field>
+                            <field name="scrapped"><default-field title="Scrapped"><display align="right"/></default-field></field>
+                            <field name="remaining"><default-field title="To issue"><display align="right"/></default-field></field>
+                            <field name="stockUomId"><default-field title="Unit"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="required"/></column>
+                                <column><field-ref name="issued"/><field-ref name="remaining"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Losses"/>
+                    <box-body-nopad>
+                        <label text="No loss recorded." type="p" style="q-pa-md" condition="!lossRows.length"/>
+                        <section name="LossRows" condition="lossRows.length">
+                            <widgets>
+                                <form-list name="RunLosses" list="lossRows" skip-form="true" paginate="false">
+                                    <field name="lossTypeText"><default-field title="Loss"><display text="${lossTypeText} · ${lossDateText}"/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display text="${productName}${assetId ? ' · ' + assetId : ''}"/></default-field></field>
+                                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                                    <field name="reasonName"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="effectText"><default-field title="Effect"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="costAmount" hide="!financialRead"><default-field title="Cost"><display currency-unit-field="costUomId" align="right"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="lossTypeText"/><field-ref name="productName"/></column>
+                                        <column><field-ref name="quantity"/><field-ref name="statusText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Quantity events"/>
+                    <box-body-nopad>
+                        <label text="No quantity recorded yet." type="p" style="q-pa-md" condition="!eventRows.length"/>
+                        <section name="EventRows" condition="eventRows.length">
+                            <widgets>
+                                <form-list name="QuantityEvents" list="eventRows" skip-form="true" paginate="false">
+                                    <field name="eventTypeText"><default-field title="Event"><display text="${eventTypeText} · ${eventDateText}"/></default-field></field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity"><display text="${quantity}${target ? ' (target ' + previousTarget + ' to ' + target + ')' : ''}" align="right"/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="approvalText"><default-field title="Approval"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="eventTypeText"/></column>
+                                        <column><field-ref name="quantity"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

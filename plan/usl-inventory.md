@@ -1207,7 +1207,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | get#ProductionRunDisplayInfo | Manufacturing/WorkOrders/WorkOrderDetail; Shared/MaterialIssueReceipt |  |
 | ManufacturingServices | create#ProductionRun |  | mantle.work.ProductionServices.create#ProductionOrder (without the legacy consume and produce products, P16a) |
 | ManufacturingServices | create#ShipmentAssemblyWorkEffort |  |  |
-| ManufacturingServices | set#ProducedProductQuantity |  |  |
+| ManufacturingServices | set#ProducedProductQuantity |  | — never called (F8): a target change is mantle.work.ProductionServices.change#ProductionQuantity (P7) |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
 | ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
 | ManufacturingServices | breakDown#Assembly |  |  |
@@ -1215,7 +1215,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | unissue#Component |  |  |
 | ManufacturingServices | cancel#AssemblyWorkEffort |  |  |
 | ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly |  |
-| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly |  |
+| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly | — not used by Quantities: it reads mantle.work.ProductionServices.get#ProductionQuantities (the run lines and receipts, P7) |
 | ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt |  |
 | ManufacturingServices | get#ProductBomDetail | Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion |  |
 | ManufacturingServices | get#ProductionRunPickInfo | Manufacturing/WorkOrders/WorkOrderDetail | — not used: Manufacturing/WorkOrders/WorkOrderDetail/PickSheet reads mantle.work.ProductionServices.get#ProductionPickList (the run lines, P5a) |
