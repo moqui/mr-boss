@@ -135,15 +135,17 @@ function readInspection(qualityInspectionId) {
 }
 
 // ===== expected receipts =====
-// The lines of the user's purchase orders in a view, with names and display texts.
-function lineRows(userScope, p, view) {
+// The lines of the user's purchase orders in a view, with names and display texts (withoutHeld: lateness only, no held
+// quantity read, for Home's count).
+function lineRows(userScope, p, view, withoutHeld = false) {
     const found = progress.lines({
         organizationPartyIds: buyersOf(userScope, p.organizationPartyId),
         vendorPartyId: supplierFilter(userScope, p.supplierPartyId),
         orderId: blank(p.orderId) ? null : String(p.orderId),
         facilityId: blank(p.facilityId) ? null : String(p.facilityId),
         excludedVendorIds: excludedVendors(userScope),
-        includeClosed: !!view.closed
+        includeClosed: !!view.closed,
+        withoutHeld
     })
     let lines = found.lines.filter(view.test)
     if (!blank(p.dueFrom)) lines = lines.filter(line => line.dueDate && lib.ms(line.dueDate) >= lib.ms(p.dueFrom))
@@ -240,13 +242,13 @@ function expectedReceipts(p) {
 // Home's late receipts: the lines of the Late view (null for a user without the buying lists).
 function lateCount(userScope) {
     if (!userScope.capabilities.listRead) return null
-    return lineRows(userScope, {}, views.late).lines.length
+    return lineRows(userScope, {}, views.late, true).lines.length
 }
 // The purchase orders with a late line among the given buyers' (PurchaseOrders' Late view).
 function lateOrderIds(userScope, buyers) {
     return unique(
         progress
-            .lines({organizationPartyIds: buyers, excludedVendorIds: excludedVendors(userScope)})
+            .lines({organizationPartyIds: buyers, excludedVendorIds: excludedVendors(userScope), withoutHeld: true})
             .lines.filter(line => line.late)
             .map(line => line.orderId)
     )

@@ -974,9 +974,31 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
   - **F-P5-4** ZIRET_WH's demo operation policy names no quarantine location, so a receipt that needs inspection there is
     refused LOCATION_REQUIRED unless the receiver chooses the quarantine cage (0901); the walk does.
   - **F-P5-5** A line's accepted quantity counts its receipts' first inspections' decisions; a re-inspection's split shows
-    only through the held quantity.
+    only through the held quantity. (Fixed in review R1: a re-inspection moves what it accepts back to accepted.)
   - **F-P5-6** The due date is the line's, the part's or the open receipt's, so the Late, Partly received and Held views are
     computed over the open lines read (at most 2,000, with a warning past it) rather than in the query.
+
+**Review Nov 4 (P5).** Checked: F-P5-1, each Purchasing receipt transition (`purchaseReceive`, `purchaseFinishReceipt`,
+`purchaseReceiveAll`, `purchaseBillReceipt`, `prepareReceipt`) runs `check#Record` (the receipt's organization, and the
+`receive` or `payableEdit` capability) and then the Mantle guard (`receive#ShipmentStock`, `close#ReceiptRemainder`,
+`receive#ExpectedShipment`, `create#InvoiceFromSource`, `ensure#PurchaseReceipt`), each checking its permission and facility or
+organization again, with no entity write of its own; a buyer posting `purchaseReceive` is refused (PurchasingAccess and the
+walk), another organization's receipt RECORD_UNAVAILABLE. F-P5-2, the inspection actions under Purchasing are offered only
+where Warehouse's `checkRecord` passes, and the included transitions call Warehouse's `check#Record` with the capability
+before the Mantle verb, so Purchasing widens nothing. The 10/8/7/1/held scenario reads correctly. Fixes:
+  - **R1 (medium)** `PurchaseReceipts.js` `inspectionSplit`: a re-inspection (rework of rejected, held stock) was ignored, so
+    what it accepted stayed rejected for good (F-P5-5). A re-inspection's units now leave rejected while it is undecided and
+    what it accepts returns to accepted; the Mantle spec gains the rework line (6 received, 2 rejected, 1 accepted again: 5
+    accepted, 1 rejected). Shared/ShipmentDetail's Purchasing lines use the same split.
+  - **R2 (medium)** `notify#LateReceipts` ran every organization in one transaction and one `lines` read capped at 2,000
+    parts newest first (the oldest, likeliest late, dropped first). The job now runs each internal organization through
+    `lib.probe` (its own transaction and error frame), logs a failing one and goes on, and warns when an organization is
+    truncated; a failed part clears its errors. The spec runs the job path, then the organization's run finds it sent.
+  - **R3 (low)** `lines` failure tolerance and cost (F-P5-6): the held and stock-factor reads ran through `lib.call`, whose
+    failure left an error message that failed every later call; they now run in an error frame. The per-line scans of
+    parts, receipts and sources (quadratic over 2,000 lines) are indexed; Home's late count, PurchaseOrders' Late view and
+    the notice skip the per-line held read (`withoutHeld`). An empty set of internal organizations answers no lines (plain
+    Mantle). Left: Receipts' Completed and All views still read held once per received line (up to 2,000 service calls).
 
 ### P6 — Bills and matching
 
