@@ -16,12 +16,25 @@ along with this software (see the LICENSE.md file). If not, see
     (mantle.work.ProductionServices.get#ProductionOperations): a released run's operation children, a draft's routing
     operations to come, each with its sequence, work center, predecessors, planned and actual dates, status, the materials it
     consumes and its readiness with the reason (not released, on hold, waiting for a predecessor, short of a component). A run
-    with no routing has no operation and keeps its quantities and time itself. Reschedule comes with P12, execution with the
-    shop floor (P10). It reads the run when the client loads the tab alone. -->
+    with no routing has no operation and keeps its quantities and time itself. Reschedule (P12), for a scheduler, on an
+    operation not started: its dialog previews the move (template/ManufacturingSchedule.xml previewMove and MovePreview, over
+    mantle.work.ProductionPlanningServices.schedule#ProductionOperation) with its conflicts, and the preview box applies it, asks
+    a supervisor for an override or unschedules it. Execution comes with the shop floor (P10). It reads the run when the client
+    loads the tab alone. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Operations" default-menu-index="4">
     <parameter name="workEffortId"/>
     <parameter name="selectedOperationId"/>
+    <parameter name="moveOperationId"/>
+    <parameter name="moveFacilityId"/>
+    <parameter name="moveStart"/>
+    <parameter name="moveEnd"/>
+    <parameter name="moveReason"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition-include name="previewMove" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="applyMove" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="requestOverride" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
+    <transition-include name="unscheduleOperation" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
     <actions>
         <if condition="recordFound">
             <service-call name="mantle.work.ProductionServices.get#ProductionOperations" out-map="operationsFound"
@@ -29,13 +42,18 @@ along with this software (see the LICENSE.md file). If not, see
         </if>
         <set field="operationRows" from="(operationsFound?.operationRows || []).map((row) =&gt; Object.assign({}, row, {
                 readyColor: row.ready ? 'positive' : (row.readinessText == 'Done' ? 'teal' : 'warning'),
-                selected: !!selectedOperationId &amp;&amp; row.workEffortId == selectedOperationId}))"/>
+                selected: !!selectedOperationId &amp;&amp; row.workEffortId == selectedOperationId,
+                canReschedule: !!manufacturing.capabilities.schedule &amp;&amp; !!row.workEffortId &amp;&amp; !row.actualStartDate
+                    &amp;&amp; ['WeApproved', 'WeOnHold'].includes(row.statusId),
+                rescheduleValues: {moveOperationId: row.workEffortId, moveFacilityId: row.workCenterFacilityId,
+                    moveStart: row.estimatedStartDate ? ec.l10n.format(row.estimatedStartDate, 'yyyy-MM-dd HH:mm') : null}}))"/>
         <set field="routed" from="!!operationsFound?.routed"/>
         <set field="draftOperations" from="!!operationsFound?.draft"/>
     </actions>
     <widgets>
         <section name="OperationsFound" condition="recordFound">
             <widgets>
+                <section-include name="MovePreview" location="component://mr-boss/template/ManufacturingSchedule.xml"/>
                 <label text="The operations the routing will release with the work order." type="p" style="text-caption m-muted"
                         condition="draftOperations &amp;&amp; operationRows.length"/>
                 <form-list name="RunOperations" list="operationRows" skip-form="true" paginate="false">
@@ -59,9 +77,34 @@ along with this software (see the LICENSE.md file). If not, see
                             </render-mode>
                         </default-field>
                     </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="Reschedule_${workEffortId}" condition="canReschedule" button-text="Reschedule"
+                                    icon="sym_o_event_repeat" title="Reschedule ${workEffortName}" width="560">
+                                <label text="The preview shows its conflicts with the work center's calendar, offline times, slots, predecessors, equipment and skills before anything changes."
+                                        type="p" style="text-caption m-muted"/>
+                                <form-single name="RescheduleOperation" transition="previewMove" map="rescheduleValues">
+                                    <field name="moveOperationId"><default-field><hidden/></default-field></field>
+                                    <field name="moveFacilityId">
+                                        <default-field title="Work center" tooltip="Its routing's work center or one of its alternates">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'workCenters', selected:moveFacilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="moveStart"><default-field title="Start"><date-time/></default-field></field>
+                                    <field name="moveEnd">
+                                        <default-field title="End" tooltip="Leave empty: its hours over the work hours"><date-time/></default-field>
+                                    </field>
+                                    <field name="submit"><default-field title=""><submit text="Preview move"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
                     <columns type="mobile">
                         <column><field-ref name="workEffortName"/><field-ref name="workCenterName"/></column>
-                        <column><field-ref name="readinessText"/><field-ref name="statusText"/></column>
+                        <column><field-ref name="readinessText"/><field-ref name="actions"/></column>
                     </columns>
                 </form-list>
                 <label text="No routing: this work order has no operations and keeps its quantities and time itself." type="p"

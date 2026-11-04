@@ -14,8 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Centers (design-manufacturing §6 WorkCenters: Find, Centers, NewCenter; style-guide §3.2 List): the work centers of the
     user's organizations, found by name or id and plant, each with its plant, parallel slots, capacity, efficiency and the
-    load of its released operations over the next two weeks (mantle.work.ProductionPlanningServices.get#WorkCenterLoad,
-    which checks PRODUCTION_VIEW and the organization); a center opens FacilityDetail. New work center, for a resource
+    load of its released operations over the next two weeks against its available hours (calendar, holidays and downtime),
+    its next available time and why it is offline now or next (P12, F57; mantle.work.ProductionPlanningServices
+    get#WorkCenterLoad, which checks PRODUCTION_VIEW and the organization); a center opens FacilityDetail. New work center, for a resource
     administrator, makes an existing facility a work center or a new line under a plant (mantle.work.RoutingServices
     store#WorkCenter, METHOD_RESOURCES), with its parallel slots (store#WorkCenterCapacity). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -59,7 +60,8 @@ along with this software (see the LICENSE.md file). If not, see
                 utilizationColor: row.utilizationPercent == null ? 'grey-8' : Number(row.utilizationPercent) &gt; 100 ? 'negative'
                     : Number(row.utilizationPercent) &gt; 85 ? 'warning' : 'positive',
                 slotsText: row.slotsConfigured ? String(row.parallelSlots) : '1 (not set)',
-                findingText: (row.findings || []).length ? row.findings.length + ' operations without hours' : ''}))"/>
+                findingText: row.missingText || ((row.findings || []).length ? row.findings.length + ' operations without hours' : ''),
+                offlineColor: row.offlineNow ? 'negative' : 'warning'}))"/>
         <set field="centerListCount" from="load.centerListCount"/>
         <set field="centerListPageIndex" from="load.centerListPageIndex"/>
         <set field="centerListPageSize" from="load.centerListPageSize"/>
@@ -72,8 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         <container style="row items-center q-col-gutter-sm">
             <container style="col">
                 <label text="Work centers" type="h5"/>
-                <label text="Load from ${load.rangeText}: the hours of released operations against the slots over the whole range,
-                    before work hours, holidays and downtime." type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="Load from ${load.rangeText}: the booked hours of released operations against the available hours (the slots over the work hours, less holidays and downtime)."
+                        type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="col-auto row q-gutter-sm">
                 <container-dialog id="NewCenterDialog" button-text="New work center" title="New work center" icon="sym_o_add"
@@ -220,6 +222,26 @@ along with this software (see the LICENSE.md file). If not, see
                     <display align="right"/>
                 </default-field>
             </field>
+            <field name="availableHours">
+                <default-field title="Available hours">
+                    <display align="right"/>
+                </default-field>
+            </field>
+            <field name="nextAvailableText">
+                <default-field title="Next available">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="offlineReasonText">
+                <default-field title="Offline reason">
+                    <render-mode>
+                        <text type="qvt"><![CDATA[${offlineReasonText ? '<q-chip dense square class="q-ma-none m-tonal text-' + offlineColor + '">'
+                            + WebUtilities.encodeHtml(offlineReasonText) + '</q-chip>' : ''}]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: offlineReasonText || ''})}]]></text>
+                        <text type="html">${offlineReasonText || ''}</text>
+                    </render-mode>
+                </default-field>
+            </field>
             <field name="utilizationText">
                 <default-field title="Utilization">
                     <render-mode>
@@ -231,7 +253,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </default-field>
             </field>
             <field name="findingText">
-                <default-field title="Findings">
+                <default-field title="Missing data">
                     <display style="text-negative"/>
                 </default-field>
             </field>

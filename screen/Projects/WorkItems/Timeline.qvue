@@ -23,8 +23,198 @@ along with this software (see the LICENSE.md file). If not, see
     on by business days. A drag from a bar's round end to another bar makes that one wait for it; a click on an arrow opens
     DependencyForm (the lag, Remove); a click on a bar opens the item. Alt+Left and Alt+Right move a focused bar by a day. Bars are
     positioned elements and the arrows an SVG over them, as Calendar.qvue draws its grid; no Gantt library. Status colors are brand
-    color names; the shading is a neutral tint (style-guide §4.8, §5). -->
+    color names; the shading is a neutral tint (style-guide §4.8, §5).
+    Resource mode (design-manufacturing ProductionSchedule and §12 M11, impl-manufacturing P12, F4): Manufacturing's
+    ProductionSchedule serves this component from Manufacturing/Planning/ProductionSchedule.xml, whose schedule transition answers
+    the work centers as lanes (with their closed, holiday and offline times shaded) and the released operations as bars by hour
+    (stacked within a lane, a lock on started work, a warning on a conflict, predecessors as arrows). A drag is a preview only:
+    the drop opens the Move dialog at the lane and time it was dropped on and previews it (the conflicts, the end from the
+    operation's hours); Apply in the dialog commits, a scheduler without override authority asks for an override, and a
+    supervisor decides the requests shown above the lanes. Show conflicts lists them all; Enter on a bar opens Move, so no
+    drag is needed. The work-item modes above are unchanged by it. -->
 <template><div class="boss-timeline">
+    <!-- ===== resource mode (Manufacturing's ProductionSchedule, impl-manufacturing P12, M11): work-center lanes ===== -->
+    <template v-if="resourceMode">
+        <div class="row items-center q-gutter-sm q-mb-xs">
+            <div class="text-h5 q-mr-sm">{{t('Production schedule')}}</div>
+            <div v-if="rPlantOptions.length" style="width:240px;max-width:100%"><m-drop-down id="boss-schedule-plant" name="schedulePlant" :model-value="rPlantId"
+                    :options="rPlantOptions" :label="t('Plant')" allow-empty @update:model-value="rSetPlant"></m-drop-down></div>
+            <m-date-time id="boss-schedule-from" name="scheduleFrom" type="date" :model-value="rFromDay" :label="t('From')" @update:model-value="rSetFrom"></m-date-time>
+            <q-btn-toggle :model-value="rDays" dense no-caps unelevated toggle-color="primary" :options="rDayOptions" @update:model-value="rSetDays"></q-btn-toggle>
+            <q-space></q-space>
+            <q-btn unelevated dense no-caps class="m-btn-tonal q-px-sm" :label="t('Today')" @click="rToday"></q-btn>
+            <q-btn-toggle v-model="rzoom" dense no-caps unelevated toggle-color="primary" :options="zoomOptions"></q-btn-toggle>
+            <q-btn v-if="sched" flat dense no-caps :color="rShowConflicts ? 'warning' : 'primary'" icon="sym_o_warning" class="boss-schedule-conflicts-toggle"
+                    :label="t('Show conflicts') + ' (' + rConflicts.length + ')'" @click="rShowConflicts = !rShowConflicts"></q-btn>
+            <q-btn v-if="rMeta.snapshotUrl" flat dense no-caps color="primary" icon="sym_o_print" :label="t('Snapshot')" :href="rMeta.snapshotUrl" target="_blank"></q-btn>
+        </div>
+        <div v-if="loading && !sched" class="q-pa-md">
+            <q-skeleton type="text" width="30%"></q-skeleton>
+            <q-skeleton type="rect" height="260px" class="q-mt-md"></q-skeleton>
+        </div>
+        <div v-else-if="rMeta.notAvailable || rMeta.failed" class="q-pa-lg text-center">
+            <q-icon name="sym_o_visibility_off" size="48px" class="m-muted"></q-icon>
+            <div class="text-h6 q-mt-sm">{{t('This schedule is not available')}}</div>
+            <div class="text-body2 m-muted">{{rMeta.failed || t('The plant is not one of yours.')}}</div>
+        </div>
+        <template v-else-if="sched">
+            <!-- the override requests waiting at these work centers -->
+            <div v-if="sched.requestList && sched.requestList.length" class="q-mb-sm boss-schedule-requests">
+                <q-banner v-for="request in sched.requestList" :key="request.scheduleChangeId" dense rounded class="q-mb-xs"
+                        :class="request.statusId === 'SchRequested' ? 'bg-warning-1 m-tonal text-warning' : 'm-tonal'">
+                    <div class="text-body2">
+                        <span class="text-weight-medium">{{request.operationName}}</span> {{t('to')}} {{request.toFacilityName}} {{request.toStartText}} – {{request.toEndText}}
+                        · {{request.statusText}} · {{t('asked by')}} {{request.requestedByName}}<span v-if="request.reason">: {{request.reason}}</span>
+                    </div>
+                    <div class="text-caption">{{request.conflictText}}</div>
+                    <template v-slot:action>
+                        <template v-if="request.canDecide">
+                            <q-btn flat dense no-caps color="negative" :label="t('Refuse')" @click="rOpenDecide(request, 'refuse')"></q-btn>
+                            <q-btn flat dense no-caps color="primary" :label="t('Approve override')" @click="rOpenDecide(request, 'approve')"></q-btn>
+                        </template>
+                    </template>
+                </q-banner>
+            </div>
+            <!-- Show conflicts: every conflict of where the operations are now -->
+            <div v-if="rShowConflicts" class="q-mb-sm rounded-borders q-pa-sm boss-schedule-conflict-list" :class="dark ? 'bg-grey-9' : 'bg-orange-1'">
+                <div v-if="!rConflicts.length" class="text-body2 m-muted">{{t('No conflicts in this schedule.')}}</div>
+                <div v-for="item in rConflicts" :key="item.workEffortId + item.code + item.message" class="row no-wrap items-center q-py-xs">
+                    <q-icon name="sym_o_warning" class="text-warning q-mr-sm"></q-icon>
+                    <a href="#" class="text-weight-medium q-mr-sm" @click.prevent="rOpenMoveById(item.workEffortId)">{{item.operationName}}</a>
+                    <span class="text-body2">{{item.message}}</span>
+                </div>
+            </div>
+            <div v-if="sched.truncated" class="text-caption text-warning q-mb-xs">{{t('The first 300 operations are drawn; choose fewer days to see the others.')}}</div>
+            <div v-if="!rLanes.length" class="q-pa-lg text-center rounded-borders" :class="dark ? 'bg-grey-9' : 'bg-blue-grey-1'">
+                <div class="text-body2 m-muted">{{t('No work center at this plant. A resource administrator adds one in Work centers.')}}</div>
+            </div>
+            <div v-else ref="scroller" class="boss-tl-scroll rounded-borders" :class="dark ? 'boss-tl-dark' : ''" :style="{maxHeight: scrollHeight}" @scroll.passive="onScroll">
+                <div class="relative-position" :style="{width: (gridW + chartW) + 'px'}">
+                    <div class="boss-tl-head row no-wrap" style="height:44px">
+                        <div class="boss-tl-corner column justify-end q-px-sm" :style="{width: gridW + 'px', height: '44px'}">
+                            <div class="text-caption text-weight-medium m-muted q-pb-xs">{{t('Work center')}}</div>
+                        </div>
+                        <div class="relative-position" :style="{width: chartW + 'px', height: '44px'}">
+                            <div v-for="month in months" :key="month.key" class="absolute boss-tl-month text-caption text-weight-medium ellipsis q-px-xs"
+                                    :style="{left: month.left + 'px', width: month.width + 'px', top: 0, height: '22px', lineHeight: '22px'}">{{month.label}}</div>
+                            <div v-for="tick in rTicks" :key="tick.key" class="absolute text-caption m-muted text-center boss-tl-tick"
+                                    :class="tick.today ? 'text-primary text-weight-bold' : ''"
+                                    :style="{left: tick.left + 'px', width: tick.width + 'px', top: '22px', height: '18px', lineHeight: '18px'}">{{tick.label}}</div>
+                        </div>
+                    </div>
+                    <div ref="lanesBody" class="relative-position" :style="{height: rBodyH + 'px'}">
+                        <div class="absolute" :style="{left: gridW + 'px', top: 0, width: chartW + 'px', height: rBodyH + 'px'}">
+                            <div v-for="tick in rTicks" :key="'l' + tick.key" class="absolute boss-tl-line" :style="{left: tick.left + 'px', top: 0, bottom: 0}"></div>
+                            <div v-if="rNowX != null" class="absolute bg-negative" :style="{left: rNowX + 'px', top: 0, bottom: 0, width: '2px', zIndex: 1}"></div>
+                        </div>
+                        <div v-for="lane in rLanes" :key="lane.facilityId" class="row no-wrap boss-tl-row boss-schedule-lane" :data-lane="lane.facilityId"
+                                :style="{height: lane.height + 'px'}">
+                            <div class="boss-tl-cell column no-wrap justify-center q-px-sm" :style="{width: gridW + 'px'}">
+                                <div class="text-weight-medium ellipsis">{{lane.facilityName}}</div>
+                                <div class="text-caption m-muted ellipsis">{{lane.caption}}</div>
+                            </div>
+                            <div class="relative-position" :style="{width: chartW + 'px', height: lane.height + 'px'}">
+                                <!-- closed (outside work hours), holidays and offline times, under the bars -->
+                                <div v-for="shade in lane.shades" :key="shade.key" class="absolute" :class="shade.cls"
+                                        :style="{left: shade.left + 'px', width: shade.width + 'px', top: 0, bottom: 0}"><q-tooltip v-if="shade.name">{{shade.name}}</q-tooltip></div>
+                                <div v-for="bar in lane.bars" :key="bar.id" class="absolute boss-tl-bar rounded-borders boss-schedule-bar"
+                                        :class="['text-' + bar.color, bar.canMove ? 'boss-tl-grab' : '', rDrag && rDrag.started && rDrag.op.workEffortId === bar.id ? 'boss-tl-faint' : '']"
+                                        :data-bar="bar.id" tabindex="0" role="button" :aria-label="bar.ariaLabel"
+                                        :style="{left: bar.left + 'px', width: bar.width + 'px', top: bar.top + 'px', height: '22px', zIndex: 2}"
+                                        @pointerdown="rBarDown($event, bar)" @keydown.enter="rOpenMove(bar.op)">
+                                    <div class="relative-position ellipsis q-px-xs text-caption boss-tl-label">
+                                        <q-icon v-if="bar.op.locked" name="sym_o_lock" size="12px"></q-icon>
+                                        <q-icon v-else-if="bar.op.conflicts.length" name="sym_o_warning" size="12px"></q-icon>
+                                        {{bar.label}}</div>
+                                    <q-tooltip :delay="400">{{bar.tip}}</q-tooltip>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- the bar being dragged, and the move being previewed: where it would go -->
+                        <div v-if="rGhost" class="absolute boss-schedule-ghost rounded-borders text-primary"
+                                :style="{left: (gridW + rGhost.left) + 'px', width: rGhost.width + 'px', top: rGhost.top + 'px', height: '22px', zIndex: 4}">
+                            <div class="ellipsis q-px-xs text-caption">{{rGhost.label}}</div>
+                        </div>
+                        <svg class="absolute boss-tl-arrows" :style="{left: gridW + 'px', top: 0}" :width="chartW" :height="rBodyH" aria-hidden="true">
+                            <g v-for="arrow in rArrows" :key="arrow.key" :class="arrow.violated ? 'text-warning' : (dark ? 'text-grey-5' : 'text-grey-7')">
+                                <path :d="arrow.d" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+                                <path :d="arrow.head" fill="currentColor" stroke="none"></path>
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div v-if="sched.unscheduledList && sched.unscheduledList.length" class="q-mt-sm">
+                <div class="text-subtitle2">{{t('Not scheduled')}}</div>
+                <div v-for="op in sched.unscheduledList" :key="op.workEffortId" class="row items-center q-gutter-sm q-py-xs">
+                    <a :href="op.url" @click.prevent="go(op.url)">{{op.operationName}}</a>
+                    <span class="text-caption m-muted">{{op.runName}} · {{op.hours ? op.hours + ' ' + t('hours') : ''}}</span>
+                    <q-btn v-if="op.canMove" flat dense no-caps color="primary" :label="t('Schedule')" @click="rOpenMove(op)"></q-btn>
+                </div>
+            </div>
+            <div v-if="rLanes.length" class="row items-center q-gutter-md q-mt-xs text-caption m-muted">
+                <span><span class="boss-tl-swatch boss-schedule-closed"></span> {{t('Not working')}}</span>
+                <span><span class="boss-tl-swatch boss-tl-holiday"></span> {{t('Holiday')}}</span>
+                <span><span class="boss-tl-swatch boss-schedule-offline"></span> {{t('Offline')}}</span>
+                <span><q-icon name="sym_o_warning" class="text-warning"></q-icon> {{t('Conflict')}}</span>
+                <span><q-icon name="sym_o_lock"></q-icon> {{t('Started: actual work pins it')}}</span>
+                <span v-if="sched.canSchedule && !phone">{{t('Drag a bar to preview a move; the Move dialog applies it.')}}</span>
+            </div>
+        </template>
+
+        <!-- ===== Move: preview, then apply (the drag only fills it) ===== -->
+        <m-dialog v-model="move.open" :title="t('Move operation')" width="620" @hide="rCloseMove">
+            <div v-if="move.op" class="q-gutter-y-sm boss-schedule-move">
+                <div class="text-body2"><span class="text-weight-medium">{{move.op.operationName}}</span> · {{move.op.runName}}
+                    <span v-if="move.op.productName">· {{move.op.productName}} {{move.op.quantityText}}</span></div>
+                <div class="text-caption m-muted">{{t('Now')}}: {{rLaneName(move.op.facilityId)}} {{move.op.startText ? move.op.startText + ' – ' + move.op.endText : t('not scheduled')}}
+                    <span v-if="move.op.hours">· {{move.op.hours}} {{t('standard hours')}}</span></div>
+                <div class="row q-col-gutter-sm">
+                    <div class="col-12"><m-drop-down id="boss-move-center" name="targetFacilityId" v-model="move.facilityId" :options="rLaneOptions"
+                            :label="t('Work center')" @update:model-value="rStale"></m-drop-down></div>
+                    <div class="col-12 col-sm-6"><m-date-time id="boss-move-start" name="startText" v-model="move.startText" :label="t('Start')" @update:model-value="rStale"></m-date-time></div>
+                    <div class="col-12 col-sm-6"><m-date-time id="boss-move-end" name="endText" v-model="move.endText" :label="t('End')" tooltip="Empty: its hours over the work hours"
+                            @update:model-value="rStale"></m-date-time></div>
+                </div>
+                <m-text-line id="boss-move-reason" name="reason" v-model="move.reason" :label="t('Reason')"></m-text-line>
+                <div v-if="move.preview" class="rounded-borders q-pa-sm boss-schedule-preview" :class="dark ? 'bg-grey-9' : 'bg-blue-grey-1'">
+                    <div class="text-body2">{{t('Preview')}}: {{move.preview.facilityName}} {{move.preview.startText}} – {{move.preview.endText}}
+                        <span v-if="move.preview.endComputed" class="m-muted">({{t('end from its hours')}})</span></div>
+                    <div v-for="item in move.preview.refusals" :key="'r' + item.code + item.message" class="text-negative text-body2">
+                        <q-icon name="sym_o_block"></q-icon> {{item.message}}</div>
+                    <div v-for="item in move.preview.conflicts" :key="'c' + item.code + item.message" class="text-warning text-body2 boss-schedule-conflict">
+                        <q-icon name="sym_o_warning"></q-icon> {{item.message}}</div>
+                    <div v-if="!move.preview.refusals.length && !move.preview.conflicts.length" class="text-positive text-body2">
+                        <q-icon name="sym_o_check_circle"></q-icon> {{t('No conflict')}}</div>
+                    <q-toggle v-if="move.preview.needsOverride && move.preview.canOverride" v-model="move.override" dense
+                            :label="t('Override the conflicts (a supervisor exception; it changes no capacity)')"></q-toggle>
+                    <div v-if="move.preview.canRequestOverride" class="text-caption m-muted">{{t('A supervisor may override the conflicts: ask with a reason.')}}</div>
+                </div>
+            </div>
+            <div class="row justify-end q-gutter-sm q-mt-md">
+                <q-btn v-if="move.op && move.op.startText && move.op.canMove" flat no-caps color="negative" :label="t('Unschedule')" :disable="move.busy" @click="rUnschedule"></q-btn>
+                <q-space></q-space>
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn flat no-caps color="primary" :label="t('Preview')" :loading="move.busy && move.step === 'preview'" @click="rPreview"></q-btn>
+                <q-btn v-if="move.preview && move.preview.canRequestOverride" unelevated no-caps color="primary" :label="t('Request override')"
+                        :disable="!move.reason || move.busy" @click="rCommit('request')"></q-btn>
+                <q-btn v-else-if="rCanEditSchedule" unelevated no-caps color="primary" :label="t('Apply')" :disable="!rApplyReady" :loading="move.busy && move.step === 'apply'"
+                        @click="rCommit('apply')"></q-btn>
+            </div>
+        </m-dialog>
+        <m-dialog v-model="decide.open" :title="decide.decision === 'approve' ? t('Approve the override') : t('Refuse the override')" width="480">
+            <div v-if="decide.request" class="text-body2 q-mb-sm">{{decide.request.operationName}} {{t('to')}} {{decide.request.toFacilityName}}
+                {{decide.request.toStartText}} – {{decide.request.toEndText}}<div class="text-caption text-warning">{{decide.request.conflictText}}</div></div>
+            <m-text-line id="boss-decide-reason" name="decisionReason" v-model="decide.reason" :label="t('Reason')"></m-text-line>
+            <div class="row justify-end q-gutter-sm q-mt-md">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps :color="decide.decision === 'approve' ? 'primary' : 'negative'" :label="decide.decision === 'approve' ? t('Approve override') : t('Refuse')"
+                        :disable="decide.busy || (decide.decision === 'refuse' && !decide.reason)" @click="rDecide"></q-btn>
+            </div>
+        </m-dialog>
+    </template>
+
+    <template v-if="!resourceMode">
     <!-- ===== the toolbar ===== -->
     <div class="row items-center q-gutter-sm q-mb-xs">
         <div v-if="!projectFixed && !inPlanTab" class="text-h5 q-mr-sm">{{t('Timeline')}}</div>
@@ -205,6 +395,7 @@ along with this software (see the LICENSE.md file). If not, see
             <span v-if="canPlan && !phone">{{t('Drag a bar to move it, its ends to change its dates, its round end to another bar for a dependency.')}}</span>
         </div>
     </template>
+    </template>
 
     <!-- ===== DependencyForm ===== -->
     <m-dialog v-model="dep.open" :title="dep.isNew ? t('New dependency') : t('Dependency')" width="480">
@@ -247,7 +438,11 @@ module.exports = {
             filter: { text: '', assigneePartyId: null, purposeEnumId: null, sprintId: null, milestoneId: null },
             zoom: store.get('zoom') || 'weeks', group: store.get('group') || 'tree', autoSchedule: store.get('auto') === 'Y',
             collapsed: {}, drag: null, preview: null, linkDrag: null, scrollLeft: 0, scrolledFor: null,
-            dep: { open: false, isNew: true, dependentId: null, predecessorId: null, lagDays: '', violated: false, canChange: false, busy: false }
+            dep: { open: false, isNew: true, dependentId: null, predecessorId: null, lagDays: '', violated: false, canChange: false, busy: false },
+            // resource mode
+            sched: null, rMeta: {}, rzoom: store.get('rzoom') || 'days', rShowConflicts: false, rDrag: null,
+            move: { open: false, op: null, facilityId: null, startText: '', endText: '', reason: '', override: false, preview: null, busy: false, step: '', key: '' },
+            decide: { open: false, request: null, decision: 'approve', reason: '', busy: false, key: '' }
         };
     },
     computed: {
@@ -256,7 +451,8 @@ module.exports = {
         dark() { return this.$q.dark.isActive; },
         locale() { return String((moqui.config && moqui.config.locale) || 'en-US').replace('_', '-'); },
         pathList() { return this.$root.currentPathList || []; },
-        tIndex() { return this.pathList.lastIndexOf('Timeline'); },
+        tIndex() { const index = this.pathList.lastIndexOf('Timeline'); return index >= 0 ? index : this.pathList.lastIndexOf('ProductionSchedule'); },
+        resourceMode() { return this.tIndex >= 0 && this.pathList[this.tIndex] === 'ProductionSchedule'; },
         screenPath() { return this.$root.basePath + '/' + (this.tIndex >= 0 ? this.pathList.slice(0, this.tIndex + 1) : ['Projects', 'WorkItems', 'Timeline']).join('/'); },
         linkPath() { return (this.$root.linkBasePath || '/qapps') + '/' + (this.tIndex >= 0 ? this.pathList.slice(0, this.tIndex + 1) : ['Projects', 'WorkItems', 'Timeline']).join('/'); },
         params() { return this.$root.currentParameters || {}; },
@@ -268,7 +464,10 @@ module.exports = {
             if (!this.inProject) options.push({ label: this.t('Projects'), value: 'portfolio' });
             return options;
         },
-        zoomOptions() { return [{ label: this.t('Weeks'), value: 'weeks' }, { label: this.t('Months'), value: 'months' }, { label: this.t('Quarters'), value: 'quarters' }]; },
+        zoomOptions() {
+            if (this.resourceMode) return [{ label: this.t('Days'), value: 'days' }, { label: this.t('Weeks'), value: 'weeks' }, { label: this.t('Months'), value: 'months' }];
+            return [{ label: this.t('Weeks'), value: 'weeks' }, { label: this.t('Months'), value: 'months' }, { label: this.t('Quarters'), value: 'quarters' }];
+        },
         groupOptions() {
             return [{ value: 'tree', label: this.t('The tree') }, { value: 'milestone', label: this.t('Milestone') }, { value: 'assignee', label: this.t('Assignee') },
                 { value: 'none', label: this.t('None') }];
@@ -282,7 +481,10 @@ module.exports = {
             if (this.mode === 'plan') return this.t('No milestones or releases yet');
             return this.filtered ? this.t('No work item matches the find') : this.t('No work items yet');
         },
-        dayPx() { return { weeks: 22, months: 7, quarters: 2.5 }[this.zoom] || 22; },
+        dayPx() {
+            if (this.resourceMode) return { days: 360, weeks: 48, months: 10 }[this.rzoom] || 360;
+            return { weeks: 22, months: 7, quarters: 2.5 }[this.zoom] || 22;
+        },
         rowH() { return 34; },
         // the sprint and milestone lanes are the work items' (the other modes have them as rows)
         headH() { return this.mode === 'items' ? 84 : 44; },
@@ -292,6 +494,13 @@ module.exports = {
         planItems() { return (this.timeline && this.timeline.planItemList) || []; },
         // the days drawn: the rows' and plan items' dates and today, a little before and after, whole months
         range() {
+            // resource mode: the schedule's days, from its first through the day before its end
+            if (this.resourceMode) {
+                if (!this.sched) { const today = dayNum(new Date().toISOString().slice(0, 10)); return { first: today, last: today + 13, days: 14 }; }
+                const first = dayNum(this.sched.fromText);
+                const thru = dayNum(this.sched.thruText) + (String(this.sched.thruText).slice(11, 16) > '00:00' ? 1 : 0);
+                return { first, last: Math.max(first, thru - 1), days: Math.max(1, thru - first) };
+            }
             const days = [];
             const add = (text) => { if (text) days.push(dayNum(text)); };
             if (this.timeline) {
@@ -327,7 +536,7 @@ module.exports = {
                 const month = Number(text.slice(5, 7));
                 const next = dayNum(new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10));
                 const width = (Math.min(next, this.range.last + 1) - num) * this.dayPx;
-                const quarterLabel = this.zoom === 'quarters' ? this.fmt(text, { month: 'short' }) + (month === 1 ? ' ' + year : '') : null;
+                const quarterLabel = this.zoom === 'quarters' && !this.resourceMode ? this.fmt(text, { month: 'short' }) + (month === 1 ? ' ' + year : '') : null;
                 out.push({ key: text, left: (num - this.range.first) * this.dayPx, width,
                     label: quarterLabel || this.fmt(text, { month: width < 60 ? 'short' : 'long', year: 'numeric' }) });
                 num = next;
@@ -482,6 +691,119 @@ module.exports = {
         itemOptions() {
             return ((this.timeline && this.timeline.rowList) || []).filter((row) => row.rowKind === 'item')
                 .map((row) => ({ value: row.workEffortId, label: row.workEffortId + ' ' + row.workEffortName }));
+        },
+        // ===== resource mode (ProductionSchedule) =====
+        rPlantId() { return this.rMeta.plantId || null; },
+        rPlantOptions() { return (this.rMeta.plantOptions || []).map((option) => ({ value: option.value, label: option.label })); },
+        rFromDay() { return this.params.fromDay || (this.sched ? String(this.sched.fromText || '').slice(0, 10) : ''); },
+        rDays() { return Number(this.params.days || this.rMeta.days || 14); },
+        rDayOptions() { return [{ label: this.t('Week'), value: 7 }, { label: this.t('2 weeks'), value: 14 }, { label: this.t('4 weeks'), value: 28 }]; },
+        rCanEditSchedule() { return !!(this.sched && this.sched.canSchedule); },
+        rFirstMs() { return this.sched ? dayNum(this.sched.fromText) * 86400000 : 0; },
+        rNowX() {
+            if (!this.sched) return null;
+            const x = this.xAtWall(this.sched.nowText);
+            return x >= 0 && x <= this.chartW ? x : null;
+        },
+        rConflicts() { return (this.sched && this.sched.conflictList) || []; },
+        rLaneOptions() { return ((this.sched && this.sched.laneList) || []).map((lane) => ({ value: lane.facilityId, label: lane.facilityName })); },
+        // a tick per day (weekday and day in the days zoom), else as the work-item zooms
+        rTicks() {
+            const out = [];
+            if (!this.sched) return out;
+            const today = this.sched.todayText;
+            for (let num = this.range.first; num <= this.range.last; num++) {
+                const text = dayText(num);
+                const left = (num - this.range.first) * this.dayPx;
+                if (this.rzoom === 'days') out.push({ key: text, left, width: this.dayPx, today: text === today, label: this.fmt(text, { weekday: 'short', day: 'numeric' }) });
+                else if (this.rzoom === 'weeks') out.push({ key: text, left, width: this.dayPx, today: text === today, label: String(Number(text.slice(8, 10))) });
+                else if (weekdayOf(text) === 1) out.push({ key: text, left, width: 7 * this.dayPx, label: String(Number(text.slice(8, 10))) });
+            }
+            return out;
+        },
+        // the lanes: each work center with its shading and its bars, stacked so that bars at the same time do not overlap
+        rLanes() {
+            if (!this.sched) return [];
+            const out = [];
+            let top = 0;
+            const span = (fromText, thruText) => {
+                const left = Math.max(0, this.xAtWall(fromText));
+                const right = Math.min(this.chartW, this.xAtWall(thruText));
+                return right > left ? { left, width: Math.max(1, right - left) } : null;
+            };
+            for (const lane of this.sched.laneList || []) {
+                const shades = [];
+                (lane.closedList || []).forEach((row, i) => { const at = span(row.fromText, row.thruText); if (at) shades.push(Object.assign({ key: 'c' + i, cls: 'boss-schedule-closed' }, at)); });
+                (lane.holidayList || []).forEach((row, i) => { const at = span(row.fromText, row.thruText); if (at) shades.push(Object.assign({ key: 'h' + i, cls: 'boss-tl-holiday', name: row.name }, at)); });
+                (lane.offlineList || []).forEach((row, i) => { const at = span(row.fromText, row.thruText); if (at) shades.push(Object.assign({ key: 'o' + i, cls: 'boss-schedule-offline',
+                    name: row.kindText + ': ' + row.reasonText + ' · ' + row.fromText + (row.open ? '' : ' – ' + row.thruText) }, at)); });
+                const ops = (this.sched.operationList || []).filter((op) => op.facilityId === lane.facilityId)
+                    .slice().sort((a, b) => String(a.startText).localeCompare(String(b.startText)));
+                const stackEnds = [];
+                const bars = ops.map((op) => {
+                    const left = this.xAtWall(op.startText);
+                    const width = Math.max(6, this.xAtWall(op.endText) - left);
+                    let stack = stackEnds.findIndex((end) => end <= left + 0.5);
+                    if (stack < 0) { stack = stackEnds.length; stackEnds.push(0); }
+                    stackEnds[stack] = left + width;
+                    const color = op.locked ? 'blue-grey' : (op.conflicts.length ? 'warning' : (op.statusId === 'WeOnHold' ? 'orange' : 'primary'));
+                    return { id: op.workEffortId, op, left, width, stack, color, canMove: !!op.canMove,
+                        label: this.rzoom === 'months' ? '' : op.operationName + ' · ' + op.runName,
+                        ariaLabel: op.operationName + ', ' + op.runName + ', ' + op.startText + ' to ' + op.endText,
+                        tip: op.operationName + ' · ' + op.runName + (op.productName ? ' · ' + op.productName + ' ' + op.quantityText : '') + ' · ' + op.startText + ' – ' + op.endText
+                            + (op.hours ? ' · ' + op.hours + ' h' : '') + ' · ' + op.statusText + (op.lockedReason ? ' · ' + op.lockedReason : '')
+                            + (op.conflictText ? ' · ' + op.conflictText : '') };
+                });
+                const height = Math.max(1, stackEnds.length) * 28 + 10;
+                bars.forEach((bar) => { bar.top = 5 + bar.stack * 28; bar.y = top + bar.top + 11; });
+                const caption = [lane.parallelSlots + ' ' + (lane.parallelSlots === 1 ? this.t('slot') : this.t('slots')),
+                    lane.calendarConfigured ? '' : this.t('no work calendar'), ops.length + ' ' + this.t('operations')].filter(Boolean).join(' · ');
+                out.push(Object.assign({}, lane, { top, height, shades, bars, caption }));
+                top += height;
+            }
+            return out;
+        },
+        rBodyH() { return this.rLanes.reduce((sum, lane) => sum + lane.height, 0); },
+        rBarIndex() {
+            const index = {};
+            for (const lane of this.rLanes) for (const bar of lane.bars) index[bar.id] = { bar, lane };
+            return index;
+        },
+        // a predecessor's end to its operation's start
+        rArrows() {
+            const out = [];
+            for (const lane of this.rLanes) for (const bar of lane.bars) for (const id of bar.op.predecessorIds || []) {
+                const from = this.rBarIndex[id];
+                if (!from) continue;
+                const x1 = from.bar.left + from.bar.width; const y1 = from.bar.y;
+                const x2 = bar.left; const y2 = bar.y;
+                const d = x2 - 6 >= x1 + 6 ? `M${x1},${y1} H${x1 + 6} V${y2} H${x2 - 5}` : `M${x1},${y1} H${x1 + 6} V${(y1 + y2) / 2} H${x2 - 10} V${y2} H${x2 - 5}`;
+                out.push({ key: id + '|' + bar.id, d, head: `M${x2},${y2} L${x2 - 6},${y2 - 4} L${x2 - 6},${y2 + 4} Z`,
+                    violated: (bar.op.conflicts || []).some((item) => item.code === 'PREDECESSOR') });
+            }
+            return out;
+        },
+        // the dragged bar where it is dropped, or the previewed move
+        rGhost() {
+            const drag = this.rDrag;
+            if (drag && drag.started) {
+                const lane = this.rLanes[drag.laneIndex];
+                if (!lane) return null;
+                return { left: this.xAtWall(drag.startText), width: Math.max(6, this.xAtWall(drag.endText) - this.xAtWall(drag.startText)),
+                    top: lane.top + 5, label: drag.startText };
+            }
+            const preview = this.move.open && this.move.preview;
+            if (!preview) return null;
+            const lane = this.rLanes.find((row) => row.facilityId === preview.facilityId);
+            if (!lane) return null;
+            return { left: this.xAtWall(preview.startText), width: Math.max(6, this.xAtWall(preview.endText) - this.xAtWall(preview.startText)),
+                top: lane.top + lane.height - 27, label: this.t('Preview') + ' ' + preview.startText };
+        },
+        rApplyReady() {
+            const preview = this.move.preview;
+            if (!preview || this.move.busy || preview.refusals.length) return false;
+            if (!preview.conflicts.length) return !!preview.canApply;
+            return preview.canOverride && this.move.override && !!this.move.reason;
         }
     },
     watch: {
@@ -494,7 +816,12 @@ module.exports = {
         'params.mode'() { this.load(); },
         zoom(value) { store.set('zoom', value); this.$nextTick(() => this.scrollToToday()); },
         group(value) { store.set('group', value); },
-        autoSchedule(value) { store.set('auto', value ? 'Y' : 'N'); }
+        autoSchedule(value) { store.set('auto', value ? 'Y' : 'N'); },
+        rzoom(value) { store.set('rzoom', value); this.$nextTick(() => this.rScrollToNow()); },
+        'params.plantId'() { if (this.resourceMode) this.rLoad(); },
+        'params.fromDay'() { if (this.resourceMode) this.rLoad(); },
+        'params.days'() { if (this.resourceMode) this.rLoad(); },
+        'params.scheduleChangeId'() { if (this.resourceMode) this.rLoad(); }
     },
     methods: {
         t,
@@ -555,6 +882,7 @@ module.exports = {
                 top: ((this.rowH - height) / 2) + 'px', height: height + 'px', zIndex: this.preview && this.preview.id === row.id ? 3 : 2 };
         },
         load() {
+            if (this.resourceMode) return this.rLoad();
             const seq = ++this.seq;
             this.loading = true;
             const params = this.inProject ? { workEffortId: this.params.workEffortId || '' } : { rootWorkEffortId: this.params.rootWorkEffortId || '' };
@@ -718,10 +1046,162 @@ module.exports = {
                 this.dep.open = false;
                 this.load();
             }, () => {});
+        },
+        // ===== resource mode (ProductionSchedule) =====
+        // a wall time (yyyy-MM-dd HH:mm in the user's zone) counted as UTC, as the days are
+        wallMs(text) { return Date.parse(String(text).slice(0, 16).replace(' ', 'T') + ':00Z'); },
+        wallText(ms) { return new Date(ms).toISOString().slice(0, 16).replace('T', ' '); },
+        xAtWall(text) { return text ? ((this.wallMs(text) - this.range.first * 86400000) / 86400000) * this.dayPx : 0; },
+        rLaneName(id) { const lane = ((this.sched && this.sched.laneList) || []).find((row) => row.facilityId === id); return lane ? lane.facilityName : (id || ''); },
+        rLoad() {
+            const seq = ++this.seq;
+            this.loading = true;
+            const params = {};
+            ['plantId', 'fromDay', 'days', 'scheduleChangeId'].forEach((name) => { if (this.params[name]) params[name] = this.params[name]; });
+            return moqui.request(this.url('schedule'), { params }).then((result) => {
+                if (seq !== this.seq) return;
+                this.loading = false;
+                const json = result.json || {};
+                this.rMeta = { plantId: json.plantId || null, plantOptions: json.plantOptions || [], days: json.days || 14, snapshotUrl: json.snapshotUrl || null,
+                    notAvailable: !!json.notAvailable, failed: json.failed || null };
+                this.sched = json.schedule || null;
+                if (this.sched && this.scrolledFor !== this.sched.fromText) { this.scrolledFor = this.sched.fromText; this.$nextTick(() => this.rScrollToNow()); }
+            }, (err) => { if (seq !== this.seq) return; this.loading = false; moqui.handleAjaxError(err); });
+        },
+        rScrollToNow() {
+            const el = this.$refs.scroller;
+            if (!el || this.rNowX == null) return;
+            el.scrollLeft = Math.max(0, this.rNowX - Math.min(160, (el.clientWidth - this.gridW) / 3));
+        },
+        rSetPlant(value) { if ((value || null) !== (this.rPlantId || null)) this.setUrlParams({ plantId: value || null }); },
+        rSetFrom(value) { if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) this.setUrlParams({ fromDay: value }); },
+        rSetDays(value) { this.setUrlParams({ days: String(value) }); },
+        rToday() { if (this.params.fromDay) this.setUrlParams({ fromDay: null }); else this.rScrollToNow(); },
+        rPost(name, params) {
+            return moqui.request(this.url(name), { method: 'POST', params }).then((result) => {
+                const json = result.json || {};
+                if (json.messageInfos && json.messageInfos.length) moqui.notifyMessages(json.messageInfos);
+                return json;
+            }, (err) => { moqui.handleAjaxError(err); throw err; });
+        },
+        rKey() { return 'sched-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10); },
+        // the Move dialog for an operation, at a target (a drop) or where it is
+        rOpenMove(op, target) {
+            if (!op) return;
+            const at = target || {};
+            this.move = { open: true, op, facilityId: at.facilityId || op.facilityId, startText: at.startText || op.startText || (this.sched ? this.sched.nowText : ''),
+                endText: at.endText || '', reason: '', override: false, preview: null, busy: false, step: '', key: this.rKey() };
+            this.rPreview();
+        },
+        rOpenMoveById(id) {
+            const op = ((this.sched && this.sched.operationList) || []).find((row) => row.workEffortId === id);
+            if (op) this.rOpenMove(op);
+        },
+        rCloseMove() { this.move = Object.assign({}, this.move, { open: false, preview: null }); },
+        rStale() { this.move.preview = null; this.move.override = false; },
+        rMoveParams(action) {
+            const move = this.move;
+            const preview = move.preview || {};
+            return { moveAction: action, operationWorkEffortId: move.op.workEffortId, targetFacilityId: move.facilityId || '',
+                startText: move.startText || '', endText: action === 'preview' ? (move.endText || '') : (preview.endText || move.endText || ''),
+                reason: move.reason || '', override: move.override ? 'Y' : 'N', operationKey: move.key,
+                expectedRevision: preview.expectedRevision != null ? String(preview.expectedRevision) : String(move.op.expectedRevision),
+                expectedRunRevision: preview.expectedRunRevision != null ? String(preview.expectedRunRevision) : String(move.op.expectedRunRevision) };
+        },
+        rPreview() {
+            if (!this.move.op) return;
+            this.move.busy = true;
+            this.move.step = 'preview';
+            this.rPost('moveOperation', this.rMoveParams('preview')).then((json) => {
+                this.move.busy = false;
+                this.move.preview = json.preview || null;
+            }, () => { this.move.busy = false; });
+        },
+        rCommit(action) {
+            this.move.busy = true;
+            this.move.step = action;
+            this.rPost('moveOperation', this.rMoveParams(action)).then((json) => {
+                this.move.busy = false;
+                if (json.failed) { this.move.key = this.rKey(); return; }
+                this.move.open = false;
+                this.rLoad();
+            }, () => { this.move.busy = false; });
+        },
+        rUnschedule() {
+            const op = this.move.op;
+            this.$q.dialog({ title: this.t('Unschedule'), message: this.t('Take') + ' ' + op.operationName + ' ' + this.t('off the schedule?'), cancel: true, persistent: true })
+                .onOk(() => {
+                    this.move.busy = true;
+                    this.rPost('moveOperation', Object.assign(this.rMoveParams('unschedule'), { expectedRevision: String(op.expectedRevision),
+                        expectedRunRevision: String(op.expectedRunRevision) })).then((json) => {
+                        this.move.busy = false;
+                        if (json.failed) { this.move.key = this.rKey(); return; }
+                        this.move.open = false;
+                        this.rLoad();
+                    }, () => { this.move.busy = false; });
+                });
+        },
+        rOpenDecide(request, decision) { this.decide = { open: true, request, decision, reason: '', busy: false, key: this.rKey() }; },
+        rDecide() {
+            this.decide.busy = true;
+            this.rPost('decideOverride', { scheduleChangeId: this.decide.request.scheduleChangeId, decision: this.decide.decision, reason: this.decide.reason || '',
+                operationKey: this.decide.key }).then((json) => {
+                this.decide.busy = false;
+                if (json.failed) { this.decide.key = this.rKey(); return; }
+                this.decide.open = false;
+                this.rLoad();
+            }, () => { this.decide.busy = false; });
+        },
+        // a bar dragged: its preview only (time by the zoom's step, the lane under the pointer); the drop opens Move with it
+        rBarDown(event, bar) {
+            if (event.button !== 0) return;
+            const touch = event.pointerType === 'touch';
+            const movable = bar.canMove && !touch;
+            if (movable) event.preventDefault();
+            this.rDrag = { op: bar.op, x: event.clientX, y: event.clientY, started: false, movable, laneIndex: this.rLanes.findIndex((lane) => lane.facilityId === bar.op.facilityId),
+                startText: bar.op.startText, endText: bar.op.endText };
+            window.addEventListener('pointermove', this.rMove);
+            window.addEventListener('pointerup', this.rUp);
+        },
+        rMove(event) {
+            const drag = this.rDrag;
+            if (!drag) return;
+            if (!drag.started) {
+                if (Math.abs(event.clientX - drag.x) + Math.abs(event.clientY - drag.y) < 5) return;
+                if (!drag.movable) { this.rEndDrag(); return; }
+                drag.started = true;
+            }
+            const stepMinutes = { days: 15, weeks: 60, months: 1440 }[this.rzoom] || 60;
+            const minutes = Math.round(((event.clientX - drag.x) / this.dayPx) * 1440 / stepMinutes) * stepMinutes;
+            const startMs = this.wallMs(drag.op.startText) + minutes * 60000;
+            const length = this.wallMs(drag.op.endText) - this.wallMs(drag.op.startText);
+            const body = this.$refs.lanesBody ? this.$refs.lanesBody.getBoundingClientRect() : null;
+            let laneIndex = drag.laneIndex;
+            if (body) {
+                const y = event.clientY - body.top;
+                const found = this.rLanes.findIndex((lane) => y >= lane.top && y < lane.top + lane.height);
+                if (found >= 0) laneIndex = found;
+            }
+            this.rDrag = Object.assign({}, drag, { laneIndex, startText: this.wallText(startMs), endText: this.wallText(startMs + length) });
+        },
+        rEndDrag() {
+            window.removeEventListener('pointermove', this.rMove);
+            window.removeEventListener('pointerup', this.rUp);
+            const drag = this.rDrag;
+            this.rDrag = null;
+            return drag;
+        },
+        rUp() {
+            const drag = this.rEndDrag();
+            if (!drag) return;
+            if (!drag.started) { this.rOpenMove(drag.op); return; }
+            const lane = this.rLanes[drag.laneIndex];
+            // the end is left to the preview: the operation's hours over the target's work hours
+            this.rOpenMove(drag.op, { facilityId: lane ? lane.facilityId : drag.op.facilityId, startText: drag.startText });
         }
     },
     mounted() { this.load(); },
-    beforeUnmount() { this.endDrag(); }
+    beforeUnmount() { this.endDrag(); this.rEndDrag(); }
 };
 </script>
 
@@ -767,4 +1247,8 @@ module.exports = {
 .boss-tl-arrows { pointer-events: none; z-index: 3; overflow: visible; }
 .boss-tl-hit { pointer-events: stroke; cursor: pointer; }
 .boss-tl-key { font-weight: bold; }
+.boss-schedule-closed { background: rgba(0, 0, 0, .045); }
+.boss-tl-dark .boss-schedule-closed { background: rgba(255, 255, 255, .05); }
+.boss-schedule-offline { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--q-warning) 28%, transparent) 0 6px, transparent 6px 12px); }
+.boss-schedule-ghost { border: 2px dashed currentColor; background: color-mix(in srgb, currentColor 10%, transparent); pointer-events: none; }
 </style>
