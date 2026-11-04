@@ -481,6 +481,30 @@ The rest of M3 and CX-METHOD (design §5, crosscut §3.23), over Products P8's r
     authorization off, where each service's permission check refuses.
   - **F-P2-5** A screen-local variable named `selected` is passed to the shared `choices` transition (`in-map="context"`) as
     the selected value; OperationTemplates' selected template is `selectedTemplate` for that reason.
+- Review (Nov 3):
+  - Fixed: the `operationSources` choice left every template out when given the routing (`parentWorkEffortId <> ?` drops
+    the templates' null parent), so Copy operations offered other routings' operations only; it now keeps a null parent,
+    and the P2 method choices answer nothing to a user without METHOD_VIEW. ManufacturingMethods checks the templates are
+    offered.
+  - Fixed: a published instruction was immutable only in `store#OperationInstruction`; its publisher could remove it (row
+    and file) from the template's Files, and the generic WorkEffortContent services could replace its file. Mantle's
+    `WorkEffortInstructionImmutable` EECA (Work.eecas.xml, `OperationTemplates.js` `guardInstruction`) now refuses a
+    delete, a change of its file, checksum, type, template or start, a reopened end, and a create without a checksum under
+    the instruction store; RecordFiles lists it as not removable and refuses its removal. MethodTemplates covers each.
+  - Fixed: Products' `Methods.js` opened a product's first method by method code (F-P2-2's sort), so an `ALT` method came
+    before MAIN; it opens MAIN when there is one, as Mantle's cost roll-up picks.
+  - Spec: a METHOD_APPROVE holder of another organization gets no release notice (MethodTemplates).
+  - Checked, no change: F-P2-1 (every Products caller of `store#Routing` that edits passes `workEffortId`; New routing shows
+    only without one); the overlap finding (release already refused a date before the latest approval, so only
+    `validate#BomDraft` and the request show it); the CSV imports (each version in its own transaction through
+    `import#…Version`, which checks METHOD_EDIT again; kits skipped; nothing released); `clone#Bom`; the Manufacturing
+    context (each capability is the user's own CatalogAccess capability, Costs only with cost read); F-P2-4 (the Mantle and
+    Products method services are `allow-remote="false"` and check their permissions, and the palette reads through
+    `search#Records`, so no REST or palette path reaches them).
+  - Specs run: Mantle MethodTemplates, ProductMethods, ManufacturingServices, WarehouseProduction (30, pass); BOSS
+    ManufacturingMethods, ManufacturingAccess, ProductsMethods, ProductsMethodFixtures, ProductsSharedContext,
+    ProductsCosts, Files (123, pass), RecordFiles, AccountingIssuedFiles, AccountingPaymentFiles (20, pass); client
+    ManufacturingMethodsWalk and ProductsMethodWalk (6, pass).
 
 ### P3 — Work centers and equipment
 

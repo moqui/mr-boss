@@ -591,7 +591,17 @@ const choiceSources = {
             )
         )
         if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", userScope.ownerIds)
-        if (p.workEffortId) query = query.condition("parentWorkEffortId", "not-equals", p.workEffortId)
+        // not this routing's own operations; a template has no parent, which a plain not-equals would leave out
+        if (p.workEffortId)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("parentWorkEffortId", "is-null", null),
+                        factory.makeCondition("parentWorkEffortId", "not-equals", p.workEffortId)
+                    ],
+                    "or"
+                )
+            )
         if (term)
             query = query.condition(
                 factory.makeCondition(
@@ -648,9 +658,12 @@ const choiceSources = {
         )
     }
 }
+// the method form choices (P2) name a method organization's products, operations and inspection templates: method readers only
+const methodChoices = ["products", "operationSources", "inspectionTemplates"]
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Manufacturing choice " + p.choice)
+    if (methodChoices.includes(p.choice) && !userScope.capabilities.methodRead) return {options: []}
     return {options: choiceSources[p.choice](userScope, String(p.term || "").trim(), p.selected || null, p)}
 }
 

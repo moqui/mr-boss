@@ -45,6 +45,11 @@ feature(
                     workEffortName: "Spec line routing",
                     changeReason: "Spec routing"
                 }).routing
+                // Copy operations offers the templates (no parent) and other routings' operations, not this routing's own
+                const sources = invoke(access + "get#Choices", {
+                    choice: "operationSources",
+                    workEffortId: routing.workEffortId
+                }).options.map(row => row.value)
                 const copied = shared("copy#RoutingOperations", {
                     workEffortId: routing.workEffortId,
                     sourceWorkEffortIds: ids.templateIds,
@@ -59,10 +64,11 @@ feature(
                 const requested = shared("request#RoutingRelease", {workEffortId: routing.workEffortId, changeReason: "Ready"})
                 built.routingId = routing.workEffortId
                 built.operationIds = copied.copiedOperationIds
-                return {published, copied, engineerRelease, requested}
+                return {published, sources, copied, engineerRelease, requested}
             })
         },
-        then({published, copied, engineerRelease, requested}) {
+        then({published, sources, copied, engineerRelease, requested}) {
+            ids.templateIds.every(id => sources.includes(id))
             published.instructionRows.length == 1
             published.instructionRows[0].contentChecksum.length == 64
             copied.copiedOperationIds.length == 2

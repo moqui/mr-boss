@@ -34,8 +34,10 @@ function run(op, parameters) {
                 productId,
                 asOfDate: p.asOfDate
             }).bomRows
-            if (!detail && found.bomRows.length)
-                found.detail = call(S + "get#BomDetail", {productBomId: found.bomRows[0].productBomId, asOfDate: p.asOfDate})
+            // the product's MAIN method when it has one (as Mantle's cost roll-up picks), else its first
+            const opened = found.bomRows.find(row => row.methodCode === "MAIN") || found.bomRows[0]
+            if (!detail && opened)
+                found.detail = call(S + "get#BomDetail", {productBomId: opened.productBomId, asOfDate: p.asOfDate})
         }
         found.productBomId = found.detail?.productBom.productBomId || null
         found.workEffortId = p.workEffortId || found.detail?.productBom.routingWorkEffortId || null
