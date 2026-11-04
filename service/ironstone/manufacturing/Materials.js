@@ -43,8 +43,9 @@ function materialSource(p) {
         left: number(row.remaining),
         shortText: row.short ? "Short " + quantityText(row.short) : "",
         heldText: number(row.held) > 0 ? "Held " + quantityText(row.held) : "",
-        stagedText: row.stagedShort ? "Released short: issued once stock covers it" : "",
-        canAct: canIssue && !!row.canIssue && !row.stagedShort,
+        // a line released short is offered again once the free stock covers it: its first issue clears the block
+        stagedText: row.stagedShort && row.short ? "Released short: issued once stock covers it" : "",
+        canAct: canIssue && !!row.canIssue && !(row.stagedShort && row.short),
         assetOptions: canIssue && row.canIssue ? Array.from(row.stockOptions || []) : []
     }))
     // the source's words in Manufacturing; Stage opens Warehouse's Move with the run fixed for those who move stock (there

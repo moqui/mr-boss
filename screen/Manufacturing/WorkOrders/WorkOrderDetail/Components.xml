@@ -32,7 +32,7 @@ along with this software (see the LICENSE.md file). If not, see
                         productionRunLineId:productionRunLineId || null, productId:productId || null,
                         quantity:quantity || null, routingOperationWorkEffortId:routingOperationWorkEffortId || null,
                         sourceFacilityId:sourceFacilityId || null, instructionText:instructionText || null,
-                        remove:remove == 'true'}"/>
+                        remove:remove == 'true', clearEmpty:clearEmpty == 'true'}"/>
             <script>if (!ec.message.hasError()) ec.message.addMessage(remove == 'true' ? 'Material line removed'
                     : productionRunLineId ? 'Material line saved' : 'Material line added', 'success')</script>
         </actions>
@@ -180,11 +180,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                     operationKey:keyBase + '-edit-' + productionRunLineId,
                                                     productionRunLineId:productionRunLineId, quantity:required,
                                                     routingOperationWorkEffortId:routingOperationWorkEffortId,
-                                                    instructionText:instructionText}">
+                                                    sourceFacilityId:sourceFacilityId, instructionText:instructionText,
+                                                    clearEmpty:'true'}">
                                             <field name="workEffortId"><default-field><hidden/></default-field></field>
                                             <field name="expectedRevision"><default-field><hidden/></default-field></field>
                                             <field name="operationKey"><default-field><hidden/></default-field></field>
                                             <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                                            <!-- the form posts every field, so an emptied one clears (F-P5b-1) -->
+                                            <field name="clearEmpty"><default-field><hidden/></default-field></field>
                                             <field name="quantity">
                                                 <default-field title="Quantity"><text-line size="8" input-type="number"/></default-field>
                                             </field>
@@ -192,6 +195,14 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <default-field title="Operation">
                                                     <drop-down allow-empty="true">
                                                         <list-options list="routingOperations" key="${value}" text="${label}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="sourceFacilityId">
+                                                <default-field title="Staged from">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'stockFacilities'}"/>
                                                     </drop-down>
                                                 </default-field>
                                             </field>

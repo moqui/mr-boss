@@ -302,9 +302,11 @@ along with this software (see the LICENSE.md file). If not, see
                                         condition="backflush.canConfirm">
                                     <label text="Issues each line's remaining quantity from the lots shown, once. If any line cannot be issued, nothing is."
                                             type="p"/>
+                                    <!-- the page's key, not the preview's: a later backflush (after a return) can show the
+                                        same preview and must not answer the first one's result -->
                                     <form-single name="ConfirmBackflushForm" transition="materialAction"
                                             map="{workEffortId:material.source.sourceId, actionKind:'backflush',
-                                                previewKey:backflush.previewKey, operationKey:'backflush-' + backflush.previewKey}">
+                                                previewKey:backflush.previewKey, operationKey:'backflush-' + pageKey}">
                                         <field name="workEffortId"><default-field><hidden/></default-field></field>
                                         <field name="actionKind"><default-field><hidden/></default-field></field>
                                         <field name="previewKey"><default-field><hidden/></default-field></field>

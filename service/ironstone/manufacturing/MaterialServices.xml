@@ -21,9 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
             source read with the Manufacturing scope and record check (the output lines, issuances left to return, the
             output's tracking, the movements with value only with financial read), its material lines from
             mantle.work.ProductionServices.get#ProductionMaterials (required, issued, returned and left apart, short and held
-            text, the stock to issue from for STOCK_ISSUE holders; a staged short line is not offered), Stage for STOCK_MOVE
-            holders (Warehouse's Move with the run fixed), the run's consumption policy and, when it backflushes, the backflush
-            preview (its lines, lots and findings). Refuses a user without Manufacturing (MANUFACTURING_UNAVAILABLE) and a run
+            text, the stock to issue from for STOCK_ISSUE holders; a staged short line is offered once stock covers it),
+            Stage for STOCK_MOVE holders (Warehouse's Move with the run fixed), the run's consumption policy and, when it
+            backflushes, the backflush preview (its lines, lots and findings). Refuses a user without Manufacturing (MANUFACTURING_UNAVAILABLE) and a run
             outside the scope (RECORD_UNAVAILABLE).</description>
         <in-parameters>
             <parameter name="sourceId"/>

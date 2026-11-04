@@ -937,7 +937,7 @@ materials and stock.
   - The Materials tab (index 3): Warehouse's `Shared/MaterialIssueReceipt` mounted in WorkOrderDetail's subscreens with its
     Manufacturing context: `ironstone.manufacturing.MaterialServices.get#MaterialSource` (Materials.js) reads Warehouse's run
     source with the Manufacturing scope and record check (Production.js `runSource` takes the app, a local edit) and replaces its
-    material lines with get#ProductionMaterials' (returned and stock apart; a staged short line not offered), Stage for STOCK_MOVE
+    material lines with get#ProductionMaterials' (returned and stock apart; a staged short line offered once stock covers it), Stage for STOCK_MOVE
     holders and, when the policy backflushes, the Backflush box with its lots and Confirm backflush; `get#MaterialAction` maps
     issue, return, receive (Warehouse's run actions) and backflush, which the screen's materialAction runs after Manufacturing's
     check#Record with `issue` (STOCK_ISSUE). The forms carry `workEffortId` for WorkOrderDetail.
@@ -983,7 +983,7 @@ materials and stock.
   Home feature expected the P1 empty queue.
 - Findings (provisional):
   - **F-P5b-1** Declared but absent in-parameters arrive as null in a JS service module, so `p.field !== undefined` cannot tell
-    "not given" from "cleared"; store#ProductionMaterial treats an empty field as "keep".
+    "not given" from "cleared"; store#ProductionMaterial treats an empty field as "keep", unless `clearEmpty` (review, below).
   - **F-P5b-2** Payables `notify` leaves the actor out of the recipients, so a planner's own staged release does not notify that
     planner; the spec checks a second planner.
   - **F-P5b-3** The method's material lines come from the explosion in no fixed order (lineSeqNum follows it), so specs find a
@@ -993,6 +993,29 @@ materials and stock.
     Policy, Shared/MaterialIssueReceipt (the Manufacturing branch), WorkOrderDetail's subscreens, Home.xml and HomeServices.xml's
     P5b block, the ManufacturingShell Home feature, ClientIsolation's Shared list. P7 edits receive#ProductionOutput and may add
     WorkOrderDetail tabs; P11 nothing of these.
+- **Review Nov 3 (P5b).** Checked against the P5b scope, §2 and design §3, §13: backflush is policy-gated
+  (BACKFLUSH_NOT_POLICY), issues the previewed picks or none in one transaction (issue#ProductionMaterial has no
+  require-new; a refusal rolls back), a retry answers the first, held stock is never chosen and the guard refuses it
+  (HELD_STOCK) also at an over-on-hand facility; STOCK_ISSUE through Manufacturing's check#Record (owner-scoped as Warehouse's
+  facility scope) and Mantle; store#ProductionMaterial drafts and manual lines only; the Shared screens' Manufacturing branches
+  leave Warehouse's and Products' contexts as they were; Home's counts use find#ProductionOrders' open statuses and the
+  plant with its lines; the notice goes to the organization's PRODUCTION_PLAN holders. Fixed:
+  - (medium) the Materials tab never offered a line released short, even once stock covered it, and only its first issue
+    clears the block, so it could not be issued from Manufacturing: it is offered once `short` is gone (Materials.js).
+  - (medium, F-P5b-1) an edit could not clear a line's operation, source facility or instruction: store#ProductionMaterial
+    takes `clearEmpty`, which Components' Edit dialog posts with every field (Staged from added to it); without it an empty
+    field still keeps the value. ProductionMaterials and ManufacturingMaterials cover keep and clear.
+  - (low) Confirm backflush's operation key was the preview key, so a second backflush after a full return (same picks,
+    same revision) answered the first and issued nothing: the key is the page's.
+  - (low, spec gap) the re-explosion keeping a manual line had no spec: ProductionOrders' later-release feature adds one,
+    checks it survives the re-explosion beside the method's lines, and removes it before release.
+  - Left: Components' chip still reads "Released short" for a covered staged line until its first issue (the block
+    stands until then); get#ProductionShortages' count is a lower bound past 100 runs (truncated); a nested failure in
+    the middle of a backflush has no spec of its own (the preview recheck refuses most changes first).
+  - Tests: Mantle ProductionMaterials, ProductionOrders, WarehouseProduction, ManufacturingServices (30, pass); BOSS
+    ManufacturingMaterials, ManufacturingAccess, ManufacturingWorkOrders, ManufacturingShell, ClientIsolation,
+    ProductsInventory, ProductsSharedContext, WarehouseProductionFixtures, WarehousePacking, AppStructure, TuiRender (167,
+    pass); walks ManufacturingMaterialsWalk, WarehouseProductionWalk (5, pass); `moqui lint --screens` clean for P5b's screens.
 
 ### P6 — Cost evidence
 

@@ -237,10 +237,23 @@ feature("a planner adds a manual line to a draft on Components; a reader sees no
             quantity: "1"
         })
         const manual = linesOf(workEffortId).filter(row => row.manualLine === "Y")
+        // the Edit dialog posts every field with clearEmpty, so an emptied source facility clears (F-P5b-1)
+        const edited = post(users.plan, path + "/storeMaterial", {
+            workEffortId,
+            expectedRevision: revisionOf(workEffortId),
+            operationKey: key(),
+            productionRunLineId: manual[0]?.productionRunLineId,
+            quantity: "3",
+            routingOperationWorkEffortId: ids.routingOperationIds[1],
+            sourceFacilityId: "",
+            instructionText: "",
+            clearEmpty: "true"
+        })
+        const editedLine = linesOf(workEffortId).find(row => row.manualLine === "Y")
         const after = asUser(users.plan, () => lib.page(path, {workEffortId, lastStandalone: "true"}, "html"))
-        return {plannerPage, readerPage, added, readerAdd, manual, after}
+        return {plannerPage, readerPage, added, readerAdd, manual, edited, editedLine, after}
     },
-    then({plannerPage, readerPage, added, readerAdd, manual, after}) {
+    then({plannerPage, readerPage, added, readerAdd, manual, edited, editedLine, after}) {
         plannerPage.errors.length == 0
         plannerPage.output.includes("Add material")
         readerPage.errors.length == 0
@@ -249,6 +262,11 @@ feature("a planner adds a manual line to a draft on Components; a reader sees no
         readerAdd.includes("PERMISSION_DENIED")
         manual.length == 1
         manual[0].routingOperationWorkEffortId == ids.routingOperationIds[1]
+        manual[0].sourceFacilityId == ids.plantId
+        edited == ""
+        Number(String(editedLine.stockQuantity)) == 3
+        editedLine.sourceFacilityId == null
+        editedLine.routingOperationWorkEffortId == ids.routingOperationIds[1]
         after.output.includes("Remove")
     }
 })
