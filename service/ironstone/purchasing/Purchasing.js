@@ -263,7 +263,10 @@ const linkPaths = [
     // P8: the supplier returns, the shared ReturnDetail and the supplier return authorization print
     "Returns/SupplierReturns",
     "Returns/ReturnDetail",
-    "Returns/ReturnAuthorization"
+    "Returns/ReturnAuthorization",
+    // P9: a purchase order's changes and the acknowledgements
+    "Orders/OrderChanges",
+    "Orders/Acknowledgements"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")

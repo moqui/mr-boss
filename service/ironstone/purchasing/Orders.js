@@ -364,11 +364,15 @@ function detail(p) {
     const draft = statusId === "OrderOpen"
     const working = ["OrderApproved", "OrderSent", "OrderProcessing"].includes(statusId)
     const revision = Number(order.orderRevision ?? 1)
+    // P9: a held order whose changed revision was applied waits for the approval of that revision (Revisions.js)
+    const deciding =
+        statusId === "OrderPlaced" ||
+        ec.resource.script("component://mr-boss/service/ironstone/purchasing/Revisions.js").changeState(order).state === "applied"
     const actions = {
         edit: draft && !!can.buy,
         place: draft && !!can.buy && itemRows.length > 0,
-        approve: statusId === "OrderPlaced" && !!can.approve && !!can.orderApprove && (!approval || approval.canDecide),
-        refuse: statusId === "OrderPlaced" && !!can.approve && (!approval || approval.canDecide),
+        approve: deciding && !!can.approve && !!can.orderApprove && (!approval || approval.canDecide),
+        refuse: deciding && !!can.approve && (!approval || approval.canDecide),
         send: ["OrderApproved", "OrderSent"].includes(statusId) && !!can.buy,
         hold: ["OrderPlaced", "OrderProcessing", "OrderApproved", "OrderSent"].includes(statusId) && !!can.buy && !purchaseHold,
         release: !!purchaseHold && !!can.holdRelease,
@@ -395,6 +399,20 @@ function detail(p) {
             supplierReference: part.otherPartyOrderId || "",
             facilityId: part.facilityId || "",
             facilityName: facility ? facility.facilityName || facility.facilityId : "",
+            // P9: the delivery date and terms (a draft's Edit order; a placed order's through OrderChanges)
+            estimatedDeliveryDate: part.estimatedDeliveryDate ? lib.dateText(part.estimatedDeliveryDate) : "",
+            settlementTermId: part.settlementTermId || "",
+            tradeTermEnumId: part.tradeTermEnumId || "",
+            termsText: [
+                part.estimatedDeliveryDate ? "Delivery by " + lib.dateText(part.estimatedDeliveryDate) : "",
+                part.settlementTermId
+                    ? one("mantle.account.invoice.SettlementTerm", {settlementTermId: part.settlementTermId})?.description ||
+                      part.settlementTermId
+                    : "",
+                enumText(part.tradeTermEnumId)
+            ]
+                .filter(Boolean)
+                .join(" · "),
             currencyUomId: currency,
             entryText: lib.dateText(order.entryDate),
             placedText: lib.dateText(order.placedDate),

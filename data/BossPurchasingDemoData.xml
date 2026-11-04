@@ -123,6 +123,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.email.EmailServer emailServerId="BOSS_PURCHASING_DEMO" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N"
             smtpSsl="N"/>
     <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_ORDER_EMAIL" emailServerId="BOSS_PURCHASING_DEMO"/>
+    <!-- P9: the reminders to acknowledge an order (send#PurchaseReminder) go to the same sink -->
+    <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_REMINDER" emailServerId="BOSS_PURCHASING_DEMO"/>
     <!-- P4: Retail's purchase order approval policy (design §18, impl-purchasing §4: a buyer and manager split): up to $5,000
         one purchase approver decides; from $5,000 a member of the purchase approver group and then the purchasing administrator,
         who may not have taken the first step. Suppliers have no policy rows, so one purchase approver decides them. -->
@@ -163,4 +165,15 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.facility.Facility facilityId="BOSS_PUR_DROPSHIP" facilityTypeEnumId="FcTpDropShip" ownerPartyId="ZiddlemanInc"
             facilityName="Ziddleman direct (drop-ship)" assetAllowOtherOwner="Y" assetAllowIssueOverQoh="Y"/>
     <mantle.product.ProductPrice productPriceId="DEMO_3_1_CS" canDropShip="Y"/>
+
+    <!-- P9: Retail's order from Brightline, sent and not acknowledged yet (Acknowledgements' Unacknowledged view, Home's
+        Unacknowledged orders) -->
+    <mantle.order.OrderHeader orderId="BOSS_PUR_PO_ACK" orderName="Fastener restock" statusId="OrderSent"
+            entryDate="2026-10-28 00:00:00" placedDate="2026-10-28 00:00:00" approvedDate="2026-10-29 00:00:00"
+            currencyUomId="USD" grandTotal="200" orderRevision="1"/>
+    <mantle.order.OrderPart orderId="BOSS_PUR_PO_ACK" orderPartSeqId="01" statusId="OrderSent" vendorPartyId="BOSS_PUR_SUP_B"
+            customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" partTotal="200"/>
+    <mantle.order.OrderItem orderId="BOSS_PUR_PO_ACK" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="DEMO_1_1" itemDescription="Demo product one-one" quantity="20" unitAmount="10"
+            requiredByDate="2026-11-20 00:00:00"/>
 </entity-facade-xml>

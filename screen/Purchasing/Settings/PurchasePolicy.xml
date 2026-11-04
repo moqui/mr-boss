@@ -31,7 +31,8 @@ along with this software (see the LICENSE.md file). If not, see
                         settlementTermId:settlementTermId, incotermEnumId:incotermEnumId, rfqResponseDays:rfqResponseDays,
                         quoteExpiryWarnDays:quoteExpiryWarnDays, reminderDays:reminderDays, lockSentOrders:lockSentOrders,
                         supplierApprovalRequired:supplierApprovalRequired, unapprovedSupplierEnumId:unapprovedSupplierEnumId,
-                        approvalGateEnabled:approvalGateEnabled, selfApprovalAllowed:selfApprovalAllowed}"/>
+                        approvalGateEnabled:approvalGateEnabled, selfApprovalAllowed:selfApprovalAllowed,
+                        substitutionEnumId:substitutionEnumId}"/>
             <message type="success">Buying policy saved</message>
         </actions>
         <default-response url=".">
@@ -277,6 +278,19 @@ along with this software (see the LICENSE.md file). If not, see
                                         </drop-down>
                                     </default-field>
                                 </field>
+                                <!-- P9: whether an order's change may put another product on a line -->
+                                <field name="substitutionEnumId">
+                                    <default-field title="Substitution on a change" tooltip="Empty takes Not allowed">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="PurchaseSubstitution"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
                                 <field name="effectiveFromDate">
                                     <default-field title="Effective from" tooltip="Leave empty to start now">
                                         <date-time/>
@@ -307,6 +321,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <field-ref name="selfApprovalAllowed"/>
                                         <field-ref name="lockSentOrders"/>
                                     </field-row>
+                                    <field-ref name="substitutionEnumId"/>
                                     <field-row>
                                         <field-ref name="effectiveFromDate"/>
                                         <field-ref name="changeReason"/>

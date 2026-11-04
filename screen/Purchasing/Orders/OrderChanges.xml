@@ -1,0 +1,405 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderChanges (design-purchasing §6 OrderChanges; style-guide §3.8 Wizard; impl-purchasing P9): the change of one placed,
+    approved or sent purchase order, opened from OrderDetail (hidden from the menu). Start holds the order with a Change reason
+    (mantle.order.OrderServices.start#PurchaseRevision). ProposedChange: the lines' new quantity, price, required date and
+    substitute (a grid) and the order's supplier, receiving facility, delivery date, payment term and incoterm, kept in the
+    page's changesText until applied. RevisionEffects (preview#PurchaseRevision): each change's old and new value and its
+    refusal by name beside each line's received, billed, returned, accepted and expected quantities and the amount of each
+    changed line. ApplyRevision (apply#PurchaseRevision, one transaction with the receipt, budget and match effects) with the
+    reason and the preview's basis, so a receipt posted since fails it by name; then the new revision waits for its approval
+    on OrderDetail, which releases the hold, and is sent again from there. Let the change go (cancel#PurchaseRevision) while
+    nothing is applied. For a buyer; a purchase approver reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Order change" default-menu-include="false">
+    <parameter name="orderId" required="true"/>
+    <!-- the proposed change while it is reviewed: {itemChanges, partChanges} as JSON -->
+    <parameter name="changesText"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition-include name="startRevision" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <!-- the grid posts orderItemSeqId_N with quantity_N, unitAmount_N, requiredByDate_N and productId_N; the order's form
+        posts partForm with its fields; each replaces its part of the proposed change -->
+    <transition name="propose">
+        <actions>
+            <script><![CDATA[
+                const previous = changesText ? JSON.parse(changesText) : {}
+                const params = ec.web.parameters
+                const given = value => value != null && String(value).trim() !== ''
+                let itemChanges = previous.itemChanges || []
+                const lineKeys = Object.keys(params).filter(key => /^orderItemSeqId_\d+$/.test(key))
+                if (lineKeys.length) {
+                    itemChanges = []
+                    for (const key of lineKeys) {
+                        const suffix = key.slice(key.lastIndexOf('_'))
+                        const line = {orderItemSeqId: String(params[key])}
+                        for (const field of ['quantity', 'unitAmount', 'requiredByDate', 'productId'])
+                            if (given(params[field + suffix])) line[field] = String(params[field + suffix]).trim()
+                        if (Object.keys(line).length > 1) itemChanges.push(line)
+                    }
+                }
+                let partChanges = previous.partChanges || {}
+                if (params.partForm === 'Y') {
+                    partChanges = {}
+                    for (const field of ['vendorPartyId', 'facilityId', 'estimatedDeliveryDate', 'settlementTermId', 'tradeTermEnumId'])
+                        if (given(params[field])) partChanges[field] = String(params[field]).trim()
+                }
+                changesText = JSON.stringify({itemChanges, partChanges})
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="orderId"/>
+            <parameter name="changesText"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="applyChange">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <set field="proposedChange" from="changesText ? JSON.parse(changesText) : {}"/>
+            <service-call name="mantle.order.OrderServices.apply#PurchaseRevision" out-map="applied"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, basisKey:basisKey || null,
+                        itemChanges:proposedChange.itemChanges || [], partChanges:proposedChange.partChanges || {},
+                        reason:reason, operationKey:operationKey}"/>
+            <message type="success">Revision ${applied.orderRevision} applied; it waits for its approval</message>
+        </actions>
+        <default-response url="../OrderDetail"><parameter name="orderId"/></default-response>
+        <error-response url=".">
+            <parameter name="orderId"/>
+            <parameter name="changesText"/>
+        </error-response>
+    </transition>
+    <transition name="cancelChange">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.OrderServices.cancel#PurchaseRevision" in-map="{orderId:orderId}"/>
+            <message type="success">The change is let go; the order is no longer held for it</message>
+        </actions>
+        <default-response url="../OrderDetail"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.AccessServices.check#Record" out-map="checked" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="proposedChange" from="changesText ? JSON.parse(changesText) : null"/>
+        <set field="preview" from="null"/>
+        <if condition="checked?.recordId &amp;&amp; (can.buy || can.approve)">
+            <service-call name="mantle.order.OrderServices.preview#PurchaseRevision" out-map="preview" transaction="force-new"
+                    ignore-error="true" in-map="{orderId:orderId, itemChanges:proposedChange?.itemChanges || [],
+                        partChanges:proposedChange?.partChanges || {}}"/>
+            <set field="preview" from="preview?.orderId ? preview : null"/>
+        </if>
+        <if condition="preview">
+            <set field="revisionState" from="preview.revisionState"/>
+            <set field="editing" from="revisionState == 'started' &amp;&amp; !!can.buy"/>
+            <set field="supplierName" from="preview.partTexts.vendorPartyId"/>
+            <set field="proposedLines" from="Object.fromEntries((proposedChange?.itemChanges || []).map((line) =&gt; [line.orderItemSeqId, line]))"/>
+            <!-- the grid: each line's current values, or the proposed ones -->
+            <set field="lineValues" from="preview.lineRows.map((line) =&gt; Object.assign({}, line, {
+                    quantity: String(proposedLines[line.orderItemSeqId]?.quantity ?? line.quantityText.replace(/,/g, '')),
+                    unitAmount: proposedLines[line.orderItemSeqId]?.unitAmount ?? (line.unitAmount == null ? '' : String(line.unitAmount)),
+                    requiredByDate: proposedLines[line.orderItemSeqId]?.requiredByDate ?? (line.requiredText || ''),
+                    productId: proposedLines[line.orderItemSeqId]?.productId ?? ''}))"/>
+            <set field="partValue" from="Object.assign({orderId:orderId, changesText:changesText || '', partForm:'Y'},
+                    preview.partValues, proposedChange?.partChanges || {})"/>
+            <set field="applyValue" from="{orderId:orderId, orderRevision:String(preview.orderRevision), basisKey:preview.basisKey,
+                    changesText:changesText || '', operationKey:'po-revise-' + ec.user.randomString(24)}"/>
+            <set field="changeRows" from="preview.changeRows"/>
+            <set field="budgetRows" from="preview.budgetRows"/>
+            <set field="revisable" from="['OrderPlaced', 'OrderProcessing', 'OrderApproved', 'OrderSent', 'OrderHold'].includes(preview.statusId)"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="OrderChangeMissing" condition="!preview">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Purchase order ${orderId} is not available to change: it does not exist, it is not an
+                                order of your organizations, or you do not buy or approve."/>
+                        <link url="${sharedLinks['Orders/PurchaseOrders']}" text="Back to the purchase orders" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OrderChangeFound" condition="preview">
+            <widgets>
+                <context record-entity="mantle.order.OrderHeader" record-id="${orderId}"
+                        title="Change purchase order ${orderId} · ${supplierName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="Change purchase order ${orderId}" type="h5"/>
+                                <label text="${supplierName}" type="span" style="text-subtitle1 m-muted"/>
+                            </container>
+                            <label text="Revision ${preview.orderRevision}${revisionState == 'started' ? ', changing to revision ' + preview.proposedRevision : ''}"
+                                    type="div" style="text-caption m-muted"/>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="Back to the order" icon="sym_o_arrow_back"
+                                    link-type="anchor-button" parameter-map="{orderId:orderId}"/>
+                            <link url="cancelChange" link-type="hidden-form" text="Let the change go" icon="sym_o_undo"
+                                    btn-type="danger" condition="editing" parameter-map="{orderId:orderId}"
+                                    confirmation="Let the change of ${orderId} go? Nothing is changed and the order is no longer held for it."/>
+                        </container>
+                    </container>
+                </container>
+
+                <!-- no change open: start one -->
+                <section name="OrderChangeStart" condition="revisionState == 'none'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Start a change"/>
+                            <box-body>
+                                <label type="p" condition="!revisable"
+                                        text="Purchase order ${orderId} is not placed, approved or sent; a draft is edited on its record."/>
+                                <section name="StartOrderChangeForm" condition="revisable &amp;&amp; can.buy">
+                                    <widgets>
+                                        <form-single name="StartOrderChange" transition="startRevision">
+                                            <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision" from="String(preview.orderRevision)"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason for the change"><text-area rows="2" required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Start the change">
+                                                    <submit confirmation="Hold purchase order ${orderId} while it changes?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- applied: the new revision waits for its approval on the order -->
+                <section name="OrderChangeApplied" condition="revisionState == 'applied'">
+                    <widgets>
+                        <container-box type="info">
+                            <box-header title="Revision ${preview.orderRevision} waits for its approval"/>
+                            <box-body>
+                                <label type="p" text="A purchase approver approves it on the order, which releases the hold; then it is sent to ${supplierName} again. To change it further, start from the order once it is approved."/>
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Open the order" link-type="anchor"
+                                        parameter-map="{orderId:orderId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- started: ProposedChange, RevisionEffects and ApplyRevision -->
+                <section name="OrderChangeProposed" condition="revisionState == 'started'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="1 · Proposed change: lines"/>
+                            <box-body-nopad>
+                                <section name="ProposedLinesForm" condition="editing">
+                                    <widgets>
+                                        <form-list name="ProposedLines" list="lineValues" transition="propose" multi="true">
+                                            <hidden-parameters parameter-map="{orderId:orderId, changesText:changesText || ''}"/>
+                                            <field name="orderItemSeqId"><default-field title="#"><display also-hidden="true"/></default-field></field>
+                                            <field name="productText">
+                                                <default-field title="Product">
+                                                    <label text="${productText}" type="div"/>
+                                                    <label text="Received ${receivedText} · billed ${billedText}" type="div"
+                                                            style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                            <field name="unitAmount"><default-field title="Unit price"><text-line size="10"/></default-field></field>
+                                            <field name="requiredByDate"><default-field title="Required by"><date-time type="date"/></default-field></field>
+                                            <field name="productId">
+                                                <default-field title="Substitute" tooltip="Another product for the line, where the buying policy allows it">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'orderProducts', selected:productId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title=""><submit text="Review the change"/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="productText"/><field-ref name="quantity"/></column>
+                                                <column><field-ref name="unitAmount"/><field-ref name="requiredByDate"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="1 · Proposed change: the order"/>
+                            <box-body>
+                                <section name="ProposedOrderForm" condition="editing">
+                                    <widgets>
+                                        <form-single name="ProposedOrder" transition="propose" map="partValue">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="changesText"><default-field><hidden/></default-field></field>
+                                            <field name="partForm"><default-field><hidden/></default-field></field>
+                                            <field name="vendorPartyId">
+                                                <default-field title="Supplier" tooltip="Only before anything is received or billed">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityId">
+                                                <default-field title="Receive at">
+                                                    <drop-down allow-empty="false">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'planFacilities', selected:facilityId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="estimatedDeliveryDate">
+                                                <default-field title="Delivery by"><date-time type="date"/></default-field>
+                                            </field>
+                                            <field name="settlementTermId">
+                                                <default-field title="Payment term">
+                                                    <drop-down allow-empty="true">
+                                                        <entity-options key="${settlementTermId}" text="${description}">
+                                                            <entity-find entity-name="mantle.account.invoice.SettlementTerm">
+                                                                <order-by field-name="description"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="tradeTermEnumId">
+                                                <default-field title="Incoterm">
+                                                    <drop-down allow-empty="true">
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                                <econdition field-name="parentEnumId" value="TtInco"/>
+                                                                <order-by field-name="description"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Review the change"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row>
+                                                    <field-ref name="vendorPartyId"/>
+                                                    <field-ref name="facilityId"/>
+                                                </field-row>
+                                                <field-row>
+                                                    <field-ref name="estimatedDeliveryDate"/>
+                                                    <field-ref name="settlementTermId"/>
+                                                </field-row>
+                                                <field-ref name="tradeTermEnumId"/>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+
+                        <container-box>
+                            <box-header title="2 · Effects · ${changeRows.length} changes"/>
+                            <box-body-nopad>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!changeRows.length"
+                                        text="Nothing is changed yet: change a line or the order above and review the change."/>
+                                <section name="RevisionEffectRows" condition="changeRows.length">
+                                    <widgets>
+                                        <form-list name="RevisionEffects" list="changeRows" skip-form="true" paginate="false"
+                                               >
+                                            <field name="whatText"><default-field title="Change"><display/></default-field></field>
+                                            <field name="fromText"><default-field title="Now"><display/></default-field></field>
+                                            <field name="toText"><default-field title="Proposed"><display/></default-field></field>
+                                            <field name="refusalText">
+                                                <default-field title="Blocked by">
+                                                    <label text="${refusalText}" type="span" style="text-negative" condition="refusalCode"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="whatText"/><field-ref name="refusalText"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <form-list name="RevisionLineEffects" list="preview.lineRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                                    <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                                    <field name="returnedText" align="right"><default-field title="Returned"><display/></default-field></field>
+                                    <field name="expectedText" align="right"><default-field title="Still expected"><display/></default-field></field>
+                                    <field name="floorText" align="right"><default-field title="Lowest quantity"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="receivedText"/></column>
+                                        <column><field-ref name="quantityText"/><field-ref name="floorText"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="RevisionBudgetRows" condition="budgetRows.length">
+                                    <widgets>
+                                        <form-list name="RevisionBudgetEffects" list="budgetRows" skip-form="true" paginate="false"
+                                               >
+                                            <field name="orderItemSeqId"><default-field title="Line"><display/></default-field></field>
+                                            <field name="fromText" align="right"><default-field title="Amount now"><display/></default-field></field>
+                                            <field name="toText" align="right"><default-field title="Proposed amount"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="orderItemSeqId"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="budgetRows.length"
+                                        text="Change of the order's amount: ${preview.amountDeltaText}. A lowered line's budget commitment is released to what it still needs; a raised line is reserved when the new revision is approved."/>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="preview.openReceipt"
+                                        text="The open receipt's expected quantities follow the new quantities; bills matched to a changed line are evaluated again."/>
+                            </box-body-nopad>
+                        </container-box>
+
+                        <section name="ApplyRevisionStep" condition="preview.canApply &amp;&amp; can.buy">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="3 · Apply revision ${preview.proposedRevision}"/>
+                                    <box-body>
+                                        <form-single name="ApplyRevision" transition="applyChange" map="applyValue">
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                            <field name="basisKey"><default-field><hidden/></default-field></field>
+                                            <field name="changesText"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason, kept with each change"><text-area rows="2" required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Apply revision ${preview.proposedRevision}">
+                                                    <submit type="primary" confirmation="Apply revision ${preview.proposedRevision} of ${orderId}? It then waits for its approval before it is sent."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

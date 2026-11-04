@@ -93,6 +93,11 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Purchasing (impl-purchasing P7): drop-ship a customer line from a supplier; confirm a drop-ship order's delivery -->
     <transition-include name="dropShipLine" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
     <transition-include name="confirmDelivery" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
+    <!-- Purchasing (impl-purchasing P9): the change of the order, the supplier's acknowledgement and reminders -->
+    <transition-include name="startRevision" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="recordAcknowledgement" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="linePromise" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="sendReminders" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"

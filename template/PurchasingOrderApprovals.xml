@@ -44,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="approvalStateText" from="!approval ? '' : approval.missing ? approval.missingMessage
                         : approval.refused ? 'Refused at revision ' + approval.sourceRevision
                         : approval.complete ? 'Approved at revision ' + approval.sourceRevision
-                        : po.statusId == 'OrderPlaced' ? 'Waiting for ' + approval.currentStepText + ' of revision ' + approval.sourceRevision
+                        : (po.statusId == 'OrderPlaced' || po.actions.approve || po.actions.refuse) ? 'Waiting for ' + approval.currentStepText + ' of revision ' + approval.sourceRevision
                         : ''"/>
                 <set field="budgetText" from="!approval ? '' : {OK:'Within budget', WARN:'Over budget: the approval warns',
                         STOP:'Over budget: a Stop refuses the approval unless a budget overrider gives a reason',

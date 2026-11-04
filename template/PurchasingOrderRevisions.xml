@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A purchase order's revisions and acknowledgements in Purchasing (design-purchasing §6 OrderDetail, OrderChanges and
+    Acknowledgements; impl-purchasing P9): OrderDetail's Revisions section (each revision's time, changes, reason, when it was
+    sent and its stored PDF, with Change order, which starts the change and opens OrderChanges) and Supplier acknowledgement
+    section (the response, reference and the revision acknowledged, each line's requested and promised date with its own
+    promise, the reminders and the history, with Record acknowledgement and Send reminder), over
+    ironstone.purchasing.RevisionServices.get#OrderRevisions; and the transitions they and the Acknowledgements list post,
+    each included by name: startRevision (mantle.order.OrderServices.start#PurchaseRevision), recordAcknowledgement and
+    linePromise (record#Acknowledgement) and sendReminders (send#PurchaseReminder, a result per order). Each checks the
+    order with AccessServices.check#Record first; the Mantle service checks its permission and the organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="startRevision">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.OrderServices.start#PurchaseRevision" out-map="started"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, reason:reason}"/>
+            <message type="success">The order is held while it changes</message>
+        </actions>
+        <default-response url="../OrderChanges"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the supplier's response: one promised date for every line, or none; a line's own promise is linePromise -->
+    <transition name="recordAcknowledgement">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <entity-find entity-name="mantle.order.OrderItem" list="ackItems" disable-authz="true">
+                <econdition field-name="orderId"/>
+                <econdition field-name="parentItemSeqId" operator="is-null"/>
+            </entity-find>
+            <set field="lineAcknowledgements" from="promisedDate ? Array.from(ackItems).map((item) =&gt;
+                    ({orderItemSeqId:item.orderItemSeqId, promisedDate:promisedDate})) : []"/>
+            <service-call name="mantle.order.OrderServices.record#Acknowledgement" out-map="recorded"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, otherPartyOrderId:otherPartyOrderId || null,
+                        otherPartyOrderDate:otherPartyOrderDate || null, acknowledgementEnumId:acknowledgementEnumId || null,
+                        acknowledgementNote:acknowledgementNote || null, lineAcknowledgements:lineAcknowledgements,
+                        evidenceText:evidenceText || null, contentFile:contentFile || null, operationKey:operationKey || null}"/>
+            <message type="success">Acknowledgement of revision ${recorded.acknowledgedRevision} recorded</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="linePromise">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <service-call name="mantle.order.OrderServices.record#Acknowledgement"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, acknowledgementNote:acknowledgementNote || null,
+                        lineAcknowledgements:[{orderItemSeqId:orderItemSeqId, promisedDate:promisedDate || null,
+                            promisedQuantity:promisedQuantity || null}]}"/>
+            <message type="success">Promise of line ${orderItemSeqId} recorded</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- one order (OrderDetail: orderId) or the selected ones (Acknowledgements: selectedIds), a result per order; Mantle checks
+        each order's organization and names the ones it refuses -->
+    <transition name="sendReminders">
+        <actions>
+            <if condition="orderId">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            </if>
+            <service-call name="mantle.order.OrderServices.send#PurchaseReminder" out-map="reminded"
+                    in-map="{orderIds:(orderId ? [orderId] : Array.from(selectedIds || [])), note:note || null}"/>
+            <script>ec.message.addMessage('Reminded ' + reminded.sentCount + ' of ' + reminded.results.length + ' orders' +
+                (reminded.results.some((row) =&gt; !['SENT', 'PARTLY_SENT'].includes(row.resultCode))
+                    ? '; ' + reminded.results.filter((row) =&gt; !['SENT', 'PARTLY_SENT'].includes(row.resultCode))
+                        .map((row) =&gt; row.orderId + ': ' + row.message).join('; ') : ''),
+                reminded.failedCount ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- included by PurchasingOrderDetail.xml inside the found order (po and orderId set) -->
+        <section name="PurchasingOrderRevisions">
+            <actions>
+                <service-call name="ironstone.purchasing.RevisionServices.get#OrderRevisions" out-map="revisionsOut"
+                        in-map="{appRoot:appRoot, orderId:orderId}" transaction="force-new" ignore-error="true"/>
+                <set field="rev" from="revisionsOut?.orderRevisions || null"/>
+                <set field="revisionRows" from="rev?.revisionRows || []"/>
+                <set field="revisionContentUrl" from="sri.buildUrl('orderContent').path + '?orderId=' + encodeURIComponent(orderId)
+                        + '&amp;orderContentId='"/>
+                <set field="startValue" from="{orderId:orderId, orderRevision:String(po.orderRevision)}"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderRevisionsFound" condition="rev">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Revisions · ${revisionRows.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="PurchaseOrderChange" button-text="Change order" icon="sym_o_edit_note"
+                                        width="520" title="Change purchase order ${orderId}" condition="rev.actions.change">
+                                    <form-single name="StartPurchaseRevision" transition="startRevision" map="startValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                        <field name="reason">
+                                            <default-field title="Reason for the change"><text-area rows="2" required="true"/></default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Start the change">
+                                                <submit confirmation="Hold purchase order ${orderId} while it changes? It is not sent or approved again until the new revision is approved or the change is let go."/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${sharedLinks['Orders/OrderChanges']}" text="Continue the change" icon="sym_o_edit_note"
+                                        link-type="anchor-button" parameter-map="{orderId:orderId}"
+                                        condition="rev.actions.continueChange"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label type="p" style="text-warning q-pa-sm q-mb-none" text="${rev.revisionStateText}"
+                                        condition="rev.revisionStateText"/>
+                                <form-list name="PurchaseOrderRevisionList" list="revisionRows" skip-form="true" paginate="false">
+                                    <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="changeText">
+                                        <default-field title="Changes">
+                                            <label text="${changeText}" type="div"/>
+                                            <label text="Reason: ${reason}" type="div" style="text-caption m-muted" condition="reason"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="sentText">
+                                        <default-field title="Sent">
+                                            <link url="${revisionContentUrl}${orderContentId}" url-type="plain"
+                                                    text="${sentText || 'PDF'}" link-type="anchor" target-window="_blank"
+                                                    condition="canOpen"/>
+                                            <label text="${sentText}" condition="!canOpen"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="revisionText"/><field-ref name="changeText"/></column>
+                                        <column><field-ref name="dateText"/><field-ref name="sentText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+
+        <section name="PurchasingOrderAcknowledgement">
+            <actions>
+                <set field="ack" from="rev?.acknowledgement || null"/>
+                <set field="ackValue" from="{orderId:orderId, orderRevision:String(po.orderRevision),
+                        otherPartyOrderId:ack?.supplierReference || '', acknowledgementEnumId:'PakAccepted',
+                        operationKey:'po-ack-' + ec.user.randomString(24)}"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderAcknowledgementFound" condition="ack">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Supplier acknowledgement"/>
+                            <box-toolbar>
+                                <container-dialog id="PurchaseOrderAcknowledge" button-text="Record acknowledgement"
+                                        icon="sym_o_mark_email_read" width="640"
+                                        title="Record ${po.supplierName}'s acknowledgement of revision ${po.orderRevision}"
+                                        condition="rev.actions.acknowledge">
+                                    <form-single name="RecordAcknowledgement" transition="recordAcknowledgement" map="ackValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="otherPartyOrderId">
+                                            <default-field title="Supplier's reference"><text-line size="20"/></default-field>
+                                        </field>
+                                        <field name="otherPartyOrderDate">
+                                            <default-field title="Supplier's date"><date-time type="date"/></default-field>
+                                        </field>
+                                        <field name="acknowledgementEnumId">
+                                            <default-field title="Response">
+                                                <drop-down allow-empty="false">
+                                                    <option key="PakAccepted" text="Accepted"/>
+                                                    <option key="PakChanged" text="Accepted with changes"/>
+                                                    <option key="PakRejected" text="Rejected"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="promisedDate">
+                                            <default-field title="Promised delivery" tooltip="For every line; a line's own promise is set on its row">
+                                                <date-time type="date"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="acknowledgementNote">
+                                            <default-field title="Supplier's reason" tooltip="Needed for a changed or rejected response">
+                                                <text-area rows="2"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="evidenceText">
+                                            <default-field title="Received by" tooltip="How the response came: a phone call, an email">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="contentFile"><default-field title="Supplier's document"><file/></default-field></field>
+                                        <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row>
+                                                <field-ref name="otherPartyOrderId"/>
+                                                <field-ref name="otherPartyOrderDate"/>
+                                            </field-row>
+                                            <field-row>
+                                                <field-ref name="acknowledgementEnumId"/>
+                                                <field-ref name="promisedDate"/>
+                                            </field-row>
+                                            <field-ref name="acknowledgementNote"/>
+                                            <field-row>
+                                                <field-ref name="evidenceText"/>
+                                                <field-ref name="contentFile"/>
+                                            </field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="sendReminders" link-type="hidden-form" text="Send reminder" icon="sym_o_notifications"
+                                        condition="rev.actions.remind" parameter-map="{orderId:orderId}"
+                                        confirmation="Remind ${po.supplierName} to acknowledge revision ${po.orderRevision} of ${orderId}?"/>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${ack.stateText}" type="strong" style="text-${ack.outcomeColor}"/>
+                                <label text="Supplier's reference: ${ack.supplierReference}${ack.supplierDateText ? ' of ' + ack.supplierDateText : ''}"
+                                        type="div" condition="ack.supplierReference"/>
+                                <label text="Supplier's reason: ${ack.note}" type="div" condition="ack.note"/>
+                                <label text="Recorded ${ack.recordedText}" type="div" style="m-muted" condition="ack.recordedText"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderPromises" list="rev.lineRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="requiredText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="promisedText">
+                                        <default-field title="Promised">
+                                            <label text="${promisedText}${promisedQuantityText ? ' · ' + promisedQuantityText : ''}" type="span"/>
+                                            <label text="${promiseState}" type="div" style="text-caption text-${promiseColor}"
+                                                    condition="promiseState"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="LinePromise_${orderItemSeqId}" button-text="Promise" icon="sym_o_event"
+                                                    width="480" title="Promise of line ${orderItemSeqId}" condition="rev.actions.acknowledge">
+                                                <form-single name="LinePromise" transition="linePromise">
+                                                    <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                                    <field name="orderRevision" from="String(po.orderRevision)"><default-field><hidden/></default-field></field>
+                                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="promisedDate" from="null">
+                                                        <default-field title="Promised date"><date-time type="date"/></default-field>
+                                                    </field>
+                                                    <field name="promisedQuantity" from="null">
+                                                        <default-field title="Promised quantity"><text-line size="8"/></default-field>
+                                                    </field>
+                                                    <field name="acknowledgementNote" from="null">
+                                                        <default-field title="Supplier's reason"><text-line/></default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="requiredText"/></column>
+                                        <column><field-ref name="promisedText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="PurchaseOrderReminders" condition="rev.reminderRows.length">
+                                    <widgets>
+                                        <form-list name="PurchaseOrderReminderList" list="rev.reminderRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="sentText"><default-field title="Reminded"><display/></default-field></field>
+                                            <field name="revisionText"><default-field title="Of"><display/></default-field></field>
+                                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="sentText"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                                <section name="PurchaseOrderAcknowledgementHistory" condition="rev.historyRows.length">
+                                    <widgets>
+                                        <form-list name="PurchaseOrderAcknowledgementHistoryList" list="rev.historyRows"
+                                                skip-form="true" paginate="false">
+                                            <field name="changedText"><default-field title="When"><display/></default-field></field>
+                                            <field name="whatText"><default-field title="Recorded"><display/></default-field></field>
+                                            <field name="toText"><default-field title="Value"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                            <field name="byText"><default-field title="By"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="whatText"/><field-ref name="changedText"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

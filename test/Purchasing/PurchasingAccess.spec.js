@@ -10,7 +10,8 @@
 // purchase order, a purchase order's record link to OrderDetail and its detail's record scope; P5 a purchase receipt's scope and
 // the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
 // render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator; P8 a supplier return's scope,
-// its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail.
+// its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail; P9 a purchase order's revisions and
+// acknowledgement for its organization, and starting a change for the buyer only.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -765,6 +766,44 @@ feature("a supplier return is its organization's; authorizing it needs RETURN_AU
         if (own !== "/qapps/Purchasing/Returns/ReturnDetail?returnId=" + returnId) problems.push(`the reader's link: ${own}`)
         const warehouse = link("warehouse.read", false)
         if (warehouse && warehouse.includes("/Purchasing/")) problems.push(`a Warehouse user's link: ${warehouse}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+// P9: a purchase order's revisions and acknowledgement are its organization's: another organization's reader is refused them;
+// starting a change and recording the supplier's response are the buyer's (PURCHASE_ORDER_EDIT), offered to the buyer and not
+// to a reader on the same order, and the list is refused a requester
+feature("an order's revisions and acknowledgement are its organization's, and changing or acknowledging it is the buyer's", {
+    when() {
+        const problems = []
+        const read = user =>
+            asUser(
+                user,
+                () =>
+                    invoke("ironstone.purchasing.RevisionServices.get#OrderRevisions", {
+                        appRoot: "Purchasing",
+                        orderId: ids.ackOrderId
+                    }).orderRevisions
+            )
+        const buyer = read(users.buyer)
+        if (!buyer.actions.change || !buyer.actions.acknowledge) problems.push("the buyer is not offered the change and response")
+        const reader = read(users.read)
+        if (reader.actions.change || reader.actions.acknowledge) problems.push("the reader is offered the change or response")
+        const other = asUser(users.services, () =>
+            refusal("ironstone.purchasing.RevisionServices.get#OrderRevisions", {appRoot: "Purchasing", orderId: ids.ackOrderId})
+        )
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's reader: ${other || "accepted"}`)
+        const capability = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "order", recordId: ids.ackOrderId, capability: "buy"})
+            )
+        const holder = capability(users.buyer)
+        if (holder !== "") problems.push(`the buyer's change check: ${holder}`)
+        const without = capability(users.read)
+        if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's change check: ${without || "accepted"}`)
         return {problems}
     },
     then({problems}) {

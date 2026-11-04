@@ -1910,6 +1910,9 @@ policy decision or override reason. `mantle.other.BudgetServices` (P15) has
 - Purchasing's proposed `ApprovalServices.decide#PurchaseApproval` calls `check#Budget` and `reserve#Commitment` at request approval, and `convert#Commitment` (request to PO) at PO approval.
 - Purchasing's `close#PurchaseRemainders` and a request cancel call `release#Commitment`.
 - Accounting's `approve#Payable` calls `convert#Commitment` (PO to actual; P15).
+- Purchasing's `apply#PurchaseRevision` calls the internal `lower#SourceCommitments` (impl-purchasing P9, F-P9-4): a line
+  the revision lowers gives up the difference at the new revision, with no permission of its own, as
+  `release#ClosedSourceCommitments`; a raised line is reserved by the approval of the new revision.
 
 Purchasing's RequirementBudgetAllocation may link to a commitment; it is not the commitment.
 BudgetVariance's committed column reads BudgetCommitment.

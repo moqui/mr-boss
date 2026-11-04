@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's revision and acknowledgement reads (design-purchasing §6 OrderChanges, Acknowledgements and OrderDetail;
+    impl-purchasing P9; Revisions.js): OrderDetail's Revisions and Acknowledgements sections, the Acknowledgements list
+    (find#Acknowledgements, included in ironstone.purchasing.OrderServices by name) and the Today source of acknowledgements
+    due. The screens call the Mantle writes (mantle.order.OrderServices start#, cancel#, preview#, apply#PurchaseRevision,
+    record#Acknowledgement, send#PurchaseReminder) after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="OrderRevisions" allow-remote="false">
+        <description>OrderDetail's Revisions and Acknowledgements of one purchase order (design §6 OrderDetail): each revision
+            with its time, its changes from the audit log (a price change withheld from a user who sees no order amounts)
+            and reason, when it was sent and its stored PDF; where an open change stands; the supplier's acknowledgement
+            (reference, the revision acknowledged and the response), each line's requested and promised dates, the
+            reminders and the acknowledgement's history; and the actions the user's capabilities and the order's status
+            allow. Refuses an order the user may not work with (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orderRevisions" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Revisions.js"/>
+            <set field="orderRevisions" from="ec.resource.script(module).execute('orderRevisions', context).orderRevisions"/>
+        </actions>
+    </service>
+    <service verb="find" noun="Acknowledgements" allow-remote="false">
+        <description>AcknowledgementList (design §6 Acknowledgements): one page of the sent purchase orders of the user's
+            organizations (at most the 500 first by id), by view: unacknowledged (not at the current revision, the default),
+            changed (a changed or rejected response, or a promise later than required), overdue (unacknowledged past the
+            buying policy's reminder days since the revision went out) or all; by supplier, organization and text (order,
+            name or supplier reference); the oldest sent first. Each row has its revision, supplier, when it went out, the
+            response, the supplier's reference, the earliest requested and latest promised dates, the late reason, the last
+            reminder and when the acknowledgement is due. Refuses a user without the buying lists (PERMISSION_DENIED) and
+            another organization (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="ackRows" type="List"/>
+            <parameter name="ackRowsCount" type="Integer"/>
+            <parameter name="ackRowsPageIndex" type="Integer"/>
+            <parameter name="ackRowsPageSize" type="Integer"/>
+            <parameter name="ackRowsPageMaxIndex" type="Integer"/>
+            <parameter name="ackRowsPageRangeLow" type="Integer"/>
+            <parameter name="ackRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+            <parameter name="view"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Revisions.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findAcknowledgements', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Purchasing today-source of acknowledgements due (Purchasing.xml shell-providers; get#UserTodayItems
+            calls it): the user's organizations' sent orders unacknowledged past the buying policy's reminder days, for a
+            buyer, each opening its order. Another user's Today and a user who is not a buyer get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Revisions.js')
+                    .execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
+</services>

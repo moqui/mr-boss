@@ -644,7 +644,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | handle#OrderMajorChange |  |  |
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
-| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly; OrderChanges is P9) |
+| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9) |
 | OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
 | OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
@@ -1636,7 +1636,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | shipment/WarehouseTaskServices | correct#LotMetadata |  | Warehouse/Inventory/Lots (Correct) |
 | shipment/WarehouseTaskServices | preview#Repack, repack#Asset |  | Warehouse/Transfers/Repack |
 | shipment/WarehouseTaskServices | ensure#PurchaseReceipt |  | Warehouse/Receiving/Receipts (NewReceipt); Warehouse/Receiving/NewReceipt (quick create); close#ReceiptRemainder's backorder; Purchasing/Receiving/Receipts and Purchasing/Orders/OrderDetail (PrepareReceipt, "Expected receipt (ASN)") (Purchasing P5) |
-| shipment/WarehouseTaskServices | adjust#ExpectedReceipt |  | (Purchasing's order revision, when Purchasing is built) |
+| shipment/WarehouseTaskServices | adjust#ExpectedReceipt |  | Purchasing/Orders/OrderChanges (ApplyRevision, through apply#PurchaseRevision; Purchasing P9) |
 | shipment/WarehouseTaskServices | receive#ShipmentStock |  | Warehouse/Receiving/Receive and Warehouse/Handheld/Receive (ReceiveLine, GenerateTracking); Purchasing/Receiving/ShipmentDetail (PurchaseReceiveLine) (Purchasing P5) |
 | shipment/WarehouseTaskServices | receive#ExpectedShipment |  | Warehouse/Receiving/ReceiptDetail and Receive (Receive all as expected); Purchasing/Receiving/ShipmentDetail (Receive all as expected) (Purchasing P5) |
 | shipment/WarehouseTaskServices | receive#AdHocStock |  | Warehouse/Receiving/Receive (AdHocReceipt) |
@@ -1708,6 +1708,11 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/ReturnServices | find#ReturnableReceipts, add#ReceiptToReturn |  | Purchasing/Returns/SupplierReturns (NewSupplierReturn: the receipts by receipt and lot, the first item) and Purchasing/Returns/ReturnDetail (Eligible receipts, Add) (Purchasing P8); Warehouse/Returns/ReturnDetail (Warehouse P14) |
 | order/ReturnServices | authorize#SupplierReturn |  | Purchasing/Returns/ReturnDetail (Authorize, Record RMA) (Purchasing P8) |
 | order/ReturnServices | create#ReplacementOrder |  | Purchasing/Returns/ReturnDetail (Replace) (Purchasing P8) |
+| order/OrderServices | start#PurchaseRevision, cancel#PurchaseRevision |  | Purchasing/Orders/OrderDetail (Change order); Purchasing/Orders/OrderChanges (Start a change, Let the change go) (Purchasing P9) |
+| order/OrderServices | preview#PurchaseRevision, apply#PurchaseRevision |  | Purchasing/Orders/OrderChanges (ProposedChange, RevisionEffects, ApplyRevision) (Purchasing P9) |
+| order/OrderServices | record#Acknowledgement |  | Purchasing/Orders/Acknowledgements (Record); Purchasing/Orders/OrderDetail (Record acknowledgement, a line's Promise) (Purchasing P9) |
+| order/OrderServices | send#PurchaseReminder |  | Purchasing/Orders/Acknowledgements (Send reminder, on the selected rows); Purchasing/Orders/OrderDetail (Send reminder) (Purchasing P9) |
+| other/BudgetServices | lower#SourceCommitments |  | (apply#PurchaseRevision's budget delta, internal; Purchasing P9) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)
