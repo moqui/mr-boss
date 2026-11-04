@@ -12,12 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Manufacturing (design-manufacturing §1.2, §8): the report index and its eight reports
-    (impl-manufacturing P16). Open to every Manufacturing user; each report service decides what it shows (money columns:
-    ACCOUNTING_VIEW). -->
+<!-- The Reports area of IronStone Manufacturing (design-manufacturing §1.2, §9; impl-manufacturing P16): the report index
+    (ReportIndex) and its eight reports, each over its mantle.work.ProductionReportServices service: WorkOrderStatusReport,
+    MaterialReport, OperationPerformanceReport, LossReport, QualityReport, ProductionCostReport,
+    BillOfMaterialsVarianceReport and PlanningReport. Open to every Manufacturing user; each report service decides what it
+    shows (PRODUCTION_VIEW; money columns ACCOUNTING_VIEW, left out otherwise). Home's Kpis open them with their filters. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="12" menu-image="sym_o_assessment" menu-image-type="icon">
+    <subscreens default-item="ReportIndex" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Status, materials, operation performance, loss, quality, cost, BOM variance and planning." type="p"/>
+        <subscreens-panel id="ReportsPanel" type="tab"/>
     </widgets>
 </screen>

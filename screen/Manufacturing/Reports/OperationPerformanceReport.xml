@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OperationPerformanceReport (design-manufacturing §9 OperationPerformanceReport; style-guide §3.12 Report): each
+    work center's OEE over the period (PerformanceFind;
+    mantle.work.ProductionReportServices.get#OperationPerformanceReport): planned, planned stop, downtime, run, machine
+    and labor hours, standard hours, the units counted and good, and availability, performance, quality and OEE, each
+    Not calculable with its reason where its figures are missing (CenterRows); the plant's factors as number cards; and
+    the downtime by reason (DowntimeRows). The export holds the parameters and columns. Every Manufacturing reader
+    reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Performance" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="reasonCode"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <!-- the selected plant until the parameters name a facility or clear it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (manufacturing.plantId || null) : (facilityId || null)"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:reportFacilityId,
+                productId:productId || null, reasonCode:reasonCode || null, fromDate:fromDate || null,
+                thruDate:thruDate || null}"/>
+        <service-call name="mantle.work.ProductionReportServices.get#OperationPerformanceReport" out-map="report"
+                in-map="Object.assign({}, options, {pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.asOf"/>
+        <set field="financialRead" from="!!report?.financialRead"/>
+        <set field="centerRows" from="report?.centerRows || []"/>
+        <set field="downtimeRows" from="report?.downtimeRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['centerRows' + key] = report['centerRows' + key]</script>
+        <set field="totals" from="report?.totals || {}"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Operation performance" type="h5"/>
+                <label text="Each work center's OEE: availability (run time over planned production time, planned stops
+                        excluded and overlapping stops counted once) × performance (the standard hours of the units
+                        counted over run time) × quality (good over every unit counted, a reworked unit once). A
+                        factor whose figures are missing is not calculable, never zero."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="PerformanceFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Plant or work center" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'materialProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="reasonCode">
+                <default-field title="Stop reason" tooltip="Narrows the downtime by reason">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'downtimeReasons', selected:reasonCode, facilityId:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="7 days before the last day when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty">
+                    <date-time type="date"/>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="productId"/>
+                    <field-ref name="reasonCode"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportStatus" location="component://mr-boss/template/ManufacturingReportParts.xml"/>
+        <section name="PerformanceCards" condition="reportFound">
+            <widgets>
+                <dashboard min-width="170">
+                    <number-card title="OEE" value="${totals.oeeText}" icon="sym_o_speed" size="sm"/>
+                    <number-card title="Availability" value="${totals.availabilityText}" icon="sym_o_schedule" size="sm"/>
+                    <number-card title="Performance" value="${totals.performanceText}" icon="sym_o_bolt" size="sm"/>
+                    <number-card title="Quality" value="${totals.qualityText}" icon="sym_o_verified" size="sm"/>
+                </dashboard>
+                <label text="${totals.notesText}." type="p" style="text-caption m-muted" condition="totals.notesText"/>
+            </widgets>
+        </section>
+        <section name="CenterRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Work centers"/>
+                    <box-body-nopad>
+                        <label text="No work center in this scope." type="p" style="q-pa-md m-muted"
+                                condition="!centerRows.length"/>
+                        <form-list name="CenterRows" list="centerRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="facilityName">
+                                <default-field title="Work center">
+                                    <link url="${sharedLinks['WorkCenters/FacilityDetail']}" text="${facilityName}"
+                                            link-type="anchor" parameter-map="{facilityId:facilityId}"/>
+                                </default-field>
+                            </field>
+                            <field name="plannedHours" align="right">
+                                <default-field title="Planned" tooltip="Work hours in the period less planned stops">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="plannedStopHours" align="right">
+                                <default-field title="Planned stops">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="downtimeHours" align="right">
+                                <default-field title="Downtime" tooltip="Unplanned stops and outages, overlaps counted once">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="runHours" align="right">
+                                <default-field title="Run">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="machineHours" align="right">
+                                <default-field title="Machine">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="laborSetupHours" align="right">
+                                <default-field title="Labor setup">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="laborRunHours" align="right">
+                                <default-field title="Labor run">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="standardHours" align="right">
+                                <default-field title="Standard" tooltip="The standard hours of the units counted">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="totalQuantity" align="right">
+                                <default-field title="Counted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="goodQuantity" align="right">
+                                <default-field title="Good">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="availabilityText">
+                                <default-field title="Availability">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="performanceText">
+                                <default-field title="Performance">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="qualityText">
+                                <default-field title="Quality">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="oeeText">
+                                <default-field title="OEE">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="notCalculableText">
+                                <default-field title="Not calculable because">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="notesText">
+                                <default-field title="Notes">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="facilityName"/>
+                                    <field-ref name="oeeText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="availabilityText"/>
+                                    <field-ref name="performanceText"/>
+                                    <field-ref name="qualityText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="DowntimeRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Downtime by reason"/>
+                    <box-body-nopad>
+                        <label text="No stop or outage in this period." type="p" style="q-pa-md m-muted"
+                                condition="!downtimeRows.length"/>
+                        <form-list name="DowntimeRows" list="downtimeRows" skip-form="true" paginate="false">
+                            <field name="facilityName">
+                                <default-field title="Work center">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reasonText">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="kindText">
+                                <default-field title="Kind">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="hours" align="right">
+                                <default-field title="Hours">
+                                    <display format="#,##0.##"/>
+                                </default-field>
+                            </field>
+                            <field name="stopCount" align="right">
+                                <default-field title="Stops">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="facilityName"/>
+                                    <field-ref name="reasonText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="hours"/>
+                                    <field-ref name="kindText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

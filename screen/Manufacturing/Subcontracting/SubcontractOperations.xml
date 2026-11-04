@@ -141,108 +141,120 @@ along with this software (see the LICENSE.md file). If not, see
         </container>
         <container-box>
             <box-body-nopad>
-                <form-list name="SubcontractList" list="operationList" skip-form="true" paginate="true" header-dialog="true"
-                        select-columns="true">
-                    <field name="supplierPartyId">
-                        <header-field title="Supplier">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
-                            </drop-down>
-                        </header-field>
-                        <default-field><ignored/></default-field>
-                    </field>
-                    <field name="facilityId">
-                        <header-field title="Plant">
-                            <drop-down allow-empty="true">
-                                <dynamic-options transition="choices" server-search="true" min-length="0"
-                                        parameter-map="{choice:'plants', selected:facilityId}"/>
-                            </drop-down>
-                        </header-field>
-                        <default-field><ignored/></default-field>
-                    </field>
-                    <field name="stateText">
-                        <header-field title="State">
-                            <drop-down allow-empty="true">
-                                <option key="Requested" text="Requested"/>
-                                <option key="Draft purchase order" text="Draft purchase order"/>
-                                <option key="Ordered" text="Ordered"/>
-                                <option key="Components sent" text="Components sent"/>
-                                <option key="Output received" text="Output received"/>
-                                <option key="Accepted" text="Accepted"/>
-                            </drop-down>
-                        </header-field>
-                        <default-field>
-                            <render-mode>
-                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
-                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
-                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
-                                <text type="html">${stateText}</text>
-                            </render-mode>
-                        </default-field>
-                    </field>
-                    <field name="exceptionsOnly">
-                        <header-field title="Exceptions only"><check><option key="Y" text=" "/></check></header-field>
-                        <default-field><ignored/></default-field>
-                    </field>
-                    <field name="operationName">
-                        <header-field title="Operation"/>
-                        <default-field>
-                            <link url="../SubcontractDetail" text="${operationName}" link-type="anchor"
-                                    parameter-map="{workEffortId:operationWorkEffortId}"/>
-                        </default-field>
-                    </field>
-                    <field name="workEffortId">
-                        <header-field title="Work order"/>
-                        <default-field>
-                            <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
-                                    parameter-map="{workEffortId:workEffortId}"/>
-                        </default-field>
-                    </field>
-                    <field name="supplierName">
-                        <header-field title="Supplier"/>
-                        <default-field>
-                            <link url="../Supplier360" text="${supplierName || 'No supplier yet'}" link-type="anchor"
-                                    parameter-map="{vendorPartyId:supplierPartyId}" condition="supplierPartyId"/>
-                            <label text="No supplier yet" type="span" style="text-warning" condition="!supplierPartyId"/>
-                        </default-field>
-                    </field>
-                    <field name="productName"><header-field title="Service"/><default-field><display/></default-field></field>
-                    <field name="orderId">
-                        <header-field title="Purchase order"/>
-                        <default-field>
-                            <link url="../OrderDetail" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"
-                                    condition="orderId"/>
-                            <label text="${orderStatusText}" type="div" style="text-caption m-muted" condition="orderId"/>
-                        </default-field>
-                    </field>
-                    <field name="quantity" align="right">
-                        <header-field title="Quantity"/>
-                        <default-field><display text="${quantity || ''} ${uomText || ''}"/></default-field>
-                    </field>
-                    <field name="unitAmount" align="right" hide="!priceRead">
-                        <header-field title="Price"/>
-                        <default-field><display currency-unit-field="currencyUomId"/></default-field>
-                    </field>
-                    <field name="dispatchCount" align="right">
-                        <header-field title="Dispatches"/>
-                        <default-field><display/></default-field>
-                    </field>
-                    <field name="receivedQuantity" align="right">
-                        <header-field title="Output received"/>
-                        <default-field><display format="#,##0.###"/></default-field>
-                    </field>
-                    <field name="acceptedQuantity" align="right">
-                        <header-field title="Accepted"/>
-                        <default-field><display format="#,##0.###"/></default-field>
-                    </field>
-                    <field name="requiredByText"><header-field title="Due"/><default-field><display/></default-field></field>
-                    <field name="facilityName"><header-field title="Plant or line"/><default-field><display/></default-field></field>
-                    <columns type="mobile">
-                        <column><field-ref name="operationName"/><field-ref name="supplierName"/></column>
-                        <column><field-ref name="stateText"/><field-ref name="requiredByText"/></column>
-                    </columns>
-                </form-list>
+                <!-- the price column only for a reader of the prices: a field's hide leaves its title in the column chooser
+                    (select-columns), so a reader without them gets the list without the field (extends, its default ignored) -->
+                <section name="SubcontractListFull" condition="priceRead">
+                    <widgets>
+                        <form-list name="SubcontractList" list="operationList" skip-form="true" paginate="true" header-dialog="true"
+                                select-columns="true">
+                            <field name="supplierPartyId">
+                                <header-field title="Supplier">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="facilityId">
+                                <header-field title="Plant">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'plants', selected:facilityId}"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="stateText">
+                                <header-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="Requested" text="Requested"/>
+                                        <option key="Draft purchase order" text="Draft purchase order"/>
+                                        <option key="Ordered" text="Ordered"/>
+                                        <option key="Components sent" text="Components sent"/>
+                                        <option key="Output received" text="Output received"/>
+                                        <option key="Accepted" text="Accepted"/>
+                                    </drop-down>
+                                </header-field>
+                                <default-field>
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="exceptionsOnly">
+                                <header-field title="Exceptions only"><check><option key="Y" text=" "/></check></header-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="operationName">
+                                <header-field title="Operation"/>
+                                <default-field>
+                                    <link url="../SubcontractDetail" text="${operationName}" link-type="anchor"
+                                            parameter-map="{workEffortId:operationWorkEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="workEffortId">
+                                <header-field title="Work order"/>
+                                <default-field>
+                                    <link url="${sharedLinks['WorkOrders/WorkOrderDetail']}" text="${workEffortId}" link-type="anchor"
+                                            parameter-map="{workEffortId:workEffortId}"/>
+                                </default-field>
+                            </field>
+                            <field name="supplierName">
+                                <header-field title="Supplier"/>
+                                <default-field>
+                                    <link url="../Supplier360" text="${supplierName || 'No supplier yet'}" link-type="anchor"
+                                            parameter-map="{vendorPartyId:supplierPartyId}" condition="supplierPartyId"/>
+                                    <label text="No supplier yet" type="span" style="text-warning" condition="!supplierPartyId"/>
+                                </default-field>
+                            </field>
+                            <field name="productName"><header-field title="Service"/><default-field><display/></default-field></field>
+                            <field name="orderId">
+                                <header-field title="Purchase order"/>
+                                <default-field>
+                                    <link url="../OrderDetail" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"
+                                            condition="orderId"/>
+                                    <label text="${orderStatusText}" type="div" style="text-caption m-muted" condition="orderId"/>
+                                </default-field>
+                            </field>
+                            <field name="quantity" align="right">
+                                <header-field title="Quantity"/>
+                                <default-field><display text="${quantity || ''} ${uomText || ''}"/></default-field>
+                            </field>
+                            <field name="unitAmount" align="right" hide="!priceRead">
+                                <header-field title="Price"/>
+                                <default-field><display currency-unit-field="currencyUomId"/></default-field>
+                            </field>
+                            <field name="dispatchCount" align="right">
+                                <header-field title="Dispatches"/>
+                                <default-field><display/></default-field>
+                            </field>
+                            <field name="receivedQuantity" align="right">
+                                <header-field title="Output received"/>
+                                <default-field><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="acceptedQuantity" align="right">
+                                <header-field title="Accepted"/>
+                                <default-field><display format="#,##0.###"/></default-field>
+                            </field>
+                            <field name="requiredByText"><header-field title="Due"/><default-field><display/></default-field></field>
+                            <field name="facilityName"><header-field title="Plant or line"/><default-field><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="operationName"/><field-ref name="supplierName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="requiredByText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                    <fail-widgets>
+                        <form-list name="SubcontractListUnpriced" list="operationList" extends="SubcontractList" skip-form="true"
+                                paginate="true" header-dialog="true" select-columns="true">
+                            <field name="unitAmount"><default-field><ignored/></default-field></field>
+                        </form-list>
+                    </fail-widgets>
+                </section>
                 <section name="NoSubcontracts" condition="!operationList.length">
                     <widgets>
                         <container style="q-pa-sm">

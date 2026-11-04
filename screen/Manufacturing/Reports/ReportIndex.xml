@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReportIndex (design-manufacturing §9 Reports; style-guide §3.12): the Manufacturing reports, each with its purpose and
+    date basis, linking to its screen. Every report is complete for a production reader; the money columns of the cost, loss
+    and BOM variance reports show only with financial read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="All reports" default-menu-index="1">
+    <actions>
+        <set field="financialRead" from="!!manufacturing.capabilities.financialRead"/>
+        <set field="reportRows" from="[
+                {title:'Work order status', url:sharedLinks['Reports/WorkOrderStatusReport'], basis:'Due and completion dates',
+                    purpose:'Target, good and remaining quantity, days late and what blocks each work order'},
+                {title:'Materials', url:sharedLinks['Reports/MaterialReport'], basis:'Issued and received',
+                    purpose:'Required, issued, returned and net material, and good and held output, with lots'},
+                {title:'Operation performance', url:sharedLinks['Reports/OperationPerformanceReport'], basis:'A period, the last week by default',
+                    purpose:'OEE by work center: availability, performance and quality, with downtime by reason'},
+                {title:'Loss', url:sharedLinks['Reports/LossReport'], basis:'Loss date',
+                    purpose:financialRead ? 'Scrap, process loss and rework against good output, with their cost'
+                        : 'Scrap, process loss and rework against good output; their cost needs financial read'},
+                {title:'Quality', url:sharedLinks['Reports/QualityReport'], basis:'Inspection date',
+                    purpose:'Production inspections: samples, readings, failure rate, holds and time to disposition'},
+                {title:'Production cost', url:sharedLinks['Reports/ProductionCostReport'], basis:'Completion date, or open now',
+                    purpose:financialRead ? 'Cost by component, WIP, output allocation and variance of each work order'
+                        : 'The cost close state of each work order; its amounts need financial read'},
+                {title:'BOM variance', url:sharedLinks['Reports/BillOfMaterialsVarianceReport'], basis:'Release date',
+                    purpose:'Planned against issued material, substitutes, yield and time'},
+                {title:'Planning', url:sharedLinks['Reports/PlanningReport'], basis:'The current supply plans',
+                    purpose:'Required, available, held, suggested and converted quantities with their provenance'}
+            ]"/>
+    </actions>
+    <widgets>
+        <label text="Reports" type="h5"/>
+        <form-list name="ReportIndex" list="reportRows" skip-form="true" paginate="false">
+            <field name="title">
+                <default-field title="Report">
+                    <link url="${url}" text="${title}" link-type="anchor"/>
+                </default-field>
+            </field>
+            <field name="purpose">
+                <default-field title="Purpose">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="basis">
+                <default-field title="Dates">
+                    <display/>
+                </default-field>
+            </field>
+            <columns type="mobile">
+                <column>
+                    <field-ref name="title"/>
+                </column>
+                <column>
+                    <field-ref name="basis"/>
+                </column>
+            </columns>
+        </form-list>
+    </widgets>
+</screen>

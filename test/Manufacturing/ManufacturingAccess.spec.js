@@ -926,10 +926,16 @@ feature("a work order's costs: the estimator reads the estimate and no actuals, 
             costPage: screen(users.cost),
             financePage: screen(users.finance),
             readerPage: screen(users.read),
-            servicesPage: screen(users.services)
+            servicesPage: screen(users.services),
+            // the money columns left out of a reader's html, tui and csv renders too, their titles with them
+            readerModes: ["html", "tui", "csv"].map(mode =>
+                asUser(users.read, () =>
+                    lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"}, mode)
+                )
+            )
         }
     },
-    then({cost, finance, reader, services, costPage, financePage, readerPage, servicesPage}) {
+    then({cost, finance, reader, services, costPage, financePage, readerPage, servicesPage, readerModes}) {
         cost.estimate.unitCost == "4"
         cost.estimate.totalCost == "20"
         cost.actuals == null
@@ -954,6 +960,12 @@ feature("a work order's costs: the estimator reads the estimate and no actuals, 
         !readerPage.output.includes("Frozen estimate")
         !readerPage.output.includes("Actual cost")
         !readerPage.output.includes("Request cost review")
+        financePage.output.includes("Amount") &&
+            financePage.output
+                .includes("Ledger")
+                [readerPage].concat(readerModes)
+                .every(page => !page.output.includes("Amount") && !page.output.includes("Ledger"))
+        readerModes.every(page => page.errors.length == 0 && page.output.includes("Component"))
         servicesPage.output.includes("This work order is not available.")
     }
 })
@@ -1814,18 +1826,26 @@ feature(
     "Subcontracting opens for the planner and the buyer, Planning for the buyer, and neither for a reader, with authz enabled",
     {
         when() {
-            const open = (username, path, parameters = {}) => asUser(username, () => lib.page(path, parameters))
+            const open = (username, path, parameters = {}, mode = "qvt") =>
+                asUser(username, () => lib.page(path, parameters, mode))
             return {
                 planner: open(users.plan, "Subcontracting/SubcontractOperations"),
                 buyer: open(users.buyer, "Subcontracting/SubcontractOperations"),
                 reader: open(users.read, "Subcontracting/SubcontractOperations"),
+                // the price column (and its title in the column chooser) only for a reader of the prices
+                plannerHtml: open(users.plan, "Subcontracting/SubcontractOperations", {}, "html"),
+                plannerTui: open(users.plan, "Subcontracting/SubcontractOperations", {}, "tui"),
+                buyerHtml: open(users.buyer, "Subcontracting/SubcontractOperations", {}, "html"),
                 buyerPlanning: open(users.buyer, "Planning/SupplyPlanning", {plantId: ids.plantId}),
                 readerPlanning: open(users.read, "Planning/SupplyPlanning", {plantId: ids.plantId})
             }
         },
-        then({planner, buyer, reader, buyerPlanning, readerPlanning}) {
+        then({planner, buyer, reader, plannerHtml, plannerTui, buyerHtml, buyerPlanning, readerPlanning}) {
             planner.errors.length == 0
             planner.output.includes("New outside processing")
+            !planner.output.includes("'label':'Price'") && !plannerHtml.output.includes("<div>Price</div>")
+            !plannerTui.output.includes('"title":"Price"')
+            buyer.output.includes("'label':'Price'") && buyerHtml.output.includes("<div>Price</div>")
             buyer.errors.length == 0
             buyer.output.includes("Outside processing")
             !buyer.output.includes("New outside processing")
@@ -2191,6 +2211,91 @@ feature("the Changes tab, SplitWorkOrder and Disassembly open by role, with auth
         r.supervisorKits.output.includes("Preview")
         r.readerKits.output.includes("Disassembly is for production supervisors")
         r.kitChoice == ""
+    }
+})
+
+// ===== P16: reports =====
+// The report services as the screens run them (artifact authorization off, F-P3-2): each refused for the plant display (no
+// PRODUCTION_VIEW) on the parameters a reader passes with; the other organization's reader sees none of Retail's runs and is
+// refused Retail's plant; a reader gets no money, a financial reader the amounts. The Reports area opens for every
+// Manufacturing reader with authz enabled, and not for the plant display.
+const R16 = "mantle.work.ProductionReportServices."
+const reportCalls = {
+    "get#ProductionStatusReport": {statusId: "all"},
+    "get#ProductionMaterialReport": {},
+    "get#OperationPerformanceReport": {},
+    "get#ProductionLossReport": {},
+    "get#ProductionQualityReport": {},
+    "get#ProductionCostReport": {basis: "open"},
+    "get#BomVarianceReport": {},
+    "get#ProductionPlanningReport": {},
+    "get#ProductionDashboard": {}
+}
+feature("the report services need production read, keep to the user's organizations and leave money out without financial read", {
+    when() {
+        const failures = []
+        for (const [service, parameters] of Object.entries(reportCalls)) {
+            const reader = asUser(users.read, () => refusal(R16 + service, parameters), false)
+            const display = asUser(users.display, () => refusal(R16 + service, parameters), false)
+            if (reader !== "") failures.push(service + " reader: " + reader)
+            if (!display.includes("PERMISSION_DENIED")) failures.push(service + " display: " + display)
+        }
+        const status = user => asUser(user, () => invoke(R16 + "get#ProductionStatusReport", {statusId: "all"}), false)
+        const choices = (user, selected) =>
+            asUser(user, () =>
+                invoke(access + "get#Choices", {choice: "workOrders", term: "no such work order", selected}).options.map(
+                    row => row.value
+                )
+            )
+        const cost = user =>
+            asUser(user, () => invoke(R16 + "get#ProductionCostReport", {basis: "open", pageNoLimit: true}), false)
+        return {
+            failures,
+            readerStatus: status(users.read),
+            otherStatus: status(users.services),
+            otherPlant: asUser(users.services, () => refusal(R16 + "get#ProductionLossReport", {facilityId: ids.plantId}), false),
+            readerPlant: asUser(users.read, () => refusal(R16 + "get#ProductionLossReport", {facilityId: ids.plantId}), false),
+            readerCost: cost(users.read),
+            financeCost: cost(users.finance),
+            // the reports' work order drop-down: a selected run of the user's outside the page, and none of another's
+            readerRuns: choices(users.read, ids.runId),
+            otherRuns: choices(users.services, ids.runId)
+        }
+    },
+    then(r) {
+        r.failures.join("\n") == ""
+        r.readerStatus.statusRows.some(row => row.workEffortId == ids.runId)
+        !r.otherStatus.statusRows.some(row => row.workEffortId == ids.runId)
+        r.otherPlant.includes("RECORD_UNAVAILABLE")
+        r.readerPlant == ""
+        r.readerCost.financialRead == false
+        r.readerCost.costRows.every(row => !("wipAmount" in row) && !("materialCost" in row))
+        r.readerCost.moneyTotals == null
+        r.financeCost.financialRead == true
+        r.financeCost.costRows.every(row => "wipAmount" in row)
+        r.readerRuns.includes(ids.runId)
+        !r.otherRuns.includes(ids.runId)
+    }
+})
+feature("the Reports area opens for every Manufacturing reader with authz enabled, and not for the plant display", {
+    when() {
+        const open = (user, path) => asUser(user, () => lib.page(path, {facilityId: ids.plantId}, "html"))
+        return {
+            reader: open(users.read, "Reports/ReportIndex"),
+            operator: open(users.operate, "Reports/OperationPerformanceReport"),
+            cost: open(users.cost, "Reports/ProductionCostReport"),
+            display: open(users.display, "Reports/ReportIndex")
+        }
+    },
+    then(r) {
+        r.reader.status == 200
+        r.reader.errors == []
+        r.reader.output.includes("Operation performance")
+        r.operator.status == 200
+        r.operator.output.includes("Availability")
+        r.cost.status == 200
+        r.cost.output.includes("Cost close")
+        r.display.status != 200 || !r.display.output.includes("Operation performance")
     }
 })
 

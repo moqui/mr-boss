@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PlanningReport (design-manufacturing §9 PlanningReport; style-guide §3.12 Report): the suggestions of the current
+    supply plans of the user's organizations (PlanningFind;
+    mantle.work.ProductionReportServices.get#ProductionPlanningReport over SupplyPlanning's PlanningRun records):
+    product, facility, method, state, dates, required, available, held, suggested and converted quantity, provenance
+    and exception (SuggestionRows); each plan's facilities, age and freshness (PlanRows); totals per unit and period.
+    The export holds the parameters and columns. Every Manufacturing reader reads it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Planning" default-menu-index="9">
+    <parameter name="organizationPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="methodEnumId"/>
+    <parameter name="bucket"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <actions>
+        <!-- the selected plant until the parameters name a facility or clear it (every facility) -->
+        <set field="reportFacilityId" from="facilityId == null ? (manufacturing.plantId || null) : (facilityId || null)"/>
+        <set field="bucketOptions" from="[{value:'week', label:'Week'}, {value:'day', label:'Day'}]"/>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, facilityId:reportFacilityId,
+                productId:productId || null, methodEnumId:methodEnumId || null, bucket:bucket || null}"/>
+        <service-call name="mantle.work.ProductionReportServices.get#ProductionPlanningReport" out-map="report"
+                in-map="Object.assign({}, options, {pageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="reportFound" from="!!report?.asOf"/>
+        <set field="financialRead" from="!!report?.financialRead"/>
+        <set field="suggestionRows" from="report?.suggestionRows || []"/>
+        <set field="planRows" from="report?.planRows || []"/>
+        <set field="totalRows" from="report?.totalRows || []"/>
+        <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',
+            'PageRangeHigh']) context['suggestionRows' + key] = report['suggestionRows' + key]</script>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Planning" type="h5"/>
+                <label text="The suggestions of the current supply plans: required, available, held, suggested and
+                        converted quantities, with their dates, provenance and the plan's freshness."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="PlanningFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Plant or work center" tooltip="Every facility of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:reportFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'materialProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="methodEnumId">
+                <default-field title="Method">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'planningMethods', selected:methodEnumId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="bucket">
+                <default-field title="Group by">
+                    <drop-down allow-empty="true">
+                        <list-options list="bucketOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show report" type="primary"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="facilityId"/>
+                    <field-ref name="productId"/>
+                    <field-ref name="methodEnumId"/>
+                    <field-ref name="bucket"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportStatus" location="component://mr-boss/template/ManufacturingReportParts.xml"/>
+        <section name="PlanRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Plans"/>
+                    <box-body-nopad>
+                        <label text="No current supply plan in this scope. Run one in Supply planning." type="p" style="q-pa-md m-muted"
+                                condition="!planRows.length"/>
+                        <form-list name="PlanRows" list="planRows" skip-form="true" paginate="false">
+                            <field name="planningRunId">
+                                <default-field title="Plan">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="facilityText">
+                                <default-field title="Facilities">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="completedText">
+                                <default-field title="Planned">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="horizonText">
+                                <default-field title="Horizon">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="suggestionCount" align="right">
+                                <default-field title="Suggestions">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="exceptionCount" align="right">
+                                <default-field title="Exceptions">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="staleText">
+                                <default-field title="Freshness">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="planningRunId"/>
+                                    <field-ref name="facilityText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="staleText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="TotalRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Totals"/>
+                    <box-body-nopad>
+                        <label text="No totals." type="p" style="q-pa-md m-muted"
+                                condition="!totalRows.length"/>
+                        <form-list name="PlanningTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="bucketText">
+                                <default-field title="Period">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="rowCount" align="right">
+                                <default-field title="Suggestions">
+                                    <display format="#,##0"/>
+                                </default-field>
+                            </field>
+                            <field name="requiredQuantity" align="right">
+                                <default-field title="Required">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="availableQuantity" align="right">
+                                <default-field title="Available">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="suggestedQuantity" align="right">
+                                <default-field title="Suggested">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="convertedQuantity" align="right">
+                                <default-field title="Converted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="unitText"/>
+                                    <field-ref name="rowCount"/>
+                                </column>
+                                <column>
+                                    <field-ref name="suggestedQuantity"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SuggestionRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Suggestions"/>
+                    <box-body-nopad>
+                        <label text="No suggestion in the current supply plans." type="p" style="q-pa-md m-muted"
+                                condition="!suggestionRows.length"/>
+                        <form-list name="SuggestionRows" list="suggestionRows" skip-form="true" paginate="true"
+                                select-columns="true" show-csv-button="true" show-xlsx-button="true">
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="facilityName">
+                                <default-field title="Facility">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="methodText">
+                                <default-field title="Method">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="requiredByText">
+                                <default-field title="Required by">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="releaseText">
+                                <default-field title="Release">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="requiredQuantity" align="right">
+                                <default-field title="Required">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="availableQuantity" align="right">
+                                <default-field title="Available">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="heldQuantity" align="right">
+                                <default-field title="Held">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="suggestedQuantity" align="right">
+                                <default-field title="Suggested">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="convertedQuantity" align="right">
+                                <default-field title="Converted">
+                                    <display format="#,##0.###"/>
+                                </default-field>
+                            </field>
+                            <field name="unitText">
+                                <default-field title="Unit">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="provenanceText">
+                                <default-field title="Demand">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="supplyText">
+                                <default-field title="Supply">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="exceptionText">
+                                <default-field title="Exception">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="staleText">
+                                <default-field title="Stale">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productName"/>
+                                    <field-ref name="methodText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="suggestedQuantity"/>
+                                    <field-ref name="requiredByText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
