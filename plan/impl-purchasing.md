@@ -1011,8 +1011,8 @@ receipt's reservation offer).
     (the walk uses the administrator).
   - **F-P14a-2** run#SupplyPlan explodes a made product's BOM through get#BomExplosion, which needs METHOD_VIEW; the
     Purchasing planner and administrator had none, so their run of a plan with a made product failed. BossSetupData grants
-    METHOD_VIEW to both (F119's rule). Left for the lead: a runner without METHOD_VIEW gets the explosion's error left in
-    the messages, so the whole run fails rather than naming METHOD_INVALID on that product.
+    METHOD_VIEW to both (F119's rule). A runner without METHOD_VIEW now gets METHOD_INVALID on the made product and the
+    run goes on (review R1).
   - **F-P14a-3** The Purchasing reader holds no permission, and get#SupplyPlan admitted none it could hold; Mantle gains
     SUPPLY_PLAN_VIEW (reads only), granted to BOSS_PURCHASING_READ.
   - **F-P14a-4** A draft purchase order was not supply to the plan (firm statuses only), so a converted buy would be
@@ -1022,6 +1022,23 @@ receipt's reservation offer).
     Product360 context will also touch: a merge to reconcile (one dispatch line, one exported helper).
   - **F-P14a-6** A tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu (its content is loaded
     by the client), so AppStructure checks those routes for errors only; their content is PurchasingReplenishment's.
+
+**Review Nov 4 (P14a).** Checked the Mantle and BOSS diffs against this section, §2 and the brief. Draft lines as supply:
+only an OrderOpen purchase part's line with an active RequirementSupply counts (no other draft PO), a placed order counts
+once under the firm statuses, and nothing else nets a requirement's coverage, so there is no double count;
+Manufacturing's outside-processing drafts are service lines, never netted. Shared/SupplyPlanning: Manufacturing's
+`choices` goes to the same service as its old transition-include, and buy rows were never convertible there (no
+PsmBuy permission before), so its users see no change. METHOD_VIEW on the Purchasing planner and administrator reads
+BOM structure only (no cost: PRODUCT_COST_VIEW is apart), and Purchasing's InventoryAvailability context sets every
+method and cost capability false; kept, since without it a planner's plan would leave every made product an exception.
+ProductFacility's snooze fields are an `extend-entity` in their own file (mr-mantle's pattern), audit-logged, and
+store#ProductFacilityPolicy audits them with the change reason. Specs lean (Replenishment 6, PurchasingReplenishment 3,
+0.7 s). Fixes:
+- R1 (medium, F-P14a-2): `run#SupplyPlan` called get#BomExplosion for a runner without a method read; its refusal marked
+  the run's transaction rollback-only, so the whole run failed. `structureOf` now checks the method read first and names
+  METHOD_INVALID on that product (SupplyPlanning.spec's last feature).
+Specs run: Mantle SupplyPlanning (11), Replenishment (6), ProductionSubcontract (8); BOSS ManufacturingPlanning (5),
+ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (11): all pass.
 
 ### P15 — Performance
 
