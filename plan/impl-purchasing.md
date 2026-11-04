@@ -264,7 +264,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | — |
-| P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | — |
+| P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
 | P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | — |
 | P17 Finish | BOSS | — | — |
@@ -942,6 +942,106 @@ P7 ports it into mr-mantle and finishes it.
     service, and the plan orders up to the maximum; SuggestLevels names one product without demand history and applies
     the rest;
   - a snoozed rule still shows its shortage.
+
+The lead split P14 in two: **P14a** (the base, below) and **P14b** (after P7 and P10): the request route and the drop-ship
+route of the buy conversion, customer-order demand's reservation offer on ShipmentDetail, and the usable-when items that
+need them (an approved request's demand not suggested again; a customer-order shortage keeping its sales line with the
+receipt's reservation offer).
+
+**Built Nov 4 (P14a, the base).**
+- Mantle, the buy conversion (`SupplyPlanning.js`, `SupplyPlanningServices.xml`): `convertPermissions.PsmBuy =
+  PURCHASE_ORDER_EDIT`; `convertBuy` makes a line of a draft (OrderOpen) purchase order of the suggestion's supplier for its
+  facility, one order (one purchase part) per supplier and facility in the call, at the requirement's remaining quantity in
+  the stock unit and the resolver's supplier price, with a RequirementSupply RstPurchaseOrder, the requirement Ordered and the
+  suggestion converted; it refuses a stale plan (PLAN_STALE), an exception or no supplier (SUGGESTION_EXCEPTION), a closed
+  suggestion, an unusable product (`check#ProductUsable` Purchase, PRODUCT_NOT_USABLE), no supplier-price read or price; never
+  places or approves. A buy whose requirement is already covered by another operation is refused DEMAND_ALREADY_COVERED
+  naming the covering line (no second order); a retry with the same operation key answers EXISTING. The pricing and draft
+  order code is shared with the outside-processing conversion (`draftOrderLine`). Transfer stays METHOD_NOT_CONVERTED.
+  `convert#PlanningSuggestions` takes `automatic`, which leaves a snoozed rule's suggestion (SUGGESTION_SNOOZED).
+- Mantle, the plan: `run#SupplyPlan` reads the reorder rule (R-PUR-19): below the minimum a shortage orders up to the
+  maximum (RdmUpToMaximum) or at least the reorder quantity (RdmFixedQuantity), with a "Reorder rule" line in its demand and
+  supply; a snoozed rule's suggestion carries the warning SNOOZED (`snoozed`, and the thru date and reason in its
+  `warningText`); the line of a draft order a conversion made counts as supply. `get#SupplyPlan` admits the new
+  `SUPPLY_PLAN_VIEW` (MantleSetupData, ADMIN) and answers `canConvertBuy`.
+- Mantle, Warehouse's contract: `entity/ReorderRuleEntities.xml` extends ProductFacility with `snoozeThruDate` and
+  `snoozeReason`, audit-logged; `store#ProductFacilityPolicy` (`WarehousePolicy.js`, its checks now `facilityValues`, shared
+  with the new `facilityPreview`) keeps them: a new snooze ends after now (SNOOZE_INVALID) and gives its reason
+  (SNOOZE_REASON_REQUIRED), an empty thru date ends it, one left as it was is kept.
+- Mantle, levels and import (`service/mantle/facility/ReorderRuleServices.xml`, `ReorderRules.js`): `preview#ReorderLevels`
+  (STOCK_POLICY_PLAN or MANAGE; average daily demand from the facility's issuances over the history, the supplier's lead time
+  else the one given, safety and cover days; NO_DEMAND_HISTORY and NO_LEAD_TIME named), `apply#ReorderLevels` (each row
+  through store#ProductFacilityPolicy as its own transaction, each failure named) and `validate#ReorderRuleImportRow`;
+  `data/ReorderRuleImportData.xml` registers the catalog import kind `reorderRules` (STOCK_POLICY_PLAN), each row stored
+  through store#ProductFacilityPolicy with its row result.
+- BOSS: `screen/Purchasing/Replenishment.xml` (tabs: Shared/SupplyPlanning as Supply planning, the default; ReorderRules;
+  Shared/InventoryAvailability hidden), `Replenishment/ReorderRules.xml` with `Rules.xml` (ReorderFind, ReorderRuleList, New
+  rule and Edit with the snooze), `SuggestLevels.xml` (preview, Apply on the selected rows from the server's own preview) and
+  `PlanSchedule.xml` (store#PlanSchedule and Preview run); `template/PurchasingReplenishmentParts.xml` (choices, storeRule).
+  Shared/SupplyPlanning's Purchasing branch: `planFacilityId` (the buying organization's warehouse or plant, default the
+  latest current plan's), buy suggestions by default (`_ALL_` shows every method), Recalculate and Schedule for `plan`, Convert
+  of buy and outside-processing suggestions for `buy` after `check#Record` facility, the order linked through Home's lookup
+  until P3; its `choices` transition dispatches by app root; on the Manufacturing mount buy rows are no longer offered to
+  convert. Shared/InventoryAvailability: the Purchasing context in `SharedContext.js` (one dispatch line to
+  `Replenishment.js catalogContext`: Summary, Projection and Policy, stock policy for STOCK_POLICY_PLAN) and the snooze
+  fields on Policy. `ironstone.purchasing.ReplenishmentServices` (`get#PlanContext`, `find#ReorderRules`) over
+  `Replenishment.js`; `Purchasing.js` gains the `facility` record kind, the `planFacilities`, `planProducts` and
+  `planningMethods` choices and the Replenishment links. Home: `get#Home` counts the open buy suggestions of the current
+  plans (`shortfallCount`) with the latest plan's date, shown under the cards. BossSetupData: SUPPLY_PLAN_VIEW to the
+  reader, METHOD_VIEW to the planner and administrator (F-P14a-2).
+- Specs: Mantle `test/product/Replenishment.spec.js` (6: snooze rules and audit; buy, up-to-maximum, fixed and snoozed
+  suggestions; the buyer's conversion, retry, DEMAND_ALREADY_COVERED, the planner refused, automatic snoozed refused; draft
+  lines as supply; levels preview and apply; the import kind) and SupplyPlanning's buy refusal now PERMISSION_DENIED for a
+  planner. BOSS `PurchasingReplenishment` (3: the SupplyPlanning qvt render with Home's count, the screen conversion, the
+  Rules html render with Policy's) and PurchasingAccess's facility case. Acceptance `PurchasingReplenishmentWalk` (4, the
+  usable-when items above that need neither P7 nor P10); AppStructure's Purchasing routes (`routeFixtures`).
+- Tests run: Mantle Replenishment, SupplyPlanning, ProductionSubcontract, ProductCatalogImport, WarehousePolicy,
+  WarehouseFacilities (56, pass); BOSS PurchasingAccess, PurchasingReplenishment, ManufacturingPlanning, ManufacturingAccess,
+  ManufacturingSubcontracting, ManufacturingReports, ProductsInventory, ProductsImport, WarehouseAccess (63, pass);
+  acceptance PurchasingReplenishmentWalk (4), AppStructure (18) and PurchasingFoundationWalk, pass. `moqui lint --screens`: no
+  idiom or hazard site in the changed screens (informational anchors only).
+- Decisions:
+  - A competing buy conversion is a named failure (DEMAND_ALREADY_COVERED), not EXISTING as for make: design §8 asks for the
+    named row; the retry of the same operation still answers its first result.
+  - A reorder rule's minimum is its reorder point; up to maximum adds maximum − minimum to the net, a fixed quantity orders at
+    least the reorder quantity. A rule with a maximum and no minimum orders up to it once demand appears.
+  - No automatic conversion exists yet; the snooze's contract is `automatic` on convert#PlanningSuggestions, and the plan
+    still suggests the shortage with SNOOZED.
+  - SuggestLevels applies the server's own preview for the selected rows, never values posted from the page.
+- Findings (provisional):
+  - **F-P14a-1** The plan's "a planner's second conversion is DemandAlreadyCovered": the Purchasing planner holds no
+    PURCHASE_ORDER_EDIT, so its conversion is refused PERMISSION_DENIED; the competing conversion is a second buyer's
+    (the walk uses the administrator).
+  - **F-P14a-2** run#SupplyPlan explodes a made product's BOM through get#BomExplosion, which needs METHOD_VIEW; the
+    Purchasing planner and administrator had none, so their run of a plan with a made product failed. BossSetupData grants
+    METHOD_VIEW to both (F119's rule). A runner without METHOD_VIEW now gets METHOD_INVALID on the made product and the
+    run goes on (review R1).
+  - **F-P14a-3** The Purchasing reader holds no permission, and get#SupplyPlan admitted none it could hold; Mantle gains
+    SUPPLY_PLAN_VIEW (reads only), granted to BOSS_PURCHASING_READ.
+  - **F-P14a-4** A draft purchase order was not supply to the plan (firm statuses only), so a converted buy would be
+    suggested again by the next run; the lines of a draft order with a RequirementSupply (a conversion's) now count.
+  - **F-P14a-5** Shared/SupplyPlanning took Manufacturing's `choices` by transition-include, which refuses a Purchasing user;
+    it now dispatches by app root. SharedContext.js and PurchasingSpecLib gain a Purchasing branch and fixture that P2's
+    Product360 context will also touch: a merge to reconcile (one dispatch line, one exported helper).
+  - **F-P14a-6** A tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu (its content is loaded
+    by the client), so AppStructure checks those routes for errors only; their content is PurchasingReplenishment's.
+
+**Review Nov 4 (P14a).** Checked the Mantle and BOSS diffs against this section, §2 and the brief. Draft lines as supply:
+only an OrderOpen purchase part's line with an active RequirementSupply counts (no other draft PO), a placed order counts
+once under the firm statuses, and nothing else nets a requirement's coverage, so there is no double count;
+Manufacturing's outside-processing drafts are service lines, never netted. Shared/SupplyPlanning: Manufacturing's
+`choices` goes to the same service as its old transition-include, and buy rows were never convertible there (no
+PsmBuy permission before), so its users see no change. METHOD_VIEW on the Purchasing planner and administrator reads
+BOM structure only (no cost: PRODUCT_COST_VIEW is apart), and Purchasing's InventoryAvailability context sets every
+method and cost capability false; kept, since without it a planner's plan would leave every made product an exception.
+ProductFacility's snooze fields are an `extend-entity` in their own file (mr-mantle's pattern), audit-logged, and
+store#ProductFacilityPolicy audits them with the change reason. Specs lean (Replenishment 6, PurchasingReplenishment 3,
+0.7 s). Fixes:
+- R1 (medium, F-P14a-2): `run#SupplyPlan` called get#BomExplosion for a runner without a method read; its refusal marked
+  the run's transaction rollback-only, so the whole run failed. `structureOf` now checks the method read first and names
+  METHOD_INVALID on that product (SupplyPlanning.spec's last feature).
+Specs run: Mantle SupplyPlanning (11), Replenishment (6), ProductionSubcontract (8); BOSS ManufacturingPlanning (5),
+ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (11): all pass.
 
 ### P15 — Performance
 

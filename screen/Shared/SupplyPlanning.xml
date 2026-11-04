@@ -23,49 +23,81 @@ along with this software (see the LICENSE.md file). If not, see
     facility set, checked by ironstone.manufacturing.AccessServices first; buy and transfer suggestions are shown with
     their supplier or source and converted where Purchasing and Warehouse mount this screen (impl-manufacturing §7); an
     outside-processing request (P14) is converted here by a buyer (BOSS_PURCHASING_BUYER) into a draft service purchase
-    order line. Other apps add their contexts when they are built. -->
+    order line. Purchasing (impl-purchasing P14a, crosscut §3.20's Purchasing row) mounts it at
+    Purchasing/Replenishment/SupplyPlanning with its context: the buying organization's warehouse or plant (planFacilityId,
+    ironstone.purchasing.ReplenishmentServices.get#PlanContext), checked by ironstone.purchasing.AccessServices.check#Record
+    before each Mantle verb; buy suggestions by default, every method's demand and supply shown; a buyer
+    (PURCHASE_ORDER_EDIT) converts buy and outside-processing suggestions into lines of draft purchase orders, never placed;
+    make stays Manufacturing's and transfer Warehouse's. Other apps add their contexts when they are built. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Supply planning"
         default-menu-include="false">
     <parameter name="plantId"/>
+    <parameter name="planFacilityId"/>
     <parameter name="planningSuggestionId"/>
     <parameter name="methodEnumId"/>
     <parameter name="exceptionsOnly"/>
-    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <!-- the drop-downs of the mount's app: Purchasing's (planFacilities, planProducts, planningMethods), else Manufacturing's -->
+    <transition name="choices" read-only="true">
+        <actions>
+            <if condition="appRoot == 'Purchasing'">
+                <then>
+                    <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+                </then>
+                <else>
+                    <service-call name="ironstone.manufacturing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+                </else>
+            </if>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <!-- PlanParameters: a new calculation of the plant's plan (the last one is superseded) -->
     <transition name="runPlan">
         <actions>
+            <set field="planNodeId" from="appRoot == 'Purchasing' ? planFacilityId : plantId"/>
             <if condition="appRoot == 'Manufacturing'">
                 <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'supplyPlan'}"/>
             </if>
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'plan'}"/>
+            </if>
             <service-call name="mantle.product.SupplyPlanningServices.run#SupplyPlan" out-map="ran"
-                    in-map="{facilityIds:[plantId], horizonDays:horizonDays || null,
+                    in-map="{facilityIds:[planNodeId], horizonDays:horizonDays || null,
                         productIds:productId ? [productId] : null}"/>
             <message type="success">Plan calculated: ${ran.suggestionCount} suggestions, ${ran.exceptionCount} with an
                 exception</message>
         </actions>
         <default-response url=".">
             <parameter name="plantId"/>
+            <parameter name="planFacilityId"/>
         </default-response>
         <error-response url="."/>
     </transition>
     <!-- PlanSchedule: the organization's one schedule -->
     <transition name="storeSchedule">
         <actions>
+            <set field="planNodeId" from="appRoot == 'Purchasing' ? planFacilityId : plantId"/>
             <if condition="appRoot == 'Manufacturing'">
                 <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'supplyPlan'}"/>
             </if>
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'plan'}"/>
+            </if>
             <service-call name="mantle.product.SupplyPlanningServices.store#PlanSchedule"
-                    in-map="{facilityIds:[plantId], intervalHours:intervalHours || null, nextRunDate:nextRunDate || null,
+                    in-map="{facilityIds:[planNodeId], intervalHours:intervalHours || null, nextRunDate:nextRunDate || null,
                         horizonDays:horizonDays || null, active:active, netHeldQuantity:netHeldQuantity,
                         changeReason:changeReason}"/>
             <message type="success">Plan schedule saved</message>
         </actions>
         <default-response url=".">
             <parameter name="plantId"/>
+            <parameter name="planFacilityId"/>
         </default-response>
         <error-response url="."/>
     </transition>
@@ -85,6 +117,14 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'facility', recordId:runFacilityId}"/>
                 </if>
+            </if>
+            <!-- Purchasing: a buyer converts buy and outside-processing suggestions of the facility's plan; no work order
+                facility is taken -->
+            <if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'buy'}"/>
+                <set field="runFacilityId" from="null"/>
+                <set field="methodDate" from="null"/>
             </if>
             <set field="selectedIds" from="Array.isArray(planningSuggestionIdList) ? planningSuggestionIdList
                     : String(planningSuggestionIdList || '').split(',').filter(Boolean)"/>
@@ -114,6 +154,7 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
         <default-response url=".">
             <parameter name="plantId"/>
+            <parameter name="planFacilityId"/>
         </default-response>
         <error-response url="."/>
     </transition>
@@ -127,11 +168,23 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="contextFound" from="!!planContext?.appRoot"/>
             <set field="can" from="planContext?.capabilities || {}"/>
         </if>
-        <if condition="contextFound &amp;&amp; plantId">
+        <!-- Purchasing: the buying organization's facility (the one chosen, else its first warehouse) and buy suggestions
+            unless another method or all are chosen -->
+        <if condition="appRoot == 'Purchasing'">
+            <service-call name="ironstone.purchasing.ReplenishmentServices.get#PlanContext" out-map="planContext"
+                    in-map="{appRoot:appRoot, facilityId:planFacilityId || null}" transaction="force-new" ignore-error="true"/>
+            <set field="planFacilityId" from="planContext?.facilityId || null"/>
+            <set field="contextFound" from="!!planContext?.capabilities"/>
+            <set field="can" from="planContext?.capabilities || {}"/>
+            <set field="methodEnumId" from="methodEnumId || 'PsmBuy'"/>
+        </if>
+        <set field="planNodeId" from="appRoot == 'Purchasing' ? planFacilityId : plantId"/>
+        <if condition="contextFound &amp;&amp; planNodeId">
             <service-call name="mantle.product.SupplyPlanningServices.get#SupplyPlan" out-map="plan"
                     transaction="force-new" ignore-error="true"
-                    in-map="{facilityIds:[plantId], planningSuggestionId:planningSuggestionId || null,
-                        methodEnumId:methodEnumId || null, exceptionsOnly:exceptionsOnly == 'Y'}"/>
+                    in-map="{facilityIds:[planNodeId], planningSuggestionId:planningSuggestionId || null,
+                        methodEnumId:methodEnumId &amp;&amp; methodEnumId != '_ALL_' ? methodEnumId : null,
+                        exceptionsOnly:exceptionsOnly == 'Y'}"/>
         </if>
         <set field="planFound" from="!!plan?.organizationPartyId"/>
         <set field="run" from="plan?.run || null"/>
@@ -142,16 +195,22 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="schedule" from="plan?.schedule || {}"/>
         <!-- the actions shown: Mantle's answer for the user, and on a mount with its own context also that context's
             server-derived capabilities, which its transitions check (as Shared/RequestDetail) -->
-        <set field="mayRun" from="!!plan?.canRun &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
-        <set field="maySchedule" from="!!plan?.canSchedule &amp;&amp; (appRoot != 'Manufacturing' || !!can.supplyPlan)"/>
-        <!-- on the Manufacturing mount a planner converts make suggestions and a buyer outside processing (P14) -->
-        <set field="convertible" from="suggestions.filter(row =&gt; row.canConvert &amp;&amp; (appRoot != 'Manufacturing'
-                || (row.methodEnumId == 'PsmOutside' ? !!can.buy : !!can.plan)))"/>
+        <set field="planCapability" from="appRoot == 'Manufacturing' ? !!can.supplyPlan : appRoot == 'Purchasing' ? !!can.plan
+                : true"/>
+        <set field="mayRun" from="!!plan?.canRun &amp;&amp; planCapability"/>
+        <set field="maySchedule" from="!!plan?.canSchedule &amp;&amp; planCapability"/>
+        <!-- on the Manufacturing mount a planner converts make suggestions and a buyer outside processing (P14); on the
+            Purchasing mount a buyer converts buy and outside-processing suggestions (P14a) -->
+        <set field="convertible" from="suggestions.filter(row =&gt; row.canConvert &amp;&amp; (appRoot == 'Manufacturing'
+                ? (row.methodEnumId == 'PsmMake' ? !!can.plan : row.methodEnumId == 'PsmOutside' ? !!can.buy : false)
+                : appRoot == 'Purchasing' ? ['PsmBuy', 'PsmOutside'].includes(row.methodEnumId) &amp;&amp; !!can.buy : true))"/>
         <set field="convertsOutside" from="convertible.some(row =&gt; row.methodEnumId == 'PsmOutside')"/>
-        <set field="convertsMake" from="convertible.some(row =&gt; row.methodEnumId != 'PsmOutside')"/>
-        <set field="convertText" from="convertsOutside &amp;&amp; convertsMake ? 'Convert' : convertsOutside
-                ? 'Make draft purchase order lines' : 'Make draft work orders'"/>
-        <set field="convertConfirm" from="convertsOutside
+        <set field="convertsMake" from="convertible.some(row =&gt; row.methodEnumId == 'PsmMake')"/>
+        <set field="convertText" from="appRoot == 'Purchasing' ? 'Make draft purchase orders' : convertsOutside &amp;&amp;
+                convertsMake ? 'Convert' : convertsOutside ? 'Make draft purchase order lines' : 'Make draft work orders'"/>
+        <set field="convertConfirm" from="appRoot == 'Purchasing'
+                ? 'Add each selected suggestion to a draft purchase order of its supplier, one order per supplier and facility? The orders stay drafts until they are placed; a suggestion already covered is named and left.'
+                : convertsOutside
                 ? 'Make a draft purchase order line of its supplier for each selected outside-processing request, and a draft work order for each make suggestion? The orders are placed in Purchasing; buy and transfer suggestions are left for Purchasing and Warehouse.'
                 : 'Make a draft work order for each selected make suggestion? Buy and transfer suggestions are left for Purchasing and Warehouse.'"/>
         <!-- the list's filter, apart from the rows' own method -->
@@ -169,7 +228,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appLinks" from="sharedLinks || {}"/>
         <set field="runLinkPath" from="appLinks['WorkOrders/WorkOrderDetail'] || appLinks.Home || '.'"/>
         <set field="runLinkDetail" from="!!appLinks['WorkOrders/WorkOrderDetail']"/>
-        <set field="orderLinkPath" from="appLinks['Subcontracting/OrderDetail'] || null"/>
+        <!-- a purchase order opens its detail on a mount that has one, else Purchasing's lookup -->
+        <set field="orderLinkPath" from="appLinks['Subcontracting/OrderDetail'] || appLinks['Orders/OrderDetail'] || null"/>
+        <set field="orderLookupPath" from="!orderLinkPath &amp;&amp; appRoot == 'Purchasing' ? appLinks.Home : null"/>
         <set field="operationKey" from="'plan-' + ec.user.randomString(24)"/>
         <set field="scheduleDefaults" from="{intervalHours:schedule.intervalHours || 24, horizonDays:schedule.horizonDays,
                 active:schedule.active || 'N', netHeldQuantity:schedule.netHeldQuantity || 'N',
@@ -177,35 +238,71 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
     <widgets>
         <label text="Supply planning" type="h5"/>
-        <form-single name="PlanScope" transition="." map="{plantId:plantId}">
-            <field name="plantId">
-                <default-field title="Plant" tooltip="The plant and the lines under it are planned together">
-                    <drop-down allow-empty="true">
-                        <dynamic-options transition="choices" server-search="true" min-length="0"
-                                parameter-map="{choice:'plants', selected:plantId}"/>
-                    </drop-down>
-                </default-field>
-            </field>
-            <field name="submit">
-                <default-field title="">
-                    <submit text="Show plan"/>
-                </default-field>
-            </field>
-            <field-layout>
-                <field-row>
-                    <field-ref name="plantId"/>
-                    <field-ref name="submit"/>
-                </field-row>
-            </field-layout>
-        </form-single>
-        <label text="Choose a plant to see its supply plan." type="p" condition="contextFound &amp;&amp; !plantId"/>
-        <section name="PlanNotAvailable" condition="plantId &amp;&amp; !planFound">
+        <section name="PlanScopePlant" condition="appRoot != 'Purchasing'">
+            <widgets>
+                <form-single name="PlanScope" transition="." map="{plantId:plantId}">
+                    <field name="plantId">
+                        <default-field title="Plant" tooltip="The plant and the lines under it are planned together">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'plants', selected:plantId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show plan"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="plantId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <!-- Purchasing: the buying organization's warehouse or plant -->
+        <section name="PlanScopeFacility" condition="appRoot == 'Purchasing'">
+            <widgets>
+                <form-single name="PlanFacilityScope" transition="." map="{planFacilityId:planFacilityId}">
+                    <field name="planFacilityId">
+                        <default-field title="Facility" tooltip="The facility and those under it are planned together">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'planFacilities', selected:planFacilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title="">
+                            <submit text="Show plan"/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row>
+                            <field-ref name="planFacilityId"/>
+                            <field-ref name="submit"/>
+                        </field-row>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+        <label text="Choose a plant to see its supply plan." type="p"
+                condition="contextFound &amp;&amp; !planNodeId &amp;&amp; appRoot != 'Purchasing'"/>
+        <label text="Your organizations have no warehouse to plan." type="p"
+                condition="contextFound &amp;&amp; !planNodeId &amp;&amp; appRoot == 'Purchasing'"/>
+        <section name="PlanNotAvailable"
+                condition="(planNodeId || (appRoot == 'Purchasing' &amp;&amp; !contextFound)) &amp;&amp; !planFound">
             <widgets>
                 <container-box type="warning">
                     <box-body>
                         <label text="This supply plan is not available to you." type="p"/>
                         <link url="${appLinks.Home}" text="Manufacturing home" link-type="anchor" icon="arrow_back"
                                 condition="appRoot == 'Manufacturing'"/>
+                        <link url="${appLinks.Home}" text="Purchasing home" link-type="anchor" icon="arrow_back"
+                                condition="appRoot == 'Purchasing'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -238,8 +335,14 @@ along with this software (see the LICENSE.md file). If not, see
                             <container-dialog id="RecalculatePlanDialog" button-text="Recalculate" icon="sym_o_calculate"
                                     width="640" type="primary" title="Recalculate the supply plan of ${plan.facilityNames}"
                                     condition="mayRun">
-                                <form-single name="PlanParameters" transition="runPlan" map="{plantId:plantId}">
+                                <form-single name="PlanParameters" transition="runPlan"
+                                        map="{plantId:plantId, planFacilityId:planFacilityId}">
                                     <field name="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="planFacilityId">
                                         <default-field>
                                             <hidden/>
                                         </default-field>
@@ -254,7 +357,7 @@ along with this software (see the LICENSE.md file). If not, see
                                         <default-field title="Product" tooltip="Empty plans every product with demand">
                                             <drop-down allow-empty="true">
                                                 <dynamic-options transition="choices" server-search="true" min-length="0"
-                                                        parameter-map="{choice:'products'}"/>
+                                                        parameter-map="{choice:appRoot == 'Purchasing' ? 'planProducts' : 'products'}"/>
                                             </drop-down>
                                         </default-field>
                                     </field>
@@ -270,6 +373,11 @@ along with this software (see the LICENSE.md file). If not, see
                                     width="760" title="Plan schedule of ${plan.organizationName}" condition="maySchedule">
                                 <form-single name="PlanSchedule" transition="storeSchedule" map="scheduleDefaults">
                                     <field name="plantId" from="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="planFacilityId" from="planFacilityId">
                                         <default-field>
                                             <hidden/>
                                         </default-field>
@@ -346,8 +454,13 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Suggestions"/>
                             <box-toolbar>
                                 <form-single name="SuggestionFilter" transition="." map="{plantId:plantId,
-                                        methodEnumId:methodEnumId, exceptionsOnly:exceptionsOnly}">
+                                        planFacilityId:planFacilityId, methodEnumId:methodEnumId, exceptionsOnly:exceptionsOnly}">
                                     <field name="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="planFacilityId">
                                         <default-field>
                                             <hidden/>
                                         </default-field>
@@ -400,25 +513,39 @@ along with this software (see the LICENSE.md file). If not, see
                                                                 <hidden/>
                                                             </default-field>
                                                         </field>
+                                                        <field name="planFacilityId" from="planFacilityId">
+                                                            <default-field title="">
+                                                                <hidden/>
+                                                            </default-field>
+                                                        </field>
                                                         <field name="operationKey" from="operationKey">
                                                             <default-field title="">
                                                                 <hidden/>
                                                             </default-field>
                                                         </field>
+                                                        <!-- a work order's method date and work center: not on the
+                                                            Purchasing mount, which makes no work order -->
                                                         <field name="methodDate">
-                                                            <default-field title="Methods as of"
+                                                            <conditional-field condition="appRoot != 'Purchasing'"
+                                                                    title="Methods as of"
                                                                     tooltip="Empty reads the BOM and routing as of the plan date">
                                                                 <date-time type="timestamp"/>
+                                                            </conditional-field>
+                                                            <default-field title="">
+                                                                <hidden/>
                                                             </default-field>
                                                         </field>
                                                         <field name="runFacilityId">
-                                                            <default-field title="Work center"
+                                                            <conditional-field condition="appRoot != 'Purchasing'" title="Work center"
                                                                     tooltip="Empty puts each work order on its routing's work center">
                                                                 <drop-down allow-empty="true">
                                                                     <dynamic-options transition="choices" server-search="true"
                                                                             min-length="0"
                                                                             parameter-map="{choice:'workCenters', plantId:plantId}"/>
                                                                 </drop-down>
+                                                            </conditional-field>
+                                                            <default-field title="">
+                                                                <hidden/>
                                                             </default-field>
                                                         </field>
                                                         <field name="submit">
@@ -433,7 +560,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <default-field title="Product">
                                                     <link url="." text="${pseudoId}" link-type="anchor"
                                                             tooltip="Explain its demand and supply"
-                                                            parameter-map="{plantId:plantId, planningSuggestionId:planningSuggestionId,
+                                                            parameter-map="{plantId:plantId, planFacilityId:planFacilityId,
+                                                                planningSuggestionId:planningSuggestionId,
                                                                 methodEnumId:filterMethodEnumId || '', exceptionsOnly:filterExceptionsOnly || ''}"/>
                                                 </default-field>
                                             </field>
@@ -509,6 +637,10 @@ along with this software (see the LICENSE.md file). If not, see
                                                         supplies[0].orderId : ''}" link-type="anchor"
                                                             condition="supplies.length &amp;&amp; supplies[0].orderId &amp;&amp; orderLinkPath"
                                                             parameter-map="{orderId:supplies[0].orderId}"/>
+                                                    <link url="${orderLookupPath}" text="${supplies.length ? 'Purchase order ' +
+                                                        supplies[0].orderId : ''}" link-type="anchor"
+                                                            condition="supplies.length &amp;&amp; supplies[0].orderId &amp;&amp; orderLookupPath"
+                                                            parameter-map="{lookupType:'order', lookupId:supplies[0].orderId}"/>
                                                 </default-field>
                                             </field>
                                             <columns type="mobile">

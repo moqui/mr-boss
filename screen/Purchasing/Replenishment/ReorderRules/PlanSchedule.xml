@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PlanSchedule of ReorderRules (design-purchasing §8 ReorderRules; impl-purchasing P14a): the organization's one plan
+    schedule, the shared supply plan's (mantle.product.SupplyPlanningServices.store#PlanSchedule, SUPPLY_PLAN_RUN; the same
+    one the SupplyPlanning mounts keep), for a facility of the buying organization; and a preview run before it is enabled
+    (previewRun: run#SupplyPlan for the facility now), whose result shows here with a link to the plan. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Plan schedule" default-menu-index="3">
+    <parameter name="planFacilityId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingReplenishmentParts.xml"/>
+    <transition name="storeSchedule">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'plan'}"/>
+            <service-call name="mantle.product.SupplyPlanningServices.store#PlanSchedule"
+                    in-map="{facilityIds:[planFacilityId], intervalHours:intervalHours || null, nextRunDate:nextRunDate || null,
+                        horizonDays:horizonDays || null, active:active, netHeldQuantity:netHeldQuantity,
+                        changeReason:changeReason}"/>
+            <message type="success">Plan schedule saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="planFacilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="previewRun">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:planFacilityId, capability:'plan'}"/>
+            <service-call name="mantle.product.SupplyPlanningServices.run#SupplyPlan" out-map="ran"
+                    in-map="{facilityIds:[planFacilityId], horizonDays:horizonDays || null}"/>
+            <message type="success">Plan calculated: ${ran.suggestionCount} suggestions, ${ran.exceptionCount} with an
+                exception</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="planFacilityId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReplenishmentServices.get#PlanContext" out-map="planContext"
+                in-map="{appRoot:appRoot, facilityId:planFacilityId || null}" transaction="force-new" ignore-error="true"/>
+        <set field="planFacilityId" from="planContext?.facilityId || null"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <if condition="planFacilityId">
+            <service-call name="mantle.product.SupplyPlanningServices.get#SupplyPlan" out-map="plan"
+                    in-map="{facilityIds:[planFacilityId]}" transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="schedule" from="plan?.schedule || {}"/>
+        <set field="run" from="plan?.run || null"/>
+        <set field="buyCount" from="(plan?.suggestions || []).filter(row =&gt; row.methodEnumId == 'PsmBuy').length"/>
+        <set field="scheduleForm" from="{planFacilityId:planFacilityId, active:schedule.active || 'N',
+                intervalHours:schedule.intervalHours || 24, nextRunDate:schedule.nextRunDate || null,
+                horizonDays:schedule.horizonDays, netHeldQuantity:schedule.netHeldQuantity || 'N'}"/>
+        <set field="scheduleText" from="!schedule.exists ? 'No schedule yet: the plan runs only when someone recalculates it.'
+                : schedule.active == 'Y' ? 'Runs every ' + schedule.intervalHours + ' hours, next ' + schedule.nextRunText
+                : 'Schedule paused'"/>
+        <set field="planPath" from="sharedLinks['Replenishment/SupplyPlanning']"/>
+    </actions>
+    <widgets>
+        <label text="Plan schedule" type="h5"/>
+        <form-single name="ScheduleScope" transition="." map="{planFacilityId:planFacilityId}">
+            <field name="planFacilityId">
+                <default-field title="Facility">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'planFacilities', selected:planFacilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="planFacilityId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="Your organizations have no warehouse to plan." type="p" condition="!planFacilityId"/>
+        <section name="ScheduleFound" condition="planFacilityId &amp;&amp; plan">
+            <widgets>
+                <container-box>
+                    <box-header title="Plan schedule of ${plan.organizationName}"/>
+                    <box-toolbar>
+                        <link url="previewRun" text="Preview run" link-type="hidden-form" btn-type="default" icon="sym_o_calculate"
+                                condition="can.plan" parameter-map="{planFacilityId:planFacilityId}"
+                                confirmation="Calculate the plan of ${plan.facilityNames} now? It replaces the current plan's unconverted suggestions."/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${scheduleText}" type="p"/>
+                        <label text="${schedule.lastRunMessage}" type="p" style="text-negative"
+                                condition="schedule.lastRunMessage"/>
+                        <section name="ScheduleEdit" condition="can.plan">
+                            <widgets>
+                                <form-single name="PlanScheduleForm" transition="storeSchedule" map="scheduleForm">
+                                    <field name="planFacilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="active">
+                                        <default-field title="Run on schedule">
+                                            <drop-down>
+                                                <option key="Y" text="Yes"/>
+                                                <option key="N" text="No"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="intervalHours">
+                                        <default-field title="Every how many hours">
+                                            <text-line input-type="number" size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="nextRunDate">
+                                        <default-field title="Next run">
+                                            <date-time type="timestamp"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="horizonDays">
+                                        <default-field title="Horizon in days" tooltip="Empty for the production policy's">
+                                            <text-line input-type="number" size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="netHeldQuantity">
+                                        <default-field title="Count held stock"
+                                                tooltip="Count stock held for an inspection that is due within the lead time">
+                                            <drop-down>
+                                                <option key="N" text="No, show it pending release"/>
+                                                <option key="Y" text="Yes, when its inspection is due within the lead time"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save schedule"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="active"/>
+                                            <field-ref name="intervalHours"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="nextRunDate"/>
+                                            <field-ref name="horizonDays"/>
+                                        </field-row>
+                                        <field-ref name="netHeldQuantity"/>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Current plan"/>
+                    <box-body>
+                        <label text="No plan has been calculated for ${plan.facilityNames} yet. Preview a run to see what it suggests before enabling the schedule."
+                                type="p" condition="!run"/>
+                        <label text="${run ? ['Calculated ' + run.ageText, 'as of ' + run.planDateText, run.suggestionCount + ' suggestions',
+                                buyCount + ' to buy', run.exceptionCount + ' with an exception', run.stale ? run.staleReason : '']
+                                .filter(Boolean).join(' · ') : ''}" type="p" condition="run"/>
+                        <link url="${planPath}" text="Open the plan" link-type="anchor" icon="sym_o_arrow_forward"
+                                condition="run" parameter-map="{planFacilityId:planFacilityId, methodEnumId:'_ALL_'}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="The plan of this facility is not available to you." type="p"
+                condition="planFacilityId &amp;&amp; !plan"/>
+    </widgets>
+</screen>

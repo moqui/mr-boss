@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's Replenishment reads (impl-purchasing P14a; design-purchasing §8; Replenishment.js): the planning facility of
+    its SupplyPlanning and ReorderRules screens and the reorder rules ReorderRules lists, each for a user with the
+    Replenishment area. The writes are Mantle's, called by the screens after ironstone.purchasing.AccessServices:
+    SupplyPlanningServices (run, schedule, convert), FacilityServices.store#ProductFacilityPolicy and ReorderRuleServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="PlanContext" allow-remote="false">
+        <description>The planning facility of a Replenishment screen: the one given, checked as one of the user's
+            organizations' facilities (RECORD_UNAVAILABLE), else the first warehouse or plant of the active organization, or of
+            their first; with the user's Purchasing capabilities. Refuses a user without Replenishment
+            (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="facilityId"/>
+            <parameter name="facilityName"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="capabilities" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Replenishment.js')
+                    .execute('planContext', context)"/>
+            <set field="facilityId" from="out.facilityId"/>
+            <set field="facilityName" from="out.facilityName"/>
+            <set field="organizationPartyId" from="out.organizationPartyId"/>
+            <set field="capabilities" from="out.capabilities"/>
+        </actions>
+    </service>
+    <service verb="find" noun="ReorderRules" allow-remote="false">
+        <description>The reorder rules (ProductFacility rows) at the facilities of the user's organizations, by product,
+            facility, a supplier with a purchase price of the product (in the user's supplier scope, else
+            RECORD_UNAVAILABLE), below minimum (available stock under the minimum) and snoozed; each with its product and
+            facility names, levels, method, available stock, snooze and state. At most 500 rules, paged. Refuses a user
+            without Replenishment (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="productId"/>
+            <parameter name="facilityId"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="belowMinimum"/>
+            <parameter name="snoozedOnly"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="ruleList" type="List"/>
+            <parameter name="ruleListCount" type="Integer"/>
+            <parameter name="ruleListPageIndex" type="Integer"/>
+            <parameter name="ruleListPageSize" type="Integer"/>
+            <parameter name="ruleListPageMaxIndex" type="Integer"/>
+            <parameter name="ruleListPageRangeLow" type="Integer"/>
+            <parameter name="ruleListPageRangeHigh" type="Integer"/>
+            <parameter name="truncated" type="Boolean"/>
+            <parameter name="reorderOptions" type="List"><description>The reorder methods, for the rule
+                forms.</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Replenishment.js')
+                    .execute('findRules', context)"/>
+            <script>ec.context.putAll(out)</script>
+        </actions>
+    </service>
+</services>

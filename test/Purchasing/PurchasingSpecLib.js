@@ -13,7 +13,9 @@ const ids = {
     sharedSupplierId: "ZiddlemanInc",
     commonSupplierId: "BOSS_PUR_SUP_C",
     organizationId: "ORG_ZIZI_RETAIL",
-    otherOrganizationId: "ORG_ZIZI_SERVICES"
+    otherOrganizationId: "ORG_ZIZI_SERVICES",
+    // P14a: Retail's warehouse, the facility Replenishment plans
+    facilityId: "ZIRET_WH"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -105,10 +107,69 @@ function shell(user) {
 function routeFixtures() {
     const routes = {
         // P1: Home's counters (counted by later phases) and the lookup of the demo purchase order
-        Home: {parameters: {lookupType: "order", lookupId: ids.orderId}, text: "Brightline restock"}
+        Home: {parameters: {lookupType: "order", lookupId: ids.orderId}, text: "Brightline restock"},
+        // P14a: Replenishment's supply plan of Retail's warehouse, its availability of a demo product, the reorder rules
+        Replenishment: {parameters: {planFacilityId: ids.facilityId}, text: "Supply planning"},
+        "Replenishment/SupplyPlanning": {parameters: {planFacilityId: ids.facilityId}, text: "Supply planning"},
+        "Replenishment/InventoryAvailability": {parameters: {productId: "DEMO_1_1", facilityId: ids.facilityId}, text: "Stock"},
+        // the tabs and their parent, whose fragment the shell renders with the tab menu (the tab's own content is
+        // PurchasingReplenishment's and the walk's)
+        "Replenishment/ReorderRules": {},
+        "Replenishment/ReorderRules/Rules": {},
+        "Replenishment/ReorderRules/SuggestLevels": {parameters: {planFacilityId: ids.facilityId}},
+        "Replenishment/ReorderRules/PlanSchedule": {parameters: {planFacilityId: ids.facilityId}}
     }
-    const mounts = []
+    const mounts = [
+        ["Replenishment/SupplyPlanning", "component://mr-boss/screen/Shared/SupplyPlanning.xml"],
+        ["Replenishment/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"]
+    ]
     return {routes, mounts}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures})
+// P14a: a bought product of Retail's with Ziddleman's purchase price and a sales order for it at ZIRET_WH, so a spec plans
+// its own shortage (Replenishment's specs and walk); the order id is new on each call when the database outlives a run.
+function replenishmentFixture(fixture) {
+    system(() => {
+        invoke("store#mantle.product.Product", {
+            productId: fixture.productId,
+            pseudoId: fixture.productId,
+            productName: fixture.productName,
+            productTypeEnumId: "PtAsset",
+            assetTypeEnumId: "AstTpInventory",
+            amountUomId: "OTH_ea",
+            ownerPartyId: ids.organizationId,
+            statusId: "PrdActive"
+        })
+        invoke("store#mantle.product.ProductPrice", {
+            productPriceId: fixture.productId + "_BUY",
+            productId: fixture.productId,
+            vendorPartyId: ids.sharedSupplierId,
+            pricePurposeEnumId: "PppPurchase",
+            priceTypeEnumId: "PptCurrent",
+            fromDate: 0,
+            price: 4,
+            priceUomId: "USD"
+        })
+        if (!fixture.orderId) return
+        invoke("store#mantle.order.OrderHeader", {orderId: fixture.orderId, statusId: "OrderApproved", currencyUomId: "USD"})
+        invoke("store#mantle.order.OrderPart", {
+            orderId: fixture.orderId,
+            orderPartSeqId: "01",
+            vendorPartyId: ids.organizationId,
+            customerPartyId: "CustJqp",
+            facilityId: ids.facilityId,
+            statusId: "OrderApproved"
+        })
+        invoke("store#mantle.order.OrderItem", {
+            orderId: fixture.orderId,
+            orderPartSeqId: "01",
+            orderItemSeqId: "01",
+            productId: fixture.productId,
+            quantity: fixture.quantity || 6,
+            unitAmount: 20,
+            requiredByDate: new Date(Date.now() + 7 * 86400000)
+        })
+    })
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, replenishmentFixture})

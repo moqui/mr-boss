@@ -412,3 +412,40 @@ feature("no Purchasing group reaches the Mantle REST order paths or the bulk ord
         problems.join("\n") == ""
     }
 })
+
+// P14a: Replenishment's facility (the record its SupplyPlanning, ReorderRules and their transitions check): the plan and
+// stock-policy capabilities for the planner, the buy capability for the buyer, each refused to the other on the same
+// facility; another organization's facility refused like a missing one, and not among the planning facilities; the
+// replenishment reads refused to a group without the area
+feature("a replenishment facility is the organization's; plan and buy on it need their permissions", {
+    when() {
+        const problems = []
+        const check = (user, capability, recordId = ids.facilityId) =>
+            asUser(user, () => refusal(access + "check#Record", {recordType: "facility", recordId, capability}))
+        for (const [capability, holder, without] of [
+            ["plan", users.planner, users.buyer],
+            ["stockPolicy", users.planner, users.buyer],
+            ["buy", users.buyer, users.planner]
+        ]) {
+            const held = check(holder, capability)
+            if (held !== "") problems.push(`${holder} is refused ${capability} on ${ids.facilityId}: ${held}`)
+            const refusedMessage = check(without, capability)
+            if (!refusedMessage.includes("PERMISSION_DENIED"))
+                problems.push(`${without} is not refused ${capability}: ${refusedMessage || "accepted"}`)
+        }
+        const other = check(users.planner, "plan", "BOSS_PRD_WH")
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's facility: ${other || "accepted"}`)
+        const facilities = asUser(users.planner, () => values(invoke(access + "get#Choices", {choice: "planFacilities"})))
+        if (!facilities.includes(ids.facilityId) || facilities.includes("BOSS_PRD_WH"))
+            problems.push(`the planner's planning facilities: ${facilities}`)
+        const requester = asUser(users.requester, () =>
+            refusal("ironstone.purchasing.ReplenishmentServices.find#ReorderRules", {})
+        )
+        if (!requester.includes("PERMISSION_DENIED") && !refused(requester))
+            problems.push(`the requester reads the reorder rules: ${requester || "accepted"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

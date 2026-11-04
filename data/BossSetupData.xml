@@ -1460,4 +1460,11 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_POLICY_EDIT"
             fromDate="0"/>
+    <!-- Purchasing P14a: the reader reads the supply plan of Replenishment (SUPPLY_PLAN_VIEW); the planner, buyer and
+        administrator read it through SUPPLY_PLAN_RUN and PURCHASE_ORDER_EDIT -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="SUPPLY_PLAN_VIEW" fromDate="0"/>
+    <!-- run#SupplyPlan explodes a made product's BOM through get#BomExplosion, which needs METHOD_VIEW, so the groups that
+        run the plan from Replenishment hold it (F119's rule; impl-purchasing P14a) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="METHOD_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="METHOD_VIEW" fromDate="0"/>
 </entity-facade-xml>

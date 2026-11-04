@@ -102,6 +102,18 @@ along with this software (see the LICENSE.md file). If not, see
                                     </drop-down>
                                 </default-field>
                             </field>
+                            <!-- the reorder rule's snooze (impl-purchasing P14a): automatic conversion leaves the shortage -->
+                            <field name="snoozeThruDate">
+                                <default-field title="Snooze reorder until"
+                                        tooltip="Automatic conversion leaves the shortage until then; the plan still shows it. Empty ends the snooze.">
+                                    <date-time type="timestamp"/>
+                                </default-field>
+                            </field>
+                            <field name="snoozeReason">
+                                <default-field title="Snooze reason">
+                                    <text-line/>
+                                </default-field>
+                            </field>
                             <field name="changeReason">
                                 <default-field title="Reason">
                                     <text-line/>
