@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Purchase orders section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Purchase orders area of IronStone Purchasing (design-purchasing §1, §6): PurchaseOrders (the default), the shared
+    OrderDetail, OrderChanges and Acknowledgements (impl-purchasing P3, P7, P9), for the buying lists' groups
+    (BOSS_PUR_LISTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Purchase orders" default-menu-index="5" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Purchase orders." type="p"/>
+        <label text="Placeholder: Purchase orders, their changes and supplier acknowledgements." type="p"/>
     </widgets>
 </screen>

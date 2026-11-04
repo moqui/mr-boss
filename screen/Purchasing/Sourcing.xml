@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Sourcing area of IronStone Purchasing (design-purchasing §1, §5): QuoteRequests (the default), QuoteRequestDetail,
+    Quotes, QuoteDetail, QuoteComparison and Award (impl-purchasing P11, P12), for the buying lists' groups
+    (BOSS_PUR_LISTS). Titled RFQs in the menu. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="RFQs" default-menu-index="4" menu-image="sym_o_request_quote" menu-image-type="icon">
+    <widgets>
+        <label text="Placeholder: Requests for quotation, supplier quotes, comparison and award." type="p"/>
+    </widgets>
+</screen>

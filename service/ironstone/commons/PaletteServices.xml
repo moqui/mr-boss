@@ -43,7 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
                 mantle.work.effort.WorkEffort, moqui.resource.wiki.WikiPage, mantle.party.communication.CommunicationEvent,
                 moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time),
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
-                opens under Manufacturing for its users)</description></parameter>
+                opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
+                order, supplier quote or purchase agreement opens under Purchasing for its users)</description></parameter>
             <parameter name="id" required="true"/>
             <parameter name="workEffortTypeEnumId"/>
             <parameter name="partyTypeEnumId"/>
@@ -58,6 +59,25 @@ along with this software (see the LICENSE.md file). If not, see
                 url = ec.resource.script('component://mr-boss/service/ironstone/accounting/Accounting.js').recordLink(financeKind, id)
                 icon = 'sym_o_account_balance'
                 return
+            }
+            // purchase orders, supplier quotes and purchase agreements open under Purchasing for a user who may work with them
+            // there (ironstone.purchasing's scope: the root grant, the buying organization and the supplier,
+            // impl-purchasing P1), else nowhere; a purchase request, RFQ or supplier return once its Purchasing screen is
+            // built (until then its other apps' links below)
+            const purchasingEntities = {'mantle.order.OrderHeader':'order', 'mantle.party.agreement.Agreement':'agreement',
+                'mantle.request.Request':'request', 'mantle.order.return.ReturnHeader':'supplierReturn'}
+            if (ec.user.userId && Object.prototype.hasOwnProperty.call(purchasingEntities, recordEntityName)) {
+                const purchasing = ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js')
+                let kind = purchasingEntities[recordEntityName]
+                if (kind === 'order') kind = purchasing.orderKind(id)
+                if (kind === 'request') kind = purchasing.requestKind(id)
+                const ownLink = kind === 'order' || kind === 'quote' || kind === 'agreement'
+                if (kind && (ownLink || purchasing.hasScreen(kind))) {
+                    url = purchasing.recordLink(kind, id)
+                    icon = {order:'sym_o_receipt_long', quote:'sym_o_request_quote', agreement:'sym_o_handshake', request:'sym_o_add_task',
+                        rfq:'sym_o_contract', supplierReturn:'sym_o_assignment_return'}[kind]
+                    if (url || ownLink) return
+                }
             }
             // shipments, stock, lots, containers, counts, returns and facilities open under Warehouse for a user who may work
             // with them there (ironstone.warehouse's scope: the root grant, the facility and the organizations), else nowhere

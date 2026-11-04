@@ -519,4 +519,100 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_MANUFACTURING_READ" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_APPROVE" userId="BOSS_MFG_COST_CLOSE" fromDate="0"/>
+    <!-- Purchasing (impl-purchasing P1): a user per group of design-purchasing §1, each in the root user group BOSS_PURCHASING
+        and their capability group, agents of Ziziwork Retail (BossPurchasingDemoData.xml); purchasing.read is a reader with
+        no other launcher, purchasing.admin is in BOSS_PURCHASING_ADMIN alone, purchasing.buymatch a buyer who also matches
+        bills (Accounting's BOSS_ACCOUNTING_MATCH), purchasing.buyreceive a buyer with Warehouse's receive group, and
+        purchasing.services a reader of Ziziwork Services, whose purchases and suppliers Retail's users never reach. The
+        buyer is the buyer of Brightline and Ziddleman (a dated PartyRelationship from the Buyer to the Supplier, §2). -->
+    <mantle.party.Party partyId="BOSS_PUR_REQUESTER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_REQUESTER" firstName="Purchasing" lastName="Requester"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_REQUESTER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_REQUESTER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_REQUESTER" username="purchasing.requester"
+            userFullName="Purchasing Requester" partyId="BOSS_PUR_REQUESTER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_REQUESTER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_REQUESTER" userId="BOSS_PUR_REQUESTER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_BUYER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_BUYER" firstName="Purchasing" lastName="Buyer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_BUYER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_BUYER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_BUYER" username="purchasing.buyer"
+            userFullName="Purchasing Buyer" partyId="BOSS_PUR_BUYER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_BUYER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_PUR_BUYER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_PLANNER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_PLANNER" firstName="Purchasing" lastName="Planner"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_PLANNER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_PLANNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_PLANNER" username="purchasing.planner"
+            userFullName="Purchasing Planner" partyId="BOSS_PUR_PLANNER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_PLANNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_PLANNER" userId="BOSS_PUR_PLANNER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_APPROVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_APPROVE" firstName="Purchasing" lastName="Approver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_APPROVE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_APPROVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_APPROVE" username="purchasing.approve"
+            userFullName="Purchasing Approver" partyId="BOSS_PUR_APPROVE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_APPROVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_APPROVE" userId="BOSS_PUR_APPROVE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_READ" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_READ" firstName="Purchasing" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_READ_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_READ" username="purchasing.read"
+            userFullName="Purchasing Reader" partyId="BOSS_PUR_READ"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_READ" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_READ" userId="BOSS_PUR_READ" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_ADMIN" firstName="Purchasing" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_ADMIN" username="purchasing.admin"
+            userFullName="Purchasing Administrator" partyId="BOSS_PUR_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_ADMIN" userId="BOSS_PUR_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_MATCH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_MATCH" firstName="Purchasing" lastName="Buyer matcher"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_MATCH_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_MATCH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_MATCH" username="purchasing.buymatch"
+            userFullName="Purchasing Buyer matcher" partyId="BOSS_PUR_MATCH"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_MATCH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_PUR_MATCH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_MATCH" userId="BOSS_PUR_MATCH" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_RECEIVE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_RECEIVE" firstName="Purchasing" lastName="Buyer receiver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_RECEIVE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_RECEIVE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_RECEIVE" username="purchasing.buyreceive"
+            userFullName="Purchasing Buyer receiver" partyId="BOSS_PUR_RECEIVE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_BUYER" userId="BOSS_PUR_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_PUR_RECEIVE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_PUR_RECEIVE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_PUR_SERVICES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_PUR_SERVICES" firstName="Purchasing" lastName="Services reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_PUR_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_PUR_SERVICES" username="purchasing.services"
+            userFullName="Purchasing Services reader" partyId="BOSS_PUR_SERVICES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING" userId="BOSS_PUR_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_PURCHASING_READ" userId="BOSS_PUR_SERVICES" fromDate="0"/>
+    <mantle.party.PartyRole partyId="BOSS_PUR_BUYER" roleTypeId="Buyer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_BUYER_SUP_B" relationshipTypeEnumId="PrtSupplier"
+            fromPartyId="BOSS_PUR_BUYER" fromRoleTypeId="Buyer" toPartyId="BOSS_PUR_SUP_B" toRoleTypeId="Supplier"
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_BUYER_ZIDDLEMAN" relationshipTypeEnumId="PrtSupplier"
+            fromPartyId="BOSS_PUR_BUYER" fromRoleTypeId="Buyer" toPartyId="ZiddlemanInc" toRoleTypeId="Supplier"
+            fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

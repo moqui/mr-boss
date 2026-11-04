@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Replenishment section of IronStone Purchasing (initial-design.md app table);
-    design-purchasing.md decides its screens. -->
+<!-- The Replenishment area of IronStone Purchasing (design-purchasing §1, §8): the shared SupplyPlanning (the default) and
+    InventoryAvailability, and ReorderRules (impl-purchasing P14), for the planner, buyer, reader and administrator groups
+    (BOSS_PUR_REPLENISHMENT). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Replenishment" default-menu-index="6" menu-image="sym_o_autorenew" menu-image-type="icon">
+        default-menu-title="Replenishment" default-menu-index="8" menu-image="sym_o_autorenew" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Replenishment." type="p"/>
+        <label text="Placeholder: Supply planning, availability and reorder rules." type="p"/>
     </widgets>
 </screen>
