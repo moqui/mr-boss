@@ -216,7 +216,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | built Nov 3 |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
-| P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
+| P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | built Nov 4 |
 | P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | built Nov 3 |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
@@ -1521,6 +1521,110 @@ Design §4 ShopFloor, OperationExecution and Instructions, §3 ProductionTime; M
   - the run's supervisor approves the operator's timesheet, which writes the labor event; reopening it writes the
     reversal;
   - the same flow completes in the terminal twin.
+
+**Built Nov 4 (P10).**
+- Mantle records (`entity/ProductionShopFloorEntities.xml`, new): `mantle.work.production.MachineRuntimeEvent` (run, operation,
+  work center, optional equipment, mode, from and thru, hours, the WorkCenterRate it was valued at with rate, amount and
+  currency, valuation, its cost event) and `InstructionAcknowledgment` (run, operation, the WorkEffortContent row, step kind
+  IstAcknowledge or IstEvidence, person, user, date, value and unit, file reference, note); on WorkEffort the operation's
+  audit-logged `productionGoodQuantity`, `productionLossQuantity` and the start override (`productionStartOverride`, `...Checks`,
+  `...ByUserId`, `...Date`). Seeds (`data/ProductionShopFloorData.xml`): the WorkTypes `WktpProductionSetup`, `WktpProductionRun`
+  and `WktpProductionRework` (F18), the RatePurpose `RaprProductionCost` (the costing rate, design Y2), MachineRuntimeMode,
+  InstructionStepType and the cost event types `PcetLabor` and `PcetMachine`.
+- Mantle services (`ProductionShopFloor.js`, eleven appended to `ProductionServices.xml`): `get#ShopFloorQueue` (the open runs'
+  operations at a plant or center by state: running, ready, paused, blocked, done; readiness from `get#ProductionOperations`;
+  mine; at most 100 runs), `get#ProductionOperation` (the start checks, timer, runtime, evidence, quantities and what the user may
+  do; values only with ACCOUNTING_VIEW), `get#ProductionInstructions` and `record#InstructionStep` (the instruction rows of the
+  routing operation and its template in effect at the release, a revision warning when a newer one is published; acknowledgment
+  once per person; the evidence of `methodRequiredEvidence`), `override#ProductionOperationStart` (PRODUCTION_SUPERVISE),
+  `start#`, `pause#` and `complete#ProductionOperation`, `record#MachineRuntime`, `sync#ProductionLaborCost` (internal) and
+  `get#ProductionTime`. Start checks (§4): the run running, the operation open, its predecessors started, the in-process gate
+  (P8's `operationGate`, F104), a staged short line, the run's equipment (blocked status or an open outage), the operator
+  assigned when the run names assignees (or a supervisor), and the required skills and instruction acknowledgment, blocking
+  unless overridden, with an advisory when neither is configured; then TimesheetServices' `start#Timer`, a timer elsewhere only
+  with `confirmSwitch` (TIMER_SWITCH_REQUIRED). Complete: the predecessors complete (PREDECESSOR_OPEN, naming them), the evidence
+  recorded, no machine runtime open, then `record#ProductionQuantity` under the operation's key (the output operation receives
+  good and pending output; any operation records loss), the user's timer stopped, `TimeEntry.pieceCount` = good under the
+  `pieceRate` policy, and the operation Complete; one transaction, a retry answers the first. Machine runtime: start, stop or a
+  past interval, valued at the center's approved PccMachine WorkCenterRate in effect at its start, else PcvUnvalued; its
+  PcetMachine event awaits the close. `ProductionCosts.js` gained the TimeEntry and MachineRuntimeEvent sources and a source
+  that answers no event (a labor delta of nothing); `record#ProductionCostEvent` takes `sourceRemoved`.
+- The labor hook (F34, F35): `TimesheetServices.approve#` and `reopen#Timesheet` and `TimeServices.store#` and `delete#TimeEntry`
+  call `sync#ProductionLaborCost` beside `post#WorkEffortCost`: per entry on a production run whose owner's policy has
+  `laborCostSync`, the delta between its hours while its week is approved and what its labor events recorded (approval at the
+  costing RateAmount by position class and work type, else unvalued; reopen and deletion the reversal; an hours change a delta at
+  the first rate). Other entries are passed over after one read; an entry that fails is logged and named. No
+  `get#TimesheetApprovers` change (F33).
+- Mantle's Today (F41): `get#UserTodayItems` leaves out a WepProductionRun and the WetTask operations under one.
+- F90/F95: `transition#ProductionOrder` complete refuses operations not completed on the shop floor (OPERATION_UNREPORTED, after
+  the material check) unless `closeUnreportedOperations`; `completeOnFinalReceipt` counts as that acceptance. ProductionQuantities
+  and ProductionQuality's completing features pass it; WorkOrderDetail's Complete dialog has the checkbox.
+- BOSS: the Shop floor area (`ShopFloor.xml`, its placeholder replaced): `Station` (`Station.qvue`: scan, plant, My work, the
+  selected card with Open, Start and Instructions, the board by state, stacked at phone width; `Station.tui.json`, the board
+  component opening OperationExecution), `OperationExecution` and `Instructions` (density handheld, scan-input), `ProductionTime`
+  and `InstructionsPrint` (html-print); `ironstone.manufacturing.ShopFloorServices` (`get#Station`, `resolve#OperationScan`) and
+  `HomeServices.get#TodayItems` over `ShopFloor.js`; the root's `<today-source>`; Manufacturing.js's P10 block (routes, the
+  `productionWorkTypes` choice). Demo: line A's policy row (machine runtime recorded, piece rate, `laborCostSync`), Retail's
+  costing rate `BOSS_MFG_RATE_RUN`, the material handler's assembly skill.
+- Specs: Mantle `test/work/ProductionShopFloor.spec.js` (7 features, about 2 s: the queue by state; the skill override and the
+  acknowledgment blocking the start; the timer switch with its confirmation and a retry; overlap with completion refused before
+  the predecessor; machine runtime valued and unvalued, apart from labor; the evidence; 6 good at Assemble with its piece count,
+  then 5 good and 1 scrap at Pack with the coupled receipt and a retry; STOCK_ISSUE_REQUIRED; the supervisor's approval writing
+  the labor event and the reopen its reversal, the flag off at a second plant and a plain task writing none; OPERATION_UNREPORTED
+  then closed; Today leaving out a run and its operation and keeping a plain task; the reads refused). BOSS
+  `ManufacturingShopFloor` (6, through the screens' transitions and pages with authz on, and the tui twins),
+  ManufacturingAccess's P10 section (2), the route fixtures (AppStructure, TuiRender; AppStructure's placeholder floor 63),
+  ManufacturingSpecLib's `shopFloorFixture`, `ManufacturingShopFloorFixtures` and the client walk `ManufacturingShopFloorWalk`
+  (2, at 390 px), both in `suite.js`.
+- Tests run: Mantle ProductionShopFloor (7), and ManufacturingServices, WarehouseProduction, ProductMethods, ProductionQuantities,
+  ProductionQuality, ProductionOrders, ProductionCosts, ProductionSchedule, ProductionMaterials, ProductionPolicy,
+  ProductionSubcontract, ProductionDowntime, WorkTimeEntries, WorkTimesheets, CommonsToday (122, all pass; no baseline failure
+  of the time specs showed in this runtime); BOSS ManufacturingShopFloor (6), AppStructure and TuiRender (21), ManufacturingAccess,
+  ManufacturingShell, TodayPanel, ManufacturingWorkOrders, ManufacturingDowntime, ManufacturingMaterials, TuiRender (135),
+  TimeEntries, Billing, ClientBilling, ManufacturingSchedule, ManufacturingSubcontracting (31), all pass; the walk
+  ManufacturingShopFloorWalk (2, pass). `moqui lint --screens`: only informational anchor rows for the Shop floor screens.
+- Decisions:
+  - An operation may start once the operations before it have started (overlapping work), and completes only after they have
+    completed; the readiness text still says "Waiting for" until they complete.
+  - The supervisor's override waives the required skills and, only when asked, the instruction acknowledgment; it is recorded on
+    the operation (audit-logged) for every operator of it, and no other check is overridable.
+  - The required acknowledgment is the instruction in effect at the release (the template's or the routing operation's), and the
+  required evidence (`methodRequiredEvidence`) is asked for at completion, not at start.
+  - F96: the coupled output receipt needs STOCK_ISSUE (§2), refused before anything posts with STOCK_ISSUE_REQUIRED and its
+    advice; a plain operator records only loss at the output operation. The demo's material handler holds both.
+  - Machine runtime follows the policy: none where `machineRuntimeEnumId` is Not recorded, the built-in default (F-P10-2).
+  - The labor event names its entry by `sourceId` and leaves `timeEntryId` empty (F-P10-6), and freezes the rate at the first
+    approval; a RateAmount correction reaches a run through P15's review.
+  - Pause is the operation's own On hold with its reason and an optional timer stop; a stop of the line is reported apart in
+    Downtime (Report stop), which carries the run and operation.
+  - ProductionTime is the whole work order's time (no operation filter on the screen), with Projects' submit, approve and reopen.
+- Deferred: Home's work list reusing Today's items (F41's "Home's work list reuses it"); the time-log enforcement policy
+  (`timeLogEnforcementEnumId` PtlWarn, PtlRequired) at completion; backflush at the policy's operation issue points (P5b named P10
+  its caller); the shared-station device credential (CX-DEVICE, §7); WorkOrderDetail Operations' link to the shop floor.
+- Findings (provisional):
+  - **F-P10-1** ProductionOrders.js's `missingSkills` (P5a) and ProductionSchedule.js (P12) read `mantle.party.PartySkill`, which
+    is no entity (`mantle.humanres.ability.PartySkill`), so an assignment's or a schedule's skill check errored once a template
+    had a skill standard. Fixed in both.
+  - **F-P10-2** The built-in ProductionMachineRuntime default is Not recorded, so `record#MachineRuntime` is refused
+    (MACHINE_RUNTIME_OFF) until a policy row records it; the demo's line A row does.
+  - **F-P10-3** A Projects timer stopped within a minute is discarded (deleted, `stop#Timer`), so a start then an immediate
+    completion leaves no time: the specs move a timer's start back, and the walk's fixture records earlier time.
+  - **F-P10-4** Release copies the run's dates to its operations (F55, F112), so an operation's due date in Today and the queue
+    is the run's end until it is scheduled.
+  - **F-P10-5** (F90, F95) Complete now refuses unreported operations (OPERATION_UNREPORTED); the opt-in completeOnFinalReceipt
+    closes them as before.
+  - **F-P10-6** ProductionCostEvent.timeEntryId is a foreign key to TimeEntry, so a labor event naming it would keep a reopened
+    week's entry from being deleted; the labor event names the entry by `sourceId` only.
+  - **F-P10-7** The labor hook runs in the approval's transaction: an entry whose event cannot be computed is logged and passed
+    over, but a failure of the event's write would roll back the approval.
+  - **F-P10-8** For the merge: ProductionServices.xml (`record#ProductionCostEvent`'s `sourceRemoved`, `transition#ProductionOrder`'s
+    `closeUnreportedOperations` and its description, the appended section), ProductionCosts.js (the sources and `record`'s
+    null event), ProductionQuantities.js (`completeCheck`, `afterReceipt`), ProductionOrders.js (`blockedReasons`, the request
+    field, the PartySkill name), ProductionSchedule.js (PartySkill), TimesheetServices.xml, TimeServices.xml,
+    WorkEffortServices.xml (`get#UserTodayItems`), the P7 and P8 specs' complete calls; BOSS: Manufacturing.xml (today-source),
+    Manufacturing.js, HomeServices.xml, Quantities.xml (the checkbox), BossManufacturingDemoData, BossUsersDemoData,
+    ManufacturingSpecLib (routes, `shopFloorFixture`), ManufacturingAccess, AppStructure's floor (63), suite.js and
+    docs/ManufacturingImplementation.md. P9 (in parallel) edits ProductionOrders.js and the Components screens.
 
 ### P11 — Downtime and maintenance
 

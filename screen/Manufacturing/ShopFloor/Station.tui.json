@@ -1,0 +1,17 @@
+{
+    "t": "component",
+    "name": "board",
+    "props": {
+        "source": "queueRows",
+        "groups": "groups",
+        "rows": "rows",
+        "groupId": "id",
+        "groupLabel": "label",
+        "groupColor": "color",
+        "groupOf": "state",
+        "id": "id",
+        "title": "title",
+        "fields": ["readinessText", "workCenterName", "dueText"],
+        "open": "../OperationExecution?operationWorkEffortId={id}"
+    }
+}

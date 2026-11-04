@@ -3,7 +3,8 @@
 The Manufacturing app calls Mantle's production, method, quality and stock services, which check their own permissions
 and organization. BOSS owns the app's access (`ironstone.manufacturing.AccessServices`), its routes, choices, Home and
 forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation), P2 (methods), P3 (work centers and
-equipment), P4 (policy and reasons), P6 (cost evidence), P11 (downtime and maintenance) and P13 (supply planning) of
+equipment), P4 (policy and reasons), P6 (cost evidence), P10 (shop floor and time), P11 (downtime and maintenance) and P13
+(supply planning) of
 [impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
 
 ## Routes and users
@@ -20,7 +21,8 @@ equipment), P4 (policy and reasons), P6 (cost evidence), P11 (downtime and maint
 | Planning | `Planning/SupplyPlanning` (the default tab), the shared supply plan with the Manufacturing context; `Planning/ProductionSchedule` (P12, with `ProductionScheduleTui` and `ScheduleSnapshot`) and `Planning/Capacity`; for the planner, scheduler and supervisor groups |
 | Work orders, Reports | Placeholders, open to every Manufacturing user |
 | Quality | `Quality/Inspections` (the default), `Quality/InspectionTemplates`, `Quality/ScrapLoss` (P7); hidden `Quality/QualityInspection`, `Quality/InspectionStation` and `Quality/QualityCertificate` (P8); for the quality groups and the supervisor (below) |
-| Shop floor, Subcontracting | Placeholders, for their groups only (below) |
+| Shop floor | `ShopFloor/Station` (P10: the board and operator card, a `.qvue` with `Station.tui.json`), hidden `OperationExecution`, `Instructions`, `ProductionTime` and `InstructionsPrint`; for the operator and supervisor groups (`BOSS_MFG_SHOP_FLOOR`) |
+| Subcontracting | Placeholder, for its groups only (below) |
 
 All routes are under `/qapps/Manufacturing`, in design §1.2's order by `default-menu-index`. The root
 (`screen/Manufacturing.xml`) runs `get#SharedContext` in its always-actions into `manufacturing` (capabilities, the
@@ -213,6 +215,24 @@ times and Take offline (`store#WorkCenterOffline` preview, then apply with or wi
 shows next available and the offline reason. Approvals lists `ProductionScheduleOverride`; its link opens the schedule on
 the request, and `ProductionScheduleChange` (to the run's people, else the supervisors) opens the operation.
 
+## Shop floor and production time (P10)
+
+`ShopFloor/Station.xml` serves `Station.qvue` (and the terminal `Station.tui.json`, a `board` component) over its
+transitions `queueRows` (`ironstone.manufacturing.ShopFloorServices.get#Station`: Mantle's `get#ShopFloorQueue` for the
+selected plant as the board's groups and cards), `scanOperation` (`resolve#OperationScan`: an operation's or a work order's
+id) and `startOperation` (`check#Record` with `operate`, then `start#ProductionOperation`; a timer elsewhere answers
+TIMER_SWITCH_REQUIRED, which the card confirms before switching), each call in its own transaction (F111).
+`OperationExecution` (density handheld, a scan-input over `resolve#OperationScan`) reads `get#ProductionOperation` and posts
+`startOperation`, `stopTimer`, `pauseOperation` (Report stop opens `WorkCenters/Downtime` with `_openDialog=ReportStopDialog`),
+`completeOperation`, `machineRuntime` and `overrideStart` (`supervise`), each after `check#Record` of the operation.
+`Instructions` reads `get#ProductionInstructions` and posts `recordStep` (acknowledge, evidence); `InstructionsPrint` is the
+operator instructions print. `ProductionTime` reads `get#ProductionTime` for a work order and posts Projects' `submit#`,
+`approve#` (`supervise`) and `reopen#Timesheet` and `stop#Timer`. Today's Manufacturing source is
+`ironstone.manufacturing.HomeServices.get#TodayItems` (`ShopFloor.js` `today`): the user's due operations, opening
+OperationExecution, with no Mark done; Mantle's `get#UserTodayItems` leaves a run and its operations out of its own tasks.
+Line A's demo policy row records machine runtime, piece rate and the labor cost hook; `BOSS_MFG_RATE_RUN` is Retail's
+costing rate of production run time.
+
 ## Verification
 
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters,ManufacturingPlanning,
@@ -222,6 +242,8 @@ ManufacturingDowntime,ManufacturingSchedule` (and `TimelineWalk` and `ProjectsTu
 and TuiRender cover the built screens and the area
 placeholders.
 `./moq test mr-mantle --spec ProductionQuality` and the walk `ManufacturingQualityWalk` (P8).
+`./moq test mr-boss --spec ManufacturingShopFloor,ManufacturingAccess,TodayPanel`, `./moq test mr-mantle --spec
+ProductionShopFloor,WorkTimeEntries,WorkTimesheets` and the walk `ManufacturingShopFloorWalk` (P10).
 `./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingMethods`; AppStructure and TuiRender cover
 the built routes (ManufacturingSpecLib's `routeFixtures`) and the area placeholders; `./moq test mr-mantle --spec
 MethodTemplates`; the walk `./moq test-client mr-boss --serve -- --spec ManufacturingMethodsWalk`.

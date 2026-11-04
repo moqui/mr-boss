@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OperationExecution (design-manufacturing OperationExecution: Work, PersonTimer, MachineRuntime and CompleteStep; style-guide
+    §3.5 Task, §8.2 handheld; impl-manufacturing P10): one operation of a work order for its operator, at handheld density (48 px
+    controls, 18 px text) with a scan field that opens another operation. The record header (operation, work order, product,
+    work center, state and readiness); the start checks (work order running, predecessors started, quality gate, material,
+    equipment, operator, skills and instructions, each blocking or noted, with the supervisor's override); the person timer
+    (Start, the one primary while the operation may start, switching a timer elsewhere only with Switch my timer; Stop timer);
+    machine runtime apart from labor (Start machine, Stop machine, Record a past interval); and the work: the quantities,
+    the operation's material, Complete (the primary while it runs: good, pending, loss, scrap and rework, with the coupled output
+    receipt at the operation that receives the output), Pause (a reason, the timer stopped, and Report stop opening Downtime's
+    report with the work order and operation), Instructions, Materials and Time. Every action checks the operation through
+    ironstone.manufacturing.AccessServices.check#Record (operate; supervise for the override), then calls the Mantle verb
+    (mantle.work.ProductionServices start#, pause#, complete#ProductionOperation, record#MachineRuntime,
+    override#ProductionOperationStart; TimesheetServices.stop#Timer), which checks again; a refusal names the blocked
+    predecessor, check or line and the form keeps what was entered. The terminal renders every field and action as forms. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Operation" default-menu-include="false" density="handheld">
+    <parameter name="operationWorkEffortId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="operationCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId || '_NA_'}"/>
+        <set field="recordFound" from="!!operationCheck?.recordId"/>
+    </always-actions>
+
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="openScanned">
+        <actions>
+            <if condition="!scannedOperationId">
+                <return error="true" message="Scan or type an operation or a work order"/>
+            </if>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:scannedOperationId}"/>
+            <set field="operationWorkEffortId" from="scannedOperationId"/>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="startOperation">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.start#ProductionOperation" out-map="started"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId,
+                        workTypeEnumId:workTypeEnumId || null, confirmSwitch:confirmSwitch == 'true'}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${started.result?.resultCode == 'RESUMED' ? 'Resumed' : 'Started'}: your timer runs on this operation${started.result?.switched ? '; your other timer was stopped' : ''}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="stopTimer">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.TimesheetServices.stop#Timer" out-map="stopped" in-map="{timeEntryId:timeEntryId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${stopped.message}</message></if>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="overrideStart">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'supervise'}"/>
+            <service-call name="mantle.work.ProductionServices.override#ProductionOperationStart"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId, reason:reason,
+                        acknowledgment:acknowledgment == 'true'}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Start checks overridden</message></if>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="pauseOperation">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.pause#ProductionOperation" out-map="paused"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId, reasonCode:reasonCode || null,
+                        reason:reason || null, stopTimer:stopTimer == 'true'}"/>
+            <set field="pausedRun" from="paused?.result?.workEffortId"/>
+            <if condition="!ec.message.hasError()"><message type="success">Paused${paused.result?.stoppedTimeEntryId ? '; your timer stopped' : ''}</message></if>
+        </actions>
+        <!-- Report stop: Downtime's report of a stop of the line, with the work order and operation -->
+        <conditional-response url="../../WorkCenters/Downtime">
+            <condition><expression>reportStop == 'true'</expression></condition>
+            <parameter name="workEffortId" from="pausedRun"/>
+            <parameter name="operationWorkEffortId"/>
+            <parameter name="facilityId" from="workCenterFacilityId"/>
+            <parameter name="_openDialog" value="ReportStopDialog"/>
+        </conditional-response>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="completeOperation">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <service-call name="mantle.work.ProductionServices.complete#ProductionOperation" out-map="completed"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId,
+                        productionRunLineId:productionRunLineId || null, good:good || null, pending:pending || null,
+                        processLoss:processLoss || null, scrap:scrap || null, rework:rework || null,
+                        reasonCode:reasonCode || null, reason:reason || null, toLocationSeqId:toLocationSeqId || null,
+                        heldLocationSeqId:heldLocationSeqId || null, lotNumber:lotNumber || null,
+                        stopTimer:stopTimer == 'true'}"/>
+            <script><![CDATA[
+                const done = completed?.result || {}
+                if (!ec.message.hasError()) ec.message.addMessage(done.resultCode === 'APPROVAL_REQUESTED' ? done.message
+                    : 'Operation completed' + (done.quantity ? ': good ' + done.quantity.good + ', remaining ' + done.quantity.remaining : '')
+                        + (done.message ? '. ' + done.message : ''), done.resultCode === 'APPROVAL_REQUESTED' ? 'warning' : 'success')
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+    <transition name="machineRuntime">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'operation', recordId:operationWorkEffortId, capability:'operate'}"/>
+            <if condition="assetId">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'asset', recordId:assetId}"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.record#MachineRuntime" out-map="recorded"
+                    in-map="{operationKey:operationKey, operationWorkEffortId:operationWorkEffortId, action:runtimeAction,
+                        machineRuntimeEventId:machineRuntimeEventId || null, assetId:assetId || null,
+                        runtimeModeEnumId:runtimeModeEnumId || null, fromDate:fromDate || null, thruDate:thruDate || null,
+                        comments:comments || null}"/>
+            <script><![CDATA[
+                const runtime = recorded?.result || {}
+                if (!ec.message.hasError()) ec.message.addMessage(runtime.resultCode === 'STARTED' ? 'Machine runtime started'
+                    : 'Machine runtime recorded: ' + runtime.hours + ' h' + (runtime.message ? '. ' + runtime.message : ''),
+                    runtime.valued === false ? 'warning' : 'success')
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="operationWorkEffortId"/></default-response>
+        <error-response url="."><parameter name="operationWorkEffortId"/></error-response>
+    </transition>
+
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionOperation" out-map="operationFound"
+                    transaction="force-new" ignore-error="true" in-map="{operationWorkEffortId:operationWorkEffortId}"/>
+        </if>
+        <set field="recordFound" from="recordFound &amp;&amp; !!operationFound?.productionOperation"/>
+        <set field="detail" from="operationFound?.productionOperation || {}"/>
+        <set field="op" from="detail.operation || {}"/>
+        <set field="runInfo" from="detail.run || {}"/>
+        <set field="can" from="detail.can || {}"/>
+        <set field="timer" from="detail.timer || null"/>
+        <set field="figures" from="detail.quantities || {}"/>
+        <set field="timerHere" from="!!timer &amp;&amp; timer.here"/>
+        <set field="timerElsewhere" from="!!timer &amp;&amp; !timer.here"/>
+        <set field="stateColors" from="{WeApproved:'grey-8', WeInProgress:'primary', WeOnHold:'warning', WeComplete:'positive',
+                WeCancelled:'grey'}"/>
+        <set field="statusColor" from="stateColors[op.statusId] || 'grey'"/>
+        <!-- one primary: Start while it may start and the timer is not on it, else Complete while it runs -->
+        <set field="startPrimary" from="!!can.start &amp;&amp; !timerHere"/>
+        <set field="checkRows" from="(detail.checks || []).map((row) =&gt; Object.assign({}, row, {stateText: row.ok ? 'OK'
+                : row.blocking ? 'Blocked' : 'Note', stateColor: row.ok ? 'positive' : row.blocking ? 'negative' : 'warning'}))"/>
+        <set field="runtimeRows" from="detail.runtimeRows || []"/>
+        <set field="materialRows" from="detail.materialRows || []"/>
+        <set field="keyBase" from="'sf-' + operationWorkEffortId + '-' + ec.user.randomString(12)"/>
+        <set field="startValues" from="{operationKey:keyBase + '-start', operationWorkEffortId:operationWorkEffortId,
+                workTypeEnumId:'WktpProductionRun'}"/>
+        <set field="stopValues" from="{operationWorkEffortId:operationWorkEffortId, timeEntryId:timer?.timeEntryId}"/>
+        <set field="completeValues" from="{operationKey:keyBase + '-complete', operationWorkEffortId:operationWorkEffortId,
+                productionRunLineId:runInfo.productionRunLineId, stopTimer:'true'}"/>
+        <set field="pauseValues" from="{operationKey:keyBase + '-pause', operationWorkEffortId:operationWorkEffortId,
+                workCenterFacilityId:op.workCenterFacilityId, stopTimer:'true'}"/>
+        <set field="machineValues" from="{operationKey:keyBase + '-machine', operationWorkEffortId:operationWorkEffortId,
+                runtimeAction:detail.openRuntimeId ? 'stop' : 'start', machineRuntimeEventId:detail.openRuntimeId}"/>
+        <set field="intervalValues" from="{operationKey:keyBase + '-interval', operationWorkEffortId:operationWorkEffortId,
+                runtimeAction:'record', runtimeModeEnumId:'MrmRun'}"/>
+        <set field="overrideValues" from="{operationKey:keyBase + '-override', operationWorkEffortId:operationWorkEffortId}"/>
+        <set field="linkParameters" from="{operationWorkEffortId:operationWorkEffortId}"/>
+        <set field="runParameters" from="{workEffortId:runInfo.workEffortId}"/>
+        <set field="downtimeParameters" from="{workEffortId:runInfo.workEffortId, operationWorkEffortId:operationWorkEffortId,
+                facilityId:op.workCenterFacilityId, _openDialog:'ReportStopDialog'}"/>
+    </actions>
+    <widgets>
+        <form-single name="OperationScan" transition="openScanned">
+            <field name="scannedOperationId">
+                <default-field title="Scan">
+                    <scan-input resolver="ironstone.manufacturing.ShopFloorServices.resolve#OperationScan"
+                            allowed-types="operation" placeholder="Scan an operation or work order"/>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Open" type="default"/></default-field></field>
+        </form-single>
+        <section name="OperationNotFound" condition="!recordFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Operation ${operationWorkEffortId} is not available to you." type="p"/>
+                        <link url="../Station" text="Back to the station" icon="sym_o_arrow_back"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OperationFound" condition="recordFound">
+            <widgets>
+                <context record-entity="mantle.work.effort.WorkEffort" record-id="${operationWorkEffortId}"
+                        title="${op.operationName} · ${runInfo.runName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${operationWorkEffortId}" type="span" style="m-key-chip text-mono"/>
+                                <label text="${op.operationName}" type="h5" style="q-my-none"/>
+                            </container>
+                            <label text="Work order ${runInfo.workEffortId} · ${runInfo.runName} · ${runInfo.productName}" type="div"
+                                    style="text-caption m-muted"/>
+                            <label text="${op.workCenterName} · released ${runInfo.releaseText} · revision ${runInfo.revision}" type="div"
+                                    style="text-caption m-muted"/>
+                            <label text="${op.readinessText}" type="div" style="text-body2"/>
+                            <label text="After ${op.predecessorText}" type="div" style="text-caption m-muted" condition="op.predecessorText"/>
+                            <label text="${op.overrideText}" type="div" style="text-caption text-warning" condition="op.overrideText"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(op.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: op.statusText})}]]></text>
+                                <text type="html">${op.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-x-sm q-gutter-y-sm m-record-actions">
+                        <section name="StartAction" condition="can.start &amp;&amp; !timerHere">
+                            <widgets>
+                                <container-dialog id="StartDialog" type="primary" button-text="Start" icon="sym_o_play_arrow"
+                                        title="Start ${op.operationName}" width="520">
+                                    <label text="Your timer runs on ${timer?.workEffortName || 'other work'} since ${timer?.fromText}: starting this operation stops it."
+                                            type="p" style="text-warning" condition="timerElsewhere"/>
+                                    <form-single name="StartForm" transition="startOperation" map="startValues">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="workTypeEnumId">
+                                            <default-field title="Work type">
+                                                <drop-down allow-empty="false">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'productionWorkTypes'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="confirmSwitch">
+                                            <conditional-field condition="timerElsewhere" title="Your timer">
+                                                <check><option key="true" text="Stop my other timer and start this one"/></check>
+                                            </conditional-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Start"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                        <section name="CompleteAction" condition="can.complete">
+                            <widgets>
+                                <container-dialog id="CompleteDialog" type="${startPrimary ? 'default' : 'primary'}"
+                                        button-text="Complete" icon="sym_o_task_alt" title="Complete ${op.operationName}" width="640">
+                                    <label text="Planned ${figures.target}, good ${figures.good}, remaining ${figures.remaining}." type="p"
+                                            style="text-caption" condition="figures.target"/>
+                                    <label text="This operation receives the work order's output: the good and pending quantity are received to stock with it."
+                                            type="p" style="text-caption" condition="op.outputOperation"/>
+                                    <label text="Receiving the output needs the stock issue permission: complete it with a stock handler, or record only the loss."
+                                            type="p" style="text-warning" condition="op.outputOperation &amp;&amp; !can.receiveOutput"/>
+                                    <form-single name="CompleteForm" transition="completeOperation" map="completeValues">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="productionRunLineId"><default-field><hidden/></default-field></field>
+                                        <field name="good"><default-field title="Good"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="pending"><default-field title="Pending inspection"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="processLoss"><default-field title="Process loss"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="scrap"><default-field title="Scrap"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="rework"><default-field title="Rework"><text-line size="8" input-type="number"/></default-field></field>
+                                        <field name="reasonCode">
+                                            <default-field title="Loss reason">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'lossReasons'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                                        <field name="toLocationSeqId">
+                                            <conditional-field condition="op.outputOperation" title="Put good output in"
+                                                    tooltip="A location of the plant"><text-line size="12"/></conditional-field>
+                                        </field>
+                                        <field name="stopTimer">
+                                            <default-field title="Your timer"><check><option key="true" text="Stop my timer on this operation"/></check></default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Complete" confirmation="Complete ${op.operationName}?"/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="good"/><field-ref name="pending"/></field-row>
+                                            <field-row><field-ref name="processLoss"/><field-ref name="scrap"/><field-ref name="rework"/></field-row>
+                                            <field-row><field-ref name="reasonCode"/><field-ref name="reason"/></field-row>
+                                            <field-ref name="toLocationSeqId"/>
+                                            <field-ref name="stopTimer"/>
+                                            <field-ref name="submit"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                        <section name="PauseAction" condition="can.pause">
+                            <widgets>
+                                <container-dialog id="PauseDialog" type="default" button-text="Pause" icon="sym_o_pause"
+                                        title="Pause ${op.operationName}" width="560">
+                                    <form-single name="PauseForm" transition="pauseOperation" map="pauseValues">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="workCenterFacilityId"><default-field><hidden/></default-field></field>
+                                        <field name="reasonCode">
+                                            <default-field title="Reason">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'holdReasons'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                                        <field name="stopTimer">
+                                            <default-field title="Your timer"><check><option key="true" text="Stop my timer"/></check></default-field>
+                                        </field>
+                                        <field name="reportStop">
+                                            <default-field title="Line"><check><option key="true" text="The line stopped: report the stop next"/></check></default-field>
+                                        </field>
+                                        <field name="submit"><default-field title=""><submit text="Pause"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                        <link url="../Instructions" text="Instructions" icon="sym_o_menu_book" parameter-map="linkParameters"/>
+                        <button-menu text="More" icon="more_horiz">
+                            <link url="../../WorkOrders/WorkOrderDetail/MaterialIssueReceipt" text="Materials" icon="sym_o_inventory_2"
+                                    parameter-map="runParameters"/>
+                            <link url="../ProductionTime" text="Time" icon="sym_o_schedule" parameter-map="runParameters"/>
+                            <link url="../../WorkCenters/Downtime" text="Report stop" icon="sym_o_report" parameter-map="downtimeParameters"/>
+                            <link url="../../WorkOrders/WorkOrderDetail" text="Work order" icon="sym_o_precision_manufacturing"
+                                    parameter-map="runParameters"/>
+                            <container-dialog id="OverrideDialog" condition="can.override" type="warning"
+                                    button-text="Override start checks" icon="sym_o_admin_panel_settings"
+                                    title="Override the start checks of ${op.operationName}" width="560">
+                                <label text="The operation may start without the required skills; with the acknowledgment waived, without the instructions read. The reason is recorded."
+                                        type="p" style="text-caption"/>
+                                <form-single name="OverrideForm" transition="overrideStart" map="overrideValues">
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                    <field name="acknowledgment">
+                                        <default-field title="Instructions"><check><option key="true" text="Also waive the instruction acknowledgment"/></check></default-field>
+                                    </field>
+                                    <field name="submit"><default-field title=""><submit text="Override" type="warning"
+                                            confirmation="Override the start checks of ${op.operationName}?"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Start checks"/>
+                    <box-body-nopad>
+                        <form-list name="StartChecks" list="checkRows" skip-form="true" paginate="false">
+                            <field name="label"><default-field title="Check"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="message"><default-field title="Detail"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="message"/></column>
+                                <column><field-ref name="stateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="${(detail.advisories || []).join('; ')}" type="p" style="text-caption m-muted q-pa-sm"
+                                condition="(detail.advisories || []).length"/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Person timer"/>
+                    <box-toolbar>
+                        <section name="StopTimer" condition="timerHere">
+                            <widgets>
+                                <form-single name="StopTimerForm" transition="stopTimer" map="stopValues">
+                                    <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="timeEntryId"><default-field><hidden/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="Stop timer" type="default" icon="sym_o_stop"/></default-field></field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Your timer runs on this operation since ${timer?.fromText} (${timer?.elapsedMinutes} min)." type="p" condition="timerHere"/>
+                        <label text="Your timer runs on ${timer?.workEffortName || 'other work'} since ${timer?.fromText}." type="p" condition="timerElsewhere"/>
+                        <label text="No timer of yours is running." type="p" style="m-muted" condition="!timer"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Machine runtime"/>
+                    <box-body>
+                        <section name="MachineActions" condition="can.machine">
+                            <widgets>
+                                <form-single name="MachineForm" transition="machineRuntime" map="machineValues">
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                    <field name="runtimeAction"><default-field><hidden/></default-field></field>
+                                    <field name="machineRuntimeEventId"><default-field><hidden/></default-field></field>
+                                    <field name="submit"><default-field title=""><submit text="${detail.openRuntimeId ? 'Stop machine' : 'Start machine'}"
+                                            type="default" icon="sym_o_precision_manufacturing"/></default-field></field>
+                                </form-single>
+                                <container-dialog id="MachineIntervalDialog" type="default" button-text="Record runtime"
+                                        icon="sym_o_more_time" title="Record machine runtime of ${op.operationName}" width="560">
+                                    <form-single name="MachineIntervalForm" transition="machineRuntime" map="intervalValues">
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="operationWorkEffortId"><default-field><hidden/></default-field></field>
+                                        <field name="runtimeAction"><default-field><hidden/></default-field></field>
+                                        <field name="assetId">
+                                            <default-field title="Equipment">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'equipment', facilityId:op.workCenterFacilityId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="runtimeModeEnumId">
+                                            <default-field title="Mode">
+                                                <drop-down allow-empty="false">
+                                                    <option key="MrmRun" text="Run"/>
+                                                    <option key="MrmSetup" text="Set-up"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From"><date-time type="timestamp" required="true"/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through"><date-time type="timestamp" required="true"/></default-field></field>
+                                        <field name="comments"><default-field title="Note"><text-line/></default-field></field>
+                                        <field name="submit"><default-field title=""><submit text="Record runtime"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </widgets>
+                        </section>
+                        <label text="Machine runtime is recorded apart from your time; none yet." type="p" style="m-muted"
+                                condition="!runtimeRows.length"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="MachineRuntimeList" list="runtimeRows" skip-form="true" paginate="false">
+                            <field name="assetName"><default-field title="Equipment"><display/></default-field></field>
+                            <field name="modeText"><default-field title="Mode"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Through"><display/></default-field></field>
+                            <field name="hours"><default-field title="Hours"><display align="right"/></default-field></field>
+                            <field name="valuationText"><default-field title="Cost"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="fromText"/><field-ref name="assetName"/></column>
+                                <column><field-ref name="hours"/><field-ref name="valuationText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <section name="MaterialSection" condition="materialRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Material of this operation"/>
+                            <box-body-nopad>
+                                <form-list name="OperationMaterial" list="materialRows" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Component"><display/></default-field></field>
+                                    <field name="quantity"><default-field title="Quantity"><display align="right"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/></column>
+                                        <column><field-ref name="quantity"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

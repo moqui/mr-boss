@@ -81,8 +81,9 @@ along with this software (see the LICENSE.md file). If not, see
             workEffortName="Services kits" ownerPartyId="ORG_ZIZI_SERVICES" estimatedStartDate="2026-11-11 08:00:00"
             estimatedCompletionDate="2026-11-11 17:00:00"/>
 
-    <!-- P4: Retail's production reason codes (ReasonCodes); no ProductionPolicy row, so every policy value is the built-in
-        default and the demo runs keep Mantle's issue guard -->
+    <!-- P4: Retail's production reason codes (ReasonCodes); no ProductionPolicy row of the organization or plant, so every
+        policy value but line A's shop floor ones (P10, below) is the built-in default and the demo runs keep Mantle's issue
+        guard -->
     <mantle.work.production.ProductionReason organizationPartyId="ORG_ZIZI_RETAIL" reasonCode="SCRAP_DAMAGE"
             fromDate="2026-01-01 00:00:00" reasonName="Damaged in handling" reasonCategoryEnumId="PrcScrap"
             equipmentFault="N" plannedStop="N" approvalThreshold="5" sequenceNum="10" changeReason="Demo reasons"/>
@@ -252,4 +253,14 @@ along with this software (see the LICENSE.md file). If not, see
             disposedQuantity="0" sampleSize="2" inspectionTemplateId="BOSS_MFG_QTMPL" templateAsOfDate="2026-11-02 08:00:00"
             inspectorPartyId="BOSS_MFG_INSPECT" createdDate="2026-11-02 10:00:00" createdByUserId="BOSS_MFG_INSPECT"
             comments="Weld of the first frames"/>
+
+    <!-- P10: line A's shop floor policy (machine runtime recorded when entered, piece rate, and the labor cost of approved
+        production time, F34), dated before the demo runs; and Retail's costing rate of production run time (design Y2: a
+        RateAmount by work type, never a person's own rate) -->
+    <mantle.work.production.ProductionPolicy organizationPartyId="ORG_ZIZI_RETAIL" facilityId="BOSS_MFG_LINE_A"
+            fromDate="2026-01-01 00:00:00" machineRuntimeEnumId="PmrOptional" pieceRate="Y" laborCostSync="Y"
+            changeReason="Demo shop floor"/>
+    <mantle.humanres.rate.RateAmount rateAmountId="BOSS_MFG_RATE_RUN" rateTypeEnumId="RatpStandard"
+            ratePurposeEnumId="RaprProductionCost" workTypeEnumId="WktpProductionRun" rateCurrencyUomId="USD"
+            timePeriodUomId="TF_hr" rateAmount="25" fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

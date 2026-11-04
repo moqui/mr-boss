@@ -1957,3 +1957,114 @@ feature("the schedule and Capacity open for the scheduler with the Move form, th
         other.status != 200 || !other.output.includes("Access spec 1")
     }
 })
+
+// ===== P10: the shop floor and production time =====
+// The operation's verbs check PRODUCTION_OPERATE (an override PRODUCTION_SUPERVISE) and the run's organization themselves, with
+// artifact authorization disabled as a screen's transition inherits it (F53); the Shop floor area opens for the operator and
+// supervisor groups only (BOSS_MFG_SHOP_FLOOR), with authz enabled.
+const p10 = {}
+function p10Fixture() {
+    if (!p10.f) p10.f = lib.shopFloorFixture("Access spec P10")
+    return p10.f
+}
+const p10Key = () => "spec-access-p10-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8)
+feature("the shop floor verbs check their own permission on the same parameters, and another organization reaches none", {
+    when() {
+        const f = p10Fixture()
+        const production = "mantle.work.ProductionServices."
+        const runtime = {
+            operationWorkEffortId: f.assemble,
+            action: "record",
+            fromDate: new Date(Date.now() - 3600000),
+            thruDate: new Date(Date.now() - 1800000)
+        }
+        const override = {operationWorkEffortId: f.assemble, reason: "Certified on the line"}
+        return {
+            readerRuntime: asUser(
+                users.read,
+                () => refusal(production + "record#MachineRuntime", Object.assign({operationKey: p10Key()}, runtime)),
+                false
+            ),
+            operatorRuntime: asUser(
+                users.operate,
+                () => refusal(production + "record#MachineRuntime", Object.assign({operationKey: p10Key()}, runtime)),
+                false
+            ),
+            operatorOverride: asUser(
+                users.operate,
+                () =>
+                    refusal(production + "override#ProductionOperationStart", Object.assign({operationKey: p10Key()}, override)),
+                false
+            ),
+            supervisorOverride: asUser(
+                users.supervise,
+                () =>
+                    refusal(production + "override#ProductionOperationStart", Object.assign({operationKey: p10Key()}, override)),
+                false
+            ),
+            readerStart: asUser(
+                users.read,
+                () => refusal(production + "start#ProductionOperation", {operationKey: p10Key(), operationWorkEffortId: f.test}),
+                false
+            ),
+            readerRead: asUser(
+                users.read,
+                () => refusal(production + "get#ProductionOperation", {operationWorkEffortId: f.assemble}),
+                false
+            ),
+            otherRead: asUser(
+                users.services,
+                () => refusal(production + "get#ProductionOperation", {operationWorkEffortId: f.assemble}),
+                false
+            ),
+            otherTime: asUser(users.services, () => refusal(production + "get#ProductionTime", {workEffortId: f.runId}), false),
+            otherQueue: asUser(users.services, () => invoke(production + "get#ShopFloorQueue", {}), false),
+            otherScan: asUser(
+                users.services,
+                () => invoke("ironstone.manufacturing.ShopFloorServices.resolve#OperationScan", {scanText: f.runId}),
+                false
+            ),
+            readerCheck: asUser(
+                users.read,
+                () => refusal(access + "check#Record", {recordType: "operation", recordId: f.assemble, capability: "operate"}),
+                false
+            )
+        }
+    },
+    then(x) {
+        x.readerRuntime.includes("PERMISSION_DENIED")
+        x.operatorRuntime == ""
+        x.operatorOverride.includes("PERMISSION_DENIED")
+        x.supervisorOverride == ""
+        x.readerStart.includes("PERMISSION_DENIED")
+        x.readerRead == ""
+        x.otherRead.includes("RECORD_UNAVAILABLE")
+        x.otherTime.includes("RECORD_UNAVAILABLE")
+        x.otherQueue.operationRows.every(row => row.workEffortId != p10.f.runId)
+        x.otherScan.matches.length == 0
+        x.readerCheck.includes("PERMISSION_DENIED")
+    }
+})
+feature("the Shop floor opens for the operator and the supervisor and not for a reader, with authz enabled", {
+    when() {
+        const f = p10Fixture()
+        const operation = {operationWorkEffortId: f.test}
+        return {
+            operator: asUser(users.operate, () => lib.page("ShopFloor/OperationExecution", operation, "html")),
+            supervisor: asUser(users.supervise, () => lib.page("ShopFloor/ProductionTime", {workEffortId: f.runId}, "html")),
+            supervisorStation: asUser(users.supervise, () => lib.page("ShopFloor/Station", {}, "tui")),
+            reader: asUser(users.read, () => lib.page("ShopFloor/OperationExecution", operation, "html")),
+            other: asUser(users.services, () => lib.page("ShopFloor/OperationExecution", operation, "html"))
+        }
+    },
+    then({operator, supervisor, supervisorStation, reader, other}) {
+        operator.errors.length == 0
+        operator.output.includes("Start checks")
+        operator.output.includes("Test and pack")
+        supervisor.errors.length == 0
+        supervisor.output.includes("Time entries")
+        supervisorStation.errors.length == 0
+        reader.status != 200 || !reader.output.includes("Start checks")
+        other.status != 200 || !other.output.includes("Start checks")
+    }
+})

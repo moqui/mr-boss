@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Station (design-manufacturing ShopFloor: Station, Queue and Actions; style-guide §3.6 Board; impl-manufacturing P10): the
+    .qvue manager board and operator card (Station.qvue beside this file) over the transitions below. The plant's released,
+    running and held work orders' operations as cards in columns by state (running, ready, paused, blocked), each with its
+    readiness reason, work center and due date, from mantle.work.ProductionServices.get#ShopFloorQueue
+    (ironstone.manufacturing.ShopFloorServices.get#Station); a scan of an operation or a work order selects its card; the card
+    opens OperationExecution, Instructions or starts the operation with the person timer (start#ProductionOperation), a
+    timer running elsewhere switched only after the operator confirms. My work limits the board to the user's assignments. The
+    terminal twin is Station.tui.json: the same board, its cards opening OperationExecution, where every action of the card is a
+    form. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Station" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
+    <parameter name="facilityId"/>
+    <parameter name="mine"/>
+
+    <!-- the board: its groups and cards, the user's timer, the plants and capabilities -->
+    <transition name="queueRows" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.manufacturing.ShopFloorServices.get#Station').requireNewTransaction(true)
+                    .parameters({appRoot: 'Manufacturing', facilityId: facilityId || null, mine: mine === 'true' || mine === true}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                ec.web.sendJsonResponse({failed: true, groups: [], rows: [], messageInfos: [{type: 'danger', message}]}); return }
+            ec.web.sendJsonResponse(out.station || {groups: [], rows: []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a scanned or typed code: the operations it names -->
+    <transition name="scanOperation" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('ironstone.manufacturing.ShopFloorServices.resolve#OperationScan').requireNewTransaction(true)
+                    .parameters({scanText: scanText || ''}).call() || {}
+            const message = ec.message.hasError() ? ec.message.getErrorsString() : null
+            ec.message.clearErrors()
+            ec.web.sendJsonResponse({matches: message ? [] : Array.from(out.matches || []), message})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- Start: the operation with the person timer; a timer elsewhere answers TIMER_SWITCH_REQUIRED until confirmSwitch -->
+    <transition name="startOperation">
+        <actions><script><![CDATA[
+            ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record').requireNewTransaction(true).parameters({appRoot: 'Manufacturing',
+                recordType: 'operation', recordId: operationWorkEffortId || '', capability: 'operate'}).call()
+            let out = {}
+            if (!ec.message.hasError()) out = ec.service.sync().name('mantle.work.ProductionServices.start#ProductionOperation').requireNewTransaction(true)
+                    .parameters({operationKey: operationKey || null, operationWorkEffortId: operationWorkEffortId || '',
+                        confirmSwitch: confirmSwitch === 'true' || confirmSwitch === true}).call() || {}
+            if (ec.message.hasError()) { const message = ec.message.getErrorsString(); ec.message.clearErrors()
+                const match = /([A-Z][A-Z0-9]*(_[A-Z0-9]+)+):/.exec(message)
+                ec.web.sendJsonResponse({failed: true, reasonCode: match ? match[1] : null,
+                    message: message.replace(/^(Error: )*[A-Z][A-Z0-9_]*: /, ''), messageInfos: [{type: 'danger', message}]}); return }
+            const result = out.result || {}
+            ec.web.sendJsonResponse({result, messageInfos: [{type: 'success', message: (result.resultCode === 'JOINED' ? 'Timer started on '
+                : result.resultCode === 'RESUMED' ? 'Resumed ' : 'Started ') + (operationWorkEffortId || '')
+                + (result.switched ? '; your other timer was stopped' : '')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Manufacturing/ShopFloor/Station.qvue" template="false"/>
+            <!-- the terminal twin: the same board from queueRows, a card opening OperationExecution -->
+            <text type="tui" location="component://mr-boss/screen/Manufacturing/ShopFloor/Station.tui.json" template="false"/>
+            <text type="html,qvt"><![CDATA[<p class="m-muted">${ec.l10n.localize('The station opens in the browser app (the qvue render mode).')}</p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>
