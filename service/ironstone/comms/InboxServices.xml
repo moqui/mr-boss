@@ -629,6 +629,15 @@ along with this software (see the LICENSE.md file). If not, see
             mantle.party.CommunicationServices.set#InternalMessageState, set#InternalMessageLabels and close#ListThread; each checks the user's access, and
             a target the user does not reach is "not found". Each target is changed in a transaction of its own: one that is
             refused or fails is named in failedList with why, and the others are changed.
+
+            seen, on a target a client queued offline, is the state the client saw for the fields its action changes
+            ({isRead}, {isFlagged}, {archived}, {snoozedThruDate}, {emailFolderId} (mail), {labelIds}, and latestMessageId, the
+            newest message the client saw, so a read or archive does not take a message that came since): when the server's
+            differs, the target is left as it is and named in failedList with reason conflict and current, the state now,
+            which the client shows (the server's change wins). A thread's state is as the Inbox shows it (a flag's on the
+            message it flags, labels only those the action adds or removes). Mail is checked by
+            EmailClientServices.check#SeenState, an internal message by check#InternalSeenState. close and reopen take no
+            seen. A clientRef makes the request once (org.moqui.comms.InboxServices.run#Operation).
         </description>
         <in-parameters>
             <parameter name="targetList" type="List"/>
@@ -664,6 +673,18 @@ along with this software (see the LICENSE.md file). If not, see
             const COMM = 'mantle.party.CommunicationServices'
             const internalOnly = {spam: 'Spam is for mail', notSpam: 'Spam is for mail', move: 'Internal messages have no folders',
                 deleteForever: 'Internal messages are archived, not deleted'}
+            const labelIds = action === 'labels' ? asList(addLabelIdList).concat(asList(removeLabelIdList)) : null
+            // a target with seen whose state changed on the server since: named as a conflict with the state now, and left as it is.
+            // The check runs in its own transaction, with no error for a target not found (the action then says so)
+            const seenConflict = (checkService, checked, target, key) => {
+                if (!target.seen || typeof target.seen !== 'object') return false
+                const check = ec.service.sync().name(checkService).parameters(Object.assign({seen: target.seen, onlyLabelIds: labelIds}, checked))
+                        .requireNewTransaction(true).call() || {}
+                if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+                if (!check.conflict) return false
+                failedList.push({key: key, message: ec.l10n.localize('Changed on the server'), reason: 'conflict', current: check.current})
+                return true
+            }
             for (const target of targets) {
                 const store = target?.store
                 const key = `${store}:${target?.emailMessageId || target?.communicationEventId || target?.threadId}`
@@ -695,10 +716,13 @@ along with this software (see the LICENSE.md file). If not, see
                             default: throw new Error(ec.l10n.localize('Only mailbox threads are closed'))
                         }
                         name = MAIL + '.' + name
+                        // queued offline: only while the server is as the client saw it; else the server's state wins
+                        if (seenConflict(MAIL + '.check#SeenState', action === 'flag' ? flagOne : one, target, key)) continue
                     } else if (store === 'internal') {
                         if (internalOnly[action]) throw new Error(ec.l10n.localize(internalOnly[action]))
                         const one = target.communicationEventId ? {communicationEventId: target.communicationEventId} : {rootCommEventId: target.threadId}
                         if (!one.communicationEventId && !one.rootCommEventId) throw new Error('no message')
+                        const flagOne = action === 'flag' && !target.communicationEventId && target.lastCommEventId ? {communicationEventId: target.lastCommEventId} : one
                         if (action === 'close' || action === 'reopen') {
                             name = COMM + '.close#ListThread'
                             parameters = {communicationEventId: target.communicationEventId || target.threadId, reopen: action === 'reopen'}
@@ -707,12 +731,12 @@ along with this software (see the LICENSE.md file). If not, see
                             parameters = Object.assign({addLabelIdList: asList(addLabelIdList), removeLabelIdList: asList(removeLabelIdList)}, one)
                         } else {
                             name = COMM + '.set#InternalMessageState'
-                            let flagOne = one
-                            if (action === 'flag' && !target.communicationEventId && target.lastCommEventId) flagOne = {communicationEventId: target.lastCommEventId}
                             const states = {read: {read: true}, unread: {read: false}, flag: {flagged: true}, unflag: {flagged: false}, archive: {archived: true},
                                 unarchive: {archived: false}, trash: {archived: true, read: true}, snooze: {snoozedThruDate: snoozedThruDate}, unsnooze: {unsnooze: true}}
                             parameters = Object.assign({}, states[action], action === 'flag' ? flagOne : one)
                         }
+                        // queued offline, as for mail; a mailbox thread's close and reopen take no seen
+                        if (action !== 'close' && action !== 'reopen' && seenConflict('ironstone.comms.InboxServices.check#InternalSeenState', flagOne, target, key)) continue
                     } else throw new Error(`Unknown store ${store}`)
                     ec.service.sync().name(name).parameters(parameters).requireNewTransaction(true).call()
                     if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
@@ -728,6 +752,116 @@ along with this software (see the LICENSE.md file). If not, see
                 }
             }
         ]]></script></actions>
+    </service>
+
+    <service verb="check" noun="InternalSeenState" allow-remote="false">
+        <description>For an action a client queued on an internal message (set#ThreadState, a target's seen), as
+            EmailClientServices.check#SeenState is for mail: whether a message (communicationEventId) or a thread
+            (rootCommEventId) the user sees is still as the client saw it, for the fields seen names, as the Inbox shows
+            them (mantle.party.CommunicationServices.find#InternalThreads): isRead (every message read), isFlagged (any
+            flagged; for a flag the caller names the message it flags), archived (every message archived), snoozedThruDate
+            (millis or null: the latest snooze still to come of the messages not archived), labelIds (the user's labels of
+            any message, only those in onlyLabelIds when given) and latestMessageId (the newest of the messages checked: the
+            thread's the user sees, or the message). A snooze that has ended is none, on either side.
+            conflict is true when one differs (differentList names them), and current has the state now. Other names in
+            seen are not compared. A message the user does not see answers found false, with no error and no conflict.</description>
+        <in-parameters>
+            <parameter name="communicationEventId"/>
+            <parameter name="rootCommEventId"/>
+            <parameter name="seen" type="Map"/>
+            <parameter name="onlyLabelIds" type="List"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="found" type="Boolean"/>
+            <parameter name="conflict" type="Boolean"/>
+            <parameter name="current" type="Map"/>
+            <parameter name="differentList" type="List"/>
+        </out-parameters>
+        <actions><script><![CDATA[
+            found = false; conflict = false; current = null; differentList = []
+            const DELIVERY = ['MessageTo', 'MessageCc', 'MessageMailbox']
+            const millis = (value) => value == null || value === '' ? null : (typeof value === 'object' && typeof value.getTime === 'function' ? value.getTime() : Number(value))
+            const truth = (value) => value === true || value === 'Y' || value === 'true'
+            const partyId = ec.user.userAccount?.partyId || null
+            if (!partyId || (!communicationEventId && !rootCommEventId)) return
+            let rootId = rootCommEventId
+            if (!rootId) {
+                const event = ec.entity.find('mantle.party.communication.CommunicationEvent').condition('communicationEventId', communicationEventId)
+                        .selectField('communicationEventId').selectField('rootCommEventId').disableAuthz().one()
+                if (event == null) return
+                rootId = event.rootCommEventId || event.communicationEventId
+            }
+            const thread = ec.service.sync().name('mantle.party.CommunicationServices.get#InternalThreadMessages').parameter('rootCommEventIdList', [rootId])
+                    .call()?.threadMap?.[rootId]
+            if (ec.message.hasError()) { ec.message.clearErrors(); return }
+            if (thread == null) return
+            const all = Array.from(thread.messageList || [])
+            const messages = communicationEventId ? all.filter((message) => message.communicationEventId === communicationEventId) : all
+            if (!messages.length) return
+            found = true
+            const delivery = messages.flatMap((message) => message.myRowList.filter((row) => DELIVERY.includes(row.roleTypeId)))
+            const isPublic = messages.some((message) => message.publicState)
+            const nowMillis = millis(ec.user.nowTimestamp)
+            const snoozes = delivery.filter((row) => row.archivedDate == null).map((row) => millis(row.snoozedThruDate))
+                    .filter((value) => value != null && value > nowMillis)
+            const ids = messages.map((message) => message.communicationEventId)
+            const labels = new Set(Array.from(ec.entity.find('mantle.party.communication.CommunicationEventPartyLabel').condition('communicationEventId', 'in', ids)
+                    .condition('partyId', partyId).selectField('emailLabelId').disableAuthz().list()).map((row) => row.emailLabelId))
+            current = {
+                isRead: !messages.some((message) => message.publicState ? message.publicState.isUnread
+                    : message.myRowList.some((row) => DELIVERY.includes(row.roleTypeId) && row.readDate == null)),
+                isFlagged: messages.some((message) => message.myRowList.some((row) => row.isFlagged === 'Y')),
+                archived: isPublic ? messages.filter((message) => message.publicState).every((message) => !!message.publicState.archivedAt)
+                    : delivery.length > 0 && delivery.every((row) => row.archivedDate != null),
+                snoozedThruDate: snoozes.length ? Math.max(...snoozes) : null,
+                labelIds: Array.from(labels).sort(),
+                latestMessageId: messages[messages.length - 1].communicationEventId,
+                messageCount: messages.length}
+            const wanted = seen || {}
+            const only = onlyLabelIds && Array.from(onlyLabelIds).length ? new Set(Array.from(onlyLabelIds).map(String)) : null
+            const labelView = (list) => JSON.stringify(Array.from(list || []).map(String).filter((id) => !only || only.has(id)).sort())
+            // a snooze that has run out is no snooze, as the Inbox shows it: one the client saw that has ended since is not a change
+            const snoozeOf = (value) => value == null || value === '' || Number(value) <= nowMillis ? null : Number(value)
+            const differs = {
+                isRead: () => truth(wanted.isRead) !== current.isRead,
+                isFlagged: () => truth(wanted.isFlagged) !== current.isFlagged,
+                archived: () => truth(wanted.archived) !== current.archived,
+                snoozedThruDate: () => snoozeOf(wanted.snoozedThruDate) !== current.snoozedThruDate,
+                labelIds: () => labelView(wanted.labelIds) !== labelView(current.labelIds),
+                latestMessageId: () => wanted.latestMessageId != null && String(wanted.latestMessageId) !== String(current.latestMessageId)
+            }
+            for (const name of Object.keys(wanted)) if (differs[name] && differs[name]()) differentList.push(name)
+            conflict = differentList.length > 0
+        ]]></script></actions>
+    </service>
+
+    <service verb="get" noun="MailChanges">
+        <description>
+            The Inbox's change cursor for a client that keeps the user's messages offline (plans/Mobile-Desktop.md MD5): the
+            changes of the user's mail threads after afterSeq, as org.moqui.impl.EmailClientServices.get#MailChanges answers
+            them ({changes, lastSeq, more, reset}). Internal messages and mailbox posts (CommunicationEvent) have no change
+            log yet, so uncoveredStores names them (internal): the client reads its internal threads again each time and
+            takes the mail's changes from the cursor.
+        </description>
+        <in-parameters>
+            <parameter name="afterSeq" type="Long"/>
+            <parameter name="limit" type="Integer" default="200"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="changes" type="List"/>
+            <parameter name="lastSeq" type="Long"/>
+            <parameter name="more" type="Boolean"/>
+            <parameter name="reset" type="Boolean"/>
+            <parameter name="uncoveredStores" type="List"><description>The stores whose changes are not in changes: internal</description></parameter>
+        </out-parameters>
+        <actions>
+            <service-call name="org.moqui.impl.EmailClientServices.get#MailChanges" in-map="{afterSeq: afterSeq, limit: limit}" out-map="mail"/>
+            <set field="changes" from="mail.changes"/>
+            <set field="lastSeq" from="mail.lastSeq"/>
+            <set field="more" from="mail.more"/>
+            <set field="reset" from="mail.reset"/>
+            <set field="uncoveredStores" from="['internal']"/>
+        </actions>
     </service>
 
     <service verb="apply" noun="ViewAction">
@@ -1022,7 +1156,10 @@ along with this software (see the LICENSE.md file). If not, see
             service of that name (this file, ComposeServices, CommsHomeServices), over the mail and its internal messages and
             mailboxes together, so its Inbox is one list. Only the operations named here are answered (handled false for any
             other). Links to Commons are added: an invitation's event (eventUrl). operation accounts answers the user's Internal
-            account, for the account lists of the mail settings.</description>
+            account, for the account lists of the mail settings. operation features answers what IronStone's answers support
+            beyond the framework's, for a client that works offline: internalSendRef (send#Compose of an internal message is
+            made once by its clientRef, so a client may queue it) and mailChangesUncovered (get#MailChanges answers the mail
+            alone, its uncoveredStores).</description>
         <out-parameters>
             <parameter name="handled" type="Boolean"/>
             <parameter name="result" type="Map"/>
@@ -1041,6 +1178,11 @@ along with this software (see the LICENSE.md file). If not, see
                 handled = true
                 return
             }
+            if (operation === 'features') {
+                result = {internalSendRef: true, mailChangesUncovered: ['internal']}
+                handled = true
+                return
+            }
             const INBOX = 'ironstone.comms.InboxServices.', COMPOSE = 'ironstone.comms.ComposeServices.', HOME = 'ironstone.comms.CommsHomeServices.'
             const SERVICES = {
                 'get#InboxData': INBOX, 'find#InboxRows': INBOX, 'get#ThreadView': INBOX, 'get#MessageAttachment': INBOX, 'set#ThreadState': INBOX,
@@ -1049,7 +1191,7 @@ along with this software (see the LICENSE.md file). If not, see
                 'get#MailboxHeader': INBOX, 'save#MessageFiles': INBOX,
                 'get#ComposeData': COMPOSE, 'search#Recipients': COMPOSE, 'send#Compose': COMPOSE, 'cancel#ComposeSend': COMPOSE,
                 'save#ComposeDraft': COMPOSE, 'attach#DriveFiles': COMPOSE, 'remove#ComposeAttachment': COMPOSE, 'discard#ComposeDraft': COMPOSE,
-                'get#CommsHome': HOME
+                'get#CommsHome': HOME, 'get#MailChanges': INBOX
             }
             if (!SERVICES[operation]) return
             const out = ec.service.sync().name(SERVICES[operation] + operation).parameters(parameters || {}).call()
