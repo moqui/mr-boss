@@ -81,6 +81,7 @@ spec({
                 statusId: "WeApproved",
                 workEffortName: "Spec assembly step",
                 ownerPartyId: "ORG_ZIZI_RETAIL",
+                actualCost: 12,
                 estimatedCompletionDate: ec.user.nowTimestamp
             })
             store("mantle.work.effort.WorkEffort", {
@@ -382,9 +383,22 @@ feature("a run's operation is no task: Commons refuses its changes and Projects 
                     need: "check",
                     app: "projects"
                 })
+                // the Commons list and TaskDetail rows offer no change of the operation, and the task row of their own does
+                const taskRows = invoke("ironstone.commons.TaskServices.decorate#TaskRows", {
+                    taskList: system(() =>
+                        Array.from(
+                            ec.entity
+                                .find("mantle.work.effort.WorkEffort")
+                                .condition("workEffortId", "in", [fixture.operationId, fixture.taskId])
+                                .list()
+                        ).map(row => row.getMap())
+                    )
+                }).rowList
+                const rowUpdate = Object.fromEntries(Array.from(taskRows).map(row => [row.workEffortId, row.canUpdate]))
                 return {
                     commons,
                     projects,
+                    rowUpdate,
                     ownTask: refusal("ironstone.commons.CommonsServices.check#TaskUpdate", {workEffortId: fixture.taskId}),
                     todayCheck: refusal("ironstone.commons.CommonsServices.check#TaskUpdate", {
                         workEffortId: fixture.operationId
@@ -411,11 +425,15 @@ feature("a run's operation is no task: Commons refuses its changes and Projects 
             false
         )
     },
-    then({commons, projects, ownTask, todayCheck, markDone, update, workItem, status}) {
+    then({commons, projects, rowUpdate, ownTask, todayCheck, markDone, update, workItem, status}) {
         // the same user changes a task of their own, so the refusals are for the operation
         ownTask == ""
         commons.found == true
         commons.canUpdate == false
+        // no cost of the operation (the task roll-up's, F36)
+        commons.workEffort.actualCost == null
+        rowUpdate[fixture.operationId] == false
+        rowUpdate[fixture.taskId] == true
         projects.found == false
         todayCheck.includes("production work")
         markDone.includes("production work")

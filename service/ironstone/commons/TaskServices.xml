@@ -128,6 +128,8 @@ along with this software (see the LICENSE.md file). If not, see
             }
             if (production) {
                 canUpdate = false
+                // and no cost of it: the task roll-up writes the operation's cost at pay rates (F36)
+                for (const field of ['actualCost', 'actualClientCost', 'totalClientCostAllowed', 'costUomId']) delete workEffort[field]
                 if (need === 'update') ec.message.addError(ec.resource.expand('Operation ${workEffortId} is production work: record it on the shop floor in Manufacturing', '', {workEffortId: workEffortId}))
                 return
             }
@@ -403,6 +405,10 @@ along with this software (see the LICENSE.md file). If not, see
             const projects = {}
             if (projectIds.length) for (const project of ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', projectIds).list())
                 projects[project.workEffortId] = project.workEffortName || project.workEffortId
+            // the production runs among the roots and parents: a run's operation is no task to change (impl-manufacturing F38)
+            const aboveIds = Array.from(new Set(projectIds.concat(tasks.map((task) => task.parentWorkEffortId).filter((id) => id))))
+            const productionRunIds = new Set(aboveIds.length ? Array.from(ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', 'in', aboveIds)
+                    .condition('purposeEnumId', 'WepProductionRun').selectField('workEffortId').disableAuthz().list()).map((run) => run.workEffortId) : [])
             // the assignees
             const assignees = {}
             const assigneeParties = new Set()
@@ -450,7 +456,9 @@ along with this software (see the LICENSE.md file). If not, see
                 const entry = mine[id] || {roles: [], snoozedThru: null, follower: false}
                 const roles = Array.from(entry.roles || [])
                 const isOwner = !!partyId && task.ownerPartyId === partyId
-                const canUpdate = isOwner || roles.includes('Assignee')
+                const production = task.purposeEnumId === 'WepProductionRun' || productionRunIds.has(task.rootWorkEffortId)
+                        || productionRunIds.has(task.parentWorkEffortId)
+                const canUpdate = !production && (isOwner || roles.includes('Assignee'))
                 const isDone = ['WeComplete', 'WeClosed'].includes(task.statusId)
                 const isOpen = !isDone && task.statusId !== 'WeCancelled'
                 const due = toMillis(task.estimatedCompletionDate) ?? toMillis(task.estimatedStartDate)

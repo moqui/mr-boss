@@ -350,6 +350,26 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
     It now opens Manufacturing, else Warehouse's MaterialIssueReceipt, else nothing.
   - **F-P1-5** A Projects team user (joe.developer) has no authorization for `get#RecordLink`; no artifact group grants
     it to the Projects groups. Not changed here.
+- **Review (Nov 3).** Checked: the grants match the Access list (PRODUCTION_VIEW to the eleven groups but `_DISPLAY`,
+  METHOD_VIEW to the seven new ones but `_DISPLAY`, the admin every production and quality permission);
+  `FACILITY_ALL_ORGANIZATIONS` for the admin is §4's "the admin group works in every plant" carried into Mantle's facility
+  and stock scope, as `BOSS_WAREHOUSE_ADMIN` (impl-warehouse F84), and gives no stock action without Warehouse's
+  `STOCK_ISSUE`. The area groups only deny the root user group and let the capability groups back in with the root's
+  filter sets; `rootGrants` reads only root screen rows, so they widen nothing. `recordOf` checks every owner and facility a
+  kind names (methods and routings have no facility; an asset is checked by its facility only, stricter than Mantle's
+  StockScope). The plant preference is re-checked on every read. Fixes:
+  - **R1** (medium) F38: `decorate#TaskRows` still gave an assigned operation `canUpdate` true, so the Commons task list,
+    Today's rows and TaskDetail's row offered Mark done, due and priority that the services then refused. It now sets it
+    false for a WetTask under a WepProductionRun (the run lookup is authz-free for the purpose only; project names keep
+    their authz).
+  - **R2** (low) F36: Commons `get#TaskAccess` returned the operation's `actualCost` and client cost (the task roll-up's
+    pay-rate cost) to anyone who sees it; the production branch now drops them. ManufacturingAccess's F38 feature checks
+    both.
+  - F-P1-3 also covers Commons' `clockIn#Task` and `add#TimeOnTask`, which check `get#TaskAccess` need update. Timesheet
+    views and approval do not check the item, so production time logged elsewhere still shows and is approved in Projects.
+  - Specs: ManufacturingAccess, ManufacturingShell, Tasks, TodayPanel, Requests, WorkItems, WorkItemDetail, TimeEntries,
+    EventDetail, AppStructure, WarehouseAccess (BOSS, 294 features), ManufacturingServices, WarehouseProduction,
+    ProductMethods (Mantle, 26), all pass.
 
 ### P2 — Methods
 
