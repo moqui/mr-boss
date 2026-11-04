@@ -801,7 +801,7 @@ materials and stock.
     gate, then P16a's `release#ProductionOrder`: `check#ProductUsable` (Produce), the method valid as of the method date
     (`get#BomExplosion` findings, METHOD_INVALID), a later release of its methods (METHOD_CHANGED with `reexplodeOffered`;
     `reexplode` answers REEXPLODED, a draft at the next revision to review), and the shortage policy in effect at the
-    release time (ProductionPolicy `effective`, F-P4-4): every material line covered by the run owner's free stock at the
+    release time (ProductionPolicy `effective`, F61): every material line covered by the run owner's free stock at the
     run's facility and, for a line, its plant (F16), else SHORTAGE unless a supervisor approved a staged release at this
     revision (PsrAllUsable) or the policy is PsrStaged. A staged release stamps each short line's `stagedShortQuantity`;
     `issue#ProductionMaterial` (Production.js `issuePlan`, a local edit) refuses that line (LINE_STAGED_SHORT) until the
@@ -840,7 +840,7 @@ materials and stock.
   runEquipment, runPeople, holdReasons (`get#Choices` takes `productId`). BossSetupData: `BOSS_MFG_NEW_WORK_ORDER`
   (NewWorkOrder and QuickCreate for PLAN and ADMIN) and the two topics' links; the root's quick create and topics;
   Approvals lists ProductionStagedRelease.
-- P6's F-P6-6 done: ProductionCosts is WorkOrderDetail's Costs tab (the root's item, Manufacturing.js's P6 link path and
+- P6's F74 done: ProductionCosts is WorkOrderDetail's Costs tab (the root's item, Manufacturing.js's P6 link path and
   ManufacturingSpecLib's `moved` removed, its title row dropped and its review dialog no longer a second primary), and
   ManufacturingCostsWalk and ManufacturingAccess's P6 pages open the tab.
 - Specs: Mantle `test/work/ProductionOrders.spec.js` (11 features, about 5 s: the release with its retry and the policy
@@ -871,26 +871,26 @@ materials and stock.
   - OrderDetail's supplying work orders show in every context to a PRODUCTION_VIEW holder (§4's decision), before P14's
     Manufacturing mount.
 - Deferred: Home's counts and queue (P16), Reschedule (P12), the start checks (P10, P8), Components, materials, stock
-  and the shortage notice (P5b); a copy of the policy on the run (F-P4-4 holds: no service back-dates a row).
+  and the shortage notice (P5b); a copy of the policy on the run (F61 holds: no service back-dates a row).
 - Findings (provisional):
-  - **F-P5a-1** A section-include of a template section that itself section-includes another section of the same template
+  - **F62** A section-include of a template section that itself section-includes another section of the same template
     fails ("screen includes are nested too deeply"); WorkOrderDetail includes LifecycleActionRow directly.
-  - **F-P5a-2** A tab's content is not in a qvt render with `lastStandalone: -2` (the tab loads apart), so the tab routes'
+  - **F63** A tab's content is not in a qvt render with `lastStandalone: -2` (the tab loads apart), so the tab routes'
     texts are the header's, as FacilityDetail's are; the specs render a tab with `lastStandalone: "true"`.
-  - **F-P5a-3** Product360 under Manufacturing failed for the Manufacturing groups ("Catalog read access is required"):
+  - **F64** Product360 under Manufacturing failed for the Manufacturing groups ("Catalog read access is required"):
     Products' services need PRODUCT_CATALOG_VIEW, which no Manufacturing group held. Fixed in the review (below).
-  - **F-P5a-4** `get#AvailableInventory` and `get#BomExplosion`'s buildable quantity read one facility; P5a passes the
+  - **F65** `get#AvailableInventory` and `get#BomExplosion`'s buildable quantity read one facility; P5a passes the
     plant for a line's run (stockFacilityIds). P13 nets by line and plant on its own.
-  - **F-P5a-5** StockPosting's `reasonOf` reads only codes with an underscore, so a batch row refused SHORTAGE read FAILED;
+  - **F66** StockPosting's `reasonOf` reads only codes with an underscore, so a batch row refused SHORTAGE read FAILED;
     batch#ProductionAction reads the code itself.
-  - **F-P5a-6** For the merge: Production.js gained two exports and a staged-short check in `issuePlan` (P5b, P7 and P9
+  - **F67** For the merge: Production.js gained two exports and a staged-short check in `issuePlan` (P5b, P7 and P9
     edit it too); BossSetupData's new artifact group sits before the record-link group.
-  - **F-P5a-7** Warehouse's BOSS_WH_RUN is still WetTask (F43); left, since the guards key on the purpose.
+  - **F68** Warehouse's BOSS_WH_RUN is still WetTask (F43); left, since the guards key on the purpose.
 - **Review Nov 3 (P5a).** Checked against the phase scope, §2 and design §1.1, §3; the ten verbs' permissions, operation keys and
   revisions, the release gate, the staged block, batch results and the screens' record checks hold. Fixed:
   - (medium) cancel took a run held after its start (no fact yet), against the decision "has not started": now RUN_STARTED
     (blocked in a batch); ProductionOrders' hold feature covers it.
-  - (medium, F-P5a-3) BossSetupData grants PRODUCT_CATALOG_VIEW to every Manufacturing group that reads methods (not the plant
+  - (medium, F64) BossSetupData grants PRODUCT_CATALOG_VIEW to every Manufacturing group that reads methods (not the plant
     display), as Warehouse's groups hold it; ManufacturingWorkOrders opens Product360 as the production reader.
   - (low) a staged short line was not visible: get#ProductionOrder's material lines carry `stagedShort` and Overview's lines
     show it; Overview's storeHeader, storeEquipment and storeParty refuse a run the record check did not find, as
@@ -986,23 +986,23 @@ steps 19 and 20).
   - A review needs a released, started, held or completed run with at least one event; a second request at the same revision
     is refused until Accounting decides (P15) or the revision changes (P9).
 - Findings (provisional):
-  - **F-P6-1** ProductionCostReview has no BOSS `linkTemplate` and no `<notification-topic>` in a root: its readers are
+  - **F69** ProductionCostReview has no BOSS `linkTemplate` and no `<notification-topic>` in a root: its readers are
     Accounting's posters, who need not open Manufacturing. P15 sets the link to `Accounting/Inventory/ProductionCostClose`, lists
     the topic in Accounting's shell, and adds the review decisions (returned, closed) to the ProductionCostReview status type.
-  - **F-P6-2** An issue of material without a cost is not refused (the plan names only output and return receipts): it posts
+  - **F70** An issue of material without a cost is not refused (the plan names only output and return receipts): it posts
     nothing (AtrNoAcquireCost) and its event is unvalued and not posted. P15's close should refuse a run with one, as it does
     unvalued machine runtime.
-  - **F-P6-3** receive#ProductionOutput always has a cost (the frozen standard, else the WIP to date, COST_UNAVAILABLE without),
+  - **F71** receive#ProductionOutput always has a cost (the frozen standard, else the WIP to date, COST_UNAVAILABLE without),
     so the F13 output refusal is the event writer's backstop for another path; the return is refused before it posts.
-  - **F-P6-4** An output receipt that costLines splits (the last unit at the remainder) is two AssetReceipts with two
+  - **F72** An output receipt that costLines splits (the last unit at the remainder) is two AssetReceipts with two
     transactions, so it writes two events.
-  - **F-P6-5** Movements made before P6 (Warehouse's demo, earlier runs) have no events. Since an event derives from its source
+  - **F73** Movements made before P6 (Warehouse's demo, earlier runs) have no events. Since an event derives from its source
     alone, a backfill could call record#ProductionCostEvent per movement; not built.
-  - **F-P6-6** For the merge with P5a: ProductionCosts sits in `WorkOrders/WorkOrderDetail/`, so WorkOrderDetail's directory
+  - **F74** For the merge with P5a: ProductionCosts sits in `WorkOrders/WorkOrderDetail/`, so WorkOrderDetail's directory
     mounts it as its Costs tab (`default-menu-index="6"`). Then remove the root's `ProductionCosts` item, Manufacturing.js's P6
     link path and ManufacturingSpecLib's `moved`, move the route fixture to `WorkOrders/WorkOrderDetail/ProductionCosts`, drop
     the page's own title row for WorkOrderDetail's header, and point ManufacturingCostsWalk at the tab.
-  - **F-P6-7** ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run
+  - **F75** ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run
     alone it sees no costs and checks the empty state instead of the review request.
 
 - **Review (Nov 3).** Checked: each guard's operation-key replay returns before the hook, so a retry writes no event;
@@ -1011,7 +1011,7 @@ steps 19 and 20).
   permission, organization, operation key and revision; the recipients (F40). Decided: the estimate's readers are Products'
   cost read (CostPolicy: `PRODUCT_COST_VIEW`, `_ESTIMATE`, `_APPROVE`, `ACCOUNTING_VIEW`, `ACCOUNTING_GL_POST`), as
   ProductStandardCost's owner reads it; BOSS's Accounting readers hold `PRODUCT_COST_VIEW` as well, so §2 holds there. An issue of
-  material without a cost stays unvalued and not posted (F-P6-2): the plan refuses only receipts, §2 lets an existing service gain
+  material without a cost stays unvalued and not posted (F70): the plan refuses only receipts, §2 lets an existing service gain
   a refusal only behind a flag, and §4 records unvalued facts for P15 to refuse. Fixed: the estimate left out overhead, so its
   components did not add to its total; it now lists `PrcOverhead` (seeded, estimate only) and leaves it out of the comparison;
   the estimate's read widened to CostPolicy's set; the spec checks another organization's poster gets no notice. Left: a zero
@@ -1292,7 +1292,7 @@ and service names, and `Shared/SupplyPlanning`, which Purchasing mounts when it 
   maps to SupplyPlanning; `usl-inventory.md` gained the five services.
 - Decisions:
   - Netting reads the sources `get#InventoryProjectedInfo` sums from the entities, in the run's transaction, rather than
-    calling it (F-P13-1); the formula is the same (available − open demand not reserved − remaining consumption +
+    calling it (F76); the formula is the same (available − open demand not reserved − remaining consumption +
     remaining output), plus open purchase lines and the minimum stock.
   - One requirement per facility and product while it is only proposed: a later run reuses it, so a requirement's
     identity (and its RequirementOrderItem lines) survives recalculation; one no longer needed is rejected, never deleted.
@@ -1305,29 +1305,29 @@ and service names, and `Shared/SupplyPlanning`, which Purchasing mounts when it 
   - F27: Product360's Replenishment suggestions are not P13's. That tab is the Warehouse context; it reads
     `get#SupplyPlan` with `productId` when Warehouse mounts SupplyPlanning (§7).
 - Findings (provisional):
-  - **F-P13-1** `get#InventoryProjectedInfo` reads the search index (available in specs on the Postgres search backend, but
+  - **F76** `get#InventoryProjectedInfo` reads the search index (available in specs on the Postgres search backend, but
     filled by the data feed after commit, so a spec must index by hand). It is not called: the index lags the commit, so
     a run just converted would be suggested again; its run documents carry no purpose, so kit assemblies cannot be told
     apart; it files a run under its facility's parent, so a run on the warehouse itself is missed; it counts every sales
     line not completed, quotes and carts too, and no purchase supply. Design §7 SupplyPlanning and crosscut §3.20 now
     say netting reads those sources directly.
-  - **F-P13-2** `create#ProductionOrder` takes `planningSuggestionId` but stores only `demandRequirementId` (and the
+  - **F77** `create#ProductionOrder` takes `planningSuggestionId` but stores only `demandRequirementId` (and the
     order line); the suggestion's run is RequirementSupply's `workEffortId`, with its `planningSuggestionId`.
-  - **F-P13-3** `create#ProductionOrder`'s operation key is scoped per user (StockPosting `storedKey`), so it cannot keep
+  - **F78** `create#ProductionOrder`'s operation key is scoped per user (StockPosting `storedKey`), so it cannot keep
     two users from covering one demand; the requirement's lock and covered quantity do.
-  - **F-P13-4** No supplier lead time exists to date a buy suggestion; its release date is its required date until
+  - **F79** No supplier lead time exists to date a buy suggestion; its release date is its required date until
     Purchasing adds supplier lead times (impl-purchasing).
-  - **F-P13-5** A kit assembled for an open order has issued its components (stock is lower) while its order is still
+  - **F80** A kit assembled for an open order has issued its components (stock is lower) while its order is still
     demand, so the components count twice until the order ships; kit assemblies are made at packing, so the window is
     short. Left.
-  - **F-P13-6** In a form-list row, a link to `.` carries the row's field of the same name as a screen parameter
+  - **F81** In a form-list row, a link to `.` carries the row's field of the same name as a screen parameter
     (`methodEnumId`), which made Explain filter the list to the row's method; the link passes the filter values
     explicitly (an empty value clears).
-  - **F-P13-7** The routing lead time (PltRouting) is the standard hours as days of 24 hours, rounded up, until P12
+  - **F82** The routing lead time (PltRouting) is the standard hours as days of 24 hours, rounded up, until P12
     brings the work calendar; the time fence only warns (INSIDE_TIME_FENCE).
-  - **F-P13-8** `ManufacturingPlanningFixtures` runs in the whole mr-boss suite as Warehouse's fixtures do, adding a
+  - **F83** `ManufacturingPlanningFixtures` runs in the whole mr-boss suite as Warehouse's fixtures do, adding a
     Retail sales order of its own product at ZIRET_WH (a new order id per load, since the walks' database outlives a
-    run, F-P4-3).
+    run, F60).
 - **Review (Nov 3).** Fixed (mr-mantle `Manufacturing P13 review` commit, BOSS screen in this one):
   - (high) A sales line's reservation was subtracted less its unavailable part, which reserve#AssetForOrderItem already
     leaves as a negative available to promise, so a backordered quantity counted twice (10 ordered on 6 in stock planned
@@ -1569,6 +1569,28 @@ is written there too.
 | F59 | P4: F38's optional Mantle refusal in `update#Task` and `set#TaskStatus` behind a ProductionPolicy flag is not built. | P4 Built note |
 | F60 | P4: The walks' database outlives a `test-client --serve` run, so a walk that adds a record by a fixed code fails on its second run. | P4 Built note |
 | F61 | P4: no policy row can start before now, so a run keeps its release-time policy without a copy on the run | P5 reads `get#ProductionPolicy` with the run; P4 Built note |
+| F62 | P5a: A section-include of a template section that itself section-includes another section of the same template fails ("screen includes are nested too deeply"); WorkOrderDetail includes LifecycleActionRow directly. | P5a Built note |
+| F63 | P5a: A tab's content is not in a qvt render with `lastStandalone: -2` (the tab loads apart), so the tab routes' texts are the header's, as FacilityDetail's are; the specs render a tab with `lastStandalone: "true"`. | P5a Built note |
+| F64 | P5a: Product360 under Manufacturing failed for the Manufacturing groups ("Catalog read access is required"): Products' services need PRODUCT_CATALOG_VIEW, which no Manufacturing group held. | P5a Built note |
+| F65 | P5a: `get#AvailableInventory` and `get#BomExplosion`'s buildable quantity read one facility; P5a passes the plant for a line's run (stockFacilityIds). | P5a Built note |
+| F66 | P5a: StockPosting's `reasonOf` reads only codes with an underscore, so a batch row refused SHORTAGE read FAILED; batch#ProductionAction reads the code itself. | P5a Built note |
+| F67 | P5a: For the merge: Production.js gained two exports and a staged-short check in `issuePlan` (P5b, P7 and P9 edit it too); BossSetupData's new artifact group sits before the record-link group. | P5a Built note |
+| F68 | P5a: Warehouse's BOSS_WH_RUN is still WetTask (F43); left, since the guards key on the purpose. | P5a Built note |
+| F69 | P6: ProductionCostReview has no BOSS `linkTemplate` and no `<notification-topic>` in a root: its readers are Accounting's posters, who need not open Manufacturing. | P6 Built note |
+| F70 | P6: An issue of material without a cost is not refused (the plan names only output and return receipts): it posts nothing (AtrNoAcquireCost) and its event is unvalued and not posted. | P6 Built note |
+| F71 | P6: receive#ProductionOutput always has a cost (the frozen standard, else the WIP to date, COST_UNAVAILABLE without), so the F13 output refusal is the event writer's backstop for another path; the return is refused before it posts. | P6 Built note |
+| F72 | P6: An output receipt that costLines splits (the last unit at the remainder) is two AssetReceipts with two transactions, so it writes two events. | P6 Built note |
+| F73 | P6: Movements made before P6 (Warehouse's demo, earlier runs) have no events. | P6 Built note |
+| F74 | P6: For the merge with P5a: ProductionCosts sits in `WorkOrders/WorkOrderDetail/`, so WorkOrderDetail's directory mounts it as its Costs tab (`default-menu-index="6"`). | P6 Built note |
+| F75 | P6: ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run alone it sees no costs and checks the empty state instead of the review request. | P6 Built note |
+| F76 | P13: `get#InventoryProjectedInfo` reads the search index (available in specs on the Postgres search backend, but filled by the data feed after commit, so a spec must index by hand). | P13 Built note |
+| F77 | P13: `create#ProductionOrder` takes `planningSuggestionId` but stores only `demandRequirementId` (and the order line); the suggestion's run is RequirementSupply's `workEffortId`, with its `planningSuggestionId`. | P13 Built note |
+| F78 | P13: `create#ProductionOrder`'s operation key is scoped per user (StockPosting `storedKey`), so it cannot keep two users from covering one demand; the requirement's lock and covered quantity do. | P13 Built note |
+| F79 | P13: No supplier lead time exists to date a buy suggestion; its release date is its required date until Purchasing adds supplier lead times (impl-purchasing). | P13 Built note |
+| F80 | P13: A kit assembled for an open order has issued its components (stock is lower) while its order is still demand, so the components count twice until the order ships; kit assemblies are made at packing, so the window is short. | P13 Built note |
+| F81 | P13: In a form-list row, a link to `.` carries the row's field of the same name as a screen parameter (`methodEnumId`), which made Explain filter the list to the row's method; the link passes the filter values explicitly (an empty value clears). | P13 Built note |
+| F82 | P13: The routing lead time (PltRouting) is the standard hours as days of 24 hours, rounded up, until P12 brings the work calendar; the time fence only warns (INSIDE_TIME_FENCE). | P13 Built note |
+| F83 | P13: `ManufacturingPlanningFixtures` runs in the whole mr-boss suite as Warehouse's fixtures do, adding a Retail sales order of its own product at ZIRET_WH (a new order id per load, since the walks' database outlives a run, F60). | P13 Built note |
 
 ## 7. Later
 
