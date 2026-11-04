@@ -115,8 +115,8 @@ Run from mr-moqui: `./moq test mr-mantle --spec <name>` and `./moq test mr-boss 
   `test/product/ProductMethods`, `SupplyPlanning`; `test/ledger/ProductionCostClose`.
 - BOSS regression: `test/Manufacturing/*.spec.js` (one per area; `ManufacturingAccess`, the app's one access spec),
   and the golden-path client walk `test/client/Manufacturing/ManufacturingWorkOrdersWalk.spec.js`.
-- BOSS acceptance (`acceptance/Manufacturing/`, `acceptance/client/Manufacturing/`): the standalone walks
-  `ManufacturingAccessWalk`, `ManufacturingIsolationWalk` and `ManufacturingCostIsolationWalk`
+- BOSS acceptance (`acceptance/Manufacturing/`, `acceptance/client/Manufacturing/`): the standalone walk
+  `ManufacturingAccessWalk` (access, isolation and cost isolation)
   (`ManufacturingStandaloneLib.js`: an organization of its own plans, makes and receives with users of one capability;
   the other organization's users are refused its records and actions by URL, transition, service, export, print,
   palette, scan, search, notice and the other apps' shared contexts, and no cost shows without financial read),

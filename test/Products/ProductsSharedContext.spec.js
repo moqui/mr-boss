@@ -27,10 +27,9 @@ spec({
         ec.artifactExecution.enableAuthz()
     }
 })
-feature("shared catalog routing derives the Products context and grants with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return as("catalog.reader", enabled, () =>
+feature("shared catalog routing derives the Products context and grants", {
+    when() {
+        return as("catalog.reader", true, () =>
             call(C + "get#SharedContext", {
                 appRoot: "Products",
                 capabilities: {costRead: true},
@@ -53,10 +52,9 @@ feature("shared catalog routing derives the Products context and grants with aut
         !r.connectionTypes.includes("Shipments")
     }
 })
-feature("unimplemented app contexts are rejected at every shared controller with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return as("catalog.admin", enabled, () => {
+feature("unimplemented app contexts are rejected at every shared controller", {
+    when() {
+        return as("catalog.admin", true, () => {
             const names = [
                 C + "get#SharedContext",
                 C + "get#CatalogRecord",

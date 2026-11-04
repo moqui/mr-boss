@@ -1,64 +1,73 @@
-const native = (service, p = {}) =>
-    ec.service
-        .sync()
-        .name("mantle.ledger." + service)
-        .parameters(p)
-        .call() || {}
-function asFinance(user, enabled, run) {
-    return ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").asUser(user, run, enabled)
-}
-feature("Treasury can read the scoped settlement workbench without gaining AR editing with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return asFinance("finance.treasury", enabled, () => {
-            const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-            const parameters = {
-                organizationPartyId: helper.ids.organizationPartyId,
-                partyId: helper.ids.settlementPartyId,
-                currencyUomId: "USD"
-            }
-            const items = helper.call("mantle.account.PaymentServices.find#OpenItems", {...parameters, direction: "receivable"})
-            const source = items.paymentRows.find(row => row.sourceId === "BOSS_ACCT_STL_RECEIPT60")
-            const target = items.invoiceRows.find(row => row.sourceId === "BOSS_ACCT_STL_INV100")
-            assert(source && target, "Treasury's negative needs the same real settlement that AR may preview")
-            const preview = {
-                ...parameters,
-                direction: "receivable",
-                effectiveDate: ec.user.nowTimestamp,
-                allocations: [{sourceKey: source.sourceKey, targetKey: target.sourceKey, amount: "1"}],
-                sourceVersions: {[source.sourceKey]: source.version, [target.sourceKey]: target.version}
-            }
-            return {
-                page: helper.page("Receivables/ReceivablesWorkbench", parameters, "qvt"),
-                items,
-                edit: refusal("mantle.account.PaymentServices.preview#Settlement", preview),
-                arEdit: helper.asUser(
-                    "finance.ar",
-                    () => refusal("mantle.account.PaymentServices.preview#Settlement", preview),
-                    enabled
-                ),
-                invoice: refusal("mantle.account.InvoiceServices.get#InvoiceFinanceDetail", {
-                    organizationPartyId: helper.ids.organizationPartyId,
-                    invoiceId: helper.ids.finalizedInvoiceId
-                })
-            }
+// The Accounting access rules, each feature with artifact authorization on: who opens the app, the organization scope,
+// another organization's records, and each permission's refused write paired with its holder's success on the same
+// request (or a refusal after the permission, named by its reason code). The walk over every route and group is the
+// acceptance AccountingAccessWalk; the screens' content is rendered by the specs that own their logic.
+const lib = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
+const ids = lib.ids
+const org = ids.organizationPartyId
+const as = (user, run, organizationPartyId) => lib.asUser(user, run, true, organizationPartyId)
+const T = "mantle.ledger.transaction.AcctgTrans",
+    INVOICE = "mantle.account.invoice.Invoice",
+    PAYMENT = "mantle.account.payment.Payment"
+const invoke = (name, p = {}) => ec.service.sync().name(name).parameters(p).disableAuthz().call() || {}
+
+spec({
+    setupSpec() {
+        // another internal organization with an invoice, a payment and an entry with a file, none of them Corp's
+        login("john.doe")
+        ec.artifactExecution.disableAuthz()
+        invoke("create#mantle.party.Party", {partyId: "BOSS_FIN_OUTSIDE", partyTypeEnumId: "PtyOrganization"})
+        invoke("create#mantle.party.Organization", {
+            partyId: "BOSS_FIN_OUTSIDE",
+            organizationName: "Unrelated financial organization"
         })
-    },
-    then({page, items, edit, arEdit, invoice}) {
-        page.status == 200
-        page.errors == []
-        page.output.includes("Allocate receipts and credits")
-        !page.output.includes("Add allocation")
-        items.capabilities.canRead == true
-        items.capabilities.canApply == false
-        items.invoiceRows.some(row => row.sourceId === "BOSS_ACCT_STL_INV100")
-        edit.includes("PERMISSION_DENIED")
-        arEdit == ""
-        invoice.includes("PERMISSION_DENIED")
+        invoke("create#mantle.party.PartyRole", {partyId: "BOSS_FIN_OUTSIDE", roleTypeId: "OrgInternal"})
+        invoke("create#" + INVOICE, {
+            invoiceId: "BOSS_ISO_INVOICE",
+            invoiceTypeEnumId: "InvoiceSales",
+            statusId: "InvoiceInProcess",
+            fromPartyId: "BOSS_FIN_OUTSIDE",
+            toPartyId: "_NA_",
+            currencyUomId: "USD",
+            description: "Secret finance isolation"
+        })
+        invoke("create#" + PAYMENT, {
+            paymentId: "BOSS_ISO_PAYMENT",
+            paymentTypeEnumId: "PtDisbursement",
+            paymentInstrumentEnumId: "PiOther",
+            statusId: "PmntProposed",
+            fromPartyId: "BOSS_FIN_OUTSIDE",
+            toPartyId: "_NA_",
+            amount: 42,
+            amountUomId: "USD"
+        })
+        invoke("create#" + T, {
+            acctgTransId: "BOSS_ISO_ENTRY",
+            organizationPartyId: "BOSS_FIN_OUTSIDE",
+            acctgTransTypeEnumId: "AttInternal",
+            isPosted: "N",
+            amountUomId: "USD",
+            transactionDate: ec.user.nowTimestamp,
+            description: "Secret finance isolation"
+        })
+        invoke("create#mantle.ledger.transaction.AcctgTransContent", {
+            acctgTransContentId: "BOSS_ISO_FILE",
+            acctgTransId: "BOSS_ISO_ENTRY",
+            contentLocation: "dbresource://finance-isolation.txt",
+            contentTypeEnumId: "AtctEvidence"
+        })
+        for (const [document, key] of [
+            ["MantleInvoice", {invoiceId: "BOSS_ISO_INVOICE"}],
+            ["MantlePayment", {paymentId: "BOSS_ISO_PAYMENT"}],
+            ["MantleAcctgTrans", {acctgTransId: "BOSS_ISO_ENTRY"}],
+            ["MantleGlAccount", {glAccountId: "111100000"}]
+        ])
+            ec.search.indexDocuments(ec.entity.getDataDocuments(document, key))
     }
 })
-// The message a call is refused with, or "" when it succeeds. A negative case checks the message names the missing
-// authority, and a positive case with the same parameters gets "", so a validation error is not taken for a refusal.
+
+// The message a call is refused with, or "" when it succeeds (artifact authz off for the call itself, so the service's
+// own permission check is what refuses).
 function refusal(service, p) {
     ec.message.pushErrors()
     try {
@@ -71,162 +80,55 @@ function refusal(service, p) {
         ec.message.popErrors()
     }
 }
-const readerDraft = {organizationPartyId: "BOSS_ACCT_ORG", description: "Access spec draft"}
-// a copy of the European Central Bank's daily file, so the provider reads it instead of the network
-const providerRates = {
-    organizationPartyId: "BOSS_ACCT_ORG",
-    uomIdList: ["EUR"],
-    sourceText: "<Cube><Cube time='2026-01-05'><Cube currency='USD' rate='1.04'/></Cube></Cube>"
+// The rows that do not hold, one line each: [name, actual, expected], where expected "" is a success (an empty
+// refusal), true a condition, a RegExp a pattern and any other text a text the refusal must contain.
+function mismatches(rows) {
+    const holds = (actual, expected) =>
+        expected === ""
+            ? actual === ""
+            : expected === true
+              ? actual === true
+              : expected instanceof RegExp
+                ? expected.test(String(actual))
+                : String(actual).includes(expected)
+    return rows
+        .filter(([, actual, expected]) => !holds(actual, expected))
+        .map(
+            ([name, actual, expected]) =>
+                name + ": expected " + (expected === "" ? "success" : String(expected)) + ", got " + actual
+        )
+        .join("\n")
 }
-feature("Accounting reader sees own organization documents with authz enabled or disabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return asFinance("finance.read", enabled, () => ({
-            access: native("AccountingServices.get#Access"),
-            own: native("AccountingServices.get#Record", {
-                kind: "invoices",
-                recordId: "BOSS_ACCT_INVOICE"
-            }),
-            other: refusal("mantle.ledger.AccountingServices.get#Record", {
-                kind: "accounts",
-                recordId: "110000",
-                organizationPartyId: "ORG_ZIZI_SERVICES"
-            }),
-            settings: refusal("mantle.ledger.SetupServices.get#Preferences", {organizationPartyId: "BOSS_ACCT_ORG"}),
-            create: refusal("mantle.ledger.JournalServices.store#DraftEntry", readerDraft),
-            // the same draft is made for a GL user
-            glCreate: asFinance("finance.gl", enabled, () =>
-                refusal("mantle.ledger.JournalServices.store#DraftEntry", readerDraft)
-            ),
-            glSettings: asFinance("finance.admin", enabled, () =>
-                refusal("mantle.ledger.SetupServices.get#Preferences", {organizationPartyId: "BOSS_ACCT_ORG"})
-            )
-        }))
-    },
-    then({access, own, other, settings, create, glCreate, glSettings}) {
-        access.capabilities.reportRead == true
-        access.capabilities.glPost == false
-        own.record.invoiceId == "BOSS_ACCT_INVOICE"
-        other.includes("not available")
-        settings.includes("admin authority is required")
-        create.includes("glPost authority is required")
-        glCreate == ""
-        glSettings == ""
-    }
-})
-feature("a reader has only the Accounting business launcher and no finance quick create", {
+const denied = "PERMISSION_DENIED"
+const admin = "admin authority is required"
+// a render refused for the user's grants, not one that opened with less on it
+const refusedRender = page => page.status != 200 && page.errors.some(error => /not authorized/.test(error))
+
+feature("who opens Accounting: its launcher for a finance reader, its reads by the view permissions, no Mantle REST writes", {
     when() {
-        return asFinance("finance.read", true, () => {
+        const shell = () => {
             const rendered = ec.screen
                 .makeTest()
                 .rootScreen("component://webroot/screen/webroot.xml")
                 .render("shellData", {}, null)
-            return {
-                status: rendered.status,
-                data: JSON.parse(rendered.output)
-            }
-        })
-    },
-    then({status, data}) {
-        status == 200
-        data.apps.some(app => app.name === "Accounting")
-        !data.apps.some(app => ["Products", "Projects", "Warehouse", "Purchasing"].includes(app.name))
-        data.apps.find(app => app.name === "Accounting").providers.quickCreate.length == 0
-    }
-})
-feature("the GL operator cannot change preferences, rates or terms even with artifact authz disabled", {
-    when() {
-        return asFinance("finance.gl", false, () => ({
-            preferences: refusal("mantle.ledger.SetupServices.store#Preferences", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                settings: {invoiceIdPrefix: "BAD"},
-                changeReason: "Denied"
-            }),
-            rates: refusal("mantle.ledger.CurrencyServices.store#Rate", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                uomId: "USD",
-                toUomId: "EUR",
-                conversionFactor: 1,
-                fromDate: ec.user.nowTimestamp,
-                rateSource: "test",
-                changeReason: "Denied"
-            }),
-            terms: refusal("mantle.ledger.SetupServices.store#SettlementTerm", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                description: "Denied",
-                termValue: 30,
-                termValueUomId: "TF_day",
-                changeReason: "Denied"
-            }),
-            fetch: refusal("mantle.ledger.CurrencyServices.refresh#Rates", providerRates),
-            proposals: refusal("mantle.ledger.CurrencyServices.get#RateProposals", {organizationPartyId: "BOSS_ACCT_ORG"}),
-            accept: refusal("mantle.ledger.CurrencyServices.accept#RateProposals", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                rateProposalIdList: ["ACCESS_SPEC_NONE"]
-            })
+            return {status: rendered.status, apps: rendered.status == 200 ? JSON.parse(rendered.output).apps : []}
+        }
+        const reader = as("finance.read", () => ({
+            shell: shell(),
+            access: invoke("mantle.ledger.AccountingServices.get#Access")
         }))
-    },
-    then({preferences, rates, terms, fetch, proposals, accept}) {
-        preferences.includes("admin authority is required")
-        rates.includes("admin authority is required")
-        terms.includes("admin authority is required")
-        fetch.includes("admin authority is required")
-        proposals.includes("admin authority is required")
-        accept.includes("admin authority is required")
-    }
-})
-feature("a finance admin can change the rates and terms the GL operator cannot, with the same parameters", {
-    when() {
-        return asFinance("finance.admin", false, () => ({
-            rates: refusal("mantle.ledger.CurrencyServices.store#Rate", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                uomId: "USD",
-                toUomId: "EUR",
-                conversionFactor: 1,
-                fromDate: ec.user.nowTimestamp,
-                rateSource: "test",
-                changeReason: "Allowed"
-            }),
-            terms: refusal("mantle.ledger.SetupServices.store#SettlementTerm", {
-                organizationPartyId: "BOSS_ACCT_ORG",
-                description: "Access spec term",
-                termValue: 30,
-                termValueUomId: "TF_day",
-                changeReason: "Allowed"
-            }),
-            fetch: refusal("mantle.ledger.CurrencyServices.refresh#Rates", providerRates),
-            proposals: refusal("mantle.ledger.CurrencyServices.get#RateProposals", {organizationPartyId: "BOSS_ACCT_ORG"})
-        }))
-    },
-    then({rates, terms, fetch, proposals}) {
-        rates == ""
-        terms == ""
-        fetch == ""
-        proposals == ""
-    }
-})
-feature("Accounting root grants do not authorize Mantle REST financial mutators", {
-    when() {
-        return asFinance("finance.gl", true, () => {
-            const failures = []
-            for (const path of ["s1/mantle/gl/trans", "s1/mantle/invoices", "s1/mantle/payments"]) {
+        // the GL operator's Accounting grants do not reach the Mantle REST mutators
+        const rest = as("finance.gl", () =>
+            ["s1/mantle/gl/trans", "s1/mantle/invoices", "s1/mantle/payments"].map(path => {
                 const rendered = ec.screen
                     .makeTest()
                     .rootScreen("component://webroot/screen/webroot/rest.xml")
-                    .render(path, {organizationPartyId: "BOSS_ACCT_ORG"}, "post")
-                if (![401, 403].includes(rendered.status)) failures.push(path + ": " + rendered.status)
+                    .render(path, {organizationPartyId: org}, "post")
                 ec.message.clearErrors()
-            }
-            return {failures}
-        })
-    },
-    then({failures}) {
-        failures == []
-    }
-})
-
-feature("finance reads follow the view permissions, not group names or another app's edit permission", {
-    when() {
+                return path + " " + rendered.status
+            })
+        )
+        // the same products reader, first in a group named for projects, then with RECEIVABLE_VIEW alone
         const groupId = "BOSS_SPEC_RECEIVABLE_VIEW"
         const readerId = "BOSS_PRD_READER"
         const make = (entity, fields) =>
@@ -237,39 +139,31 @@ feature("finance reads follow the view permissions, not group names or another a
                 .disableAuthz()
                 .call()
         const remove = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz().deleteAll()
-        const reach = () => {
-            const capabilities = ec.resource
-                .script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js")
-                .capabilities()
-            const link = ec.service
-                .sync()
-                .name("ironstone.commons.PaletteServices.get#RecordLink")
-                .parameters({docType: "MantleInvoice", id: "BOSS_ACCT_INVOICE"})
-                .disableAuthz()
-                .call().url
-            return {
-                read: capabilities.read,
-                link: link || null,
-                list: !refusal("mantle.ledger.AccountingServices.find#Records", {kind: "invoices"})
-            }
-        }
+        const reach = () => ({
+            read: ec.resource.script("component://mr-mantle/service/mantle/ledger/AccountingPolicy.js").capabilities().read,
+            link:
+                invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: "MantleInvoice", id: ids.invoiceId}).url ||
+                "",
+            list: refusal("mantle.ledger.AccountingServices.find#Records", {kind: "invoices"}),
+            shell: shell()
+        })
         make("mantle.party.PartyRelationship", {
             partyRelationshipId: "BOSS_SPEC_READER_CORP",
             relationshipTypeEnumId: "PrtAgent",
             fromPartyId: readerId,
-            toPartyId: "BOSS_ACCT_ORG",
+            toPartyId: org,
             toRoleTypeId: "OrgInternal",
             fromDate: 0
         })
         make("moqui.security.UserGroup", {userGroupId: groupId, description: "Receivables view by permission alone"})
         try {
             make("moqui.security.UserGroupMember", {userGroupId: "BOSS_PROJECT_MANAGER", userId: readerId, fromDate: 0})
-            const manager = asFinance("catalog.reader", false, reach)
+            const manager = as("catalog.reader", reach)
             remove("moqui.security.UserGroupMember", {userGroupId: "BOSS_PROJECT_MANAGER", userId: readerId})
             make("moqui.security.UserGroupPermission", {userGroupId: groupId, userPermissionId: "RECEIVABLE_VIEW", fromDate: 0})
             make("moqui.security.UserGroupMember", {userGroupId: groupId, userId: readerId, fromDate: 0})
-            const viewer = asFinance("catalog.reader", false, reach)
-            return {manager, viewer}
+            const viewer = as("catalog.reader", reach)
+            return {reader, rest, manager, viewer}
         } finally {
             remove("moqui.security.UserGroupMember", {userId: readerId, userGroupId: groupId})
             remove("moqui.security.UserGroupMember", {userId: readerId, userGroupId: "BOSS_PROJECT_MANAGER"})
@@ -278,278 +172,1056 @@ feature("finance reads follow the view permissions, not group names or another a
             remove("mantle.party.PartyRelationship", {partyRelationshipId: "BOSS_SPEC_READER_CORP"})
         }
     },
-    then({manager, viewer}) {
+    then({reader, rest, manager, viewer}) {
+        reader.shell.status == 200
+        const app = reader.shell.apps.find(app => app.name === "Accounting")
+        !!app
+        app.providers.quickCreate.length == 0
+        !reader.shell.apps.some(app => ["Products", "Projects", "Warehouse", "Purchasing"].includes(app.name))
+        reader.access.capabilities.reportRead == true
+        reader.access.capabilities.glPost == false
+        rest.filter(row => !/ 40[13]$/.test(row)) == []
         manager.read == false
-        manager.link == null
-        manager.list == false
+        manager.link == ""
+        manager.list != ""
+        !manager.shell.apps.some(app => app.name === "Accounting")
         viewer.read == true
         viewer.link.includes("Accounting/Receivables/InvoiceDetail")
-        viewer.list == true
+        viewer.list == ""
     }
 })
 
-const receivablesHelper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-const receivablesIds = receivablesHelper.ids
-const receivablesReadCases = [
-    ["mantle.account.InvoiceServices.get#InvoiceFinanceDetail", {invoiceId: receivablesIds.invoiceId}],
-    ["mantle.account.InvoiceServices.find#Receivables", {}],
-    ["mantle.account.InvoiceServices.get#ReceivableSummary", {}],
-    ["mantle.account.InvoiceServices.get#InvoiceOutput", {invoiceId: receivablesIds.finalizedInvoiceId}],
-    ["mantle.account.InvoiceServices.find#ApprovedTimeBilling", {}],
-    ["mantle.account.CustomerFinanceServices.get#CustomerFinance", {customerPartyId: receivablesIds.customerPartyId}],
-    ["ironstone.accounting.ReceivableServices.get#InvoiceContext", {invoiceId: receivablesIds.invoiceId}],
-    ["ironstone.accounting.ReceivableServices.find#Invoices", {}],
-    ["ironstone.accounting.ReceivableServices.get#BillingQueue", {}],
-    ["ironstone.accounting.ReceivableServices.get#CustomerContext", {customerPartyId: receivablesIds.customerPartyId}]
-].map(([service, parameters]) => ({
-    service,
-    parameters: Object.assign({organizationPartyId: receivablesIds.organizationPartyId}, parameters)
-}))
-
-feature("P4 read #service accepts AR and refuses AP for the same valid request with artifact authz disabled", {
-    where: receivablesReadCases,
-    when({service, parameters}) {
-        const allowed = receivablesHelper.asUser("finance.ar", () => receivablesHelper.refusal(service, parameters), false)
-        const denied = receivablesHelper.asUser("finance.ap", () => receivablesHelper.refusal(service, parameters), false)
-        return {allowed, denied}
-    },
-    then({allowed, denied}) {
-        allowed == ""
-        denied.includes("PERMISSION_DENIED")
-    }
-})
-
-feature("P4 read #service refuses a supplied organization outside the active selection with artifact authz disabled", {
-    where: receivablesReadCases,
-    when({service, parameters}) {
-        return receivablesHelper.asUser(
-            "finance.ar",
-            () => ({
-                allowed: receivablesHelper.refusal(service, parameters),
-                denied: receivablesHelper.refusal(
-                    service,
-                    Object.assign({}, parameters, {
-                        organizationPartyId: receivablesIds.foreignOrganizationPartyId
-                    })
-                )
-            }),
-            false
-        )
-    },
-    then({allowed, denied}) {
-        allowed == ""
-        denied.toLowerCase().includes("organization")
-    }
-})
-
-feature("supporting attachment discovery requires AR edit for the same real invoice file", {
+feature("the organization scope: AR's reads of the selected organization pass, of another are refused, and AP has none", {
     when() {
-        const service = "mantle.account.InvoiceServices.get#InvoiceDeliveryAttachments"
-        const parameters = {
-            organizationPartyId: receivablesIds.organizationPartyId,
-            invoiceId: receivablesIds.finalizedInvoiceId,
-            attachmentContentIdList: ["BOSS_ACCT_AR_SUPPORT"]
-        }
-        return {
-            allowed: receivablesHelper.asUser("finance.ar", () => receivablesHelper.call(service, parameters), false),
-            ap: receivablesHelper.asUser("finance.ap", () => receivablesHelper.refusal(service, parameters), false),
-            reader: receivablesHelper.asUser("finance.read", () => receivablesHelper.refusal(service, parameters), false),
-            outside: receivablesHelper.asUser(
-                "finance.ar",
-                () =>
-                    receivablesHelper.refusal(
-                        service,
-                        Object.assign({}, parameters, {organizationPartyId: receivablesIds.foreignOrganizationPartyId})
+        const reads = [
+            ["mantle.account.InvoiceServices.get#InvoiceFinanceDetail", {invoiceId: ids.invoiceId}],
+            ["mantle.account.InvoiceServices.find#Receivables", {}],
+            ["mantle.account.InvoiceServices.get#ReceivableSummary", {}],
+            ["mantle.account.InvoiceServices.get#InvoiceOutput", {invoiceId: ids.finalizedInvoiceId}],
+            ["mantle.account.InvoiceServices.find#ApprovedTimeBilling", {}],
+            ["mantle.account.CustomerFinanceServices.get#CustomerFinance", {customerPartyId: ids.customerPartyId}],
+            ["ironstone.accounting.ReceivableServices.get#InvoiceContext", {invoiceId: ids.invoiceId}],
+            ["ironstone.accounting.ReceivableServices.find#Invoices", {}],
+            ["ironstone.accounting.ReceivableServices.get#BillingQueue", {}],
+            ["ironstone.accounting.ReceivableServices.get#CustomerContext", {customerPartyId: ids.customerPartyId}],
+            [
+                "mantle.account.InvoiceServices.get#InvoiceDeliveryAttachments",
+                {invoiceId: ids.finalizedInvoiceId, attachmentContentIdList: ["BOSS_ACCT_AR_SUPPORT"]}
+            ]
+        ]
+        const rows = as("finance.ar", () =>
+            reads.flatMap(([service, p]) => [
+                [service + " own", refusal(service, {...p, organizationPartyId: org}), ""],
+                [
+                    service + " other",
+                    refusal(service, {...p, organizationPartyId: ids.foreignOrganizationPartyId}),
+                    /organization/i
+                ]
+            ])
+        )
+        // the same valid requests, refused to AP for its permissions (the attachments are the next feature's)
+        const ap = as("finance.ap", () =>
+            reads
+                .slice(0, -1)
+                .map(([service, p]) => [service + " as AP", refusal(service, {...p, organizationPartyId: org}), denied])
+        )
+        // the reader's own records through the calls that refuse another organization's
+        const own = as("finance.read", () =>
+            [
+                ["invoices", "BOSS_ACCT_INVOICE", "MantleInvoice"],
+                ["payments", "BOSS_ACCT_PAYMENT", "MantlePayment"],
+                ["journals", "BOSS_ACCT_ENTRY", "MantleAcctgTrans"]
+            ].flatMap(([kind, id, type]) => [
+                [
+                    kind + " list",
+                    invoke("mantle.ledger.AccountingServices.find#Records", {kind, text: id}).records.some(row =>
+                        Object.values(row).includes(id)
                     ),
-                false
+                    true
+                ],
+                [kind + " link", !!invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: type, id}).url, true],
+                [kind + " record", refusal("mantle.ledger.AccountingServices.get#Record", {kind, recordId: id}), ""]
+            ])
+        )
+        return {problems: mismatches(rows.concat(ap, own))}
+    },
+    then({problems}) {
+        problems == ""
+    }
+})
+
+feature("another organization's records are refused in lists, exports, search, links, files, reports and record reads", {
+    when() {
+        const content = ec.entity
+            .find("mantle.ledger.transaction.AcctgTransContent")
+            .condition("acctgTransContentId", "BOSS_ISO_FILE")
+            .disableAuthz()
+            .one()
+        const fileInfo = () =>
+            refusal("mantle.party.CommunicationServices.get#RecordLinkInfo", {
+                recordEntityName: "mantle.ledger.transaction.AcctgTransContent",
+                recordId: "BOSS_ISO_FILE"
+            })
+        // the administrator with the file's own organization selected sees it; the reader is scoped to Corp
+        const owner = lib.asUser("john.doe", fileInfo, true, "BOSS_FIN_OUTSIDE")
+        const access = /not available|authority is required|not permitted|not authorized/i
+        const rows = as("finance.read", () => {
+            const rows = [
+                ["the other organization's file", fileInfo(), /not found|not available/],
+                [
+                    "the other organization's general ledger",
+                    refusal("mantle.ledger.FinanceReportServices.run#GeneralLedger", {organizationPartyId: "BOSS_FIN_OUTSIDE"}),
+                    access
+                ],
+                [
+                    "an account read of another organization",
+                    refusal("mantle.ledger.AccountingServices.get#Record", {
+                        kind: "accounts",
+                        recordId: "110000",
+                        organizationPartyId: ids.foreignOrganizationPartyId
+                    }),
+                    "not available"
+                ]
+            ]
+            for (const [kind, id, type, path] of [
+                ["invoices", "BOSS_ISO_INVOICE", "MantleInvoice", "Receivables/Invoices"],
+                ["payments", "BOSS_ISO_PAYMENT", "MantlePayment", "Payments/Payments"],
+                ["journals", "BOSS_ISO_ENTRY", "MantleAcctgTrans", "GeneralLedger/JournalEntries"]
+            ]) {
+                const csv = ec.screen
+                    .makeTest()
+                    .rootScreen("component://mr-boss/screen/Accounting.xml")
+                    .renderMode("csv")
+                    .withStaticData()
+                    .render(path, {organizationPartyId: org, text: "BOSS_ISO", lastStandalone: "-2"}, null)
+                rows.push(
+                    [
+                        kind + " list",
+                        invoke("mantle.ledger.AccountingServices.find#Records", {kind, text: "BOSS_ISO"}).records.length === 0,
+                        true
+                    ],
+                    [kind + " link", !invoke("ironstone.commons.PaletteServices.get#RecordLink", {docType: type, id}).url, true],
+                    [
+                        kind + " search",
+                        invoke("mantle.search.UniversalSearchServices.search#Universal", {q: "BOSS_ISO", entityType: type})
+                            .results.length === 0,
+                        true
+                    ],
+                    [kind + " csv", csv.status == 200 && !String(csv.output).includes(id), true],
+                    [kind + " record", refusal("mantle.ledger.AccountingServices.get#Record", {kind, recordId: id}), access]
+                )
+            }
+            return rows
+        })
+        return {
+            problems: mismatches(
+                rows.concat([
+                    ["the file exists", content?.acctgTransId === "BOSS_ISO_ENTRY", true],
+                    ["its owner sees it", owner, ""]
+                ])
             )
         }
     },
-    then({allowed, ap, reader, outside}) {
-        allowed.attachmentRows.length == 1
-        allowed.attachmentRows[0].invoiceContentId == "BOSS_ACCT_AR_SUPPORT"
-        allowed.attachmentRows[0].fileName == "Scope.txt"
-        !!allowed.attachmentRows[0].attachmentVersion
-        allowed.attachmentRows[0].contentLocation == null
-        ap.includes("PERMISSION_DENIED")
-        ap.includes("RECEIVABLE_EDIT")
-        reader.includes("PERMISSION_DENIED")
-        reader.includes("RECEIVABLE_EDIT")
-        outside.includes("ORGANIZATION_DENIED")
+    then({problems}) {
+        problems == ""
     }
 })
 
-feature("P4 batch review omits unavailable invoice values for AP while AR sees the same selected records", {
-    when() {
-        const parameters = {
-            organizationPartyId: receivablesIds.organizationPartyId,
-            invoiceIdList: [receivablesIds.invoiceId, receivablesIds.finalizedInvoiceId]
+feature(
+    "ledger, close, tax, budget, asset, setup and report writes: each refused for the permission, the same request passes it for the holder",
+    {
+        when() {
+            const draft = {organizationPartyId: org, description: "Access spec draft"}
+            const preferences = {organizationPartyId: org}
+            const rate = {
+                organizationPartyId: org,
+                uomId: "USD",
+                toUomId: "EUR",
+                conversionFactor: 1,
+                fromDate: ec.user.nowTimestamp,
+                rateSource: "test",
+                changeReason: "Access spec"
+            }
+            const term = {
+                organizationPartyId: org,
+                description: "Access spec term",
+                termValue: 30,
+                termValueUomId: "TF_day",
+                changeReason: "Access spec"
+            }
+            // a copy of the European Central Bank's daily file, so the provider reads it instead of the network
+            const providerRates = {
+                organizationPartyId: org,
+                uomIdList: ["EUR"],
+                sourceText: "<Cube><Cube time='2026-01-05'><Cube currency='USD' rate='1.04'/></Cube></Cube>"
+            }
+            const period = {organizationPartyId: org, timePeriodId: ids.closePeriodId}
+            const reopen = {...period, changeReason: "Access check"}
+            const periodRun = {...period, runKindEnumId: "PrkProjectCost"}
+            const taxRate = {
+                organizationPartyId: org,
+                taxAuthorityRateId: "BOSS_ACCT_UT_2020",
+                thruDate: "2019-06-01 00:00:00",
+                changeReason: "Access spec"
+            }
+            const vendor1099 = {organizationPartyId: org, timePeriodId: "_NA_"}
+            const landed = {
+                organizationPartyId: org,
+                invoiceId: "BOSS_ACCT_BILL_FREIGHT",
+                invoiceItemSeqId: "01",
+                assetReceiptIds: "_NA_",
+                inputFingerprint: "stale",
+                operationKey: "ACCESS-P13",
+                changeReason: "Access spec"
+            }
+            const productRepair = {
+                organizationPartyId: org,
+                productId: "_NA_",
+                acquireCost: 1,
+                changeReason: "Access spec",
+                operationKey: "ACCESS-P13-R"
+            }
+            const budget = {budgetId: "BOSS_ACCT_BUDGET"}
+            const revision = {...budget, lines: [{glAccountId: "_NA_", amount: 1}], changeReason: "Access spec"}
+            const budgetRule = {
+                organizationPartyId: org,
+                actionEnumId: "BcaStop",
+                thresholdPercent: 0,
+                changeReason: "Access spec"
+            }
+            const capitalize = {assetId: "BOSS_ACCT_FA_VAN", acquireCostUomId: "EUR", operationKey: "access-fa-cap"}
+            const assetClass = {organizationPartyId: org, classEnumId: "AsClsLaptop", usefulLifeYears: 0, changeReason: "Access"}
+            const assetRepair = {
+                assetId: "BOSS_ACCT_FA_VAN",
+                acquireCost: "-1",
+                changeReason: "Access",
+                operationKey: "access-fa-fix"
+            }
+            const newco = "BOSS_ACCT_NEWCO"
+            const setupRead = {organizationPartyId: newco}
+            const setupStore = {organizationPartyId: newco, runVersion: -1, openingDate: "2026-01-01"}
+            const setupItems = {organizationPartyId: newco, rows: [], verifyOnly: true}
+            const activate = {organizationPartyId: newco, runVersion: -1, operationKey: "SETUP-ACCESS"}
+            const reports = [
+                ["ironstone.accounting.ReportServices.get#Statement", {organizationPartyId: org, statement: "balanceSheet"}],
+                ["ironstone.accounting.ReportServices.get#Statement", {organizationPartyId: org, statement: "accountBalance"}],
+                ["mantle.ledger.LedgerReportServices.run#PartnerLedger", {organizationPartyId: org}],
+                ["mantle.ledger.LedgerReportServices.run#PostedAmountSummary", {organizationPartyId: org}],
+                ["mantle.sales.SalesReportServices.run#SalesAnalysis", {organizationPartyId: org}]
+            ]
+            const ledger = "mantle.ledger."
+            const books = "mantle.ledger.AssetBookServices."
+            const setup = "mantle.ledger.SetupServices."
+            // [name, user, service, parameters, expected]: a holder's "" or reason code after the permission, else the refusal
+            const cases = [
+                [
+                    "draft entry",
+                    "finance.read",
+                    ledger + "JournalServices.store#DraftEntry",
+                    draft,
+                    "glPost authority is required"
+                ],
+                ["draft entry", "finance.gl", ledger + "JournalServices.store#DraftEntry", draft, ""],
+                ["preferences read", "finance.read", setup + "get#Preferences", preferences, admin],
+                ["preferences read", "finance.admin", setup + "get#Preferences", preferences, ""],
+                [
+                    "preferences store",
+                    "finance.gl",
+                    setup + "store#Preferences",
+                    {organizationPartyId: org, settings: {invoiceIdPrefix: "BAD"}, changeReason: "Denied"},
+                    admin
+                ],
+                ["rate", "finance.gl", ledger + "CurrencyServices.store#Rate", rate, admin],
+                ["rate", "finance.admin", ledger + "CurrencyServices.store#Rate", rate, ""],
+                ["term", "finance.gl", setup + "store#SettlementTerm", term, admin],
+                ["term", "finance.admin", setup + "store#SettlementTerm", term, ""],
+                ["rate refresh", "finance.gl", ledger + "CurrencyServices.refresh#Rates", providerRates, admin],
+                ["rate refresh", "finance.admin", ledger + "CurrencyServices.refresh#Rates", providerRates, ""],
+                [
+                    "rate proposals",
+                    "finance.gl",
+                    ledger + "CurrencyServices.get#RateProposals",
+                    {organizationPartyId: org},
+                    admin
+                ],
+                [
+                    "rate proposals",
+                    "finance.admin",
+                    ledger + "CurrencyServices.get#RateProposals",
+                    {organizationPartyId: org},
+                    ""
+                ],
+                [
+                    "rate accept",
+                    "finance.gl",
+                    ledger + "CurrencyServices.accept#RateProposals",
+                    {organizationPartyId: org, rateProposalIdList: ["ACCESS_SPEC_NONE"]},
+                    admin
+                ],
+                // the close stops at the demo period's blockers, the reopen at the open period
+                ["period close", "finance.gl", ledger + "CloseServices.close#Period", period, denied],
+                ["period close", "finance.approve", ledger + "CloseServices.close#Period", period, "CLOSE_BLOCKED"],
+                ["period reopen", "finance.approve", ledger + "CloseServices.reopen#Period", reopen, denied],
+                ["period reopen", "finance.admin", ledger + "CloseServices.reopen#Period", reopen, "PERIOD_OPEN"],
+                ["period run", "finance.read", ledger + "PeriodRunServices.preview#Run", periodRun, denied],
+                ["period run", "finance.gl", ledger + "PeriodRunServices.preview#Run", periodRun, ""],
+                [
+                    "close checklist",
+                    "finance.ar",
+                    ledger + "CloseServices.get#Checklist",
+                    period,
+                    /RECORD_UNAVAILABLE|ACCESS_DENIED/
+                ],
+                // the tax rate's end date is refused for its dates, not its authority, for the administrator
+                ["tax rate", "finance.tax", "mantle.other.TaxServices.store#Rate", taxRate, admin],
+                ["tax rate", "finance.admin", "mantle.other.TaxServices.store#Rate", taxRate, "RATE_DATES_INVALID"],
+                [
+                    "tax statements",
+                    "finance.ar",
+                    "ironstone.accounting.TaxServices.find#Statements",
+                    {organizationPartyId: org},
+                    "Tax authority is required"
+                ],
+                [
+                    "tax statements",
+                    "finance.tax",
+                    "ironstone.accounting.TaxServices.find#Statements",
+                    {organizationPartyId: org},
+                    ""
+                ],
+                [
+                    "1099 run",
+                    "finance.ar",
+                    "mantle.other.TaxServices.run#Vendor1099Statements",
+                    vendor1099,
+                    "taxEdit authority is required"
+                ],
+                [
+                    "1099 run",
+                    "finance.tax",
+                    "mantle.other.TaxServices.run#Vendor1099Statements",
+                    vendor1099,
+                    "PERIOD_UNAVAILABLE"
+                ],
+                [
+                    "valuation",
+                    "finance.ar",
+                    "mantle.product.InventoryReportServices.run#InventoryValuation",
+                    {organizationPartyId: org},
+                    denied
+                ],
+                [
+                    "valuation",
+                    "finance.read",
+                    "mantle.product.InventoryReportServices.run#InventoryValuation",
+                    {organizationPartyId: org},
+                    ""
+                ],
+                [
+                    "stock transactions",
+                    "finance.ar",
+                    "mantle.product.InventoryReportServices.run#StockTransactions",
+                    {organizationPartyId: org},
+                    denied
+                ],
+                ["landed cost", "finance.ap", books + "post#LandedCost", landed, denied],
+                ["landed cost", "finance.gl", books + "post#LandedCost", landed, /STALE_PREVIEW|ALREADY_ALLOCATED/],
+                ["product cost repair", "finance.gl", books + "repair#ProductAcquireCost", productRepair, denied],
+                ["product cost repair", "finance.admin", books + "repair#ProductAcquireCost", productRepair, "ASSETS_NONE"],
+                [
+                    "budgets",
+                    "finance.ar",
+                    "ironstone.accounting.BudgetServices.find#Budgets",
+                    {organizationPartyId: org},
+                    "Budget read authority is required"
+                ],
+                ["budgets", "finance.read", "ironstone.accounting.BudgetServices.find#Budgets", {organizationPartyId: org}, ""],
+                [
+                    "budget variance",
+                    "finance.ar",
+                    "mantle.other.BudgetReportServices.run#BudgetVariance",
+                    {organizationPartyId: org, ...budget},
+                    "reportRead authority is required"
+                ],
+                [
+                    "budget variance",
+                    "finance.read",
+                    "mantle.other.BudgetReportServices.run#BudgetVariance",
+                    {organizationPartyId: org, ...budget},
+                    ""
+                ],
+                ["budget revise", "finance.read", "mantle.other.BudgetServices.revise#Budget", revision, denied],
+                ["budget revise", "finance.gl", "mantle.other.BudgetServices.revise#Budget", revision, "ACCOUNT_UNAVAILABLE"],
+                [
+                    "budget approve",
+                    "finance.gl",
+                    "mantle.other.BudgetServices.change#BudgetState",
+                    {...budget, action: "approve"},
+                    denied
+                ],
+                [
+                    "budget approve",
+                    "finance.approve",
+                    "mantle.other.BudgetServices.change#BudgetState",
+                    {...budget, action: "approve"},
+                    "STATE_TRANSITION_INVALID"
+                ],
+                ["budget policy", "finance.gl", "mantle.other.BudgetServices.store#Policy", budgetRule, admin],
+                ["budget policy", "finance.admin", "mantle.other.BudgetServices.store#Policy", budgetRule, "THRESHOLD_INVALID"],
+                [
+                    "budget check",
+                    "finance.ar",
+                    "mantle.other.BudgetServices.check#Budget",
+                    {organizationPartyId: org, glAccountId: "_NA_", amount: 1},
+                    denied
+                ],
+                ["capitalize", "finance.read", books + "capitalize#Asset", capitalize, denied],
+                ["capitalize", "finance.gl", books + "capitalize#Asset", capitalize, "CURRENCY_UNSUPPORTED"],
+                ["asset class", "finance.gl", books + "store#Class", assetClass, denied],
+                ["asset class", "finance.admin", books + "store#Class", assetClass, "LIFE_INVALID"],
+                ["asset cost repair", "finance.gl", books + "repair#AcquireCost", assetRepair, denied],
+                ["asset cost repair", "finance.admin", books + "repair#AcquireCost", assetRepair, "AMOUNT_INVALID"],
+                ["asset book", "finance.ar", books + "get#AssetBook", {assetId: "BOSS_ACCT_FA_VAN"}, denied],
+                [
+                    "assets",
+                    "finance.ar",
+                    "ironstone.accounting.AssetBookServices.find#Assets",
+                    {organizationPartyId: org},
+                    "read authority is required"
+                ],
+                ["assets", "finance.read", "ironstone.accounting.AssetBookServices.find#Assets", {organizationPartyId: org}, ""],
+                // the setup of BOSS_ACCT_NEWCO, refused for the administrator only after the permission (a stale version)
+                ["opening preview", "finance.read", setup + "preview#OpeningBalances", setupRead, denied],
+                ["opening preview", "finance.admin", setup + "preview#OpeningBalances", setupRead, "", newco],
+                ["readiness", "finance.gl", setup + "check#Readiness", setupRead, denied],
+                ["readiness", "finance.admin", setup + "check#Readiness", setupRead, "", newco],
+                ["setup store", "finance.ar", setup + "store#SetupRun", setupStore, denied],
+                ["setup store", "finance.admin", setup + "store#SetupRun", setupStore, "STALE_REVISION", newco],
+                ["open items", "finance.ap", setup + "import#OpenItems", setupItems, denied],
+                ["open items", "finance.admin", setup + "import#OpenItems", setupItems, "", newco],
+                ["activate", "finance.gl", setup + "activate#Accounting", activate, denied],
+                ["activate", "finance.admin", setup + "activate#Accounting", activate, "STALE_REVISION", newco],
+                ...reports.flatMap(([service, p]) => [
+                    ["report " + service, "finance.ar", service, p, /PERMISSION_DENIED|authority is required/],
+                    ["report " + service, "finance.read", service, p, ""]
+                ])
+            ]
+            // one sign-in for each user and organization
+            const rows = []
+            for (const scope of new Set(cases.map(row => row[1] + " " + (row[5] || org)))) {
+                const [user, organizationPartyId] = scope.split(" ")
+                const mine = cases.filter(row => row[1] === user && (row[5] || org) === organizationPartyId)
+                as(
+                    user,
+                    () =>
+                        mine.forEach(([name, , service, p, expected]) =>
+                            rows.push([name + " as " + user, refusal(service, p), expected])
+                        ),
+                    organizationPartyId
+                )
+            }
+            return {problems: mismatches(rows)}
+        },
+        then({problems}) {
+            problems == ""
         }
-        const review = () => receivablesHelper.call("ironstone.accounting.ReceivableServices.get#InvoiceBatchContext", parameters)
-        return {
-            ar: receivablesHelper.asUser("finance.ar", review, false),
-            ap: receivablesHelper.asUser("finance.ap", review, false)
-        }
-    },
-    then({ar, ap}) {
-        ar.batchRows.length == 2
-        ar.batchRows.every(row => row.available && row.totalText && row.customerName)
-        ap.batchRows.length == 2
-        ap.batchRows.every(row => !row.available && !row.totalText && !row.customerName)
     }
-})
+)
 
-feature("customer statements require AR edit even when the reader can read the same invoices", {
+feature("receivables and treasury: each AR permission refuses the other roles where the same request passes for AR", {
     when() {
-        const parameters = {
-            organizationPartyId: receivablesIds.organizationPartyId,
-            customerPartyIdList: [receivablesIds.customerPartyId],
-            includeZeroBalance: true
+        const rows = []
+        const add = (name, user, run, expected) => rows.push([name + " as " + user, as(user, run), expected])
+        const attempt = (name, service, p, holders, others, expected = denied) => {
+            for (const user of holders) add(name, user, () => refusal(service, p), "")
+            for (const user of others) add(name, user, () => refusal(service, p), expected)
         }
-        const service = "mantle.account.CollectionServices.get#Statements"
-        return {
-            allowed: receivablesHelper.asUser("finance.ar", () => receivablesHelper.refusal(service, parameters), false),
-            denied: receivablesHelper.asUser("finance.read", () => receivablesHelper.refusal(service, parameters), false)
-        }
-    },
-    then({allowed, denied}) {
-        allowed == ""
-        denied.includes("PERMISSION_DENIED")
-        denied.includes("RECEIVABLE_EDIT")
-    }
-})
-
-feature("the finance approver approves another author's invoice while only AR may edit the draft", {
-    when() {
-        const service = "mantle.account.InvoiceServices."
-        const invoiceId = receivablesHelper.asUser(
-            "finance.ar",
-            () => {
-                const made = receivablesHelper.call(service + "create#Receivable", {
-                    organizationPartyId: receivablesIds.organizationPartyId,
-                    customerPartyId: receivablesIds.customerPartyId,
-                    description: "Approval access fixture"
-                })
-                receivablesHelper.call(service + "store#InvoiceDraftItem", {
-                    organizationPartyId: receivablesIds.organizationPartyId,
-                    invoiceId: made.invoiceId,
-                    itemTypeEnumId: "ItemTimeEntry",
-                    quantity: 1,
-                    amount: 10,
-                    description: "Approval access services"
-                })
-                return made.invoiceId
-            },
-            false
+        const receivable = {organizationPartyId: org}
+        // supporting attachments need AR edit, and the archive location is not given out
+        const attachments = {...receivable, invoiceId: ids.finalizedInvoiceId, attachmentContentIdList: ["BOSS_ACCT_AR_SUPPORT"]}
+        const attachmentService = "mantle.account.InvoiceServices.get#InvoiceDeliveryAttachments"
+        const attachmentRows = as("finance.ar", () => lib.call(attachmentService, attachments).attachmentRows || [])
+        rows.push([
+            "the AR attachment row",
+            attachmentRows.length == 1 &&
+                attachmentRows[0].invoiceContentId == "BOSS_ACCT_AR_SUPPORT" &&
+                attachmentRows[0].fileName == "Scope.txt" &&
+                !!attachmentRows[0].attachmentVersion &&
+                attachmentRows[0].contentLocation == null,
+            true
+        ])
+        for (const user of ["finance.ap", "finance.read"])
+            add("attachments", user, () => refusal(attachmentService, attachments), "RECEIVABLE_EDIT")
+        // statements need AR edit though the reader reads the same invoices
+        attempt(
+            "statements",
+            "mantle.account.CollectionServices.get#Statements",
+            {...receivable, customerPartyIdList: [ids.customerPartyId], includeZeroBalance: true},
+            ["finance.ar"],
+            ["finance.read"],
+            "RECEIVABLE_EDIT"
         )
-        const record = ec.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", invoiceId).disableAuthz().one()
-        const parameters = {
-            organizationPartyId: receivablesIds.organizationPartyId,
-            invoiceId,
-            lastUpdatedStamp: record.lastUpdatedStamp,
-            description: "Edited by AR"
-        }
-        const deniedReader = receivablesHelper.asUser(
-            "finance.read",
-            () => receivablesHelper.refusal(service + "store#InvoiceDraft", parameters),
-            false
+        // a batch review gives AP the selected rows without their values
+        const review = () =>
+            lib.call("ironstone.accounting.ReceivableServices.get#InvoiceBatchContext", {
+                ...receivable,
+                invoiceIdList: [ids.invoiceId, ids.finalizedInvoiceId]
+            }).batchRows
+        const arBatch = as("finance.ar", review)
+        const apBatch = as("finance.ap", review)
+        rows.push(
+            [
+                "AR batch rows",
+                arBatch.length == 2 && arBatch.every(row => row.available && row.totalText && row.customerName),
+                true
+            ],
+            [
+                "AP batch rows",
+                apBatch.length == 2 && apBatch.every(row => !row.available && !row.totalText && !row.customerName),
+                true
+            ]
         )
-        const deniedApprover = receivablesHelper.asUser(
-            "finance.approve",
-            () => receivablesHelper.refusal(service + "store#InvoiceDraft", parameters),
-            false
-        )
-        const allowedEditor = receivablesHelper.asUser(
-            "finance.ar",
-            () => receivablesHelper.refusal(service + "store#InvoiceDraft", parameters),
-            false
-        )
-        const current = ec.entity.find("mantle.account.invoice.Invoice").condition("invoiceId", invoiceId).disableAuthz().one()
+        // only AR edits a draft, only the approver approves another author's invoice
+        const invoices = "mantle.account.InvoiceServices."
+        const invoiceId = as("finance.ar", () => {
+            const made = lib.call(invoices + "create#Receivable", {
+                ...receivable,
+                customerPartyId: ids.customerPartyId,
+                description: "Approval access fixture"
+            })
+            lib.call(invoices + "store#InvoiceDraftItem", {
+                ...receivable,
+                invoiceId: made.invoiceId,
+                itemTypeEnumId: "ItemTimeEntry",
+                quantity: 1,
+                amount: 10,
+                description: "Approval access services"
+            })
+            return made.invoiceId
+        })
+        const stamp = () => ec.entity.find(INVOICE).condition("invoiceId", invoiceId).disableAuthz().one().lastUpdatedStamp
+        const edit = {...receivable, invoiceId, lastUpdatedStamp: stamp(), description: "Edited by AR"}
+        for (const user of ["finance.read", "finance.approve"])
+            add("draft edit", user, () => refusal(invoices + "store#InvoiceDraft", edit), "RECEIVABLE_EDIT")
+        add("draft edit", "finance.ar", () => refusal(invoices + "store#InvoiceDraft", edit), "")
         const approval = {
-            organizationPartyId: receivablesIds.organizationPartyId,
+            ...receivable,
             invoiceId,
             action: "approve",
-            lastUpdatedStamp: current.lastUpdatedStamp,
+            lastUpdatedStamp: stamp(),
             operationKey: "access-approve-" + ec.user.randomString(20),
             changeReason: "Separate finance approval"
         }
-        const deniedEditor = receivablesHelper.asUser(
+        add("invoice approve", "finance.ar", () => refusal(invoices + "change#InvoiceState", approval), "INVOICE_APPROVE")
+        rows.push([
+            "approved by the approver",
+            as("finance.approve", () => lib.call(invoices + "change#InvoiceState", approval)).statusId,
+            "InvoiceFinalized"
+        ])
+        const capabilities = () =>
+            lib.call(invoices + "get#InvoiceFinanceDetail", {...receivable, invoiceId: ids.invoiceId}).capabilities
+        const editor = as("finance.ar", capabilities)
+        const approver = as("finance.approve", capabilities)
+        rows.push(
+            ["the editor's controls", editor.canDraftEdit === true && editor.canApprove === false, true],
+            ["the approver's controls", approver.canDraftEdit === false && approver.canApprove === true, true]
+        )
+        // a linked customer credit is an AR record and never an AP bill
+        // made with artifact authz off: create#InvoiceCreditMemo is granted through its screen transition only
+        const creditId = lib.asUser(
             "finance.ar",
-            () => receivablesHelper.refusal(service + "change#InvoiceState", approval),
+            () =>
+                lib.call(invoices + "create#InvoiceCreditMemo", {
+                    ...receivable,
+                    originalInvoiceId: ids.finalizedInvoiceId,
+                    amount: 5,
+                    description: "Credit access fixture",
+                    linkToOriginal: true,
+                    allocateToLines: true,
+                    operationKey: "access-credit-" + ec.user.randomString(20)
+                }).invoiceId,
             false
         )
-        const approved = receivablesHelper.asUser(
-            "finance.approve",
-            () => receivablesHelper.call(service + "change#InvoiceState", approval),
-            false
+        const record = {...receivable, recordId: creditId}
+        const records = kind => lib.call("mantle.ledger.AccountingServices.find#Records", {...record, kind}).records
+        rows.push(
+            [
+                "the credit as an AR record",
+                as(
+                    "finance.ar",
+                    () => lib.call("mantle.ledger.AccountingServices.get#Record", {...record, kind: "invoices"}).record.invoiceId
+                ),
+                creditId
+            ],
+            [
+                "the credit in AR's list",
+                as("finance.ar", () => records("invoices").some(row => row.invoiceId === creditId)),
+                true
+            ],
+            ["the credit in AP's bills", as("finance.ap", () => !records("bills").some(row => row.invoiceId === creditId)), true]
         )
-        const detail = () =>
-            receivablesHelper.call(service + "get#InvoiceFinanceDetail", {
-                organizationPartyId: receivablesIds.organizationPartyId,
-                invoiceId: receivablesIds.invoiceId
-            })
-        return {
-            deniedReader,
-            deniedApprover,
-            allowedEditor,
-            deniedEditor,
-            approved,
-            editor: receivablesHelper.asUser("finance.ar", detail, false),
-            approver: receivablesHelper.asUser("finance.approve", detail, false)
+        add(
+            "the credit as a bill",
+            "finance.ap",
+            () => refusal("mantle.ledger.AccountingServices.get#Record", {...record, kind: "bills"}),
+            "not available"
+        )
+        // treasury reads the settlement workbench's open items but AR alone previews a settlement
+        const settlement = {...receivable, partyId: ids.settlementPartyId, currencyUomId: "USD"}
+        const treasury = as("finance.treasury", () => {
+            const items = lib.call("mantle.account.PaymentServices.find#OpenItems", {...settlement, direction: "receivable"})
+            return {items, page: lib.page("Receivables/ReceivablesWorkbench", settlement, "qvt")}
+        })
+        const source = treasury.items.paymentRows.find(row => row.sourceId === ids.settlementPaymentId)
+        const target = treasury.items.invoiceRows.find(row => row.sourceId === ids.settlementInvoiceId)
+        rows.push(
+            [
+                "treasury's open items",
+                treasury.items.capabilities.canRead === true &&
+                    treasury.items.capabilities.canApply === false &&
+                    !!source &&
+                    !!target,
+                true
+            ],
+            [
+                "treasury's workbench",
+                treasury.page.status == 200 &&
+                    treasury.page.errors.length == 0 &&
+                    treasury.page.output.includes("Allocate receipts and credits") &&
+                    !treasury.page.output.includes("Add allocation"),
+                true
+            ]
+        )
+        const preview = {
+            ...settlement,
+            direction: "receivable",
+            effectiveDate: ec.user.nowTimestamp,
+            allocations: [{sourceKey: source?.sourceKey, targetKey: target?.sourceKey, amount: "1"}],
+            sourceVersions: {[source?.sourceKey]: source?.version, [target?.sourceKey]: target?.version}
         }
+        attempt(
+            "settlement preview",
+            "mantle.account.PaymentServices.preview#Settlement",
+            preview,
+            ["finance.ar"],
+            ["finance.treasury"]
+        )
+        add(
+            "invoice detail",
+            "finance.treasury",
+            () => refusal(invoices + "get#InvoiceFinanceDetail", {...receivable, invoiceId: ids.finalizedInvoiceId}),
+            denied
+        )
+        // AR issues an invoice's pay link and invites no supplier contact
+        const capability = "mantle.party.ExternalAccessServices.create#AccessCapability"
+        attempt(
+            "pay link",
+            capability,
+            {recordType: "Invoice", recordId: ids.finalizedInvoiceId, scopes: "InvoicePay", validDays: 1},
+            ["finance.ar"],
+            ["finance.ap", "finance.read"]
+        )
+        add(
+            "supplier invite",
+            "finance.ar",
+            () =>
+                refusal("mantle.party.ExternalAccessServices.invite#Contact", {
+                    ...receivable,
+                    app: "supplier",
+                    partyId: "BOSS_ACCT_SUPPLIER",
+                    emailAddress: "ap@supplier.example"
+                }),
+            denied
+        )
+        // collections, credit and recurring invoices
+        const customer = {...receivable, customerPartyId: "BOSS_ACCT_COLLECT"}
+        const level = {...receivable, description: "Access spec level", daysOverdueFrom: 75, changeReason: "Access"}
+        const schedule = {
+            ...receivable,
+            templateInvoiceId: "BOSS_ACCT_RENT_TEMPLATE",
+            intervalUomId: "TF_yr",
+            description: "Access spec schedule"
+        }
+        attempt(
+            "collection work",
+            "ironstone.accounting.CollectionServices.find#Work",
+            receivable,
+            ["finance.ar"],
+            ["finance.tax"]
+        )
+        attempt(
+            "collection policies",
+            "ironstone.accounting.CollectionServices.get#CollectionPolicies",
+            receivable,
+            ["finance.admin"],
+            ["finance.ar"]
+        )
+        add("reminder level", "finance.ar", () => refusal("mantle.account.CollectionServices.store#Level", level), denied)
+        attempt(
+            "credit status",
+            "mantle.account.CreditServices.get#CustomerCreditStatus",
+            customer,
+            ["finance.ar"],
+            ["finance.ap"]
+        )
+        attempt(
+            "credit policy",
+            "mantle.account.CreditServices.store#Policy",
+            {...customer, creditLimit: 5000, changeReason: "Access spec"},
+            ["finance.approve"],
+            ["finance.ar"]
+        )
+        attempt(
+            "collection activity",
+            "mantle.account.CollectionServices.record#Activity",
+            {...customer, outcomeEnumId: "CaoNoAnswer", note: "Access spec"},
+            ["finance.ar"],
+            ["finance.read"]
+        )
+        add(
+            "recurring schedule",
+            "finance.ap",
+            () => refusal("mantle.account.RecurringInvoiceServices.store#Schedule", schedule),
+            denied
+        )
+        attempt("aging", "mantle.ledger.LedgerReportServices.run#Aging", receivable, ["finance.read"], ["finance.tax"])
+        // the level, policy and schedule the holders store are ended, so the demo and the other specs keep theirs
+        const levelId = as("finance.admin", () => lib.call("mantle.account.CollectionServices.store#Level", level).dunningLevelId)
+        const scheduleId = as(
+            "finance.ar",
+            () => lib.call("mantle.account.RecurringInvoiceServices.store#Schedule", schedule).invoiceScheduleId
+        )
+        rows.push(["the admin's reminder level", !!levelId, true], ["AR's recurring schedule", !!scheduleId, true])
+        as("finance.admin", () =>
+            lib.call("mantle.account.CollectionServices.store#Level", {...receivable, dunningLevelId: levelId, ended: "Y"})
+        )
+        as("finance.admin", () =>
+            lib.call("mantle.account.CreditServices.store#Policy", {...customer, ended: "Y", changeReason: "Access spec end"})
+        )
+        as("finance.ar", () =>
+            lib.call("mantle.account.RecurringInvoiceServices.store#Schedule", {
+                invoiceScheduleId: scheduleId,
+                statusId: "IschEnded"
+            })
+        )
+        // returns: AR settles, a reader previews, receipt is Warehouse's, order changes need their permissions; nothing
+        // here settles the demo return the walk settles
+        const returnId = "BOSS_ACCT_RETURN"
+        const returnPreview = "mantle.order.ReturnServices.preview#ReturnSettlement"
+        const settle = {returnId, previewVersion: "stale", operationKey: "RETURN-ACCESS-" + Date.now()}
+        const sourceOf = condition =>
+            ec.entity.find("mantle.shipment.ShipmentItemSource").condition(condition).disableAuthz().list()[0]
+        const shipmentId = sourceOf({orderId: "BOSS_ACCT_SO_RETURN"}).shipmentId
+        const paymentId = ec.entity.find(PAYMENT).condition("orderId", "BOSS_ACCT_SO_RETURN").disableAuthz().list()[0].paymentId
+        const readPreview = as("finance.read", () => lib.call(returnPreview, {returnId}))
+        rows.push(
+            ["the reader's return preview", readPreview.lineRows.length == 1 && readPreview.reasonCode == "FORBIDDEN", true],
+            ["AR's return preview", as("finance.ar", () => lib.call(returnPreview, {returnId}).canSettle), true]
+        )
+        add("return preview", "finance.ap", () => refusal(returnPreview, {returnId}), "FORBIDDEN")
+        add("return settle", "finance.read", () => refusal("mantle.order.ReturnServices.settle#Return", settle), "FORBIDDEN")
+        // AR passes the authority and is refused for the stale preview only
+        add("return settle", "finance.ar", () => refusal("mantle.order.ReturnServices.settle#Return", settle), "RECEIPT_CHANGED")
+        add(
+            "return receipt",
+            "finance.ar",
+            () =>
+                refusal("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", {
+                    shipmentId: sourceOf({returnId}).shipmentId,
+                    itemList: [{returnId, returnItemSeqId: "01", quantityAccepted: 5}]
+                }),
+            /PERMISSION_DENIED|not authorized/
+        )
+        const release = {shipmentId, reason: "Access spec"}
+        add("draft release", "finance.treasury", () => refusal(invoices + "release#ShipmentDraftInvoice", release), denied)
+        add("draft release", "finance.ar", () => refusal(invoices + "release#ShipmentDraftInvoice", release), "SHIPMENT_SHIPPED")
+        const refund = {paymentId, amount: 1, reason: "Access spec", operationKey: settle.operationKey + "-R"}
+        add("order refund", "finance.ar", () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund), denied)
+        // treasury passes the permission and stops at the refund's own validation
+        add(
+            "order refund",
+            "finance.treasury",
+            () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund),
+            /^(?![\s\S]*PERMISSION_DENIED)[\s\S]+/
+        )
+        return {problems: mismatches(rows)}
     },
-    then({deniedReader, deniedApprover, allowedEditor, deniedEditor, approved, editor, approver}) {
-        deniedReader.includes("RECEIVABLE_EDIT")
-        deniedApprover.includes("RECEIVABLE_EDIT")
-        allowedEditor == ""
-        deniedEditor.includes("INVOICE_APPROVE")
-        approved.statusId == "InvoiceFinalized"
-        editor.capabilities.canDraftEdit == true
-        editor.capabilities.canApprove == false
-        approver.capabilities.canDraftEdit == false
-        approver.capabilities.canApprove == true
+    then({problems}) {
+        problems == ""
     }
 })
 
-feature("P4 server choices preserve selected labels outside the search page", {
+feature(
+    "payables, matching, payment runs and banking: each permission refuses the other roles where the same request passes for its holder",
+    {
+        when() {
+            const rows = []
+            const add = (name, user, run, expected) => rows.push([name + " as " + user, as(user, run), expected])
+            const attempt = (name, service, p, holders, others) => {
+                for (const user of holders) add(name, user, () => refusal(service, p), "")
+                for (const user of others) add(name, user, () => refusal(service, p), denied)
+            }
+            const invoices = "mantle.account.InvoiceServices."
+            const match = "mantle.account.InvoiceMatchServices."
+            // a bill: imported by AP, held by AP, released by the approver
+            const upload = {
+                organizationPartyId: org,
+                supplierPartyId: "BOSS_ACCT_SUPPLIER",
+                referenceNumber: "ACCESS-" + Date.now(),
+                amount: "10"
+            }
+            add("bill import", "finance.approve", () => refusal(invoices + "import#Bill", upload), denied)
+            const imported = as("finance.ap", () => lib.call(invoices + "import#Bill", upload))
+            const hold = {invoiceId: imported.invoiceId, organizationPartyId: org, holdReasonEnumId: "IhrApReview"}
+            add("bill hold", "finance.read", () => refusal(invoices + "hold#Invoice", hold), denied)
+            const held = as("finance.ap", () => lib.call(invoices + "hold#Invoice", hold))
+            attempt(
+                "hold release",
+                invoices + "release#InvoiceHold",
+                {invoiceHoldId: held.invoiceHoldId, organizationPartyId: org, releaseComment: "Checked"},
+                ["finance.approve"],
+                ["finance.ap"]
+            )
+            attempt(
+                "supplier profile",
+                "mantle.party.SupplierServices.store#SupplierProfile",
+                {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", selfBillingIndicator: "Y"},
+                ["finance.ap"],
+                ["finance.ar"]
+            )
+            attempt(
+                "bill link",
+                "mantle.party.ExternalAccessServices.create#AccessCapability",
+                {recordType: "Order", recordId: "BOSS_ACCT_PO", scopes: "BillUpload", validDays: 1},
+                ["finance.ap"],
+                ["finance.ar", "finance.treasury"]
+            )
+            // a bill of one unit against the demo's received order, matched and then unapplied, so the demo stays as it was
+            const invoiceId = as("finance.ap", () =>
+                lib.call(invoices + "import#Bill", {
+                    organizationPartyId: org,
+                    supplierPartyId: "BOSS_ACCT_SUPPLIER",
+                    referenceNumber: "MATCH-ACCESS-" + Date.now()
+                })
+            ).invoiceId
+            invoke(invoices + "create#InvoiceItem", {
+                invoiceId,
+                itemTypeEnumId: "ItemInventory",
+                productId: "BOSS_ACCT_SUPPLY",
+                quantity: 1,
+                amount: 8
+            })
+            const bill = {invoiceId, organizationPartyId: org}
+            add("match evaluate", "finance.ar", () => refusal(match + "evaluate#InvoiceMatch", bill), denied)
+            const evaluated = as("finance.read", () => lib.call(match + "evaluate#InvoiceMatch", bill))
+            rows.push(["the reader's evaluation", evaluated.sourceRows.length == 1, true])
+            const apply = {
+                ...bill,
+                allocationList: evaluated.sourceRows.map(row => ({
+                    invoiceItemSeqId: row.invoiceItemSeqId,
+                    orderId: row.orderId,
+                    orderItemSeqId: row.orderItemSeqId,
+                    assetReceiptId: row.assetReceiptId,
+                    quantity: String(row.quantity)
+                }))
+            }
+            attempt("match apply", match + "apply#InvoiceMatch", apply, ["finance.match"], ["finance.read"])
+            add("match unapply", "finance.approve", () => refusal(match + "unapply#InvoiceMatch", bill), denied)
+            add("match unapply", "finance.ap", () => refusal(match + "unapply#InvoiceMatch", bill), "")
+            attempt(
+                "match policy",
+                match + "store#MatchPolicy",
+                {
+                    organizationPartyId: org,
+                    billBasisEnumId: "ImbReceived",
+                    receiptRequired: "Y",
+                    priceTolerancePercent: 2,
+                    varianceActionEnumId: "ImaHold"
+                },
+                ["finance.admin"],
+                ["finance.ap"]
+            )
+            attempt(
+                "legacy matches",
+                match + "preview#LegacyMatches",
+                {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER"},
+                ["finance.match"],
+                ["finance.read"]
+            )
+            // a payment run: AP creates, the approver approves, AP may not execute; it is cancelled so its bills stay free
+            // the pay date is today in the finance users' zone (the server's), not the spec user's
+            const runs = "mantle.account.PaymentRunServices."
+            const day = as("finance.ap", () => ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"))
+            const request = {
+                organizationPartyId: org,
+                paymentMethodId: "BOSS_ACCT_RUN_BANK",
+                paymentInstrumentEnumId: "PiCompanyCheck",
+                dueThroughDate: day,
+                payDate: day,
+                description: "Access spec run"
+            }
+            add("run create", "finance.treasury", () => refusal(runs + "create#Run", request), denied)
+            const made = as("finance.ap", () => lib.call(runs + "create#Run", request))
+            const run = {organizationPartyId: org, paymentRunId: made.paymentRunId}
+            const runStamp = () =>
+                ec.entity.find("mantle.account.payment.PaymentRun").condition(run).disableAuthz().one().lastUpdatedStamp
+            add("run approve", "finance.ap", () => refusal(runs + "approve#Run", {...run, lastUpdatedStamp: runStamp()}), denied)
+            add("run approve", "finance.approve", () => refusal(runs + "approve#Run", {...run, lastUpdatedStamp: runStamp()}), "")
+            add(
+                "run execute",
+                "finance.ap",
+                () => refusal(runs + "execute#Run", {...run, operationKey: "ACCESS-RUN-" + made.paymentRunId}),
+                denied
+            )
+            // payment view reads runs as it reads their payments; a tax user has no payables or payment read
+            attempt("run read", runs + "get#Run", run, ["finance.read"], ["finance.tax"])
+            add(
+                "run list",
+                "finance.tax",
+                () => refusal("ironstone.accounting.PaymentRunServices.find#Runs", {organizationPartyId: org}),
+                denied
+            )
+            add("run cancel", "finance.ap", () => refusal(runs + "cancel#Run", run), "")
+            // banking: statement review needs BANK_RECONCILE, bank lines a payment read, deposits payment edit
+            const bank = {paymentMethodId: ids.bankPaymentMethodId}
+            const reconcile = "mantle.account.ReconciliationServices."
+            attempt(
+                "statement review",
+                reconcile + "review#StatementImport",
+                {...bank, formatEnumId: "SifCsv", statementText: "Date,Description,Amount\n" + day + ",Access check,-1.00"},
+                ["finance.treasury"],
+                ["finance.ar", "finance.read"]
+            )
+            add(
+                "bank rule",
+                "finance.read",
+                () => refusal(reconcile + "store#Rule", {organizationPartyId: org, matchText: "access check"}),
+                denied
+            )
+            attempt("bank lines", reconcile + "find#BankLines", bank, ["finance.read"], ["finance.ar"])
+            add(
+                "deposit slip",
+                "finance.read",
+                () =>
+                    refusal("mantle.account.PaymentServices.create#DepositSlip", {
+                        ...bank,
+                        paymentIdList: ["BOSS_ACCT_BANK_RCPT1"],
+                        operationKey: "access-deposit"
+                    }),
+                denied
+            )
+            return {problems: mismatches(rows)}
+        },
+        then({problems}) {
+            problems == ""
+        }
+    }
+)
+
+feature("a section a role lacks does not open, and the screens with no logic spec offer each role its own controls", {
     when() {
-        return receivablesHelper.asUser(
+        // refused renders: their status, not their content (the holders' renders are in the specs of each screen)
+        const refused = [
+            ["finance.ar", "Banking/BankAccounts", {}],
+            ["finance.ar", "PeriodClose/PeriodCloseDetail", {timePeriodId: ids.closePeriodId}],
+            ["finance.ar", "Budgets/Budgets", {}],
+            ["finance.ar", "Reports/BalanceSheet", {}],
+            ["finance.ar", "Settings/CollectionPolicies", {}],
+            ["finance.ar", "Approvals", {}],
+            ["finance.ar", "Payables/BillDetail/Match", {recordId: "BOSS_ACCT_BILL_MATCH", lastStandalone: "true"}],
+            ["finance.tax", "Receivables/Collections", {}],
+            ["finance.read", "Settings/Setup/Readiness", {lastStandalone: "true"}]
+        ].map(([user, path, p]) => {
+            const page = as(user, () => lib.page(path, p))
+            return [path + " as " + user, refusedRender(page) ? true : page.status + " " + page.errors.join(" | "), true]
+        })
+        const shows = (page, present, absent = []) =>
+            page.status == 200 &&
+            page.errors.length == 0 &&
+            present.every(text => page.output.includes(text)) &&
+            !absent.some(text => page.output.includes(text))
+        const returnId = "BOSS_ACCT_RETURN"
+        const newco = "BOSS_ACCT_NEWCO"
+        const pages = [
+            [
+                "budgets as a reader",
+                as("finance.read", () => shows(lib.page("Budgets/Budgets"), ["Operating budget"], ["New budget"]))
+            ],
+            ["budgets as GL", as("finance.gl", () => shows(lib.page("Budgets/Budgets"), ["Operating budget", "New budget"]))],
+            [
+                "budget controls as a reader",
+                as("finance.read", () => shows(lib.page("Budgets/BudgetControls"), ["Policies"], ["Add policy"]))
+            ],
+            [
+                "budget controls as the admin",
+                as("finance.admin", () => shows(lib.page("Budgets/BudgetControls"), ["Add policy"]))
+            ],
+            ["balance sheet as a reader", as("finance.read", () => shows(lib.page("Reports/BalanceSheet"), ["Total assets"]))],
+            [
+                "setup readiness as the admin",
+                as(
+                    "finance.admin",
+                    () =>
+                        shows(lib.page("Settings/Setup/Readiness", {organizationPartyId: newco, lastStandalone: "true"}), [
+                            "Posting guard"
+                        ]),
+                    newco
+                )
+            ],
+            ["the return as AR", as("finance.ar", () => shows(lib.page("Records/ReturnDetail", {returnId}), ["Settle return"]))],
+            [
+                "the return as a reader",
+                as("finance.read", () =>
+                    shows(lib.page("Records/ReturnDetail", {returnId}), ["Customer return BOSS_ACCT_RETURN"], ["Settle return"])
+                )
+            ],
+            [
+                "the return as AP",
+                as("finance.ap", () => lib.page("Records/ReturnDetail", {returnId}).output.includes("Return not available"))
+            ]
+        ].map(([name, ok]) => [name, ok, true])
+        return {problems: mismatches(refused.concat(pages))}
+    },
+    then({problems}) {
+        problems == ""
+    }
+})
+
+feature("server choices keep a selected label outside the search page", {
+    when() {
+        // the fixtures are made with artifact authz off (create#InvoiceCreditMemo is granted through its screen
+        // transition only), the choices are read with it on
+        return lib.asUser(
             "finance.admin",
             () => {
                 const service = "mantle.account.InvoiceServices."
-                const organizationPartyId = receivablesIds.organizationPartyId
-                // Own the source and credit used by the picker; shared demo invoices retain their original balances.
-                const target = receivablesHelper.call(service + "create#Receivable", {
-                    organizationPartyId,
-                    customerPartyId: receivablesIds.customerPartyId,
+                // own the source and credit used by the picker; shared demo invoices keep their balances
+                const target = lib.call(service + "create#Receivable", {
+                    organizationPartyId: org,
+                    customerPartyId: ids.customerPartyId,
                     description: "Choice source invoice"
                 })
-                receivablesHelper.call(service + "store#InvoiceDraftItem", {
-                    organizationPartyId,
+                lib.call(service + "store#InvoiceDraftItem", {
+                    organizationPartyId: org,
                     invoiceId: target.invoiceId,
                     itemTypeEnumId: "ItemTimeEntry",
                     quantity: 1,
                     amount: 25,
                     description: "Choice source services"
                 })
-                const finalize = invoiceId => {
-                    const record = ec.entity
-                        .find("mantle.account.invoice.Invoice")
-                        .condition("invoiceId", invoiceId)
-                        .disableAuthz()
-                        .one()
-                    return receivablesHelper.call(service + "change#InvoiceState", {
-                        organizationPartyId,
+                const finalize = invoiceId =>
+                    lib.call(service + "change#InvoiceState", {
+                        organizationPartyId: org,
                         invoiceId,
                         action: "finalize",
-                        lastUpdatedStamp: record.lastUpdatedStamp,
+                        lastUpdatedStamp: ec.entity.find(INVOICE).condition("invoiceId", invoiceId).disableAuthz().one()
+                            .lastUpdatedStamp,
                         operationKey: "choice-finalize-" + ec.user.randomString(20),
                         changeReason: "Prepare a valid selected choice"
                     })
-                }
                 finalize(target.invoiceId)
-                const credit = receivablesHelper.call(service + "create#InvoiceCreditMemo", {
-                    organizationPartyId,
+                const credit = lib.call(service + "create#InvoiceCreditMemo", {
+                    organizationPartyId: org,
                     originalInvoiceId: target.invoiceId,
                     amount: 5,
                     description: "Choice customer credit",
@@ -558,10 +1230,10 @@ feature("P4 server choices preserve selected labels outside the search page", {
                     operationKey: "choice-credit-" + ec.user.randomString(20)
                 })
                 finalize(credit.invoiceId)
-                const bill = receivablesHelper.call("mantle.ledger.AccountingServices.create#DraftDocument", {
+                const bill = lib.call("mantle.ledger.AccountingServices.create#DraftDocument", {
                     kind: "bills",
-                    organizationPartyId,
-                    otherPartyId: receivablesIds.customerPartyId,
+                    organizationPartyId: org,
+                    otherPartyId: ids.customerPartyId,
                     description: "Choice supplier bill"
                 })
                 const reviewedContentId = "CHOICE_ATTACH_" + ec.user.randomString(20)
@@ -569,21 +1241,23 @@ feature("P4 server choices preserve selected labels outside the search page", {
                     "dbresource://mantle/content/invoice/" + target.invoiceId + "/content_" + reviewedContentId + "/Reviewed.txt"
                 const reviewedFile = ec.resource.getLocationReference(reviewedLocation)
                 reviewedFile.putText("The supporting scope reviewed by this test")
-                receivablesHelper.call("create#mantle.account.invoice.InvoiceContent", {
+                invoke("create#mantle.account.invoice.InvoiceContent", {
                     invoiceContentId: reviewedContentId,
                     invoiceId: target.invoiceId,
                     contentLocation: reviewedLocation,
                     contentTypeEnumId: "IctInvoiceDocument",
                     description: "Reviewed customer attachment"
                 })
-                const nativeAttachmentParameters = {
-                    organizationPartyId,
+                const attachments = {
+                    organizationPartyId: org,
                     invoiceId: target.invoiceId,
                     attachmentContentIdList: [reviewedContentId]
                 }
-                const reviewedRow = receivablesHelper.call(service + "get#InvoiceDeliveryAttachments", nativeAttachmentParameters)
-                    .attachmentRows[0]
+                const reviewedRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
                 const reviewedToken = reviewedContentId + "~" + reviewedRow.attachmentVersion
+                ec.artifactExecution.enableAuthz()
+                const choices = p => lib.call("ironstone.accounting.AccessServices.get#Choices", p).options || []
+                const term = "no-matching-accounting-fixture-92831"
                 const cases = [
                     ...[
                         "parties",
@@ -599,11 +1273,7 @@ feature("P4 server choices preserve selected labels outside the search page", {
                     {choice: "receivableCredits", invoiceId: target.invoiceId, selected: credit.invoiceId},
                     {choice: "invoiceTypes", selected: "InvoiceSales"},
                     {choice: "invoiceStatuses", selected: "InvoiceFinalized"},
-                    {
-                        choice: "invoiceAttachments",
-                        invoiceId: receivablesIds.finalizedInvoiceId,
-                        selected: "BOSS_ACCT_AR_SUPPORT"
-                    },
+                    {choice: "invoiceAttachments", invoiceId: ids.finalizedInvoiceId, selected: "BOSS_ACCT_AR_SUPPORT"},
                     {choice: "reviewedInvoiceAttachments", invoiceId: target.invoiceId, selected: reviewedToken},
                     {choice: "invoiceItemTypes", selected: "ItemTimeEntry"},
                     {choice: "identificationTypes", selected: "PtidPassport"},
@@ -612,54 +1282,42 @@ feature("P4 server choices preserve selected labels outside the search page", {
                 ]
                 const failures = []
                 for (const entry of cases) {
+                    // projects are chosen in the organization that has them
                     const projectScope = entry.choice === "projects"
-                    if (projectScope) receivablesHelper.selectOrganization(receivablesIds.foreignOrganizationPartyId)
+                    if (projectScope) lib.selectOrganization(ids.foreignOrganizationPartyId)
                     try {
-                        const parameters = Object.assign(
-                            {
-                                organizationPartyId:
-                                    entry.choice === "projects" ? receivablesIds.foreignOrganizationPartyId : organizationPartyId
-                            },
-                            entry
-                        )
-                        const initial =
-                            receivablesHelper.call("ironstone.accounting.AccessServices.get#Choices", parameters).options || []
+                        const parameters = {organizationPartyId: projectScope ? ids.foreignOrganizationPartyId : org, ...entry}
+                        const initial = choices(parameters)
                         const selected = entry.selected ? initial.find(row => row.value === entry.selected) : initial[0]
                         if (!selected) {
                             failures.push(entry.choice + ": required fixture option is absent")
                             continue
                         }
-                        const term = "no-matching-accounting-fixture-92831"
-                        const outside =
-                            receivablesHelper.call(
-                                "ironstone.accounting.AccessServices.get#Choices",
-                                Object.assign({}, parameters, {term, selected: null})
-                            ).options || []
-                        if (outside.length) failures.push(entry.choice + ": search did not exclude the selected fixture")
-                        const filtered =
-                            receivablesHelper.call(
-                                "ironstone.accounting.AccessServices.get#Choices",
-                                Object.assign({}, parameters, {term, selected: selected.value})
-                            ).options || []
-                        if (!filtered.some(row => row.value === selected.value && row.label === selected.label))
+                        if (choices({...parameters, term, selected: null}).length)
+                            failures.push(entry.choice + ": search did not exclude the selected fixture")
+                        if (
+                            !choices({...parameters, term, selected: selected.value}).some(
+                                row => row.value === selected.value && row.label === selected.label
+                            )
+                        )
                             failures.push(entry.choice + ": selected label was lost")
                     } finally {
-                        if (projectScope) receivablesHelper.selectOrganization(organizationPartyId)
+                        if (projectScope) lib.selectOrganization(org)
                     }
                 }
+                ec.artifactExecution.disableAuthz()
                 reviewedFile.putText("This source changed after its supporting bytes were reviewed")
-                const currentRow = receivablesHelper.call(service + "get#InvoiceDeliveryAttachments", nativeAttachmentParameters)
-                    .attachmentRows[0]
+                ec.artifactExecution.enableAuthz()
+                const currentRow = lib.call(service + "get#InvoiceDeliveryAttachments", attachments).attachmentRows[0]
                 if (currentRow.attachmentVersion === reviewedRow.attachmentVersion)
                     failures.push("reviewedInvoiceAttachments: source byte change did not change its version")
-                const retained =
-                    receivablesHelper.call("ironstone.accounting.AccessServices.get#Choices", {
-                        organizationPartyId,
-                        invoiceId: target.invoiceId,
-                        choice: "reviewedInvoiceAttachments",
-                        term: "no-matching-accounting-fixture-92831",
-                        selected: reviewedToken
-                    }).options || []
+                const retained = choices({
+                    organizationPartyId: org,
+                    invoiceId: target.invoiceId,
+                    choice: "reviewedInvoiceAttachments",
+                    term,
+                    selected: reviewedToken
+                })
                 if (!retained.some(row => row.value === reviewedToken && row.label.includes("Reviewed.txt")))
                     failures.push("reviewedInvoiceAttachments: original reviewed token was lost after source change")
                 if (retained.some(row => row.value === reviewedContentId + "~" + currentRow.attachmentVersion))
@@ -673,854 +1331,5 @@ feature("P4 server choices preserve selected labels outside the search page", {
     },
     then({failures}) {
         failures == []
-    }
-})
-
-feature("a linked customer credit remains an AR record in the common reads and never appears as an AP bill", {
-    when() {
-        const credit = receivablesHelper.asUser(
-            "finance.ar",
-            () =>
-                receivablesHelper.call("mantle.account.InvoiceServices.create#InvoiceCreditMemo", {
-                    organizationPartyId: receivablesIds.organizationPartyId,
-                    originalInvoiceId: receivablesIds.finalizedInvoiceId,
-                    amount: 5,
-                    description: "Credit access fixture",
-                    linkToOriginal: true,
-                    allocateToLines: true,
-                    operationKey: "access-credit-" + ec.user.randomString(20)
-                }),
-            false
-        )
-        const invoiceId = credit.invoiceId
-        const parameters = {organizationPartyId: receivablesIds.organizationPartyId, recordId: invoiceId}
-        const list = kind =>
-            receivablesHelper.call("mantle.ledger.AccountingServices.find#Records", Object.assign({}, parameters, {kind}))
-        return {
-            invoiceId,
-            ar: receivablesHelper.asUser(
-                "finance.ar",
-                () => ({
-                    record: receivablesHelper.call(
-                        "mantle.ledger.AccountingServices.get#Record",
-                        Object.assign({}, parameters, {kind: "invoices"})
-                    ).record,
-                    records: list("invoices").records
-                }),
-                false
-            ),
-            ap: receivablesHelper.asUser(
-                "finance.ap",
-                () => ({
-                    denied: receivablesHelper.refusal(
-                        "mantle.ledger.AccountingServices.get#Record",
-                        Object.assign({}, parameters, {kind: "bills"})
-                    ),
-                    records: list("bills").records
-                }),
-                false
-            )
-        }
-    },
-    then({invoiceId, ar, ap}) {
-        !!invoiceId
-        ar.record.invoiceId == invoiceId
-        ar.records.some(row => row.invoiceId === invoiceId)
-        ap.denied.includes("not available")
-        !ap.records.some(row => row.invoiceId === invoiceId)
-    }
-})
-
-feature("invoice header controls pair the approver, editor and reader capabilities", {
-    when() {
-        const render = () => receivablesHelper.page("Receivables/InvoiceDetail", {recordId: receivablesIds.invoiceId}, "html")
-        return {
-            approver: receivablesHelper.asUser("finance.approve", render),
-            editor: receivablesHelper.asUser("finance.ar", render),
-            reader: receivablesHelper.asUser("finance.read", render)
-        }
-    },
-    then({approver, editor, reader}) {
-        approver.status == 200
-        editor.status == 200
-        reader.status == 200
-        approver.errors == []
-        editor.errors == []
-        reader.errors == []
-        approver.output.includes("Approve invoice")
-        !approver.output.includes("Edit invoice")
-        editor.output.includes("Edit invoice")
-        editor.output.includes("Finalize invoice")
-        !editor.output.includes("Approve invoice")
-        !reader.output.includes("Approve invoice")
-        !reader.output.includes("Finalize invoice")
-        !reader.output.includes("Edit invoice")
-    }
-})
-
-// P6 payables: each service refuses a user without its permission, and a user who has it succeeds with the same parameters.
-feature("payables services pair a refusal with the permitted user's success, with artifact authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const org = helper.ids.organizationPartyId
-        const reference = "ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
-        const upload = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", referenceNumber: reference, amount: "10"}
-        const importDenied = as("finance.approve", () => refusal("mantle.account.InvoiceServices.import#Bill", upload))
-        const imported = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.import#Bill", upload))
-        const hold = {invoiceId: imported.invoiceId, organizationPartyId: org, holdReasonEnumId: "IhrApReview"}
-        const holdDenied = as("finance.read", () => refusal("mantle.account.InvoiceServices.hold#Invoice", hold))
-        const held = as("finance.ap", () => helper.call("mantle.account.InvoiceServices.hold#Invoice", hold))
-        const release = {invoiceHoldId: held.invoiceHoldId, organizationPartyId: org, releaseComment: "Checked"}
-        const releaseDenied = as("finance.ap", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
-        const released = as("finance.approve", () => refusal("mantle.account.InvoiceServices.release#InvoiceHold", release))
-        const terms = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER", selfBillingIndicator: enabled ? "Y" : "N"}
-        const termsDenied = as("finance.ar", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
-        const termsSaved = as("finance.ap", () => refusal("mantle.party.SupplierServices.store#SupplierProfile", terms))
-        const approvals = user => as(user, () => helper.page("Approvals", {}, "qvt"))
-        return {
-            enabled,
-            importDenied,
-            holdDenied,
-            releaseDenied,
-            released,
-            termsDenied,
-            termsSaved,
-            arApprovals: approvals("finance.ar"),
-            approverApprovals: approvals("finance.approve")
-        }
-    },
-    then({enabled, importDenied, holdDenied, releaseDenied, released, termsDenied, termsSaved, arApprovals, approverApprovals}) {
-        importDenied.includes("PERMISSION_DENIED")
-        holdDenied.includes("PERMISSION_DENIED")
-        releaseDenied.includes("PERMISSION_DENIED")
-        released == ""
-        termsDenied.includes("PERMISSION_DENIED")
-        termsSaved == ""
-        approverApprovals.status == 200
-        approverApprovals.output.includes("Inboxes")
-        // the Approvals area is the approvers' and AP's: with artifact authz on, AR does not reach it
-        !enabled || !arApprovals.output.includes("Inboxes")
-    }
-})
-
-feature("external links: AR issues an invoice's pay link and AP a purchase order's bill link, each refused to the other #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const create = "mantle.party.ExternalAccessServices.create#AccessCapability"
-        const pay = {recordType: "Invoice", recordId: helper.ids.finalizedInvoiceId, scopes: "InvoicePay", validDays: 1}
-        const bill = {recordType: "Order", recordId: "BOSS_ACCT_PO", scopes: "BillUpload", validDays: 1}
-        const invite = {organizationPartyId: helper.ids.organizationPartyId, app: "supplier", partyId: "BOSS_ACCT_SUPPLIER"}
-        return {
-            payByAr: as("finance.ar", () => refusal(create, pay)),
-            payByAp: as("finance.ap", () => refusal(create, pay)),
-            payByReader: as("finance.read", () => refusal(create, pay)),
-            billByAp: as("finance.ap", () => refusal(create, bill)),
-            billByAr: as("finance.ar", () => refusal(create, bill)),
-            billByTreasury: as("finance.treasury", () => refusal(create, bill)),
-            inviteByAr: as("finance.ar", () =>
-                refusal("mantle.party.ExternalAccessServices.invite#Contact", {...invite, emailAddress: "ap@supplier.example"})
-            )
-        }
-    },
-    then({payByAr, payByAp, payByReader, billByAp, billByAr, billByTreasury, inviteByAr}) {
-        payByAr == ""
-        payByAp.includes("PERMISSION_DENIED")
-        payByReader.includes("PERMISSION_DENIED")
-        billByAp == ""
-        billByAr.includes("PERMISSION_DENIED")
-        billByTreasury.includes("PERMISSION_DENIED")
-        inviteByAr.includes("PERMISSION_DENIED")
-    }
-})
-
-feature("matching services pair a refusal with the permitted user's success, with artifact authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const org = helper.ids.organizationPartyId
-        // a bill of one unit against the demo's received order, matched and then unapplied, so the demo stays as it was
-        const reference = "MATCH-ACCESS-" + Date.now() + (enabled ? "-A" : "-D")
-        const invoiceId = as("finance.ap", () =>
-            helper.call("mantle.account.InvoiceServices.import#Bill", {
-                organizationPartyId: org,
-                supplierPartyId: "BOSS_ACCT_SUPPLIER",
-                referenceNumber: reference
-            })
-        ).invoiceId
-        ec.service
-            .sync()
-            .name("mantle.account.InvoiceServices.create#InvoiceItem")
-            .parameters({invoiceId, itemTypeEnumId: "ItemInventory", productId: "BOSS_ACCT_SUPPLY", quantity: 1, amount: 8})
-            .disableAuthz()
-            .call()
-        const bill = {invoiceId, organizationPartyId: org}
-        const evaluateDenied = as("finance.ar", () => refusal("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
-        const evaluated = as("finance.read", () => helper.call("mantle.account.InvoiceMatchServices.evaluate#InvoiceMatch", bill))
-        const apply = Object.assign({}, bill, {
-            allocationList: evaluated.sourceRows.map(row => ({
-                invoiceItemSeqId: row.invoiceItemSeqId,
-                orderId: row.orderId,
-                orderItemSeqId: row.orderItemSeqId,
-                assetReceiptId: row.assetReceiptId,
-                quantity: String(row.quantity)
-            }))
-        })
-        const applyDenied = as("finance.read", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
-        const applied = as("finance.match", () => refusal("mantle.account.InvoiceMatchServices.apply#InvoiceMatch", apply))
-        const unapplyDenied = as("finance.approve", () =>
-            refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill)
-        )
-        const unapplied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.unapply#InvoiceMatch", bill))
-        const policy = {
-            organizationPartyId: org,
-            billBasisEnumId: "ImbReceived",
-            receiptRequired: "Y",
-            priceTolerancePercent: 2,
-            varianceActionEnumId: "ImaHold"
-        }
-        const policyDenied = as("finance.ap", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
-        const policySaved = as("finance.admin", () => refusal("mantle.account.InvoiceMatchServices.store#MatchPolicy", policy))
-        const legacy = {organizationPartyId: org, supplierPartyId: "BOSS_ACCT_SUPPLIER"}
-        const legacyDenied = as("finance.read", () =>
-            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
-        )
-        const legacyPreview = as("finance.match", () =>
-            refusal("mantle.account.InvoiceMatchServices.preview#LegacyMatches", legacy)
-        )
-        const matchTab = as("finance.match", () =>
-            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"}, "qvt")
-        )
-        const arTab = as("finance.ar", () =>
-            helper.page("Payables/BillDetail/Match", {recordId: invoiceId, lastStandalone: "true"})
-        )
-        return {
-            enabled,
-            evaluated,
-            evaluateDenied,
-            applyDenied,
-            applied,
-            unapplyDenied,
-            unapplied,
-            policyDenied,
-            policySaved,
-            legacyDenied,
-            legacyPreview,
-            matchTab,
-            arTab
-        }
-    },
-    then(result) {
-        result.evaluated.sourceRows.length == 1
-        result.evaluateDenied.includes("PERMISSION_DENIED")
-        result.applyDenied.includes("PERMISSION_DENIED")
-        result.applied == ""
-        result.unapplyDenied.includes("PERMISSION_DENIED")
-        result.unapplied == ""
-        result.policyDenied.includes("PERMISSION_DENIED")
-        result.policySaved == ""
-        result.legacyDenied.includes("PERMISSION_DENIED")
-        result.legacyPreview == ""
-        result.matchTab.status == 200
-        result.matchTab.output.includes("Apply match")
-        // a match operator reaches Payables; with artifact authz on, AR does not, and AR's tab shows no match either way
-        !result.arTab.output.includes("Apply match")
-    }
-})
-
-// Banking (P9): the same statement review, deposit and bank read, refused for the role that lacks the permission and
-// accepted for the one that holds it; the Banking section opens for treasury and the reader, not for AR.
-feature("banking needs BANK_RECONCILE, deposits need payment edit, and AR does not open Banking", {
-    when() {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const bank = {paymentMethodId: helper.ids.bankPaymentMethodId}
-        const day = ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd")
-        const review = Object.assign({}, bank, {
-            formatEnumId: "SifCsv",
-            statementText: "Date,Description,Amount\n" + day + ",Access check,-1.00"
-        })
-        const rule = {organizationPartyId: helper.ids.organizationPartyId, matchText: "access check"}
-        const deposit = Object.assign({}, bank, {paymentIdList: ["BOSS_ACCT_BANK_RCPT1"], operationKey: "access-deposit"})
-        const asRole = (user, run) => asFinance(user, true, run)
-        return {
-            arReview: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.review#StatementImport", review)),
-            readerReview: asRole("finance.read", () =>
-                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
-            ),
-            treasuryReview: asRole("finance.treasury", () =>
-                refusal("mantle.account.ReconciliationServices.review#StatementImport", review)
-            ),
-            readerRule: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.store#Rule", rule)),
-            readerLines: asRole("finance.read", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
-            arLines: asRole("finance.ar", () => refusal("mantle.account.ReconciliationServices.find#BankLines", bank)),
-            readerDeposit: asRole("finance.read", () => refusal("mantle.account.PaymentServices.create#DepositSlip", deposit)),
-            arPage: asRole("finance.ar", () => helper.page("Banking/BankAccounts")),
-            readerPage: asRole("finance.read", () => helper.page("Banking/BankAccountDetail", bank)),
-            treasuryPage: asRole("finance.treasury", () => helper.page("Banking/BankAccountDetail", bank))
-        }
-    },
-    then({
-        arReview,
-        readerReview,
-        treasuryReview,
-        readerRule,
-        readerLines,
-        arLines,
-        readerDeposit,
-        arPage,
-        readerPage,
-        treasuryPage
-    }) {
-        arReview.includes("PERMISSION_DENIED")
-        readerReview.includes("PERMISSION_DENIED")
-        treasuryReview == ""
-        readerRule.includes("PERMISSION_DENIED")
-        readerLines == ""
-        arLines.includes("PERMISSION_DENIED")
-        readerDeposit.includes("PERMISSION_DENIED")
-        arPage.status != 200 || !arPage.output.includes("Operating account")
-        readerPage.output.includes("Operating account") && readerPage.errors.length == 0
-        !readerPage.output.includes("Import statement") && !readerPage.output.includes("Deposit slip")
-        treasuryPage.output.includes("Import statement") && treasuryPage.output.includes("Deposit slip")
-    }
-})
-
-// Period close (P11): the same close, reopen and period run requests, refused for the role without the permission and
-// passing the permission check for the one that holds it (the close then stops at the demo period's blockers, the reopen
-// at the open period); the Period close section opens for the approver and not for AR.
-feature("closing needs FISCAL_CLOSE, reopening FISCAL_REOPEN and a period run GL posting, and AR does not open Period close", {
-    when() {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const p = {organizationPartyId: helper.ids.organizationPartyId, timePeriodId: helper.ids.closePeriodId}
-        const reopen = Object.assign({changeReason: "Access check"}, p)
-        const run = Object.assign({runKindEnumId: "PrkProjectCost"}, p)
-        const asRole = (user, action) => asFinance(user, true, action)
-        return {
-            glClose: asRole("finance.gl", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
-            approverClose: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.close#Period", p)),
-            approverReopen: asRole("finance.approve", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
-            adminReopen: asRole("finance.admin", () => refusal("mantle.ledger.CloseServices.reopen#Period", reopen)),
-            readerRun: asRole("finance.read", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
-            glRun: asRole("finance.gl", () => refusal("mantle.ledger.PeriodRunServices.preview#Run", run)),
-            arChecklist: asRole("finance.ar", () => refusal("mantle.ledger.CloseServices.get#Checklist", p)),
-            arPage: asRole("finance.ar", () => helper.page("PeriodClose/PeriodCloseDetail", p)),
-            approverPage: asRole("finance.approve", () => helper.page("PeriodClose/PeriodCloseDetail", p))
-        }
-    },
-    then({glClose, approverClose, approverReopen, adminReopen, readerRun, glRun, arChecklist, arPage, approverPage}) {
-        glClose.includes("PERMISSION_DENIED")
-        approverClose.includes("CLOSE_BLOCKED")
-        approverReopen.includes("PERMISSION_DENIED")
-        adminReopen.includes("PERIOD_OPEN")
-        readerRun.includes("PERMISSION_DENIED")
-        glRun == ""
-        arChecklist.includes("RECORD_UNAVAILABLE") || arChecklist.includes("ACCESS_DENIED")
-        arPage.status != 200 || !arPage.output.includes("BOSS_ACCT_CLOSE_INVOICE")
-        approverPage.output.includes("BOSS_ACCT_CLOSE_INVOICE") && approverPage.errors.length == 0
-    }
-})
-
-feature("tax: rates and authorities for finance administrators, statements for tax users, neither for AR #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const rate = {
-            organizationPartyId: "BOSS_ACCT_ORG",
-            taxAuthorityRateId: "BOSS_ACCT_UT_2020",
-            thruDate: "2019-06-01 00:00:00",
-            changeReason: "Access spec"
-        }
-        const statements = {organizationPartyId: "BOSS_ACCT_ORG"}
-        return {
-            // the same end date is refused for its dates, not its authority, for an administrator
-            adminRate: asFinance("finance.admin", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
-            taxRate: asFinance("finance.tax", enabled, () => refusal("mantle.other.TaxServices.store#Rate", rate)),
-            taxList: asFinance("finance.tax", enabled, () =>
-                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
-            ),
-            arList: asFinance("finance.ar", enabled, () =>
-                refusal("ironstone.accounting.TaxServices.find#Statements", statements)
-            ),
-            arRun: asFinance("finance.ar", enabled, () =>
-                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
-                    organizationPartyId: "BOSS_ACCT_ORG",
-                    timePeriodId: "_NA_"
-                })
-            ),
-            taxRun: asFinance("finance.tax", enabled, () =>
-                refusal("mantle.other.TaxServices.run#Vendor1099Statements", {
-                    organizationPartyId: "BOSS_ACCT_ORG",
-                    timePeriodId: "_NA_"
-                })
-            )
-        }
-    },
-    then({adminRate, taxRate, taxList, arList, arRun, taxRun}) {
-        adminRate.includes("RATE_DATES_INVALID")
-        taxRate.includes("admin authority is required")
-        taxList == ""
-        arList.includes("Tax authority is required")
-        arRun.includes("taxEdit authority is required")
-        taxRun.includes("PERIOD_UNAVAILABLE")
-    }
-})
-
-feature("valuation: reads for report readers, landed cost posting for GL, cost repair for finance admin, with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const org = {organizationPartyId: "BOSS_ACCT_ORG"}
-        // the same request: refused for its permission, else for its stale preview or missing stock
-        const post = Object.assign(
-            {
-                invoiceId: "BOSS_ACCT_BILL_FREIGHT",
-                invoiceItemSeqId: "01",
-                assetReceiptIds: "_NA_",
-                inputFingerprint: "stale",
-                operationKey: "ACCESS-P13-" + enabled,
-                changeReason: "Access spec"
-            },
-            org
-        )
-        const repair = Object.assign(
-            {productId: "_NA_", acquireCost: 1, changeReason: "Access spec", operationKey: "ACCESS-P13-R-" + enabled},
-            org
-        )
-        const valuation = "mantle.product.InventoryReportServices.run#InventoryValuation"
-        return {
-            readerValuation: asFinance("finance.read", enabled, () => refusal(valuation, org)),
-            arValuation: asFinance("finance.ar", enabled, () => refusal(valuation, org)),
-            apPost: asFinance("finance.ap", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
-            glPost: asFinance("finance.gl", enabled, () => refusal("mantle.ledger.AssetBookServices.post#LandedCost", post)),
-            glRepair: asFinance("finance.gl", enabled, () =>
-                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
-            ),
-            adminRepair: asFinance("finance.admin", enabled, () =>
-                refusal("mantle.ledger.AssetBookServices.repair#ProductAcquireCost", repair)
-            ),
-            arStock: asFinance("finance.ar", enabled, () =>
-                refusal("mantle.product.InventoryReportServices.run#StockTransactions", org)
-            )
-        }
-    },
-    then({readerValuation, arValuation, apPost, glPost, glRepair, adminRepair, arStock}) {
-        readerValuation == ""
-        arValuation.includes("PERMISSION_DENIED")
-        apPost.includes("PERMISSION_DENIED")
-        glPost.includes("STALE_PREVIEW") || glPost.includes("ALREADY_ALLOCATED")
-        glRepair.includes("PERMISSION_DENIED")
-        adminRepair.includes("ASSETS_NONE")
-        arStock.includes("PERMISSION_DENIED")
-    }
-})
-
-feature("budgets: readers read, GL edits, approvers approve, administrators set controls, AR none #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const organization = {organizationPartyId: "BOSS_ACCT_ORG"}
-        const budget = {budgetId: "BOSS_ACCT_BUDGET"}
-        // the same revision and policy for each user: refused for an unknown account or a zero threshold when allowed
-        const revision = {...budget, lines: [{glAccountId: "_NA_", amount: 1}], changeReason: "Access spec"}
-        const rule = {...organization, actionEnumId: "BcaStop", thresholdPercent: 0, changeReason: "Access spec"}
-        const as = (user, run) => asFinance(user, enabled, run)
-        return {
-            readerList: as("finance.read", () => refusal("ironstone.accounting.BudgetServices.find#Budgets", organization)),
-            arList: as("finance.ar", () => refusal("ironstone.accounting.BudgetServices.find#Budgets", organization)),
-            readerVariance: as("finance.read", () =>
-                refusal("mantle.other.BudgetReportServices.run#BudgetVariance", {...organization, ...budget})
-            ),
-            arVariance: as("finance.ar", () =>
-                refusal("mantle.other.BudgetReportServices.run#BudgetVariance", {...organization, ...budget})
-            ),
-            glRevise: as("finance.gl", () => refusal("mantle.other.BudgetServices.revise#Budget", revision)),
-            readerRevise: as("finance.read", () => refusal("mantle.other.BudgetServices.revise#Budget", revision)),
-            glApprove: as("finance.gl", () =>
-                refusal("mantle.other.BudgetServices.change#BudgetState", {...budget, action: "approve"})
-            ),
-            approverApprove: as("finance.approve", () =>
-                refusal("mantle.other.BudgetServices.change#BudgetState", {...budget, action: "approve"})
-            ),
-            adminPolicy: as("finance.admin", () => refusal("mantle.other.BudgetServices.store#Policy", rule)),
-            glPolicy: as("finance.gl", () => refusal("mantle.other.BudgetServices.store#Policy", rule)),
-            arCheck: as("finance.ar", () =>
-                refusal("mantle.other.BudgetServices.check#Budget", {...organization, glAccountId: "_NA_", amount: 1})
-            ),
-            arPage: as("finance.ar", () => helper.page("Budgets/Budgets")),
-            readerPage: as("finance.read", () => helper.page("Budgets/Budgets")),
-            glPage: as("finance.gl", () => helper.page("Budgets/Budgets")),
-            readerControls: as("finance.read", () => helper.page("Budgets/BudgetControls")),
-            adminControls: as("finance.admin", () => helper.page("Budgets/BudgetControls"))
-        }
-    },
-    then(r) {
-        r.readerList == ""
-        r.arList.includes("Budget read authority is required")
-        r.readerVariance == ""
-        r.arVariance.includes("reportRead authority is required")
-        r.glRevise.includes("ACCOUNT_UNAVAILABLE")
-        r.readerRevise.includes("PERMISSION_DENIED")
-        r.glApprove.includes("PERMISSION_DENIED")
-        r.approverApprove.includes("STATE_TRANSITION_INVALID")
-        r.adminPolicy.includes("THRESHOLD_INVALID")
-        r.glPolicy.includes("admin authority is required")
-        r.arCheck.includes("PERMISSION_DENIED")
-        r.arPage.status != 200 || !r.arPage.output.includes("Operating budget")
-        r.readerPage.output.includes("Operating budget") && r.readerPage.errors.length == 0
-        !r.readerPage.output.includes("New budget")
-        r.glPage.output.includes("New budget")
-        r.readerControls.output.includes("Policies") && !r.readerControls.output.includes("Add policy")
-        r.adminControls.output.includes("Add policy")
-    }
-})
-
-// Fixed assets (P12): the same book requests refused for the role without the permission and passing the permission check
-// for the one that holds it (each then stops at its own validation, so nothing changes); AR does not open Fixed assets.
-feature("fixed assets: book events need GL posting, classes and cost repair finance administration, and AR has no list", {
-    when() {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const org = helper.ids.organizationPartyId
-        const capitalize = {assetId: "BOSS_ACCT_FA_VAN", acquireCostUomId: "EUR", operationKey: "access-fa-cap"}
-        const storeClass = {organizationPartyId: org, classEnumId: "AsClsLaptop", usefulLifeYears: 0, changeReason: "Access"}
-        const repair = {assetId: "BOSS_ACCT_FA_VAN", acquireCost: "-1", changeReason: "Access", operationKey: "access-fa-fix"}
-        const asRole = (user, action) => asFinance(user, true, action)
-        const books = "mantle.ledger.AssetBookServices."
-        return {
-            readCapitalize: asRole("finance.read", () => refusal(books + "capitalize#Asset", capitalize)),
-            glCapitalize: asRole("finance.gl", () => refusal(books + "capitalize#Asset", capitalize)),
-            glClass: asRole("finance.gl", () => refusal(books + "store#Class", storeClass)),
-            adminClass: asRole("finance.admin", () => refusal(books + "store#Class", storeClass)),
-            glRepair: asRole("finance.gl", () => refusal(books + "repair#AcquireCost", repair)),
-            adminRepair: asRole("finance.admin", () => refusal(books + "repair#AcquireCost", repair)),
-            arBook: asRole("finance.ar", () => refusal(books + "get#AssetBook", {assetId: "BOSS_ACCT_FA_VAN"})),
-            arList: asRole("finance.ar", () =>
-                refusal("ironstone.accounting.AssetBookServices.find#Assets", {organizationPartyId: org})
-            ),
-            readList: asRole("finance.read", () =>
-                refusal("ironstone.accounting.AssetBookServices.find#Assets", {organizationPartyId: org})
-            )
-        }
-    },
-    then({readCapitalize, glCapitalize, glClass, adminClass, glRepair, adminRepair, arBook, arList, readList}) {
-        readCapitalize.includes("PERMISSION_DENIED")
-        glCapitalize.includes("CURRENCY_UNSUPPORTED")
-        glClass.includes("PERMISSION_DENIED")
-        adminClass.includes("LIFE_INVALID")
-        glRepair.includes("PERMISSION_DENIED")
-        adminRepair.includes("AMOUNT_INVALID")
-        arBook.includes("PERMISSION_DENIED")
-        arList.includes("read authority is required")
-        readList == ""
-    }
-})
-
-feature("payment run services pair a refusal with the permitted user's success, with artifact authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const org = helper.ids.organizationPartyId
-        // the pay date is today for the users who create and execute the run, in their zone (the finance users have none,
-        // so the server's), not the spec user's: on an Americas evening the two are different days
-        const day = as("finance.ap", () => ec.l10n.format(ec.user.nowTimestamp, "yyyy-MM-dd"))
-        const request = {
-            organizationPartyId: org,
-            paymentMethodId: "BOSS_ACCT_RUN_BANK",
-            paymentInstrumentEnumId: "PiCompanyCheck",
-            dueThroughDate: day,
-            payDate: day,
-            description: "Access spec run"
-        }
-        const createDenied = as("finance.treasury", () => refusal("mantle.account.PaymentRunServices.create#Run", request))
-        const made = as("finance.ap", () => helper.call("mantle.account.PaymentRunServices.create#Run", request))
-        const run = {organizationPartyId: org, paymentRunId: made.paymentRunId}
-        const stamp = () =>
-            ec.entity.find("mantle.account.payment.PaymentRun").condition(run).disableAuthz().one().lastUpdatedStamp
-        const approveDenied = as("finance.ap", () =>
-            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
-        )
-        const approved = as("finance.approve", () =>
-            refusal("mantle.account.PaymentRunServices.approve#Run", Object.assign({lastUpdatedStamp: stamp()}, run))
-        )
-        const execute = Object.assign({operationKey: "ACCESS-RUN-" + made.paymentRunId}, run)
-        const executeDenied = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.execute#Run", execute))
-        // payment view reads runs as it reads their payments; a tax user has no payables or payment read
-        const readDenied = as("finance.tax", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
-        const listDenied = as("finance.tax", () =>
-            refusal("ironstone.accounting.PaymentRunServices.find#Runs", {organizationPartyId: org})
-        )
-        const read = as("finance.read", () => refusal("mantle.account.PaymentRunServices.get#Run", run))
-        // the run is cancelled so its bills stay free for the other specs' runs
-        const cancelled = as("finance.ap", () => refusal("mantle.account.PaymentRunServices.cancel#Run", run))
-        return {createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}
-    },
-    then({createDenied, approveDenied, approved, executeDenied, readDenied, listDenied, read, cancelled}) {
-        createDenied.includes("PERMISSION_DENIED")
-        approveDenied.includes("PERMISSION_DENIED")
-        approved == ""
-        executeDenied.includes("PERMISSION_DENIED")
-        readDenied.includes("PERMISSION_DENIED")
-        listDenied.includes("PERMISSION_DENIED")
-        read == ""
-        cancelled == ""
-    }
-})
-
-// Collections, credit and recurring invoices (P10): each service refused for the role without the permission and passing
-// for the one that holds it, with the same request; Collection policies open for the finance admin only, Collections for
-// AR and not for tax.
-feature(
-    "collections, credit and recurring services pair a refusal with the permitted user's success, with artifact authz #enabled",
-    {
-        where: [{enabled: true}, {enabled: false}],
-        when({enabled}) {
-            const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-            const as = (user, run) => helper.asUser(user, run, enabled)
-            const org = helper.ids.organizationPartyId
-            const customer = {organizationPartyId: org, customerPartyId: "BOSS_ACCT_COLLECT"}
-            const level = {
-                organizationPartyId: org,
-                description: "Access spec level",
-                daysOverdueFrom: 75,
-                changeReason: "Access"
-            }
-            const policy = Object.assign({}, customer, {creditLimit: 5000, changeReason: "Access spec"})
-            const contact = Object.assign({}, customer, {outcomeEnumId: "CaoNoAnswer", note: "Access spec"})
-            const schedule = {
-                organizationPartyId: org,
-                templateInvoiceId: "BOSS_ACCT_RENT_TEMPLATE",
-                intervalUomId: "TF_yr",
-                description: "Access spec schedule"
-            }
-            const results = {
-                workDenied: as("finance.tax", () =>
-                    refusal("ironstone.accounting.CollectionServices.find#Work", {organizationPartyId: org})
-                ),
-                work: as("finance.ar", () =>
-                    refusal("ironstone.accounting.CollectionServices.find#Work", {organizationPartyId: org})
-                ),
-                policiesDenied: as("finance.ar", () =>
-                    refusal("ironstone.accounting.CollectionServices.get#CollectionPolicies", {organizationPartyId: org})
-                ),
-                policies: as("finance.admin", () =>
-                    refusal("ironstone.accounting.CollectionServices.get#CollectionPolicies", {organizationPartyId: org})
-                ),
-                levelDenied: as("finance.ar", () => refusal("mantle.account.CollectionServices.store#Level", level)),
-                levelStored: as("finance.admin", () => helper.call("mantle.account.CollectionServices.store#Level", level)),
-                statusDenied: as("finance.ap", () => refusal("mantle.account.CreditServices.get#CustomerCreditStatus", customer)),
-                status: as("finance.ar", () => refusal("mantle.account.CreditServices.get#CustomerCreditStatus", customer)),
-                policyDenied: as("finance.ar", () => refusal("mantle.account.CreditServices.store#Policy", policy)),
-                policy: as("finance.approve", () => refusal("mantle.account.CreditServices.store#Policy", policy)),
-                contactDenied: as("finance.read", () => refusal("mantle.account.CollectionServices.record#Activity", contact)),
-                contact: as("finance.ar", () => refusal("mantle.account.CollectionServices.record#Activity", contact)),
-                scheduleDenied: as("finance.ap", () =>
-                    refusal("mantle.account.RecurringInvoiceServices.store#Schedule", schedule)
-                ),
-                scheduleStored: as("finance.ar", () =>
-                    helper.call("mantle.account.RecurringInvoiceServices.store#Schedule", schedule)
-                ),
-                agingDenied: as("finance.tax", () =>
-                    refusal("mantle.ledger.LedgerReportServices.run#Aging", {organizationPartyId: org})
-                ),
-                aging: as("finance.read", () =>
-                    refusal("mantle.ledger.LedgerReportServices.run#Aging", {organizationPartyId: org})
-                ),
-                arSettings: as("finance.ar", () => helper.page("Settings/CollectionPolicies")),
-                taxCollections: as("finance.tax", () => helper.page("Receivables/Collections"))
-            }
-            // the level, policy and schedule made here are ended, so the demo and the other specs keep theirs
-            as("finance.admin", () =>
-                helper.call("mantle.account.CollectionServices.store#Level", {
-                    organizationPartyId: org,
-                    dunningLevelId: results.levelStored.dunningLevelId,
-                    ended: "Y"
-                })
-            )
-            as("finance.admin", () =>
-                helper.call(
-                    "mantle.account.CreditServices.store#Policy",
-                    Object.assign({}, customer, {ended: "Y", changeReason: "Access spec end"})
-                )
-            )
-            as("finance.ar", () =>
-                helper.call("mantle.account.RecurringInvoiceServices.store#Schedule", {
-                    invoiceScheduleId: results.scheduleStored.invoiceScheduleId,
-                    statusId: "IschEnded"
-                })
-            )
-            return Object.assign(results, {enabled})
-        },
-        then(r) {
-            r.workDenied.includes("PERMISSION_DENIED")
-            r.work == ""
-            r.policiesDenied.includes("PERMISSION_DENIED")
-            r.policies == ""
-            r.levelDenied.includes("PERMISSION_DENIED")
-            !!r.levelStored.dunningLevelId
-            r.statusDenied.includes("PERMISSION_DENIED")
-            r.status == ""
-            r.policyDenied.includes("PERMISSION_DENIED")
-            r.policy == ""
-            r.contactDenied.includes("PERMISSION_DENIED")
-            r.contact == ""
-            r.scheduleDenied.includes("PERMISSION_DENIED")
-            !!r.scheduleStored.invoiceScheduleId
-            r.agingDenied.includes("PERMISSION_DENIED")
-            r.aging == ""
-            !r.enabled || r.arSettings.status != 200 || !r.arSettings.output.includes("Payment reminder levels")
-            !r.enabled || r.taxCollections.status != 200 || !r.taxCollections.output.includes("Overdue customers")
-        }
-    }
-)
-
-// Returns and order changes (P17): the same return settlement, receipt, draft release and order refund, refused for the
-// role that lacks the permission and allowed (or refused for another reason) for the one that holds it; ReturnDetail
-// opens for its side's readers and offers Settle to AR only. Nothing here settles the demo return the walk settles.
-feature("returns: AR settles, a reader previews, receipt needs STOCK_RECEIVE, order changes need their permissions #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const returnId = "BOSS_ACCT_RETURN"
-        const preview = {returnId}
-        const settle = {returnId, previewVersion: "stale", operationKey: "RETURN-ACCESS-" + Date.now() + (enabled ? "-A" : "-D")}
-        const shipment = ec.entity
-            .find("mantle.shipment.ShipmentItemSource")
-            .condition("orderId", "BOSS_ACCT_SO_RETURN")
-            .disableAuthz()
-            .list()[0]
-        const payment = ec.entity
-            .find("mantle.account.payment.Payment")
-            .condition("orderId", "BOSS_ACCT_SO_RETURN")
-            .disableAuthz()
-            .list()[0]
-        const release = {shipmentId: shipment.shipmentId, reason: "Access spec"}
-        const refund = {paymentId: payment.paymentId, amount: 1, reason: "Access spec", operationKey: settle.operationKey + "-R"}
-        const receive = {
-            shipmentId: ec.entity
-                .find("mantle.shipment.ShipmentItemSource")
-                .condition("returnId", returnId)
-                .disableAuthz()
-                .list()[0].shipmentId,
-            itemList: [{returnId, returnItemSeqId: "01", quantityAccepted: 5}]
-        }
-        return {
-            readPreview: as("finance.read", () => helper.call("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
-            arPreview: as("finance.ar", () => helper.call("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
-            apPreview: as("finance.ap", () => refusal("mantle.order.ReturnServices.preview#ReturnSettlement", preview)),
-            readSettle: as("finance.read", () => refusal("mantle.order.ReturnServices.settle#Return", settle)),
-            arSettle: as("finance.ar", () => refusal("mantle.order.ReturnServices.settle#Return", settle)),
-            arReceive: as("finance.ar", () => refusal("mantle.shipment.WarehouseTaskServices.receive#ReturnItems", receive)),
-            treasuryRelease: as("finance.treasury", () =>
-                refusal("mantle.account.InvoiceServices.release#ShipmentDraftInvoice", release)
-            ),
-            arRelease: as("finance.ar", () => refusal("mantle.account.InvoiceServices.release#ShipmentDraftInvoice", release)),
-            arRefund: as("finance.ar", () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund)),
-            treasuryRefund: as("finance.treasury", () => refusal("mantle.account.PaymentServices.refund#OrderPayment", refund)),
-            arPage: as("finance.ar", () => helper.page("Records/ReturnDetail", {returnId})),
-            readPage: as("finance.read", () => helper.page("Records/ReturnDetail", {returnId})),
-            apPage: as("finance.ap", () => helper.page("Records/ReturnDetail", {returnId}))
-        }
-    },
-    then(result) {
-        result.readPreview.lineRows.length == 1
-        result.readPreview.reasonCode == "FORBIDDEN"
-        result.arPreview.canSettle == true
-        result.apPreview.includes("FORBIDDEN")
-        result.readSettle.includes("FORBIDDEN")
-        // AR passes the authority and is refused for the stale preview only
-        result.arSettle.includes("RECEIPT_CHANGED")
-        // receipt is Warehouse's: refused by its permission, and with artifact authz by the Accounting grants too
-        result.arReceive.includes("PERMISSION_DENIED") || result.arReceive.includes("not authorized")
-        result.treasuryRelease.includes("PERMISSION_DENIED")
-        result.arRelease.includes("SHIPMENT_SHIPPED")
-        result.arRefund.includes("PERMISSION_DENIED")
-        !result.treasuryRefund.includes("PERMISSION_DENIED")
-        result.treasuryRefund != ""
-        result.arPage.output.includes("Settle return")
-        !result.readPage.output.includes("Settle return")
-        result.readPage.output.includes("Customer return BOSS_ACCT_RETURN")
-        result.apPage.output.includes("Return not available")
-    }
-})
-
-// Setup and activation (P19): finance administration previews, checks, saves, imports and activates the setup of
-// BOSS_ACCT_NEWCO, each refused here only for a reason after the permission (a stale version, an empty check); a reader,
-// AR, AP and GL are refused for the permission with the same parameters; the Setup mount opens for the administrator.
-// Nothing here changes the demo setup.
-feature("setup: finance administration reads, saves, imports and activates the setup; other roles are refused #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const org = "BOSS_ACCT_NEWCO"
-        const admin = run => helper.asUser("finance.admin", run, enabled, org)
-        const as = (user, run) => helper.asUser(user, run, enabled)
-        const service = name => "mantle.ledger.SetupServices." + name
-        const read = {organizationPartyId: org}
-        const store = {organizationPartyId: org, runVersion: -1, openingDate: "2026-01-01"}
-        const items = {organizationPartyId: org, rows: [], verifyOnly: true}
-        const activate = {organizationPartyId: org, runVersion: -1, operationKey: "SETUP-ACCESS-" + (enabled ? "A" : "D")}
-        return {
-            enabled,
-            adminPreview: admin(() => refusal(service("preview#OpeningBalances"), read)),
-            readPreview: as("finance.read", () => refusal(service("preview#OpeningBalances"), read)),
-            adminReadiness: admin(() => refusal(service("check#Readiness"), read)),
-            glReadiness: as("finance.gl", () => refusal(service("check#Readiness"), read)),
-            adminStore: admin(() => refusal(service("store#SetupRun"), store)),
-            arStore: as("finance.ar", () => refusal(service("store#SetupRun"), store)),
-            adminImport: admin(() => refusal(service("import#OpenItems"), items)),
-            apImport: as("finance.ap", () => refusal(service("import#OpenItems"), items)),
-            adminActivate: admin(() => refusal(service("activate#Accounting"), activate)),
-            glActivate: as("finance.gl", () => refusal(service("activate#Accounting"), activate)),
-            adminPage: admin(() => helper.page("Settings/Setup/Readiness", {organizationPartyId: org, lastStandalone: "true"})),
-            readPage: as("finance.read", () => helper.page("Settings/Setup/Readiness", {lastStandalone: "true"}))
-        }
-    },
-    then(r) {
-        r.adminPreview == ""
-        r.readPreview.includes("PERMISSION_DENIED")
-        r.adminReadiness == ""
-        r.glReadiness.includes("PERMISSION_DENIED")
-        r.adminStore.includes("STALE_REVISION")
-        r.arStore.includes("PERMISSION_DENIED")
-        r.adminImport == ""
-        r.apImport.includes("PERMISSION_DENIED")
-        r.adminActivate.includes("STALE_REVISION")
-        r.glActivate.includes("PERMISSION_DENIED")
-        r.adminPage.status == 200
-        r.adminPage.output.includes("Posting guard")
-        !r.enabled || r.readPage.status != 200 || !r.readPage.output.includes("Posting guard")
-    }
-})
-
-// Reports (P16): the same report requests for a reader, who runs them, and for AR, who holds no report read; the services
-// refuse even with artifact authorization disabled, and AR does not open the report screens.
-feature("reports: readers run the statements, partner ledger, posted amounts and sales analysis, AR none #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        const helper = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js")
-        const organization = {organizationPartyId: "BOSS_ACCT_ORG"}
-        const requests = [
-            ["ironstone.accounting.ReportServices.get#Statement", {...organization, statement: "balanceSheet"}],
-            ["ironstone.accounting.ReportServices.get#Statement", {...organization, statement: "accountBalance"}],
-            ["mantle.ledger.LedgerReportServices.run#PartnerLedger", organization],
-            ["mantle.ledger.LedgerReportServices.run#PostedAmountSummary", organization],
-            ["mantle.sales.SalesReportServices.run#SalesAnalysis", organization]
-        ]
-        const run = user => asFinance(user, enabled, () => requests.map(([service, p]) => refusal(service, p)))
-        return {
-            reader: run("finance.read"),
-            ar: run("finance.ar"),
-            arPage: asFinance("finance.ar", enabled, () => helper.page("Reports/BalanceSheet")),
-            readerPage: asFinance("finance.read", enabled, () => helper.page("Reports/BalanceSheet"))
-        }
-    },
-    then({reader, ar, arPage, readerPage}) {
-        reader.every(reason => reason == "")
-        ar.every(reason => /PERMISSION_DENIED|authority is required/.test(reason))
-        arPage.status != 200 || !arPage.output.includes("Total assets")
-        readerPage.errors.length == 0 && readerPage.output.includes("Total assets")
     }
 })

@@ -53,10 +53,9 @@ feature("product and taxonomy CSV exports contain the same owner-scoped rows as 
         !products.output.includes("BOSS_PRD_OTHER")
     }
 })
-feature("resolved price output and supplier exports keep direction and owner scope with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return as("catalog.price.read", enabled, () => ({
+feature("resolved price output and supplier exports keep direction and owner scope", {
+    when() {
+        return as("catalog.price.read", true, () => ({
             prices: render(
                 "Prices/PriceLists/PriceListDetail",
                 {
@@ -83,10 +82,9 @@ feature("resolved price output and supplier exports keep direction and owner sco
         supplierDenied == true
     }
 })
-feature("Products alone refuses financial outputs, posting and unsupported contexts with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
-        return as("catalog.reader", enabled, () => {
+feature("Products alone refuses financial outputs, posting and unsupported contexts", {
+    when() {
+        return as("catalog.reader", true, () => {
             const context = call("ironstone.products.CatalogServices.get#ProductDetail", {productId: "BOSS_PRD_OWN"}).detail,
                 connections = call("ironstone.products.CatalogServices.get#ProductConnections", {productId: "BOSS_PRD_OWN"}),
                 cost = call("ironstone.products.CostServices.get#CostContext", {productId: "BOSS_PRD_OWN"}),

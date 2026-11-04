@@ -521,9 +521,8 @@ application (mr-mantle AccountingImplementation, "Base-currency posting (P20)");
 
 Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 
-- Regression suite (`test/Accounting/`): AccountingAccess (the app's one access spec), AccountingIsolation and
-  AccountingShell (roles, scope and the palette, with paired positive and negative cases), AccountingOutputs,
-  AccountingScreens, AccountingReceivables, AccountingSettlement, AccountingPayments, AccountingPaymentFiles,
+- Regression suite (`test/Accounting/`): AccountingAccess (the app's one access spec: roles, organization
+  scope and isolation, with paired positive and negative cases), AccountingOutputs, AccountingReceivables, AccountingSettlement, AccountingPayments, AccountingPaymentFiles,
   AccountingIssuedFiles, AccountingPaymentGateway, AccountingPaymentRefunds, AccountingPaymentTransfers,
   AccountingPayables, AccountingMatching, AccountingPaymentRuns, AccountingBanking, AccountingPeriodClose,
   AccountingTax, AccountingBudgets, AccountingValuation and AccountingCollections (returns and setup in

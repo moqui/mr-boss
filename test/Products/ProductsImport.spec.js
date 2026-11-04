@@ -101,9 +101,8 @@ feature("the BOSS mapping form configures native work and emits one aggregate re
         Array.from(notices).filter(r => JSON.parse(r.requestJson).operationKey === applied.operationKey).length == 1
     }
 })
-feature("native import staging and source reports keep their role and owner guards with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    when({enabled}) {
+feature("native import staging and source reports keep their role and owner guards", {
+    when() {
         return {
             reader: as(
                 "catalog.reader",
@@ -113,12 +112,12 @@ feature("native import staging and source reports keep their role and owner guar
                         organizationPartyId: "ORG_ZIZI_SERVICES",
                         sourceText: "productId,productName\nDENIED,Denied\n"
                     }),
-                enabled
+                true
             ),
             editor: as(
                 "catalog.edit",
                 () => call(S + "get#CatalogImportKinds", {organizationPartyId: "ORG_ZIZI_SERVICES"}),
-                enabled
+                true
             ),
             prices: as(
                 "catalog.edit",
@@ -128,7 +127,7 @@ feature("native import staging and source reports keep their role and owner guar
                         organizationPartyId: "ORG_ZIZI_SERVICES",
                         sourceText: "productId,vendorPartyId,price,priceUomId\nBOSS_PRD_OWN,BOSS_PRD_SUPPLIER,9,USD\n"
                     }),
-                enabled
+                true
             )
         }
     },

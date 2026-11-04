@@ -1,5 +1,5 @@
 // The Manufacturing standalone walks' organization and flow (impl-manufacturing P17; design-manufacturing §10.3 "Unauthorized
-// action and standalone app", crosscut §6), shared by ManufacturingAccessWalk and ManufacturingIsolationWalk: BOSS_P17_ORG,
+// action and standalone app", crosscut §6), shared by the acceptance ManufacturingAccessWalk: BOSS_P17_ORG,
 // an organization with its own plant, line, made product, component, released routing and BOM and a sales demand, and its
 // Manufacturing users of one capability each (spec users in the Manufacturing root group and one capability group, agents of
 // the organization, no other launcher; the material handler holds Warehouse's issue group without the Warehouse root); plan to

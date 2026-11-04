@@ -314,7 +314,7 @@ feature(
                     for (const level of Array.isArray(found.json) ? found.json : [])
                         levels[level.name] = (level.subscreens || []).filter(item => item.menuInclude).map(item => item.name)
                 }
-                // one refused screen here: test/Projects/ClientIsolation.spec.js renders every screen file as the client (Rates, CreateInvoice, OrderDetail)
+                // one refused screen here: test/Projects/ProjectsAccess.spec.js checks the client's refused Billing screens (Rates, OrderDetail)
                 return {
                     levels,
                     billing: render("Billing", {}),

@@ -273,8 +273,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     - `moqui lint --screens` clean for BOSS with the Debug binary;
     - the inventories' **Implemented in** columns;
   - an access rule the phase adds checked in `CustomerServiceAccess` (one holder and one non-holder on one verb, and
-    another organization's record refused), not every service and mount; ClientIsolation and ClientWrites passing with
-    the new package (F17);
+    another organization's record refused), not every service and mount; ProjectsAccess passing with the new
+    package (F17);
   - for a phase that touches the Support app (P13, P15): the same for mr-pass, and lint clean for PASS;
   - its row and **Built** note here.
 
@@ -374,7 +374,7 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     shared mount calls it. A supplied organization, customer, case, order, return or invitation is checked against it.
     An agent sees the cases of their teams' queues and those assigned to them; a manager the teams they manage.
   - No artifact authorization for the raw Mantle request, return and order mutators or their REST paths. The client
-    deny pattern's service pattern gains `ironstone.customerservice`, and ClientWrites its new verbs (F17).
+    deny pattern's service pattern gains `ironstone.customerservice`, and ProjectsAccess its new verbs (F17).
   - The permissions Customer Service's Mantle services check (§2, §4): mr-mantle seeds its eleven new `UserPermission`
     rows beside `ORDER_APPROVE` in `MantleSetupData.xml` (`RETURN_AUTHORIZE` is Purchasing's, `CUSTOMER_CREDIT_VIEW`
     Accounting's), and BossSetupData grants them with `UserGroupPermission` rows:

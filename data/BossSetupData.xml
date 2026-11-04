@@ -362,7 +362,7 @@ along with this software (see the LICENSE.md file). If not, see
         Backlog, sprints and import, and every Commons and Comms screen. What a client may open: the root, Home, Projects (List, ProjectDetail with Overview, Work items, Plan's Timeline, Roadmap and
         Requests, and P10b's Hours: ProjectDetail/ClientHours), Roadmap, MilestoneDetail, ReleaseDetail, WorkItems (List,
         WorkItemDetail, Timeline), Requests (List, RequestDetail), Billing (Invoices, InvoiceDetail, InvoicePrint), Chatter and
-        RecordFiles; test/Projects/ClientIsolation.spec.js fails when a screen file is neither. -->
+        RecordFiles. -->
     <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL" description="IronStone Projects screens and writes the client contacts never reach">
         <artifacts artifactName="component://mr-boss/screen/Projects/(Time|Resources|Reports|Settings)(\.xml|/.*)"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
@@ -388,7 +388,7 @@ along with this software (see the LICENSE.md file). If not, see
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <artifacts artifactName="component://mr-boss/screen/Shared/(StandardCosts|CostRollup|CostHistory|InventoryValuation|Documents|DocumentDetail|CategoryContent|Translations|Units|Packaging|Labels|IdentificationTypes|CatalogChecks|ProductImport)\.xml" artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- every write of an IronStone app service, by its verb: every verb but the reads (get, find, search, check, clean, decorate,
-            describe, list, lookup, match, parse, suggest), which test/Projects/ClientWrites.spec.js checks against every service file. The
+            describe, list, lookup, match, parse, suggest), which test/Projects/ProjectsAccess.spec.js checks against every service file. The
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself -->

@@ -129,7 +129,7 @@ written down here and extended for work items, requests and clients:
   record write denied), denies Billing until P10b opens Invoices and InvoiceDetail, and shows no time (no hours shared)
   until P10b's client states. As built in P10b: a client's own writes are `ironstone.client.ClientServices` only (the client
   package, which the IronStone service deny pattern does not name; the pattern names every write verb and is checked against
-  every service file by test/Projects/ClientWrites.spec.js), each allow-remote false and checking the client's access itself before it writes with
+  every service file by test/Projects/ProjectsAccess.spec.js), each allow-remote false and checking the client's access itself before it writes with
   authorization off: Send message and Reply in Chatter (a Message to the record's internal people only: the record's
   assignees or request assignee and the project's managers, never another client, the client's own side or an outside
   party; a reply only to a message or a status update for it), raise a request in a client project with files (the public

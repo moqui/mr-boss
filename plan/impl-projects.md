@@ -892,7 +892,7 @@ F41–F43, for the PASS pattern.
   allocation, other client, internal member, setting, unshared item or unpublished note. A refused action is absent
   from the projection's capabilities, as P10b hid refused controls.
 - **Done for a phase:** §2's Done for the Mantle and BOSS parts; the regression tests for the phase's rules in mr-pass,
-  among them `ClientPortalAccess`, the app's one access spec, which carries ClientIsolation's rules over to the
+  among them `ClientPortalAccess`, the app's one access spec, which carries ProjectsAccess's rules over to the
   operations; the regression suites of mr-pass, mr-mantle and mr-boss within budget; lint clean for PASS;
   WorkProjectClients and the BOSS Client specs passing until C7 changes them; and its row and **Built** note here. The
   phase's "usable when" is an acceptance test to write in mr-pass `acceptance/` or `acceptance/client/` (the remote
@@ -1014,7 +1014,7 @@ Each result is a row in §9.6 and, where it changes the design, an edit there. S
   ClientHours, Billing's client view and the shared repositories are removed; `ironstone.client.ClientServices` is
   removed once its Mantle cores serve the app (C3, C4). The `BOSS_PROJECTS_INTERNAL` deny patterns and
   `EXTERNAL_USER` stay, refusing anyone left with a client grant.
-- Specs: ClientWalk, ClientWrites, ClientBilling, ClientCode, ClientChatDrive and ClientIsolation become "a client
+- Specs: ClientBilling and ProjectsAccess (the merge of ClientWalk, ClientWrites, ClientCode, ClientChatDrive and ClientIsolation) become "a client
   account reaches no BOSS screen or service", their cases carried by `ClientPortalAccess`; WorkProjectClients is
   unchanged.
 - design-projects §1.1 and §15 describe the Client app.

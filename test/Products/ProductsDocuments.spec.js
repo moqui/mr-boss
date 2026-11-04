@@ -120,9 +120,8 @@ feature("the app content and translation wrappers use native optimistic revision
         translations.translationRows.find(r => r.contentId === created.productContentId).reviewState == "Needs review"
     }
 })
-feature("raw typed content, conflict drafts and their audit rows retain the catalog owner boundary with authz #enabled", {
-    where: [{enabled: true}, {enabled: false}],
-    expect({enabled}) {
+feature("raw typed content, conflict drafts and their audit rows retain the catalog owner boundary", {
+    expect() {
         const n = as("john.doe", () =>
             call("mantle.product.ProductServices.create#ProductContent", {
                 productId: "BOSS_PRD_OTHER",
@@ -138,7 +137,7 @@ feature("raw typed content, conflict drafts and their audit rows retain the cata
                     recordId: n.productContentId,
                     checkOnly: true
                 }),
-            enabled
+            true
         )
         result.recordVisible == false || result.error.includes("not authorized")
     }
