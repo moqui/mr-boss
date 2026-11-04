@@ -1727,6 +1727,14 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | party/AgreementServices | get#PurchaseAgreementPrint |  | Purchasing/Agreements/AgreementDetail (Print, Print as of) (Purchasing P13) |
 | party/AgreementServices | expire#PurchaseAgreements |  | (the daily job expire_PurchaseAgreements; Purchasing P13) |
 | order/PurchasePegServices | get#ReceiptPegs, reserve#ReceiptPeg |  | Purchasing/Receiving/ShipmentDetail (Bought for customer orders, Reserve for this order) (Purchasing P14b) |
+| order/SourcingServices | create#QuoteRequest |  | Purchasing/Sourcing/QuoteRequests (New RFQ); Purchasing/NewQuoteRequest (quick create); Purchasing/Requests/RequestSourcing (Request quotes, the RFQ route) (Purchasing P11) |
+| order/SourcingServices | store#QuoteRequest, store#QuoteRequestItem |  | Purchasing/Sourcing/QuoteRequestDetail (Edit RFQ; Add item, Edit, Remove) (Purchasing P11) |
+| order/SourcingServices | store#QuoteInvitation |  | Purchasing/Sourcing/QuoteRequestDetail (Invite supplier, Declined) (Purchasing P11) |
+| order/SourcingServices | send#QuoteRequest |  | Purchasing/Sourcing/QuoteRequestDetail (Send) (Purchasing P11) |
+| order/SourcingServices | get#QuoteRequestPrint |  | Purchasing/Sourcing/QuoteRequestDetail (Print, Print as of) (Purchasing P11) |
+| order/SourcingServices | store#SupplierQuote |  | Purchasing/Sourcing/Quotes (New supplier quote); Purchasing/Sourcing/QuoteDetail (Record the answer, Edit quote) (Purchasing P11) |
+| order/SourcingServices | store#SupplierQuoteItem |  | Purchasing/Sourcing/QuoteDetail (Add line, Edit price) (Purchasing P11) |
+| order/SourcingServices | publish#SupplierQuotePrice |  | Purchasing/Sourcing/QuoteDetail (Publish price) (Purchasing P11) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

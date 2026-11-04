@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- QuoteRequestDetail (design-purchasing §5 QuoteRequestDetail; style-guide §3.3 Detail; impl-purchasing P11): an RFQ of the
+    user's organizations, over ironstone.purchasing.SourcingServices.get#QuoteRequest. QuoteRequestHeader: the RFQ, its
+    organization, response date, facility, currency and revision, its status, and the actions: Send (SendQuoteRequest: the RFQ
+    published as of now, its PDF stored on the RFQ and mailed to each supplier not sent this revision, one failure named while
+    the others go), Print, and in More Edit RFQ and Print as of a date and time (the RFQ as the audit log has it then).
+    QuoteRequestItems: the items with their source request lines, Add item, Edit and Remove (each change a new revision that
+    needs a new send; quotes still requested follow it). QuoteRequestSuppliers: the invited suppliers' quotes, each a purchase
+    order in the quote statuses, with when it was sent the RFQ and whether it changed since, Invite supplier, Enter quote
+    (QuoteDetail) and Declined. QuoteRequestResponses: the quotes answered. The published PDFs, the History from the audit log,
+    the Conversation and Files. Every write is mantle.order.SourcingServices', after AccessServices.check#Record of the RFQ
+    with the buy capability; a reader sees the RFQ without its actions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="RFQ" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="printAsOf"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="updateRfq">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.store#QuoteRequest"
+                    in-map="{requestId:requestId, requestName:requestName, description:(description || null),
+                        responseRequiredDate:(responseRequiredDate || null), facilityId:(facilityId || null),
+                        changeReason:(changeReason || null)}"/>
+            <message type="success">Saved RFQ ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- an item added, changed or removed: only the fields the form posts -->
+    <transition name="storeRfqItem">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <set field="itemValues" from="Object.fromEntries(['requestItemSeqId', 'productId', 'description', 'quantity',
+                    'quantityUomId', 'requiredByDate', 'remove', 'changeReason'].filter((name) =&gt; context[name] != null
+                    &amp;&amp; context[name] !== '').map((name) =&gt; [name, context[name]]))"/>
+            <service-call name="mantle.order.SourcingServices.store#QuoteRequestItem"
+                    in-map="Object.assign({requestId:requestId}, itemValues)"/>
+            <message type="success">Saved the items of RFQ ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="inviteSupplier">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:supplierPartyId}"/>
+            <service-call name="mantle.order.SourcingServices.store#QuoteInvitation" out-map="invited"
+                    in-map="{requestId:requestId, supplierPartyId:supplierPartyId}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(invited.existing ? 'Already invited: quote ' + invited.orderId
+                : 'Invited; quote ' + invited.orderId + ' waits for the RFQ to be sent', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="declineInvitation">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.store#QuoteInvitation"
+                    in-map="{requestId:requestId, orderId:orderId, declined:true, reason:reason}"/>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the send: each supplier's result by name; one that failed does not stop the others -->
+    <transition name="sendRfq">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.send#QuoteRequest" out-map="sent"
+                    in-map="{requestId:requestId, note:(note || null), operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const failed = (sent.supplierResults || []).filter((row) => row.resultStatus != 'SENT')
+                    const sentNames = (sent.supplierResults || []).filter((row) => row.resultStatus == 'SENT').map((row) => row.supplierName)
+                    ec.message.addMessage((sentNames.length ? 'Sent RFQ ' + requestId + ' to ' + sentNames.join(', ') : 'RFQ ' + requestId + ' was sent to no supplier')
+                        + (failed.length ? '; not sent to ' + failed.map((row) => row.supplierName + ' (' + (row.errorCode || 'failed').replace(/_/g, ' ').toLowerCase() + ')').join(', ') : ''),
+                        failed.length ? 'warning' : 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="printRfq" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}"/>
+            <service-call name="mantle.order.SourcingServices.get#QuoteRequestPrint" out-map="printed"
+                    in-map="{requestId:requestId, asOfDate:asOfDate || null}"/>
+            <script>
+                const bytes = ec.resource.xslFoTransform(printed.printHtml, null, null, 'application/pdf')
+                ec.web.response.setContentType('application/pdf')
+                ec.web.response.setHeader('Content-Disposition', 'inline; filename="' + printed.fileName + '"')
+                ec.web.response.getOutputStream().write(bytes)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a published RFQ's PDF, as sent -->
+    <transition name="rfqContent" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId}"/>
+            <entity-find-one entity-name="mantle.request.RequestContent" value-field="content" disable-authz="true"/>
+            <if condition="content?.requestId != requestId || !content?.contentLocation">
+                <return error="true" message="The file is not on RFQ ${requestId}"/></if>
+            <script>ec.web.sendResourceResponse(content.contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the print as of a time: a link form back to the RFQ with the time, whose page then offers the PDF -->
+    <transition name="asOf">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="printAsOf"/>
+        </default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.SourcingServices.get#QuoteRequest" out-map="detail"
+                in-map="{appRoot:appRoot, requestId:requestId}" transaction="force-new" ignore-error="true"/>
+        <set field="rfq" from="detail?.rfq || null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="found" from="!!rfq"/>
+        <if condition="found">
+            <set field="historyRows" from="detail.historyRows || []"/>
+            <set field="headerValue" from="{requestId:requestId, requestName:rfq.requestName, description:rfq.description,
+                    responseRequiredDate:rfq.responseRequiredDate, facilityId:rfq.facilityId}"/>
+            <set field="sendValue" from="{requestId:requestId, operationKey:'rfq-send-' + requestId + '-' + ec.user.randomString(16)}"/>
+            <set field="printUrl" from="sri.buildUrl('printRfq').addParameters({requestId:requestId}).getUrlWithParams()"/>
+            <set field="printAsOfUrl" from="printAsOf ? sri.buildUrl('printRfq').addParameters({requestId:requestId,
+                    asOfDate:printAsOf}).getUrlWithParams() : null"/>
+            <set field="contentUrl" from="sri.buildUrl('rfqContent').path + '?requestId=' + encodeURIComponent(requestId)
+                    + '&amp;requestContentId='"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="QuoteRequestMissing" condition="!found">
+            <widgets>
+                <context title="RFQ ${requestId}"/>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="RFQ ${requestId} is not available: it does not exist or it is not one of your
+                                organizations' requests for quotation."/>
+                        <link url="${sharedLinks['Sourcing/QuoteRequests']}" text="Back to RFQs" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="QuoteRequestFound" condition="found">
+            <widgets>
+                <context record-entity="mantle.request.Request" record-id="${requestId}" title="RFQ ${requestId} · ${rfq.requestName}"/>
+                <container style="q-mb-xs">
+                    <link url="${sharedLinks['Sourcing/QuoteRequests']}" link-type="anchor" text="RFQs" icon="arrow_back"/>
+                </container>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-baseline">
+                                <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                                <label text="${rfq.requestName}" type="h5"/>
+                            </container>
+                            <label text="${[rfq.organizationName, rfq.dueText ? 'respond by ' + rfq.dueText : '',
+                                    rfq.facilityName ? 'deliver to ' + rfq.facilityName : '', rfq.currencyUomId,
+                                    rfq.revisionText ? 'revision of ' + rfq.revisionText : '', rfq.respondedText]
+                                    .filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${rfq.statusColor}">${
+                                    WebUtilities.encodeHtml(rfq.statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "QuoteRequestStatus", style: "strong",
+                                    text: rfq.statusText})}]]></text>
+                                <text type="html">${rfq.statusText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-sm m-record-foot m-record-actions">
+                        <container-dialog id="SendQuoteRequest" button-text="Send" icon="sym_o_send" type="primary" width="560"
+                                title="Send RFQ ${requestId}" condition="rfq.canSend">
+                            <form-single name="SendQuoteRequestForm" transition="sendRfq" map="sendValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="note">
+                                    <default-field title="Message to the suppliers"><text-area rows="3"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Send to ${rfq.sendCount} supplier${rfq.sendCount == 1 ? '' : 's'}">
+                                        <submit confirmation="Publish RFQ ${requestId} as it is now and send it to the ${rfq.sendCount}
+                                                supplier${rfq.sendCount == 1 ? '' : 's'} not sent this revision?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted" text="The RFQ's PDF is kept on it with the time it was
+                                    published. A supplier whose address fails is named; the others are sent."/>
+                        </container-dialog>
+                        <link url="${printUrl}" url-type="plain" text="Print" icon="sym_o_print" link-type="anchor-button"
+                                target-window="_blank"/>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="EditQuoteRequest" button-text="Edit RFQ" icon="sym_o_edit" width="720"
+                                    title="Edit RFQ ${requestId}" condition="rfq.canEdit">
+                                <form-single name="EditQuoteRequestForm" transition="updateRfq" map="headerValue">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="requestName"><default-field title="Name"><text-line/></default-field></field>
+                                    <field name="facilityId">
+                                        <default-field title="Deliver to">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'planFacilities', selected:headerValue.facilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="responseRequiredDate">
+                                        <default-field title="Respond by"><date-time type="date"/></default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Specification"><text-area rows="4"/></default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason for the change"><text-line/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="requestName"/><field-ref name="facilityId"/></field-row>
+                                        <field-ref name="responseRequiredDate"/>
+                                        <field-ref name="description"/>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                                <label type="p" style="text-caption m-muted" condition="rfq.publishedText"
+                                        text="A change of the response date or the specification needs a new send."/>
+                            </container-dialog>
+                            <container-dialog id="QuoteRequestPrintAsOf" button-text="Print as of" icon="sym_o_history"
+                                    width="440" title="Print RFQ ${requestId} as of">
+                                <form-single name="QuoteRequestAsOf" transition="asOf">
+                                    <field name="requestId" from="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="printAsOf"><default-field title="Date and time"><date-time/></default-field></field>
+                                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+                <label type="p" style="text-warning" condition="rfq.changedSinceSent"
+                        text="The RFQ changed since it was last sent: send it again so each supplier quotes this revision."/>
+                <section name="QuoteRequestAsOf" condition="printAsOfUrl">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Print as of ${printAsOf}"/>
+                            <box-body>
+                                <link url="${printAsOfUrl}" url-type="plain" text="Open the RFQ as of ${printAsOf}"
+                                        icon="sym_o_picture_as_pdf" link-type="anchor-button" target-window="_blank"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label type="p" text="${rfq.description}" condition="rfq.description"/>
+                <!-- QuoteRequestItems -->
+                <container-box>
+                    <box-header title="Items · ${rfq.itemRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="QuoteRequestAddItem" button-text="Add item" icon="sym_o_add" width="640"
+                                title="Add an item to RFQ ${requestId}" condition="rfq.canEdit">
+                            <form-single name="AddQuoteRequestItem" transition="storeRfqItem" map="{requestId:requestId}">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Product">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'orderProducts'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Description" tooltip="What is wanted, for an item with no product">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                <field name="requiredByDate">
+                                    <default-field title="Required by"><date-time type="date"/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add item"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="productId"/><field-ref name="description"/></field-row>
+                                    <field-row><field-ref name="quantity"/><field-ref name="requiredByDate"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="QuoteRequestItems" list="rfq.itemRows" skip-form="true" paginate="false">
+                            <field name="requestItemSeqId">
+                                <default-field title="Item"><label text="${requestItemSeqId}" type="span" style="text-mono"/></default-field>
+                            </field>
+                            <field name="productText">
+                                <default-field title="Product">
+                                    <label text="${productText || description}" type="div"/>
+                                    <label text="${description}" type="div" style="text-caption m-muted"
+                                            condition="productText &amp;&amp; description"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityText" align="right">
+                                <default-field title="Quantity"><label text="${quantityText} ${uomText}" type="span"/></default-field>
+                            </field>
+                            <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="For request lines"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="QuoteRequestItem_${requestItemSeqId}" button-text="Edit" icon="sym_o_edit"
+                                            width="560" title="Item ${requestItemSeqId} of RFQ ${requestId}" condition="rfq.canEdit">
+                                        <form-single name="EditQuoteRequestItem" transition="storeRfqItem"
+                                                map="{requestId:requestId, requestItemSeqId:requestItemSeqId, quantity:quantity,
+                                                    requiredByDate:requiredByDate, description:description}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="requestItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                            <field name="requiredByDate">
+                                                <default-field title="Required by"><date-time type="date"/></default-field>
+                                            </field>
+                                            <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason for the change"><text-line/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="storeRfqItem" text="" icon="sym_o_delete" link-type="hidden-form-link"
+                                            btn-type="danger" tooltip="Remove the item" condition="rfq.canEdit"
+                                            parameter-map="{requestId:requestId, requestItemSeqId:requestItemSeqId, remove:'true'}"
+                                            confirmation="Remove item ${requestItemSeqId} from RFQ ${requestId}?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productText"/><field-ref name="requiredByText"/></column>
+                                <column><field-ref name="quantityText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!rfq.itemRows.length"
+                                text="${rfq.canEdit ? 'No items yet. Add what you want quoted with Add item, then invite suppliers.'
+                                    : 'This RFQ has no items.'}"/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- QuoteRequestSuppliers: each invited supplier's quote -->
+                <container-box>
+                    <box-header title="Suppliers · ${rfq.invitationRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="QuoteRequestInvite" button-text="Invite supplier" icon="sym_o_person_add"
+                                width="520" title="Invite a supplier to RFQ ${requestId}" condition="rfq.canInvite">
+                            <form-single name="InviteSupplier" transition="inviteSupplier" map="{requestId:requestId}">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="supplierPartyId">
+                                    <default-field title="Supplier">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'suppliers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Invite"><submit/></default-field></field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted" text="The supplier's quote waits for the RFQ to be
+                                    sent; it is mailed to the supplier's order address, else its primary one."/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="QuoteRequestSuppliers" list="rfq.invitationRows" skip-form="true" paginate="false">
+                            <field name="supplierName">
+                                <default-field title="Supplier">
+                                    <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="${supplierName}" link-type="anchor"
+                                            parameter-map="{orderId:orderId}"/>
+                                    <label text="Quote ${orderId}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="Quote">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="sentText">
+                                <default-field title="Sent">
+                                    <label text="${sentText}" type="div"/>
+                                    <label text="${sendState}" type="div" style="text-caption text-warning"
+                                            condition="sendState == 'Changed since sent'"/>
+                                </default-field>
+                            </field>
+                            <field name="reference"><default-field title="Their reference"><display/></default-field></field>
+                            <field name="validityText"><default-field title="Valid"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="Enter quote" link-type="anchor-button"
+                                            icon="sym_o_edit_note" parameter-map="{orderId:orderId}"
+                                            condition="rfq.canEnterQuote &amp;&amp; statusId == 'OrderRequested'"/>
+                                    <container-dialog id="QuoteDeclined_${orderId}" button-text="Declined" icon="sym_o_block"
+                                            width="480" title="${supplierName} declined RFQ ${requestId}"
+                                            condition="rfq.canEnterQuote &amp;&amp; statusId == 'OrderRequested'">
+                                        <form-single name="DeclineInvitation" transition="declineInvitation"
+                                                map="{requestId:requestId, orderId:orderId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="The supplier's reason"><text-area rows="2" required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Record the decline">
+                                                    <submit type="danger" confirmation="Record that ${supplierName} declined RFQ ${requestId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="supplierName"/><field-ref name="sentText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="amountText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!rfq.invitationRows.length"
+                                text="No supplier is invited yet."/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- QuoteRequestResponses: the quotes answered -->
+                <section name="QuoteRequestResponsesShown" condition="rfq.responseRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Responses · ${rfq.responseRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="QuoteRequestResponses" list="rfq.responseRows" skip-form="true" paginate="false">
+                                    <field name="supplierName">
+                                        <default-field title="Supplier">
+                                            <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="${supplierName}"
+                                                    link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reference"><default-field title="Their reference"><display/></default-field></field>
+                                    <field name="receivedText"><default-field title="Received"><display/></default-field></field>
+                                    <field name="validityText">
+                                        <default-field title="Valid">
+                                            <label text="${validityText}" type="span" style="${expired ? 'text-negative' : ''}"/>
+                                            <label text="Expired" type="div" style="text-caption text-negative" condition="expired"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="supplierName"/><field-ref name="validityText"/></column>
+                                        <column><field-ref name="amountText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="QuoteRequestPublished" condition="rfq.publishedRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="As published"/>
+                            <box-body-nopad>
+                                <form-list name="QuoteRequestPublishedList" list="rfq.publishedRows" skip-form="true" paginate="false">
+                                    <field name="dateText">
+                                        <default-field title="Published">
+                                            <link url="${contentUrl}${requestContentId}" url-type="plain" text="${dateText}"
+                                                    link-type="anchor" target-window="_blank"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description"><default-field title="PDF"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="dateText"/></column>
+                                        <column><field-ref name="description"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="QuoteRequestHistory" condition="historyRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="History"/>
+                            <box-body-nopad>
+                                <form-list name="QuoteRequestHistoryList" list="historyRows" skip-form="true" paginate="false">
+                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="whatText"><default-field title="Change"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="toText"><default-field title="To"><display/></default-field></field>
+                                    <field name="byText"><default-field title="By"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="whatText"/><field-ref name="dateText"/></column>
+                                        <column><field-ref name="toText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Conversation"/>
+                            <box-body>
+                                <chatter id="QuoteRequestChatter" record-entity="mantle.request.Request" record-id="${requestId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Files"/>
+                            <box-body>
+                                <record-files id="QuoteRequestFiles" record-entity="mantle.request.Request" record-id="${requestId}"/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -62,11 +62,11 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="Unsourced requests" value="${counterText.unsourcedCount}" icon="sym_o_add_task" size="sm"
                     link="/qapps/Purchasing/Requests"/>
             <number-card title="RFQs due" value="${counterText.quoteDueCount}" icon="sym_o_request_quote" size="sm"
-                    link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+                    link="/qapps/Purchasing/Sourcing/QuoteRequests?view=due" condition="can.listRead"/>
             <number-card title="Quotes to compare" value="${counterText.quoteCompareCount}" icon="sym_o_compare_arrows"
                     size="sm" link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
             <number-card title="Quotes expiring" value="${counterText.quoteExpiringCount}" icon="sym_o_timer" size="sm"
-                    link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+                    link="/qapps/Purchasing/Sourcing/Quotes?view=expiring" condition="can.listRead"/>
             <number-card title="Shortfalls" value="${counterText.shortfallCount}" icon="sym_o_production_quantity_limits"
                     size="sm" link="/qapps/Purchasing/Replenishment" condition="can.replenishment"/>
             <number-card title="Approvals waiting" value="${counterText.approvalCount}" icon="sym_o_approval" size="sm"

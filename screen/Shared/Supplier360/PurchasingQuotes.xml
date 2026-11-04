@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's RFQs and quotes tab, in the Purchasing context (crosscut §3.3 Purchasing row; design-purchasing §3 Supplier360,
+    §5; impl-purchasing P11): the open RFQs the supplier is invited to, with their response date and answers, and the
+    supplier's quotes with their status, validity and amount (withheld from a user who may not see prices), each opening
+    Purchasing's QuoteRequestDetail or QuoteDetail, from ironstone.purchasing.SourcingServices find#QuoteRequests and
+    find#SupplierQuotes. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="RFQs &amp; quotes" default-menu-index="11">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.SourcingServices.find#QuoteRequests" out-map="supplierRfqsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, vendorPartyId:vendorPartyId, pageSize:50}"/>
+        <service-call name="ironstone.purchasing.SourcingServices.find#SupplierQuotes" out-map="supplierQuotesOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, vendorPartyId:vendorPartyId, pageSize:50}"/>
+        <set field="supplierQuotesFound" from="supplierQuotesOut?.quoteRows != null"/>
+        <set field="supplierRfqRows" from="supplierRfqsOut?.rfqRows || []"/>
+        <set field="supplierQuoteRows" from="supplierQuotesOut?.quoteRows || []"/>
+    </actions>
+    <widgets>
+        <label text="The RFQs and quotes of this supplier are not available to you." type="p" condition="!supplierQuotesFound"/>
+        <section name="SupplierQuotesFound" condition="supplierQuotesFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Open RFQs this supplier is invited to"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Sourcing/QuoteRequests']}" text="All RFQs" link-type="anchor-button"
+                                parameter-map="{vendorPartyId:vendorPartyId, view:'all'}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierRfqRows" list="supplierRfqRows" skip-form="true" paginate="false">
+                            <field name="requestId">
+                                <default-field title="RFQ">
+                                    <link url="${sharedLinks['Sourcing/QuoteRequestDetail']}" text="${requestId}"
+                                            link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                    <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Respond by"><display/></default-field></field>
+                            <field name="respondedText" align="right"><default-field title="Answered"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestId"/><field-ref name="dueText"/></column>
+                                <column><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" condition="!supplierRfqRows.length"
+                                text="This supplier is invited to no open RFQ of your organizations."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Quotes from this supplier"/>
+                    <box-toolbar>
+                        <link url="${sharedLinks['Sourcing/Quotes']}" text="All quotes" link-type="anchor-button"
+                                parameter-map="{vendorPartyId:vendorPartyId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="SupplierQuoteRows" list="supplierQuoteRows" skip-form="true" paginate="false">
+                            <field name="orderId">
+                                <default-field title="Quote">
+                                    <link url="${sharedLinks['Sourcing/QuoteDetail']}" text="${orderId}" link-type="anchor"
+                                            parameter-map="{orderId:orderId}"/>
+                                    <label text="${reference}" type="div" style="text-caption m-muted" condition="reference"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="validityText"><default-field title="Valid"><display/></default-field></field>
+                            <field name="rfqId"><default-field title="RFQ"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="orderId"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="amountText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-md" condition="!supplierQuoteRows.length"
+                                text="Your organizations have no quote from this supplier."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

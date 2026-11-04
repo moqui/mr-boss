@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's RFQ and supplier quote reads (design-purchasing §5 QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail;
+    impl-purchasing P11; Sourcing.js): the RFQ and quote lists, QuoteRequestDetail and QuoteDetail, and the Today source of
+    RFQs due. The screens call the Mantle writes (mantle.order.SourcingServices create#, store#QuoteRequest,
+    store#QuoteRequestItem, store#QuoteInvitation, send#QuoteRequest, get#QuoteRequestPrint, store#SupplierQuote,
+    store#SupplierQuoteItem, publish#SupplierQuotePrice) after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="QuoteRequests" allow-remote="false">
+        <description>QuoteRequestFind and QuoteRequestList (design §5 QuoteRequests): the RFQs of the user's organizations by
+            view (open, the default; drafts; responses due within a day or past; changed since sent; closed; all) and filters
+            (status, organization, a supplier invited, text), newest first, at most 500 read (a warning past it); each with its
+            organization, status, response date, revision, items and its suppliers invited and answered. Refuses a user
+            without the buying lists (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="statusId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rfqRows" type="List"/>
+            <parameter name="rfqRowsCount" type="Integer"/>
+            <parameter name="rfqRowsPageIndex" type="Integer"/>
+            <parameter name="rfqRowsPageSize" type="Integer"/>
+            <parameter name="rfqRowsPageMaxIndex" type="Integer"/>
+            <parameter name="rfqRowsPageRangeLow" type="Integer"/>
+            <parameter name="rfqRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+            <parameter name="view"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
+                    .execute('findRfqs', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="QuoteRequest" allow-remote="false">
+        <description>QuoteRequestDetail (design §5): an RFQ the user may work with (check#Record rfq): its header, items with
+            their source request lines, the invited suppliers' quotes (status, when each was sent the RFQ and whether it
+            changed since, answer date, validity, amount withheld from a user who may not see prices), the responses, the
+            published PDFs, the history from the audit log and the actions the user's capabilities allow. Refuses an RFQ the
+            user may not work with (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="requestId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="rfq" type="Map"/>
+            <parameter name="historyRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
+                    .execute('rfqDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="find" noun="SupplierQuotes" allow-remote="false">
+        <description>QuoteFind and QuoteList (design §5 Quotes): the purchase orders of the user's organizations in the quote
+            statuses (and the declined ones under All) by view (awaiting the supplier, quoted, expiring within the buying
+            policy's warning days, expired, all) and filters (supplier, RFQ, organization, text), newest first, at most 500 read;
+            each with its supplier, reference, validity, RFQ, channel and amount (withheld from a user who may not see prices).
+            Refuses a user without the buying lists (PERMISSION_DENIED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="requestId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="quoteRows" type="List"/>
+            <parameter name="quoteRowsCount" type="Integer"/>
+            <parameter name="quoteRowsPageIndex" type="Integer"/>
+            <parameter name="quoteRowsPageSize" type="Integer"/>
+            <parameter name="quoteRowsPageMaxIndex" type="Integer"/>
+            <parameter name="quoteRowsPageRangeLow" type="Integer"/>
+            <parameter name="quoteRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+            <parameter name="view"/>
+        </out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
+                    .execute('findQuotes', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierQuote" allow-remote="false">
+        <description>QuoteDetail (design §5): a quote the user may work with (check#Record order, then in a quote status or
+            declined): its header and terms with their history, lines with each one's price, quantity and promise history
+            (prices withheld from a user who may not see them), evidence, its RFQ and the actions (answer, edit, publish for a
+            supplier-price editor; an expired quote shows but cannot be placed). Refuses an order the user may not work with or
+            that is no quote (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="orderId" required="true"/></in-parameters>
+        <out-parameters><parameter name="quote" type="Map"/></out-parameters>
+        <actions>
+            <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
+                    .execute('quoteDetail', context))</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Purchasing today-source of RFQs (Purchasing.xml shell-providers): for a buyer, the sent RFQs whose
+            response date falls by the end of the range (or has passed) with a supplier still to answer, each opening
+            QuoteRequestDetail. Another user's Today and a user who does not buy get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
+                    .execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
+</services>

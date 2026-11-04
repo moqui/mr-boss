@@ -76,7 +76,8 @@ along with this software (see the LICENSE.md file). If not, see
                     url = purchasing.recordLink(kind, id)
                     icon = {order:'sym_o_receipt_long', quote:'sym_o_request_quote', agreement:'sym_o_handshake', request:'sym_o_add_task',
                         rfq:'sym_o_contract', supplierReturn:'sym_o_assignment_return'}[kind]
-                    if (url || ownLink) return
+                    // an RFQ opens only QuoteRequestDetail, never another app's RequestDetail (impl-purchasing P11, R-PUR-13)
+                    if (url || ownLink || kind === 'rfq') return
                 }
             }
             // shipments, stock, lots, containers, counts, returns and facilities open under Warehouse for a user who may work

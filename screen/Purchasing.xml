@@ -69,6 +69,11 @@ along with this software (see the LICENSE.md file). If not, see
         <quick-create kind="purchasingPurchaseRequest" label="Purchase request" screen="Purchasing/NewPurchaseRequest"
                 icon="sym_o_add_task" sequence="71"/>
         <today-source service="ironstone.purchasing.RequestServices.get#TodayItems" label="Purchase requests"/>
+        <!-- P11: an RFQ, for the buyers and the administrator (NewQuoteRequest is BOSS_PUR_NEW_RFQ's), and the RFQs whose
+            responses are due with a supplier still to answer, for buyers; an RFQ is found by the palette source above -->
+        <quick-create kind="purchasingQuoteRequest" label="RFQ" screen="Purchasing/NewQuoteRequest"
+                icon="sym_o_request_quote" sequence="73"/>
+        <today-source service="ironstone.purchasing.SourcingServices.get#TodayItems" label="RFQs due"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

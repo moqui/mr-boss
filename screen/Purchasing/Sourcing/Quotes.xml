@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Quotes (design-purchasing §5 Quotes; style-guide §3.2 List; impl-purchasing P11): QuoteFind and QuoteList over
+    ironstone.purchasing.SourcingServices.find#SupplierQuotes (the purchase orders of the user's organizations in the quote
+    statuses by view: Awaiting the supplier, Quoted, Expiring within the buying policy's warning days, Expired, All with the
+    declined ones), each with its supplier, reference, validity, RFQ, channel and amount (withheld from a user who may not see
+    prices), with saved finds; NewSupplierQuote (New supplier quote: an email, phone or unsolicited quote entered on the
+    supplier's behalf with how it came and its evidence, mantle.order.SourcingServices.store#SupplierQuote; for an RFQ's
+    supplier it answers the RFQ's items; it opens QuoteDetail to enter the prices). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Quotes" default-menu-index="2">
+    <parameter name="view"/>
+    <parameter name="vendorPartyId"/>
+    <parameter name="requestId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="createQuote">
+        <actions>
+            <if condition="requestId">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'rfq', recordId:requestId, capability:'buy'}"/>
+            </if>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'supplier', recordId:vendorPartyId, capability:'buy'}"/>
+            <service-call name="mantle.order.SourcingServices.store#SupplierQuote" out-map="stored"
+                    in-map="{requestId:(requestId || null), organizationPartyId:organizationPartyId, vendorPartyId:vendorPartyId,
+                        otherPartyOrderId:(otherPartyOrderId || null), validThruDate:(validThruDate || null),
+                        salesChannelEnumId:(salesChannelEnumId || null), evidenceText:(evidenceText || null),
+                        contentFile:(contentFile || null)}"/>
+            <set field="orderId" from="stored.orderId"/>
+        </actions>
+        <default-response url="../QuoteDetail"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.SourcingServices.find#SupplierQuotes" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, vendorPartyId:vendorPartyId, requestId:requestId,
+                    organizationPartyId:organizationPartyId, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="quoteRows" from="found?.quoteRows || []"/>
+        <set field="quoteRowsCount" from="found?.quoteRowsCount"/>
+        <set field="quoteRowsPageIndex" from="found?.quoteRowsPageIndex"/>
+        <set field="quoteRowsPageSize" from="found?.quoteRowsPageSize"/>
+        <set field="quoteRowsPageMaxIndex" from="found?.quoteRowsPageMaxIndex"/>
+        <set field="quoteRowsPageRangeLow" from="found?.quoteRowsPageRangeLow"/>
+        <set field="quoteRowsPageRangeHigh" from="found?.quoteRowsPageRangeHigh"/>
+        <set field="viewLabel" from="found?.viewLabel || 'All'"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="newQuote" from="{organizationPartyId:purchasing.activeOrganizationPartyId || purchasing.organizationPartyIds[0] || '',
+                salesChannelEnumId:'ScEmail'}"/>
+        <set field="viewLinks" from="[['', 'All'], ['requested', 'Awaiting the supplier'], ['proposed', 'Quoted'], ['expiring', 'Expiring'],
+                ['expired', 'Expired']].map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+        <set field="filtered" from="!!(view || vendorPartyId || requestId || organizationPartyId || text)"/>
+        <set field="emptyText" from="filtered ? 'No quote matches these filters.' : can.buy
+                ? 'No supplier quote yet. Invite suppliers on an RFQ, or enter a quote you received with New supplier quote.'
+                : 'Your organizations have no supplier quote yet.'"/>
+    </actions>
+    <widgets>
+        <context title="Supplier quotes" selection-form="QuoteList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Supplier quotes" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewSupplierQuoteDialog" button-text="New supplier quote" type="primary" icon="sym_o_add"
+                        title="Enter a supplier's quote" width="720" condition="can.buy">
+                    <form-single name="NewSupplierQuote" transition="createQuote" map="newQuote">
+                        <field name="organizationPartyId">
+                            <default-field title="Buying organization">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="vendorPartyId">
+                            <default-field title="Supplier">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="requestId">
+                            <default-field title="For RFQ" tooltip="Empty for a quote the supplier sent unasked">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'rfqs'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="otherPartyOrderId"><default-field title="Their reference"><text-line/></default-field></field>
+                        <field name="validThruDate"><default-field title="Valid through"><date-time type="date"/></default-field></field>
+                        <field name="salesChannelEnumId">
+                            <default-field title="Received by">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" min-length="0" parameter-map="{choice:'quoteChannels'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="evidenceText">
+                            <default-field title="How it came" tooltip="A call with whom, an email's subject"><text-line/></default-field>
+                        </field>
+                        <field name="contentFile"><default-field title="The supplier's file"><file/></default-field></field>
+                        <field name="submitButton"><default-field title="Enter quote"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="organizationPartyId"/><field-ref name="vendorPartyId"/></field-row>
+                            <field-row><field-ref name="requestId"/><field-ref name="otherPartyOrderId"/></field-row>
+                            <field-row><field-ref name="validThruDate"/><field-ref name="salesChannelEnumId"/></field-row>
+                            <field-row><field-ref name="evidenceText"/><field-ref name="contentFile"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="QuoteViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="QuoteList" list="quoteRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <field name="orderId">
+                        <header-field title="Quote" show-order-by="true"/>
+                        <default-field title="Quote">
+                            <link url="../QuoteDetail" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                            <label text="${supplierName}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Quote or reference"><text-find hide-options="true"/></header-field>
+                    </field>
+                    <field name="vendorPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Buying organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="requestId">
+                        <header-field title="RFQ">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'rfqs', selected:requestId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="rfqId">
+                        <default-field title="RFQ">
+                            <link url="${sharedLinks['Sourcing/QuoteRequestDetail']}" text="${rfqId}" link-type="anchor"
+                                    parameter-map="{requestId:rfqId}" condition="rfqId"/>
+                            <label text="Unasked" type="span" style="m-muted" condition="!rfqId"/>
+                        </default-field>
+                    </field>
+                    <field name="reference"><default-field title="Their reference"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="validityText"><default-field title="Valid"><display/></default-field></field>
+                    <field name="channelText"><default-field title="Received by"><display/></default-field></field>
+                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="validityText"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="amountText"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!quoteRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

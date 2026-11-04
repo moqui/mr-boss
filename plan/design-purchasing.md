@@ -402,6 +402,12 @@ decided at its approval and the order stage at the PO's (`convert#Commitment`).
 
 **Data contract** (impl-purchasing §4; F19). Each invited supplier's quote is a purchase OrderHeader with one part, the supplier as vendor and the buying organization as customer, in OrderRequested ("Request Quote"), its lines from the RFQ items with RequestItemOrder links; there is no invitation record. Send creates the quote order's capability through proposed `mantle.party.ExternalAccessServices.create#AccessCapability` (record, revision, supplier, scope `QuoteResponse`, expiry) and mails its link, the PASS Supplier app's QuoteResponse page taking the token, on the buying organization's site (crosscut §5; §13). Cancel, a new revision or the award's close step revokes it through `revoke#AccessCapability`. A proposed source-allocation relation links request items/requirements to RFQ items with quantity/UOM; requested and proposed quotes never reserve stock or count as incoming supply. Public documents exclude internal maximum prices, competing suppliers and private source-request notes.
 
+As built (impl-purchasing P11): the source-allocation relation is RequestItemAssoc, from the RFQ item to the purchase
+request line, with the quantity left to source when the RFQ was made; the recipients are the supplier's order addresses,
+else its primary ones, and the deadline is the RFQ's (a per-supplier contact, channel and deadline are later, F-P11-6); an
+invitation's send state is its quote order's emails against the RFQ's revision. Commons and Projects leave the type out of
+their lists and request access; `convert#RequestToProject` refuses it.
+
 **Source.** research §4; ERPNext request_for_quotation JSON/JS; Carbon PurchasingRFQForm and `carbon/apps/erp/app/routes/share+/purchasing-rfq.$id.tsx`; active Request/RequestItem source.
 
 **Needs.** PUR-RFQ, PUR-PORTAL, PUR-SHELL.
@@ -443,6 +449,9 @@ decided at its approval and the order stage at the PO's (`convert#Commitment`).
 **Actions and states.** Validate units and supplier identity before accepting a submitted offer. An amendment is an audit-logged change to the quote order, read back as of any time; once an award places the quote it is a PO and changes only through OrderChanges. Buyer may reject with reason; retraction cannot delete a linked PO. PublishPrice is the only path from a quote to a supplier price (R-PUR-21). It needs the supplier-price editor capability. Proposed `publish#SupplierQuotePrice` writes the ProductPrice row through Products' proposed `mantle.product.PriceServices.store#ProductPrice`, preserves effective dates, and records the source order and line on the row. An offer is not inventory supply or a binding PO. Quote evidence files are the quote order's OrderContent (D25; impl-purchasing §4).
 
 **Quantity tiers** both ways (impl-purchasing §4; F22). As purchase ProductPrice rows with their minimum quantities, valid for the quote's validity, so the resolver prices a line at any quantity, the long-standing Moqui Java way; PublishPrice writes them, and a supplier's submitted tiers become price rows only when a buyer publishes them. Where an organization uses it, a promotion's auto-adjust: an `apply#Promotion` service adds an `isPromo` child OrderItem (`parentItemSeqId`, `promoQuantity`) for the quantity difference, reapplied by `apply#OrderPromotions` on every change. Mantle finds promotions through the order's ProductStore, which a PO lacks, so their purchase scope is checked before the build.
+As built (impl-purchasing P11): tiers are price rows, PublishPrice publishing a line's price or a tier (from quantity and
+price) per call, with the source order and line on the row; the promotion way needs a purchasing ProductStore and is later
+(F41, F-P11-3).
 
 
 

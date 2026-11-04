@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestSourcing's RFQ route (design-purchasing §4 RequestSourcing, §5; impl-purchasing P11): the request lines left to
+    source asked of suppliers as a new RFQ rather than bought at once. The transition requestQuotes (one transition-include in
+    Requests/RequestSourcing.xml) makes a draft RFQ of the lines' organization with an item per line for the quantity left to
+    source, linked to its line (mantle.order.SourcingServices.create#QuoteRequest with sourceRequestItemKeys), after the record
+    check of each request with the buy capability, and opens it in QuoteRequestDetail to invite suppliers and send it; the
+    section PurchasingSourcingRfqRoute (one section-include) offers it on the lines shown. Nothing is sourced until an award
+    places a quote. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="requestQuotes">
+        <actions>
+            <set field="rfqKeys" from="String(rfqItemKeys || '').split(',').map((key) =&gt; key.trim()).filter((key) =&gt; key)"/>
+            <iterate list="Array.from(new Set(rfqKeys.map((key) =&gt; key.split(':')[0])))" entry="sourceRequestId">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'request', recordId:sourceRequestId, capability:'buy'}"/>
+            </iterate>
+            <entity-find entity-name="mantle.request.RequestParty" list="sourceParties" disable-authz="true">
+                <econdition field-name="requestId" from="rfqKeys.length ? rfqKeys[0].split(':')[0] : '_NA_'"/>
+                <econdition field-name="roleTypeId" value="OrgInternal"/>
+            </entity-find>
+            <entity-find-one entity-name="mantle.request.Request" value-field="sourceRequest" disable-authz="true">
+                <field-map field-name="requestId" from="rfqKeys.length ? rfqKeys[0].split(':')[0] : '_NA_'"/>
+            </entity-find-one>
+            <service-call name="mantle.order.SourcingServices.create#QuoteRequest" out-map="created"
+                    in-map="{organizationPartyId:(sourceParties[0]?.partyId || null), requestName:rfqName,
+                        facilityId:(sourceRequest?.facilityId || null), currencyUomId:(sourceRequest?.currencyUomId || null),
+                        responseRequiredDate:(responseRequiredDate || null), sourceRequestItemKeys:rfqKeys.join(',')}"/>
+            <set field="requestId" from="created.requestId"/>
+        </actions>
+        <default-response url="//Purchasing/Sourcing/QuoteRequestDetail"><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingSourcingRfqRoute" condition="sourcingAllowed &amp;&amp; convertKeys">
+            <actions>
+                <set field="rfqValue" from="{rfqItemKeys:convertKeys, rfqName:'Quotes for ' + Array.from(new Set(convertKeys
+                        .split(',').map((key) =&gt; key.split(':')[0]))).join(', ')}"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Ask suppliers for quotes"/>
+                    <box-toolbar>
+                        <container-dialog id="SourcingRequestQuotes" button-text="Request quotes" icon="sym_o_request_quote"
+                                width="560" title="An RFQ for these request lines">
+                            <form-single name="SourcingRfq" transition="requestQuotes" map="rfqValue">
+                                <field name="rfqItemKeys"><default-field><hidden/></default-field></field>
+                                <field name="rfqName"><default-field title="Name"><text-line/></default-field></field>
+                                <field name="responseRequiredDate">
+                                    <default-field title="Respond by" tooltip="Empty: the buying policy's response days from today">
+                                        <date-time type="date"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Create the RFQ"><submit/></default-field></field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted" text="Each line becomes an item for what is left to source.
+                                    Invite suppliers and send the RFQ from it; the lines stay to source until a quote is awarded."/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" style="m-muted q-mb-none" text="Lines ${convertKeys.split(',').join(', ')} can be asked
+                                of several suppliers before buying."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

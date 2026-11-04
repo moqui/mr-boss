@@ -20,7 +20,8 @@ along with this software (see the LICENSE.md file). If not, see
     makes, its supplier check and, for a supplier-price reader, its amount. ConvertDemand: Create purchase orders, one
     transaction per group; the same page then shows each group's result (the order made, or the failure by name), and Retry the
     failed groups repeats only those under the same operation key. Nothing is placed or approved. For a buyer (the buy
-    capability; Mantle checks PURCHASE_ORDER_EDIT); P11 adds the RFQ route. -->
+    capability; Mantle checks PURCHASE_ORDER_EDIT). P11: the RFQ route, the lines asked of suppliers as a new RFQ
+    (template/PurchasingSourcingRfq.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Source requests" default-menu-include="false">
     <parameter name="requestId"/>
@@ -28,6 +29,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="requestItemKeys"/>
     <parameter name="operationKey"/>
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <!-- P11: the RFQ route (template/PurchasingSourcingRfq.xml) -->
+    <transition-include name="requestQuotes" location="component://mr-boss/template/PurchasingSourcingRfq.xml"/>
     <!-- the groups converted, each in its own transaction; a retry with the same operation key repeats only the failures -->
     <transition name="convertSourcing">
         <actions>
@@ -265,6 +268,8 @@ along with this software (see the LICENSE.md file). If not, see
                         </container-box>
                     </widgets>
                 </section>
+                <!-- P11: the RFQ route -->
+                <section-include name="PurchasingSourcingRfqRoute" location="component://mr-boss/template/PurchasingSourcingRfq.xml"/>
             </widgets>
         </section>
     </widgets>

@@ -177,7 +177,13 @@ function routeFixtures() {
         NewPurchaseRequest: {parameters: {}, text: "New purchase request"},
         // P13: the agreements and Retail's blanket agreement
         "Agreements/AgreementList": {parameters: {}, text: "Agreements"},
-        "Agreements/AgreementDetail": {parameters: {agreementId: ids.agreementId}, text: "Widget blanket"}
+        "Agreements/AgreementDetail": {parameters: {agreementId: ids.agreementId}, text: "Widget blanket"},
+        // P11: the RFQs and supplier quotes (no demo RFQ or quote: their details not available) and the quick create
+        "Sourcing/QuoteRequests": {parameters: {}, text: "Requests for quotation"},
+        "Sourcing/Quotes": {parameters: {}, text: "Supplier quotes"},
+        "Sourcing/QuoteRequestDetail": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"},
+        "Sourcing/QuoteDetail": {parameters: {orderId: "BOSS_PUR_NO_QUOTE"}, text: "not available"},
+        NewQuoteRequest: {parameters: {}, text: "New RFQ"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

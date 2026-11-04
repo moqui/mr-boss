@@ -13,7 +13,9 @@
 // its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail; P9 a purchase order's revisions and
 // acknowledgement for its organization, and starting a change for the buyer only; P10 the quick create of a purchase request
 // (requestCreate), a request's detail for its requester and organization, and its sourcing for the buyer only; P13 an
-// agreement's scope, its change and release for the buyer only and its record link to AgreementDetail.
+// agreement's scope, its change and release for the buyer only and its record link to AgreementDetail; P11 the quick create of
+// an RFQ (rfqCreate), an RFQ's scope, its writes for the buyer only, its record link to QuoteRequestDetail and the RFQ left out
+// of Commons and Projects.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -114,11 +116,16 @@ feature("the Purchasing menu and providers follow each group's areas; the launch
             {
                 user: users.buyer,
                 extra: lists.concat(["Replenishment"]),
-                quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder"]
+                quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder", "purchasingQuoteRequest"]
             },
             {user: users.planner, extra: lists.concat(["Replenishment"]), quick: []},
             {user: users.approve, extra: lists.concat(["Approvals"]), quick: []},
-            {user: users.admin, extra: order, quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder"]}
+            // P11: quick create of an RFQ for the buyer and the administrator (BOSS_PUR_NEW_RFQ)
+            {
+                user: users.admin,
+                extra: order,
+                quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder", "purchasingQuoteRequest"]
+            }
         ]
         const problems = []
         for (const {user, extra, quick} of rows) {
@@ -195,10 +202,21 @@ const capabilityNames = [
     "replenishment",
     "approvals",
     "settings",
-    "requestCreate"
+    "requestCreate",
+    "rfqCreate"
 ]
 // P10: the requester and the buyer groups file purchase requests (requestCreate, BOSS_PUR_NEW_REQUEST)
-const buyer = ["buy", "profileEdit", "scorecardEdit", "billImport", "returnAuthorize", "supplierPriceRead", "requestCreate"]
+// P11: the buyer group creates RFQs (rfqCreate, BOSS_PUR_NEW_RFQ)
+const buyer = [
+    "buy",
+    "profileEdit",
+    "scorecardEdit",
+    "billImport",
+    "returnAuthorize",
+    "supplierPriceRead",
+    "requestCreate",
+    "rfqCreate"
+]
 const capabilityUsers = [
     {user: users.requester, granted: ["requestCreate"]},
     {user: users.read, granted: ["listRead", "replenishment"]},
@@ -943,3 +961,72 @@ feature("an agreement is its organization's; changing or releasing it is the buy
         problems.join("\n") == ""
     }
 })
+
+// P11: an RFQ is its organization's: QuoteRequestDetail's read for its reader and refused for another organization's; its
+// writes the buyer's; its record link opens QuoteRequestDetail (never another app's RequestDetail); Commons and Projects
+// neither list it nor show it, though the buyer filed it (R-PUR-13)
+feature(
+    "an RFQ is its organization's; changing it is the buyer's; it opens only QuoteRequestDetail, in no Commons or Projects list",
+    {
+        when() {
+            const problems = []
+            const rfqId = asUser(
+                users.buyer,
+                () =>
+                    invoke("mantle.order.SourcingServices.create#QuoteRequest", {
+                        organizationPartyId: ids.organizationId,
+                        requestName: "Access spec RFQ"
+                    }).requestId,
+                false
+            )
+            const detail = user =>
+                asUser(user, () =>
+                    refusal("ironstone.purchasing.SourcingServices.get#QuoteRequest", {appRoot: "Purchasing", requestId: rfqId})
+                )
+            const reader = detail(users.read)
+            if (reader !== "") problems.push(`the reader's detail: ${reader}`)
+            const other = detail(users.services)
+            if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's reader: ${other || "accepted"}`)
+            const capability = user =>
+                asUser(user, () => refusal(access + "check#Record", {recordType: "rfq", recordId: rfqId, capability: "buy"}))
+            const holder = capability(users.buyer)
+            if (holder !== "") problems.push(`the buyer's check: ${holder}`)
+            const without = capability(users.read)
+            if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's check: ${without || "accepted"}`)
+            const link = user =>
+                asUser(
+                    user,
+                    () =>
+                        invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                            recordEntityName: "mantle.request.Request",
+                            id: rfqId
+                        }).url || null
+                )
+            if (link(users.read) !== "/qapps/Purchasing/Sourcing/QuoteRequestDetail?requestId=" + rfqId)
+                problems.push(`the RFQ's link: ${link(users.read)}`)
+            const otherLink = link(users.services)
+            if (otherLink) problems.push(`another organization's reader has a link: ${otherLink}`)
+            // the buyer filed it, so Commons' own visibility would show it (the Commons services, which a Purchasing group is
+            // not authorized for, called as a Commons user would)
+            const commons = asUser(
+                users.buyer,
+                () => invoke("ironstone.commons.RequestServices.get#RequestAccess", {requestId: rfqId, need: "check"}),
+                false
+            )
+            if (commons.visible) problems.push("Commons shows the RFQ to the buyer who filed it")
+            const listed = asUser(
+                users.buyer,
+                () =>
+                    Array.from(
+                        invoke("ironstone.commons.RequestServices.find#RequestRows", {list: "all", pageSize: 100}).rowList || []
+                    ),
+                false
+            )
+            if (listed.some(row => row.requestId == rfqId)) problems.push("Commons lists the RFQ")
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)
