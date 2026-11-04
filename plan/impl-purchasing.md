@@ -2602,7 +2602,7 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
     DEMAND_ALREADY_COVERED naming the purchase order or request line.
   - the request route: one purchase request per organization and facility in the call (`create#PurchaseRequest`,
     `store#PurchaseRequestItem`, so their checks apply), a line per customer order line of the requirement with a
-    RequestItemOrder to it (F-P10-7) and one for the rest, at the supplier's price as the most to pay where the buyer may
+    RequestItemOrder to it (F125) and one for the rest, at the supplier's price as the most to pay where the buyer may
     read it, each a RequirementSupply RstPurchaseRequest on the plan's requirement; the requests are sent to approval
     (`submit#PurchaseRequest`, each in its own transaction, a failure named and the request left a draft). The approval then
     makes the request's own requirements and RequestSourcing sources them (P10). `cancel#PurchaseRequest` ends the request's
@@ -2632,7 +2632,7 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
   `reserve#ReceiptPeg`; transition-included in Shared/ShipmentDetail).
 - Specs: Mantle `test/product/ReplenishmentRoutes.spec.js` (5 features, 1.5 s: the request route with its lines, links,
   submission, retry, DEMAND_ALREADY_COVERED and ROUTE_NOT_ALLOWED; request supply while submitted, approved and sourced, the
-  request's drop-ship route through RequestSourcing (F-P10-7's missing spec) and a cancel ending the coverage; the plan's
+  request's drop-ship route through RequestSourcing (F125's missing spec) and a cancel ending the coverage; the plan's
   drop-ship route with NO_CUSTOMER_LINE and a pending order; the receipt's pegs, Reserve, PERMISSION_DENIED and NOT_PEGGED;
   held netting within the supplier's lead time). No BOSS regression spec (F154). Acceptance
   `acceptance/Purchasing/PurchasingReplenishmentRoutesWalk` (3: a customer-order shortage converted to a purchase order keeps
@@ -2674,7 +2674,7 @@ ManufacturingSubcontracting (5), PurchasingReplenishment (3), PurchasingAccess (
     Convert offers no supplier choice yet.
   - **F154** No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is
     the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's.
-  - **F155** F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its
+  - **F155** F125 is answered: the request route writes the RequestItemOrder from a request line to its
     customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route.
 
 **Review Nov 4 (P14b).** Checked both diffs against this section, §2, crosscut §4.2 and the brief, with the shared planning
@@ -3000,7 +3000,7 @@ is written there too.
 | F152 | P14b: Request lines as plan supply count any approved purchase request of the organization at a facility of the set, in the line's quantity: a request line in a unit other than the stock unit is not converted (the request route writes the stock unit; a hand-filed line in another unit would be miscounted). Fixed in the review (R2). | See P14b |
 | F153 | P14b: The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but Convert offers no supplier choice yet. | See P14b |
 | F154 | P14b: No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's. | See P14b |
-| F155 | P14b: F125 (F-P10-7) is answered: the request route writes the RequestItemOrder from a request line to its customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route. | See P14b |
+| F155 | P14b: F125 is answered: the request route writes the RequestItemOrder from a request line to its customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route. | See P14b |
 
 ## 7. Later
 
