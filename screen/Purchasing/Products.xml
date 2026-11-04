@@ -12,12 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Products mount of IronStone Purchasing (design-purchasing §1, §3 Product360): the shared Product360 in the
-    Purchasing context (impl-purchasing P2), opened from the palette's product lookup and product links, out of the menu,
-    for the buying lists' groups (BOSS_PUR_LISTS). -->
+<!-- The Products mount of IronStone Purchasing (design-purchasing §1, §3 Product360; impl-purchasing P2), out of the menu,
+    for the buying lists' groups (BOSS_PUR_LISTS): ProductFind (a product chosen from the catalog the user reads) and Products'
+    shared Product360 in the Purchasing context (ironstone.products.SharedContext.js: the master read only with the
+    crosscut §3.5 Purchasing tabs; a product check#ProductUsable refuses for buying shows the reason), opened from the
+    palette's product lookup and product links. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Products" default-menu-index="14" menu-image="sym_o_inventory_2" menu-image-type="icon" default-menu-include="false">
+    <subscreens default-item="ProductFind" always-use-full-path="true">
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Product records in the purchasing context." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

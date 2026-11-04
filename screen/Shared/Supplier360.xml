@@ -28,6 +28,23 @@ along with this software (see the LICENSE.md file). If not, see
                 <service-call name="ironstone.manufacturing.SubcontractServices.get#SupplierContext"
                         in-map="{vendorPartyId:vendorPartyId}" out-map="context"/>
             </then>
+            <!-- Purchasing's mount (Purchasing/Suppliers/Supplier360, crosscut §3.3 Purchasing row, impl-purchasing P2) has its
+                own read: contact, the buying organization's profile and its rows, the buyer, category and supplier check
+                (ironstone.purchasing.SupplierServices.get#SupplierContext); a supplier out of scope shows as not available -->
+            <else-if condition="appRoot == 'Purchasing'">
+                <service-call name="ironstone.purchasing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                        out-map="sharedMountContext"/>
+                <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+                <service-call name="ironstone.purchasing.SupplierServices.get#SupplierContext" out-map="purchasingSupplier"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId}"/>
+                <set field="supplierUnavailable" from="!purchasingSupplier?.vendorPartyId"/>
+                <if condition="supplierUnavailable">
+                    <set field="purchasingSupplier" from="{supplier:{supplierName:'Supplier'}, contactRows:[], addressRows:[],
+                            roleRows:[], profile:{}, profileRows:[], buyerRows:[], purchasingCapabilities:{}}"/>
+                </if>
+                <script>ec.context.putAll(purchasingSupplier)</script>
+            </else-if>
             <else>
                 <service-call name="ironstone.products.CatalogServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
                 <script>if(!sharedMountContext.capabilities.read)throw new Error('Catalog read access is required')</script>
@@ -50,6 +67,12 @@ along with this software (see the LICENSE.md file). If not, see
     </always-actions>
     <subscreens default-item="Overview">
         <subscreens-item name="Prices" menu-index="2" location="component://mr-boss/screen/Shared/SupplierPrices.xml" menu-title="Products &amp; prices"/>
+        <!-- Purchasing (impl-purchasing P2): the buying profile, buyer and category, and the finance details for a finance
+            reader; each tab's condition keeps it to Purchasing -->
+        <subscreens-item name="Buying" menu-index="6" location="component://mr-boss/screen/Shared/Supplier360/Buying.xml"
+                menu-title="Buying profile"/>
+        <subscreens-item name="Finance" menu-index="7" location="component://mr-boss/screen/Shared/Supplier360/Finance.xml"
+                menu-title="Payment details"/>
     </subscreens>
     <actions>
         <entity-find-one entity-name="mantle.party.Organization" value-field="buyerOrganization" cache="true">
@@ -63,25 +86,53 @@ along with this software (see the LICENSE.md file). If not, see
                 rejectionRows?.length ? rejectionRows.length + ' with rejections' : ''].filter(Boolean).join(' · ')"/>
     </actions>
     <widgets>
-        <context record-entity="mantle.party.Party" record-id="${vendorPartyId}" title="${supplier.supplierName}"/>
-        <!-- the header card (style-guide §3.4): the supplier and the buying organization, with a new offer as the primary action -->
-        <container style="m-record-header">
-            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
-                <container style="col-12 col-md m-record-title">
-                    <label text="${supplier.supplierName}" type="h5"/>
-                    <label text="Supplier to ${buyerOrganization?.organizationName || organizationPartyId}" type="p"
-                            style="text-caption m-muted q-mb-none" condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"/>
-                    <label text="${subcontractSummary}" type="p" style="text-caption m-muted q-mb-none"
-                            condition="appRoot == 'Manufacturing'"/>
-                    <label text="${receivingSummary}" type="p" style="text-caption m-muted q-mb-none"
-                            condition="appRoot == 'Warehouse'"/>
+        <section name="PurchasingUnavailable" condition="supplierUnavailable">
+            <widgets>
+                <label text="This supplier is not available to you." type="p"/>
+                <link url="${sharedLinks['Suppliers']}" text="Back to suppliers" link-type="anchor-button" icon="sym_o_arrow_back"/>
+            </widgets>
+        </section>
+        <section name="SupplierRecord" condition="!supplierUnavailable">
+            <widgets>
+                <context record-entity="mantle.party.Party" record-id="${vendorPartyId}" title="${supplier.supplierName}"/>
+                <!-- the header card (style-guide §3.4): the supplier and the buying organization, with a new offer as the primary action -->
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${supplier.supplierName}" type="h5"/>
+                            <label text="Supplier to ${buyerOrganization?.organizationName || organizationPartyId}" type="p"
+                                    style="text-caption m-muted q-mb-none" condition="appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'"/>
+                            <label text="${subcontractSummary}" type="p" style="text-caption m-muted q-mb-none"
+                                    condition="appRoot == 'Manufacturing'"/>
+                            <label text="${receivingSummary}" type="p" style="text-caption m-muted q-mb-none"
+                                    condition="appRoot == 'Warehouse'"/>
+                            <!-- Purchasing: a shared supplier; the supplier check against the buying policy (a block, suspension
+                                or unapproved status, with its Warn or Stop) follows the title row -->
+                            <label text="${supplier.ownerText}" type="p" style="text-caption m-muted q-mb-none"
+                                    condition="appRoot == 'Purchasing' &amp;&amp; supplier.ownerText"/>
+                        </container>
+                        <section name="PurchasingApproval" condition="appRoot == 'Purchasing'">
+                            <widgets>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${profile.approvalColor}">${
+                                            WebUtilities.encodeHtml(profile.approvalText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Approval: " + profile.approvalText})}]]></text>
+                                        <text type="html">Approval: ${profile.approvalText}</text>
+                                    </render-mode>
+                                </container>
+                            </widgets>
+                        </section>
+                        <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                            <link url="Prices" text="New supplier offer" link-type="anchor-button" btn-type="primary" icon="sym_o_add" condition="canOffer"
+                                    parameter-map="{vendorPartyId:vendorPartyId,organizationPartyId:organizationPartyId,_openDialog:'NewSupplierOfferDialog'}"/>
+                        </container>
+                    </container>
+                    <label text="${supplierCheck.message}" type="p" style="text-${supplierCheck.color} q-mt-sm q-mb-none"
+                            condition="appRoot == 'Purchasing' &amp;&amp; supplierCheck?.message"/>
                 </container>
-                <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
-                    <link url="Prices" text="New supplier offer" link-type="anchor-button" btn-type="primary" icon="sym_o_add" condition="canOffer"
-                            parameter-map="{vendorPartyId:vendorPartyId,organizationPartyId:organizationPartyId,_openDialog:'NewSupplierOfferDialog'}"/>
-                </container>
-            </container>
-        </container>
-        <subscreens-panel id="SupplierTabs" type="tab"/>
+                <subscreens-panel id="SupplierTabs" type="tab"/>
+            </widgets>
+        </section>
     </widgets>
 </screen>

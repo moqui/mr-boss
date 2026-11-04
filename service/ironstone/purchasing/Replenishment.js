@@ -243,49 +243,12 @@ function shortfalls(userScope) {
     return {shortfallCount: Number(count), planRunText: lib.dateText(runs[0].planDate)}
 }
 
-// ===== Products' shared InventoryAvailability =====
-// The Purchasing context of the shared catalog mounts (SharedContext.js; crosscut §3.7's Purchasing row: Summary,
-// Projection and Policy over the buying organizations' facilities): the Replenishment users read the stock of their
-// organizations' products, and a stock planner (STOCK_POLICY_PLAN) edits the facility policy through
-// store#ProductFacilityPolicy; nothing of the catalog, prices or costs.
-function catalogContext() {
-    const userScope = purchasing().scope()
-    if (!userScope.read) throw new Error("Shared catalog context is not available")
-    const catalog = call("ironstone.products.CatalogServices.get#CatalogAccess")
-    const read = !!userScope.capabilities.replenishment
-    const capabilities = {systemAdmin: !!catalog.capabilities?.systemAdmin, read}
-    for (const name of ["catalogEdit", "catalogAdmin", "priceRead", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
-        capabilities[name] = false
-    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
-        capabilities[name] = false
-    Object.assign(capabilities, {
-        stockPlan: read && !!userScope.capabilities.stockPolicy,
-        stockManage: false,
-        glPost: false,
-        marginRead: false
-    })
-    return {
-        capabilities,
-        appRoot: "Purchasing",
-        linkBase: "//Purchasing",
-        webBase: "/qapps/Purchasing",
-        printBase: "/apps/Purchasing",
-        sharedLinks: {"": "//Purchasing/Replenishment"},
-        productTabs: read ? ["Stock"] : [],
-        connectionTypes: [],
-        ownerPartyIds: read ? catalog.ownerPartyIds : [],
-        organizationPartyIds: read ? userScope.organizationPartyIds : [],
-        activeOrganizationPartyId: read ? userScope.activeOrganizationPartyId : null
-    }
-}
-
 const operations = {planContext, findRules}
 ;({
     facilityChoices,
     productChoices,
     methodChoices,
     shortfalls,
-    catalogContext,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Replenishment operation " + op)
         return operations[op](parameters || {})

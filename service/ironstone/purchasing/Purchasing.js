@@ -41,7 +41,12 @@ const capabilityPermissions = {
     costRead: "PRODUCT_COST_VIEW",
     financialRead: "ACCOUNTING_VIEW",
     receive: "STOCK_RECEIVE",
-    match: "INVOICE_MATCH"
+    match: "INVOICE_MATCH",
+    // P2: the supplier finance details on Supplier360 (Accounting's get#SupplierFinance) and the supplier-price edit
+    payableRead: "PAYABLE_VIEW",
+    termsEdit: "SUPPLIER_TERMS_EDIT",
+    supplierPriceEdit: "SUPPLIER_PRICE_EDIT",
+    catalogRead: "PRODUCT_CATALOG_VIEW"
 }
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PUR_<Area>): listRead, the buying lists
 // (suppliers, sourcing, orders, agreements, receiving, returns, bills, performance), which every Purchasing group but the
@@ -218,7 +223,13 @@ const linkPaths = [
     // P14a: Replenishment's shared supply plan and availability, and the reorder rules
     "Replenishment/SupplyPlanning",
     "Replenishment/InventoryAvailability",
-    "Replenishment/ReorderRules"
+    "Replenishment/ReorderRules",
+    // P2: the supplier screens, the shared Supplier360, SupplierPrices and PriceExplain, Product360 and the buying policy
+    "Suppliers/Supplier360",
+    "Suppliers/SupplierPrices",
+    "Suppliers/PriceExplain",
+    "Products/Product360",
+    "Settings/PurchasePolicy"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -296,7 +307,21 @@ function readSupplierReturn(returnId) {
 function readSupplier(partyId) {
     const party = one("mantle.party.Party", {partyId})
     if (!party || !hasRole(partyId, "Supplier") || isInternal(partyId)) return null
-    return {owners: [], suppliers: [partyId], shared: true, label: partyName(partyId), detail: ""}
+    return {owners: [], suppliers: [partyId], shared: true, label: partyName(partyId), detail: party.pseudoId || ""}
+}
+// A product of the user's organizations or the shared catalog (P2: Purchasing's Product360), for a catalog reader.
+function readProduct(productId) {
+    const product = one("mantle.product.Product", {productId})
+    if (!product || !access.has("PRODUCT_CATALOG_VIEW")) return null
+    const owner = product.ownerPartyId
+    const shared = !owner || owner === "_NA_"
+    return {
+        owners: shared ? [] : [owner],
+        suppliers: [],
+        shared,
+        label: product.productName || productId,
+        detail: product.pseudoId && product.pseudoId !== productId ? product.pseudoId : ""
+    }
 }
 
 // A facility a replenishment screen plans or lists (P14a): its owner is the buyer; it names no supplier.
@@ -325,7 +350,15 @@ const recordKinds = {
     supplierReturn: {name: "Supplier return", icon: "sym_o_assignment_return", destination: null, read: readSupplierReturn},
     supplier: {name: "Supplier", icon: "sym_o_corporate_fare", destination: null, read: readSupplier},
     // P14a: the facility a plan or reorder rule is for (no screen of its own)
-    facility: {name: "Facility", icon: "sym_o_warehouse", destination: null, read: readFacility}
+    facility: {name: "Facility", icon: "sym_o_warehouse", destination: null, read: readFacility},
+    supplier: {
+        name: "Supplier",
+        icon: "sym_o_corporate_fare",
+        destination: "Suppliers/Supplier360?vendorPartyId=",
+        read: readSupplier
+    },
+    // P2: a product opens Purchasing's Product360
+    product: {name: "Product", icon: "sym_o_inventory_2", destination: "Products/Product360?productId=", read: readProduct}
 }
 
 // A record the user may work with: every buyer it names is one of their organizations and every supplier it names is in
@@ -393,8 +426,9 @@ function requestKind(requestId) {
 
 // ===== palette =====
 // The finds of the palette (design §1: authorized PO, RFQ and supplier lookup): each kind by its id and names, ignoring case,
-// limited in the query to the user's buyers or supplier scope, and each row checked again by recordOf. Later phases add
-// requests, RFQs and agreements as their screens are built.
+// limited in the query to the user's buyers or supplier scope, and each row checked again by recordOf; P2 adds a supplier by
+// its item codes (the supplier offers' otherPartyItemId) and products. Later phases add requests, RFQs and agreements as
+// their screens are built.
 const searchFinds = [
     {
         kind: "order",
@@ -417,6 +451,40 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("partyId"),
         idField: "partyId"
+    },
+    {
+        kind: "supplier",
+        query: (userScope, condition) =>
+            find("mantle.product.ProductPrice")
+                .condition("pricePurposeEnumId", "PppPurchase")
+                .condition("vendorPartyId", "is-not-null", null)
+                .condition(condition(["otherPartyItemId"]))
+                .selectField("vendorPartyId")
+                .distinct(true)
+                .orderBy("vendorPartyId"),
+        idField: "vendorPartyId"
+    },
+    {
+        kind: "product",
+        query: (userScope, condition) =>
+            find("mantle.product.Product")
+                .condition(condition(["productId", "pseudoId", "productName"]))
+                .condition(
+                    ec.entity.conditionFactory.makeCondition(
+                        [
+                            ec.entity.conditionFactory.makeCondition("ownerPartyId", "is-null", null),
+                            ec.entity.conditionFactory.makeCondition(
+                                "ownerPartyId",
+                                "in",
+                                ["_NA_"].concat(userScope.ownerIds || buyerIds(userScope))
+                            )
+                        ],
+                        "or"
+                    )
+                )
+                .selectField("productId")
+                .orderBy("productId"),
+        idField: "productId"
     }
 ]
 function search(p) {
@@ -498,7 +566,59 @@ const choiceSources = {
     // P14a: Replenishment's planning facilities, products and plan methods (Replenishment.js)
     planFacilities: (userScope, term, selected) => replenishment().facilityChoices(userScope, term, selected),
     planProducts: (userScope, term, selected) => replenishment().productChoices(userScope, term, selected),
-    planningMethods: (userScope, term) => replenishment().methodChoices(term)
+    planningMethods: (userScope, term) => replenishment().methodChoices(term),
+    // P2: the people of the user's organizations (agents, employees, members) a supplier's buyer may be, by name
+    buyers: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        const now = Number(ec.user.nowTimestamp)
+        const active = row =>
+            (row.fromDate == null || Number(row.fromDate) <= now) && (row.thruDate == null || Number(row.thruDate) > now)
+        const peopleIds = Array.from(
+            new Set(
+                Array.from(
+                    find("mantle.party.PartyRelationship")
+                        .condition("relationshipTypeEnumId", "in", ["PrtAgent", "PrtEmployee", "PrtMember"])
+                        .condition("toPartyId", "in", buyerIds(userScope))
+                        .list()
+                )
+                    .filter(active)
+                    .map(row => row.fromPartyId)
+            )
+        )
+        if (!peopleIds.length) return []
+        let query = find("mantle.party.Person").condition("partyId", "in", peopleIds).orderBy("firstName").limit(choiceLimit)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["firstName", "lastName", "partyId"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(query.list()).map(row => ({value: row.partyId, label: partyName(row.partyId)}))
+        if (selected && !options.some(option => option.value === selected) && peopleIds.includes(selected))
+            options.push({value: selected, label: partyName(selected)})
+        return options
+    },
+    // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
+    supplierCategories: (userScope, term, selected) => {
+        let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})
+            .orderBy("description")
+            .limit(choiceLimit)
+        if (term)
+            query = query.condition(ec.entity.conditionFactory.makeCondition("description", "like", likeText(term)).ignoreCase())
+        const options = Array.from(query.list()).map(row => ({
+            value: row.partyClassificationId,
+            label: row.description || row.partyClassificationId
+        }))
+        if (selected && !options.some(option => option.value === selected)) {
+            const row = one("mantle.party.PartyClassification", {partyClassificationId: selected})
+            if (row?.classificationTypeEnumId === "PcltSupplierCategory")
+                options.push({value: selected, label: row.description || selected})
+        }
+        return options
+    }
 }
 function choices(p) {
     const userScope = required()

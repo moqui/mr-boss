@@ -15,7 +15,10 @@ const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
     // P14a: Retail's warehouse, the facility Replenishment plans
-    facilityId: "ZIRET_WH"
+    facilityId: "ZIRET_WH",
+    // P2: Retail's supplier awaiting approval and its blocked one (BossPurchasingDemoData.xml's buying profiles)
+    pendingSupplierId: "BOSS_PUR_SUP_PENDING",
+    blockedSupplierId: "BOSS_PUR_SUP_BLOCKED"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -117,11 +120,28 @@ function routeFixtures() {
         "Replenishment/ReorderRules": {},
         "Replenishment/ReorderRules/Rules": {},
         "Replenishment/ReorderRules/SuggestLevels": {parameters: {planFacilityId: ids.facilityId}},
-        "Replenishment/ReorderRules/PlanSchedule": {parameters: {planFacilityId: ids.facilityId}}
+        "Replenishment/ReorderRules/PlanSchedule": {parameters: {planFacilityId: ids.facilityId}},
+        // P2: the suppliers, a supplier's 360, Product360, and the settings with the buying policy
+        "Suppliers/SupplierList": {parameters: {}, text: "Suppliers"},
+        "Suppliers/Supplier360": {parameters: {vendorPartyId: ids.blockedSupplierId}, text: "Halvorsen Metals"},
+        "Suppliers/SupplierPrices": {parameters: {}, text: "Supplier offers"},
+        "Suppliers/PriceExplain": {
+            parameters: {productId: "DEMO_1_1", vendorPartyId: ids.sharedSupplierId},
+            text: "Transaction price context"
+        },
+        "Products/ProductFind": {parameters: {}, text: "Find a product"},
+        "Products/Product360": {parameters: {productId: "DEMO_1_1"}, text: "DEMO_1_1"},
+        "Settings/SettingsHome": {parameters: {}, text: "Supplier categories"},
+        "Settings/PurchasePolicy": {parameters: {}, text: "Purchase controls"}
     }
+    // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
         ["Replenishment/SupplyPlanning", "component://mr-boss/screen/Shared/SupplyPlanning.xml"],
-        ["Replenishment/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"]
+        ["Replenishment/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"],
+        ["Suppliers/Supplier360", "component://mr-boss/screen/Shared/Supplier360.xml"],
+        ["Suppliers/SupplierPrices", "component://mr-boss/screen/Shared/SupplierPrices.xml"],
+        ["Suppliers/PriceExplain", "component://mr-boss/screen/Shared/PriceExplain.xml"],
+        ["Products/Product360", "component://mr-boss/screen/Shared/Product360.xml"]
     ]
     return {routes, mounts}
 }

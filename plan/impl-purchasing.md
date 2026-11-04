@@ -252,7 +252,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 4 (§6 F1–F43) |
 | P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | built Nov 4, 2026 |
-| P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | — |
+| P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | built Nov 4, 2026 |
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | — |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
@@ -489,6 +489,120 @@ organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppli
   - a dated purchase block shows on Supplier360 and cancels no order;
   - PriceExplain explains ZiddlemanInc's tier for ORG_ZIZI_RETAIL, and a buyer without supplier-price read sees none;
   - an administrator starts a PurchasePolicy row from a date, and the earlier row stays with its history.
+
+**Built Nov 4 (P2).**
+- Mantle:
+  - `entity/AccountingPayableEntities.xml`: SupplierProfile's buying fields `currencyUomId`, `incotermEnumId` (a TermType
+    under TtInco), `approvalStatusId` (StatusType `SupplierApproval`: SupaPending, SupaApproved, SupaRejected,
+    SupaSuspended) and the dated purchase block `purchaseBlockFromDate`, `purchaseBlockThruDate`, `purchaseBlockReason`,
+    all audit-logged (F25).
+  - `entity/PurchasePolicyEntities.xml`: `mantle.order.purchase.PurchasePolicy`, dated by organization on
+    ProductionPolicy's pattern (empty takes the built-in default): the buying defaults (currency, purchase price list,
+    receiving facility, default buyer, payment term, Incoterm) and the controls (`rfqResponseDays` 7,
+    `quoteExpiryWarnDays` 7, `reminderDays` 3, `lockSentOrders` N, `supplierApprovalRequired` N,
+    `unapprovedSupplierEnumId` PusWarn/PusStop, `approvalGateEnabled` N, `selfApprovalAllowed` N); the
+    `PurchaseUnapprovedSupplier` enumeration and `PcltSupplierCategory` (F11).
+  - `service/mantle/order/PurchaseServices.xml` over `PurchasePolicy.js`: `get#PurchasePolicy` (the policy in effect for
+    an organization and date, with `policyFromDate`, the row a document keeps), `store#PurchasePolicy`
+    (PURCHASE_POLICY_EDIT; POLICY_CHANGED, POLICY_INVALID) and `check#SupplierUsable` (OK, WARN or STOP:
+    SUPPLIER_BLOCKED, SUPPLIER_SUSPENDED, SUPPLIER_UNAPPROVED). Reading takes PURCHASE_POLICY_EDIT,
+    PURCHASE_ORDER_EDIT, PURCHASE_APPROVE, PURCHASE_ORDER_APPROVE or SUPPLIER_PROFILE_EDIT in the user's organizations.
+    The rules of later phases (P3's `check#PurchaseApprovalRequired` SECA, the order and RFQ checks) read
+    `PurchasePolicy.js`'s `effective(organizationPartyId, at)` and `supplierUsable(organizationPartyId, supplierPartyId,
+    at)`, which check no permission.
+  - `service/mantle/party/SupplierServices.xml` over `SupplierProfile.js`: `store#SupplierProfile` now takes the buying
+    fields under SUPPLIER_PROFILE_EDIT beside the finance fields under SUPPLIER_TERMS_EDIT (an approval decision, a change
+    to Approved or Rejected, also PURCHASE_APPROVE), its codes and callers unchanged; `create#Supplier` (an organization or
+    person owned by the organization, in the Supplier role, with its email, phone and category, Pending where the policy
+    requires approval); `store#SupplierBuyer` (the dated PrtSupplier relationship from a Buyer of the organization, ending
+    the organization's buyer in effect, never another organization's); `set#SupplierCategory`.
+  - Spec `test/order/PurchasePolicy` (5 features).
+- BOSS:
+  - `ironstone.purchasing.SupplierServices` (`Suppliers.js`): `find#Suppliers`, `find#SupplierDuplicates`,
+    `get#SupplierContext` (Supplier360's Purchasing read) and `bulk#SupplierChanges` (buyer or category, a result per
+    supplier); `ironstone.purchasing.SettingsServices` (`Settings.js`): `get#PurchasingSettings` (the settings rows and
+    PolicyDependencies: Accounting's match and budget control and Warehouse's receiving read only, with their owners'
+    links), `store#RequestPurpose` and `store#SupplierCategory`.
+  - `Purchasing.js`: the supplier record's destination (Supplier360), a `product` kind (Product360), the capabilities
+    `payableRead`, `termsEdit`, `supplierPriceEdit` and `catalogRead`, the choices `buyers` and `supplierCategories`, the
+    palette's supplier item code and product finds, and the P2 link paths. `PaletteServices.get#RecordLink` opens a
+    product in Purchasing's Product360 for a Purchasing user who opens neither Products nor Warehouse.
+  - Products' `SharedContext.js` gets the Purchasing branch (crosscut §3.5, §3.21): the master read only, the tabs Summary,
+    Identifiers, Dimensions, Packaging, Suppliers (supplier-price readers), Stock, Documents and BOM (method readers), no
+    sales price. `PRODUCT_CATALOG_VIEW` to the buyer, planner, approver, reader and administrator groups (BossSetupData).
+  - Screens: `Purchasing/Suppliers.xml` (SupplierList, the shared SupplierPrices and PriceExplain as tabs, Supplier360
+    hidden), `Suppliers/SupplierList.xml` (find, New supplier and New individual supplier with the duplicate check first
+    and Create anyway, Pending approval and Blocked links, the bulk Assign buyer and Set category), `Purchasing/Products.xml`
+    with `Products/ProductFind.xml` and Product360, `Purchasing/Settings.xml` with `Settings/SettingsHome.xml`
+    (SettingsLinks, RequestPurposes, SupplierClassifications) and `Settings/PurchasePolicy.xml` (BuyingDefaults,
+    PurchaseControls, PolicyDependencies, the dated rows); `template/PurchasingParts.xml` (the choices transition).
+  - Shared screens, each change kept to its Purchasing branch: `Shared/Supplier360.xml` (the Purchasing read, the approval
+    chip and the supplier check under the title, a not-available state), `Supplier360/Buying.xml` (the buying profile with
+    the payment term and self-billing read only, the buyer and its history, the category, the profile's history) and
+    `Supplier360/Finance.xml` (Accounting's `get#SupplierFinance` for a finance reader, masked), the Conversation tab;
+    `Shared/SupplierPrices.xml` and `Shared/PriceExplain.xml` for a supplier-price reader only, PriceExplain in the
+    purchase direction asking for the supplier first; `Shared/Product360.xml`'s "Not for buying" reason from
+    `check#ProductUsable` (usage Purchase).
+  - Demo (`BossPurchasingDemoData.xml` P2 block): Retail's PurchasePolicy (gate off, supplier approval required, Warn),
+    four supplier categories, the profiles of Ziddleman and Brightline (Approved), Northwind (`BOSS_PUR_SUP_PENDING`,
+    Pending) and Halvorsen (`BOSS_PUR_SUP_BLOCKED`, blocked from Nov 1, 2026 for a quality hold), and their categories.
+  - Specs: `PurchasingAccess` gains one feature (the supplier scope of the list, Supplier360 and the bulk changes, the
+    settings' permissions, the product link; 11 features); `PurchasingSuppliers` (3: the list's profile columns and
+    finds, the duplicates in scope, Supplier360's one html render). Acceptance: `acceptance/Purchasing/PurchasingSuppliersWalk`
+    (the five usable-when items through the screens' transitions); `PurchasingSpecLib.routeFixtures` lists the P2 routes
+    and shared mounts, and AppStructure's placeholder floor is 60 (63 left).
+- Tests run: PurchasePolicy, AccountingPayables, WarehouseReceiving, OrderProcureToPayBasicFlow, CrmMiscServices,
+  OrderLifecycle, OrderBulk, PurchaseHoldPermission (Mantle, 72 features, all pass); PurchasingAccess,
+  PurchasingSuppliers, AccountingAccess, AccountingPayables, ManufacturingAccess, ManufacturingSubcontracting,
+  ProductsAccess, ProductsSharedContext, ProductsSuppliers, ProductsPriceLists, ProductsFinish, ProductsInventory,
+  WarehouseReceiving, WarehouseAccess (BOSS, 130 features, all pass); acceptance PurchasingSuppliersWalk (5),
+  PurchasingFoundationWalk (3) and AppStructure (18), all pass. `moqui lint --screens`: no idiom or hazard site in the
+  changed screens.
+- Decisions:
+  - Approved and Rejected are the purchase approver's decision (PURCHASE_APPROVE) in `store#SupplierProfile` until P4's
+    `decide#PurchaseApproval` routes it; a buyer puts a supplier to Pending or Suspended. Giving the status already in
+    effect is no decision.
+  - `check#SupplierUsable`: a purchase block and Suspended always stop; Pending and Rejected, and no status where the
+    policy requires approval, get the policy's Warn or Stop; a supplier with no profile and no approval required is OK, so
+    nothing changes for Mantle's callers. It refuses nothing itself; P3's order and P11's RFQ services stop on STOP.
+  - The supplier's buyer is the organization's: `store#SupplierBuyer` ends only the relationships from people of the
+    organization (agents, employees, members), so a shared supplier keeps each organization's buyer.
+  - The supplier list, Supplier360 and the duplicate search read through `ironstone.purchasing` (the app's reads, §2);
+    the writes are the Mantle services, called by the screens after `check#Record` with the profileEdit capability.
+  - Supplier360's Purchasing tabs (Buying profile, Payment details) come after the existing ones (menu index 6 and 7), so
+    the other apps' tab order is unchanged.
+- Findings (provisional):
+  - **F47** PriceExplain's purchase explanation needs the external vendor: `PriceResolver.context` infers the sales
+    direction with no vendor and refuses a purchase direction ("Price direction does not match the transaction parties").
+    Purchasing's PriceExplain asks for the supplier first.
+  - **F48** A Purchasing user held no catalog read, so Products' shared Product360, SupplierPrices and PriceExplain
+    refused them; P2 grants PRODUCT_CATALOG_VIEW to the list-reading groups (as Manufacturing P2 did to its groups).
+  - **F49** The design's PurchaseControls also name a substitution rule and a recurring-release rule; no phase before
+    P9 (substitution on a revision) and P13 (agreement releases) reads them, so PurchasePolicy leaves them to those
+    phases. The PurchaseSupplierApproval notification of a new Pending supplier is P4's (with its topic).
+  - **F50** A shared tab whose screen has a `condition` (Supplier360's Receiving, Subcontract orders, Payment details)
+    is still listed in the tab menu data of every app; the condition hides only its content. Pre-existing in Warehouse
+    and Manufacturing; left as is.
+
+**Review Nov 4 (P2).** Checked the diff in both repos against §2 and this phase: PRODUCT_CATALOG_VIEW to the five
+Purchasing groups opens no Products-root screen (the root and its areas are artifact grants the groups lack) and no cost or
+price beyond §2 (SharedContext's Purchasing branch lists no Prices or Costs tab, Suppliers needs SUPPLIER_PRICE_VIEW,
+cost and method stay their permissions); store#SupplierProfile keeps Accounting's finance path, codes and callers;
+SupplierProfile and PurchasePolicy changes end the row in effect and start the next with the earlier rows kept; the
+get#RecordLink and SharedContext edits come after the Products and Warehouse branches, so their users are unchanged; the
+BOSS screens call the Mantle writes after check#Record. Fixes:
+- R1 (medium) store#SupplierBuyer, set#SupplierCategory and store#SupplierProfile's buying fields accepted another
+  organization's supplier from a plain Mantle caller (BOSS checked the scope only in its own services); they now refuse a
+  supplier owned by another organization (SUPPLIER_UNAVAILABLE). set#SupplierCategory reported an unchanged category as
+  changed; it now answers no change, and PurchasingAccess expects Brightline's unchanged category.
+- R2 (medium) a buyer could clear a Rejected or Suspended supplier's status, which check#SupplierUsable then passes where
+  the policy does not require approval; clearing a status now needs PURCHASE_APPROVE like a decision.
+- Left for the lead: a supplier's category is a PartyClassification, so for a shared (_NA_) supplier one organization's
+  category is every organization's (F11's design); store#SupplierBuyer and Supplier360's buyer history find the
+  organization's buyers by their membership now, so a buyer who has left keeps an open Buyer relationship and drops out of
+  the history.
+- Specs: mr-mantle PurchasePolicy, AccountingPayables, WarehouseReceiving; mr-boss PurchasingAccess, PurchasingSuppliers,
+  AccountingAccess, AccountingPayables, ProductsSharedContext, ProductsAccess, WarehouseAccess; all pass.
 
 ### P3 — Purchase orders
 
@@ -988,7 +1102,7 @@ receipt's reservation offer).
   `Replenishment.js`; `Purchasing.js` gains the `facility` record kind, the `planFacilities`, `planProducts` and
   `planningMethods` choices and the Replenishment links. Home: `get#Home` counts the open buy suggestions of the current
   plans (`shortfallCount`) with the latest plan's date, shown under the cards. BossSetupData: SUPPLY_PLAN_VIEW to the
-  reader, METHOD_VIEW to the planner and administrator (F-P14a-2).
+  reader, METHOD_VIEW to the planner and administrator (F52).
 - Specs: Mantle `test/product/Replenishment.spec.js` (6: snooze rules and audit; buy, up-to-maximum, fixed and snoozed
   suggestions; the buyer's conversion, retry, DEMAND_ALREADY_COVERED, the planner refused, automatic snoozed refused; draft
   lines as supply; levels preview and apply; the import kind) and SupplyPlanning's buy refusal now PERMISSION_DENIED for a
@@ -1009,21 +1123,21 @@ receipt's reservation offer).
     still suggests the shortage with SNOOZED.
   - SuggestLevels applies the server's own preview for the selected rows, never values posted from the page.
 - Findings (provisional):
-  - **F-P14a-1** The plan's "a planner's second conversion is DemandAlreadyCovered": the Purchasing planner holds no
+  - **F51** The plan's "a planner's second conversion is DemandAlreadyCovered": the Purchasing planner holds no
     PURCHASE_ORDER_EDIT, so its conversion is refused PERMISSION_DENIED; the competing conversion is a second buyer's
     (the walk uses the administrator).
-  - **F-P14a-2** run#SupplyPlan explodes a made product's BOM through get#BomExplosion, which needs METHOD_VIEW; the
+  - **F52** run#SupplyPlan explodes a made product's BOM through get#BomExplosion, which needs METHOD_VIEW; the
     Purchasing planner and administrator had none, so their run of a plan with a made product failed. BossSetupData grants
     METHOD_VIEW to both (F119's rule). A runner without METHOD_VIEW now gets METHOD_INVALID on the made product and the
     run goes on (review R1).
-  - **F-P14a-3** The Purchasing reader holds no permission, and get#SupplyPlan admitted none it could hold; Mantle gains
+  - **F53** The Purchasing reader holds no permission, and get#SupplyPlan admitted none it could hold; Mantle gains
     SUPPLY_PLAN_VIEW (reads only), granted to BOSS_PURCHASING_READ.
-  - **F-P14a-4** A draft purchase order was not supply to the plan (firm statuses only), so a converted buy would be
+  - **F54** A draft purchase order was not supply to the plan (firm statuses only), so a converted buy would be
     suggested again by the next run; the lines of a draft order with a RequirementSupply (a conversion's) now count.
-  - **F-P14a-5** Shared/SupplyPlanning took Manufacturing's `choices` by transition-include, which refuses a Purchasing user;
+  - **F55** Shared/SupplyPlanning took Manufacturing's `choices` by transition-include, which refuses a Purchasing user;
     it now dispatches by app root. SharedContext.js and PurchasingSpecLib gain a Purchasing branch and fixture that P2's
-    Product360 context will also touch: a merge to reconcile (one dispatch line, one exported helper).
-  - **F-P14a-6** A tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu (its content is loaded
+    Product360 context will also touch: reconciled at the merge: one Purchasing context in SharedContext.js serves Product360 (catalog read) and InventoryAvailability (Replenishment's stock read).
+  - **F56** A tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu (its content is loaded
     by the client), so AppStructure checks those routes for errors only; their content is PurchasingReplenishment's.
 
 **Review Nov 4 (P14a).** Checked the Mantle and BOSS diffs against this section, §2 and the brief. Draft lines as supply:
@@ -1037,7 +1151,7 @@ method and cost capability false; kept, since without it a planner's plan would 
 ProductFacility's snooze fields are an `extend-entity` in their own file (mr-mantle's pattern), audit-logged, and
 store#ProductFacilityPolicy audits them with the change reason. Specs lean (Replenishment 6, PurchasingReplenishment 3,
 0.7 s). Fixes:
-- R1 (medium, F-P14a-2): `run#SupplyPlan` called get#BomExplosion for a runner without a method read; its refusal marked
+- R1 (medium, F52): `run#SupplyPlan` called get#BomExplosion for a runner without a method read; its refusal marked
   the run's transaction rollback-only, so the whole run failed. `structureOf` now checks the method read first and names
   METHOD_INVALID on that product (SupplyPlanning.spec's last feature).
 Specs run: Mantle SupplyPlanning (11), Replenishment (6), ProductionSubcontract (8); BOSS ManufacturingPlanning (5),
@@ -1225,6 +1339,16 @@ is written there too.
 | F44 | P1: the per-app Shell specs left the regression suite in the test reduction; Products and Accounting check their menus per group in their Access specs | PurchasingShell folded into PurchasingAccess (P1 review R2) |
 | F45 | P1: `get#PartyOrganizationInfo`'s organizations for a Retail agent include `BOSS_WH_RETURNS` (Warehouse's demo organization under Retail), so the organizations choice lists it beside ORG_ZIZI_RETAIL | None: a demo-data effect, harmless |
 | F46 | P1: `get#RecordLink` answered no link for any OrderHeader or Agreement before P1; a sales order still gets none (Sales has no order screen) | P1 links POs, quotes and agreements to Purchasing; sales orders wait for Sales |
+| F47 | P2: `PriceResolver.context` infers the sales direction with no vendor and refuses a purchase direction, so a purchase price explanation needs the supplier | Purchasing's PriceExplain asks for the supplier first |
+| F48 | P2: Purchasing users held no catalog read, so Products' shared Product360, SupplierPrices and PriceExplain refused them | PRODUCT_CATALOG_VIEW to the list-reading Purchasing groups; the Purchasing context shows no price or cost tab, and supplier prices keep SUPPLIER_PRICE_VIEW |
+| F49 | P2: the design's PurchaseControls also name a substitution and a recurring-release rule, which only P9 and P13 read; the Pending supplier's notification needs P4's topic | Left to P9, P13 and P4 |
+| F50 | P2: a shared tab whose screen has a `condition` is still listed in every app's tab menu data; only its content is hidden (as in Warehouse and Manufacturing) | None |
+| F51 | P14a: the Purchasing planner holds no PURCHASE_ORDER_EDIT, so the plan's "a planner's second conversion is DemandAlreadyCovered" is a second buyer's; a planner is refused | The walk uses a second buyer; the planner plans, buyers convert |
+| F52 | P14a: `run#SupplyPlan` explodes a made product's BOM through `get#BomExplosion` (METHOD_VIEW); without it the whole run failed | METHOD_VIEW to the Purchasing planner and admin; a runner without it gets METHOD_INVALID on that product and the run goes on (review R1) |
+| F53 | P14a: `get#SupplyPlan` admitted no permission the Purchasing reader holds | Mantle's SUPPLY_PLAN_VIEW, granted to BOSS_PURCHASING_READ |
+| F54 | P14a: a draft purchase order was no supply to the plan, so a converted buy would be suggested again | The lines of a draft order with an active RequirementSupply (a conversion's) count |
+| F55 | P14a: Shared/SupplyPlanning included Manufacturing's `choices`, which refuses a Purchasing user | It dispatches by app root; at the W2 merge one Purchasing context in SharedContext.js serves both Product360 and InventoryAvailability |
+| F56 | P14a: a tab's qvt fragment under Replenishment/ReorderRules renders the parent's tab menu, so AppStructure checks those routes for errors only | None; their content is PurchasingReplenishment's |
 
 ## 7. Later
 

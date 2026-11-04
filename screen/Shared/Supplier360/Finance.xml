@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Payment details tab, in the Purchasing context (crosscut §3.3 Purchasing row: PaymentDetails,
+    PartyIdentifications and TaxRegistrations subject to role; impl-purchasing P2): Accounting's
+    mantle.party.SupplierServices.get#SupplierFinance for a finance reader (PAYABLE_VIEW or ACCOUNTING_VIEW), read only:
+    the payment methods masked (treasury's), the identifications and the tax registrations, each only as Mantle answers them
+    for the user. Finance edits them in Accounting's Supplier360. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Payment details" default-menu-index="7">
+    <condition>
+        <expression>appRoot == 'Purchasing' &amp;&amp; !!purchasingCapabilities?.financeRead</expression>
+    </condition>
+    <actions>
+        <service-call name="mantle.party.SupplierServices.get#SupplierFinance" out-map="finance" transaction="force-new"
+                ignore-error="true" in-map="{organizationPartyId:organizationPartyId, supplierPartyId:vendorPartyId}"/>
+        <set field="financeFound" from="!!finance?.supplier"/>
+        <set field="paymentMethods" from="finance?.paymentMethods || []"/>
+        <set field="identifications" from="finance?.identifications || []"/>
+        <set field="taxRegistrations" from="finance?.taxRegistrations || []"/>
+    </actions>
+    <widgets>
+        <label text="${organizationName} has no business with this supplier yet." type="p" condition="!financeFound"/>
+        <section name="FinanceDetails" condition="financeFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Payment methods"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierPaymentMethods" list="paymentMethods" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Method">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="maskedAccountNumber">
+                                <default-field title="Account">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/></column>
+                                <column><field-ref name="maskedAccountNumber"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No payment method you may read." type="p" style="q-pa-md m-muted"
+                                condition="!paymentMethods.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Identifications and tax registrations"/>
+                    <box-body-nopad>
+                        <form-list name="SupplierIdentifications" list="identifications" skip-form="true" paginate="false">
+                            <field name="partyIdTypeEnumId">
+                                <default-field title="Type">
+                                    <display-entity entity-name="moqui.basic.Enumeration"/>
+                                </default-field>
+                            </field>
+                            <field name="idValue">
+                                <default-field title="Value">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="partyIdTypeEnumId"/></column>
+                                <column><field-ref name="idValue"/></column>
+                            </columns>
+                        </form-list>
+                        <form-list name="SupplierTaxRegistrations" list="taxRegistrations" skip-form="true" paginate="false">
+                            <field name="taxAuthorityId">
+                                <default-field title="Tax authority">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="partyTaxId">
+                                <default-field title="Tax ID">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="taxAuthorityId"/></column>
+                                <column><field-ref name="partyTaxId"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No identification or tax registration you may read." type="p" style="q-pa-md m-muted"
+                                condition="!identifications.length &amp;&amp; !taxRegistrations.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

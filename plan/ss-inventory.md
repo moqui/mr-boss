@@ -402,8 +402,8 @@ is unchanged.
 | EditAssocs | AllSelectableFeaturesForm | Products/Products/VariantBuilder; Shared/Product360 | Products/Products/VariantBuilder (qvue; VariantBuilderTui XML twin) |
 | EditCategories | AddCategoryForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
 | EditCategories | CategoriesForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Categories |
-| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
-| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only |
+| EditPrices | NewPriceForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only; Purchasing/Suppliers/SupplierPrices (Shared/SupplierPrices) |
+| EditPrices | PricesForm | Products/Pricing/Prices; Products/Products/Product360; Products/Suppliers/SupplierPrices; Purchasing/Suppliers/SupplierPrices; Shared/Product360; Shared/SupplierPrices; Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices (NewSalesPrice, NewSupplierPrice, Prices); Shared/SupplierPrices (SupplierOffers and offer forms); Products mounts only; Purchasing/Suppliers/SupplierPrices (Shared/SupplierPrices) |
 | EditProduct | CloneProductForm | Products/Products/Product360; Shared/Product360 | Shared/Product360 |
 | EditProduct | EditProductForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360 |
 | EditProduct | AddIdentificationForm | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 | Shared/Product360/Identifiers |
@@ -577,10 +577,10 @@ is unchanged.
 | EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | RolesForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
-| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
-| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 |  |
+| EditParty | SetClassificationForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying (SupplierCategory); Purchasing/Suppliers/SupplierList (BulkCategory); — (other apps' contexts on Customer360, §7) |
+| EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying (Category); — (other apps' contexts on Customer360, §7) |
+| EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | — (Accounting/Payables/Supplier360 edits; Shared/Supplier360/Finance reads) |
+| EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Shared/Supplier360/Finance (SupplierIdentifications) |
 | EditParty | AddSettingForm | Admin/Settings/OrganizationDetail |  |
 | EditParty | AddSettingTextForm | Admin/Settings/OrganizationDetail |  |
 | EditParty | SettingsForm | Admin/Settings/OrganizationDetail |  |
@@ -893,10 +893,10 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| FindSupplier | CreatePersonForm | Purchasing/Suppliers |  |
-| FindSupplier | CreateOrganizationForm | Purchasing/Suppliers |  |
-| FindSupplier | OuterSearchForm | Purchasing/Suppliers |  |
-| FindSupplier | SupplierListForm | Purchasing/Suppliers |  |
+| FindSupplier | CreatePersonForm | Purchasing/Suppliers | Purchasing/Suppliers/SupplierList (CreateSupplierPerson) |
+| FindSupplier | CreateOrganizationForm | Purchasing/Suppliers | Purchasing/Suppliers/SupplierList (CreateSupplierOrganization, DuplicateCandidates) |
+| FindSupplier | OuterSearchForm | Purchasing/Suppliers | Purchasing/Suppliers/SupplierList (SupplierList find) |
+| FindSupplier | SupplierListForm | Purchasing/Suppliers | Purchasing/Suppliers/SupplierList (SupplierList) |
 
 ## Survey (14 forms)
 

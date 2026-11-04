@@ -77,8 +77,10 @@ along with this software (see the LICENSE.md file). If not, see
     <condition>
         <!-- not in Warehouse's Supplier360, which shows no price (crosscut §3.3 Warehouse row), nor in Manufacturing's, whose
             subcontract orders show their price to a buyer only (§3.3 Manufacturing row) -->
+        <!-- in Purchasing (impl-purchasing P2) for a supplier-price reader only -->
         <expression>appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'
-            &amp;&amp; (!Array.isArray(product360Tabs) || product360Tabs.includes('Suppliers'))</expression>
+            &amp;&amp; (!Array.isArray(product360Tabs) || product360Tabs.includes('Suppliers'))
+            &amp;&amp; (appRoot != 'Purchasing' || !!sharedMountContext.capabilities.supplierPriceRead)</expression>
     </condition>
     <actions>
         <service-call name="ironstone.products.SupplierServices.get#SupplierOptions" in-map="context" out-map="context"/>
@@ -728,4 +730,7 @@ along with this software (see the LICENSE.md file). If not, see
             </box-body>
         </container-box>
     </widgets>
+    <fail-widgets>
+        <label text="Supplier prices are not available to you." type="p" condition="appRoot == 'Purchasing'"/>
+    </fail-widgets>
 </screen>

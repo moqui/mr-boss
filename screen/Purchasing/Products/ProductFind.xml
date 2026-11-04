@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The product lookup of Purchasing's Products mount (impl-purchasing P2): a product of the catalog the user reads
+    (Products' catalog choices, in the owner scope), opened in Purchasing's Product360. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Find a product" default-menu-include="false">
+    <transition-include name="choices" location="component://mr-boss/template/CatalogChoiceTransitions.xml"/>
+    <transition name="open">
+        <default-response url="../Product360">
+            <parameter name="productId"/>
+        </default-response>
+    </transition>
+    <widgets>
+        <label text="Products" type="h5"/>
+        <container-box>
+            <box-header title="Find a product"/>
+            <box-body>
+                <label text="Choose a product to see its units, packaging, supplier prices and stock." type="p"
+                        style="text-caption m-muted"/>
+                <form-single name="ProductLookup" transition="open">
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="false">
+                                <dynamic-options parameter-map="{choice:'products'}" transition="choices" server-search="true"
+                                        min-length="0"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="Open product">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </box-body>
+        </container-box>
+    </widgets>
+</screen>

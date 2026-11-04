@@ -149,13 +149,72 @@ function manufacturingContext() {
         activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null
     }
 }
+// Purchasing's mounts (impl-purchasing P2; crosscut §3.3, §3.5, §3.21): Shared/Product360 under Products, and Supplier360,
+// SupplierPrices and PriceExplain under Suppliers. A Purchasing user with the buying lists (listRead) who reads the catalog
+// (PRODUCT_CATALOG_VIEW) reads the product master read only with the crosscut's Purchasing tabs: Summary, Identifiers,
+// Dimensions & units, Packaging, Suppliers (supplier prices, for a supplier-price reader), Stock, Documents, and BOM for a
+// method reader. Prices are the purchase direction only (no sales price read); supplier-price edit, cost read and method read
+// stay their own permissions, checked again in Mantle.
+const purchasingTabs = ["Summary", "Identifiers", "Dimensions", "Packaging", "Suppliers", "Stock", "Documents", "BOM"]
+const purchasingPaths = {
+    "": "Suppliers",
+    "Products/Product360": "Products/Product360",
+    "SupplierPrices/Supplier360": "Suppliers/Supplier360",
+    "Suppliers/Supplier360": "Suppliers/Supplier360",
+    "Suppliers/SupplierPrices": "Suppliers/SupplierPrices",
+    "Prices/PriceExplain": "Suppliers/PriceExplain"
+}
+function purchasingContext() {
+    const purchasing = ec.resource.script("component://mr-boss/service/ironstone/purchasing/Purchasing.js")
+    const userScope = purchasing.scope()
+    // the buying lists' catalog read (P2: Product360, SupplierPrices, PriceExplain) or Replenishment's stock read (P14a:
+    // InventoryAvailability, its Stock tab and, for a stock-policy holder, the reorder policy)
+    const replenishment = !!userScope.capabilities.replenishment
+    if (!userScope.read || !(userScope.capabilities.listRead || replenishment))
+        throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {},
+        catalogRead = !!source.read && !!userScope.capabilities.listRead,
+        read = catalogRead || replenishment
+    const capabilities = {systemAdmin: !!source.systemAdmin, read}
+    for (const name of ["catalogEdit", "catalogAdmin", "priceRead", "priceEdit", "costEstimate", "costApprove"])
+        capabilities[name] = false
+    for (const name of ["supplierPriceRead", "supplierPriceEdit", "costRead", "methodRead"])
+        capabilities[name] = catalogRead && !!source[name]
+    Object.assign(capabilities, {
+        methodEdit: false,
+        methodApprove: false,
+        methodAdmin: false,
+        stockPlan: replenishment && !!userScope.capabilities.stockPolicy,
+        stockManage: false,
+        glPost: false,
+        marginRead: false
+    })
+    return {
+        capabilities,
+        appRoot: "Purchasing",
+        linkBase: "//Purchasing",
+        webBase: "/qapps/Purchasing",
+        printBase: "/apps/Purchasing",
+        sharedLinks: Object.fromEntries(Object.entries(purchasingPaths).map(([key, path]) => [key, "//Purchasing/" + path])),
+        productTabs: catalogRead
+            ? purchasingTabs.filter(
+                  tab => (tab !== "Suppliers" || capabilities.supplierPriceRead) && (tab !== "BOM" || capabilities.methodRead)
+              )
+            : replenishment
+              ? ["Stock"]
+              : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()
-    // Purchasing's Replenishment mount of InventoryAvailability (impl-purchasing P14a, crosscut §3.7)
-    if (appRoot === "Purchasing")
-        return ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js").catalogContext()
+    if (appRoot === "Purchasing") return purchasingContext()
     if (appRoot !== "Products") throw new Error("Shared catalog context is not available")
     const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
         read = !!a.capabilities?.read,

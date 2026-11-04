@@ -168,6 +168,9 @@ along with this software (see the LICENSE.md file). If not, see
                 // a Warehouse user who may not open Products opens a product in Warehouse's Product360 (impl-warehouse P4, B2)
                 if (!url && !mayOpenProducts && catalogEntity === 'mantle.product.Product')
                     url = ec.resource.script('component://mr-boss/service/ironstone/warehouse/Warehouse.js').recordLink('product', id)
+                // a Purchasing user who may not open Products or Warehouse opens it in Purchasing's Product360 (impl-purchasing P2)
+                if (!url && !mayOpenProducts && catalogEntity === 'mantle.product.Product')
+                    url = ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').recordLink('product', id)
                 icon = catalogEntity==='mantle.product.Product' ? 'sym_o_inventory_2' : catalogEntity==='mantle.product.category.ProductCategory' ? 'sym_o_category' : 'sym_o_style'
                 return
             }

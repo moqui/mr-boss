@@ -1,0 +1,444 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Suppliers (design-purchasing §3 Suppliers; style-guide §3.2 List; impl-purchasing P2): SupplierFind and SupplierList over
+    ironstone.purchasing.SupplierServices.find#Suppliers (the user's organizations' suppliers and the shared ones, each with
+    the buying organization's profile, buyer and category), the New supplier organization and person dialogs
+    (CreateSupplierOrganization, CreateSupplierPerson), which search for duplicates first (find#SupplierDuplicates) and offer
+    the existing Supplier360 before mantle.party.SupplierServices.create#Supplier makes one (owned by the organization, in
+    the Supplier role, Pending where the buying policy requires approval), and the bulk buyer and category changes of the
+    selected suppliers (bulk#SupplierChanges), a result per supplier. Creating and changing need SUPPLIER_PROFILE_EDIT. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Suppliers" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="partyClassificationId"/>
+    <parameter name="buyerPartyId"/>
+    <parameter name="approvalStatusId"/>
+    <parameter name="blocked"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <!-- a new supplier that may duplicate others comes back with its values to show the candidates -->
+    <parameter name="newOrganizationName"/>
+    <parameter name="newFirstName"/>
+    <parameter name="newLastName"/>
+    <parameter name="newExternalId"/>
+    <parameter name="newEmailAddress"/>
+    <parameter name="newContactNumber"/>
+    <parameter name="newClassificationId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="createSupplier">
+        <actions>
+            <set field="duplicateRows" from="[]"/>
+            <if condition="createAnyway != 'Y'">
+                <service-call name="ironstone.purchasing.SupplierServices.find#SupplierDuplicates" out-map="duplicates"
+                        in-map="{organizationName:organizationName, firstName:firstName, lastName:lastName,
+                            externalId:externalId, emailAddress:emailAddress}"/>
+                <set field="duplicateRows" from="duplicates?.duplicateRows || []"/>
+            </if>
+            <if condition="!duplicateRows.length">
+                <service-call name="mantle.party.SupplierServices.create#Supplier" out-map="created"
+                        in-map="{organizationPartyId:organizationPartyId || purchasing.activeOrganizationPartyId
+                                || purchasing.organizationPartyIds[0], organizationName:organizationName, firstName:firstName,
+                            lastName:lastName, externalId:externalId, emailAddress:emailAddress, contactNumber:contactNumber,
+                            partyClassificationId:partyClassificationId}"/>
+                <message type="success">Supplier created</message>
+            </if>
+        </actions>
+        <conditional-response url=".">
+            <condition>
+                <expression>duplicateRows.length</expression>
+            </condition>
+            <parameter name="newOrganizationName" from="organizationName"/>
+            <parameter name="newFirstName" from="firstName"/>
+            <parameter name="newLastName" from="lastName"/>
+            <parameter name="newExternalId" from="externalId"/>
+            <parameter name="newEmailAddress" from="emailAddress"/>
+            <parameter name="newContactNumber" from="contactNumber"/>
+            <parameter name="newClassificationId" from="partyClassificationId"/>
+        </conditional-response>
+        <default-response url="../Supplier360">
+            <parameter name="vendorPartyId" from="created?.partyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the selected suppliers (selectedIds) and the change, a result per supplier -->
+    <transition name="bulkChange">
+        <actions>
+            <service-call name="ironstone.purchasing.SupplierServices.bulk#SupplierChanges" out-map="bulkOut"
+                    in-map="{organizationPartyId:organizationPartyId, change:change, partyIds:selectedIds,
+                        buyerPartyId:buyerPartyId, fromDate:fromDate, partyClassificationId:partyClassificationId}"/>
+            <script>if (bulkOut?.summary) ec.message.addMessage(bulkOut.summary,
+                bulkOut.results.some((row) =&gt; row.resultCode == 'REFUSED') ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.SupplierServices.find#Suppliers" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{organizationPartyId:organizationPartyId, text:text, partyClassificationId:partyClassificationId,
+                    buyerPartyId:buyerPartyId, approvalStatusId:approvalStatusId, blocked:blocked, pageIndex:pageIndex,
+                    pageSize:pageSize}"/>
+        <set field="supplierRows" from="found?.supplierRows || []"/>
+        <set field="supplierRowsCount" from="found?.supplierRowsCount"/>
+        <set field="supplierRowsPageIndex" from="found?.supplierRowsPageIndex"/>
+        <set field="supplierRowsPageSize" from="found?.supplierRowsPageSize"/>
+        <set field="supplierRowsPageMaxIndex" from="found?.supplierRowsPageMaxIndex"/>
+        <set field="supplierRowsPageRangeLow" from="found?.supplierRowsPageRangeLow"/>
+        <set field="supplierRowsPageRangeHigh" from="found?.supplierRowsPageRangeHigh"/>
+        <set field="buyingOrganizationName" from="found?.organizationName || ''"/>
+        <set field="canCreate" from="!!purchasing.capabilities.profileEdit"/>
+        <set field="filtered" from="!!(text || partyClassificationId || buyerPartyId || approvalStatusId || blocked)"/>
+        <set field="emptyText" from="filtered ? 'No supplier matches these filters.' : (canCreate
+                ? 'No supplier yet. Add one with New supplier.' : 'No supplier is shared with your organizations yet.')"/>
+        <set field="checkingNew" from="!!(newOrganizationName || newLastName)"/>
+        <if condition="checkingNew">
+            <service-call name="ironstone.purchasing.SupplierServices.find#SupplierDuplicates" out-map="candidates"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{organizationName:newOrganizationName, firstName:newFirstName, lastName:newLastName,
+                        externalId:newExternalId, emailAddress:newEmailAddress}"/>
+        </if>
+        <set field="duplicateRows" from="candidates?.duplicateRows || []"/>
+        <set field="newSupplier" from="{organizationName:newOrganizationName, firstName:newFirstName, lastName:newLastName,
+                externalId:newExternalId, emailAddress:newEmailAddress, contactNumber:newContactNumber,
+                partyClassificationId:newClassificationId, createAnyway:'Y'}"/>
+        <set field="newSupplierName" from="newOrganizationName || [newFirstName, newLastName].filter(Boolean).join(' ')"/>
+    </actions>
+    <widgets>
+        <context title="Suppliers" selection-form="SupplierList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Suppliers" type="h5"/>
+                <label text="Buying profiles of ${buyingOrganizationName}" type="p" style="text-caption m-muted q-mb-none"
+                        condition="buyingOrganizationName"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewSupplierOrganizationDialog" button-text="New supplier" type="primary" icon="sym_o_add"
+                        title="New supplier organization" width="720" condition="canCreate">
+                    <form-single name="CreateSupplierOrganization" transition="createSupplier">
+                        <field name="organizationName">
+                            <default-field title="Organization name">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="externalId">
+                            <default-field title="External ID" tooltip="The supplier's ID in another system">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="emailAddress">
+                            <default-field title="Email">
+                                <text-line input-type="email"/>
+                            </default-field>
+                        </field>
+                        <field name="contactNumber">
+                            <default-field title="Phone">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="partyClassificationId">
+                            <default-field title="Category">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'supplierCategories'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Check and create">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="organizationName"/>
+                                <field-ref name="externalId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="emailAddress"/>
+                                <field-ref name="contactNumber"/>
+                            </field-row>
+                            <field-ref name="partyClassificationId"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewSupplierPersonDialog" button-text="New individual supplier" icon="sym_o_person_add"
+                        title="New individual supplier" width="720" condition="canCreate">
+                    <form-single name="CreateSupplierPerson" transition="createSupplier">
+                        <field name="firstName">
+                            <default-field title="First name">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="lastName">
+                            <default-field title="Last name">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="externalId">
+                            <default-field title="External ID" tooltip="The supplier's ID in another system">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="emailAddress">
+                            <default-field title="Email">
+                                <text-line input-type="email"/>
+                            </default-field>
+                        </field>
+                        <field name="contactNumber">
+                            <default-field title="Phone">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Check and create">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="firstName"/>
+                                <field-ref name="lastName"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="emailAddress"/>
+                                <field-ref name="contactNumber"/>
+                            </field-row>
+                            <field-ref name="externalId"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+                <link url="." text="Pending approval" link-type="anchor-button" icon="sym_o_pending"
+                        parameter-map="{approvalStatusId:'SupaPending'}"/>
+                <link url="." text="Blocked" link-type="anchor-button" icon="sym_o_block" parameter-map="{blocked:'Y'}"/>
+            </container>
+        </container>
+        <!-- a new supplier that may be one already here: open the existing one, or create it anyway -->
+        <section name="DuplicateCandidates" condition="checkingNew &amp;&amp; canCreate">
+            <widgets>
+                <container-box>
+                    <box-header title="Is ${newSupplierName} one of these suppliers?"/>
+                    <box-toolbar>
+                        <container-dialog id="CreateAnywayDialog" button-text="Create anyway" icon="sym_o_add"
+                                title="Create ${newSupplierName}" width="640">
+                            <form-single name="CreateAnyway" transition="createSupplier" map="newSupplier">
+                                <field name="organizationName"><default-field><hidden/></default-field></field>
+                                <field name="firstName"><default-field><hidden/></default-field></field>
+                                <field name="lastName"><default-field><hidden/></default-field></field>
+                                <field name="externalId"><default-field><hidden/></default-field></field>
+                                <field name="emailAddress"><default-field><hidden/></default-field></field>
+                                <field name="contactNumber"><default-field><hidden/></default-field></field>
+                                <field name="partyClassificationId"><default-field><hidden/></default-field></field>
+                                <field name="createAnyway"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Create ${newSupplierName}">
+                                        <submit confirmation="None of these is ${newSupplierName}: create a new supplier?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="DuplicateList" list="duplicateRows" skip-form="true" paginate="false">
+                            <field name="supplierName">
+                                <default-field title="Supplier">
+                                    <link url="../Supplier360" text="${supplierName}" link-type="anchor"
+                                            parameter-map="{vendorPartyId:partyId}"/>
+                                </default-field>
+                            </field>
+                            <field name="pseudoId">
+                                <default-field title="ID">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="emailText">
+                                <default-field title="Email">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="supplierName"/></column>
+                                <column><field-ref name="emailText"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No existing supplier matches ${newSupplierName}." type="p" style="q-pa-md m-muted"
+                                condition="!duplicateRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SupplierList" list="supplierRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <row-selection id-field="partyId" parameter="selectedIds" list-mode="true" condition="canCreate">
+                        <action>
+                            <dialog button-text="Assign buyer" button-icon="sym_o_person" title="Assign a buyer to the selected suppliers"/>
+                            <form-single name="BulkBuyer" transition="bulkChange">
+                                <field name="change" from="'buyer'"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId" from="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="buyerPartyId">
+                                    <default-field title="Buyer" tooltip="Empty ends the current buyer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'buyers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="Empty starts now">
+                                        <date-time/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Assign buyer">
+                                        <submit confirmation="Assign this buyer to the selected suppliers?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Set category" button-icon="sym_o_category" title="Set the category of the selected suppliers"/>
+                            <form-single name="BulkCategory" transition="bulkChange">
+                                <field name="change" from="'category'"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId" from="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="partyClassificationId">
+                                    <default-field title="Category" tooltip="Empty removes the category">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'supplierCategories'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Set category">
+                                        <submit confirmation="Set this category on the selected suppliers?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="supplierName">
+                        <header-field title="Supplier" show-order-by="true"/>
+                        <default-field title="Supplier">
+                            <link url="../Supplier360" text="${supplierName}" link-type="anchor"
+                                    parameter-map="{vendorPartyId:partyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Name, ID or external ID">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                    </field>
+                    <field name="pseudoId">
+                        <default-field title="ID">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="emailText">
+                        <default-field title="Contact">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="buyerPartyId">
+                        <header-field title="Buyer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'buyers', selected:buyerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Buyer">
+                            <display text="${buyerName}"/>
+                        </default-field>
+                    </field>
+                    <field name="partyClassificationId">
+                        <header-field title="Category">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'supplierCategories', selected:partyClassificationId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Category">
+                            <display text="${categoryText}"/>
+                        </default-field>
+                    </field>
+                    <field name="approvalStatusId">
+                        <header-field title="Approval">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${statusId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.StatusItem">
+                                        <econdition field-name="statusTypeId" value="SupplierApproval"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Approval">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${approvalColor}">${
+                                    WebUtilities.encodeHtml(approvalText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: approvalText})}]]></text>
+                                <text type="html">${approvalText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="blockText">
+                        <default-field title="Purchase block">
+                            <display style="text-negative"/>
+                        </default-field>
+                    </field>
+                    <field name="blocked">
+                        <header-field title="Blocked only">
+                            <drop-down allow-empty="true">
+                                <option key="Y" text="Yes"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="ownerText">
+                        <default-field title="Owner">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="findButton">
+                        <header-field title="Find">
+                            <submit/>
+                        </header-field>
+                    </field>
+                    <columns>
+                        <column><field-ref name="supplierName"/><field-ref name="pseudoId"/></column>
+                        <column><field-ref name="emailText"/></column>
+                        <column><field-ref name="buyerPartyId"/></column>
+                        <column><field-ref name="partyClassificationId"/></column>
+                        <column><field-ref name="approvalStatusId"/><field-ref name="blockText"/></column>
+                        <column><field-ref name="currencyUomId"/></column>
+                        <column><field-ref name="ownerText"/></column>
+                    </columns>
+                    <columns type="mobile">
+                        <column><field-ref name="supplierName"/><field-ref name="buyerPartyId"/></column>
+                        <column><field-ref name="approvalStatusId"/><field-ref name="blockText"/></column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!supplierRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

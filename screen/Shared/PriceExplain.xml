@@ -37,16 +37,22 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
         <set field="printBase" from="sharedMountContext.printBase"/>
     </always-actions>
+    <!-- in Purchasing (impl-purchasing P2, crosscut §3.21) the purchase direction only, for a supplier-price reader -->
+    <condition>
+        <expression>appRoot != 'Purchasing' || !!sharedMountContext.capabilities.supplierPriceRead</expression>
+    </condition>
     <actions>
         <service-call name="ironstone.products.PriceListServices.get#PriceListOptions" out-map="context" />
         <set field="organizationPartyId" from="organizationPartyId || defaultOrganizationPartyId" />
-        <set field="direction" from="direction || (pricingAccess.canPriceRead ? 'sales' : 'purchase')" />
+        <set field="direction" from="appRoot == 'Purchasing' ? 'purchase' : direction || (pricingAccess.canPriceRead ? 'sales' : 'purchase')" />
         <set field="priceUomId" from="priceUomId || 'USD'" />
         <set field="quantity" from="quantity || '1'" />
         <set field="vendorPartyId" from="vendorPartyId || (direction === 'sales' ? organizationPartyId : null)" />
         <set field="customerPartyId" from="customerPartyId || (direction === 'purchase' ? organizationPartyId : null)" />
         <set field="traceRows" from="[]" />
-        <if condition="productId">
+        <!-- a purchase explanation needs its supplier (the external vendor); Purchasing asks for one first -->
+        <set field="supplierNeeded" from="appRoot == 'Purchasing' &amp;&amp; productId &amp;&amp; !vendorPartyId"/>
+        <if condition="productId &amp;&amp; !supplierNeeded">
             <service-call name="ironstone.products.PriceListServices.get#PriceExplanation" in-map="context" out-map="context" />
         </if>
     </actions>
@@ -190,6 +196,7 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
         <label text="Product ${productId || &quot;not selected&quot;} · Organization ${organizationPartyId} · Quantity ${quantity} ${quantityUomId || &quot;stock units&quot;} · ${direction}" type="p" />
+        <label text="Choose the supplier whose offer to explain." type="p" condition="supplierNeeded" />
         <section name="ResolvedPriceAvailable" condition="!!priceResult">
             <widgets>
                 <container-box>
@@ -334,4 +341,7 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets>
         </section>
     </widgets>
+    <fail-widgets>
+        <label text="Supplier prices are not available to you." type="p" condition="appRoot == 'Purchasing'"/>
+    </fail-widgets>
 </screen>

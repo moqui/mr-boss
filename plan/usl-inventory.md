@@ -342,7 +342,7 @@ Added in Accounting P6 (payables), called by built screens:
 | InvoiceServices | request#HoldRelease | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
 | InvoiceServices | release#InvoiceHold | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail/Holds |
 | InvoiceServices | get#InvoiceHolds |  | Accounting/Payables/BillDetail; Accounting/Payables/BillDetail/Holds |
-| SupplierServices | store#SupplierProfile | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360/Terms |
+| SupplierServices | store#SupplierProfile | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360/Terms; Shared/Supplier360/Buying (Purchasing: SupplierProfile) |
 | SupplierServices | get#SupplierFinance | Accounting/Payables/Supplier360 | Accounting/Payables/Supplier360 and its tabs |
 
 Added in Accounting P7 (matching), called by built screens:
@@ -776,16 +776,16 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | create#UserAccountPerson |  |  |
 | PartyServices | create#PartyUserAccount | Admin/Users/Users |  |
 | PartyServices | update#PartyUserAccount | Admin/Users/UserDetail |  |
-| PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail |  |
+| PartyServices | create#Person | Commons/QuickCreate; Purchasing/Suppliers; Sales/Accounts/Accounts; Sales/Accounts/ContactDetail | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier) |
 | PartyServices | create#PersonCustomer |  |  |
 | PartyServices | create#PersonEmployee |  |  |
-| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations |  |
+| PartyServices | create#Organization | Commons/QuickCreate; Purchasing/Suppliers; Admin/Settings/Organizations | Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.create#Supplier) |
 | PartyServices | update#PartyDetail | Commons/Contacts/ContactDetail; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | PartyServices | convert#PartyToOrganization |  |  |
 | PartyServices | convert#PartyToPerson |  |  |
-| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail |  |
-| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
-| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |
+| PartyServices | ensure#PartyRole | Purchasing/Suppliers; Admin/Settings/Organizations; Admin/Settings/OrganizationDetail | — (create#Supplier adds the Supplier role through create#Person or create#Organization) |
+| PartyServices | set#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through mantle.party.SupplierServices.set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
+| PartyServices | remove#PartyClassification | Purchasing/Suppliers/Supplier360; Shared/Customer360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying, Purchasing/Suppliers/SupplierList (through set#SupplierCategory); — (other apps' contexts on Customer360, §7) |
 | PartyServices | get#PartyBadgeInfo |  |  |
 | PartyServices | lookup#PartyBadge |  |  |
 | PartyServices | scan#PartyBadge |  |  |
