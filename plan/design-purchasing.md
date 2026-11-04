@@ -661,6 +661,11 @@ off by default, on its owner's settings, so plain Mantle keeps its behavior (imp
 
 **Context passed.** Mount `Purchasing/Approvals`, a top-level menu item; [Commons §4](design-drawers-commons.md#4-header-and-drawer-screens) and crosscut §3.15. This is Purchasing's row of the crosscut §3.15 table (R-XC-12): request, award, PO and supplier approvals / purchase topics and buying organization / decide against the current revision / budget commitment. Filter to the topics PurchaseRequestApproval, PurchaseAwardApproval, PurchaseOrderApproval and PurchaseSupplierApproval and the current recipient: the mount passes Purchasing's topic list to `get#UserNotifications`, which takes a list of topics, not an `appName` filter (impl-accounting §4). Agreement activation comes on PurchaseOrderApproval, with the agreement as source. The list rows are pending proposed PurchaseApprovalDecision steps; the notification is the delivery, not the record. Show source, amount/currency, policy tier, revision, budget result and due date. Approve and refuse call the proposed topic handlers `approve#PurchaseSource` and `refuse#PurchaseSource` (§1), never a NotificationMessage mutation; body and actions use the same source access check as the PO/request. Refusal moves a PO OrderPlaced → OrderRejected, leaves a request ReqSubmitted with the refused decision, leaves an award's quotes unplaced and sets a supplier's approval status Rejected. Stale or superseded requests link to the current revision without accepting a decision.
 
+As built (impl-purchasing P4): the topics are seeded in mr-mantle with `mantle.order.PurchaseServices.approve#PurchaseSource`
+and `refuse#PurchaseSource`, and a supplier's is PurchaseSupplierApproval. A row's title carries the source, revision,
+supplier, amount and step; the budget result shows on OrderDetail's approvals to an approver, not in the list, since the
+notice is sent by the buyer, who may not read budgets (F-P4-8).
+
 **Needs.** PUR-APPROVAL, PUR-SHELL.
 
 ## 7. Agreements
@@ -1104,7 +1109,12 @@ recipient's authority and cannot expose finance data withheld by these source re
 
 **Actions and states.** PurchaseApprovalPolicy is effective-dated rows with their key fields audit-logged (impl-purchasing §4). Policy activation requires administrator authority and rejects ambiguous bands or no eligible approver. Thresholds ship as decided (impl-purchasing §4): no monetary auto-approval outside explicitly configured policy, a buyer and manager split to start, and a visible Warn budget policy, with finance choosing Stop per budget. With no active policy for an organization and source type, one approval step by the purchase-approver capability applies, and self-approval needs an explicit setting, so a one-person business can still approve (R-PUR-14). Proposed PurchaseApprovalDecision, a record of its own, records source entity/ID/revision, the policy row and the time it was evaluated, approver, decision, date and reason; the business source remains authoritative. A change to an audit-logged key field of a placed source after its decision invalidates the decision and resubmits notifications. Request approval does not invent ReqApproved; ReqReviewed remains reviewed. Budget checks/commitment lock at approval use Accounting AC-14 BudgetControlPolicy and its `BudgetServices.check#Budget`, `reserve#Commitment`, `convert#Commitment` and `release#Commitment` (D10). Separate duty prevents buyer self-approval when required and does not imply finance payable approval.
 
-
+As built (impl-purchasing P4): a row is one step of a band (from included, to not included) in its currency, optionally for
+a category or facility; its approver is a user, else a user group's members, else any purchase approver of the organization,
+each holding PURCHASE_APPROVE; quorum distinct approvers decide it; `separateApprover` keeps an earlier step's approver off it;
+self-approval is the step's setting, else the buying policy's; expiry days bound how long a step's approval counts while
+later steps wait. Bands of one scope meet or are the same. A band applies in its own currency only: nothing converts an amount
+(F-P4-3). The budget is checked and reserved by account, the line's override account else the one its bill posts to.
 
 **Source.** research §3, §5, §10; existing Request status family and Commons notification approval providers.
 

@@ -254,7 +254,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Purchasing root and menu, Home | built Nov 4, 2026 |
 | P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | built Nov 4, 2026 |
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | built Nov 4, 2026 |
-| P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | — |
+| P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | built Nov 4, 2026 |
 | P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
 | P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | — |
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | — |
@@ -865,6 +865,108 @@ BOSS screens call the Mantle writes after check#Record. Fixes:
     unused commitment;
   - a bulk approval of three POs with one stale names it and approves the other two;
   - a PO to a supplier awaiting approval gets the policy's Stop, and passes once the supplier is approved.
+
+**Built Nov 4 (P4).**
+- Mantle:
+  - `entity/PurchaseApprovalEntities.xml`: `mantle.order.purchase.PurchaseApprovalPolicy` (organization, source type
+    `PurchaseApprovalSource`: PasOrder, PasRequest, PasAward, PasSupplier; band `fromAmount` included to `thruAmount` not
+    included, currency, category, facility, `sequenceNum`, `approverUserId`, `approverUserGroupId`, `quorum`,
+    `selfApprovalAllowed`, `separateApprover`, `expiryDays`, dates, description and reason, every key field audit-logged);
+    `PurchaseApprovalDecision.supersededDate`.
+  - `data/PurchaseApprovalSetupData.xml`: the topics `PurchaseOrderApproval` and `PurchaseSupplierApproval` with
+    `approve#PurchaseSource` and `refuse#PurchaseSource` (F23; refuse needs a reason).
+  - `service/mantle/order/PurchaseApprovals.js` with `PurchaseServices.xml` (appended): `store#PurchaseApprovalPolicy`
+    (PURCHASE_POLICY_EDIT; a new step, the next version of one, or its end; POLICY_AMBIGUOUS for a band overlapping another
+    band of the same scope or a second row for one step, NO_ELIGIBLE_APPROVER when fewer users of the organization holding
+    PURCHASE_APPROVE than the quorum fit the step's approver), `preview#PurchaseApproval` (an order, a supplier or an amount:
+    the steps with who approved and who may approve, POLICY_MISSING, canDecide or why not, and for an order `check#Budget` by
+    account, WITHHELD for a buyer), `submit#SupplierApproval`, `decide#SupplierApproval`, `suspend#Supplier`,
+    `approve#PurchaseSource`, `refuse#PurchaseSource` and `handle#PurchaseApprovalRevision`. The steps: the rows in effect of
+    the organization and source type that fit the amount, currency, category and facility, of the most specific rank
+    (facility and category, category, facility, the organization's), by sequence; none in effect is P3's no-policy rule; rows
+    in effect none of which fits is POLICY_MISSING. A step is done when its quorum of distinct users approved it at the
+    source's revision within its expiry. Messages go to the step's approvers (the user named, else the group's members, else
+    any purchase approver of the organization), one message, or one per approver where the quorum is over one.
+  - `PurchaseOrders.js`: `decide#PurchaseApproval` takes approve or refuse: the step waiting and its checks (NOT_ELIGIBLE,
+    SELF_APPROVAL by the step's setting else the buying policy's, ALREADY_DECIDED, SEPARATION_REQUIRED, POLICY_MISSING); the
+    decision keeps the policy row and step; a refusal (REASON_REQUIRED) is `reject#Order`; an approval leaving a step
+    answers `pendingStepText` and notifies the next; the last one reserves the budget of the lines with no request
+    (`reserve#Commitment` at BcsOrder, keyed by the revision, each line on its override account else
+    `get#InvoiceItemGlAccount` incoming; only accounts under an approved budget; `budgetOverrideReason` for a Stop) and
+    approves. The gate's `approvalWarnings` needs every step done. `place#PurchaseOrder` sends the first step;
+    `cancel#PurchaseOrder` releases the commitments (`release#ClosedSourceCommitments`) and reads the notices.
+  - `service/Purchase.secas.xml`: OrderRevisionPurchaseApproval on `increment#OrderRevision` (not for a status, file or
+    note): the decisions of earlier revisions are superseded and a placed order's first step is sent again at the new
+    revision.
+  - `SupplierProfile.js`: a new Pending supplier's PurchaseSupplierApproval notice (F49), and `storeDecision`, the decided
+    status written for `decide#SupplierApproval` (F-P4-2). `Budgets.js`: PURCHASE_APPROVE reserves and checks (F-P4-1).
+  - Specs: `test/order/PurchaseApprovals` (5 features, about 2.7 s); acceptance `acceptance/order/PurchaseApprovalBudgetWalk`
+    (2: Warn approves with the warning and reserves; a closed remainder releases).
+- BOSS:
+  - `ironstone.purchasing.ApprovalServices` (`Approvals.js`): `find#PurchaseApprovalPolicies` (Settings area) and
+    `get#TodayItems` (the user's approvals waiting); Home's `approvalCount` (BuyerServices); the choices `approvers`,
+    `approverGroups` and `productCategories` (Purchasing.js); the Settings link row; `Orders.js` `get#OrderDetail` carries
+    `approval` (the order's preview as a probe), the `refuse` action, the decisions' step and superseded date;
+    `bulk#PurchaseOrderActions` takes `orderRevisions` and names a step left waiting.
+  - Screens: `Purchasing/Approvals.xml` (Commons Notifications with Purchasing's topics), `Settings/ApprovalPolicies.xml`
+    (ApprovalPolicyList with New step, Change and End; ApprovalPreview), `template/PurchasingOrderApprovals.xml` (OrderDetail's
+    approvals: the state, steps, budget, decisions and Refuse; included in place of P3's Approvals box, with `refuseOrder` in
+    Shared/OrderDetail.xml and the approve dialog's budget override reason), `template/PurchasingSupplierApproval.xml`
+    (Supplier360's Approval menu: Submit for approval, Approve, Refuse, Suspend), the Today source in `Purchasing.xml`.
+  - Data: BossSetupData's links of the two topics; BossPurchasingDemoData's Retail policy (up to $5,000 a purchase approver;
+    from $5,000 the BOSS_PURCHASING_APPROVE group and then the purchasing administrator, separated).
+  - Specs: `PurchasingApprovals` (2: ApprovalPolicies' one html render with the preview, Today); PurchasingAccess gains the
+    approval policies' access feature (14); PurchasingOrders checks the approvals section, the approval and refuse of the
+    placed order and Home's approval count; PurchasingSuppliers' render the Approval menu; `routeFixtures` lists Approvals
+    and Settings/ApprovalPolicies. Acceptance `acceptance/Purchasing/PurchasingApprovalsWalk` (5: the two steps, the inbox
+    and a superseded revision, a refusal, the bulk with one stale, the supplier's Stop and approval).
+- Tests run: Mantle PurchaseApprovals, PurchaseOrders, PurchasePolicy, OrderProcureToPayBasicFlow, AccountingBudgets,
+  CrmMiscServices, OrderLifecycle, OrderBulk, WorkProjectRequests, PurchaseHoldPermission, AccountingPayables,
+  WarehouseReceiving (all pass); BOSS PurchasingApprovals, PurchasingAccess, PurchasingOrders, PurchasingSuppliers,
+  PurchasingReplenishment, ProductsSuppliers, ManufacturingSubcontracting, WarehouseReceiving, WarehousePicking,
+  ClientBilling, AccountingPayables, AccountingAccess, ProjectsAccess, AccountingBudgets (97 features, all pass); client
+  PurchasingOrdersWalk (pass); acceptance PurchasingApprovalsWalk (5), PurchaseApprovalBudgetWalk (2) and AppStructure
+  (18), all pass. `moqui lint --screens`: no idiom or hazard site in the new and changed screens (informational anchors
+  only).
+- Decisions:
+  - A step's approver is a user, a user group or any purchase approver of the organization, each holding PURCHASE_APPROVE
+    and working for the organization; "approver role" is the user group (the design's role, as data).
+  - Bands of one scope (organization, source type, currency, category, facility) meet or are the same; rows of one band are
+    its steps by sequence. A source with lines in two categories that each have rows takes both rows' steps.
+  - Expiry: a step's approval counts for its days while later steps wait; an expired one is approved again.
+  - A supplier is approved by the same steps (PasSupplier rows, none in the demo: one purchase approver); its revision is
+    the count of its profile rows (F-P4-4). Suspended is the status with a dated purchase block and its reason; a suspended
+    supplier is submitted again only once the block ends, and approved again.
+  - The budget is reserved only for lines under an approved budget's account, so an organization without budgets writes no
+    commitment; a Warn reserves with the warning and a Stop refuses unless a BUDGET_OVERRIDE holder gives a reason.
+  - Approvals is Commons' list with the topics; its rows' titles carry the order, revision, supplier, amount and step, not
+    the budget (F-P4-8).
+- Findings (provisional):
+  - **F-P4-1** `reserve#`, `release#Commitment` and `check#Budget` admitted no Purchasing permission (Accounting §7: "with their
+    approval permission"); PURCHASE_APPROVE is added to Budgets.js's reserve permissions (a widening, no new refusal).
+  - **F-P4-2** `store#SupplierProfile` needs SUPPLIER_PROFILE_EDIT for any buying field, which the purchase approver group does
+    not hold, so an approver could not set a supplier Approved; `decide#SupplierApproval` writes the decided status through
+    SupplierProfile.js's `storeDecision` after its own PURCHASE_APPROVE check.
+  - **F-P4-3** A band applies only in its currency (or every currency when it names none); nothing converts an amount, so the
+    preview's "converted amount" is the source's own, and a source in a currency no row covers, where rows exist, is
+    POLICY_MISSING.
+  - **F-P4-4** A supplier has no revision; P4 counts its SupplierProfile rows (each change starts one), which the notice
+    carries as `sourceRevision`.
+  - **F-P4-5** A line changed on a placed order before any decision left the approvers' notice at the old revision, which the
+    handler then refuses as stale; the SECA also resends where an approval notice exists, not only after a decision.
+  - **F-P4-6** PurchaseOrders' row selection posts order ids only, so the list's bulk approval decides each order's current
+    revision; `bulk#PurchaseOrderActions` takes `orderRevisions` for a caller that kept the revisions reviewed, which the list
+    does not send yet.
+  - **F-P4-7** An error of a service called through `EntityLib.call` reaches the framework's approve#NotificationMessage as
+    "Error: Error: CODE: …" (the inner error text is wrapped again); callers test the code with includes, and
+    `lib.reasonCode` would not parse it.
+  - **F-P4-8** The design's Approvals rows show the budget result and a due date; a notice is sent by the buyer who placed
+    the order, who may not read budgets, so the title has no budget, and Today's due date is the time it was sent.
+    OrderDetail's approvals show the budget to an approver.
+  - **F-P4-9** OrderDetail's Purchasing branch has no tab list (P3 built it as sections of one page); P4's approvals are a
+    section of their own template, included in place of P3's Approvals box (one line in `PurchasingOrderDetail.xml`).
+  - **F-P4-10** Approvals is no longer a placeholder: AppStructure's count is 60 against its floor of 59, which P5 and P6's
+    screens may cross at the merge.
 
 ### P5 — Receiving and inspection
 

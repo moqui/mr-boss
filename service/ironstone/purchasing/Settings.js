@@ -126,6 +126,17 @@ function settings(p) {
             url: "/qapps/Purchasing/Settings/PurchasePolicy"
         },
         {
+            area: "Approval policies",
+            description: "Who approves purchase orders and suppliers, in which steps, by amount",
+            effectiveText:
+                String(
+                    rows("mantle.order.purchase.PurchaseApprovalPolicy", {organizationPartyId}).filter(row => current(row, at))
+                        .length
+                ) + " steps in effect",
+            owner: "Purchasing",
+            url: "/qapps/Purchasing/Settings/ApprovalPolicies"
+        },
+        {
             area: "Request purposes",
             description: "The purposes a purchase request is filed under, with who handles them",
             effectiveText: String(find("mantle.request.RequestCategory").count()) + " purposes",

@@ -1497,4 +1497,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Purchasing P4: the approval topics Mantle seeds (PurchaseApprovalSetupData.xml) open the purchase order and the
+        supplier under Purchasing; the decision is made there or from Approvals (approve#PurchaseSource,
+        refuse#PurchaseSource) -->
+    <moqui.security.user.NotificationTopic topic="PurchaseOrderApproval"
+            linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
+    <moqui.security.user.NotificationTopic topic="PurchaseSupplierApproval"
+            linkTemplate="/qapps/Purchasing/Suppliers/Supplier360?vendorPartyId=${supplierPartyId}&amp;organizationPartyId=${organizationPartyId}"/>
 </entity-facade-xml>

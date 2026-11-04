@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's approval reads (design-purchasing §12 ApprovalPolicies, §6 Approvals; impl-purchasing P4; Approvals.js): the
+    approval policy list of the Settings area and the Today source of the decisions waiting. The policies are stored, previewed
+    and decided through Mantle's mantle.order.PurchaseServices, which the screens call after AccessServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="PurchaseApprovalPolicies" allow-remote="false">
+        <description>An organization's approval policy rows (ApprovalPolicyList): each step with its source type, amount band and
+            currency, category or facility, step, approver, quorum, separation, self-approval and expiry, its dates and state,
+            in effect now and starting later (inEffect Y, the default) or every row (N), by source, band and step; and whether
+            the user may change them (PURCHASE_POLICY_EDIT). Refuses a user without the Settings area (PERMISSION_DENIED) and
+            an organization not theirs (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="sourceTypeEnumId"/>
+            <parameter name="inEffect" default-value="Y"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizationName"/>
+            <parameter name="policyRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Approvals.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findPolicies', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizationName" from="found.organizationName"/>
+            <set field="policyRows" from="found.policyRows"/>
+            <set field="canEdit" from="found.canEdit"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Purchasing today-source (Purchasing.xml shell-providers; get#UserTodayItems calls it): the purchase
+            order and supplier approvals waiting for the user's decision (their unread PurchaseOrderApproval and
+            PurchaseSupplierApproval messages), each opening its order or Supplier360. A user without Purchasing's approvals,
+            and another user's Today, get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Approvals.js')
+                    .execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
+</services>

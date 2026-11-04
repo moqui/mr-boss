@@ -18,7 +18,9 @@ const ids = {
     facilityId: "ZIRET_WH",
     // P2: Retail's supplier awaiting approval and its blocked one (BossPurchasingDemoData.xml's buying profiles)
     pendingSupplierId: "BOSS_PUR_SUP_PENDING",
-    blockedSupplierId: "BOSS_PUR_SUP_BLOCKED"
+    blockedSupplierId: "BOSS_PUR_SUP_BLOCKED",
+    // P4: Retail's approval policy steps (BossPurchasingDemoData.xml): up to $5,000 one step, from $5,000 two
+    approvalPolicyIds: ["BOSS_PUR_APR_SMALL", "BOSS_PUR_APR_LARGE_1", "BOSS_PUR_APR_LARGE_2"]
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -136,7 +138,10 @@ function routeFixtures() {
         // P3: the purchase orders, Retail's draft in OrderDetail and the quick create
         "Orders/PurchaseOrders": {parameters: {}, text: "Purchase orders"},
         "Orders/OrderDetail": {parameters: {orderId: ids.orderId}, text: "Brightline restock"},
-        NewPurchaseOrder: {parameters: {}, text: "New purchase order"}
+        NewPurchaseOrder: {parameters: {}, text: "New purchase order"},
+        // P4: the approvals waiting (Commons Notifications with Purchasing's topics) and the approval policies
+        Approvals: {parameters: {}, text: "Approvals"},
+        "Settings/ApprovalPolicies": {parameters: {}, text: "Approval steps"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

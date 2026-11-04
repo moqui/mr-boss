@@ -577,6 +577,15 @@ refused by `ironstone.purchasing.ApprovalServices.approve#PurchaseSource` and `r
 and the other core apps' approval topics that crosscut §3.15 lists
 ([design-crosscut §3.15](design-crosscut.md#315-approvals-waiting), D8).
 
+Nov 4, 2026 (impl-purchasing P4, as built): the purchase topics are Mantle's, seeded in mr-mantle
+`data/PurchaseApprovalSetupData.xml` (F23): `PurchaseOrderApproval` and `PurchaseSupplierApproval`
+(a supplier awaiting approval), with `mantle.order.PurchaseServices.approve#PurchaseSource` and
+`refuse#PurchaseSource` (`PURCHASE_APPROVE`; `refuseReasonRequired`) as the approve and refuse services,
+which decide the source at the revision in the message (`sourceRevision`) and refuse a stale one naming
+the current revision. One message goes to the approvers of the step waiting, one per approver where
+the step needs more than one. BOSS sets their links. `PurchaseRequestApproval` (P10) and
+`PurchaseAwardApproval` (P12) are seeded the same way.
+
 Nov 1, 2026 (review R-PPL-17, R-SAL-07, R-MKT-07): the seed gains the People, Sales and Marketing
 topics below. Each topic's `approveServiceName` and `refuseServiceName` both name the domain's
 decision service, called with the action, the record and the source stamp in `messageJson`; the

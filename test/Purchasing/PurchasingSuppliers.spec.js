@@ -80,6 +80,8 @@ feature(
             output.includes("Purchasing from Halvorsen Metals is blocked: Quality hold")
             output.includes("Buying profile of Ziziwork Retail")
             output.includes("Change profile")
+            // P4: the header's Approval menu offers a buyer the suspension of a supplier not suspended
+            output.includes("Suspend")
             output.includes("(set by finance)")
             output.includes("Raw metals")
             output.includes("Purchasing demo: blocked supplier")

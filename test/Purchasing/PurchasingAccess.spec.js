@@ -547,3 +547,58 @@ feature("a replenishment facility is the organization's; plan and buy on it need
         problems.join("\n") == ""
     }
 })
+
+feature(
+    "the approval policies are the Settings area's to list and PURCHASE_POLICY_EDIT's to change, in the user's organizations",
+    {
+        when() {
+            const problems = []
+            const approvalService = "ironstone.purchasing.ApprovalServices.",
+                store = "mantle.order.PurchaseServices.store#PurchaseApprovalPolicy"
+            const listed = asUser(users.admin, () =>
+                Array.from(
+                    invoke(approvalService + "find#PurchaseApprovalPolicies", {
+                        appRoot: "Purchasing",
+                        organizationPartyId: ids.organizationId
+                    }).policyRows || []
+                )
+            ).map(row => row.purchaseApprovalPolicyId)
+            if (!ids.approvalPolicyIds.every(id => listed.includes(id))) problems.push(`the administrator lists ${listed}`)
+            const buyerList = asUser(users.buyer, () =>
+                refusal(approvalService + "find#PurchaseApprovalPolicies", {appRoot: "Purchasing"})
+            )
+            if (!buyerList.includes("PERMISSION_DENIED"))
+                problems.push(`the buyer lists the policies: ${buyerList || "accepted"}`)
+            // one step of awards (no award is approved before P12), the same request for each user, through the Mantle service as
+            // the screen's transition calls it (its own permission and organization checks; artifact authorization off); the
+            // administrator's is ended
+            const step = organizationPartyId => ({
+                organizationPartyId,
+                sourceTypeEnumId: "PasAward",
+                sequenceNum: 1,
+                changeReason: "Access spec"
+            })
+            const approver = asUser(users.approve, () => refusal(store, step(ids.organizationId)), false)
+            if (!approver.includes("PERMISSION_DENIED")) problems.push(`the approver stores a policy: ${approver || "accepted"}`)
+            const other = asUser(users.admin, () => refusal(store, step(ids.otherOrganizationId)), false)
+            if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`the other organization's policy: ${other || "accepted"}`)
+            const stored = asUser(users.admin, () => invoke(store, step(ids.organizationId)), false)
+            if (!stored.purchaseApprovalPolicyId) problems.push("the administrator is refused the policy")
+            else
+                asUser(
+                    users.admin,
+                    () =>
+                        invoke(store, {
+                            purchaseApprovalPolicyId: stored.purchaseApprovalPolicyId,
+                            endPolicy: "Y",
+                            changeReason: "Access spec"
+                        }),
+                    false
+                )
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)

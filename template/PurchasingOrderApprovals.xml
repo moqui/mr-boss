@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Approvals for Purchasing (design-purchasing §6 OrderDetail and Approvals; impl-purchasing P4): the section
+    template/PurchasingOrderDetail.xml includes in the order's page, from get#OrderDetail's approval (the order's
+    preview#PurchaseApproval: the steps its approval policy selects for its amount, or the no-policy rule's one, who approved
+    each at the revision and who may approve the one waiting; the budget's decision of its lines at the PO stage for an approver,
+    withheld from a buyer) and its decisions (each with its step and whether a later revision superseded it). Refuse, for an
+    approver who may decide the step waiting, refuses with a reason through decide#PurchaseApproval, which rejects the order
+    (refuseOrder, included by name in Shared/OrderDetail.xml); Approve is the header's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="refuseOrder">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'approve'}"/>
+            <service-call name="mantle.order.PurchaseServices.decide#PurchaseApproval"
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, decision:'refuse', reason:reason,
+                        operationKey:operationKey}"/>
+            <message type="success">Refused; the purchase order is rejected</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingOrderApprovals">
+            <actions>
+                <set field="approval" from="po.approval"/>
+                <set field="approvalStepRows" from="approval?.stepRows || []"/>
+                <set field="approvalBudgetRows" from="approval?.budgetRows || []"/>
+                <set field="refuseValue" from="{orderId:orderId, orderRevision:String(po.orderRevision),
+                        operationKey:'po-refuse-' + ec.user.randomString(24)}"/>
+                <set field="approvalStateText" from="!approval ? '' : approval.missing ? approval.missingMessage
+                        : approval.refused ? 'Refused at revision ' + approval.sourceRevision
+                        : approval.complete ? 'Approved at revision ' + approval.sourceRevision
+                        : po.statusId == 'OrderPlaced' ? 'Waiting for ' + approval.currentStepText + ' of revision ' + approval.sourceRevision
+                        : ''"/>
+                <set field="budgetText" from="!approval ? '' : {OK:'Within budget', WARN:'Over budget: the approval warns',
+                        STOP:'Over budget: a Stop refuses the approval unless a budget overrider gives a reason',
+                        WITHHELD:'Budget withheld', NONE:''}[approval.budgetResult] || ''"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Approvals · ${po.decisionRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="PurchaseOrderRefuse" button-text="Refuse" icon="sym_o_block" width="520"
+                                title="Refuse purchase order ${orderId}" condition="po.actions.refuse">
+                            <form-single name="RefusePurchaseOrder" transition="refuseOrder" map="refuseValue">
+                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="reason">
+                                    <default-field title="Reason"><text-area rows="2" required="true"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Refuse revision ${po.orderRevision}">
+                                        <submit type="danger"
+                                                confirmation="Refuse purchase order ${orderId}? It is rejected and not sent to ${po.supplierName}."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${approvalStateText}" type="p" condition="approvalStateText"
+                                style="${approval?.missing ? 'text-negative' : ''}"/>
+                        <label text="${approval?.refusalText}" type="p" style="text-caption m-muted"
+                                condition="approval?.refusalText &amp;&amp; po.statusId == 'OrderPlaced'"/>
+                        <label text="${budgetText}" type="p" condition="budgetText"
+                                style="${approval?.budgetResult == 'STOP' ? 'text-negative' : approval?.budgetResult == 'WARN' ? 'text-warning' : ''}"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <section name="PurchaseOrderApprovalSteps" condition="approvalStepRows.length">
+                            <widgets>
+                                <form-list name="PurchaseOrderApprovalSteps" list="approvalStepRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="approverText"><default-field title="Approver"><display/></default-field></field>
+                                    <field name="state">
+                                        <default-field title="State">
+                                            <label text="${state}${approvedByText ? ': ' + approvedByText : ''}" type="span"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="approverText"/></column>
+                                        <column><field-ref name="state"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <section name="PurchaseOrderBudget" condition="approvalBudgetRows.length">
+                            <widgets>
+                                <form-list name="PurchaseOrderBudget" list="approvalBudgetRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="glAccountId"><default-field title="Account"><display/></default-field></field>
+                                    <field name="decisionText"><default-field title="Budget"><display/></default-field></field>
+                                    <field name="requestedText">
+                                        <default-field title="This order"><display/></default-field>
+                                    </field>
+                                    <field name="availableText">
+                                        <default-field title="Available"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="glAccountId"/><field-ref name="decisionText"/></column>
+                                        <column><field-ref name="requestedText"/><field-ref name="availableText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                        <form-list name="PurchaseOrderDecisions" list="po.decisionRows" skip-form="true" paginate="false">
+                            <field name="decisionText">
+                                <default-field title="Decision">
+                                    <label text="${decisionText}${stepText ? ' · ' + stepText : ''}" type="span"/>
+                                    <label text="${supersededText}" type="div" style="text-caption m-muted" condition="supersededText"/>
+                                    <label text="${reason}" type="div" style="text-caption m-muted" condition="reason"/>
+                                </default-field>
+                            </field>
+                            <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                            <field name="byText"><default-field title="By"><display/></default-field></field>
+                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="decisionText"/><field-ref name="byText"/></column>
+                                <column><field-ref name="dateText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No approval decision yet."
+                                condition="!po.decisionRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

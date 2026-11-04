@@ -95,10 +95,17 @@ feature(
             render.output.includes("Add line")
             render.output.includes("Place")
             render.output.includes("Lines · 1")
+            // P4: the approvals section (template/PurchasingOrderApprovals.xml) of a draft
+            render.output.includes("No approval decision yet.")
             Object.values(reader.actions).every(allowed => !allowed)
             reader.totalText == "Withheld"
             reader.itemRows[0].priceText == "Withheld"
             placed.actions.approve == true
+            // P4: the approver may refuse the step waiting of Retail's policy (one step up to $5,000); a reader gets no preview
+            placed.actions.refuse == true
+            placed.approval.stepRows.length == 1
+            placed.approval.canDecide == true
+            reader.approval == null
             placed.actions.place == false
             placed.actions.edit == false
             // the history's price changes are withheld from the reader too
@@ -138,9 +145,17 @@ feature("Home counts the drafts and the approved orders not sent, and a buyer's 
         const work = asUser(users.buyer, () =>
             invoke("ironstone.purchasing.BuyerServices.find#BuyerWork", {appRoot: "Purchasing"})
         )
-        return {buyer: home(users.buyer).counters, requester: home(users.requester).counters, work}
+        return {
+            buyer: home(users.buyer).counters,
+            requester: home(users.requester).counters,
+            approver: home(users.approve).counters,
+            work
+        }
     },
-    then({buyer, requester, work}) {
+    then({buyer, requester, approver, work}) {
+        // P4: the approvals waiting for the approver (the placed order's PurchaseOrderApproval), none counted for a buyer
+        approver.approvalCount >= 1
+        buyer.approvalCount == null
         buyer.draftCount >= 1
         buyer.unsentCount >= 1
         requester.draftCount == null

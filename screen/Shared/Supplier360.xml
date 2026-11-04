@@ -65,6 +65,10 @@ along with this software (see the LICENSE.md file). If not, see
             </else>
         </if>
     </always-actions>
+    <!-- Purchasing P4: the supplier's approval (template/PurchasingSupplierApproval.xml) -->
+    <transition-include name="submitSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
+    <transition-include name="decideSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
+    <transition-include name="suspendSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
     <subscreens default-item="Overview">
         <subscreens-item name="Prices" menu-index="2" location="component://mr-boss/screen/Shared/SupplierPrices.xml" menu-title="Products &amp; prices"/>
         <!-- Purchasing (impl-purchasing P2): the buying profile, buyer and category, and the finance details for a finance
@@ -126,6 +130,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
                             <link url="Prices" text="New supplier offer" link-type="anchor-button" btn-type="primary" icon="sym_o_add" condition="canOffer"
                                     parameter-map="{vendorPartyId:vendorPartyId,organizationPartyId:organizationPartyId,_openDialog:'NewSupplierOfferDialog'}"/>
+                            <!-- Purchasing P4: submit, approve or refuse, and suspend -->
+                            <section-include name="PurchasingSupplierApproval"
+                                    location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
                         </container>
                     </container>
                     <label text="${supplierCheck.message}" type="p" style="text-${supplierCheck.color} q-mt-sm q-mb-none"
