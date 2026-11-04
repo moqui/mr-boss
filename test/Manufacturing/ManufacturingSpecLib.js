@@ -521,25 +521,31 @@ function scheduleFixture(prefix) {
 
 // P10: a running work order of six DEMO_1_1 on line A from the demo method (Assemble, then Test and pack on line B), named
 // prefix with a time stamp, the supervisor its Manager (its time's approver, F33), its components received at the plant and
-// issued, and Assemble's operation template with a published instruction (published once: the walks' database outlives a
-// run, F60). Answers {runId, name, assemble, test}.
+// issued, and Assemble's operation template with a published instruction (published only when it is not the one in effect:
+// the walks' database outlives a run, F60). Answers {runId, name, assemble, test}.
 function shopFloorFixture(prefix) {
     const P = "mantle.work.ProductionServices."
     const find = (entity, conditions) => ec.entity.find(entity).condition(conditions).disableAuthz()
     const revision = runId => Number(find("mantle.work.effort.WorkEffort", {workEffortId: runId}).one().productionRevision || 0)
     const templateId = ids.templateIds[0]
-    const instructions = system(() =>
+    const fasten = "fasten the four screws"
+    // the instruction in effect; ManufacturingMethods publishes its own on the same template, so publish again when that
+    // one is in effect
+    const current = system(() =>
         Array.from(
             find("mantle.work.effort.WorkEffortContent", {workEffortId: templateId, contentTypeEnumId: "WectInstruction"}).list()
-        )
+        ).find(row => row.fromDate && !row.thruDate)
     )
-    if (!instructions.length)
+    const currentText = current
+        ? system(() => String(ec.resource.getLocationReference(current.contentLocation).getText() || ""))
+        : ""
+    if (!currentText.includes(fasten))
         asUser(
             users.method,
             () =>
                 invoke("mantle.work.RoutingServices.store#OperationInstruction", {
                     workEffortId: templateId,
-                    contentText: "# Assemble\nSeat both subassemblies, then fasten the four screws to 2 Nm.",
+                    contentText: "# Assemble\nSeat both subassemblies, then " + fasten + " to 2 Nm.",
                     filename: "assemble.md",
                     description: "Assemble the pilot unit",
                     changeReason: "Shop floor demo instruction"

@@ -69,7 +69,10 @@ feature(
         },
         then({published, sources, copied, engineerRelease, requested}) {
             ids.templateIds.every(id => sources.includes(id))
-            published.instructionRows.length == 1
+            // other specs publish on the demo template too (the shop floor fixture's), so this one's is the one in effect
+            published.instructionRows.filter(row => !row.thruDate).length == 1
+            published.instructionRows[0].workEffortContentId == published.workEffortContentId
+            published.instructionRows[0].thruDate == null
             published.instructionRows[0].contentChecksum.length == 64
             copied.copiedOperationIds.length == 2
             copied.operationRows.length == 2
