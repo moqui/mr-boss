@@ -443,6 +443,9 @@ organization filters pass: every BOSS spec naming ZiddlemanInc or listing suppli
   written. No caller in mr-mantle, mr-boss, mr-marble or mr-pass places a Purchase hold.
 - Specs run: PurchasingAccess, ManufacturingAccess, AccountingAccess, WarehouseReports, ProductsSuppliers, ProductsAccess,
   ProductsPricing, ProductsImport, ProductsFinish (BOSS, all pass).
+- **Wave 1 suites (Nov 4, on master after P1 merged):** standalone mr-mantle 1,568 passed, 2 failed (the baseline
+  WorkTimeEntries and WorkTimesheets), 11 skipped; `./moq test-apps` 2,788 server and 13 client features passed (feature
+  time mr-mantle 281 of 300 s, mr-boss 191 of 220 s server and 32 of 36 s client); `moqui lint --screens` clean.
 
 ### P2 — Suppliers and buying policy
 
