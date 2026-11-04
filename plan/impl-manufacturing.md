@@ -1453,6 +1453,24 @@ BillOfMaterialsCompare's amendment action; M4.
     (a transition, two actions, two More items), Find.xml, Shared/BillOfMaterialsCompare.xml (an appended section),
     Approvals.xml, Manufacturing.xml's topics, BossSetupData's topic links, Manufacturing.js (a block before `operations`),
     ManufacturingSpecLib's routes, ManufacturingAccess (appended), suite.js, AccountingPreferences.xml.
+- Review (Nov 3): checked substitution (candidates only from the BOM line's rule, PatEquivalent only under BsrEquivalent, the
+  supervisor's decision revalidating revision, candidate and quantity), the amendment (only unexecuted lines and operations
+  remapped, issued facts keeping their links, both reviews, strictRelease), split and backorder (RequirementSupply conserved,
+  retry answering the same runs; `keepMethod` is honored only as a JS `true`, so the release service's paths are unchanged),
+  cancellation and the kit reversal against F29–F32. Fixed:
+  - (medium) a released run's substitute applied at once under the policy's `substituteApproval` N, a method change after
+    release with no review (§4); it now always waits for a supervisor after release, N applying to drafts only (spec: a draft's
+    applies, a released run's is REQUESTED).
+  - (medium) `reverse#SupportedAssembly` refused only components issued short of the kits' BOM quantities; it now refuses any
+    difference (BOM_CHANGED), since with `kitCostFromComponents` N no value check catches a lowered BOM; and a breakdown
+    that lowers fewer kits than asked is refused (BREAKDOWN_SHORT) rather than cancelling the whole slices.
+  - (low) an amendment removing a method line that has an applied substitute deleted it under the substitute; it is kept now,
+    with a finding.
+  - (low) ReceiptAdjustments' spec named the flag-off hard lock case "refused"; it loses the posting (F-P9-2).
+  - F-P9-2 is Accounting's, not P9's: `PostingGuard.assertMutable` deliberately lets an unpost through and an automatic
+    source's refused posting goes to the error journal, so the unchanged legacy `repost#AssetReceipt` loses the locked day's
+    posting. Recorded in impl-accounting §7; the forward flag avoids it.
+  - Cancellation counts P8's production inspections as facts (after the merge with master).
 
 ### P10 — Shop floor and time
 
