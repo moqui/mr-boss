@@ -64,6 +64,13 @@ feature("an organization of its own plans, makes and receives, each step by a Ma
         // the operator holds PRODUCTION_OPERATE and no STOCK_ISSUE: the same posting is refused
         steps.issueRefused.includes("PERMISSION_DENIED")
         steps.issue == ""
+        // the count of the component's stock open during the issue: its review finds the issue, a conflict to recount
+        steps.countStart == ""
+        steps.countLine == ""
+        steps.countSubmit == ""
+        steps.countReview == ""
+        steps.countConflicts == 1
+        steps.countMovements >= 1
         issued == 3
         steps.executionPage.errors == []
         steps.executionPage.output.includes("P17 secret assemble")

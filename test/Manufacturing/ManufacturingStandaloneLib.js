@@ -165,7 +165,7 @@ const refusedFor = message =>
 function leaks(username, renders, pattern) {
     return renders.filter(([, got]) => pattern.test(got.output)).map(([name]) => `${username} sees ${name}`)
 }
-function user(username, groups) {
+function user(username, groups, root = "BOSS_MANUFACTURING") {
     const partyId = "BOSS_" + username.replace(".", "_").toUpperCase()
     store("mantle.party.Party", {partyId, partyTypeEnumId: "PtyPerson"})
     store("mantle.party.Person", {partyId, firstName: "P17", lastName: username})
@@ -177,7 +177,7 @@ function user(username, groups) {
         currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
         passwordHashType: "SHA"
     })
-    for (const userGroupId of ["BOSS_MANUFACTURING"].concat(groups))
+    for (const userGroupId of (root ? [root] : []).concat(groups))
         store("moqui.security.UserGroupMember", {userId: partyId, userGroupId, fromDate: since})
     store("mantle.party.PartyRelationship", {
         partyRelationshipId: partyId + "_ORG",
@@ -216,6 +216,9 @@ function setup() {
         filterDate: ec.user.nowTimestamp
     })
     for (const [username, groups] of Object.entries(p17Users)) user(username, groups)
+    // the plant's counter and count reviewer: Warehouse's count groups, no Manufacturing (design §10.3's count while
+    // production issues and receives)
+    user("p17.counter", ["BOSS_WAREHOUSE_COUNT", "BOSS_WAREHOUSE_COUNT_REVIEWER"], null)
     store("mantle.facility.Facility", {
         facilityId: PLANT,
         facilityTypeEnumId: "FcTpWarehouse",
@@ -340,7 +343,8 @@ function setup() {
 // Plan to finished stock by the organization's users through the Manufacturing screens: the planner recalculates the plant's
 // supply plan (Planning/SupplyPlanning, the shared plan) and converts the make suggestion to a draft work order; releases it
 // (WorkOrderDetail's lifecycle); the supervisor starts it; the operator, without STOCK_ISSUE, is refused the component's issue
-// on the Materials tab (Shared/MaterialIssueReceipt) that the material handler then posts; the operator starts the operation
+// on the Materials tab (Shared/MaterialIssueReceipt) that the material handler then posts, while a blind count of that stock
+// is open (its review finds the issue as a conflict); the operator starts the operation
 // on the shop floor (OperationExecution), and completing it with two good, which receives them, is refused to the operator
 // and done by the material handler (an operator with STOCK_ISSUE); the material handler receives
 // the third on the Materials tab; the supervisor completes the work order (Quantities). Answers the records (p17) and each
@@ -394,8 +398,35 @@ function planToStock() {
             quantity: 3,
             operationKey: key()
         })
+    // a blind count of the component's stock, started before the issue
+    const C = "mantle.product.InventoryCountServices."
+    const counted = run("p17.counter", C + "create#Count", {
+        facilityId: PLANT,
+        assetIds: [p17.assetId],
+        countModeEnumId: "CntModeSpot",
+        blindIndicator: "Y"
+    })
+    p17.countId = counted.physicalInventoryId
+    steps.countStart = run("p17.counter", C + "start#Count", {physicalInventoryId: p17.countId}).error
+    const countLine = one("mantle.product.asset.PhysicalInventoryCount", {
+        physicalInventoryId: p17.countId || "_NA_",
+        assetId: p17.assetId
+    })
     steps.issueRefused = issue("p17.operate")
     steps.issue = issue("p17.material")
+    // the counter counts what was there before the issue; the review finds the issue as a movement during the count, a
+    // conflict, and posts nothing (production does not go around the count)
+    steps.countLine = run("p17.counter", C + "record#CountLine", {
+        physicalInventoryId: p17.countId,
+        physicalInventoryCountId: countLine?.physicalInventoryCountId,
+        quantity: Number(String(countLine?.snapshotQuantity || 0))
+    }).error
+    steps.countSubmit = run("p17.counter", C + "submit#Count", {physicalInventoryId: p17.countId}).error
+    const reviewed = run("p17.counter", C + "review#Count", {physicalInventoryId: p17.countId})
+    steps.countReview = reviewed.error
+    steps.countConflicts = reviewed.conflictCount
+    const countView = run("p17.counter", C + "get#Count", {physicalInventoryId: p17.countId})
+    steps.countMovements = Array.from(countView.lines || []).reduce((sum, row) => sum + Array.from(row.movements || []).length, 0)
     // the shop floor: the operator starts the operation; completing it receives the output, which the operator without
     // STOCK_ISSUE is refused and the material handler (an operator with it) does with two good
     steps.executionPage = page("p17.operate", "ShopFloor/OperationExecution", {operationWorkEffortId: p17.operationId})
