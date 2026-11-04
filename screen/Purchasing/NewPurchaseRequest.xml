@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A new draft purchase request from the shell's quick create (design-purchasing §1 PUR-SHELL, §4 NewPurchaseRequest;
+    impl-purchasing P10): the buying organization, what it is for, where it is wanted and by when
+    (mantle.request.RequestServices.create#PurchaseRequest); it opens the draft in RequestDetail to add its lines and submit it.
+    For the groups that file requests (BOSS_PUR_NEW_REQUEST: the requester, the buyer and the administrator), at the root and
+    out of the menu, as NewPurchaseOrder. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New purchase request" default-menu-include="false">
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="createRequest">
+        <actions>
+            <service-call name="mantle.request.RequestServices.create#PurchaseRequest" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, requestName:requestName, facilityId:(facilityId || null),
+                        responseRequiredDate:(responseRequiredDate || null)}"/>
+            <set field="requestId" from="created.requestId"/>
+        </actions>
+        <default-response url="//Purchasing/Requests/RequestDetail">
+            <parameter name="requestId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="draftValue" from="{organizationPartyId:purchasing.activeOrganizationPartyId
+                || purchasing.organizationPartyIds[0] || ''}"/>
+    </actions>
+    <widgets>
+        <label text="New purchase request" type="h5"/>
+        <label text="A draft of what you need; add its lines on the request, then submit it for approval." type="p"
+                style="text-caption m-muted"/>
+        <form-single name="QuickPurchaseRequest" transition="createRequest" map="draftValue">
+            <field name="organizationPartyId">
+                <default-field title="Buying organization">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requestName">
+                <default-field title="What is it for"><text-line/></default-field>
+            </field>
+            <field name="facilityId">
+                <default-field title="Deliver to">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'planFacilities'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="responseRequiredDate">
+                <default-field title="Wanted by"><date-time type="date"/></default-field>
+            </field>
+            <field name="submit">
+                <default-field title=""><submit text="Create draft" type="primary"/></default-field>
+            </field>
+        </form-single>
+    </widgets>
+</screen>

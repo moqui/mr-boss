@@ -648,7 +648,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
 | OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
-| OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing |  |
+| OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing | — (BOSS never calls it: RequestSourcing calls convert#PurchaseSourcing, F4; Purchasing P10) |
 | ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext) |
 | ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a supplier return from a facility) |
 | ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order); Purchasing/Returns/SupplierReturns (NewSupplierReturn: a supplier return from a purchase order) (Purchasing P8) |
@@ -713,8 +713,8 @@ Added in Accounting P15 (budgets), called by built screens:
 | BudgetServices | store#BudgetParty | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddPartyForm |
 | BudgetServices | store#Policy | Accounting/Budgets/BudgetControls | Accounting/Budgets/BudgetControls#BudgetPolicy, PolicyVersion and EndPolicy |
 | BudgetServices | check#Budget | Accounting/Budgets/BudgetControls | Mantle (the preview of reserve#, convert#Commitment); Purchasing's order approval preview (preview#PurchaseApproval: Purchasing/Orders/OrderDetail Approvals; Purchasing P4); its request approval is §7 |
-| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's order approval of a purchase order with no request (decide#PurchaseApproval, Purchasing P4); its request approval is §7 |
-| BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable) |
+| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's order approval of a purchase order with no request (decide#PurchaseApproval, Purchasing P4); a purchase request's approval (decide#PurchaseRequestApproval: Purchasing/Requests/RequestDetail, Purchasing P10) |
+| BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable); a request-sourced purchase order line's approval (decide#PurchaseApproval: Purchasing/Orders/OrderDetail, Purchasing P10) |
 | BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close (close#PurchaseRemainders) and order cancel (cancel#PurchaseOrder, Purchasing P4) release through release#ClosedSourceCommitments; a request cancel is §7 |
 | BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/BudgetVariance |
 
@@ -1713,6 +1713,12 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | order/OrderServices | record#Acknowledgement |  | Purchasing/Orders/Acknowledgements (Record); Purchasing/Orders/OrderDetail (Record acknowledgement, a line's Promise) (Purchasing P9) |
 | order/OrderServices | send#PurchaseReminder |  | Purchasing/Orders/Acknowledgements (Send reminder, on the selected rows); Purchasing/Orders/OrderDetail (Send reminder) (Purchasing P9) |
 | other/BudgetServices | lower#SourceCommitments |  | (apply#PurchaseRevision's budget delta, internal; Purchasing P9) |
+| request/RequestServices | create#PurchaseRequest |  | Purchasing/Requests/PurchaseRequests (New purchase request); Purchasing/NewPurchaseRequest (quick create) (Purchasing P10) |
+| request/RequestServices | store#PurchaseRequestItem, delete#PurchaseRequestItem |  | Purchasing/Requests/RequestDetail (Add line, Edit, Choose supplier, Remove); Purchasing/Requests/RequestSourcing (Choose supplier) (Purchasing P10) |
+| request/RequestServices | submit#PurchaseRequest, cancel#PurchaseRequest |  | Purchasing/Requests/RequestDetail (Submit for approval, Cancel request) (Purchasing P10) |
+| request/RequestServices | decide#PurchaseRequestApproval |  | Purchasing/Requests/RequestDetail (Approve, Refuse); Purchasing/Approvals and Commons/Notifications (the PurchaseRequestApproval topic, through approve#PurchaseSource and refuse#PurchaseSource) (Purchasing P10) |
+| request/RequestServices | get#PurchaseRequestProgress |  | Purchasing/Requests/RequestDetail (Lines, Approval, through ironstone.purchasing.RequestServices.get#RequestDetail) (Purchasing P10) |
+| request/RequestServices | preview#PurchaseSourcing, convert#PurchaseSourcing, convert#PurchaseSourcingGroup |  | Purchasing/Requests/RequestSourcing (SourceDemand, SourceGroups, Create purchase orders, Retry the failed groups, Drop-ship) (Purchasing P10) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

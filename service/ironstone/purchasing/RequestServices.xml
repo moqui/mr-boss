@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's purchase request reads (design-purchasing §4 Requests, RequestDetail, RequestSourcing; impl-purchasing P10;
+    Requests.js): the Requests list, RequestDetail's Purchasing branch, OrderDetail's Sources and the Today source of requests
+    due to source. The screens call the Mantle writes (mantle.request.RequestServices create#PurchaseRequest, store# and
+    delete#PurchaseRequestItem, submit#PurchaseRequest, decide#PurchaseRequestApproval, cancel#PurchaseRequest, preview# and
+    convert#PurchaseSourcing) after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="PurchaseRequests" allow-remote="false">
+        <description>The Requests list (design §4 RequestFind and RequestList): the purchase requests of the user's
+            organizations (their OrgInternal RequestParty), a requester's own and assigned ones only, by view (mine: filed by
+            or assigned to the user; sourcing: approved with quantity left to source; due: open, wanted within a week or
+            overdue; all) and filters, newest first, at most 500 read (a warning past it); each with its requester,
+            organization, facility, due date, approval, lines and the approved, sourced and remaining quantity. Refuses a user
+            without Purchasing.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="statusId"/>
+            <parameter name="facilityId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="requestRows" type="List"/>
+            <parameter name="requestRowsCount" type="Integer"/>
+            <parameter name="requestRowsPageIndex" type="Integer"/>
+            <parameter name="requestRowsPageSize" type="Integer"/>
+            <parameter name="requestRowsPageMaxIndex" type="Integer"/>
+            <parameter name="requestRowsPageRangeLow" type="Integer"/>
+            <parameter name="requestRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+            <parameter name="view"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js')
+                    .execute('findRequests', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="RequestDetail" allow-remote="false">
+        <description>RequestDetail's Purchasing branch (crosscut §3.11 Purchasing row): the purchase request checked
+            (check#Record; a requester's own only), its lines, approval and sourcing progress from
+            mantle.request.RequestServices.get#PurchaseRequestProgress, the history of its lines and status from the audit
+            log, and the actions the user may take (canSource for a buyer). Refuses a request the user may not work with
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="requestId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="request" type="Map"/>
+            <parameter name="historyRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="detail" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js')
+                    .execute('requestDetail', context)"/>
+            <set field="request" from="detail.request"/>
+            <set field="historyRows" from="detail.historyRows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderSources" allow-remote="false">
+        <description>OrderDetail's Sources (design §6 OrderDetail): the purchase request lines a purchase order's lines were
+            sourced from (RequestItemOrder), with their requirements and each request's link under Purchasing. Refuses an
+            order the user may not work with (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="orderId" required="true"/></in-parameters>
+        <out-parameters><parameter name="sourceRows" type="List"/></out-parameters>
+        <actions>
+            <set field="sourceRows" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js')
+                    .execute('orderSources', context).sourceRows"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Purchasing today-source of purchase requests (Purchasing.xml shell-providers): for a buyer, the
+            approved requests with quantity left to source that are wanted by the end of the range or overdue, each opening
+            RequestDetail. Another user's Today and a user who does not buy get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js')
+                    .execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
+</services>

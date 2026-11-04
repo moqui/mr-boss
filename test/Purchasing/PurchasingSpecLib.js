@@ -25,7 +25,9 @@ const ids = {
     receiptOrderId: "BOSS_PUR_PO_RCV",
     receiptId: "BOSS_PUR_RCV_SHIP",
     // P9: Retail's order from Brightline, sent and not acknowledged
-    ackOrderId: "BOSS_PUR_PO_ACK"
+    ackOrderId: "BOSS_PUR_PO_ACK",
+    // P10: the requester's approved purchase request of Retail's, its one line from Ziddleman left to source
+    requestId: "BOSS_PUR_REQ_A"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -163,7 +165,12 @@ function routeFixtures() {
         "Returns/ReturnAuthorization": {parameters: {returnId: "BOSS_PUR_NO_RETURN"}, text: "not available"},
         // P9: the acknowledgements, and the sent order's change (none started: Start a change)
         "Orders/Acknowledgements": {parameters: {}, text: "Acknowledgements"},
-        "Orders/OrderChanges": {parameters: {orderId: ids.ackOrderId}, text: "Start a change"}
+        "Orders/OrderChanges": {parameters: {orderId: ids.ackOrderId}, text: "Start a change"},
+        // P10: the purchase requests, the demo request in RequestDetail, its sourcing and the quick create
+        "Requests/PurchaseRequests": {parameters: {}, text: "Purchase requests"},
+        "Requests/RequestDetail": {parameters: {requestId: ids.requestId}, text: "Workshop fasteners"},
+        "Requests/RequestSourcing": {parameters: {requestId: ids.requestId}, text: "Source purchase requests"},
+        NewPurchaseRequest: {parameters: {}, text: "New purchase request"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
@@ -183,7 +190,9 @@ function routeFixtures() {
         ["Bills/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
         ["Bills/InvoiceMatch", "component://mr-boss/screen/Shared/InvoiceMatch.xml"],
         // P8: Accounting's shared ReturnDetail under Returns
-        ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"]
+        ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"],
+        // P10: Projects' shared RequestDetail under Requests
+        ["Requests/RequestDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"]
     ]
     return {routes, mounts}
 }

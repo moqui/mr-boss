@@ -615,4 +615,24 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.party.PartyRelationship partyRelationshipId="BOSS_PUR_BUYER_ZIDDLEMAN" relationshipTypeEnumId="PrtSupplier"
             fromPartyId="BOSS_PUR_BUYER" fromRoleTypeId="Buyer" toPartyId="ZiddlemanInc" toRoleTypeId="Supplier"
             fromDate="2026-01-01 00:00:00"/>
+
+
+    <!-- Purchasing P10 (here, after the requester's party, which Request.filedByPartyId names): the requester's purchase request of Retail's for ZIRET_WH from Ziddleman, approved (its requirement Retail's,
+        no supply yet):
+        Requests' Awaiting sourcing view, Home's Unsourced requests and RequestSourcing's demand -->
+    <mantle.request.Request requestId="BOSS_PUR_REQ_A" requestName="Workshop fasteners" requestTypeEnumId="RqtPurchase"
+            statusId="ReqInProgress" requestDate="2026-11-02 00:00:00" responseRequiredDate="2026-11-25 00:00:00"
+            facilityId="ZIRET_WH" currencyUomId="USD" filedByPartyId="BOSS_PUR_REQUESTER" priority="5"/>
+    <mantle.request.RequestParty requestId="BOSS_PUR_REQ_A" partyId="ORG_ZIZI_RETAIL" roleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.request.RequestParty requestId="BOSS_PUR_REQ_A" partyId="BOSS_PUR_REQUESTER" roleTypeId="Reporter" fromDate="0"/>
+    <mantle.request.RequestItem requestId="BOSS_PUR_REQ_A" requestItemSeqId="01" statusId="ReqInProgress" productId="DEMO_1_1"
+            description="Demo product one-one" quantity="12" quantityUomId="OTH_ea" requiredByDate="2026-11-25 00:00:00"
+            supplierPartyId="ZiddlemanInc" costCenterId="ORG_ZIZI_RETAIL"/>
+    <mantle.request.requirement.Requirement requirementId="BOSS_PUR_REQ_A_01" requirementTypeEnumId="RqTpProduct"
+            statusId="RqmtStApproved" facilityId="ZIRET_WH" productId="DEMO_1_1" quantity="12" quantityUomId="OTH_ea"
+            requiredByDate="2026-11-25 00:00:00" description="Purchase request BOSS_PUR_REQ_A line 01"/>
+    <mantle.request.requirement.RequirementRequestItem requirementId="BOSS_PUR_REQ_A_01" requestId="BOSS_PUR_REQ_A"
+            requestItemSeqId="01"/>
+    <mantle.request.requirement.RequirementParty requirementId="BOSS_PUR_REQ_A_01" partyId="ORG_ZIZI_RETAIL"
+            roleTypeId="OrgInternal" fromDate="0"/>
 </entity-facade-xml>

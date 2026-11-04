@@ -1,0 +1,480 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's Purchasing branch (crosscut §3.11 Purchasing row; design-purchasing §4 RequestDetail; impl-purchasing P10):
+    the section Shared/RequestDetail includes when appRoot is Purchasing, over ironstone.purchasing.RequestServices
+    get#RequestDetail (a requester's own and assigned requests only). The header (the request, its organization, requester,
+    facility, due date and revision, the status) with the action its status gives: Submit a draft, Approve or Refuse the step
+    waiting (a purchase approver, through mantle.request.RequestServices.decide#PurchaseRequestApproval), Create purchase order
+    (a buyer's RequestSourcing of the lines left to source), and Cancel (releasing the unsourced demand and its commitment);
+    Lines with Add line, Edit and Remove while the request is a draft or submitted (a change of a submitted request is a new
+    revision, sent to its approvers again), and a buyer's Choose supplier on an approved line; Sourcing progress (approved,
+    sourced, ordered, received and remaining, with the purchase orders); Approval (the state and the decisions); History (the
+    audit log of the lines and the status); Conversation and Files. Its transitions are below, included by Shared/RequestDetail;
+    each checks the request (AccessServices.check#Record) before the Mantle service, which checks again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="purchaseRequestChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a line added or changed: only the fields the form posts, so a dialog that changes the supplier leaves the rest -->
+    <transition name="storePurchaseRequestItem">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <set field="itemValues" from="Object.fromEntries(['requestItemSeqId', 'productId', 'description', 'quantity',
+                    'quantityUomId', 'requiredByDate', 'supplierPartyId', 'costCenterId', 'maximumAmount', 'changeReason']
+                    .filter((name) =&gt; context[name] != null).map((name) =&gt; [name, context[name]]))"/>
+            <service-call name="mantle.request.RequestServices.store#PurchaseRequestItem"
+                    in-map="Object.assign({requestId:requestId}, itemValues)"/>
+            <message type="success">Saved the line of request ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="removePurchaseRequestItem">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <service-call name="mantle.request.RequestServices.delete#PurchaseRequestItem"
+                    in-map="{requestId:requestId, requestItemSeqId:requestItemSeqId}"/>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="submitPurchaseRequest">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <service-call name="mantle.request.RequestServices.submit#PurchaseRequest" in-map="{requestId:requestId}"/>
+            <message type="success">Submitted request ${requestId} for approval</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- approve or refuse the step waiting, at the revision reviewed -->
+    <transition name="decidePurchaseRequest">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId, capability:'approve'}"/>
+            <service-call name="mantle.request.RequestServices.decide#PurchaseRequestApproval" out-map="decided"
+                    in-map="{requestId:requestId, sourceRevision:(sourceRevision || null), decision:(decision || 'approve'),
+                        reason:(reason || null), budgetOverrideReason:(budgetOverrideReason || null), operationKey:operationKey}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(decision == 'refuse' ? 'Refused request ' + requestId
+                : decided.pendingStepText ? 'Approved; waiting for ' + decided.pendingStepText : 'Approved request ' + requestId
+                    + '; its lines are ready to source', 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="cancelPurchaseRequest">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <service-call name="mantle.request.RequestServices.cancel#PurchaseRequest" out-map="cancelled"
+                    in-map="{requestId:requestId, reason:reason}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Cancelled request ' + requestId
+                + (cancelled.orderIds?.length ? '; its purchase orders ' + cancelled.orderIds.join(', ')
+                    + ' stay for you to decide on' : ''), cancelled.orderIds?.length ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="PurchasingRequest" condition="appRoot == 'Purchasing'">
+            <actions>
+                <service-call name="ironstone.purchasing.RequestServices.get#RequestDetail" out-map="purchaseDetail"
+                        in-map="{appRoot:appRoot, requestId:requestId}" transaction="force-new" ignore-error="true"/>
+                <set field="pr" from="purchaseDetail?.request || null"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="prHistory" from="purchaseDetail?.historyRows || []"/>
+                <set field="prCan" from="purchasing.capabilities"/>
+                <set field="prPrimary" from="!pr ? null : pr.canSubmit ? 'submit' : pr.approval?.canDecide ? 'approve'
+                        : pr.canSource ? 'source' : null"/>
+                <set field="prDecision" from="pr ? {requestId:requestId, sourceRevision:pr.sourceRevision,
+                        operationKey:'request-' + requestId + '-' + pr.sourceRevision + '-' + ec.user.userId} : {}"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingRequestMissing" condition="!pr">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Purchase request ${requestId} is not available: it does not exist, it is
+                                        not a purchase request of your organizations, or it is not one of yours."/>
+                                <link url="${sharedLinks['Requests/PurchaseRequests']}" text="Back to purchase requests"
+                                        link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="PurchasingRequestFound" condition="pr">
+                    <widgets>
+                        <context record-entity="mantle.request.Request" record-id="${requestId}"
+                                title="Purchase request ${requestId} · ${pr.requestName}"/>
+                        <container style="q-mb-xs">
+                            <link url="${sharedLinks['Requests/PurchaseRequests']}" link-type="anchor"
+                                    text="Purchase requests" icon="arrow_back"/>
+                        </container>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-baseline">
+                                        <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                                        <label text="${pr.requestName}" type="h5"/>
+                                    </container>
+                                    <label text="${[pr.organizationName, pr.filedByName ? 'requested by ' + pr.filedByName : '',
+                                            pr.facilityName ? 'for ' + pr.facilityName : '', pr.responseRequiredText ? 'wanted by '
+                                            + pr.responseRequiredText : '', pr.maximumTotalText ? 'up to ' + pr.maximumTotalText : '',
+                                            pr.revisionText ? 'revision of ' + pr.revisionText : ''].filter(Boolean).join(' · ')}"
+                                            type="div" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            pr.statusColor}">${WebUtilities.encodeHtml(pr.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PurchaseRequestStatus",
+                                            style: "strong", text: pr.statusText})}]]></text>
+                                        <text type="html">${pr.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-sm m-record-foot m-record-actions">
+                                <link url="submitPurchaseRequest" text="Submit for approval" link-type="hidden-form"
+                                        btn-type="primary" icon="sym_o_send" condition="prPrimary == 'submit'"
+                                        parameter-map="{requestId:requestId}"
+                                        confirmation="Submit purchase request ${requestId} for approval?"/>
+                                <container-dialog id="PurchaseRequestApprove" button-text="Approve" icon="sym_o_approval"
+                                        type="primary" width="520" title="Approve purchase request ${requestId}"
+                                        condition="prPrimary == 'approve'">
+                                    <form-single name="ApprovePurchaseRequest" transition="decidePurchaseRequest"
+                                            map="prDecision">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="decision" from="'approve'"><default-field><hidden/></default-field></field>
+                                        <field name="budgetOverrideReason">
+                                            <default-field title="Budget override reason"
+                                                    tooltip="Only where a budget stops the request and you may override it">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Approve (${pr.approval.currentStepText})"><submit/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="${sharedLinks['Requests/RequestSourcing']}" text="Create purchase order"
+                                        link-type="anchor-button" btn-type="primary" icon="sym_o_receipt_long"
+                                        condition="prPrimary == 'source'" parameter-map="{requestId:requestId}"/>
+                                <button-menu text="More" icon="more_horiz" condition="pr.approval.canDecide || pr.canCancel">
+                                    <container-dialog id="PurchaseRequestRefuse" button-text="Refuse" icon="sym_o_block"
+                                            width="520" title="Refuse purchase request ${requestId}"
+                                            condition="pr.approval.canDecide">
+                                        <form-single name="RefusePurchaseRequest" transition="decidePurchaseRequest"
+                                                map="prDecision">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                            <field name="decision" from="'refuse'"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason"><text-area rows="2" required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Refuse">
+                                                    <submit type="danger" confirmation="Refuse purchase request ${requestId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="PurchaseRequestCancel" button-text="Cancel request" icon="sym_o_cancel"
+                                            width="520" title="Cancel purchase request ${requestId}" condition="pr.canCancel">
+                                        <form-single name="CancelPurchaseRequest" transition="cancelPurchaseRequest"
+                                                map="{requestId:requestId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason"><text-area rows="2" required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Cancel request">
+                                                    <submit type="danger" confirmation="Cancel purchase request ${requestId}? Its
+                                                        lines not yet sourced are released."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </button-menu>
+                            </container>
+                        </container>
+                        <label type="p" style="m-muted" text="${pr.approval.stateText}${pr.approval.refusalText ? ' · '
+                                + pr.approval.refusalText : ''}" condition="pr.statusId == 'ReqSubmitted'"/>
+                        <!-- Lines, with the sourcing progress of each -->
+                        <container-box>
+                            <box-header title="Lines · ${pr.itemRows.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="PurchaseRequestAddLine" button-text="Add line" icon="sym_o_add"
+                                        width="640" title="Add a line to request ${requestId}" condition="pr.canEditItems">
+                                    <form-single name="AddPurchaseRequestLine" transition="storePurchaseRequestItem"
+                                            map="{requestId:requestId}">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="productId">
+                                            <default-field title="Product">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'orderProducts'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="description">
+                                            <default-field title="Description"
+                                                    tooltip="What is needed, for a line with no product">
+                                                <text-line/>
+                                            </default-field>
+                                        </field>
+                                        <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                        <field name="requiredByDate">
+                                            <default-field title="Required by"><date-time type="date"/></default-field>
+                                        </field>
+                                        <field name="supplierPartyId">
+                                            <default-field title="Supplier">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'suppliers'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="costCenterId">
+                                            <default-field title="Cost centre">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                            min-length="0" parameter-map="{choice:'costCenters'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="maximumAmount">
+                                            <default-field title="Most to pay" tooltip="For the whole line, in the request's
+                                                    currency; it is what the approval and the budget hold">
+                                                <text-line size="10"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Add line"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="productId"/><field-ref name="description"/></field-row>
+                                            <field-row><field-ref name="quantity"/><field-ref name="requiredByDate"/></field-row>
+                                            <field-row><field-ref name="supplierPartyId"/><field-ref name="costCenterId"/></field-row>
+                                            <field-ref name="maximumAmount"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PurchaseRequestLines" list="pr.itemRows" skip-form="true" paginate="false">
+                                    <field name="requestItemSeqId">
+                                        <default-field title="Line">
+                                            <label text="${requestItemSeqId}" type="span" style="text-mono"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName">
+                                        <default-field title="Product">
+                                            <label text="${productName || description}" type="div"/>
+                                            <label text="${description}" type="div" style="text-caption m-muted"
+                                                    condition="productName &amp;&amp; description &amp;&amp; description != productName"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right">
+                                        <default-field title="Quantity"><label text="${quantityText} ${uomText}" type="span"/></default-field>
+                                    </field>
+                                    <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                                    <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                                    <field name="costCenterName"><default-field title="Cost centre"><display/></default-field></field>
+                                    <field name="maximumText" align="right"><default-field title="Most to pay"><display/></default-field></field>
+                                    <field name="approvedText" align="right"><default-field title="Approved"><display/></default-field></field>
+                                    <field name="sourcedText" align="right"><default-field title="Sourced"><display/></default-field></field>
+                                    <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                                    <field name="remainingText" align="right">
+                                        <default-field title="To source"><label text="${remainingText}" type="span" style="text-weight-medium"/></default-field>
+                                    </field>
+                                    <field name="ordersText">
+                                        <default-field title="Purchase orders">
+                                            <section-iterate name="PurchaseRequestLineOrders" list="orderLines" entry="orderLine">
+                                                <widgets>
+                                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderLine.orderId}"
+                                                            link-type="anchor" parameter-map="{orderId:orderLine.orderId}"/>
+                                                    <label text="${orderLine.supplierName} · ${orderLine.orderStatusText}" type="div"
+                                                            style="text-caption m-muted"/>
+                                                </widgets>
+                                            </section-iterate>
+                                        </default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="PurchaseRequestLine_${requestItemSeqId}" button-text="Edit"
+                                                    icon="sym_o_edit" width="640" title="Line ${requestItemSeqId} of request ${requestId}"
+                                                    condition="pr.canEditItems">
+                                                <form-single name="EditPurchaseRequestLine" transition="storePurchaseRequestItem"
+                                                        map="{requestId:requestId, requestItemSeqId:requestItemSeqId, quantity:quantity,
+                                                            requiredByDate:requiredByDate, supplierPartyId:supplierPartyId,
+                                                            costCenterId:costCenterId, maximumAmount:maximumAmount}">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="requestItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                                    <field name="requiredByDate">
+                                                        <default-field title="Required by"><date-time type="date"/></default-field>
+                                                    </field>
+                                                    <field name="supplierPartyId">
+                                                        <default-field title="Supplier">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                                        min-length="0" parameter-map="{choice:'suppliers',
+                                                                            selected:supplierPartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="costCenterId">
+                                                        <default-field title="Cost centre">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                                        min-length="0" parameter-map="{choice:'costCenters',
+                                                                            selected:costCenterId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="maximumAmount">
+                                                        <default-field title="Most to pay"><text-line size="10"/></default-field>
+                                                    </field>
+                                                    <field name="changeReason">
+                                                        <default-field title="Reason for the change"><text-line/></default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="PurchaseRequestSupplier_${requestItemSeqId}"
+                                                    button-text="Choose supplier" icon="sym_o_storefront" width="520"
+                                                    title="Supplier for line ${requestItemSeqId}"
+                                                    condition="pr.canChooseSupplier &amp;&amp; remaining &gt; 0">
+                                                <form-single name="ChoosePurchaseRequestSupplier" transition="storePurchaseRequestItem"
+                                                        map="{requestId:requestId, requestItemSeqId:requestItemSeqId,
+                                                            supplierPartyId:supplierPartyId, costCenterId:costCenterId}">
+                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                    <field name="requestItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="supplierPartyId">
+                                                        <default-field title="Supplier">
+                                                            <drop-down allow-empty="false">
+                                                                <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                                        min-length="0" parameter-map="{choice:'suppliers',
+                                                                            selected:supplierPartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="costCenterId">
+                                                        <default-field title="Cost centre">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="purchaseRequestChoices" server-search="true"
+                                                                        min-length="0" parameter-map="{choice:'costCenters',
+                                                                            selected:costCenterId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="removePurchaseRequestItem" text="" icon="sym_o_delete" link-type="hidden-form-link"
+                                                    btn-type="danger" tooltip="Remove the line" condition="pr.canRemoveItems"
+                                                    parameter-map="{requestId:requestId, requestItemSeqId:requestItemSeqId}"
+                                                    confirmation="Remove line ${requestItemSeqId} from request ${requestId}?"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="supplierName"/></column>
+                                        <column><field-ref name="quantityText"/><field-ref name="remainingText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!pr.itemRows.length"
+                                        text="${pr.canEditItems ? 'No lines yet. Add what is needed with Add line, then submit the request.'
+                                            : 'This request has no lines.'}"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <!-- Approval: the state and each decision -->
+                        <container-box>
+                            <box-header title="Approval"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-pa-sm q-mb-none" text="${pr.approval.stateText}"/>
+                                <form-list name="PurchaseRequestDecisions" list="pr.approval.decisionRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decidedByText"><default-field title="By"><display/></default-field></field>
+                                    <field name="decisionDateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="revisionText">
+                                        <default-field title="Revision"><label text="${revisionText}${current ? '' : ' (earlier)'}"/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByText"/></column>
+                                        <column><field-ref name="decisionDateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="PurchaseRequestHistory" condition="prHistory.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="History"/>
+                                    <box-body-nopad>
+                                        <form-list name="PurchaseRequestHistoryList" list="prHistory" skip-form="true"
+                                                paginate="false">
+                                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="whatText"><default-field title="Change"><display/></default-field></field>
+                                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                                            <field name="byText"><default-field title="By"><display/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="whatText"/><field-ref name="dateText"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="PurchaseRequestChatter" record-entity="mantle.request.Request"
+                                                record-id="${requestId}"/>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="PurchaseRequestFiles" record-entity="mantle.request.Request"
+                                                record-id="${requestId}"/>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

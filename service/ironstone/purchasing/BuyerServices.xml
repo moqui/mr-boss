@@ -63,6 +63,10 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- P9: the sent purchase orders not acknowledged at their current revision, for the buying lists' groups -->
             <set field="counters" from="Object.assign({}, counters, ec.resource.script('component://mr-boss/service/ironstone/purchasing/Revisions.js')
                     .homeCount(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope()))"/>
+            <!-- P10: the approved purchase requests with quantity left to source, of the user's organizations (a requester's
+                own) -->
+            <set field="counters" from="Object.assign({}, counters, ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js')
+                    .homeCount(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope()))"/>
         </actions>
     </service>
     <service verb="find" noun="BuyerWork" allow-remote="false">

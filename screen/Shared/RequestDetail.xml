@@ -64,6 +64,14 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="setStockRequestStatus" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="approveStockRequest" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
     <transition-include name="allocateStockRequest" location="component://mr-boss/template/WarehouseTransferParts.xml"/>
+    <!-- Purchasing (impl-purchasing P10): a purchase request's lines, submission, approval and cancel
+        (template/PurchasingRequestDetail.xml) -->
+    <transition-include name="purchaseRequestChoices" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+    <transition-include name="storePurchaseRequestItem" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+    <transition-include name="removePurchaseRequestItem" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+    <transition-include name="submitPurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+    <transition-include name="decidePurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+    <transition-include name="cancelPurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -277,6 +285,11 @@ along with this software (see the LICENSE.md file). If not, see
                 recordFound = false
                 return
             }
+            // Purchasing (impl-purchasing P10): a purchase request in its own section (template/PurchasingRequestDetail.xml)
+            if (appRoot === 'Purchasing') {
+                recordFound = false
+                return
+            }
             let pd = {}
             if (projects) {
                 const out = ec.service.sync().name('ironstone.projects.ProjectRequestServices.get#ProjectRequestDetail').parameters({requestId: requestId}).call() || {}
@@ -295,8 +308,14 @@ along with this software (see the LICENSE.md file). If not, see
                 } finally { ec.message.clearErrors(); ec.message.popErrors() }
                 recordFound = !!productionRequest.available
             }
+            // a purchase request's Items tab in every context (impl-purchasing P10, crosscut §3.11): its lines with what is
+            // left to source, and "Create purchase order" (Purchasing's RequestSourcing) for a buyer only
+            purchaseRequestShown = recordFound && detail.request?.requestTypeEnumId === 'RqtPurchase'
+            const purchasingRequests = purchaseRequestShown ? ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js') : null
+            const purchaseItemRows = purchaseRequestShown ? purchasingRequests.itemRows(requestId) : []
+            purchaseSourcingUrl = purchaseRequestShown && !clientView ? purchasingRequests.sourcingUrl(requestId) : null
             const tabKeys = projects ? ['overview', 'conversation', 'work'].concat(pd.itemsShown ? ['items'] : []).concat(['files'])
-                    : ['overview', 'conversation', 'tasks', 'files']
+                    : ['overview', 'conversation', 'tasks'].concat(purchaseRequestShown ? ['items'] : []).concat(['files'])
             tab = tabKeys.includes(tab) ? tab : 'overview'
             if (!recordFound) return
             const L = (text) => ec.l10n.localize(text)
@@ -334,7 +353,7 @@ along with this software (see the LICENSE.md file). If not, see
                 canConvert = !!pd.canConvert
                 isOpen = !!pd.open
                 workList = pd.workList || []
-                itemList = pd.itemList || []
+                itemList = purchaseRequestShown ? purchaseItemRows : (pd.itemList || [])
                 noteList = pd.noteList || []
                 projectName = pd.projectName || ''
                 workText = workList.length ? pd.workDoneCount + '/' + workList.length + ' ' + L('done') : ''
@@ -381,7 +400,9 @@ along with this software (see the LICENSE.md file). If not, see
             if (!projects) factsHtml = factsCommonsHtml
             const tabs = projects ? [['overview', 'Overview'], ['conversation', 'Conversation'], ['work', 'Work' + (workList.length ? ' (' + workList.length + ')' : '')]]
                     .concat(pd.itemsShown ? [['items', 'Items' + (itemList.length ? ' (' + itemList.length + ')' : '')]] : []).concat([['files', 'Files']])
-                : [['overview', 'Overview'], ['conversation', 'Conversation'], ['tasks', 'Tasks' + (taskList.length ? ' (' + taskList.length + ')' : '')], ['files', 'Files']]
+                : [['overview', 'Overview'], ['conversation', 'Conversation'], ['tasks', 'Tasks' + (taskList.length ? ' (' + taskList.length + ')' : '')]]
+                    .concat(purchaseRequestShown ? [['items', 'Items' + (purchaseItemRows.length ? ' (' + purchaseItemRows.length + ')' : '')]] : []).concat([['files', 'Files']])
+            if (!projects) itemList = purchaseItemRows
             const base = detailPath + '?requestId=' + encodeURIComponent(requestId)
             tabsHtml = '<q-tabs dense no-caps inline-label narrow-indicator outside-arrows mobile-arrows align="left" active-color="primary" indicator-color="primary"'
                     + ' class="text-grey-8 m-request-tabs" model-value="' + enc(tab) + '">' + tabs.map(([key, label]) => {
@@ -404,7 +425,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <widgets>
         <section-include name="WarehouseStockRequest" location="component://mr-boss/template/WarehouseRequestDetail.xml"/>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; !mfgRequest"><widgets>
+        <section-include name="PurchasingRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; !mfgRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>
@@ -878,7 +900,34 @@ along with this software (see the LICENSE.md file). If not, see
             </widgets></section>
 
             <!-- ===== Projects: Items ===== -->
-            <section name="ItemsTab" condition="projects &amp;&amp; tab == 'items'"><widgets>
+            <!-- ===== Purchasing's contract (impl-purchasing P10, F6): a purchase request's Items in Commons and Projects ===== -->
+            <section name="PurchaseItemsTab" condition="purchaseRequestShown &amp;&amp; tab == 'items'"><widgets>
+                <container-box><box-header title="Items"/>
+                    <box-toolbar>
+                        <link url="${purchaseSourcingUrl}" url-type="plain" text="Create purchase order" link-type="anchor-button"
+                                icon="sym_o_receipt_long" condition="purchaseSourcingUrl"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                    <form-list name="PurchaseRequestItems" list="itemList" skip-form="true" paginate="false">
+                        <field name="requestItemSeqId"><default-field title="#"><display/></default-field></field>
+                        <field name="productText"><default-field title="Product"><display/></default-field></field>
+                        <field name="description"><default-field title="Description"><display/></default-field></field>
+                        <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                        <field name="requiredByText"><default-field title="Required by"><display/></default-field></field>
+                        <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                        <field name="costCenterName"><default-field title="Cost centre"><display/></default-field></field>
+                        <field name="remainingText"><default-field title="Sourcing"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="productText"/><field-ref name="description"/></column>
+                            <column><field-ref name="quantityText"/><field-ref name="remainingText"/></column>
+                        </columns>
+                    </form-list>
+                    <section name="NoPurchaseItems" condition="!itemList.length"><widgets>
+                        <label type="p" text="No items asked for" style="m-muted q-pa-sm q-mb-none"/>
+                    </widgets></section>
+                </box-body-nopad></container-box>
+            </widgets></section>
+            <section name="ItemsTab" condition="projects &amp;&amp; !purchaseRequestShown &amp;&amp; tab == 'items'"><widgets>
                 <container-box><box-header title="Items"/><box-body-nopad>
                     <form-list name="RequestItems" list="itemList" skip-form="true" paginate="false">
                         <field name="requestItemSeqId"><default-field title="#"><display/></default-field></field>

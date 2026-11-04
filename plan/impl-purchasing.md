@@ -260,7 +260,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | built Nov 4, 2026 |
 | P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | built Nov 4, 2026 |
 | P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | built Nov 4, 2026 |
-| P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | — |
+| P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | built Nov 4, 2026 |
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | — |
@@ -1922,6 +1922,111 @@ adjust#ExpectedReceipt's old callers. Fixes:
   - approving a sourced PO converts the reservation, so the amount is not counted twice;
   - a Projects work item linked to the request completes and the request stays In Progress;
   - the Items tab shows in the Commons and Projects contexts, with "Create purchase order" for a buyer only.
+
+**Built Nov 4 (P10).**
+- Mantle:
+  - `entity/PurchaseRequestEntities.xml`: RequestItem's `quantityUomId` and `costCenterId`, and the audit log ("true", F57) on
+    its product, quantity, unit, required date, supplier and cost centre. `data/PurchaseRequestSetupData.xml`: the
+    `PurchaseRequestApproval` topic, seeded as P4's (approve#/refuse#PurchaseSource, a refusal needs a reason).
+  - `service/mantle/request/PurchaseRequestServices.xml` over the new `PurchaseRequests.js`, included in
+    `mantle.request.RequestServices` by name: `create#PurchaseRequest` (RqtPurchase, the organization as its OrgInternal
+    RequestParty, one of the user's: RECORD_UNAVAILABLE; the buying policy's currency, else the accounting one),
+    `store#PurchaseRequestItem` (a draft's or submitted request's line: product usable for buying, unit, required date,
+    supplier the organization may buy from, cost centre of the organization or a PrtOrgRollup child, most to pay; a submitted
+    request's change is a new revision sent to its approvers again; on an approved request a buyer's supplier and cost centre
+    only, REQUEST_APPROVED), `delete#PurchaseRequestItem` (a draft's), `submit#PurchaseRequest`,
+    `decide#PurchaseRequestApproval` (PURCHASE_APPROVE; the steps of PasRequest policy rows, else the no-policy rule;
+    STALE_REVISION, SELF_APPROVAL by the filer or submitter, operation key replay; a refusal leaves it Submitted; the last
+    step makes one RqmtStApproved requirement per line, RqTpProduct or RqTpInternal, linked through RequirementRequestItem with
+    the organization as OrgInternal RequirementParty, reserves each line's maximum at BcsRequest under an approved budget and
+    puts the request In Progress), `cancel#PurchaseRequest` (the reason on the status's audit row; an uncovered requirement
+    Rejected, a partly covered one cut to what is covered, `release#ClosedSourceCommitments`, the live orders named),
+    `get#PurchaseRequestProgress` (requested, approved, sourced, ordered, received and remaining per line, the approval and the
+    actions), `preview#` and `convert#PurchaseSourcing` (PURCHASE_ORDER_EDIT; one draft order per organization, supplier,
+    facility and route, each group in its own transaction, `convert#PurchaseSourcingGroup`, under the lock of its requirements,
+    through `create#PurchaseOrder` and `store#PurchaseOrderItem`, with RequestItemOrder and RequirementSupply RstPurchaseOrder
+    under the operation key; MISSING_SUPPLIER, ALREADY_SOURCED, PRODUCT_REQUIRED, NO_CUSTOMER_LINE and the line services'
+    refusals by name, retryable or not; a retry answers EXISTING for this operation's lines; PLACE_NOT_ALLOWED; the drop-ship
+    route through `route#OrderItemToDropShip` for a line with a customer order line, DROP_SHIP_PENDING before that order's
+    approval). The writes check the request's people (the filer or a party of it) or PURCHASE_ORDER_EDIT, and the organization.
+  - Existing Mantle, refusing nothing new: `complete#RequestFromWork` leaves RqtPurchase, RqtPurchaseRfq and RqtInventory alone
+    (CX-REQUEST; F-P10-5); `PurchaseApprovals.js` knows the request as a source (topic, PasRequest, its message fields, the
+    topic handlers' branch); `PurchaseOrders.js decide` calls `PurchaseRequests.js convertOrderCommitments` after P4's
+    reservation (a request-sourced line converts the request's commitment, `convert#Commitment`) and exports `costCenterOf`.
+  - Spec `test/order/PurchaseRequests.spec.js` (6 features, about 3 s).
+- BOSS:
+  - `ironstone.purchasing.RequestServices` (`Requests.js`): `find#PurchaseRequests` (views My requests, Awaiting sourcing,
+    Due, All; a requester's own and assigned only; approved, sourced and remaining per request; at most 500 read),
+    `get#RequestDetail` (check#Record, then the Mantle progress, with the history from the audit log), `get#OrderSources`,
+    `get#TodayItems` (approved requests left to source due, for a buyer); Home's `unsourcedCount` (BuyerServices); the other
+    apps' Items rows and the "Create purchase order" link (`itemRows`, `sourcingUrl`). `Purchasing.js`: the request kind's
+    destination `Requests/RequestDetail` (so `get#RecordLink` opens a purchase request under Purchasing), the request palette
+    find, the Requests link paths and the `requestCreate` capability (NewPurchaseRequest's grant). `Approvals.js`: the topic
+    in Approvals and Today.
+  - Screens: `Purchasing/Requests.xml` (tabs: PurchaseRequests; the shared RequestDetail and RequestSourcing hidden),
+    `Requests/PurchaseRequests.xml` (RequestFind and RequestList with views and saved finds, New purchase request, Source on the
+    selected rows for a buyer), `Requests/RequestSourcing.xml` (SourceDemand with Choose supplier and Drop-ship, SourceGroups,
+    Create purchase orders and Retry the failed groups under one operation key), `Purchasing/NewPurchaseRequest.xml` (quick
+    create, BOSS_PUR_NEW_REQUEST); `template/PurchasingRequestDetail.xml` (RequestDetail's Purchasing branch: header with Submit,
+    Approve, Create purchase order and More: Refuse, Cancel request; Lines with Add line, Edit, Choose supplier, Remove and each
+    line's sourcing; Approval; History; Conversation; Files; its transitions), included by `Shared/RequestDetail.xml`, which also
+    gives a purchase request an Items tab in Commons and Projects with "Create purchase order" for a buyer only;
+    `template/PurchasingOrderSources.xml` (OrderDetail's Sources, one include in `PurchasingOrderDetail.xml`); the root's quick
+    create and Today source; Approvals lists the request topic.
+  - Data: BossSetupData's `BOSS_PUR_NEW_REQUEST` (requester, buyer, administrator) and the topic's link; BossUsersDemoData's
+    approved request `BOSS_PUR_REQ_A` of the requester (F-P10-10).
+  - Specs: `PurchasingRequests` (4: the list's scope, views and html render; RequestDetail's html render for the approver;
+    RequestSourcing's html render for the buyer with the Items link a buyer's only; Home's count and Today); PurchasingAccess
+    gains the quick create per group, the `requestCreate` capability and a request feature (detail for its requester and
+    organization, sourcing the buyer's; 20 features). Acceptance `acceptance/Purchasing/PurchasingRequestsWalk` (7, the
+    usable-when items); PurchasingFoundationWalk's quick create; `routeFixtures` lists the Requests screens; AppStructure's
+    placeholder floor 56.
+- Tests run: Mantle PurchaseRequests, OrderProcureToPayBasicFlow, CrmMiscServices, OrderLifecycle, OrderBulk,
+  WorkProjectRequests, PurchaseApprovals, PurchaseOrders, AccountingBudgets, PurchaseRevisions, DropShip (102 features, all
+  pass); BOSS PurchasingRequests, PurchasingAccess, PurchasingApprovals, PurchasingOrders, Requests (Commons),
+  ProjectRequests, ProjectsAccess, QuickCreate, Notifications, AppOrganizationFilters, PurchasingReplenishment,
+  PurchasingRevisions, PurchasingDropShip, Tasks, Files, Chatter (all pass); acceptance PurchasingRequestsWalk (7),
+  PurchasingFoundationWalk (3) and AppStructure (18), pass. The new screens render in qvt and tui without error (checked
+  once by hand). `moqui lint --screens`: no idiom or hazard site in the new and changed screens (informational anchors only).
+- Decisions:
+  - A request's approval puts it In Progress (as Warehouse's stock request): Request has no Approved status and Reviewed is
+    triage; Awaiting sourcing is In Progress with quantity left. Completion stays by hand (F-P10-9).
+  - A request's amount, for its approval steps and its budget, is its lines' maximum amounts (the most to pay for each
+    line), in the request's currency; no supplier price is read before sourcing (F-P10-2).
+  - Lines are removed only while a draft; a submitted request's lines change (each change a new revision, sent to its
+    approvers again, so a decision on the earlier one is refused).
+  - RequestSourcing is the buyer's (the buy and list capabilities; Mantle checks PURCHASE_ORDER_EDIT); a requester and the
+    other groups see "not available". Quick create of a request is the requester's, buyer's and administrator's.
+  - The request topic's approvals are decided in RequestDetail, Approvals and the Commons inbox, through the same Mantle
+    service.
+- Findings (provisional):
+  - **F-P10-1** A request's revision is the time (epoch milliseconds) of the last audit row of its lines' six fields, kept in
+    `PurchaseApprovalDecision.sourceRevision` (a long) and shown as a time; deleting a line writes no audit row, so a line is
+    removed only from a draft, before any decision.
+  - **F-P10-2** RequestItem has no price; `maximumAmount` ("the maximum amount (price) to pay for the item") is taken as the
+    line's not-to-exceed amount, so a line without one counts nothing toward the approval bands and reserves nothing.
+  - **F-P10-3** Sourcing prices a line at the supplier's price the buyer may read (`store#PurchaseOrderItem`); a supplier
+    with none fails its group PRICE_UNAVAILABLE (retryable). RequestSourcing has no per-line price override yet (design
+    SourceGroups' "price/override"). The demo's DEMO_1_1 has supplier prices from Ziddleman only, so the demo request names
+    Ziddleman and the walk adds a Brightline price.
+  - **F-P10-4** The preview shows the supplier check and, for a supplier-price reader, the group's amount, but no
+    `check#Budget`: the request's budget was decided at its approval and the PO stage is decided by the order's approval
+    (`convert#Commitment`), and a buyer may not read budgets.
+  - **F-P10-5** Warehouse P15 left `complete#RequestFromWork` without a type check, so P10's check leaves RqtInventory alone
+    too, with RqtPurchase and RqtPurchaseRfq. It refuses nothing, so it has no flag; WorkProjectRequests passes unchanged.
+  - **F-P10-6** A revision of a request-sourced order line after its approval holds the line again with `reserve#Commitment`
+    (its earlier order commitment, converted from the request, already holds the request's share), not a second conversion.
+  - **F-P10-7** Customer demand on a request (for the drop-ship route) is a RequestItemOrder from the request line to a sales
+    order line; nothing in BOSS writes one yet (P14b's conversion, or a later intake). `route#OrderItemToDropShip` buys only on
+    an approved customer order, so the route fails DROP_SHIP_PENDING before it. The route has no regression spec (its drop-ship
+    fixture is P7's); left for P14b's walk.
+  - **F-P10-8** `cancel#PurchaseRequest` keeps its reason as the status change's `changeReason` (Request has no note entity
+    of its own besides comments); the purchase orders made from the request stay and are named for the buyer.
+  - **F-P10-9** Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user
+    completes it (design RequestDetail: "fulfilled or explicitly closed with a reason"). Left for P17.
+  - **F-P10-10** The demo request is in BossUsersDemoData, after the requester's party: `Request.filedByPartyId` has a foreign
+    key, and BossPurchasingDemoData loads before the users.
+  - **F-P10-11** AppStructure's placeholder floor is now 56 (Requests built).
 
 ### P11 — RFQs and supplier quotes
 

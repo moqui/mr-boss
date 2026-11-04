@@ -69,7 +69,9 @@ const areas = {
     listRead: "Orders",
     replenishment: "Replenishment",
     approvals: "Approvals",
-    settings: "Settings"
+    settings: "Settings",
+    // P10: the quick create of a purchase request (BOSS_PUR_NEW_REQUEST), which Requests' New purchase request follows
+    requestCreate: "NewPurchaseRequest"
 }
 
 // ===== scope =====
@@ -266,7 +268,11 @@ const linkPaths = [
     "Returns/ReturnAuthorization",
     // P9: a purchase order's changes and the acknowledgements
     "Orders/OrderChanges",
-    "Orders/Acknowledgements"
+    "Orders/Acknowledgements",
+    // P10: the purchase requests, the shared RequestDetail and the sourcing of request lines
+    "Requests/PurchaseRequests",
+    "Requests/RequestDetail",
+    "Requests/RequestSourcing"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -393,10 +399,11 @@ const recordKinds = {
         read: id => readOrder(id)
     },
     quote: {name: "Supplier quote", icon: "sym_o_request_quote", destination: null, read: id => readOrder(id, true)},
+    // P10: a purchase request opens the shared RequestDetail under Requests
     request: {
         name: "Purchase request",
         icon: "sym_o_add_task",
-        destination: null,
+        destination: "Requests/RequestDetail?requestId=",
         requester: true,
         read: id => readRequest(id, purchaseRequestType)
     },
@@ -539,6 +546,18 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("vendorPartyId"),
         idField: "vendorPartyId"
+    },
+    // P10: a purchase request by its id or name, of the user's organizations (its OrgInternal party)
+    {
+        kind: "request",
+        query: (userScope, condition) =>
+            find("mantle.request.RequestAndParty", {requestTypeEnumId: purchaseRequestType, roleTypeId: "OrgInternal"})
+                .condition("partyId", "in", buyerIds(userScope))
+                .condition(condition(["requestId", "requestName"]))
+                .selectField("requestId")
+                .distinct(true)
+                .orderBy("-requestId"),
+        idField: "requestId"
     },
     // P8: a supplier return by its id, the supplier's RMA or their reference
     {

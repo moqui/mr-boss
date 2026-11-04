@@ -11,7 +11,8 @@
 // the receive permission on it; P6 a supplier bill's scope, the match for the match group only (the shared InvoiceMatch's one
 // render) and its re-evaluation; P7 a supplier's drop-ship setup for the purchase administrator; P8 a supplier return's scope,
 // its authorization for RETURN_AUTHORIZE only and its record link to ReturnDetail; P9 a purchase order's revisions and
-// acknowledgement for its organization, and starting a change for the buyer only.
+// acknowledgement for its organization, and starting a change for the buyer only; P10 the quick create of a purchase request
+// (requestCreate), a request's detail for its requester and organization, and its sourcing for the buyer only.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -106,12 +107,17 @@ feature("the Purchasing menu and providers follow each group's areas; the launch
     when() {
         // P3: quick create of a purchase order for the buyer and the administrator (BOSS_PUR_NEW_ORDER)
         const rows = [
-            {user: users.requester, extra: [], quick: []},
+            // P10: quick create of a purchase request for the requester, the buyer and the administrator (BOSS_PUR_NEW_REQUEST)
+            {user: users.requester, extra: [], quick: ["purchasingPurchaseRequest"]},
             {user: users.read, extra: lists.concat(["Replenishment"]), quick: []},
-            {user: users.buyer, extra: lists.concat(["Replenishment"]), quick: ["purchasingPurchaseOrder"]},
+            {
+                user: users.buyer,
+                extra: lists.concat(["Replenishment"]),
+                quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder"]
+            },
             {user: users.planner, extra: lists.concat(["Replenishment"]), quick: []},
             {user: users.approve, extra: lists.concat(["Approvals"]), quick: []},
-            {user: users.admin, extra: order, quick: ["purchasingPurchaseOrder"]}
+            {user: users.admin, extra: order, quick: ["purchasingPurchaseRequest", "purchasingPurchaseOrder"]}
         ]
         const problems = []
         for (const {user, extra, quick} of rows) {
@@ -187,11 +193,13 @@ const capabilityNames = [
     "listRead",
     "replenishment",
     "approvals",
-    "settings"
+    "settings",
+    "requestCreate"
 ]
-const buyer = ["buy", "profileEdit", "scorecardEdit", "billImport", "returnAuthorize", "supplierPriceRead"]
+// P10: the requester and the buyer groups file purchase requests (requestCreate, BOSS_PUR_NEW_REQUEST)
+const buyer = ["buy", "profileEdit", "scorecardEdit", "billImport", "returnAuthorize", "supplierPriceRead", "requestCreate"]
 const capabilityUsers = [
-    {user: users.requester, granted: []},
+    {user: users.requester, granted: ["requestCreate"]},
     {user: users.read, granted: ["listRead", "replenishment"]},
     {user: users.buyer, granted: buyer.concat(["listRead", "replenishment"])},
     {user: users.planner, granted: ["plan", "stockPolicy", "listRead", "replenishment"]},
@@ -804,6 +812,39 @@ feature("an order's revisions and acknowledgement are its organization's, and ch
         if (holder !== "") problems.push(`the buyer's change check: ${holder}`)
         const without = capability(users.read)
         if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's change check: ${without || "accepted"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+// P10: a purchase request's detail is its requester's and its organization's (another organization's reader is refused it);
+// sourcing it is the buyer's (PURCHASE_ORDER_EDIT), refused to the requester on the same request
+feature("a purchase request's detail is its requester's and organization's, and sourcing it is the buyer's", {
+    when() {
+        const problems = []
+        const detail = user =>
+            asUser(user, () =>
+                refusal("ironstone.purchasing.RequestServices.get#RequestDetail", {
+                    appRoot: "Purchasing",
+                    requestId: ids.requestId
+                })
+            )
+        const requester = detail(users.requester)
+        if (requester !== "") problems.push(`the requester is refused their request: ${requester}`)
+        const other = detail(users.services)
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's reader: ${other || "accepted"}`)
+        const source = user =>
+            asUser(
+                user,
+                () => refusal("mantle.request.RequestServices.preview#PurchaseSourcing", {requestId: ids.requestId}),
+                false
+            )
+        const holder = source(users.buyer)
+        if (holder !== "") problems.push(`the buyer's sourcing preview: ${holder}`)
+        const without = source(users.requester)
+        if (!without.includes("PERMISSION_DENIED")) problems.push(`the requester's sourcing preview: ${without || "accepted"}`)
         return {problems}
     },
     then({problems}) {

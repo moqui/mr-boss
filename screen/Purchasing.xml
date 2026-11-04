@@ -64,6 +64,11 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="PurchaseMatchException"/>
         <!-- P9: the sent purchase orders whose acknowledgement is due (the buying policy's reminder days), for buyers -->
         <today-source service="ironstone.purchasing.RevisionServices.get#TodayItems" label="Purchasing acknowledgements"/>
+        <!-- P10: a purchase request, for the groups that file requests (NewPurchaseRequest is BOSS_PUR_NEW_REQUEST's), and the
+            approved requests due to source, for buyers -->
+        <quick-create kind="purchasingPurchaseRequest" label="Purchase request" screen="Purchasing/NewPurchaseRequest"
+                icon="sym_o_add_task" sequence="71"/>
+        <today-source service="ironstone.purchasing.RequestServices.get#TodayItems" label="Purchase requests"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

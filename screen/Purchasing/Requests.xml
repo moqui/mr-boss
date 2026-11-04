@@ -12,12 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Purchase requests area of IronStone Purchasing (design-purchasing §1, §4): Requests, the shared
-    RequestDetail and RequestSourcing (impl-purchasing P10). Open to every Purchasing user; a requester sees their own and
-    assigned requests only. -->
+<!-- The Purchase requests area of IronStone Purchasing (design-purchasing §1, §4; impl-purchasing P10), open to every
+    Purchasing user (a requester sees their own and assigned requests only): PurchaseRequests (the default: RequestFind and
+    RequestList with its views, and New purchase request), the shared RequestDetail in the Purchasing context (crosscut §3.11,
+    hidden from the menu) and RequestSourcing (the buyer's sourcing of approved lines, hidden from the menu); the shell's quick
+    create of a request is the root's NewPurchaseRequest. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Purchase requests" default-menu-index="3" menu-image="sym_o_add_task" menu-image-type="icon">
+    <subscreens default-item="PurchaseRequests" always-use-full-path="true">
+        <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Internal purchase requests and their sourcing." type="p"/>
+        <subscreens-panel id="PurchasingRequestsPanel" type="tab"/>
     </widgets>
 </screen>
