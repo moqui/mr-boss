@@ -41,7 +41,9 @@ along with this software (see the LICENSE.md file). If not, see
                 workEffortTypeEnumId</description></parameter>
             <parameter name="recordEntityName"><description>Instead of docType: mantle.party.Party, mantle.request.Request,
                 mantle.work.effort.WorkEffort, moqui.resource.wiki.WikiPage, mantle.party.communication.CommunicationEvent,
-                moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time)</description></parameter>
+                moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time),
+                mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
+                opens under Manufacturing for its users)</description></parameter>
             <parameter name="id" required="true"/>
             <parameter name="workEffortTypeEnumId"/>
             <parameter name="partyTypeEnumId"/>
@@ -71,6 +73,35 @@ along with this software (see the LICENSE.md file). If not, see
                     count:'sym_o_fact_check', return:'sym_o_assignment_return', facility:'sym_o_warehouse',
                     inspection:'sym_o_verified'}[warehouseKind]
                 return
+            }
+            // runs, their operations, methods, routings and work centers open under Manufacturing for a user who may work with
+            // them there (ironstone.manufacturing's scope: the root grant and the organizations, impl-manufacturing P1), else as
+            // below (a method or routing in Products' method screens)
+            const manufacturingEntities = {'mantle.product.bom.ProductBom':'method', 'mantle.work.production.WorkCenter':'workCenter',
+                'mantle.work.effort.WorkEffort':null}
+            if (ec.user.userId && Object.prototype.hasOwnProperty.call(manufacturingEntities, recordEntityName)) {
+                let kind = manufacturingEntities[recordEntityName]
+                if (!kind) {
+                    const effort = ec.entity.find(recordEntityName).condition('workEffortId', id).disableAuthz().one()
+                    const runId = effort && effort.purposeEnumId !== 'WepProductionRun' ? (effort.rootWorkEffortId || effort.parentWorkEffortId) : null
+                    const above = runId ? ec.entity.find(recordEntityName).condition('workEffortId', runId).selectField('purposeEnumId').disableAuthz().one() : null
+                    kind = effort?.purposeEnumId === 'WepProductionRun' ? 'run' : ['WepRouting','WepRoutingTask'].includes(effort?.purposeEnumId) ? 'routing'
+                        : above?.purposeEnumId === 'WepProductionRun' ? 'operation' : null
+                }
+                const manufacturing = ec.resource.script('component://mr-boss/service/ironstone/manufacturing/Manufacturing.js')
+                // a method or routing opens under Manufacturing once its screen there is built (P2), until then in Products
+                const manufacturingUrl = kind && (!['method', 'routing'].includes(kind) || manufacturing.hasScreen(kind))
+                    ? manufacturing.recordLink(kind, id) : null
+                // a run or its operation is no task or event (impl-manufacturing F38, F39): without Manufacturing it opens the
+                // run's material screen under Warehouse for a Warehouse user who may work with it, else nowhere
+                const runLink = !manufacturingUrl && kind === 'run'
+                    ? ec.resource.script('component://mr-boss/service/ironstone/warehouse/Warehouse.js').recordLink('run', id) : null
+                if (manufacturingUrl || runLink || kind === 'run' || kind === 'operation') {
+                    url = manufacturingUrl || runLink
+                    icon = {run:'sym_o_precision_manufacturing', operation:'sym_o_task_alt', method:'sym_o_account_tree', routing:'sym_o_route',
+                        workCenter:'sym_o_factory'}[kind]
+                    return
+                }
             }
             if (recordEntityName === 'mantle.product.cost.ProductStandardCost') {
                 const access=ec.service.sync().name('mantle.product.CostServices.get#StandardCostAccess').parameters({productStandardCostId:id}).disableAuthz().call() || {}

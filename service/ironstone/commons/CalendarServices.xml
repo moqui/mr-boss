@@ -403,7 +403,7 @@ along with this software (see the LICENSE.md file). If not, see
             is in, visible to all users), else the record visibility rule of get#RecordLinkInfo with checkOnly (IronStone R5,
             R28: its parties and organizations; ADMIN sees all); and what the user may do with it (canEdit as organizer or editor
             of its calendar). need view adds "not available" when the user may not see it, edit also when the user may not change
-            it; check answers without an error.</description>
+            it; check answers without an error. A production run is not found (impl-manufacturing F39).</description>
         <in-parameters>
             <parameter name="workEffortId" required="true"/>
             <parameter name="need" default-value="check"/>
@@ -420,7 +420,12 @@ along with this software (see the LICENSE.md file). If not, see
             found = false; visible = false; canEdit = false; isOrganizer = false; isAttendee = false; workEffort = null
             const notAvailable = () => ec.resource.expand('Event ${workEffortId} is not available', '', {workEffortId: workEffortId})
             const row = ec.entity.find('mantle.work.effort.WorkEffort').condition('workEffortId', workEffortId).one()
-            if (row == null || row.workEffortTypeEnumId !== 'WetEvent') { if (need !== 'check') ec.message.addError(notAvailable()); return }
+            // a production run (WepProductionRun, a WetEvent) is no event: Manufacturing's services change and copy it, so
+            // EventDetail, its edits and duplicate#Event refuse it (impl-manufacturing F39)
+            if (row == null || row.workEffortTypeEnumId !== 'WetEvent' || row.purposeEnumId === 'WepProductionRun') {
+                if (need !== 'check') ec.message.addError(notAvailable())
+                return
+            }
             found = true
             // permission check: an answer without an error, whatever the user may do
             const access = ec.service.sync().name('mantle.work.EventServices.check#EventAccess').parameters({workEffortId: workEffortId, permission: 'check'}).call()

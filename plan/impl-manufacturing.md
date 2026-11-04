@@ -207,7 +207,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | partly done Oct 28 (§6 F1–F24) |
-| P1 Foundation | Mantle, BOSS | the Manufacturing root and menu, Home | — |
+| P1 Foundation | Mantle, BOSS | the Manufacturing root and menu, Home | built Nov 3 |
 | P2 Methods | Mantle, BOSS | BillsOfMaterials, the five method screens, Routings, OperationTemplates, Product360, Approvals | — |
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | — |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | — |
@@ -301,6 +301,75 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
 - **Usable when:** the menu renders for each group, and quick create offers only what the group may create. A reader
   sees their organization's runs and methods but not another organization's, in lists, the palette and record links. A
   forged run, facility or asset ID is refused.
+
+**Built Nov 3 (P1).**
+- Mantle: `MantleSetupData.xml` seeds `PRODUCTION_SCHEDULE`, `_OPERATE`, `_SUPERVISE`, `_COST_REVIEW`, `_POLICY_EDIT` and
+  `SUPPLY_PLAN_RUN` beside `PRODUCTION_VIEW` and `_PLAN`, each with its ADMIN grant. No service changed.
+- BOSS access: the eight new groups and the root user group `BOSS_MANUFACTURING`, the READ, RESOURCE_ADMIN and COST
+  descriptions of design §1.1 (F2); the root authz `BOSS_MANUFACTURING_ROOT` (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`) and
+  the `ironstone\.manufacturing\..*` service pattern on the `BOSS_MANUFACTURING` artifact group; the grants of the plan
+  (and `FACILITY_ALL_ORGANIZATIONS` to the admin, as Warehouse's); `manufacturing` added to the client deny pattern; the
+  area groups `BOSS_MFG_SHOP_FLOOR`, `_QUALITY`, `_PLANNING`, `_SUBCONTRACTING`, `_SETTINGS`, `_APPROVALS` and the record
+  link group `BOSS_MFG_RECORD_LINK`.
+- `ironstone.manufacturing.AccessServices` (`get#SharedContext`, `check#Record`, `select#Plant`, `get#Choices`,
+  `search#Records`) over `Manufacturing.js`, whose tables later phases extend: `capabilityPermissions`, `recordKinds` (run,
+  operation, method, routing, workCenter, asset, facility; a `destination` once a screen is built), `searchFinds`,
+  `choiceSources` (plants, workCenters) and `linkPaths`. `HomeServices.get#Home` (all counts null).
+- The root: the menu of design §1.2 (the six placeholders retitled and Routings, WorkCenters, Quality, Subcontracting,
+  Approvals and Reports added as placeholders, each file's comment naming what its phase builds), `<shell-providers>` with
+  the palette source and the `manufacturing` keymap; `template/ManufacturingParts.xml`; Home (plant picker, Summary
+  unavailable, Queue empty state, record lookup); `get#RecordLink` for runs, operations and work centers (methods and
+  routings once they have a destination).
+- F38, F39 guards (BOSS only): `get#TaskAccess` and `check#TaskUpdate` refuse changes to a production run's operation and
+  Projects does not find it; `get#EventAccessInfo` does not find a run, so EventDetail and `duplicate#Event` refuse it; a
+  run's record link is never a Commons task or event.
+- Demo: `BossManufacturingDemoData.xml` (lines `BOSS_MFG_LINE_A`, `_B` under ZIRET_WH with WorkCenter rows, the draft run
+  `BOSS_MFG_RUN_A`, skill types, Services' plant `BOSS_MFG_SVC_PLANT`, line `BOSS_MFG_SVC_LINE`, run `BOSS_MFG_SVC_RUN`);
+  BossUsersDemoData's `manufacturing.*` users (docs/ManufacturingImplementation.md).
+- Specs: `test/Manufacturing/ManufacturingSpecLib.js` (ids, users, `routeFixtures`), `ManufacturingShell` (20 features with their rows)
+  and `ManufacturingAccess` (48, sectioned by phase); AppStructure and TuiRender render Manufacturing
+  (Manufacturing is in AppStructure's non-placeholder list: its placeholders are found by their label and stay in the
+  placeholder feature); WarehouseFacilities' tree expects the two lines under ZIRET_WH.
+- Tests run: ManufacturingShell, ManufacturingAccess, AppStructure, TuiRender, WarehouseShell, WarehouseFacilities,
+  WarehouseAccess, WarehouseInventory, Tasks, TodayPanel, Calendar, EventDetail, TimeEntries, ClientWrites, ProductsCosts,
+  ProductsMethods (BOSS, 412 features, all pass); ManufacturingServices, WarehouseProduction, ProductMethods (Mantle, 26
+  pass). `moqui lint --screens`: no idiom or hazard site in the Manufacturing screens.
+- Decisions: the restricted areas and their groups above (Home, Work orders, BOMs, Routings, Work centers and Reports open
+  to every Manufacturing user); a plant is a facility of type FcTpPlant or the parent of a work center, kept as the
+  `ManufacturingPlantActive` preference; the display user is in `_DISPLAY` alone, with no root; no quick create in P1 (P5
+  adds the draft work order); methods and routings keep their Products link until P2 gives them a Manufacturing screen.
+- Findings (provisional):
+  - **F-P1-1** Products P8's released methods for DEMO_1_1 are not demo data: ProductsMethodFixtures makes them in specs.
+    P1's demo cannot build on them; P2 seeds a released demo method (or the walks load the fixtures).
+  - **F-P1-2** Warehouse's demo run `BOSS_WH_RUN` is WetTask, while `create#ProductionRun` makes WetEvent (F7). The F38/F39
+    guards key on `purposeEnumId`, so both are covered; P1's demo runs are WetEvent. P5 may align the Warehouse demo.
+  - **F-P1-3** F38's Projects guard also refuses time on an operation through Projects' timers and TimeEntries
+    (`TimeServices` checks `get#TaskAccess` need update, app projects). P10's ProductionTime needs its own path or an
+    exception for `PRODUCTION_OPERATE` holders on their assigned operations.
+  - **F-P1-4** Before P1 a run's record link fell through to Commons (WetEvent to EventDetail, WetTask to TaskDetail).
+    It now opens Manufacturing, else Warehouse's MaterialIssueReceipt, else nothing.
+  - **F-P1-5** A Projects team user (joe.developer) has no authorization for `get#RecordLink`; no artifact group grants
+    it to the Projects groups. Not changed here.
+- **Review (Nov 3).** Checked: the grants match the Access list (PRODUCTION_VIEW to the eleven groups but `_DISPLAY`,
+  METHOD_VIEW to the seven new ones but `_DISPLAY`, the admin every production and quality permission);
+  `FACILITY_ALL_ORGANIZATIONS` for the admin is §4's "the admin group works in every plant" carried into Mantle's facility
+  and stock scope, as `BOSS_WAREHOUSE_ADMIN` (impl-warehouse F84), and gives no stock action without Warehouse's
+  `STOCK_ISSUE`. The area groups only deny the root user group and let the capability groups back in with the root's
+  filter sets; `rootGrants` reads only root screen rows, so they widen nothing. `recordOf` checks every owner and facility a
+  kind names (methods and routings have no facility; an asset is checked by its facility only, stricter than Mantle's
+  StockScope). The plant preference is re-checked on every read. Fixes:
+  - **R1** (medium) F38: `decorate#TaskRows` still gave an assigned operation `canUpdate` true, so the Commons task list,
+    Today's rows and TaskDetail's row offered Mark done, due and priority that the services then refused. It now sets it
+    false for a WetTask under a WepProductionRun (the run lookup is authz-free for the purpose only; project names keep
+    their authz).
+  - **R2** (low) F36: Commons `get#TaskAccess` returned the operation's `actualCost` and client cost (the task roll-up's
+    pay-rate cost) to anyone who sees it; the production branch now drops them. ManufacturingAccess's F38 feature checks
+    both.
+  - F-P1-3 also covers Commons' `clockIn#Task` and `add#TimeOnTask`, which check `get#TaskAccess` need update. Timesheet
+    views and approval do not check the item, so production time logged elsewhere still shows and is approved in Projects.
+  - Specs: ManufacturingAccess, ManufacturingShell, Tasks, TodayPanel, Requests, WorkItems, WorkItemDetail, TimeEntries,
+    EventDetail, AppStructure, WarehouseAccess (BOSS, 294 features), ManufacturingServices, WarehouseProduction,
+    ProductMethods (Mantle, 26), all pass.
 
 ### P2 — Methods
 

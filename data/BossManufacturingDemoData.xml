@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- The Manufacturing demo (impl-manufacturing P1) over Mantle's ZIRET_WH (owned by ORG_ZIZI_RETAIL) and its EQUIP_AB4
+        assembly robots (F19): two production lines under ZIRET_WH with their WorkCenter rows, so a run on a line nets
+        against the warehouse (F16) and ZIRET_WH is Retail's plant; a draft run on a line owned by the organization (F14);
+        the skill types (F18; the operator's PartySkill rows are with the users); and a second organization's plant, line
+        and run (ORG_ZIZI_SERVICES), which Retail's Manufacturing users never reach. The Warehouse demo's BOSS_WH_RUN (with
+        its operation BOSS_WH_RUN_OP, BossWarehouseDemoData.xml) is Retail's released run. The demo users are in
+        BossUsersDemoData.xml. Later phases add what their walks need, each in a block named for its phase. -->
+
+    <!-- P1: Retail's lines, under its warehouse -->
+    <mantle.facility.Facility facilityId="BOSS_MFG_LINE_A" facilityTypeEnumId="FcTpLine" parentFacilityId="ZIRET_WH"
+            ownerPartyId="ORG_ZIZI_RETAIL" facilityName="Assembly line A"/>
+    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_A" efficiencyPercent="100" oeeTargetPercent="85"
+            changeReason="Demo line"/>
+    <mantle.facility.Facility facilityId="BOSS_MFG_LINE_B" facilityTypeEnumId="FcTpLine" parentFacilityId="ZIRET_WH"
+            ownerPartyId="ORG_ZIZI_RETAIL" facilityName="Assembly line B"/>
+    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_LINE_B" efficiencyPercent="90" oeeTargetPercent="80"
+            changeReason="Demo line"/>
+    <!-- P1: a draft run of Retail's on line A, with no lines yet (create#ProductionOrder makes a run's lines) -->
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_RUN_A" workEffortTypeEnumId="WetEvent" purposeEnumId="WepProductionRun"
+            statusId="WeInPlanning" facilityId="BOSS_MFG_LINE_A" workEffortName="Demo assemblies"
+            ownerPartyId="ORG_ZIZI_RETAIL" estimatedStartDate="2026-11-10 08:00:00"
+            estimatedCompletionDate="2026-11-12 17:00:00"/>
+
+    <!-- P1: the skill types of the operators and, from P2, the operation templates' skill standards (F18) -->
+    <moqui.basic.Enumeration enumId="BOSS_MFG_SKILL_ASSEMBLY" enumTypeId="SkillType" description="Assembly"/>
+    <moqui.basic.Enumeration enumId="BOSS_MFG_SKILL_COATING" enumTypeId="SkillType" description="Coating"/>
+    <moqui.basic.Enumeration enumId="BOSS_MFG_SKILL_INSPECTION" enumTypeId="SkillType" description="Production inspection"/>
+
+    <!-- P1: another organization's plant, line and run, for isolation -->
+    <mantle.facility.Facility facilityId="BOSS_MFG_SVC_PLANT" facilityTypeEnumId="FcTpPlant" ownerPartyId="ORG_ZIZI_SERVICES"
+            facilityName="Services assembly plant"/>
+    <mantle.facility.Facility facilityId="BOSS_MFG_SVC_LINE" facilityTypeEnumId="FcTpLine" parentFacilityId="BOSS_MFG_SVC_PLANT"
+            ownerPartyId="ORG_ZIZI_SERVICES" facilityName="Services kit line"/>
+    <mantle.work.production.WorkCenter facilityId="BOSS_MFG_SVC_LINE" efficiencyPercent="100" changeReason="Demo line"/>
+    <mantle.work.effort.WorkEffort workEffortId="BOSS_MFG_SVC_RUN" workEffortTypeEnumId="WetEvent"
+            purposeEnumId="WepProductionRun" statusId="WeInPlanning" facilityId="BOSS_MFG_SVC_LINE"
+            workEffortName="Services kits" ownerPartyId="ORG_ZIZI_SERVICES" estimatedStartDate="2026-11-11 08:00:00"
+            estimatedCompletionDate="2026-11-11 17:00:00"/>
+</entity-facade-xml>
