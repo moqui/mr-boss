@@ -2677,7 +2677,7 @@ Design §9; the reporting part of M10.
   (the form-list-key rule) or a `#` link, as most Warehouse screens do; Disassembly reported clean but its static template
   failed AppStructure's qvt render (F-P17-2), so it stays unmarked.
 - **§10.3 acceptance and crosscut §6 standalone operation**, `test/Manufacturing/ManufacturingAccessWalk.spec.js` (5
-  features) and `ManufacturingIsolationWalk.spec.js` (5) over `ManufacturingStandaloneLib.js`, on WarehouseAccessWalk's
+  features), `ManufacturingIsolationWalk.spec.js` (3) and `ManufacturingCostIsolationWalk.spec.js` (2, split from it in the review) over `ManufacturingStandaloneLib.js`, on WarehouseAccessWalk's
   pattern: an organization of its own, BOSS_P17_ORG (a plant, a line, a released routing of one operation and a BOM of one
   part, each setup its own made product and sales demand), with Manufacturing users of one capability group each and no
   other launcher (the material handler holds Warehouse's issue group without the Warehouse root), plans (SupplyPlanning's
@@ -2766,7 +2766,16 @@ Design §9; the reporting part of M10.
     success of each step; its 13 refusals match RECORD_UNAVAILABLE or PLANT_UNAVAILABLE (a status refusal would not), with the
     same transitions succeeding in the flow and the run unchanged; the route sweep requires 12 routes to show the records to
     their owner (42 of the 43 did). Feature times 0 to 10.3 s; AccessWalk about 15 s, IsolationWalk about 23 s with setup.
+  - (Low, fixed) ManufacturingIsolationWalk took 32 s with its start (about 26 s of its own): the cost, cost close and other
+    apps' features are ManufacturingCostIsolationWalk now (2 features, 16 s with its start), the isolation walk 3 (25 s).
+  - Not split, older than P17: AppStructure (37 s, one feature 29 s) and TuiRender (28 s, one feature 21 s) render every
+    app's screens; they want the same per-app split.
   - F-P17-2 recorded precisely (above); F141 (§6) fixed in mr-moqui 477f9e89.
+  - After merging master: ClientIsolation (16, fresh load 21 s and reused snapshot 13 s), ServerStatic (1, 17.6 s),
+    ProjectsServerStatic (1, 17.6 s), AccountingServerStatic (1, 23.0 s), WarehouseServerStatic (1, 14.4 s),
+    ManufacturingServerStatic (1, 14.0 s), TuiRender (3, 27.9 s), AppStructure (18, 37.1 s), ManufacturingAccessWalk (5,
+    22.7 s), ManufacturingIsolationWalk (3, 24.9 s), ManufacturingCostIsolationWalk (2, 16.1 s), ColumnChooser (3, 6.8 s): all
+    pass (times with each spec's start of about 6 s).
 
 ## 4. Decisions
 
@@ -3010,7 +3019,7 @@ Designed, not in this build:
 | Intake, assignment, reopen and resolution | P11 (downtime and quality requests); SLA and CSAT are Customer Service's | mr-mantle ProductionDowntime (a fault with its maintenance request; closing the stop leaves the request open); BOSS ManufacturingDowntime, ManufacturingDowntimeWalk |
 | Released BOM or routing changes; missing instruction | P9 (amendment), P10 (the instruction gate); the gauge is §7 | mr-mantle ProductionChanges (amendment, strict release), ProductionShopFloor (a start waits for the acknowledgment); BOSS ManufacturingMethods, ManufacturingShopFloor, ManufacturingChangesWalk, ManufacturingShopFloorWalk |
 | Cancellation, partial completion and retry | P5 (cancel and retry), P7 (partial), P9 (split); batches are §7 | mr-mantle ProductionOrders (cancel, unrelease, retries), ProductionChanges (split, a posted run reversed or closed out), ProductionQuantities (complete refused until reconciled, a retry posts nothing twice); BOSS ManufacturingWorkOrders |
-| Unauthorized action and standalone app | `ManufacturingAccess` in every phase; P17 | BOSS ManufacturingAccess (a section per phase), ManufacturingAccessWalk and ManufacturingIsolationWalk (P17) |
+| Unauthorized action and standalone app | `ManufacturingAccess` in every phase; P17 | BOSS ManufacturingAccess (a section per phase), ManufacturingAccessWalk, ManufacturingIsolationWalk and ManufacturingCostIsolationWalk (P17) |
 | Subcontract dispatch and output receipt | P14, on Warehouse P15 and P16 | mr-mantle ProductionSubcontract; BOSS ManufacturingSubcontracting, ManufacturingSubcontractWalk |
 | Production cost close (design-accounting §16.3 production-to-GL) | P15 | mr-mantle ProductionCostClose; BOSS ManufacturingAccess (P15), ManufacturingCostCloseWalk |
 
