@@ -104,4 +104,6 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="summary" from="done.summary"/>
         </actions>
     </service>
+    <!-- P9: the Acknowledgements list (RevisionServices.xml, Revisions.js) -->
+    <service-include verb="find" noun="Acknowledgements" location="component://mr-boss/service/ironstone/purchasing/RevisionServices.xml"/>
 </services>

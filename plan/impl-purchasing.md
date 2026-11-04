@@ -259,7 +259,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | built Nov 4, 2026 |
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | — |
 | P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | — |
-| P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | — |
+| P9 Revisions and acknowledgements | Mantle, BOSS | OrderChanges, Acknowledgements | built Nov 4, 2026 |
 | P10 Purchase requests | Mantle, BOSS | Requests, RequestDetail, RequestSourcing | — |
 | P11 RFQs and supplier quotes | Mantle, BOSS | QuoteRequests, QuoteRequestDetail, Quotes, QuoteDetail | — |
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | — |
@@ -1395,6 +1395,125 @@ P7 ports it into mr-mantle and finishes it.
   - a receive in progress fails the revision with ReceiptInProgress, and nothing changes;
   - a supplier's phone confirmation with a later date is recorded, and the original due date stays for OTD;
   - reminders to three suppliers with one bad address name it and mark the other two sent.
+
+**Built Nov 4 (P9).**
+- Mantle:
+  - `entity/PurchaseRevisionEntities.xml`: OrderPart's `otherPartyOrderId`, `otherPartyOrderDate`, `estimatedDeliveryDate`,
+    `settlementTermId` and `tradeTermEnumId` audit-logged ("true", F57), and the acknowledgement `acknowledgedRevision`,
+    `acknowledgementEnumId` (PurchaseAcknowledgement: PakAccepted, PakChanged, PakRejected), `acknowledgedDate` and
+    `acknowledgementNote`, all "true"; OrderItem's `promisedDate` and `promisedQuantity` ("true"); OrderHeader's
+    `currencyUomId` ("update"); `OrderEmailMessage.reminderOccurrence`; `PurchasePolicy.substitutionEnumId` (F49:
+    PurchaseSubstitution PsbNotAllowed, the default, or PsbAllowed). `data/PurchaseRevisionSetupData.xml`: the enumerations,
+    `OctSupplierAcknowledgement` and the `MANTLE_PURCHASE_REMINDER` template (`template/order/PurchaseReminderEmail.html.fancy`).
+  - `service/mantle/order/PurchaseRevisionServices.xml` over the new `PurchaseRevisions.js`, included in
+    `mantle.order.OrderServices` by name (six one-line service-includes): `start#PurchaseRevision` (a Change hold, its
+    source the revision started from; ORDER_NOT_REVISABLE, STALE_REVISION, REASON_REQUIRED), `cancel#PurchaseRevision`
+    (REVISION_NOT_STARTED, REVISION_APPLIED), `preview#PurchaseRevision` (change rows with their refusals by name, each
+    line's ordered, received, billed, returned, accepted and expected quantities, the changed lines' amounts, the part's
+    values and the basis key), `apply#PurchaseRevision` (one transaction: the open receipts locked first, the changes written
+    with their reason in the audit log and an internal note, the revision counted once, `adjust#ExpectedReceipt`,
+    `lower#SourceCommitments`, `queue#MatchReevaluation` per changed line, the new revision's approvers notified;
+    RECEIPT_IN_PROGRESS, QUANTITY_BELOW_RECEIVED/_BILLED/_RETURNED/_ACCEPTED, SUPPLIER_CHANGE_PROGRESSED,
+    CURRENCY_CHANGE_PROGRESSED, SUBSTITUTION_NOT_ALLOWED, SUBSTITUTE_PROGRESSED, FACILITY_ON_RECEIPT, NO_CHANGE; operation key
+    replay), `record#Acknowledgement` (SUPERSEDED_REVISION naming the current one, OUTCOME_INVALID, REASON_REQUIRED for a
+    changed or rejected response; the requested date and the ordered quantity stay; evidence as OrderContent in the Supplier
+    role) and `send#PurchaseReminder` (each order in its own transaction, a result per order and per recipient, once per
+    revision, template and occurrence; ORDER_NOT_SENT, ALREADY_ACKNOWLEDGED, RECIPIENT_REQUIRED, RECIPIENT_INVALID).
+  - Changes to existing Mantle (none refuses anything new): `increment#OrderRevision` returns while a revision or
+    acknowledgement holds the order's count (`ec.context.sharedMap`), so they count once or not at all;
+    `PurchaseOrders.js decide#PurchaseApproval` also decides a held order whose changed revision was applied, its last step
+    releasing the Change hold (to Approved, or to Placed and then approve#Order), a refusal leaving it held for the buyer;
+    `update#PurchaseOrder` takes a draft's delivery date, payment term and incoterm (the addresses-and-terms editing P3 left;
+    TERM_INVALID); `get#PurchaseOrderPrint` reads the part's supplier, facility, ship-to, reference, delivery date and terms
+    and the currency back as of the time, and prints "Changes in this revision" with their reasons; `adjust#ExpectedReceipt`
+    takes a held order (Receiving.js `purchasePart` statuses); Budgets.js `lowerSource` behind the new internal
+    `mantle.other.BudgetServices.lower#SourceCommitments`; PurchasePolicy's `substitutionEnumId` in `store#PurchasePolicy`;
+    PurchaseOrderDocuments.js exports `recipientsOf`.
+  - Spec `test/order/PurchaseRevisions.spec.js` (8 features, about 3 s).
+- BOSS:
+  - `ironstone.purchasing.RevisionServices` (`Revisions.js`): `get#OrderRevisions` (OrderDetail's sections),
+    `find#Acknowledgements` (included in `ironstone.purchasing.OrderServices` by name; views Unacknowledged, Changed promise,
+    Overdue by the policy's reminder days, All sent; at most 500 sent orders read) and `get#TodayItems` (acknowledgements due,
+    for a buyer); Home's `unacknowledgedCount` (BuyerServices); `Orders.js` offers Approve and Refuse on a held order whose
+    revision was applied, and the detail's delivery date and terms; `Purchasing.js` link paths Orders/OrderChanges and
+    Orders/Acknowledgements.
+  - Screens: `Purchasing/Orders.xml` now a tab panel (Purchase orders, Acknowledgements; OrderDetail and OrderChanges hidden);
+    `Orders/OrderChanges.xml` (Start a change; ProposedChange as a lines grid and the order's form, kept in `changesText`;
+    RevisionEffects with each change's refusal, the lines' quantities and the amounts; ApplyRevision with the reason and the
+    preview's basis; Let the change go); `Orders/Acknowledgements.xml` (AcknowledgementList with views and saved finds,
+    Record per row, Send reminder on the selected rows); `template/PurchasingOrderRevisions.xml` (the transitions
+    `startRevision`, `recordAcknowledgement`, `linePromise`, `sendReminders`; OrderDetail's Revisions section with Change
+    order and each revision's changes, reason and PDF, and Supplier acknowledgement with Record acknowledgement, Send reminder,
+    each line's requested and promised date with its own Promise, reminders and history), two section-includes in
+    `PurchasingOrderDetail.xml` and four transition-includes in `Shared/OrderDetail.xml`; Edit order's delivery date, payment
+    term and incoterm and the Details' terms; the approvals' "waiting" text for a revised order; Home's Unacknowledged orders
+    card opens Acknowledgements; the root's second today-source; Settings/PurchasePolicy's PurchaseControls takes the
+    substitution rule.
+  - Inventories: usl-inventory's revision, acknowledgement, reminder, `adjust#ExpectedReceipt`, `increment#OrderRevision` and
+    `lower#SourceCommitments` rows; ss-inventory's EditPartNonEdForm.
+  - Data: BossPurchasingDemoData's `BOSS_PUR_PO_ACK` (Retail's sent, unacknowledged order from Brightline) and the reminder
+    template on the demo mail sink.
+  - Specs: `PurchasingRevisions` (2: Acknowledgements' views, Home's count and Today with its html render; OrderChanges' html
+    render with a proposed cut and OrderDetail's revisions read by capability); PurchasingAccess gains a feature (the
+    revisions and acknowledgement are the organization's, change and response the buyer's; 18 features). Acceptance
+    `acceptance/Purchasing/PurchasingRevisionsWalk` (7: the usable-when items); `routeFixtures` lists Orders/Acknowledgements
+    and Orders/OrderChanges.
+- Tests run: Mantle PurchaseRevisions, PurchaseOrders, PurchaseApprovals, PurchasePolicy, PurchaseReceipts,
+  OrderProcureToPayBasicFlow, WarehouseReceiving, AccountingBudgets, OrderLifecycle, OrderBulk, CrmMiscServices,
+  PurchaseHoldPermission (96 features, all pass); BOSS PurchasingRevisions, PurchasingAccess, PurchasingOrders,
+  PurchasingApprovals, PurchasingReceiving, PurchasingBills, PurchasingSuppliers, PurchasingReplenishment, WarehouseReceiving,
+  AccountingBudgets (all pass); client PurchasingOrdersWalk (pass); acceptance PurchasingRevisionsWalk (7) and AppStructure
+  (18), pass. The new screens render in qvt and tui without error (checked once by hand). `moqui lint --screens`: no idiom
+  or hazard site in the new and changed screens (informational anchors only).
+- Decisions:
+  - The revision's flow: Start holds the order with a Change reason; the change is applied under the hold (again after a
+    refusal); the approval of the new revision is `decide#PurchaseApproval` on the held order, whose last step releases the
+    revision's Change hold (to Approved, or to Placed and approve#Order for an order not approved yet); the buyer resends it
+    through `send#PurchaseOrder`, which stores the new revision's PDF. The Change hold is the revision's lock: its approval or
+    the buyer's cancel of an unapplied change releases it, not `release#OrderHold` (F-P9-2).
+  - Receiving goes on while an order changes; ReceiptInProgress is a receipt or bill posted since the change was reviewed
+    (the preview's basis key), and the apply locks the open receipts first, so a receive under way finishes before it
+    (F-P9-1).
+  - A revision counts once: its writes do not move the revision one by one (F-P9-3); an acknowledgement and the Change hold
+    move none.
+  - The budget delta at apply: a lowered line's commitment is released to what it still needs (`lower#SourceCommitments`); a
+    raised line is reserved by the approval of the new revision, where Warn and Stop apply (F-P9-4). P10 adds a request's
+    conversion.
+  - A supplier's promise is per line (`promisedDate`, `promisedQuantity`); the requested date stays `requiredByDate` for on-time
+    delivery, and a promise changes no ordered quantity. A changed or rejected response needs the supplier's reason.
+  - Reminders dedupe on the revision, the template and the occurrence (by default the day) per recipient.
+  - The substitution rule (F49) is `PurchasePolicy.substitutionEnumId`: not allowed by default; allowed puts a product usable
+    for buying on a line nothing was received, billed or expected on.
+- Findings (provisional):
+  - **F-P9-1** No skip-locked find in scripts (impl-warehouse F175), so a revision cannot tell at once that a receive holds the
+    receipt; Warehouse's receive guard also receives on a held order. ReceiptInProgress is therefore the preview's basis key
+    (each line's received and billed quantities): `apply#PurchaseRevision` locks the open receipts first, waits for a receive
+    under way, and fails by name when anything was posted since the review.
+  - **F-P9-2** OhtChange's release permission (`enumCode`) is ORDER_APPROVE, which no Purchasing group holds (the design's
+    ORDER_CHANGE_HOLD_RELEASE is not seeded), and nothing in mr-mantle, mr-boss or mr-pass placed a Change hold before P9. The
+    approval of the revision releases its Change hold and the buyer's cancel an unapplied one; `release#OrderHold` still
+    releases it for an ORDER_APPROVE holder.
+  - **F-P9-3** Under `commercialRevisionOnly` each changed line moved `orderRevision` by one (`handle#OrderItemChange`'s item
+    kind), and without the flag the part's fields, the internal note and the acknowledgement's OrderPart writes each moved it
+    too (`handle#OrderPartChange`, the note and content rules); `increment#OrderRevision` returns while the order's count is
+    held (`ec.context.sharedMap['PurchaseRevisionCount:<orderId>']`), and the OrderRevisionPurchaseApproval SECA still runs
+    on those returns (harmless: nothing is superseded at the same revision).
+  - **F-P9-4** `reserve#Commitment` at a new revision replaces only the lines the approval reserves, so a line lowered to zero
+    kept its earlier commitment until close or cancel (P4 review), and a buyer holds no budget permission; Accounting's
+    `BudgetServices` gains the internal `lower#SourceCommitments` (no permission of its own, as
+    `release#ClosedSourceCommitments`), written into design-accounting's budget contract list below.
+  - **F-P9-5** `adjust#ExpectedReceipt` refused a held order (`Receiving.purchasePart` took Approved or Sent only); it now
+    takes the hold a revision places. The receive guard is unchanged.
+  - **F-P9-6** The framework writes a `<field>_changeReason` in the context to each audit row (as Moqui Java does), so the
+    revision's reason is on each change, read back by OrderDetail's Revisions and the print's "Changes in this revision".
+  - **F-P9-7** OrderPart's reference, dates and terms logged with "true" write an audit row for each new part's first value
+    of them; the as-of print needs the first set.
+  - **F-P9-8** RecordAcknowledgement takes one promised date for every line (a dialog form has no per-line grid); a line's own
+    promise is its row's Promise on OrderDetail, which keeps the revision's recorded response.
+  - **F-P9-9** Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no
+    address choice source) and adding a line by a revision (a new line is a new order or a later item).
+  - **F-P9-10** An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or
+    sent outside Mantle) is unacknowledged but never overdue.
 
 ### P10 — Purchase requests
 

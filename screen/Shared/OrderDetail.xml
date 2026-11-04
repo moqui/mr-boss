@@ -90,6 +90,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="orderDraftBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
     <transition-include name="orderUploadBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
     <transition-include name="orderPrepayment" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
+    <!-- Purchasing (impl-purchasing P9): the change of the order, the supplier's acknowledgement and reminders -->
+    <transition-include name="startRevision" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="recordAcknowledgement" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="linePromise" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="sendReminders" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"

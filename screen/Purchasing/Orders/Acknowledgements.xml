@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Acknowledgements (design-purchasing §6 Acknowledgements; style-guide §3.2 List; impl-purchasing P9): AcknowledgementList
+    over ironstone.purchasing.OrderServices.find#Acknowledgements (the sent purchase orders of the user's organizations by
+    view: Unacknowledged at their current revision, Changed promise, Overdue past the buying policy's reminder days, All sent),
+    each with its revision, supplier, when it went out, the response, the requested and promised dates and the last
+    reminder; RecordAcknowledgement per row (mantle.order.OrderServices.record#Acknowledgement, entered on the supplier's
+    behalf); and SendReminder on the selected rows (send#PurchaseReminder, a result per order and recipient), for a buyer. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Acknowledgements" default-menu-index="2">
+    <parameter name="view"/>
+    <parameter name="vendorPartyId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition-include name="recordAcknowledgement" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <transition-include name="sendReminders" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <actions>
+        <service-call name="ironstone.purchasing.OrderServices.find#Acknowledgements" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, vendorPartyId:vendorPartyId, organizationPartyId:organizationPartyId,
+                    text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="ackRows" from="found?.ackRows || []"/>
+        <set field="ackRowsCount" from="found?.ackRowsCount"/>
+        <set field="ackRowsPageIndex" from="found?.ackRowsPageIndex"/>
+        <set field="ackRowsPageSize" from="found?.ackRowsPageSize"/>
+        <set field="ackRowsPageMaxIndex" from="found?.ackRowsPageMaxIndex"/>
+        <set field="ackRowsPageRangeLow" from="found?.ackRowsPageRangeLow"/>
+        <set field="ackRowsPageRangeHigh" from="found?.ackRowsPageRangeHigh"/>
+        <set field="currentView" from="found?.view || 'unacknowledged'"/>
+        <set field="viewLabel" from="found?.viewLabel || 'Unacknowledged'"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="viewLinks" from="[['unacknowledged', 'Unacknowledged'], ['changed', 'Changed promise'], ['overdue', 'Overdue'],
+                ['all', 'All sent']].map(([key, label]) =&gt; ({key, label, current: currentView == key}))"/>
+        <set field="emptyText" from="currentView == 'unacknowledged' ? 'Every sent purchase order is acknowledged at its current revision.'
+                : currentView == 'overdue' ? 'No acknowledgement is overdue.' : currentView == 'changed'
+                ? 'No supplier changed or refused a revision, or promised later than required.' : 'No purchase order is out with its supplier.'"/>
+        <set field="ackKey" from="'po-ack-' + ec.user.randomString(20)"/>
+    </actions>
+    <widgets>
+        <context title="Acknowledgements" selection-form="AcknowledgementList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Acknowledgements" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="AcknowledgementViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="AcknowledgementList" list="ackRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true">
+                    <row-selection id-field="orderId" parameter="selectedIds" list-mode="true" condition="can.buy">
+                        <action>
+                            <dialog button-text="Send reminder" button-icon="sym_o_notifications"
+                                    title="Remind the suppliers of the selected purchase orders"/>
+                            <form-single name="BulkRemind" transition="sendReminders">
+                                <field name="note">
+                                    <default-field title="Message"><text-area rows="2"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Send reminder">
+                                        <submit confirmation="Remind each selected order's supplier to acknowledge its current revision?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="orderId">
+                        <header-field title="Order" show-order-by="false"/>
+                        <default-field title="Order">
+                            <link url="${url}" url-type="plain" text="${orderId}" link-type="anchor"/>
+                            <label text="${orderName}" type="div" style="text-caption m-muted" condition="orderName"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Order, reference or supplier reference">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                    </field>
+                    <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                    <field name="vendorPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Supplier"><display text="${supplierName}"/></default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Buying organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="sentText"><default-field title="Sent"><display/></default-field></field>
+                    <field name="responseText">
+                        <default-field title="Response">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${responseColor}">${
+                                    WebUtilities.encodeHtml(responseText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: responseText})}]]></text>
+                                <text type="html">${responseText}</text>
+                            </render-mode>
+                            <label text="${supplierReference}" type="div" style="text-caption m-muted" condition="supplierReference"/>
+                        </default-field>
+                    </field>
+                    <field name="requiredText"><default-field title="Required by"><display/></default-field></field>
+                    <field name="promisedText">
+                        <default-field title="Promised">
+                            <label text="${promisedText}" type="span"/>
+                            <label text="${lateReason}" type="div" style="text-caption text-warning" condition="lateReason"/>
+                        </default-field>
+                    </field>
+                    <field name="remindedText"><default-field title="Reminded"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="RecordAcknowledgement_${orderId}" button-text="Record" icon="sym_o_mark_email_read"
+                                    width="560" title="Record ${supplierName}'s acknowledgement of ${orderId} revision ${orderRevision}"
+                                    condition="can.buy">
+                                <form-single name="RecordAcknowledgementRow" transition="recordAcknowledgement">
+                                    <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderRevision" from="String(orderRevision)"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey" from="ackKey + '-' + orderId"><default-field><hidden/></default-field></field>
+                                    <field name="otherPartyOrderId" from="supplierReference">
+                                        <default-field title="Supplier's reference"><text-line size="20"/></default-field>
+                                    </field>
+                                    <field name="otherPartyOrderDate" from="null">
+                                        <default-field title="Supplier's date"><date-time type="date"/></default-field>
+                                    </field>
+                                    <field name="acknowledgementEnumId" from="'PakAccepted'">
+                                        <default-field title="Response">
+                                            <drop-down allow-empty="false">
+                                                <option key="PakAccepted" text="Accepted"/>
+                                                <option key="PakChanged" text="Accepted with changes"/>
+                                                <option key="PakRejected" text="Rejected"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="promisedDate" from="null">
+                                        <default-field title="Promised delivery" tooltip="For every line">
+                                            <date-time type="date"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="acknowledgementNote" from="null">
+                                        <default-field title="Supplier's reason" tooltip="Needed for a changed or rejected response">
+                                            <text-area rows="2"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="evidenceText" from="null">
+                                        <default-field title="Received by" tooltip="How the response came: a phone call, an email">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Record"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="vendorPartyId"/>
+                        </column>
+                        <column>
+                            <field-ref name="responseText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!ackRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

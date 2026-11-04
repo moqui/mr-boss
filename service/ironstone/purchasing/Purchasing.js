@@ -258,7 +258,10 @@ const linkPaths = [
     "Bills/BillList",
     "Bills/MatchExceptions",
     "Bills/InvoiceDetail",
-    "Bills/InvoiceMatch"
+    "Bills/InvoiceMatch",
+    // P9: a purchase order's changes and the acknowledgements
+    "Orders/OrderChanges",
+    "Orders/Acknowledgements"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")

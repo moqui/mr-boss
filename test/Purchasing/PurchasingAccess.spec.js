@@ -685,3 +685,41 @@ feature("a supplier bill is its organization's; its match and re-evaluation are 
         problems.join("\n") == ""
     }
 })
+
+// P9: a purchase order's revisions and acknowledgement are its organization's: another organization's reader is refused them;
+// starting a change and recording the supplier's response are the buyer's (PURCHASE_ORDER_EDIT), offered to the buyer and not
+// to a reader on the same order, and the list is refused a requester
+feature("an order's revisions and acknowledgement are its organization's, and changing or acknowledging it is the buyer's", {
+    when() {
+        const problems = []
+        const read = user =>
+            asUser(
+                user,
+                () =>
+                    invoke("ironstone.purchasing.RevisionServices.get#OrderRevisions", {
+                        appRoot: "Purchasing",
+                        orderId: ids.ackOrderId
+                    }).orderRevisions
+            )
+        const buyer = read(users.buyer)
+        if (!buyer.actions.change || !buyer.actions.acknowledge) problems.push("the buyer is not offered the change and response")
+        const reader = read(users.read)
+        if (reader.actions.change || reader.actions.acknowledge) problems.push("the reader is offered the change or response")
+        const other = asUser(users.services, () =>
+            refusal("ironstone.purchasing.RevisionServices.get#OrderRevisions", {appRoot: "Purchasing", orderId: ids.ackOrderId})
+        )
+        if (!other.includes("RECORD_UNAVAILABLE")) problems.push(`another organization's reader: ${other || "accepted"}`)
+        const capability = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "order", recordId: ids.ackOrderId, capability: "buy"})
+            )
+        const holder = capability(users.buyer)
+        if (holder !== "") problems.push(`the buyer's change check: ${holder}`)
+        const without = capability(users.read)
+        if (!without.includes("PERMISSION_DENIED")) problems.push(`the reader's change check: ${without || "accepted"}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

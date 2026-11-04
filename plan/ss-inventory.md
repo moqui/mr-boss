@@ -545,7 +545,7 @@ is unchanged.
 | OrderDetail | ChildOrderList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | AddOrderPartToShipmentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Receiving/Receipts (PrepareReceipt, "Expected receipt (ASN)"); Purchasing/Orders/OrderDetail (Receipts and inspection) |
 | OrderDetail | EditPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: EditPurchaseOrder: reference and receiving facility of a draft) (Purchasing P3) |
-| OrderDetail | EditPartNonEdForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | EditPartNonEdForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderChanges (ProposedOrder: delivery date and terms of a placed order); Shared/OrderDetail (Purchasing: RecordAcknowledgement, the supplier's reference and date) (Purchasing P9) |
 | OrderDetail | CreateOrderPartParty | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: ClosePurchaseRemainder) (Purchasing P3) |
 | OrderDetail | AddPaymentForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |

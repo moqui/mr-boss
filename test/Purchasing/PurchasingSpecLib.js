@@ -23,7 +23,9 @@ const ids = {
     approvalPolicyIds: ["BOSS_PUR_APR_SMALL", "BOSS_PUR_APR_LARGE_1", "BOSS_PUR_APR_LARGE_2"],
     // P5: Retail's approved order from Ziddleman, late, with its expected receipt (nothing received)
     receiptOrderId: "BOSS_PUR_PO_RCV",
-    receiptId: "BOSS_PUR_RCV_SHIP"
+    receiptId: "BOSS_PUR_RCV_SHIP",
+    // P9: Retail's order from Brightline, sent and not acknowledged
+    ackOrderId: "BOSS_PUR_PO_ACK"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -154,7 +156,10 @@ function routeFixtures() {
         "Bills/BillList": {parameters: {}, text: "Supplier bills"},
         "Bills/MatchExceptions": {parameters: {}, text: "Match exceptions"},
         "Bills/InvoiceDetail": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"},
-        "Bills/InvoiceMatch": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"}
+        "Bills/InvoiceMatch": {parameters: {invoiceId: "BOSS_PUR_NO_BILL"}, text: "not available"},
+        // P9: the acknowledgements, and the sent order's change (none started: Start a change)
+        "Orders/Acknowledgements": {parameters: {}, text: "Acknowledgements"},
+        "Orders/OrderChanges": {parameters: {orderId: ids.ackOrderId}, text: "Start a change"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [

@@ -62,6 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="PurchaseLateReceipt"/>
         <!-- P6: a supplier bill held on its match, for the buyers of its organization -->
         <notification-topic topic="PurchaseMatchException"/>
+        <!-- P9: the sent purchase orders whose acknowledgement is due (the buying policy's reminder days), for buyers -->
+        <today-source service="ironstone.purchasing.RevisionServices.get#TodayItems" label="Purchasing acknowledgements"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>
