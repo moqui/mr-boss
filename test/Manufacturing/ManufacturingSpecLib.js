@@ -160,6 +160,21 @@ function routeFixtures() {
         ["BillsOfMaterials/CostRollup", shared + "CostRollup.xml"],
         ["Routings/RoutingDetail", shared + "RoutingDetail.xml"]
     )
+    // P5a: the Work orders area (Find by default), New work order, the quick create, and the demo draft run's detail, tabs and
+    // prints (a draft with no lines yet)
+    const run = {workEffortId: ids.runId}
+    Object.assign(routes, {
+        WorkOrders: {text: "Work orders"},
+        "WorkOrders/Find": {text: "Work orders"},
+        "WorkOrders/NewWorkOrder": {text: "New work order"},
+        "WorkOrders/QuickCreate": {text: "New work order"},
+        "WorkOrders/WorkOrderDetail": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Overview": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Operations": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Notes": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/Traveler": {parameters: run, text: "Demo assemblies"},
+        "WorkOrders/WorkOrderDetail/PickSheet": {parameters: run, text: "Demo assemblies"}
+    })
     return {routes, mounts}
 }
 

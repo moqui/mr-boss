@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrderDetail's Operations (design-manufacturing §3 Operations): the run's operations
+    (mantle.work.ProductionServices.get#ProductionOperations): a released run's operation children, a draft's routing
+    operations to come, each with its sequence, work center, predecessors, planned and actual dates, status, the materials it
+    consumes and its readiness with the reason (not released, on hold, waiting for a predecessor, short of a component). A run
+    with no routing has no operation and keeps its quantities and time itself. Reschedule comes with P12, execution with the
+    shop floor (P10). It reads the run when the client loads the tab alone. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Operations" default-menu-index="4">
+    <parameter name="workEffortId"/>
+    <parameter name="selectedOperationId"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionOperations" out-map="operationsFound"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="operationRows" from="(operationsFound?.operationRows || []).map((row) =&gt; Object.assign({}, row, {
+                readyColor: row.ready ? 'positive' : (row.readinessText == 'Done' ? 'teal' : 'warning'),
+                selected: !!selectedOperationId &amp;&amp; row.workEffortId == selectedOperationId}))"/>
+        <set field="routed" from="!!operationsFound?.routed"/>
+        <set field="draftOperations" from="!!operationsFound?.draft"/>
+    </actions>
+    <widgets>
+        <section name="OperationsFound" condition="recordFound">
+            <widgets>
+                <label text="The operations the routing will release with the work order." type="p" style="text-caption m-muted"
+                        condition="draftOperations &amp;&amp; operationRows.length"/>
+                <form-list name="RunOperations" list="operationRows" skip-form="true" paginate="false">
+                    <field name="sequenceNum" align="right"><default-field title="#"><display/></default-field></field>
+                    <field name="workEffortName">
+                        <default-field title="Operation"><display style="${selected ? 'text-weight-bold' : ''}"/></default-field>
+                    </field>
+                    <field name="workCenterName"><default-field title="Work center"><display/></default-field></field>
+                    <field name="predecessorText"><default-field title="After"><display/></default-field></field>
+                    <field name="plannedText"><default-field title="Planned"><display/></default-field></field>
+                    <field name="actualText"><default-field title="Actual"><display/></default-field></field>
+                    <field name="materialCount" align="right"><default-field title="Materials"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="readinessText">
+                        <default-field title="Readiness">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readyColor}">${
+                                    WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
+                                <text type="html">${readinessText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortName"/><field-ref name="workCenterName"/></column>
+                        <column><field-ref name="readinessText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No routing: this work order has no operations and keeps its quantities and time itself." type="p"
+                        style="m-muted" condition="!operationRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

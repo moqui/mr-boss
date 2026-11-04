@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewWorkOrder (design-manufacturing §3 NewWorkOrder; style-guide §3.10 Wizard, as a detail with a box per step and a Next
+    primary): a draft run from a released product method in three steps, the URL holding each step's values so Back keeps
+    them. Identity: the product (one with a released BOM of the user's organizations), quantity, the line or plant, the dates
+    and the demand (a sales order line or a requirement). Method: the released BOM (its MAIN one by default), the routing it
+    names and the method date, with the explosion's findings. Review: the explosion's requirements as of the method date
+    (mantle.product.BomServices.get#BomExplosion; they stop at non-phantom sub-assemblies, whose stock counts, and blow
+    phantoms through), each with the stock free at the facility the run nets against (the line's plant) and what is short,
+    and the quantity producible now (the explosion's buildableQuantity there, R-MFG-30, F24); Create draft
+    (mantle.work.ProductionServices.create#ProductionOrder, PRODUCTION_PLAN) opens the draft in WorkOrderDetail, and its
+    operation key, made at the first step, answers a second submit with the same draft. A shortage allows the draft; its
+    release is gated. For planners (BOSS_MFG_NEW_WORK_ORDER). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New work order" default-menu-include="false">
+    <parameter name="step"/>
+    <parameter name="operationKey"/>
+    <parameter name="productId"/>
+    <parameter name="quantity"/>
+    <parameter name="facilityId"/>
+    <parameter name="estimatedStartDate"/>
+    <parameter name="estimatedCompletionDate"/>
+    <parameter name="workEffortName"/>
+    <parameter name="sourceOrderId"/>
+    <parameter name="orderItemSeqId"/>
+    <parameter name="requirementId"/>
+    <parameter name="productBomId"/>
+    <parameter name="methodDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <!-- Next and Back: the step's values go back to this page in its parameters -->
+    <transition name="toStep">
+        <actions>
+            <set field="step" from="nextStep || 'identity'"/>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="createDraft">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'plan'}"/>
+            <service-call name="mantle.work.ProductionServices.create#ProductionOrder" out-map="created"
+                    in-map="{operationKey:operationKey, organizationPartyId:organizationPartyId, productId:productId,
+                        quantity:quantity, facilityId:facilityId, estimatedStartDate:estimatedStartDate || null,
+                        estimatedCompletionDate:estimatedCompletionDate || null, productBomId:productBomId || null,
+                        methodDate:methodDate || null, workEffortName:workEffortName || null,
+                        sourceOrderId:sourceOrderId || null, orderItemSeqId:orderItemSeqId || null,
+                        requirementId:requirementId || null}"/>
+            <set field="workEffortId" from="created.workEffortId"/>
+            <script>if (created.existing) ec.message.addMessage('This draft was created already', 'info')</script>
+        </actions>
+        <default-response url="../WorkOrderDetail">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="step" value="review"/>
+        </error-response>
+    </transition>
+    <actions>
+        <set field="step" from="['identity', 'method', 'review'].includes(step) ? step : 'identity'"/>
+        <set field="operationKey" from="operationKey || ('new-wo-' + ec.user.randomString(24))"/>
+        <set field="canPlan" from="!!manufacturing.capabilities.plan"/>
+        <!-- the values each step carries, so Back keeps them -->
+        <set field="carried" from="{operationKey:operationKey, productId:productId || '', quantity:quantity || '',
+                facilityId:facilityId || '', estimatedStartDate:estimatedStartDate || '',
+                estimatedCompletionDate:estimatedCompletionDate || '', workEffortName:workEffortName || '',
+                sourceOrderId:sourceOrderId || '', orderItemSeqId:orderItemSeqId || '', requirementId:requirementId || '',
+                productBomId:productBomId || '', methodDate:methodDate || ''}"/>
+        <set field="identityReady" from="!!(productId &amp;&amp; quantity &amp;&amp; Number(quantity) &gt; 0 &amp;&amp; facilityId)"/>
+        <if condition="step != 'identity' &amp;&amp; !identityReady">
+            <set field="step" value="identity"/>
+            <message type="warning">Choose the product, a quantity above zero and the line or plant first.</message>
+        </if>
+        <if condition="step != 'identity'">
+            <!-- the facility is the user's, and its owner is the run's organization -->
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="facilityCheck"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId}" transaction="force-new"
+                    ignore-error="true"/>
+            <entity-find-one entity-name="mantle.facility.Facility" value-field="facility">
+                <field-map field-name="facilityId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="mantle.product.Product" value-field="product">
+                <field-map field-name="productId"/>
+            </entity-find-one>
+            <set field="organizationPartyId" from="facility?.ownerPartyId"/>
+            <!-- the stock a run on a line nets against is its plant's (F16) -->
+            <set field="stockFacilityId" from="facility?.facilityTypeEnumId == 'FcTpLine' &amp;&amp; facility?.parentFacilityId
+                    ? facility.parentFacilityId : facilityId"/>
+            <set field="explosion" from="null"/>
+            <!-- the BOM: the one chosen, else the product's MAIN released one, else its only one -->
+            <script><![CDATA[
+                chosenBomId = productBomId || ''
+                if (!chosenBomId) {
+                    const options = ec.service.sync().name('ironstone.manufacturing.AccessServices.get#Choices')
+                            .parameters({choice: 'releasedBoms', productId: productId}).call()?.options || []
+                    const boms = options.map((option) => ec.entity.find('mantle.product.bom.ProductBom')
+                            .condition('productBomId', option.value).one()).filter((row) => row)
+                    const main = boms.filter((row) => row.methodCode === 'MAIN')
+                    chosenBomId = main.length === 1 ? main[0].productBomId : boms.length === 1 ? boms[0].productBomId : ''
+                }
+            ]]></script>
+            <if condition="chosenBomId">
+                <service-call name="mantle.product.BomServices.get#BomExplosion" out-map="explosion" transaction="force-new"
+                        ignore-error="true"
+                        in-map="{productBomId:chosenBomId, asOfDate:methodDate || null, quantity:quantity,
+                            facilityId:stockFacilityId}"/>
+            </if>
+            <set field="bom" from="explosion?.productBom || null"/>
+            <set field="findingRows" from="(explosion?.findings || []).map((row) =&gt; ({message: row.message, recordId: row.recordId}))"/>
+            <set field="methodReady" from="!!bom &amp;&amp; !findingRows.length"/>
+            <script><![CDATA[
+                // the requirements with the stock free at the facility the run nets against, and what is short
+                requirementRows = []
+                for (const row of explosion?.requirements || []) {
+                    let free = null
+                    try {
+                        free = ec.service.sync().name('mantle.product.AssetServices.get#AvailableInventory').parameters({productId: row.productId,
+                            facilityId: stockFacilityId, ownerPartyIdList: [organizationPartyId]}).disableAuthz().call()?.availableToPromiseTotal
+                    } catch (error) {
+                        ec.logger.warn('New work order: availability of ' + row.productId + ' unavailable: ' + error.message)
+                    }
+                    const component = ec.entity.find('mantle.product.Product').condition('productId', row.productId).one()
+                    const need = Number(String(row.quantity))
+                    const have = free == null ? null : Number(String(free))
+                    requirementRows.push({productId: row.productId, productName: component?.productName || row.productId,
+                        quantity: need, quantityUomId: row.quantityUomId, available: have,
+                        shortText: have == null ? 'Unavailable' : have >= need ? '' : String(need - have)})
+                }
+                shortCount = requirementRows.filter((row) => row.shortText).length
+                producibleText = explosion?.buildableQuantity == null ? 'Unavailable' : String(Math.floor(Number(explosion.buildableQuantity)))
+                const decision = explosion?.releaseDecisionId ? ec.entity.find('mantle.work.method.MethodReleaseDecision')
+                        .condition('methodReleaseDecisionId', explosion.releaseDecisionId).disableAuthz().one() : null
+                releaseText = decision?.fromDate ? ec.l10n.format(decision.fromDate, 'yyyy-MM-dd HH:mm') : ''
+            ]]></script>
+        </if>
+        <set field="stepTitles" from="[{key: 'identity', text: '1 Identity'}, {key: 'method', text: '2 Method'},
+                {key: 'review', text: '3 Review'}]"/>
+    </actions>
+    <widgets>
+        <context title="New work order"/>
+        <container style="row items-center q-mb-sm">
+            <label text="New work order" type="h5" style="q-my-none"/>
+            <container style="col"/>
+            <link url="../Find" text="Work orders" icon="sym_o_task_alt" link-type="anchor-button"/>
+        </container>
+        <section name="NotPlanner" condition="!canPlan">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="Only a production planner creates work orders." type="p"/>
+                        <link url="../Find" text="Back to the work orders" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Steps" condition="canPlan">
+            <widgets>
+                <container style="row q-gutter-sm q-mb-sm">
+                    <section-iterate name="StepTitles" list="stepTitles" entry="stepTitle">
+                        <widgets>
+                            <label text="${stepTitle.text}" type="span"
+                                    style="${stepTitle.key == step ? 'text-weight-bold text-primary' : 'm-muted'}"/>
+                        </widgets>
+                    </section-iterate>
+                </container>
+
+                <!-- 1. Identity -->
+                <section name="IdentityStep" condition="step == 'identity'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="What to make, where and for what demand"/>
+                            <box-body>
+                                <form-single name="Identity" transition="toStep" map="carried">
+                                    <field name="nextStep" from="'method'"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="productBomId"><default-field><hidden/></default-field></field>
+                                    <field name="methodDate"><default-field><hidden/></default-field></field>
+                                    <field name="productId">
+                                        <default-field title="Product" tooltip="A product with a released BOM">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'madeProducts', selected:productId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity">
+                                        <default-field title="Quantity" tooltip="In the BOM's unit">
+                                            <text-line size="8" required="true"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="facilityId" from="facilityId || manufacturing.plantId || ''">
+                                        <default-field title="Line or plant">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'runFacilities', selected:facilityId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="workEffortName">
+                                        <default-field title="Name" tooltip="Make (quantity) (product) when empty">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="estimatedStartDate"><default-field title="Start"><date-time/></default-field></field>
+                                    <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+                                    <field name="sourceOrderId"><default-field title="Sales order"><text-line size="12"/></default-field></field>
+                                    <field name="orderItemSeqId"><default-field title="Order line"><text-line size="6"/></default-field></field>
+                                    <field name="requirementId"><default-field title="Requirement"><text-line size="12"/></default-field></field>
+                                    <field name="submit">
+                                        <default-field title=""><submit text="Next: method" type="primary"/></default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="productId"/>
+                                            <field-ref name="quantity"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="facilityId"/>
+                                            <field-ref name="workEffortName"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="estimatedStartDate"/>
+                                            <field-ref name="estimatedCompletionDate"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="sourceOrderId"/>
+                                            <field-ref name="orderItemSeqId"/>
+                                        </field-row>
+                                        <field-ref name="requirementId"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- 2. Method -->
+                <section name="MethodStep" condition="step == 'method'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="The method of ${product?.productName || productId}"/>
+                            <box-body>
+                                <form-single name="Method" transition="toStep" map="Object.assign({}, carried, {productBomId:chosenBomId})">
+                                    <field name="nextStep" from="'review'"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="productId"><default-field><hidden/></default-field></field>
+                                    <field name="quantity"><default-field><hidden/></default-field></field>
+                                    <field name="facilityId"><default-field><hidden/></default-field></field>
+                                    <field name="workEffortName"><default-field><hidden/></default-field></field>
+                                    <field name="estimatedStartDate"><default-field><hidden/></default-field></field>
+                                    <field name="estimatedCompletionDate"><default-field><hidden/></default-field></field>
+                                    <field name="sourceOrderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                    <field name="requirementId"><default-field><hidden/></default-field></field>
+                                    <field name="productBomId">
+                                        <default-field title="BOM" tooltip="A released method of the product; its MAIN one by default">
+                                            <drop-down allow-empty="false">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'releasedBoms', productId:productId, selected:chosenBomId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="methodDate">
+                                        <default-field title="Method as of" tooltip="Now when empty">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title=""><submit text="Next: review" type="primary"/></default-field>
+                                    </field>
+                                </form-single>
+                                <label text="Routing: ${bom?.routingWorkEffortId || 'none (a simple run with no operations)'}" type="p"
+                                        style="text-caption m-muted" condition="bom"/>
+                                <label text="No released BOM makes this product at that date; a method approver releases one first."
+                                        type="p" style="text-negative" condition="!bom"/>
+                                <section-iterate name="MethodFindings" list="findingRows" entry="finding">
+                                    <widgets>
+                                        <label text="${finding.recordId ? finding.recordId + ': ' : ''}${finding.message}" type="p"
+                                                style="text-negative"/>
+                                    </widgets>
+                                </section-iterate>
+                                <link url="toStep" text="Back" link-type="hidden-form-link" icon="sym_o_arrow_back"
+                                        parameter-map="Object.assign({}, carried, {nextStep:'identity'})"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- 3. Review -->
+                <section name="ReviewStep" condition="step == 'review'">
+                    <widgets>
+                        <dashboard min-width="150" style="q-mb-sm">
+                            <number-card title="To make" value="${quantity}" icon="sym_o_precision_manufacturing" size="sm"/>
+                            <number-card title="Producible now" value="${producibleText}" icon="sym_o_inventory_2" size="sm"/>
+                            <number-card title="Short components" value="${shortCount}" icon="sym_o_warning" size="sm"/>
+                        </dashboard>
+                        <container-box>
+                            <box-header title="Review: ${quantity} ${product?.productName || productId} at ${facility?.facilityName || facilityId}"/>
+                            <box-body>
+                                <label text="BOM ${bom?.productBomId}${bom?.methodCode ? ' (' + bom.methodCode + ')' : ''}${releaseText ? ', released ' + releaseText : ''}; routing ${bom?.routingWorkEffortId || 'none'}"
+                                        type="p" condition="bom"/>
+                                <label text="Demand: sales order ${sourceOrderId}${orderItemSeqId ? ' line ' + orderItemSeqId : ''}"
+                                        type="p" condition="sourceOrderId"/>
+                                <label text="Demand: requirement ${requirementId}" type="p" condition="requirementId"/>
+                                <label text="The draft is created with its shortages; its release waits until the components are covered or a supervisor approves a staged release."
+                                        type="p" style="text-warning" condition="shortCount &gt; 0"/>
+                                <section-iterate name="ReviewFindings" list="findingRows" entry="finding">
+                                    <widgets>
+                                        <label text="${finding.message}" type="p" style="text-negative"/>
+                                    </widgets>
+                                </section-iterate>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="Requirements" list="requirementRows" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Component"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Required"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="quantityUomId">
+                                        <default-field title="Unit">
+                                            <display-entity entity-name="moqui.basic.Uom" text="${description}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="available" align="right">
+                                        <default-field title="Free now"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="shortText" align="right">
+                                        <default-field title="Short"><display style="text-negative"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="quantity"/></column>
+                                        <column><field-ref name="available"/><field-ref name="shortText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                            <box-body>
+                                <container style="row items-center q-gutter-sm">
+                                    <link url="createDraft" text="Create draft" link-type="hidden-form" btn-type="primary"
+                                            icon="sym_o_add_task" condition="methodReady"
+                                            parameter-map="Object.assign({}, carried, {productBomId:chosenBomId,
+                                                organizationPartyId:organizationPartyId})"/>
+                                    <link url="toStep" text="Back" link-type="hidden-form-link" icon="sym_o_arrow_back"
+                                            parameter-map="Object.assign({}, carried, {nextStep:'method'})"/>
+                                </container>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

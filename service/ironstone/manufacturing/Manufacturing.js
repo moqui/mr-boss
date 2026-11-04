@@ -842,6 +842,165 @@ function enumOptions(enumTypeId, term, selected) {
     )
 }
 
+// ===== P5a: work orders =====
+// The Work orders area's screens (impl-manufacturing P5a): a run opens WorkOrderDetail, an operation its run's Operations;
+// their routes are in sharedLinks; and the drop-downs of New work order, Overview and the Lifecycle dialog.
+recordKinds.run.destination = "WorkOrders/WorkOrderDetail?workEffortId="
+recordKinds.operation.destination = workEffortId => {
+    const operation = one("mantle.work.effort.WorkEffort", {workEffortId})
+    const runId = operation?.rootWorkEffortId || operation?.parentWorkEffortId || workEffortId
+    return (
+        "WorkOrders/WorkOrderDetail/Operations?workEffortId=" +
+        encodeURIComponent(runId) +
+        "&selectedOperationId=" +
+        encodeURIComponent(workEffortId)
+    )
+}
+linkPaths.push(
+    "WorkOrders/Find",
+    "WorkOrders/NewWorkOrder",
+    "WorkOrders/WorkOrderDetail",
+    "WorkOrders/WorkOrderDetail/Overview",
+    "WorkOrders/WorkOrderDetail/Operations",
+    "WorkOrders/WorkOrderDetail/Notes"
+)
+// the products of the user's organizations with a released BOM of theirs (a run is made only from one, METHOD_REQUIRED)
+function madeProductIds(userScope) {
+    let boms = find("mantle.product.bom.ProductBom").selectField("productBomId,productId,organizationPartyId")
+    if (userScope.ownerIds) boms = boms.condition("organizationPartyId", "in", userScope.ownerIds)
+    const rowsFound = Array.from(boms.limit(2000).list())
+    if (!rowsFound.length) return []
+    const released = new Set(
+        Array.from(
+            find("mantle.work.method.MethodReleaseDecision", {methodEntityName: "mantle.product.bom.ProductBom"})
+                .condition(
+                    "methodId",
+                    "in",
+                    rowsFound.map(row => row.productBomId)
+                )
+                .selectField("methodId")
+                .distinct(true)
+                .list()
+        ).map(row => row.methodId)
+    )
+    return Array.from(new Set(rowsFound.filter(row => released.has(row.productBomId)).map(row => row.productId)))
+}
+const personName = person => [person.firstName, person.lastName].filter(Boolean).join(" ") || person.partyId
+Object.assign(choiceSources, {
+    // the products a work order may make: the user's organizations' products with a released BOM
+    madeProducts: (userScope, term, selected) => {
+        const productIds = madeProductIds(userScope)
+        if (!productIds.length) return []
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        return rowOptions(
+            find("mantle.product.Product").condition("productId", "in", productIds).orderBy("productName"),
+            "productId",
+            label,
+            ["productId", "pseudoId", "productName"],
+            term,
+            selected,
+            productId => (productIds.includes(productId) ? one("mantle.product.Product", {productId}) : null)
+        )
+    },
+    // the released BOMs of the chosen product (productId), by method code
+    releasedBoms: (userScope, term, selected, p) => {
+        if (!p.productId) return []
+        let query = find("mantle.product.bom.ProductBom", {productId: p.productId}).orderBy("methodCode")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        const released = row =>
+            find("mantle.work.method.MethodReleaseDecision", {
+                methodEntityName: "mantle.product.bom.ProductBom",
+                methodId: row.productBomId
+            }).count() > 0
+        const label = row => [row.methodCode, row.bomName].filter(Boolean).join(" · ") || row.productBomId
+        return rowOptions(query, "productBomId", label, ["productBomId", "methodCode", "bomName"], term, selected, productBomId => {
+            const row = one("mantle.product.bom.ProductBom", {productBomId})
+            return row && owns(userScope, row.organizationPartyId) && row.productId === p.productId ? row : null
+        }).filter(option => released(one("mantle.product.bom.ProductBom", {productBomId: option.value})))
+    },
+    // where a run is made: the user's work centers (lines) and plants
+    runFacilities: (userScope, term, selected) => {
+        const centerIds = workCenterIds()
+        const factory = ec.entity.conditionFactory
+        const kinds = [factory.makeCondition("facilityTypeEnumId", "in", plantTypes.concat(["FcTpLine"]))]
+        if (centerIds.length) kinds.push(factory.makeCondition("facilityId", "in", centerIds))
+        const parentIds = plantIdsAbove(centerIds)
+        if (parentIds.length) kinds.push(factory.makeCondition("facilityId", "in", parentIds))
+        return facilityOptions(
+            facilityFind(userScope).condition(factory.makeCondition(kinds, "or")),
+            term,
+            selected,
+            facility => inScope(userScope, facility)
+        )
+    },
+    // equipment at the user's facilities (not stock)
+    runEquipment: (userScope, term, selected) => {
+        const facilityIds = Array.from(facilityFind(userScope).selectField("facilityId").list()).map(row => row.facilityId)
+        if (!facilityIds.length) return []
+        const label = row => [row.assetName || row.assetId, row.serialNumber].filter(Boolean).join(" · ")
+        return rowOptions(
+            find("mantle.product.asset.Asset")
+                .condition("facilityId", "in", facilityIds)
+                .condition("assetTypeEnumId", "not-in", ["AstTpInventory", "AstTpSupplies"])
+                .orderBy("assetName"),
+            "assetId",
+            label,
+            ["assetId", "assetName", "serialNumber"],
+            term,
+            selected,
+            assetId => {
+                const row = one("mantle.product.asset.Asset", {assetId})
+                return row && inScope(userScope, facilityById(row.facilityId)) ? row : null
+            }
+        )
+    },
+    // the people of the user's organizations (employees and agents), for a run's supervisor or operator
+    runPeople: (userScope, term, selected) => {
+        let relations = find("mantle.party.PartyRelationship")
+            .condition("relationshipTypeEnumId", "in", ["PrtEmployee", "PrtAgent"])
+            .condition("thruDate", "is-null", null)
+            .selectField("fromPartyId")
+            .distinct(true)
+        if (userScope.ownerIds) relations = relations.condition("toPartyId", "in", userScope.ownerIds)
+        const partyIds = Array.from(relations.limit(2000).list()).map(row => row.fromPartyId)
+        if (!partyIds.length) return []
+        return rowOptions(
+            find("mantle.party.Person").condition("partyId", "in", partyIds).orderBy("firstName"),
+            "partyId",
+            personName,
+            ["partyId", "firstName", "lastName"],
+            term,
+            selected,
+            partyId => (partyIds.includes(partyId) ? one("mantle.party.Person", {partyId}) : null)
+        )
+    },
+    // the active production reasons of the user's organizations for a hold or a cancellation
+    holdReasons: (userScope, term, selected) => {
+        const now = ec.user.nowTimestamp
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", ["PrcHold", "PrcDowntime"])
+            .condition("fromDate", "less-equals", now)
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("thruDate", "is-null", null), factory.makeCondition("thruDate", "greater-than", now)],
+                    "or"
+                )
+            )
+            .orderBy("sequenceNum")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        return rowOptions(
+            query,
+            "reasonCode",
+            row => row.reasonName || row.reasonCode,
+            ["reasonCode", "reasonName"],
+            term,
+            selected,
+            () => null
+        )
+    }
+})
+
 const operations = {sharedContext, selectPlant, checkRecord, search, choices}
 ;({
     recordLink,

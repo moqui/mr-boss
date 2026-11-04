@@ -1158,6 +1158,21 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Manufacturing P5a: New work order and its quick create, for the planners (and the administrator) only -->
+    <artifactGroups artifactGroupId="BOSS_MFG_NEW_WORK_ORDER">
+        <artifacts artifactName="component://mr-boss/screen/Manufacturing/WorkOrders/(NewWorkOrder|QuickCreate)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_MFG_NewWorkOrder_DENY" userGroupId="BOSS_MANUFACTURING" authzTypeEnumId="AUTHZT_DENY"
+                authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_MFG_NewWorkOrder_PLAN" userGroupId="BOSS_MANUFACTURING_PLAN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_MFG_NewWorkOrder_ADMIN" userGroupId="BOSS_MANUFACTURING_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- the record links of the palette, Today and notifications for Manufacturing users (runs, operations, methods, routings
         and work centers route through ironstone.manufacturing's scope) -->
     <artifactGroups artifactGroupId="BOSS_MFG_RECORD_LINK">
@@ -1193,4 +1208,9 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Manufacturing/BillsOfMaterials/BillOfMaterialsDetail?productBomId=${productBomId}"/>
     <moqui.security.user.NotificationTopic topic="RoutingRelease"
             linkTemplate="/qapps/Manufacturing/Routings/RoutingDetail?workEffortId=${workEffortId}"/>
+    <!-- Manufacturing P5a: the release notice and the staged release requests open the work order -->
+    <moqui.security.user.NotificationTopic topic="ProductionRelease"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
+    <moqui.security.user.NotificationTopic topic="ProductionStagedRelease"
+            linkTemplate="/qapps/Manufacturing/WorkOrders/WorkOrderDetail?workEffortId=${workEffortId}"/>
 </entity-facade-xml>

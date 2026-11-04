@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The pick sheet of a work order (design-manufacturing §11, from Marble's RunPickDocument): each material line with its
+    operation, what it requires and has left, and the stock to pick for it (mantle.work.ProductionServices.get#ProductionPickList:
+    the run owner's available stock at the line and its plant, oldest receipt first, by lot and location), with what stays
+    short. A print (html-print) opened from WorkOrderDetail's More menu. Picking moves nothing; the issue posts on
+    MaterialIssueReceipt. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pick sheet" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionPickList" out-map="picks" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <service-call name="mantle.work.ProductionServices.get#ProductionOrder" out-map="order" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="pickRows" from="picks?.pickRows || []"/>
+    </actions>
+    <widgets>
+        <section name="PickSheetFound" condition="recordFound">
+            <widgets>
+                <label text="Pick sheet: work order ${workEffortId}" type="h5"/>
+                <label text="${order?.run?.workEffortName || ''} · ${order?.run?.facilityName || ''}" type="p" condition="order?.run"/>
+                <form-list name="PickLines" list="pickRows" skip-form="true" paginate="false">
+                    <field name="pseudoId"><default-field title="Product"><display/></default-field></field>
+                    <field name="productName"><default-field title="Name"><display/></default-field></field>
+                    <field name="operationName"><default-field title="Operation"><display/></default-field></field>
+                    <field name="remaining" align="right"><default-field title="To pick"><display format="#,##0.###"/></default-field></field>
+                    <field name="pickText"><default-field title="From"><display/></default-field></field>
+                    <field name="short" align="right"><default-field title="Short"><display style="text-negative"/></default-field></field>
+                    <field name="picked"><default-field title="Picked"><display text=" "/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="productName"/><field-ref name="pickText"/></column>
+                        <column><field-ref name="remaining"/><field-ref name="short"/></column>
+                    </columns>
+                </form-list>
+                <label text="This work order has no material lines." type="p" condition="!pickRows.length"/>
+            </widgets>
+        </section>
+        <label text="Work order ${workEffortId} is not available." type="p" condition="!recordFound"/>
+    </widgets>
+</screen>

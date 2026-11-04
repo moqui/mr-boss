@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A new draft work order from the shell's quick create (design-manufacturing §1.2): the product (one with a released BOM),
+    quantity, line or plant and due date, from the product's MAIN or only released BOM as of now
+    (mantle.work.ProductionServices.create#ProductionOrder, PRODUCTION_PLAN); it opens the draft in WorkOrderDetail. New work
+    order has the method and review steps. For planners (BOSS_MFG_NEW_WORK_ORDER), so quick create offers it to them only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New work order" default-menu-include="false">
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <transition name="createDraft">
+        <actions>
+            <service-call name="ironstone.manufacturing.AccessServices.check#Record" out-map="facilityCheck"
+                    in-map="{appRoot:appRoot, recordType:'facility', recordId:facilityId, capability:'plan'}"/>
+            <entity-find-one entity-name="mantle.facility.Facility" value-field="facility">
+                <field-map field-name="facilityId"/>
+            </entity-find-one>
+            <service-call name="mantle.work.ProductionServices.create#ProductionOrder" out-map="created"
+                    in-map="{operationKey:operationKey, organizationPartyId:facility?.ownerPartyId, productId:productId,
+                        quantity:quantity, facilityId:facilityId, estimatedCompletionDate:estimatedCompletionDate || null}"/>
+            <set field="workEffortId" from="created.workEffortId"/>
+        </actions>
+        <default-response url="//Manufacturing/WorkOrders/WorkOrderDetail">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="draftValue" from="{operationKey:'quick-wo-' + ec.user.randomString(24), facilityId:manufacturing.plantId || ''}"/>
+    </actions>
+    <widgets>
+        <label text="New work order" type="h5"/>
+        <label text="A draft from the product's released BOM; review and release it on the work order." type="p"
+                style="text-caption m-muted"/>
+        <form-single name="QuickDraft" transition="createDraft" map="draftValue">
+            <field name="operationKey"><default-field><hidden/></default-field></field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'madeProducts'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="quantity"><default-field title="Quantity"><text-line size="8" required="true"/></default-field></field>
+            <field name="facilityId">
+                <default-field title="Line or plant">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'runFacilities', selected:facilityId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="estimatedCompletionDate"><default-field title="Due"><date-time/></default-field></field>
+            <field name="submit">
+                <default-field title=""><submit text="Create draft" type="primary"/></default-field>
+            </field>
+        </form-single>
+    </widgets>
+</screen>

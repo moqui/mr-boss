@@ -116,7 +116,9 @@ const manufacturingPaths = {
     "Prices/CostRollup": "BillsOfMaterials/CostRollup",
     Routings: "Routings",
     RoutingDetail: "Routings/RoutingDetail",
-    OperationTemplates: "Routings/OperationTemplates"
+    OperationTemplates: "Routings/OperationTemplates",
+    // impl-manufacturing P5a: Product360's Open runs link
+    WorkOrders: "WorkOrders/Find"
 }
 function manufacturingContext() {
     const manufacturing = ec.resource.script("component://mr-boss/service/ironstone/manufacturing/Manufacturing.js")

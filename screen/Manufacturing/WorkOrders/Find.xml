@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WorkOrders (design-manufacturing §3 WorkOrders; style-guide §3.2 List): Find and the list of the runs of the user's
+    organizations (mantle.work.ProductionServices.find#ProductionOrders, PRODUCTION_VIEW), open ones by default, with the saved
+    finds Ready, Late, Blocked, Mine and By product (the product filter, which Product360's Open runs link sets). Its views:
+    the list, a board by status whose move posts transition#ProductionOrder (the same guarded transition as the Lifecycle
+    dialog, never a status update: a release runs the release gate, and a refused move goes back with its reason), and a
+    calendar from the estimated start to the due date. The Selection releases, holds or cancels the selected runs after a
+    confirmation (batch#ProductionAction), naming each run that is blocked or failed. New work order opens NewWorkOrder for a
+    planner. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Work orders" default-menu-include="false">
+    <parameter name="text"/>
+    <parameter name="facilityId"/>
+    <parameter name="productId"/>
+    <parameter name="statusId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="ready"/>
+    <parameter name="late"/>
+    <parameter name="blocked"/>
+    <parameter name="mine"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <!-- a card moved to another status column: the run's transition to it, at the card's revision (a second drop of the same
+        move answers the first) -->
+    <transition name="moveCard">
+        <actions>
+            <script><![CDATA[
+                ec.service.sync().name('ironstone.manufacturing.AccessServices.check#Record')
+                        .parameters({appRoot: 'Manufacturing', recordType: 'run', recordId: workEffortId}).call()
+                let moved = null
+                if (!ec.message.hasError())
+                    moved = ec.service.sync().name('mantle.work.ProductionServices.transition#ProductionOrder').parameters({
+                        operationKey: 'board-' + workEffortId + '-' + (revision ?? '') + '-' + (statusId ?? ''),
+                        workEffortId: workEffortId, toStatusId: statusId, expectedRevision: revision}).call()?.result
+                const done = {RELEASED: 'released', REEXPLODED: 're-exploded for review', UNRELEASED: 'back to a draft',
+                    STARTED: 'started', RESUMED: 'resumed', HELD: 'held', CANCELLED: 'cancelled'}
+                ec.web.sendJsonResponse(ec.message.hasError() || !moved ? {} : {messageInfos: [{type: 'success',
+                    message: 'Work order ' + workEffortId + ' ' + (done[moved.resultCode] || moved.resultCode)}]})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the selected runs (selectedIds) and the action, a result per run -->
+    <transition name="bulkAction">
+        <actions>
+            <set field="workEffortIds" from="Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.work.ProductionServices.batch#ProductionAction"
+                    in-map="{operationKey:bulkKey, action:bulk, workEffortIds:workEffortIds, reason:reason, reasonCode:reasonCode}"
+                    out-map="bulkOut"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const verb = {release: 'Released', hold: 'Held', cancel: 'Cancelled'}[bulk] || 'Done'
+                    if (bulkOut.successCount) ec.message.addMessage(verb + ': ' + bulkOut.results.filter((row) => row.ok)
+                            .map((row) => row.workEffortId).join(', '), 'success')
+                    for (const row of bulkOut.results.filter((row) => !row.ok))
+                        ec.message.addMessage((row.outcome === 'blocked' ? 'Blocked ' : 'Not done ') + row.workEffortId + ': '
+                                + String(row.message || '').replace(/^([A-Z_]+: )/, ''), 'warning')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.work.ProductionServices.find#ProductionOrders" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{text:text, facilityId:facilityId, productId:productId, statusId:statusId, assigneePartyId:assigneePartyId,
+                    ready:ready, late:late, blocked:blocked, mine:mine, pageIndex:pageIndex, pageSize:pageSize,
+                    pageNoLimit:pageNoLimit}"/>
+        <set field="orderRows" from="found?.orderRows || []"/>
+        <set field="orderRowsCount" from="found?.orderRowsCount"/>
+        <set field="orderRowsPageIndex" from="found?.orderRowsPageIndex"/>
+        <set field="orderRowsPageSize" from="found?.orderRowsPageSize"/>
+        <set field="orderRowsPageMaxIndex" from="found?.orderRowsPageMaxIndex"/>
+        <set field="orderRowsPageRangeLow" from="found?.orderRowsPageRangeLow"/>
+        <set field="orderRowsPageRangeHigh" from="found?.orderRowsPageRangeHigh"/>
+        <set field="canPlan" from="!!manufacturing.capabilities.plan"/>
+        <set field="canSupervise" from="!!manufacturing.capabilities.supervise"/>
+        <set field="bulkKey" from="'bulk-' + ec.user.randomString(24)"/>
+        <set field="filtered" from="!!(text || facilityId || productId || statusId || assigneePartyId || ready || late || blocked
+                || mine)"/>
+        <set field="emptyText" from="filtered ? 'No work order matches these filters.'
+                : (canPlan ? 'No work order is open. Plan one with New work order.' : 'No work order is open at your plants.')"/>
+    </actions>
+    <widgets>
+        <context title="Work orders" selection-form="WorkOrderList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Work orders" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="../NewWorkOrder" text="New work order" link-type="anchor-button" btn-type="primary" icon="sym_o_add"
+                        condition="canPlan"/>
+                <link url="." text="Ready" link-type="anchor-button" icon="sym_o_play_circle" parameter-map="{ready:'Y'}"/>
+                <link url="." text="Late" link-type="anchor-button" icon="sym_o_schedule" parameter-map="{late:'Y'}"/>
+                <link url="." text="Blocked" link-type="anchor-button" icon="sym_o_block" parameter-map="{blocked:'Y'}"/>
+                <link url="." text="Mine" link-type="anchor-button" icon="sym_o_person" parameter-map="{mine:'Y'}"/>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="WorkOrderList" list="orderRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true" views="list,board,calendar" show-csv-button="true">
+                    <row-selection id-field="workEffortId" parameter="selectedIds" list-mode="true" condition="canPlan || canSupervise">
+                        <action>
+                            <form-single name="BulkRelease" transition="bulkAction">
+                                <field name="bulk" from="'release'"><default-field><hidden/></default-field></field>
+                                <field name="bulkKey" from="bulkKey"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Release">
+                                        <submit icon="sym_o_rocket_launch" confirmation="Release the selected work orders? Each runs its release checks."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Hold" button-icon="sym_o_pause_circle" title="Hold the selected work orders"/>
+                            <form-single name="BulkHold" transition="bulkAction">
+                                <field name="bulk" from="'hold'"><default-field><hidden/></default-field></field>
+                                <field name="bulkKey" from="bulkKey"><default-field><hidden/></default-field></field>
+                                <field name="reasonCode">
+                                    <default-field title="Reason">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'holdReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason"><default-field title="Note"><text-line/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Hold">
+                                        <submit confirmation="Hold the selected work orders?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Cancel" button-icon="sym_o_cancel" title="Cancel the selected work orders"/>
+                            <form-single name="BulkCancel" transition="bulkAction">
+                                <field name="bulk" from="'cancel'"><default-field><hidden/></default-field></field>
+                                <field name="bulkKey" from="bulkKey"><default-field><hidden/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Cancel work orders">
+                                        <submit type="danger" confirmation="Cancel the selected work orders? Only those with nothing posted are cancelled."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="text">
+                        <header-field title="Work order"><text-line/></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Plant or line">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'runFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="productId">
+                        <header-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'madeProducts', selected:productId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <option key="WeInPlanning" text="Draft"/>
+                                <option key="WeApproved" text="Released"/>
+                                <option key="WeInProgress" text="Running"/>
+                                <option key="WeOnHold" text="On hold"/>
+                                <option key="WeComplete" text="Completed"/>
+                                <option key="WeClosed" text="Closed"/>
+                                <option key="WeCancelled" text="Cancelled"/>
+                                <option key="all" text="Any status"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <header-field title="Assigned to">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'runPeople', selected:assigneePartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="late">
+                        <header-field title="Late only"><check><option key="Y" text=" "/></check></header-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="workEffortId">
+                        <header-field title="Work order"/>
+                        <default-field>
+                            <link url="../WorkOrderDetail" text="${workEffortId}" link-type="anchor"
+                                    parameter-map="{workEffortId:workEffortId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workEffortName"><header-field title="Name"/><default-field><display/></default-field></field>
+                    <field name="productName"><header-field title="Product"/><default-field><display/></default-field></field>
+                    <field name="quantity" align="right">
+                        <header-field title="Planned"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="good" align="right">
+                        <header-field title="Good"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="remaining" align="right">
+                        <header-field title="Remaining"/>
+                        <default-field><display format="#,##0.###"/></default-field>
+                    </field>
+                    <field name="dueText">
+                        <header-field title="Due"/>
+                        <default-field><display style="${late ? 'text-negative' : ''}"/></default-field>
+                    </field>
+                    <field name="facilityName"><header-field title="Plant or line"/><default-field><display/></default-field></field>
+                    <field name="readiness"><header-field title="Readiness"/><default-field><display style="${blocked ? 'text-warning' : ''}"/></default-field></field>
+                    <field name="statusText">
+                        <header-field title="Status"/>
+                        <default-field>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                    statusColor}">${WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="workEffortId"/><field-ref name="productName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="workEffortId" card-fields="productName,plannedText,dueText"
+                            badge-field="readiness" key-fields="workEffortId,revision" transition="moveCard"
+                            move-condition="canPlan || canSupervise"
+                            column-order="WeInPlanning,WeApproved,WeInProgress,WeOnHold,WeComplete"/>
+                    <view-calendar start-field="estimatedStartDate" end-field="estimatedCompletionDate" title-field="calendarTitle"
+                            color-field="statusId" key-fields="workEffortId" card-fields="productName,plannedText,readiness"/>
+                </form-list>
+                <section name="NoWorkOrders" condition="!orderRows.length">
+                    <widgets>
+                        <container style="q-pa-sm">
+                            <label text="${emptyText}" type="p" style="m-muted q-mb-xs"/>
+                            <link url="." text="Clear filters" link-type="anchor" condition="filtered"/>
+                        </container>
+                    </widgets>
+                </section>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -50,6 +50,12 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P2: the method release requests of Approvals (F40) -->
         <notification-topic topic="BomRelease"/>
         <notification-topic topic="RoutingRelease"/>
+        <!-- P5a: quick create of a draft work order, for the planners (WorkOrders/QuickCreate is BOSS_MFG_NEW_WORK_ORDER's);
+            the release notice and the staged release requests -->
+        <quick-create kind="manufacturingWorkOrder" label="Work order" icon="sym_o_precision_manufacturing"
+                screen="Manufacturing/WorkOrders/QuickCreate" sequence="85"/>
+        <notification-topic topic="ProductionRelease"/>
+        <notification-topic topic="ProductionStagedRelease"/>
         <keymap scope="manufacturing">
             <key keys="g q" label="Manufacturing queue" screen="Manufacturing/Home"/>
         </keymap>

@@ -209,5 +209,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <label type="p" text="No milestone shares: set them on a milestone's Billing box to bill the order as milestones are reached." style="m-muted q-pa-sm q-mb-none" condition="!shareRows.length"/>
             </box-body-nopad></container-box>
         </widgets></section>
+        <!-- a sales order's supplying work orders, for a user with PRODUCTION_VIEW in any context (impl-manufacturing P5a, §4) -->
+        <section-include name="OrderRuns" location="component://mr-boss/template/ManufacturingWorkOrderParts.xml"/>
     </widgets>
 </screen>

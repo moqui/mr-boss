@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The production traveler of a work order (design-manufacturing §11, from Marble's RunPickDocument): its identity with a QR
+    code of the work order, revision and release time, the product and quantity, the operation sequence with work centers and
+    predecessors, and the material lines with their operation and quantity. A print (html-print) opened from WorkOrderDetail's
+    More menu; it renders in every mode. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Traveler" default-menu-include="false">
+    <parameter name="workEffortId"/>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.work.ProductionServices.get#ProductionOrder" out-map="order" transaction="force-new"
+                    ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+            <service-call name="mantle.work.ProductionServices.get#ProductionOperations" out-map="operationsFound"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="operationRows" from="operationsFound?.operationRows || []"/>
+        <set field="materialRows" from="(order?.lines || []).filter((line) =&gt; line.lineRoleEnumId == 'PrlrMaterial')"/>
+        <set field="outputLine" from="(order?.lines || []).find((line) =&gt; line.lineRoleEnumId == 'PrlrOutput') || {}"/>
+        <set field="qrSvg" from="recordFound ? ec.resource.barcodeSvg('QR', 'WO:' + workEffortId + ':' + (order?.run?.revision ?? ''),
+                {moduleWidth: 0.5, height: 20, quietZone: 4, humanReadable: false}) : ''"/>
+    </actions>
+    <widgets>
+        <section name="TravelerFound" condition="recordFound &amp;&amp; order?.run">
+            <widgets>
+                <container style="row items-start q-col-gutter-md">
+                    <container style="col">
+                        <label text="Traveler: work order ${workEffortId}" type="h5"/>
+                        <label text="${order.run.workEffortName || ''}" type="p"/>
+                        <label text="Make ${outputLine.quantity || ''} ${outputLine.productName || outputLine.productId || ''} at ${order.run.facilityName || order.run.facilityId}"
+                                type="p"/>
+                        <label text="Revision ${order.run.revision}${order.run.releaseDate ? ' · released ' + ec.l10n.format(order.run.releaseDate, 'yyyy-MM-dd HH:mm') : ' · draft, not released'}"
+                                type="p" style="text-caption"/>
+                    </container>
+                    <container style="col-auto">
+                        <render-mode>
+                            <text type="qvt">&lt;div class="bg-white q-pa-xs"&gt;${qrSvg}&lt;/div&gt;</text>
+                            <text type="html">${qrSvg}</text>
+                            <text type="html-print">${qrSvg}</text>
+                            <text type="tui">${JSON.stringify({t: 'text', text: 'WO:' + workEffortId})}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <label text="Operations" type="h6"/>
+                <form-list name="TravelerOperations" list="operationRows" skip-form="true" paginate="false">
+                    <field name="sequenceNum"><default-field title="#"><display/></default-field></field>
+                    <field name="workEffortName"><default-field title="Operation"><display/></default-field></field>
+                    <field name="workCenterName"><default-field title="Work center"><display/></default-field></field>
+                    <field name="predecessorText"><default-field title="After"><display/></default-field></field>
+                    <field name="materialCount"><default-field title="Materials"><display/></default-field></field>
+                    <field name="signOff"><default-field title="Done by"><display text=" "/></default-field></field>
+                </form-list>
+                <label text="No routing." type="p" condition="!operationRows.length"/>
+                <label text="Materials" type="h6"/>
+                <form-list name="TravelerMaterials" list="materialRows" skip-form="true" paginate="false">
+                    <field name="productName"><default-field title="Component"><display/></default-field></field>
+                    <field name="quantity" align="right"><default-field title="Quantity"><display format="#,##0.###"/></default-field></field>
+                    <field name="quantityUomId"><default-field title="Unit"><display/></default-field></field>
+                    <field name="operationWorkEffortId"><default-field title="At operation"><display/></default-field></field>
+                </form-list>
+            </widgets>
+        </section>
+        <label text="Work order ${workEffortId} is not available." type="p" condition="!recordFound || !order?.run"/>
+    </widgets>
+</screen>

@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the work order screens (impl-manufacturing P5a). A screen includes each transition by name and each section:
+    - lifecycleAction: an action on the run through mantle.work.ProductionServices.transition#ProductionOrder, after the run's
+      check (the screen's always-actions), with its revision, operation key (one per revision and action, so a second submit
+      answers the first) and reason;
+    - LifecycleActionRow: one action (actionRow; formPrefix names its form): what it does, or why it is refused, and its form;
+    - OrderRuns: a sales order's supplying runs, for a user with PRODUCTION_VIEW (Shared/OrderDetail). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="lifecycleAction">
+        <actions>
+            <if condition="!recordFound">
+                <return error="true" message="Work order ${workEffortId} is not available"/>
+            </if>
+            <service-call name="mantle.work.ProductionServices.transition#ProductionOrder" out-map="moved"
+                    in-map="{operationKey:operationKey, workEffortId:workEffortId, action:lifecycleAction,
+                        expectedRevision:expectedRevision, reason:reason || null, reasonCode:reasonCode || null,
+                        reexplode:reexplode == 'true'}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const result = moved.result || {}
+                    const done = {RELEASED: result.staged ? 'released staged: its short lines stay blocked until covered' : 'released',
+                        REEXPLODED: 're-exploded from the method as of now; review it and release it again',
+                        UNRELEASED: 'back to a draft', STARTED: 'started', HELD: 'held', RESUMED: 'resumed', CANCELLED: 'cancelled',
+                        REQUESTED: 'sent to the supervisors for a staged release', APPROVED: 'approved for a staged release'}
+                    ec.message.addMessage('Work order ' + workEffortId + ' ' + (done[result.resultCode] || result.resultCode), 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="workEffortId"/>
+        </default-response>
+        <error-response url=".">
+            <parameter name="workEffortId"/>
+        </error-response>
+    </transition>
+    <widgets>
+        <section name="LifecycleActionRow">
+            <widgets>
+                <container style="q-mb-md">
+                    <label text="${actionRow.label}" type="h6" style="q-my-xs"/>
+                    <label text="${actionRow.impactText}" type="p" style="text-caption" condition="actionRow.allowed &amp;&amp; actionRow.impactText"/>
+                    <label text="${actionRow.message}" type="p" style="${actionRow.allowed ? 'text-caption' : 'text-caption text-negative'}"
+                            condition="!actionRow.allowed &amp;&amp; actionRow.message"/>
+                    <section-iterate name="ActionShortages" list="actionRow.shortages || []" entry="shortage">
+                        <widgets>
+                            <label text="${shortage.productName}: needs ${shortage.required}, ${shortage.available} free, short ${shortage.short}"
+                                    type="div" style="text-caption text-warning"/>
+                        </widgets>
+                    </section-iterate>
+                    <!-- an allowed action, or a release a later method release holds back: its re-explosion -->
+                    <section name="ActionForm" condition="actionRow.allowed || actionRow.reexplodeOffered">
+                        <widgets>
+                            <form-single name="LifecycleForm_${formPrefix}_${actionRow.action}" transition="lifecycleAction"
+                                    map="{workEffortId:workEffortId, lifecycleAction:actionRow.action, expectedRevision:run.revision,
+                                        operationKey:actionRow.operationKey + (actionRow.reexplodeOffered ? '-reexplode' : ''),
+                                        reexplode:actionRow.reexplodeOffered ? 'true' : 'false'}">
+                                <field name="workEffortId"><default-field><hidden/></default-field></field>
+                                <field name="lifecycleAction"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="reexplode"><default-field><hidden/></default-field></field>
+                                <field name="reasonCode" hide="!actionRow.reasonRequired">
+                                    <default-field title="Reason">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'holdReasons'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason" hide="!actionRow.reasonRequired &amp;&amp; actionRow.action != 'requestStaged'">
+                                    <default-field title="${actionRow.reasonRequired ? 'Note (a reason or a note is required)' : 'Note'}">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submit">
+                                    <default-field title="">
+                                        <submit text="${actionRow.reexplodeOffered ? 'Re-explode as of now' : actionRow.label}"
+                                                type="${actionRow.action == 'cancel' ? 'danger' : 'primary'}"
+                                                confirmation="${actionRow.action == 'cancel' ? 'Cancel work order ' + workEffortId + '?' : (actionRow.action == 'unrelease' ? 'Unrelease work order ' + workEffortId + '?' : '')}"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </widgets>
+                    </section>
+                </container>
+            </widgets>
+        </section>
+        <section name="OrderRuns">
+            <actions>
+                <set field="orderRunRows" from="[]"/>
+                <if condition="orderId &amp;&amp; ec.user.hasPermission('PRODUCTION_VIEW')">
+                    <service-call name="mantle.work.ProductionServices.find#ProductionOrders" out-map="orderRunsFound"
+                            transaction="force-new" ignore-error="true"
+                            in-map="{demandOrderId:orderId, statusId:'all', pageSize:50}"/>
+                    <set field="orderRunRows" from="(orderRunsFound?.orderRows || []).map((row) =&gt; Object.assign({}, row, {
+                            url: ec.service.sync().name('ironstone.commons.PaletteServices.get#RecordLink').parameters({
+                                recordEntityName: 'mantle.work.effort.WorkEffort', id: row.workEffortId}).disableAuthz().call()?.url || null}))"/>
+                </if>
+            </actions>
+            <widgets>
+                <section name="OrderRunsBox" condition="orderRunRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Supplying work orders · ${orderRunRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="OrderRunList" list="orderRunRows" skip-form="true" paginate="false">
+                                    <field name="workEffortId">
+                                        <default-field title="Work order">
+                                            <link url="${url}" url-type="plain" text="${workEffortId}" link-type="anchor" condition="url"/>
+                                            <label text="${workEffortId}" type="span" condition="!url"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="quantity" align="right">
+                                        <default-field title="Planned"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="good" align="right">
+                                        <default-field title="Good"><display format="#,##0.###"/></default-field>
+                                    </field>
+                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="workEffortId"/><field-ref name="productName"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
