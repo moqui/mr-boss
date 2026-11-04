@@ -157,4 +157,10 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_PUR_RCV_SRC" shipmentId="BOSS_PUR_RCV_SHIP"
             productId="DEMO_1_1" orderId="BOSS_PUR_PO_RCV" orderItemSeqId="01" quantity="10" quantityNotHandled="10"
             statusId="SisPending"/>
+    <!-- P7: Ziddleman's drop-ship facility (Mantle's model, F21: owned by the supplier, its stock or Mantle's shell asset
+        reserved for a customer line, the shell issued to the customer), with no integration so its orders are emailed; and
+        Ziddleman's price of DEMO_3_1 marked for drop-ship, so "Drop-ship from supplier" offers it on a customer line -->
+    <mantle.facility.Facility facilityId="BOSS_PUR_DROPSHIP" facilityTypeEnumId="FcTpDropShip" ownerPartyId="ZiddlemanInc"
+            facilityName="Ziddleman direct (drop-ship)" assetAllowOtherOwner="Y" assetAllowIssueOverQoh="Y"/>
+    <mantle.product.ProductPrice productPriceId="DEMO_3_1_CS" canDropShip="Y"/>
 </entity-facade-xml>

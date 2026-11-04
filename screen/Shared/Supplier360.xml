@@ -80,6 +80,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- Purchasing (impl-purchasing P5): the supplier's receipts and their inspections -->
         <subscreens-item name="PurchasingReceipts" menu-index="8"
                 location="component://mr-boss/screen/Shared/Supplier360/PurchasingReceipts.xml" menu-title="Receipts &amp; quality"/>
+        <!-- Purchasing (impl-purchasing P7): the supplier's drop-ship facilities and their integrations -->
+        <subscreens-item name="PurchasingDropShip" menu-index="12"
+                location="component://mr-boss/screen/Shared/Supplier360/PurchasingDropShip.xml" menu-title="Drop-ship"/>
     </subscreens>
     <actions>
         <entity-find-one entity-name="mantle.party.Organization" value-field="buyerOrganization" cache="true">

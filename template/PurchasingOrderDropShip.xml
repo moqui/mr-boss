@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's drop-ship parts (design-purchasing §18 PUR-DROPSHIP, crosscut §3.6; impl-purchasing P7): the order's drop-ship
+    state read by Shared/OrderDetail's actions (mantle.order.DropShipServices.get#OrderDropShip into dropShip, which answers
+    only a purchasing user of the order's organization). OrderDropShip, in any app's context, on a customer order: each product
+    line's state (ships from the warehouse, drops when approved, on its drop-ship purchase order, delivered) with its purchase
+    order, and for a buyer "Drop-ship from supplier" (route#OrderItemToDropShip) on a warehouse line a supplier offers to drop.
+    PurchasingOrderDropShip, in Purchasing's purchase order: the customer and ship-to, the parent customer order, the tracking
+    code and each line's delivered and remaining quantity, with "Confirm delivery" (finalize#DropShipPurchaseOrder) for a buyer,
+    after the order's check#Record. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="dropShipLine">
+        <actions>
+            <service-call name="mantle.order.DropShipServices.route#OrderItemToDropShip" out-map="routed"
+                    in-map="{orderId:orderId, orderItemSeqId:orderItemSeqId, supplierPartyId:supplierPartyId}"/>
+            <message type="success">${routed.purchaseOrderIds?.length ? 'Line ' + orderItemSeqId + ' is on drop-ship purchase order '
+                    + routed.purchaseOrderIds.join(', ') : 'Line ' + orderItemSeqId + ' drops from the supplier when the order is approved'}</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="confirmDelivery">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'buy'}"/>
+            <set field="confirmedLines" from="orderItemSeqId ? [{orderItemSeqId:orderItemSeqId, quantity:quantity || null}] : null"/>
+            <service-call name="mantle.order.OrderServices.finalize#DropShipPurchaseOrder" out-map="confirmed"
+                    in-map="{purchaseOrderId:orderId, trackingCode:trackingCode || null, itemQuantityList:confirmedLines}"/>
+            <message type="success">${confirmed.alreadyApplied ? 'Already delivered; nothing changed' : 'Delivery confirmed; the customer shipment is shipped'}</message>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="OrderDropShip" condition="dropShip?.kind == 'sales'">
+            <actions>
+                <set field="dropShipLines" from="dropShip.lines.map((row) =&gt; Object.assign({}, row, {
+                        purchaseUrl: row.purchaseOrderId ? (appRoot == 'Purchasing' ? null : ec.service.sync()
+                            .name('ironstone.commons.PaletteServices.get#RecordLink').parameters({
+                            recordEntityName: 'mantle.order.OrderHeader', id: row.purchaseOrderId}).disableAuthz().call()?.url || null) : null}))"/>
+                <set field="dropShipCount" from="dropShipLines.filter((row) =&gt; row.state != 'warehouse').length"/>
+            </actions>
+            <widgets>
+                <section name="OrderDropShipTitle" condition="appRoot == 'Purchasing'">
+                    <widgets>
+                        <container style="m-record-header">
+                            <container style="m-record-title">
+                                <label text="Customer order ${orderId}" type="h5"/>
+                                <label text="Its lines' drop-ship from suppliers" type="div" style="text-caption m-muted"/>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Drop-ship · ${dropShipCount} of ${dropShipLines.length} lines"/>
+                    <box-body-nopad>
+                        <form-list name="OrderDropShipLines" list="dropShipLines" skip-form="true" paginate="false">
+                            <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <label text="${productName}" type="div"/>
+                                    <label text="${quantityText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="Drop-ship">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="purchaseOrderId">
+                                <default-field title="Purchase order">
+                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${purchaseOrderId}" link-type="anchor"
+                                            parameter-map="{orderId:purchaseOrderId}"
+                                            condition="purchaseOrderId &amp;&amp; appRoot == 'Purchasing'"/>
+                                    <link url="${purchaseUrl}" url-type="plain" text="${purchaseOrderId}" link-type="anchor"
+                                            condition="purchaseOrderId &amp;&amp; purchaseUrl"/>
+                                    <label text="${purchaseOrderId}" type="span"
+                                            condition="purchaseOrderId &amp;&amp; !purchaseUrl &amp;&amp; appRoot != 'Purchasing'"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="DropShipLine_${orderItemSeqId}" button-text="Drop-ship from supplier"
+                                            icon="sym_o_local_shipping" width="520" title="Drop-ship line ${orderItemSeqId} from a supplier"
+                                            condition="supplierOptions?.length">
+                                        <form-single name="DropShipLineForm" transition="dropShipLine">
+                                            <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="supplierPartyId">
+                                                <default-field title="Supplier">
+                                                    <drop-down><list-options list="supplierOptions" key="${supplierPartyId}"
+                                                            text="${supplierName}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Drop-ship"><submit/></default-field></field>
+                                        </form-single>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="The line moves to the supplier's drop-ship facility and is reserved there; on an approved order its purchase order is made now, else when the order is approved."/>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="purchaseOrderId"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="PurchasingOrderDropShip" condition="appRoot == 'Purchasing' &amp;&amp; dropShip?.kind == 'purchase'">
+            <actions>
+                <set field="dropShipConfirm" from="{orderId:orderId, trackingCode:''}"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Drop-ship to ${dropShip.customerName || dropShip.shipToName}"/>
+                    <box-toolbar>
+                        <container-dialog id="ConfirmDropShipDelivery" button-text="Confirm delivery" icon="sym_o_local_shipping"
+                                width="520" title="Confirm the supplier's delivery of ${orderId}"
+                                condition="dropShip.canConfirm">
+                            <form-single name="ConfirmDropShipDeliveryForm" transition="confirmDelivery" map="dropShipConfirm">
+                                <field name="orderId"><default-field><hidden/></default-field></field>
+                                <field name="trackingCode"><default-field title="Tracking code"><text-line size="30"/></default-field></field>
+                                <field name="submitButton"><default-field title="Confirm delivery"><submit/></default-field></field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted"
+                                    text="Every line left is confirmed as delivered: the customer's shipment is packed and shipped with the tracking code, which invoices the customer."/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${dropShip.stateText}" type="p" style="text-weight-medium"/>
+                        <label text="Ship to: ${[dropShip.shipToName, dropShip.shipToAddress].filter(Boolean).join(', ')}" type="p"
+                                condition="dropShip.shipToAddress || dropShip.shipToName"/>
+                        <label text="From ${dropShip.facilityName}" type="p" style="m-muted" condition="dropShip.facilityName"/>
+                        <label text="Tracking: ${dropShip.trackingText}" type="p" condition="dropShip.trackingText"/>
+                        <link url="${sharedLinks['Orders/OrderDetail']}" text="Customer order ${dropShip.salesOrderId}" link-type="anchor"
+                                parameter-map="{orderId:dropShip.salesOrderId}"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="PurchaseOrderDropShipLines" list="dropShip.lines" skip-form="true" paginate="false">
+                            <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="salesOrderItemSeqId"><default-field title="Customer line"><display/></default-field></field>
+                            <field name="orderedText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                            <field name="deliveredText" align="right"><default-field title="Delivered"><display/></default-field></field>
+                            <field name="remainingText" align="right"><default-field title="Left"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ConfirmDropShipLine_${orderItemSeqId}" button-text="Confirm line"
+                                            icon="sym_o_done" width="480" title="Confirm the delivery of line ${orderItemSeqId}"
+                                            condition="dropShip.canConfirm &amp;&amp; remaining != '0'">
+                                        <form-single name="ConfirmDropShipLineForm" transition="confirmDelivery">
+                                            <field name="orderId" from="orderId"><default-field><hidden/></default-field></field>
+                                            <field name="orderItemSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="quantity" from="remaining">
+                                                <default-field title="Quantity delivered"><text-line size="8"/></default-field>
+                                            </field>
+                                            <field name="trackingCode"><default-field title="Tracking code"><text-line size="30"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Confirm"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="orderedText"/></column>
+                                <column><field-ref name="deliveredText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

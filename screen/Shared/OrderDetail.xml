@@ -90,6 +90,9 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="orderDraftBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
     <transition-include name="orderUploadBill" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
     <transition-include name="orderPrepayment" location="component://mr-boss/template/PurchasingOrderBills.xml"/>
+    <!-- Purchasing (impl-purchasing P7): drop-ship a customer line from a supplier; confirm a drop-ship order's delivery -->
+    <transition-include name="dropShipLine" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
+    <transition-include name="confirmDelivery" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"
@@ -137,6 +140,11 @@ along with this software (see the LICENSE.md file). If not, see
         sendValue = {orderId: orderId, projectId: ord.projectId, depth: '2', comments: ''}
     ]]></script>
         </else></if>
+        <!-- Purchasing P7: the order's drop-ship state for a purchasing user of its organization, in any app (an empty kind
+            for anyone else); template/PurchasingOrderDropShip.xml shows it -->
+        <service-call name="mantle.order.DropShipServices.get#OrderDropShip" in-map="{orderId:orderId}" out-map="dropShipOut"
+                transaction="force-new" ignore-error="true"/>
+        <set field="dropShip" from="dropShipOut?.dropShip || {kind: null, lines: []}"/>
     </actions>
 
     <widgets>
@@ -262,5 +270,7 @@ along with this software (see the LICENSE.md file). If not, see
         </widgets></section>
         <!-- a sales order's supplying work orders, for a user with PRODUCTION_VIEW in any context (impl-manufacturing P5a, §4) -->
         <section-include name="OrderRuns" location="component://mr-boss/template/ManufacturingWorkOrderParts.xml"/>
+        <!-- a customer order's drop-ship lines, for a purchasing user in any context (impl-purchasing P7) -->
+        <section-include name="OrderDropShip" location="component://mr-boss/template/PurchasingOrderDropShip.xml"/>
     </widgets>
 </screen>
