@@ -2672,10 +2672,10 @@ Design §9; the reporting part of M10.
   and ProductionSchedule's plain twin screens, which have their own fixtures). No screen lacked a usable twin. ManufacturingServerStatic
   (review: split from ServerStatic) reports every Manufacturing XML screen on its route fixture: `ironstone.manufacturing.AccessServices.check#Record` is
   `read-only="true"` (it only reads), so the root's and WorkOrderDetail's always-actions are no side effect and the Notes
-  tab P5a marked is clean again (F-P17-1); InspectionStation, its Scan, NewWorkOrder and QuickCreate are marked
+  tab P5a marked is clean again (F146); InspectionStation, its Scan, NewWorkOrder and QuickCreate are marked
   `server-static="qvt"` (with ReportDowntime and Notes, 6 of 89). The others keep a list's condition outside its form-list
   (the form-list-key rule) or a `#` link, as most Warehouse screens do; Disassembly reported clean but its static template
-  failed AppStructure's qvt render (F-P17-2), so it stays unmarked.
+  failed AppStructure's qvt render (F147), so it stays unmarked.
 - **§10.3 acceptance and crosscut §6 standalone operation**, `test/Manufacturing/ManufacturingAccessWalk.spec.js` (5
   features), `ManufacturingIsolationWalk.spec.js` (3) and `ManufacturingCostIsolationWalk.spec.js` (2, split from it in the review) over `ManufacturingStandaloneLib.js`, on WarehouseAccessWalk's
   pattern: an organization of its own, BOSS_P17_ORG (a plant, a line, a released routing of one operation and a BOM of one
@@ -2699,7 +2699,7 @@ Design §9; the reporting part of M10.
   sees it; the cost close's preview and post and Accounting's cost close queue refuse both sides' Manufacturing users; and
   Warehouse's MaterialIssueReceipt, Commons' TaskDetail and EventDetail, Products' BOM tab and Accounting's
   ProductionCostClose show the organization's run, operation and method to none of Retail's users of those apps. No access
-  hole was found (F-P17-3). §8's table now names what covers each scenario.
+  hole was found (F148). §8's table now names what covers each scenario.
 - **§11 outputs.** Built earlier: the traveler and pick sheet (P5a), labels (P7), the instructions print and quality checklist
   and certificate (P8, P10), the BOM and routing prints and CSVs with the explosion and compare and the CSV import with its
   preview (P2), the dispatch and return instructions (P14), the schedule snapshot (P12), the reports' CSVs (P16) and the
@@ -2715,15 +2715,15 @@ Design §9; the reporting part of M10.
   ManufacturingImplementation.md rewritten complete and short.
 - Specs run (this runtime; no full suite): BOSS ManufacturingAccessWalk and ManufacturingIsolationWalk (10, the longest
   feature about 11 s), ManufacturingReports and ManufacturingPlanning with the new print and snapshot features (9 and 5),
-  ServerStatic, TuiRender, AppStructure, ManufacturingAccess, ManufacturingShell (all pass); ClientIsolation with both walks on a fresh load (26, pass; F-P17-4).
+  ServerStatic, TuiRender, AppStructure, ManufacturingAccess, ManufacturingShell (all pass); ClientIsolation with both walks on a fresh load (26, pass; F149).
   Walks ManufacturingWorkOrdersWalk, ManufacturingQualityWalk, ManufacturingPlanningWalk, ManufacturingReportsWalk and
   ManufacturingScheduleWalk (14, pass). `moqui lint --screens`: no Manufacturing site flagged, no Manufacturing tui worklist
   item; the new screen shows only informational anchors.
 - Findings (provisional):
-  - **F-P17-1** ServerStatic never covered Manufacturing, so P5a's `server-static="qvt"` on WorkOrderDetail/Notes was not
+  - **F146** ServerStatic never covered Manufacturing, so P5a's `server-static="qvt"` on WorkOrderDetail/Notes was not
     checked: the static report counted the parent's always-actions `check#Record` as a side effect the form request repeats.
     `check#Record` only reads and is now `read-only="true"`; ServerStatic includes Manufacturing.
-  - **F-P17-2** `ec.screen.staticReport` reported Disassembly clean, but marked `server-static="qvt"` its static qvt render
+  - **F147** `ec.screen.staticReport` reported Disassembly clean, but marked `server-static="qvt"` its static qvt render
     failed in AppStructure ("cannot read property 'componentRows' of null"). The form-list ReversalComponents has
     `list="reversal.componentRows"`, a path through `reversal`, inside section PreviewStep (condition `canReverse && reversal`);
     the form's package evaluates that list without the section's condition, where `reversal` is null. The report's
@@ -2731,15 +2731,15 @@ Design §9; the reporting part of M10.
     condition or label outside the form that names the whole list (`reversal.componentRows`), so a list path whose base a
     section's condition guards passes. A framework item: the rule should flag a form-list whose `list` is a path in a
     conditioned section (or the package evaluate the path null-safe). Disassembly stays unmarked; not changed here.
-  - **F-P17-3** No access hole found: every route, transition, verb, export, print, palette, link, scan, board, search,
+  - **F148** No access hole found: every route, transition, verb, export, print, palette, link, scan, board, search,
     drop-down, notice and other app's shared context checked refuses the other organization, and money is left out without
     financial read. A production reader cannot open Planning (the P13 area grant), so InventoryAvailability under it is the
     planners', schedulers' and supervisors' (design §7 lists it for the app); a Components shortage links it.
-  - **F-P17-4** ClientIsolation failed twice on a reused `--db snapshot` database: its secret `7777` is a substring of the
+  - **F149** ClientIsolation failed twice on a reused `--db snapshot` database: its secret `7777` is a substring of the
     snapshot's load time (a timeline `dateMillis` of 1793777737346), not P17's change; on a fresh load it passes, with both walks
     (26 features). ServerStatic now takes about 55 s with the Manufacturing screens (over 30 s, not marked slow). Both fixed in
     the review.
-  - **F-P17-5** A `sharedLinks` link (`//Manufacturing/...`) renders disabled (`href="#"`) under a test's Manufacturing root
+  - **F150** A `sharedLinks` link (`//Manufacturing/...`) renders disabled (`href="#"`) under a test's Manufacturing root
     screen, so the specs check the Snapshot and Print links by their text or `renderMode`.
 
 - **Review (Nov 4).** Findings and fixes:
@@ -2749,7 +2749,7 @@ Design §9; the reporting part of M10.
     16.5 s), WarehouseServerStatic (88, 8.4 s) and ManufacturingServerStatic (66, 8.1 s, at least the 6 marked); feature times,
     each spec 14 to 23 s with its start. The same verdicts.
   - (Medium, fixed) ClientIsolation's amount sentinels (`7777`, `8888`, `43210` and the others) matched digits inside a longer
-    number, such as a reused snapshot's `dateMillis` (F-P17-4): `leaksOf` now takes a numeric sentinel only as a number of its
+    number, such as a reused snapshot's `dateMillis` (F149): `leaksOf` now takes a numeric sentinel only as a number of its
     own (no digit before or after it), so `7777.77` and `$7,777.77` still count and `1793777737346` does not. Passes on a
     reused `--db snapshot` and on a fresh load.
   - (Low, fixed) ManufacturingIsolationWalk had vacuous controls: the other apps' contexts needed only two of five mounts to
@@ -2770,7 +2770,7 @@ Design §9; the reporting part of M10.
     apps' features are ManufacturingCostIsolationWalk now (2 features, 16 s with its start), the isolation walk 3 (25 s).
   - Not split, older than P17: AppStructure (37 s, one feature 29 s) and TuiRender (28 s, one feature 21 s) render every
     app's screens; they want the same per-app split.
-  - F-P17-2 recorded precisely (above); F141 (§6) fixed in mr-moqui 477f9e89.
+  - F147 recorded precisely (above); F141 (§6) fixed in mr-moqui 477f9e89.
   - After merging master: ClientIsolation (16, fresh load 21 s and reused snapshot 13 s), ServerStatic (1, 17.6 s),
     ProjectsServerStatic (1, 17.6 s), AccountingServerStatic (1, 23.0 s), WarehouseServerStatic (1, 14.4 s),
     ManufacturingServerStatic (1, 14.0 s), TuiRender (3, 27.9 s), AppStructure (18, 37.1 s), ManufacturingAccessWalk (5,
@@ -2975,6 +2975,11 @@ is written there too.
 | F143 | P16: Insights' catalog registration (design Z10) waits for Insights; the report services and the dashboard are the providers it registers. | P16 Built note |
 | F144 | P16: For the merge: Manufacturing.js (P16 block before `operations`), HomeServices.xml (the P16 block where the "later phases" comment was), Home.xml (Kpis section after the Summary), ManufacturingSpecLib.js (P16 routes at the end of routeFixtures), … | P16 Built note |
 | F145 | W6: the shop floor's Complete form had no Lot field, so a lot-required output (WarehousePoliciesWalk makes DEMO_1_1 lot required) could not be completed from OperationExecution (LOT_REQUIRED) | The form takes the lot on the output operation, as Quantities does |
+| F146 | P17: ServerStatic never covered Manufacturing, so P5a's `server-static="qvt"` on WorkOrderDetail/Notes was not checked: the static report counted the parent's always-actions `check#Record` as a side effect the form request repeats. | P17 Built note |
+| F147 | P17: `ec.screen.staticReport` reported Disassembly clean, but marked `server-static="qvt"` its static qvt render failed in AppStructure ("cannot read property 'componentRows' of null"). | P17 Built note |
+| F148 | P17: No access hole found: every route, transition, verb, export, print, palette, link, scan, board, search, drop-down, notice and other app's shared context checked refuses the other organization, and money is left out without financial read. | P17 Built note |
+| F149 | P17: ClientIsolation failed twice on a reused `--db snapshot` database: its secret `7777` is a substring of the snapshot's load time (a timeline `dateMillis` of 1793777737346), not P17's change; on a fresh load it passes, with both walks (26 features). | P17 Built note |
+| F150 | P17: A `sharedLinks` link (`//Manufacturing/...`) renders disabled (`href="#"`) under a test's Manufacturing root screen, so the specs check the Snapshot and Print links by their text or `renderMode`. | P17 Built note |
 
 ## 7. Later
 
