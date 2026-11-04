@@ -1,0 +1,603 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SupplyPlanning (design-crosscut §3.20, CX-PLANNING; design-manufacturing §7 SupplyPlanning; impl-manufacturing P13): the
+    shared supply plan of an organization's facility set, split as the design lays it out: the plan's parameters and
+    freshness above the suggestions (PlanSuggestions: buy, make and transfer, with their exceptions), the held quantity
+    pending release, and the selected suggestion's demand and supply (DemandSupply); Recalculate (PlanParameters), Schedule
+    (PlanSchedule) and Convert on the selected suggestions (ConvertSuggestions). It reads and writes through
+    mantle.product.SupplyPlanningServices, which checks SUPPLY_PLAN_RUN to run and schedule, PRODUCTION_PLAN to convert
+    make suggestions and the organization again. Manufacturing mounts it at Manufacturing/Planning/SupplyPlanning with its
+    context: the plant (the selected one, or plantId) is the facility set, checked by
+    ironstone.manufacturing.AccessServices first; buy and transfer suggestions are shown with their supplier or source and
+    converted where Purchasing and Warehouse mount this screen (impl-manufacturing §7). Other apps add their contexts when
+    they are built. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Supply planning"
+        default-menu-include="false">
+    <parameter name="plantId"/>
+    <parameter name="planningSuggestionId"/>
+    <parameter name="methodEnumId"/>
+    <parameter name="exceptionsOnly"/>
+    <transition-include name="choices" location="component://mr-boss/template/ManufacturingParts.xml"/>
+    <!-- PlanParameters: a new calculation of the plant's plan (the last one is superseded) -->
+    <transition name="runPlan">
+        <actions>
+            <if condition="appRoot == 'Manufacturing'">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'supplyPlan'}"/>
+            </if>
+            <service-call name="mantle.product.SupplyPlanningServices.run#SupplyPlan" out-map="ran"
+                    in-map="{facilityIds:[plantId], horizonDays:horizonDays || null,
+                        productIds:productId ? [productId] : null}"/>
+            <message type="success">Plan calculated: ${ran.suggestionCount} suggestions, ${ran.exceptionCount} with an
+                exception</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="plantId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- PlanSchedule: the organization's one schedule -->
+    <transition name="storeSchedule">
+        <actions>
+            <if condition="appRoot == 'Manufacturing'">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'supplyPlan'}"/>
+            </if>
+            <service-call name="mantle.product.SupplyPlanningServices.store#PlanSchedule"
+                    in-map="{facilityIds:[plantId], intervalHours:intervalHours || null, nextRunDate:nextRunDate || null,
+                        horizonDays:horizonDays || null, active:active, netHeldQuantity:netHeldQuantity,
+                        changeReason:changeReason}"/>
+            <message type="success">Plan schedule saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="plantId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- ConvertSuggestions: each selected suggestion on its own, a result each -->
+    <transition name="convertSuggestions">
+        <actions>
+            <if condition="appRoot == 'Manufacturing'">
+                <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'facility', recordId:plantId, capability:'plan'}"/>
+                <if condition="runFacilityId">
+                    <service-call name="ironstone.manufacturing.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'facility', recordId:runFacilityId}"/>
+                </if>
+            </if>
+            <set field="selectedIds" from="Array.isArray(planningSuggestionIdList) ? planningSuggestionIdList
+                    : String(planningSuggestionIdList || '').split(',').filter(Boolean)"/>
+            <service-call name="mantle.product.SupplyPlanningServices.convert#PlanningSuggestions" out-map="converted"
+                    in-map="{operationKey:operationKey, planningSuggestionIds:selectedIds, methodDate:methodDate || null,
+                        facilityId:runFacilityId || null}"/>
+            <iterate list="converted.results" entry="result">
+                <if condition="result.ok">
+                    <then>
+                        <message type="success">${result.resultCode == 'EXISTING' ? 'Already covered by' : 'Made'} work order
+                            ${result.workEffortId} for suggestion ${result.planningSuggestionId}</message>
+                    </then>
+                    <else>
+                        <message type="warning">Suggestion ${result.planningSuggestionId}: ${result.message}</message>
+                    </else>
+                </if>
+            </iterate>
+        </actions>
+        <default-response url=".">
+            <parameter name="plantId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="contextFound" from="false"/>
+        <if condition="appRoot == 'Manufacturing'">
+            <service-call name="ironstone.manufacturing.AccessServices.get#SharedContext" out-map="planContext"
+                    in-map="{appRoot:appRoot, plantId:plantId || null}" transaction="force-new" ignore-error="true"/>
+            <set field="plantId" from="planContext?.plantId || null"/>
+            <set field="contextFound" from="!!planContext?.appRoot"/>
+            <set field="can" from="planContext?.capabilities || {}"/>
+        </if>
+        <if condition="contextFound &amp;&amp; plantId">
+            <service-call name="mantle.product.SupplyPlanningServices.get#SupplyPlan" out-map="plan"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{facilityIds:[plantId], planningSuggestionId:planningSuggestionId || null,
+                        methodEnumId:methodEnumId || null, exceptionsOnly:exceptionsOnly == 'Y'}"/>
+        </if>
+        <set field="planFound" from="!!plan?.organizationPartyId"/>
+        <set field="run" from="plan?.run || null"/>
+        <set field="suggestions" from="plan?.suggestions || []"/>
+        <set field="pendingRelease" from="plan?.pendingRelease || []"/>
+        <set field="demandSupply" from="plan?.demandSupply || []"/>
+        <set field="selected" from="plan?.selected || null"/>
+        <set field="schedule" from="plan?.schedule || {}"/>
+        <set field="convertible" from="suggestions.filter(row =&gt; row.canConvert)"/>
+        <!-- the list's filter, apart from the rows' own method -->
+        <set field="filterMethodEnumId" from="methodEnumId || null"/>
+        <set field="filterExceptionsOnly" from="exceptionsOnly || null"/>
+        <set field="runCaption" from="run ? ['Calculated ' + run.ageText + (run.startedByName ? ' by ' + run.startedByName : ''),
+                'as of ' + run.planDateText, 'horizon to ' + run.horizonText, 'revision ' + run.revision,
+                run.netHeldQuantity == 'Y' ? 'held stock due within the lead time netted' : ''].filter(Boolean).join(' · ')
+                : ''"/>
+        <set field="stateText" from="!run ? 'Not calculated' : run.stale ? 'Stale' : 'Current'"/>
+        <set field="stateColor" from="!run ? 'grey' : run.stale ? 'warning' : 'positive'"/>
+        <set field="scheduleText" from="schedule.exists ? (schedule.active == 'Y' ? 'Runs every ' + schedule.intervalHours
+                + ' hours, next ' + schedule.nextRunText : 'Schedule paused') : 'No schedule'"/>
+        <!-- a work order opens its detail once Work orders has one, else the Manufacturing lookup -->
+        <set field="appLinks" from="sharedLinks || {}"/>
+        <set field="runLinkPath" from="appLinks['WorkOrders/WorkOrderDetail'] || appLinks.Home || '.'"/>
+        <set field="runLinkDetail" from="!!appLinks['WorkOrders/WorkOrderDetail']"/>
+        <set field="operationKey" from="'plan-' + ec.user.randomString(24)"/>
+        <set field="scheduleDefaults" from="{intervalHours:schedule.intervalHours || 24, horizonDays:schedule.horizonDays,
+                active:schedule.active || 'N', netHeldQuantity:schedule.netHeldQuantity || 'N',
+                nextRunDate:schedule.nextRunDate || null}"/>
+    </actions>
+    <widgets>
+        <label text="Supply planning" type="h5"/>
+        <form-single name="PlanScope" transition="." map="{plantId:plantId}">
+            <field name="plantId">
+                <default-field title="Plant" tooltip="The plant and the lines under it are planned together">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'plants', selected:plantId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit">
+                <default-field title="">
+                    <submit text="Show plan"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="plantId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="Choose a plant to see its supply plan." type="p" condition="contextFound &amp;&amp; !plantId"/>
+        <section name="PlanNotAvailable" condition="plantId &amp;&amp; !planFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-body>
+                        <label text="This supply plan is not available to you." type="p"/>
+                        <link url="${appLinks.Home}" text="Manufacturing home" link-type="anchor" icon="arrow_back"
+                                condition="appRoot == 'Manufacturing'"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="PlanFound" condition="planFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${plan.facilityNames}" type="h5"/>
+                            <label text="${[plan.organizationName, runCaption || 'No plan has been calculated yet']
+                                .filter(Boolean).join(' · ')}" type="p" style="text-caption q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    stateText}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PlanState", style: "strong",
+                                    text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <container style="col-12 col-md">
+                            <label text="${[run?.stale ? run.staleReason + '; recalculate before converting.' : '',
+                                scheduleText].filter(Boolean).join(' · ')}" type="p" style="q-mb-none"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="RecalculatePlanDialog" button-text="Recalculate" icon="sym_o_calculate"
+                                    width="640" type="primary" title="Recalculate the supply plan of ${plan.facilityNames}"
+                                    condition="plan.canRun">
+                                <form-single name="PlanParameters" transition="runPlan" map="{plantId:plantId}">
+                                    <field name="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="horizonDays">
+                                        <default-field title="Horizon in days"
+                                                tooltip="Empty for the schedule's horizon, else the production policy's">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="productId">
+                                        <default-field title="Product" tooltip="Empty plans every product with demand">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'products'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Recalculate"
+                                                    confirmation="Recalculate the plan? It replaces the current plan's unconverted suggestions."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="PlanScheduleDialog" button-text="Schedule" icon="sym_o_event_repeat"
+                                    width="760" title="Plan schedule of ${plan.organizationName}" condition="plan.canSchedule">
+                                <form-single name="PlanSchedule" transition="storeSchedule" map="scheduleDefaults">
+                                    <field name="plantId" from="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="active">
+                                        <default-field title="Run on schedule">
+                                            <drop-down>
+                                                <option key="Y" text="Yes"/>
+                                                <option key="N" text="No"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="intervalHours">
+                                        <default-field title="Every how many hours">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="nextRunDate">
+                                        <default-field title="Next run">
+                                            <date-time type="timestamp"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="horizonDays">
+                                        <default-field title="Horizon in days" tooltip="Empty for the production policy's">
+                                            <text-line size="6"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="netHeldQuantity">
+                                        <default-field title="Count held stock"
+                                                tooltip="Count stock held for an inspection that is due within the lead time">
+                                            <drop-down>
+                                                <option key="N" text="No, show it pending release"/>
+                                                <option key="Y" text="Yes, when its inspection is due within the lead time"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Reason">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save schedule"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="active"/>
+                                            <field-ref name="intervalHours"/>
+                                        </field-row>
+                                        <field-row>
+                                            <field-ref name="nextRunDate"/>
+                                            <field-ref name="horizonDays"/>
+                                        </field-row>
+                                        <field-ref name="netHeldQuantity"/>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+                <label text="No plan has been calculated for ${plan.facilityNames} yet. Recalculate to see what to make, buy and move."
+                        type="p" condition="!run"/>
+                <section name="PlanSuggestionsSection" condition="run">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Suggestions"/>
+                            <box-toolbar>
+                                <form-single name="SuggestionFilter" transition="." map="{plantId:plantId,
+                                        methodEnumId:methodEnumId, exceptionsOnly:exceptionsOnly}">
+                                    <field name="plantId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="methodEnumId">
+                                        <default-field title="Method">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'planningMethods', selected:methodEnumId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="exceptionsOnly">
+                                        <default-field title="Show">
+                                            <drop-down allow-empty="true">
+                                                <option key="" text="All"/>
+                                                <option key="Y" text="Exceptions only"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Filter"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row>
+                                            <field-ref name="methodEnumId"/>
+                                            <field-ref name="exceptionsOnly"/>
+                                            <field-ref name="submit"/>
+                                        </field-row>
+                                    </field-layout>
+                                </form-single>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <label text="Nothing to make, buy or move: demand is covered over the horizon."
+                                        type="p" style="q-pa-md m-muted" condition="!suggestions.length"/>
+                                <section name="SuggestionList" condition="suggestions.length">
+                                    <widgets>
+                                        <form-list name="PlanSuggestions" list="suggestions" skip-form="true"
+                                                paginate="false" select-columns="true">
+                                            <row-selection id-field="planningSuggestionId"
+                                                    parameter="planningSuggestionIdList" list-mode="true"
+                                                    condition="convertible.length">
+                                                <action>
+                                                    <dialog button-text="Convert" title="Convert the selected make suggestions"/>
+                                                    <form-single name="ConvertSuggestions" transition="convertSuggestions">
+                                                        <field name="plantId" from="plantId">
+                                                            <default-field title="">
+                                                                <hidden/>
+                                                            </default-field>
+                                                        </field>
+                                                        <field name="operationKey" from="operationKey">
+                                                            <default-field title="">
+                                                                <hidden/>
+                                                            </default-field>
+                                                        </field>
+                                                        <field name="methodDate">
+                                                            <default-field title="Methods as of"
+                                                                    tooltip="Empty reads the BOM and routing as of the plan date">
+                                                                <date-time type="timestamp"/>
+                                                            </default-field>
+                                                        </field>
+                                                        <field name="runFacilityId">
+                                                            <default-field title="Work center"
+                                                                    tooltip="Empty puts each work order on its routing's work center">
+                                                                <drop-down allow-empty="true">
+                                                                    <dynamic-options transition="choices" server-search="true"
+                                                                            min-length="0"
+                                                                            parameter-map="{choice:'workCenters', plantId:plantId}"/>
+                                                                </drop-down>
+                                                            </default-field>
+                                                        </field>
+                                                        <field name="submit">
+                                                            <default-field title="">
+                                                                <submit text="Make draft work orders"
+                                                                        confirmation="Make a draft work order for each selected make suggestion? Buy and transfer suggestions are left for Purchasing and Warehouse."/>
+                                                            </default-field>
+                                                        </field>
+                                                    </form-single>
+                                                </action>
+                                            </row-selection>
+                                            <field name="pseudoId">
+                                                <default-field title="Product">
+                                                    <link url="." text="${pseudoId}" link-type="anchor"
+                                                            tooltip="Explain its demand and supply"
+                                                            parameter-map="{plantId:plantId, planningSuggestionId:planningSuggestionId,
+                                                                methodEnumId:filterMethodEnumId || '', exceptionsOnly:filterExceptionsOnly || ''}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productName">
+                                                <default-field title="Name">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="methodText">
+                                                <default-field title="Method">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                            methodEnumId == 'PsmMake' ? 'primary' : 'grey'}">${methodText}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: methodText})}]]></text>
+                                                        <text type="html">${methodText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity" align="right">
+                                                <default-field title="Quantity">
+                                                    <display text="${quantity} ${uomText}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="remainingQuantity" align="right">
+                                                <default-field title="Remaining">
+                                                    <display format="#,##0.###"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityName">
+                                                <default-field title="For">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="requiredByText">
+                                                <default-field title="Required by">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="releaseText">
+                                                <default-field title="Release">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="sourceText">
+                                                <default-field title="Source">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <render-mode>
+                                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                            stateColor}">${stateText}</q-chip>]]></text>
+                                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                        <text type="html">${stateText}</text>
+                                                    </render-mode>
+                                                </default-field>
+                                            </field>
+                                            <field name="noteText">
+                                                <default-field title="Note">
+                                                    <display text="${exceptionMessage || warningText ||
+                                                        (pendingReleaseQuantity ? pendingReleaseQuantity + ' held for inspection' : '')}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="supplyText">
+                                                <default-field title="Covered by">
+                                                    <link url="${runLinkPath}" text="${supplies.length ? 'Work order ' +
+                                                        supplies[0].workEffortId : ''}" link-type="anchor"
+                                                            condition="supplies.length &amp;&amp; supplies[0].workEffortId"
+                                                            parameter-map="runLinkDetail ? {workEffortId:supplies[0].workEffortId}
+                                                                : {lookupType:'run', lookupId:supplies[0].workEffortId}"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="pseudoId"/>
+                                                    <field-ref name="productName"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="methodText"/>
+                                                    <field-ref name="quantity"/>
+                                                    <field-ref name="stateText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="PendingReleaseSection" condition="pendingRelease.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Held for inspection"/>
+                                    <box-body-nopad>
+                                        <form-list name="PendingRelease" list="pendingRelease" skip-form="true"
+                                                paginate="false">
+                                            <field name="productName">
+                                                <default-field title="Product">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="facilityName">
+                                                <default-field title="At">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity" align="right">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="dueText">
+                                                <default-field title="Inspection due">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="nettedText">
+                                                <default-field title="In the plan">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="productName"/>
+                                                    <field-ref name="dueText"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="quantity"/>
+                                                    <field-ref name="nettedText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="DemandSupplySection" condition="selected">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Demand and supply of ${selected.pseudoId} ${selected.productName} at ${
+                                        selected.facilityName}"/>
+                                    <box-body>
+                                        <label text="${['Demand ' + selected.grossQuantity, 'stock and supply ' +
+                                            selected.availableQuantity, selected.methodText + ' ' + selected.quantity,
+                                            selected.leadTimeDays ? 'lead ' + selected.leadTimeDays + ' days' : '',
+                                            selected.prepareDays &amp;&amp; selected.prepareDays != '0' ? 'preparation ' +
+                                            selected.prepareDays + ' days' : ''].filter(Boolean).join(' · ')}" type="p"/>
+                                    </box-body>
+                                    <box-body-nopad>
+                                        <form-list name="DemandSupply" list="demandSupply" skip-form="true" paginate="false">
+                                            <field name="kindText">
+                                                <default-field title="Source">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="label">
+                                                <default-field title="Document">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="directionText">
+                                                <default-field title="Direction">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="dateText">
+                                                <default-field title="Date">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <field name="quantity" align="right">
+                                                <default-field title="Quantity">
+                                                    <display format="#,##0.###"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="nettedText">
+                                                <default-field title="In the plan">
+                                                    <display/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column>
+                                                    <field-ref name="kindText"/>
+                                                    <field-ref name="label"/>
+                                                </column>
+                                                <column>
+                                                    <field-ref name="quantity"/>
+                                                    <field-ref name="nettedText"/>
+                                                </column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

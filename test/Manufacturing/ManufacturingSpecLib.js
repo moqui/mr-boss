@@ -130,7 +130,92 @@ function routeFixtures() {
         mounts.push(["WorkCenters/FacilityDetail/" + tab, shared + "FacilityDetail/" + tab + ".xml"])
         routes["WorkCenters/FacilityDetail/" + tab] = {parameters: {facilityId: ids.lineId}, text: "Assembly line A"}
     }
+    // P13: the Planning area (SupplyPlanning by default), the shared supply plan with the Manufacturing context on Retail's
+    // plant
+    Object.assign(routes, {
+        Planning: {text: "Supply planning"},
+        "Planning/SupplyPlanning": {parameters: {plantId: ids.plantId}, text: "Supply planning"}
+    })
+    mounts.push(["Planning/SupplyPlanning", shared + "SupplyPlanning.xml"])
     return {routes, mounts}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, routeFixtures})
+// P13: a made product of Retail's with a component bought from a supplier, its BOM (three of the component, two lead days)
+// drafted by the method engineer and released by the approver, and a sales order of four at Retail's plant due in a week:
+// the demand of ManufacturingPlanning and of the planning walk (ManufacturingPlanningFixtures), each with its own ids.
+const B = "mantle.product.BomServices."
+function planningFixture(fixture) {
+    const organizationPartyId = fixture.organizationPartyId || "ORG_ZIZI_RETAIL"
+    system(() => {
+        for (const [productId, productName] of [
+            [fixture.finId, fixture.finName],
+            [fixture.componentId, fixture.componentName]
+        ])
+            invoke("store#mantle.product.Product", {
+                productId,
+                pseudoId: productId,
+                productName,
+                productTypeEnumId: "PtAsset",
+                assetTypeEnumId: "AstTpInventory",
+                amountUomId: "OTH_ea",
+                ownerPartyId: organizationPartyId,
+                statusId: "PrdActive"
+            })
+        invoke("store#mantle.product.ProductPrice", {
+            productPriceId: fixture.componentId + "_BUY",
+            productId: fixture.componentId,
+            vendorPartyId: "ZiddlemanInc",
+            pricePurposeEnumId: "PppPurchase",
+            priceTypeEnumId: "PptCurrent",
+            fromDate: 0,
+            price: 2,
+            priceUomId: "USD"
+        })
+    })
+    const productBomId = asUser(
+        users.method,
+        () => {
+            const created = invoke(B + "store#Bom", {
+                productId: fixture.finId,
+                organizationPartyId,
+                leadTimeDays: 2,
+                changeReason: "Planning fixture method"
+            })
+            const id = created.productBom.productBomId
+            invoke(B + "store#BomItem", {productBomId: id, productId: fixture.componentId, quantity: 3, changeReason: "Fixture"})
+            return id
+        },
+        false
+    )
+    asUser(
+        users.methodApprove,
+        () => {
+            const detail = invoke(B + "get#BomDetail", {productBomId})
+            invoke(B + "release#BomDraft", {productBomId, expectedRevision: detail.expectedRevision, changeReason: "Fixture"})
+        },
+        false
+    )
+    system(() => {
+        invoke("store#mantle.order.OrderHeader", {orderId: fixture.orderId, statusId: "OrderApproved", currencyUomId: "USD"})
+        invoke("store#mantle.order.OrderPart", {
+            orderId: fixture.orderId,
+            orderPartSeqId: "01",
+            vendorPartyId: organizationPartyId,
+            customerPartyId: "CustJqp",
+            facilityId: ids.plantId,
+            statusId: "OrderApproved"
+        })
+        invoke("store#mantle.order.OrderItem", {
+            orderId: fixture.orderId,
+            orderPartSeqId: "01",
+            orderItemSeqId: "01",
+            productId: fixture.finId,
+            quantity: 4,
+            unitAmount: 20,
+            requiredByDate: new Date(Date.now() + 7 * 86400000)
+        })
+    })
+    return productBomId
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, routeFixtures, planningFixture})

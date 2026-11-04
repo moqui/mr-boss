@@ -2,8 +2,8 @@
 
 The Manufacturing app calls Mantle's production, method, quality and stock services, which check their own permissions
 and organization. BOSS owns the app's access (`ironstone.manufacturing.AccessServices`), its routes, choices, Home and
-forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation) and P3 (work centers and equipment) of
-[impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
+forms, and adds no same-named pass-through of a Mantle service. P1 (the foundation), P3 (work centers and equipment) and P13
+(supply planning) of [impl-manufacturing](../plan/impl-manufacturing.md) are built; each later phase extends the tables and sections below.
 
 ## Routes and users
 
@@ -12,7 +12,8 @@ forms, and adds no same-named pass-through of a Mantle service. P1 (the foundati
 | Home | The plant picker, the Summary (open, in progress, late, short, completed this month: each "Unavailable" until its phase counts it), the Queue of due work and shortages (empty until P5) and the lookup of a record (`lookupType`, `lookupId`) |
 | Work centers | `WorkCenters/Centers` (Find, the load, New work center), `Equipment`, `ResourceCalendar` (and `ResourceCalendarTui`); `FacilityDetail` and `EquipmentDetail`, the shared screens with the Manufacturing context, hidden from the menu |
 | Work orders, BOMs, Routings, Reports | Placeholders, open to every Manufacturing user |
-| Shop floor, Quality, Planning, Subcontracting, Settings, Approvals | Placeholders, for their groups only (below) |
+| Planning | `Planning/SupplyPlanning` (the default tab), the shared supply plan with the Manufacturing context; for the planner, scheduler and supervisor groups |
+| Shop floor, Quality, Subcontracting, Settings, Approvals | Placeholders, for their groups only (below) |
 
 All routes are under `/qapps/Manufacturing`, in design §1.2's order by `default-menu-index`. The root
 (`screen/Manufacturing.xml`) runs `get#SharedContext` in its always-actions into `manufacturing` (capabilities, the
@@ -120,8 +121,18 @@ center, Files and Conversation; the Warehouse tabs say `appRoot != 'Manufacturin
 `screen/Commons/Calendar.qvue` in its resource mode (setup answers `resource`), read only. Manufacturing.js's P3 block sets
 the work center, facility and asset destinations, the `WorkCenters/*` sharedLinks and the forms' choices.
 
+## Supply planning (P13)
+
+`screen/Shared/SupplyPlanning.xml`, mounted at `Planning/SupplyPlanning`, plans the selected plant (or `plantId`) with the
+lines under it. Its Manufacturing branch runs `get#SharedContext` with the plant, and its transitions
+`check#Record` (facility, `supplyPlan` to recalculate and schedule, `plan` to convert), then Mantle's
+`mantle.product.SupplyPlanningServices`: `run#SupplyPlan`, `get#SupplyPlan`, `store#PlanSchedule` and
+`convert#PlanningSuggestions` (make suggestions to draft work orders through `create#ProductionOrder`; buy and transfer
+are shown, for Purchasing and Warehouse to convert). Home's Due work and shortages box links it for SUPPLY_PLAN_RUN
+holders. Manufacturing.js's P13 block adds the route and the `planningMethods` choice.
+
 ## Verification
 
-`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters`, `./moq test mr-mantle --spec
-WorkCenters`, the walk `ManufacturingWorkCentersWalk`; AppStructure and TuiRender cover the built screens and the area
+`./moq test mr-boss --spec ManufacturingShell,ManufacturingAccess,ManufacturingWorkCenters,ManufacturingPlanning`, `./moq test
+mr-mantle --spec WorkCenters,SupplyPlanning`, the walks `ManufacturingWorkCentersWalk` and `ManufacturingPlanningWalk`; AppStructure and TuiRender cover the built screens and the area
 placeholders.

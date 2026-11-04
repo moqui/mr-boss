@@ -719,3 +719,62 @@ feature("a work-center change needs METHOD_RESOURCES: the reader is refused what
         resource == ""
     }
 })
+
+// ===== P13: supply planning =====
+// The shared plan of Retail's plant, read and run with the same parameters by each user; the plan is limited to a product
+// with no demand so it changes nothing another spec reads.
+const planning = "mantle.product.SupplyPlanningServices."
+const planRequest = {facilityIds: [ids.plantId], productIds: [fixture.productId]}
+feature("the planner runs the plan; the scheduler only reads it; the display user and another organization are refused", {
+    when() {
+        // the negative cases first, with the parameters that then succeed
+        const scheduler = asUser(users.schedule, () => refusal(planning + "run#SupplyPlan", planRequest), false)
+        const reader = asUser(users.display, () => refusal(planning + "get#SupplyPlan", planRequest), false)
+        const other = asUser(users.services, () => refusal(planning + "get#SupplyPlan", planRequest), false)
+        const otherAccess = asUser(users.services, () =>
+            refusal(access + "check#Record", {recordType: "facility", recordId: ids.plantId})
+        )
+        const planner = asUser(users.plan, () => refusal(planning + "run#SupplyPlan", planRequest), false)
+        const schedulerRead = asUser(users.schedule, () => refusal(planning + "get#SupplyPlan", planRequest), false)
+        const scheduleStore = asUser(
+            users.schedule,
+            () => refusal(planning + "store#PlanSchedule", {facilityIds: [ids.plantId], netHeldQuantity: "N"}),
+            false
+        )
+        const plannerAccess = asUser(users.plan, () =>
+            refusal(access + "check#Record", {recordType: "facility", recordId: ids.plantId, capability: "supplyPlan"})
+        )
+        const scheduleAccess = asUser(users.schedule, () =>
+            refusal(access + "check#Record", {recordType: "facility", recordId: ids.plantId, capability: "plan"})
+        )
+        return {scheduler, reader, other, otherAccess, planner, schedulerRead, scheduleStore, plannerAccess, scheduleAccess}
+    },
+    then({scheduler, reader, other, otherAccess, planner, schedulerRead, scheduleStore, plannerAccess, scheduleAccess}) {
+        scheduler.includes("PERMISSION_DENIED")
+        reader.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        otherAccess.includes("RECORD_UNAVAILABLE")
+        planner == ""
+        schedulerRead == ""
+        scheduleStore.includes("PERMISSION_DENIED")
+        plannerAccess == ""
+        scheduleAccess.includes("PERMISSION_DENIED")
+    }
+})
+feature("Planning opens for the planner with its actions and not for a reader or the other organization, with authz enabled", {
+    when() {
+        return {
+            planner: asUser(users.plan, () => lib.page("Planning/SupplyPlanning", {plantId: ids.plantId})),
+            reader: asUser(users.read, () => lib.page("Planning/SupplyPlanning", {plantId: ids.plantId})),
+            other: asUser(users.services, () => lib.page("Planning/SupplyPlanning", {plantId: ids.plantId}))
+        }
+    },
+    then({planner, reader, other}) {
+        planner.status == 200
+        planner.errors.length == 0
+        planner.output.includes("Recalculate")
+        planner.output.includes("Schedule")
+        reader.status != 200 || !reader.output.includes("Recalculate")
+        other.status != 200 || !other.output.includes("Recalculate")
+    }
+})
