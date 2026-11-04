@@ -205,7 +205,7 @@ feature("Product360's Open runs link, the palette and record links open the work
         // a production reader opens Product360 under Manufacturing: the Manufacturing groups read the catalog (F-P5a-3)
         const product = asUser(users.read, () => lib.page("BillsOfMaterials/Product360", {productId: ids.productId}, "html"))
         const catalog = asService(users.read, () => invoke("ironstone.products.CatalogServices.get#CatalogAccess", {}))
-        const byProduct = asService(users.read, () => invoke(P + "find#ProductionOrders", {productId: ids.productId}))
+        const byProduct = asService(users.read, () => invoke(P + "find#ProductionOrders", {productId: ids.productId, pageSize: 500}))
         const search = asUser(users.read, () =>
             invoke("ironstone.manufacturing.AccessServices.search#Records", {text: workEffortId, limit: 5}).rows.map(
                 row => row.url

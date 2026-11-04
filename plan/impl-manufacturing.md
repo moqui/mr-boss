@@ -390,6 +390,12 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   baseline), 11 skipped; mr-boss 1,704 passed, 1 failed: ManufacturingShell expected the demo's released run among Home's
   first ten due work orders, which other specs' runs can fill, so it now checks a due row is listed (fixed);
   `moqui lint --screens` clean; BOSS client walks 150 passed.
+- **Wave 5 suites (Nov 4, on master after P8, P12 and P14 merged):** standalone mr-mantle 1,521 passed, 3 failed (the
+  baseline two, and AccountingCollections' credit aging read 9 overdue days for 10 when run at 23:37 CST, after UTC
+  midnight: a date-boundary issue in Accounting's Credit.js, which Manufacturing does not touch), 13 skipped; mr-boss
+  1,724 passed, 1 failed: ManufacturingWorkOrders' find by product paged past its run once other specs' DEMO_1_1 runs
+  filled the first page (it now asks for a larger page; fixed); `moqui lint --screens` clean; BOSS client walks 159
+  passed, 1 failed (AccountingCloseWalk's dialog timed out; it passed alone).
 
 ### P2 — Methods
 
