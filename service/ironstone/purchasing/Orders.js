@@ -134,6 +134,8 @@ function findOrders(p) {
         return {
             orderId: row.orderId,
             orderName: row.orderName || "",
+            // the revision shown, which the list's bulk approval decides (bulk#PurchaseOrderActions orderRevisions)
+            orderRevision: row.orderRevision == null ? 1 : Number(row.orderRevision),
             supplierPartyId: row.vendorPartyId,
             supplierName: names[row.vendorPartyId] || row.vendorPartyId,
             organizationName: names[row.customerPartyId] || row.customerPartyId,

@@ -50,6 +50,7 @@ feature("the list shows a view's orders with ordered, received, billed and balan
     },
     then({buyerRow, readerRow, drafts, requester, render}) {
         buyerRow.statusId == "OrderPlaced"
+        buyerRow.orderRevision >= 1
         buyerRow.supplierName.startsWith("Ziddleman")
         buyerRow.orderedText == "2"
         buyerRow.receivedText == "0"
@@ -119,6 +120,30 @@ feature(
 
 feature("the bulk approval approves each order it may and names the one it refuses", {
     when() {
+        // the list's Approve posts the revisions shown: one changed since is refused, not approved (P4 review, F-P4-6)
+        const revision = asUser(users.approve, () =>
+            invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: state.secondId})
+        ).purchaseOrder.orderRevision
+        const stalePost = asUser(users.approve, () =>
+            ec.screen
+                .makeTest()
+                .rootScreen("component://mr-boss/screen/Purchasing.xml")
+                .render(
+                    "Orders/PurchaseOrders/bulkAction",
+                    {
+                        action: "approve",
+                        selectedIds: [state.secondId],
+                        orderRevisionsText: JSON.stringify({[state.secondId]: Number(revision) - 1})
+                    },
+                    "post"
+                )
+        )
+        ec.message.clearErrors()
+        const staleStatus = ec.entity
+            .find("mantle.order.OrderHeader")
+            .condition("orderId", state.secondId)
+            .disableAuthz()
+            .one().statusId
         const out = asUser(users.approve, () =>
             invoke(O + "bulk#PurchaseOrderActions", {
                 appRoot: "Purchasing",
@@ -129,9 +154,12 @@ feature("the bulk approval approves each order it may and names the one it refus
         const status = asUser(users.approve, () =>
             invoke(O + "get#OrderDetail", {appRoot: "Purchasing", orderId: state.secondId})
         ).purchaseOrder.statusId
-        return {out, status}
+        return {revision, stalePost, staleStatus, out, status}
     },
-    then({out, status}) {
+    then({revision, stalePost, staleStatus, out, status}) {
+        Number(revision) >= 1
+        stalePost.status < 400
+        staleStatus == "OrderPlaced"
         out.results.find(row => row.orderId == ids.orderId).resultCode == "ORDER_NOT_PLACED"
         out.results.find(row => row.orderId == state.secondId).resultCode == "DONE"
         out.summary.startsWith("1 of 2 approved")
