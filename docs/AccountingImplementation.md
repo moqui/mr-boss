@@ -544,7 +544,7 @@ Tests run through Moqui's JavaScript runners; Node is not a test dependency.
 target/release/moqui lint --screens <report-file>
 ```
 
-The PDF specs need a Chromium for PDF (`pdf_chromium_path`; see [Run-Deploy](../../../../docs/Run-Deploy.md) and
+The PDF specs need a Chromium for PDF (`moqui_chromium_path`; see [Run-Deploy](../../../../docs/Run-Deploy.md) and
 [Client-Testing](../../../../docs/dev/Client-Testing.md)); without one every PDF spec fails. The BOSS demo adopts the
 controls only on BOSS_ACCT_ORG, so Mantle's low-level posting specs run in the same runtime as Accounting's and test
 Mantle's defaults. Results are recorded in [impl-accounting](../plan/impl-accounting.md).

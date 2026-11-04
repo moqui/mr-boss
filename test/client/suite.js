@@ -55,7 +55,8 @@ suite(
         "WarehouseReportsWalk",
         "ManufacturingPolicyWalk",
         "ManufacturingWorkCentersWalk",
-        "ManufacturingMethodsWalk"
+        "ManufacturingMethodsWalk",
+        "ManufacturingCostsWalk"
     ],
     {
         server: {

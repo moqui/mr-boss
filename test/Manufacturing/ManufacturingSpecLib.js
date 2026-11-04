@@ -45,7 +45,9 @@ const users = {
     resource: "manufacturing.resource",
     admin: "manufacturing.admin",
     display: "manufacturing.display",
-    services: "manufacturing.services"
+    services: "manufacturing.services",
+    // P6: a production reader with Accounting's ACCOUNTING_VIEW
+    finance: "manufacturing.finance"
 }
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
@@ -175,6 +177,8 @@ function routeFixtures() {
         "WorkOrders/WorkOrderDetail/Traveler": {parameters: run, text: "Demo assemblies"},
         "WorkOrders/WorkOrderDetail/PickSheet": {parameters: run, text: "Demo assemblies"}
     })
+    // P6: the Costs tab on the Warehouse demo's released run
+    routes["WorkOrders/WorkOrderDetail/ProductionCosts"] = {parameters: {workEffortId: ids.releasedRunId}, text: "Coated filters"}
     return {routes, mounts}
 }
 

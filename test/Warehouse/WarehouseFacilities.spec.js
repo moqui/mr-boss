@@ -83,8 +83,10 @@ feature("a reader lists their organization's facilities as a tree by parent, sea
         !all.some(row => row.facilityId === ids.otherFacilityId)
         all.find(row => row.facilityId === ids.facilityId).childCount >= 1
         east == [ids.eastFacilityId]
-        // the annex, and Manufacturing's two demo lines under the warehouse (impl-manufacturing P1, F16)
-        children == ["BOSS_MFG_LINE_A", "BOSS_MFG_LINE_B", "BOSS_WH_ANNEX"]
+        // the annex, and Manufacturing's two demo lines under the warehouse (impl-manufacturing P1, F16); other specs may
+        // add their own lines under it (ManufacturingWorkCenters' cell)
+        ["BOSS_MFG_LINE_A", "BOSS_MFG_LINE_B", "BOSS_WH_ANNEX"].every(id => children.includes(id))
+        children.every(id => id === "BOSS_WH_ANNEX" || id.startsWith("BOSS_MFG_"))
         percent == 0
         list.errors == []
         list.output.includes("Ziziwork Retail East Warehouse")

@@ -212,7 +212,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Work centers and equipment | Mantle, BOSS | WorkCenters, FacilityDetail, Equipment, EquipmentDetail, ResourceCalendar | built Nov 3 |
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | — |
-| P6 Cost evidence | Mantle, BOSS | ProductionCosts | — |
+| P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
 | P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
@@ -379,6 +379,10 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
 - **Wave 1 suites (Nov 3, on master after the merge):** standalone mr-mantle 1,437 passed, 2 failed (the baseline
   WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,643 passed; `moqui lint --screens` clean; BOSS client walks
   125 passed.
+- **Wave 2 suites (Nov 3, on master after P2, P3 and P4 merged):** standalone mr-mantle 1,454 passed, 2 failed (the
+  baseline WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,668 passed, 1 failed: WarehouseFacilities expected
+  ZIRET_WH's exact children and met ManufacturingWorkCenters' spec cell, so it now checks the demo children are there
+  (fixed); `moqui lint --screens` clean; BOSS client walks 135 passed.
 
 ### P2 — Methods
 
@@ -471,18 +475,18 @@ The rest of M3 and CX-METHOD (design §5, crosscut §3.23), over Products P8's r
   skill standards (the demo has one; `store#RoutingResource` is for routing operations); templates in the palette; a "Not
   available" state for a missing routing in RoutingDetail; where used's bulk replacement (`later`).
 - Findings (provisional):
-  - **F-P2-1** Products' `Methods.js` stored a routing with no `workEffortId` into the method's routing (native's fallback),
+  - **F47** Products' `Methods.js` stored a routing with no `workEffortId` into the method's routing (native's fallback),
     so "New routing" for a product whose method has one edited that routing; ProductsMethodFixtures did that to the demo
     routing. A routing stored with no id is now new.
-  - **F-P2-2** Products' specs assume DEMO_1_1's MAIN and DEMO_3_1 have no method (ProductsMethodFixtures, ProductsMethodWalk),
+  - **F48** Products' specs assume DEMO_1_1's MAIN and DEMO_3_1 have no method (ProductsMethodFixtures, ProductsMethodWalk),
     so the demo method is DEMO_1_1's PILOT; `find#Boms` now orders by product and method code, so Product360 opens MAIN
     first when there is one. AppStructure's BillOfMaterialsDetail text is now one the seeded method shows.
-  - **F-P2-3** DEMO_1_1, DEMO_SA_1, DEMO_SA_2 and DEMO_RM_1 have no `amountUomId`, so `store#Bom` and `store#BomItem` need
+  - **F49** DEMO_1_1, DEMO_SA_1, DEMO_SA_2 and DEMO_RM_1 have no `amountUomId`, so `store#Bom` and `store#BomItem` need
     an explicit unit for them; the CSV import asks for `baseUomId` then.
-  - **F-P2-4** Manufacturing users reach the Mantle method verbs and Products' `ironstone.products.MethodServices` only
+  - **F50** Manufacturing users reach the Mantle method verbs and Products' `ironstone.products.MethodServices` only
     through the screens' inherited authorization (no artifact group grants them directly); the specs call them with
     authorization off, where each service's permission check refuses.
-  - **F-P2-5** A screen-local variable named `selected` is passed to the shared `choices` transition (`in-map="context"`) as
+  - **F51** A screen-local variable named `selected` is passed to the shared `choices` transition (`in-map="context"`) as
     the selected value; OperationTemplates' selected template is `selectedTemplate` for that reason.
 - Review (Nov 3):
   - Fixed: the `operationSources` choice left every template out when given the routing (`parentWorkEffortId <> ?` drops
@@ -494,14 +498,14 @@ The rest of M3 and CX-METHOD (design §5, crosscut §3.23), over Products P8's r
     `WorkEffortInstructionImmutable` EECA (Work.eecas.xml, `OperationTemplates.js` `guardInstruction`) now refuses a
     delete, a change of its file, checksum, type, template or start, a reopened end, and a create without a checksum under
     the instruction store; RecordFiles lists it as not removable and refuses its removal. MethodTemplates covers each.
-  - Fixed: Products' `Methods.js` opened a product's first method by method code (F-P2-2's sort), so an `ALT` method came
+  - Fixed: Products' `Methods.js` opened a product's first method by method code (F48's sort), so an `ALT` method came
     before MAIN; it opens MAIN when there is one, as Mantle's cost roll-up picks.
   - Spec: a METHOD_APPROVE holder of another organization gets no release notice (MethodTemplates).
-  - Checked, no change: F-P2-1 (every Products caller of `store#Routing` that edits passes `workEffortId`; New routing shows
+  - Checked, no change: F47 (every Products caller of `store#Routing` that edits passes `workEffortId`; New routing shows
     only without one); the overlap finding (release already refused a date before the latest approval, so only
     `validate#BomDraft` and the request show it); the CSV imports (each version in its own transaction through
     `import#…Version`, which checks METHOD_EDIT again; kits skipped; nothing released); `clone#Bom`; the Manufacturing
-    context (each capability is the user's own CatalogAccess capability, Costs only with cost read); F-P2-4 (the Mantle and
+    context (each capability is the user's own CatalogAccess capability, Costs only with cost read); F50 (the Mantle and
     Products method services are `allow-remote="false"` and check their permissions, and the palette reads through
     `search#Records`, so no REST or palette path reaches them).
   - Specs run: Mantle MethodTemplates, ProductMethods, ManufacturingServices, WarehouseProduction (30, pass); BOSS
@@ -575,20 +579,20 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   and ends the row of the same basis and product in effect; FacilityDetail's identity is edited in Warehouse only; the
   ResourceCalendar is the Commons component's resource mode (design ResourceCalendar).
 - Findings (provisional):
-  - **F-P3-1** The cost estimator (`BOSS_MANUFACTURING_COST`: `METHOD_COST_EDIT`, no `METHOD_RESOURCES`) cannot add a rate:
+  - **F52** The cost estimator (`BOSS_MANUFACTURING_COST`: `METHOD_COST_EDIT`, no `METHOD_RESOURCES`) cannot add a rate:
     Products P8's `store#WorkCenterRate` needs the resources capability and the cost one. Only a user with both (the admin)
     adds one; the plan's "a rate needs cost authority" holds. Granting `METHOD_RESOURCES` to `_COST`, or a rate scope of its
     own, is a decision for the cost phases (P6, P15).
-  - **F-P3-2** The Mantle verbs the screens call are authorized through the screen they run in (the root's inherited authz),
+  - **F53** The Mantle verbs the screens call are authorized through the screen they run in (the root's inherited authz),
     not the `BOSS_MANUFACTURING` artifact group, so a spec calls them as a user with artifact authorization disabled, as the
     Mantle specs do; the Mantle permission checks are what refuse.
-  - **F-P3-3** `Calendar.qvue` found its transitions by a path element named `Calendar`; it now also takes `ResourceCalendar`.
-  - **F-P3-4** A released operation copies its run's estimated dates (Warehouse P16a), so the calendar and the load place each
+  - **F54** `Calendar.qvue` found its transitions by a path element named `Calendar`; it now also takes `ResourceCalendar`.
+  - **F55** A released operation copies its run's estimated dates (Warehouse P16a), so the calendar and the load place each
     operation over its whole run until P12 schedules operations; work hours on a shutdown day show beside it, and the load's
     nominal hours do not subtract work hours, holidays or downtime (P12).
-  - **F-P3-5** ProductMethods' record-callback feature read "the" WorkCenterRate audit row without its key, so a rate made by
+  - **F56** ProductMethods' record-callback feature read "the" WorkCenterRate audit row without its key, so a rate made by
     another spec earlier in the same run (WorkCenters) broke it; it now reads its own rate's row.
-  - **F-P3-6** Centers has no next-available or offline-reason columns and Equipment no downtime action: they come with P11
+  - **F57** Centers has no next-available or offline-reason columns and Equipment no downtime action: they come with P11
     and P12. P1's ManufacturingAccess `store` helper and ManufacturingShell's `outsider` line are not Prettier-clean; left so
     as not to conflict.
 - **Review (Nov 3).** Checked against the scope, §2 and the usable-when items; the rate is omitted (not zeroed) for a
@@ -602,10 +606,10 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   - get#ResourceCalendarEvents read the holidays of a given plant's owner without checking the plant was the user's;
   - the Add rate dialog offered Approve to a user without the approval authority (Mantle refused it).
 
-  F-P3-1 is agreed: the plan keeps `store#WorkCenterRate` "as built" (resources and the cost authority), and the
+  F52 is agreed: the plan keeps `store#WorkCenterRate` "as built" (resources and the cost authority), and the
   usable-when's "a rate needs cost authority" holds (the resource administrator alone is refused). Left: the load counts
   the whole hours of an operation that overlaps the range, not the part inside it, with the run's dates on each operation
-  (F-P3-4), until P12 schedules operations; store#WorkCenter's new line has no operation key, so a double submit makes two
+  (F55), until P12 schedules operations; store#WorkCenter's new line has no operation key, so a double submit makes two
   lines (as P8's verb, no key).
   Tests: Mantle WorkCenters (6), ProductMethods, ManufacturingServices, WarehouseProduction, ProductStandardCosts (57,
   pass); BOSS ManufacturingWorkCenters, ManufacturingAccess, ProductsMethods, Calendar (92, pass); `moqui lint --screens`
@@ -700,14 +704,14 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   - TimeAndCost's link to CostingPolicies is a note until P15 builds that screen. P15 replaces the note with the
     read-only link.
 - Findings (provisional):
-  - **F-P4-1** The design's TimeAndCost "production approver rule" flag is not built: F33 dropped it, since the run's
+  - **F58** The design's TimeAndCost "production approver rule" flag is not built: F33 dropped it, since the run's
     supervisor in a Manager role is enough under the default timesheet policy. The design's TimeAndCost row and Actions
     now name the labor cost flag in its place.
-  - **F-P4-2** F38's optional Mantle refusal in `update#Task` and `set#TaskStatus` behind a ProductionPolicy flag is not
+  - **F59** F38's optional Mantle refusal in `update#Task` and `set#TaskStatus` behind a ProductionPolicy flag is not
     built. P1's BOSS guards cover the paths, and no phase asked for it.
-  - **F-P4-3** The walks' database outlives a `test-client --serve` run, so a walk that adds a record by a fixed code
+  - **F60** The walks' database outlives a `test-client --serve` run, so a walk that adds a record by a fixed code
     fails on its second run. ManufacturingPolicyWalk uses a code made for each run.
-  - **F-P4-4** For P5: `release#ProductionOrder` already stamps `productionReleaseDate`, and no policy row can start
+  - **F61** For P5: `release#ProductionOrder` already stamps `productionReleaseDate`, and no policy row can start
     before now. So `ProductionPolicy.js` `runPolicy(run)`, or `get#ProductionPolicy` with `workEffortId`, is the policy
     the run keeps, with no copy on the run. P5's release gate reads `shortageReleaseEnumId` there. P7 reads
     `overProducePercent` and `completeOnFinalReceipt`, P9 `strictRelease` and `substituteApproval`, and P10
@@ -718,13 +722,13 @@ The rest of M5 and CX-WORKCENTER (design §6), over Products P8's `WorkCenter` a
   plan); nothing deleted. Fixed:
   - `store#ProductionPolicy` read now before taking the organization lock. A change that waited on another could then
     start before it, end that change ms later and so lose its own values silently, and start before a release that
-    committed while it waited, against F-P4-4. Now is read after the lock.
+    committed while it waited, against F61. Now is read after the lock.
   - A reason's deactivation ended the row in effect now, even with a later start, which could stretch that row over a
     later one. It also left a scheduled change to start the reason again. It now ends the row in effect at its start and
     is refused (REASON_INVALID) while a later change is scheduled.
   - The spec covers a plant of another organization (read and change refused, no row) and the deactivation before a
     scheduled change. The ProductionSettings dialog forms are indented under their `form-single`.
-  - Left: F-P4-4 holds for the services only. A data load or a direct entity write can still back-date a row, so a P5
+  - Left: F61 holds for the services only. A data load or a direct entity write can still back-date a row, so a P5
     copy on the run would be the stricter choice. The policy and reason saves take `expectedFromDate`, not an operation
     key, as Warehouse's policy saves do, so a retry after success answers POLICY_CHANGED.
   - Specs: Mantle ProductionPolicy, WarehouseProduction and ManufacturingServices (22, pass). BOSS ManufacturingAccess,
@@ -813,6 +817,96 @@ steps 19 and 20).
     transaction, and a retried issue writes none;
   - a cost estimator sees the frozen estimate and no actuals, and a financial reader sees both;
   - a review request notifies Accounting with the run and source revision.
+
+**Built Nov 3 (P6).**
+- Mantle records (`entity/ProductionCostEntities.xml`, a new file): `mantle.work.production.ProductionCostEvent`, unique by
+  source entity, source id, cost component and source revision (PRODCOSTEVT_SOURCE), with the organization, run, operation,
+  line, event type, component, product, quantity and unit, the rate and its rate row (`rateEntityName`, `rateId`: the asset's
+  cost, the frozen standard; later a WorkCenterRate or RateAmount), the amount signed for the run's WIP, the valuation
+  (`PcvValued`, `PcvUnvalued`) and ledger state (`PclPosted` by its movement's hook, `PclNotPosted`, `PclAwaitingClose`,
+  `PclClosePosted`), the hook's `acctgTransId` and P15's `closeAcctgTransId`, the stock, time, order and invoice references,
+  `originalCostEventId` for a delta or reversal, `reasonCode`, the event and accounting dates and `afterClose`;
+  `ProductionCostAllocation` (event, output line and receipt, policy row, destination, amount, operation key, ledger and
+  reversal links), with no writer until P15; the run's audit-logged `productionCostReviewStatusId`, date, user, revision,
+  proposed accounting date and note. `data/ProductionCostData.xml`: the event types (issue, return, output), the components
+  (`ProductionCostComponent`: material, labor, machine, outside processing, output), the valuation, ledger and destination
+  enumerations, the ProductionCostReview status type (`PcrRequested`) and the `ProductionCostReview` NotificationTopic.
+- Mantle services (`ProductionCosts.js`, three services appended to `ProductionServices.xml`):
+  `record#ProductionCostEvent` (internal, no permission: it derives the event from the source record alone, from a sources
+  table that P7, P10 and P14 extend; a second call answers the first event); `get#ProductionCosts` (PRODUCTION_VIEW,
+  PRODUCTION_COST_REVIEW or ACCOUNTING_VIEW): the events, the frozen estimate for the output quantity with its components
+  (PRODUCT_COST_VIEW or ACCOUNTING_VIEW), the actuals by component, issued, returned, output relief and WIP balance
+  (ACCOUNTING_VIEW), the estimate against the actual (both), the exceptions (unvalued, not posted, awaiting close) and the
+  review state; amounts, rates and ledger links are left out of each event row without ACCOUNTING_VIEW; `review#ProductionCosts`
+  (PRODUCTION_COST_REVIEW, operation key and expected revision): sets the review fields and sends ProductionCostReview with the
+  run, its revision, the accounting date and the exception counts to the organization's PRODUCTION_COST_POST holders
+  (Payables.js `notify`), a closed period of the accounting date a warning.
+- The hooks (`ProductionServices.xml` only; `Production.js` unchanged): issue#ProductionMaterial, return#UnusedMaterial and
+  receive#ProductionOutput call `recordAll` after their movement, inside its transaction, and answer `productionCostEventId(s)`;
+  return#UnusedMaterial refuses material without a cost before it posts (`requireCost`, COST_UNAVAILABLE). receive#SubcontractOutput
+  issues and receives through those guards, so its material and output write their events with no change.
+- BOSS: `screen/Manufacturing/WorkOrders/WorkOrderDetail/ProductionCosts.xml` (Costs: the title row with the review chip and the
+  primary Request cost review dialog, CloseReview, with the accounting date, the note, the exception counts and a closed-period
+  warning; Frozen estimate; Actual cost with the estimate against it; Cost events with state chips, amounts and journal entry
+  links for financial readers; the not-available state), mounted hidden at the root as `Manufacturing/ProductionCosts`;
+  Manufacturing.js's P6 block (the link path); the demo user `manufacturing.finance` (Manufacturing reader and
+  `BOSS_ACCOUNTING_READ`).
+- Specs: Mantle `test/work/ProductionCosts.spec.js` (4 features, about 1.5 s: the issue, return, output and retry events with
+  their transactions; material without a cost unvalued, its return and an output receipt without a cost refused; the reads of
+  the estimator, finance reader, reader, another organization and no permission; the review with its refusals, audit row and
+  notice); WarehouseProduction's subcontract feature checks its events. ManufacturingAccess's P6 section (2 features: the three
+  readers through Mantle and the screen with authz enabled, the other organization; the review by the estimator and its refusal
+  for a reader, through check#Record and the verb). ManufacturingSpecLib's route `ProductionCosts` and `moved`, which
+  AppStructure and TuiRender apply to the file walk's path. Client walk `ManufacturingCostsWalk` (3, with 390 px), in suite.js.
+- Tests run: Mantle ProductionCosts, ManufacturingServices, WarehouseProduction, ProductMethods, ProductionPolicy (37, pass);
+  BOSS ManufacturingAccess, AppStructure, TuiRender (78, pass), ManufacturingShell, WarehouseAccess, WarehousePacking,
+  ClientIsolation, ManufacturingWorkCenters (181, pass); walks WarehouseProductionWalk (3) and ManufacturingCostsWalk (3), pass.
+  `moqui lint --screens`: ProductionCosts shows only informational anchor rows.
+- Decisions:
+  - An event is derived from its source, never from values a caller passes, so the internal writer needs no permission and a
+    repeated call is harmless; amounts are the hook transaction's debit total (the quantity times the asset's cost when it posted
+    nothing), signed for WIP.
+  - The output's relief is its own component (`PrcOutput`), so the unique key holds for every source; the other components are
+    the frozen estimate's, so estimate and actual compare by component.
+  - The estimate is read with Products' cost read (PRODUCT_COST_VIEW or ACCOUNTING_VIEW among it; the review aligned it with
+    CostPolicy), so a financial reader sees both.
+  - ProductionCostReview goes to the run organization's PRODUCTION_COST_POST holders, Accounting's cost close posters (F40).
+    It is decided on the record, so it has no approve service.
+  - A review needs a released, started, held or completed run with at least one event; a second request at the same revision
+    is refused until Accounting decides (P15) or the revision changes (P9).
+- Findings (provisional):
+  - **F-P6-1** ProductionCostReview has no BOSS `linkTemplate` and no `<notification-topic>` in a root: its readers are
+    Accounting's posters, who need not open Manufacturing. P15 sets the link to `Accounting/Inventory/ProductionCostClose`, lists
+    the topic in Accounting's shell, and adds the review decisions (returned, closed) to the ProductionCostReview status type.
+  - **F-P6-2** An issue of material without a cost is not refused (the plan names only output and return receipts): it posts
+    nothing (AtrNoAcquireCost) and its event is unvalued and not posted. P15's close should refuse a run with one, as it does
+    unvalued machine runtime.
+  - **F-P6-3** receive#ProductionOutput always has a cost (the frozen standard, else the WIP to date, COST_UNAVAILABLE without),
+    so the F13 output refusal is the event writer's backstop for another path; the return is refused before it posts.
+  - **F-P6-4** An output receipt that costLines splits (the last unit at the remainder) is two AssetReceipts with two
+    transactions, so it writes two events.
+  - **F-P6-5** Movements made before P6 (Warehouse's demo, earlier runs) have no events. Since an event derives from its source
+    alone, a backfill could call record#ProductionCostEvent per movement; not built.
+  - **F-P6-6** For the merge with P5a: ProductionCosts sits in `WorkOrders/WorkOrderDetail/`, so WorkOrderDetail's directory
+    mounts it as its Costs tab (`default-menu-index="6"`). Then remove the root's `ProductionCosts` item, Manufacturing.js's P6
+    link path and ManufacturingSpecLib's `moved`, move the route fixture to `WorkOrders/WorkOrderDetail/ProductionCosts`, drop
+    the page's own title row for WorkOrderDetail's header, and point ManufacturingCostsWalk at the tab.
+  - **F-P6-7** ManufacturingCostsWalk reads BOSS_WH_RUN, whose costs come from WarehouseProductionWalk earlier in the suite; run
+    alone it sees no costs and checks the empty state instead of the review request.
+
+- **Review (Nov 3).** Checked: each guard's operation-key replay returns before the hook, so a retry writes no event;
+  `record#ProductionCostEvent` runs in the causing transaction, a refusal rolling back the movement; the unique key; each
+  material event's `acctgTransId` with nothing posted again; the WIP sign; the omitted values; review#ProductionCosts's
+  permission, organization, operation key and revision; the recipients (F40). Decided: the estimate's readers are Products'
+  cost read (CostPolicy: `PRODUCT_COST_VIEW`, `_ESTIMATE`, `_APPROVE`, `ACCOUNTING_VIEW`, `ACCOUNTING_GL_POST`), as
+  ProductStandardCost's owner reads it; BOSS's Accounting readers hold `PRODUCT_COST_VIEW` as well, so §2 holds there. An issue of
+  material without a cost stays unvalued and not posted (F-P6-2): the plan refuses only receipts, §2 lets an existing service gain
+  a refusal only behind a flag, and §4 records unvalued facts for P15 to refuse. Fixed: the estimate left out overhead, so its
+  components did not add to its total; it now lists `PrcOverhead` (seeded, estimate only) and leaves it out of the comparison;
+  the estimate's read widened to CostPolicy's set; the spec checks another organization's poster gets no notice. Left: a zero
+  acquire cost is unvalued on an issue (the hook posts nothing) but valued at zero on a return (the hook posts zero), a
+  difference of Mantle's hooks. Specs: Mantle ProductionCosts, WarehouseProduction, ManufacturingServices (19, pass); BOSS
+  ManufacturingAccess, AppStructure, TuiRender (78, pass).
 
 ### P7 — Quantities, by-products and loss
 
@@ -1226,6 +1320,21 @@ is written there too.
 | F44 | P1: F38's guard also refuses time on an operation through Projects' timers and TimeEntries and Commons' `clockIn#Task` and `add#TimeOnTask` | P10's ProductionTime provides the production time path |
 | F45 | P1: a run's record link fell through to Commons (EventDetail or TaskDetail) | It opens Manufacturing, else Warehouse's MaterialIssueReceipt, else nothing |
 | F46 | P1: Projects team users have no authorization for `get#RecordLink` | Unchanged; outside Manufacturing |
+| F47 | P2: Products' `Methods.js` stored a routing with no `workEffortId` into the method's routing (native's fallback), so "New routing" for a product whose method has one edited that routing | P2 Built note |
+| F48 | P2: Products' specs assume DEMO_1_1's MAIN and DEMO_3_1 have no method (ProductsMethodFixtures, ProductsMethodWalk), so the demo method is DEMO_1_1's PILOT | P2 Built note |
+| F49 | P2: DEMO_1_1, DEMO_SA_1, DEMO_SA_2 and DEMO_RM_1 have no `amountUomId`, so `store#Bom` and `store#BomItem` need an explicit unit for them | P2 Built note |
+| F50 | P2: Manufacturing users reach the Mantle method verbs and Products' `ironstone.products.MethodServices` only through the screens' inherited authorization (no artifact group grants them directly) | P2 Built note |
+| F51 | P2: A screen-local variable named `selected` is passed to the shared `choices` transition (`in-map="context"`) as the selected value | P2 Built note |
+| F52 | P3: The cost estimator (`BOSS_MANUFACTURING_COST`, no `METHOD_RESOURCES`) cannot add a work-center rate; only the admin can | Kept as built (resources plus cost authority); P6 or P15 decides whether the cost group adds rates |
+| F53 | P3: The Mantle verbs the screens call are authorized through the screen they run in (the root's inherited authz), not the `BOSS_MANUFACTURING` artifact group, so a spec calls them as a user with artifact authorization disabled, as the Mantle specs do | P3 Built note |
+| F54 | P3: `Calendar.qvue` found its transitions by a path element named `Calendar` | It also takes `ResourceCalendar` |
+| F55 | P3: A released operation copies its run's estimated dates (Warehouse P16a), so the calendar and the load place each operation over its whole run until P12 schedules operations | P3 Built note |
+| F56 | P3: ProductMethods' record-callback feature read "the" WorkCenterRate audit row without its key, so a rate made by another spec earlier in the same run (WorkCenters) broke it | P3 Built note |
+| F57 | P3: Centers has no next-available or offline-reason columns and Equipment no downtime action | P11 and P12 |
+| F58 | P4: The design's TimeAndCost "production approver rule" flag is not built (F33 dropped it) | The labor-cost flag is named instead in the design |
+| F59 | P4: F38's optional Mantle refusal in `update#Task` and `set#TaskStatus` behind a ProductionPolicy flag is not built. | P4 Built note |
+| F60 | P4: The walks' database outlives a `test-client --serve` run, so a walk that adds a record by a fixed code fails on its second run. | P4 Built note |
+| F61 | P4: no policy row can start before now, so a run keeps its release-time policy without a copy on the run | P5 reads `get#ProductionPolicy` with the run; P4 Built note |
 
 ## 7. Later
 
