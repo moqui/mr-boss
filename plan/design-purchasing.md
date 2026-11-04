@@ -533,7 +533,9 @@ counter and its time, and the PO as of any revision or date is read back from th
 There is no revision record. Approval invalidation is proposed.
 
 **Commercial revision (Nov 1, 2026; review X2, R-SAL-02).** Mantle `increment#OrderRevision` is
-narrowed to commercial changes behind a crosscut CX-AUTOMATION flag. OrderContent and OrderNote
+narrowed to commercial changes behind a crosscut CX-AUTOMATION flag; for purchase orders it is the buying policy's
+`PurchasePolicy.commercialRevisionOnly` (impl-purchasing P3), and a line's quantity or price change, which Mantle's counting
+left out, counts under it (F-P3-2). OrderContent and OrderNote
 changes and status-only part updates stop incrementing it. Storing the sent PDF, adding a file,
 writing a note, placing, holding or approving therefore no longer move the revision a decision is
 bound to. PurchaseApprovalDecision, the sent revision, the supplier's acknowledgement and the PASS
@@ -602,7 +604,7 @@ off by default, on its owner's settings, so plain Mantle keeps its behavior (imp
 
 | Mantle SECA | What it does on a PO | This design |
 | --- | --- | --- |
-| `OrderPlacedAutoApprove` (`autoApprove#Order`) | Approves a placed order whose payments cover the total and whose `check#OrderPreApprove` returns no warning; with no ProductStore that includes a prepaid or zero-total PO | Conditioned, where the organization's buying policy turns the approval gate's flag on: proposed SECA `mantle.order.PurchaseServices.check#PurchaseApprovalRequired` on `mantle.order.OrderInfoServices.check#OrderPreApprove` adds an approve warning for any purchase part whose vendor is not OrgInternal and that lacks a current PurchaseApprovalDecision for the order revision (D8; R-SB-10; impl-purchasing §2). Nov 1, 2026 (X4): the manual `approve#Order` now checks direction, so a purchase part needs proposed `PURCHASE_ORDER_APPROVE`, and it runs `check#OrderPreApprove` too, refusing on the warning unless a current decision is recorded; the D8 hook therefore guards manual approval as well |
+| `OrderPlacedAutoApprove` (`autoApprove#Order`) | Approves a placed order whose payments cover the total and whose `check#OrderPreApprove` returns no warning; with no ProductStore that includes a prepaid or zero-total PO | Conditioned, where the organization's buying policy turns the approval gate's flag on: proposed SECA `mantle.order.PurchaseServices.check#PurchaseApprovalRequired` on `mantle.order.OrderInfoServices.check#OrderPreApprove` adds an approve warning for any purchase part whose vendor is not OrgInternal and that lacks a current PurchaseApprovalDecision for the order revision (D8; R-SB-10; impl-purchasing §2). Nov 1, 2026 (X4): the manual `approve#Order` now checks direction, so a purchase part needs proposed `PURCHASE_ORDER_APPROVE`, and it runs `check#OrderPreApprove` too, refusing on the warning unless a current decision is recorded; the D8 hook therefore guards manual approval as well. As built (impl-purchasing P3): the direction check is the gate's, so with the flag off a purchase part takes `PURCHASE_ORDER_APPROVE` or `ORDER_APPROVE` as before, and approve#Order refuses on the purchase approval's warning only (`check#OrderPreApprove` warns every unpaid PO, F-P3-4) |
 | `OrderPlacedSendEmail`, `OrderApprovedSendEmail` (`send#OrderStoreEmail`) | Nothing; a PO has no ProductStore | Kept; the proposed `send#PurchaseOrder` sends POs |
 | `OrderPlacedReserveAssets`, `OrderApprovedReserveAssets`, `OrderItemCreateCheckReserve`, `OrderItemUpdateCheckReserve` | Nothing; reservation returns early when the vendor is not an internal organization | Kept; with the drop-ship port, a sales line reserved at a drop-ship facility runs `create#DropShipPurchaseOrder` beside `reserve#AssetsForOrder` (Drop-ship above) |
 | `OrderPlacedAuthorizePayments` (`authorize#OrderPayments`) | Nothing; it returns without a ProductStore | Kept; a supplier prepayment is an Accounting payment request |

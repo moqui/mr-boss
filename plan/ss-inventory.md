@@ -522,46 +522,46 @@ is unchanged.
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | FindOrder | CreateSalesOrder | Sales/Quotes/Quotes; Sales/Orders/Orders |  |
-| FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders |  |
-| FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders |  |
-| FindOrder | CreatePurchaseOrder | Purchasing/Orders/PurchaseOrders |  |
-| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders |  |
-| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkApprove: decide#PurchaseApproval per order) (Purchasing P3) |
+| FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkClose: close#PurchaseRemainders per order) (Purchasing P3) |
+| FindOrder | CreatePurchaseOrder | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders (CreatePurchaseOrder); Purchasing/NewPurchaseOrder (quick create) (Purchasing P3) |
+| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (PurchaseOrderList, views and saved finds) (Purchasing P3) |
+| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: ClosePurchaseRemainder) (Purchasing P3) |
 | OrderDetail | AddPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | RecurOptions | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
-| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderHistory) (Purchasing P3) |
+| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: the record header, EditPurchaseOrder) (Purchasing P3) |
 | OrderDetail | AddPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | AddPartyPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | OrderPromoCodeList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | ItemLimitForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | NewNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter |  |
-| OrderDetail | UpdateNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter |  |
-| OrderDetail | NewContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles |  |
-| OrderDetail | UpdateContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles |  |
-| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | NewNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter | Shared/Chatter (the order's record context on Purchasing/Orders/OrderDetail) (Purchasing P3) |
+| OrderDetail | UpdateNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter | Shared/Chatter (the order's record context on Purchasing/Orders/OrderDetail) (Purchasing P3) |
+| OrderDetail | NewContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles | Shared/RecordFiles (the order's record context); Shared/OrderDetail (Purchasing: PurchaseOrderDocuments) (Purchasing P3) |
+| OrderDetail | UpdateContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles | Shared/RecordFiles (the order's record context) (Purchasing P3) |
+| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: SendPurchaseOrder: send#PurchaseOrder) (Purchasing P3) |
+| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderEmails) (Purchasing P3) |
 | OrderDetail | SystemMessageList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | ChildOrderList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | AddOrderPartToShipmentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | EditPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | EditPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: EditPurchaseOrder: reference and receiving facility of a draft) (Purchasing P3) |
 | OrderDetail | EditPartNonEdForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | CreateOrderPartParty | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: ClosePurchaseRemainder) (Purchasing P3) |
 | OrderDetail | AddPaymentForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | UpdatePaymentForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | GatewayAuthorizeForm | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | GatewayResponseList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | SetOrderInfoForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: AddPurchaseOrderLine) (Purchasing P3) |
 | OrderDetail | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| EditItem | EditOrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderLines) (Purchasing P3) |
+| EditItem | EditOrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: EditPurchaseOrderLine) (Purchasing P3) |
 | ItemReserve | ReserveItem | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | ReturnItem | ReturnItem | CustomerService/Returns/NewReturn; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
-| OrderItems | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderItems | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: AddPurchaseOrderLine) (Purchasing P3) |
 | OrderItems | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
-| OrderItems | OrderItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail |  |
+| OrderItems | OrderItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderLines) (Purchasing P3) |
 | QuickItems | QuickItemOptions | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | QuickItems | QuickItemList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 

@@ -51,6 +51,11 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P1: purchase orders, quotes and suppliers in the palette (search#Records) -->
         <palette-source group="Purchasing" label="Purchasing records" icon="sym_o_shopping_cart"
                 service="ironstone.purchasing.AccessServices.search#Records" sequence="48"/>
+        <!-- P3: a purchase order, for buyers (NewPurchaseOrder is BOSS_PUR_NEW_ORDER's); a purchase order is found by the
+            palette source above, which opens OrderDetail (no MantleOrder palette type: the search index holds sales orders
+            and every organization's) -->
+        <quick-create kind="purchasingPurchaseOrder" label="Purchase order" screen="Purchasing/NewPurchaseOrder"
+                icon="sym_o_receipt_long" sequence="72"/>
         <keymap scope="purchasing">
             <key keys="g b" label="Purchasing home" screen="Purchasing/Home"/>
         </keymap>

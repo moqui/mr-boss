@@ -1,6 +1,6 @@
 // Purchasing P1's "usable when" (impl-purchasing P1), as an acceptance walk with artifact authorization on: the menu renders
 // for each group, and each area of it opens while the others are refused; quick create offers nothing a group may not create
-// (no area of P1 creates a record); a reader sees their organization's purchase orders and suppliers and the shared suppliers,
+// (P3: a purchase order, to the buyer and the administrator only); a reader sees their organization's purchase orders and suppliers and the shared suppliers,
 // in the supplier list, the palette and record links, but not another organization's; a forged order or supplier id is
 // refused. The rules themselves are PurchasingAccess's.
 // Run: ./moq accept mr-boss --spec PurchasingFoundationWalk
@@ -25,28 +25,35 @@ const areas = [
 ]
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 
-feature("the menu renders for each group, its areas open, the others are refused, and quick create offers nothing", {
-    when() {
-        const problems = []
-        for (const user of [users.requester, users.buyer, users.planner, users.approve, users.read, users.admin]) {
-            const found = shell(user)
-            if (found.status != 200 || !found.names.length) problems.push(`${user}'s menu: ${found.status} ${found.names}`)
-            if ((found.providers?.quickCreate || []).length) problems.push(`${user} is offered quick create`)
-            // every area: it opens when the menu lists it (or it is the hidden Products for a list reader), else it is refused
-            const listReader = found.names.includes("Orders")
-            for (const area of areas) {
-                const expected = found.names.includes(area) || (area === "Products" && listReader)
-                const rendered = asUser(user, () => lib.page(area, {}, "html"))
-                if (opened(rendered) !== expected)
-                    problems.push(`${user} ${area}: ${expected ? "refused" : "opened"} ${rendered.status} ${rendered.errors}`)
+feature(
+    "the menu renders for each group, its areas open, the others are refused, and quick create offers only what it may create",
+    {
+        when() {
+            const problems = []
+            for (const user of [users.requester, users.buyer, users.planner, users.approve, users.read, users.admin]) {
+                const found = shell(user)
+                if (found.status != 200 || !found.names.length) problems.push(`${user}'s menu: ${found.status} ${found.names}`)
+                const quick = (found.providers?.quickCreate || [])
+                    .map(item => item.kind)
+                    .filter(kind => kind.startsWith("purchasing"))
+                const creates = [users.buyer, users.admin].includes(user) ? ["purchasingPurchaseOrder"] : []
+                if (JSON.stringify(quick) !== JSON.stringify(creates)) problems.push(`${user} is offered quick create ${quick}`)
+                // every area: it opens when the menu lists it (or it is the hidden Products for a list reader), else it is refused
+                const listReader = found.names.includes("Orders")
+                for (const area of areas) {
+                    const expected = found.names.includes(area) || (area === "Products" && listReader)
+                    const rendered = asUser(user, () => lib.page(area, {}, "html"))
+                    if (opened(rendered) !== expected)
+                        problems.push(`${user} ${area}: ${expected ? "refused" : "opened"} ${rendered.status} ${rendered.errors}`)
+                }
             }
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
         }
-        return {problems}
-    },
-    then({problems}) {
-        problems.join("\n") == ""
     }
-})
+)
 
 feature("a reader sees their organization's orders and suppliers and the shared ones, never another organization's", {
     when() {

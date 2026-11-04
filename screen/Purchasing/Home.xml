@@ -71,6 +71,11 @@ along with this software (see the LICENSE.md file). If not, see
                     size="sm" link="/qapps/Purchasing/Replenishment" condition="can.replenishment"/>
             <number-card title="Approvals waiting" value="${counterText.approvalCount}" icon="sym_o_approval" size="sm"
                     link="/qapps/Purchasing/Approvals" condition="can.approvals"/>
+            <!-- P3: the purchase orders still draft, and approved but not sent -->
+            <number-card title="Draft orders" value="${counterText.draftCount}" icon="sym_o_edit_note" size="sm"
+                    link="/qapps/Purchasing/Orders/PurchaseOrders?view=draft" condition="can.listRead"/>
+            <number-card title="Approved, not sent" value="${counterText.unsentCount}" icon="sym_o_outgoing_mail" size="sm"
+                    link="/qapps/Purchasing/Orders/PurchaseOrders?view=unsent" condition="can.listRead"/>
             <number-card title="Unacknowledged orders" value="${counterText.unacknowledgedCount}" icon="sym_o_mark_email_unread"
                     size="sm" link="/qapps/Purchasing/Orders" condition="can.listRead"/>
             <number-card title="Late receipts" value="${counterText.lateCount}" icon="sym_o_schedule" size="sm"

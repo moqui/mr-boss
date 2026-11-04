@@ -76,14 +76,15 @@ along with this software (see the LICENSE.md file). If not, see
             itemDescription="Printer paper" quantity="4" unitAmount="10"/>
 
     <!-- P2: Retail's buying policy (approval gate off, F34: the Accounting demo and OrderProcureToPayBasicFlow place and approve
-        Retail's purchase orders directly; supplier approval required, an unapproved supplier warned), the supplier
+        Retail's purchase orders directly; supplier approval required, an unapproved supplier warned; P3: revisions count
+        commercial changes only, so a sent order's revision stays the one approved and sent), the supplier
         categories, the buying profiles (Ziddleman approved, Brightline approved in USD, Northwind awaiting approval,
         Halvorsen blocked from Nov 1, 2026 with its reason) and each supplier's category. Demo.js of Accounting keeps its own
         supplier's profile. -->
     <mantle.order.purchase.PurchasePolicy organizationPartyId="ORG_ZIZI_RETAIL" fromDate="1265184000000" currencyUomId="USD"
             facilityId="ZIRET_WH" incotermEnumId="TtFOB" rfqResponseDays="5" quoteExpiryWarnDays="7" reminderDays="3"
             supplierApprovalRequired="Y" unapprovedSupplierEnumId="PusWarn" approvalGateEnabled="N" selfApprovalAllowed="N"
-            changeReason="Purchasing demo: Retail's buying policy"/>
+            commercialRevisionOnly="Y" changeReason="Purchasing demo: Retail's buying policy"/>
     <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_COMPONENTS" classificationTypeEnumId="PcltSupplierCategory"
             description="Components"/>
     <mantle.party.PartyClassification partyClassificationId="BOSS_PUR_CAT_PACKAGING" classificationTypeEnumId="PcltSupplierCategory"
@@ -116,4 +117,10 @@ along with this software (see the LICENSE.md file). If not, see
             approvalStatusId="SupaApproved" purchaseBlockFromDate="2026-11-01 00:00:00"
             purchaseBlockReason="Quality hold: failed incoming inspection" selfBillingIndicator="N"
             changeReason="Purchasing demo: blocked supplier"/>
+
+    <!-- P3: purchase orders sent from the demo go to a local sink (send#PurchaseOrder's template on a server of its own, as
+        Accounting's demo delivery); a deployment sets MANTLE_PURCHASE_ORDER_EMAIL's server -->
+    <moqui.basic.email.EmailServer emailServerId="BOSS_PURCHASING_DEMO" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N"
+            smtpSsl="N"/>
+    <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_ORDER_EMAIL" emailServerId="BOSS_PURCHASING_DEMO"/>
 </entity-facade-xml>

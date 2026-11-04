@@ -13,7 +13,8 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Purchasing Home (design-purchasing §3 Home): the buyer's counters and work. Each count comes from the phase that builds
-    its records (P3 unacknowledged and late, P4 approvals, P5 late receipts, P6 held bills, P10 unsourced requests, P11 RFQs
+    its records (P3 drafts and approved orders not sent, P9 unacknowledged, P4 approvals, P5 late receipts, P6 held bills,
+    P10 unsourced requests, P11 RFQs
     due and quotes expiring, P14 shortfall suggestions with the plan's freshness); until then it is null, which Home shows as
     unavailable, never as zero. BuyerWork's sources come the same way. Each phase appends its block. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
@@ -24,8 +25,8 @@ along with this software (see the LICENSE.md file). If not, see
         <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
         <out-parameters>
             <parameter name="counters" type="Map"><description>unsourcedCount, quoteDueCount, quoteCompareCount,
-                quoteExpiringCount, shortfallCount, approvalCount, unacknowledgedCount, lateCount and heldCount, each null
-                where not counted.</description></parameter>
+                quoteExpiringCount, shortfallCount, approvalCount, unacknowledgedCount, lateCount, heldCount, draftCount and
+                unsentCount, each null where not counted.</description></parameter>
             <parameter name="planRunText"><description>The run date of the supply plan the shortfall counts, when there is
                 one.</description></parameter>
         </out-parameters>
@@ -43,6 +44,10 @@ along with this software (see the LICENSE.md file). If not, see
                     .shortfalls(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope())"/>
             <set field="counters" from="Object.assign({}, counters, {shortfallCount: shortfall.shortfallCount})"/>
             <set field="planRunText" from="shortfall.planRunText"/>
+            <!-- P3: the draft purchase orders and the approved ones not sent, for the buying lists' groups -->
+            <set field="orderCounts" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Orders.js')
+                    .homeCounts(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope())"/>
+            <set field="counters" from="Object.assign({}, counters, orderCounts)"/>
         </actions>
     </service>
     <service verb="find" noun="BuyerWork" allow-remote="false">
@@ -61,7 +66,9 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.purchasing.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
                     out-map="shared"/>
             <set field="workRows" from="[]"/>
-            <!-- later phases: P3 open orders to send, P10 requests to source, P11 quotes due, ... -->
+            <!-- P3: the approved purchase orders to send, for a buyer; later phases: P10 requests to source, P11 quotes due -->
+            <set field="workRows" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Orders.js')
+                    .workRows(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope(), limit)"/>
         </actions>
     </service>
 </services>

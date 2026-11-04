@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's purchase order reads (design-purchasing §6; impl-purchasing P3, §2; Orders.js): the PurchaseOrders list, the
+    OrderDetail of one order in the Purchasing context, and the bulk approval and close with a result per order. The screens
+    call the Mantle writes (mantle.order.PurchaseServices: create, lines, place, cancel, clone, decide#PurchaseApproval;
+    mantle.order.OrderServices: send#PurchaseOrder, get#PurchaseOrderPrint, hold#Order, release#OrderHold,
+    close#PurchaseRemainders, accept#ServiceItem) after AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="PurchaseOrders" allow-remote="false">
+        <description>One page of the purchase orders of the user's organizations (quotes are Sourcing's), newest first, by view
+            (draft, approval, unsent, open, held, closed), status, supplier, facility, organization and text (order, name,
+            supplier or external reference, ignoring case): each with its supplier, organization, status, entry and due dates,
+            ordered and received quantities, and total, billed and balance kept apart (withheld from a user who neither works
+            the orders nor reads supplier prices or the books). Refuses a user without the buying lists (PERMISSION_DENIED)
+            and another organization (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="statusId"/>
+            <parameter name="vendorPartyId"/>
+            <parameter name="facilityId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="text"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orderRows" type="List"/>
+            <parameter name="orderRowsCount" type="Integer"/>
+            <parameter name="orderRowsPageIndex" type="Integer"/>
+            <parameter name="orderRowsPageSize" type="Integer"/>
+            <parameter name="orderRowsPageMaxIndex" type="Integer"/>
+            <parameter name="orderRowsPageRangeLow" type="Integer"/>
+            <parameter name="orderRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Orders.js"/>
+            <set field="found" from="ec.resource.script(module).execute('findOrders', context)"/>
+            <set field="orderRows" from="found.orderRows"/>
+            <set field="orderRowsCount" from="found.orderRowsCount"/>
+            <set field="orderRowsPageIndex" from="found.orderRowsPageIndex"/>
+            <set field="orderRowsPageSize" from="found.orderRowsPageSize"/>
+            <set field="orderRowsPageMaxIndex" from="found.orderRowsPageMaxIndex"/>
+            <set field="orderRowsPageRangeLow" from="found.orderRowsPageRangeLow"/>
+            <set field="orderRowsPageRangeHigh" from="found.orderRowsPageRangeHigh"/>
+            <set field="viewLabel" from="found.viewLabel"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OrderDetail" allow-remote="false">
+        <description>One purchase order in the Purchasing context of Shared/OrderDetail (crosscut §3.6 Purchasing row): its
+            header and status, revision, supplier and organization, open and released holds, lines with their cost centre and
+            what was received, accepted and billed, the history of its key fields from the audit log, its stored documents
+            (the issued PDFs among them), the emails sent with their revision, its approval decisions, and the actions the
+            user's capabilities and the order's status allow. Amounts are withheld as find#PurchaseOrders withholds them.
+            Refuses an order the user may not work with (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="orderId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="purchaseOrder" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Orders.js"/>
+            <set field="purchaseOrder" from="ec.resource.script(module).execute('detail', context).purchaseOrder"/>
+        </actions>
+    </service>
+    <service verb="bulk" noun="PurchaseOrderActions" allow-remote="false">
+        <description>ApprovePurchaseOrders and ClosePurchaseOrders (design §6): each selected order the user may work with,
+            approved through mantle.order.PurchaseServices.decide#PurchaseApproval at its current revision, or its remainder
+            closed through mantle.order.OrderServices.close#PurchaseRemainders with the reason, each in its own transaction:
+            a refusal is named with its reason code and the others are done. Refuses another action (ACTION_INVALID), no or
+            more than 100 orders (SELECTION_INVALID) and a close without a reason (REASON_REQUIRED).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="action" required="true"/>
+            <parameter name="orderIds" type="List" required="true"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="summary"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/purchasing/Orders.js"/>
+            <set field="done" from="ec.resource.script(module).execute('bulk', context)"/>
+            <set field="results" from="done.results"/>
+            <set field="summary" from="done.summary"/>
+        </actions>
+    </service>
+</services>

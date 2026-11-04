@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PurchaseOrders (design-purchasing §6 PurchaseOrders; style-guide §3.2 List; impl-purchasing P3): OrderFind and
+    PurchaseOrderList over ironstone.purchasing.OrderServices.find#PurchaseOrders (the purchase orders of the user's
+    organizations, by view: Draft, Awaiting approval, Approved not sent, Open, On hold, Closed; ordered, received, billed and
+    balance kept apart), with saved finds; CreatePurchaseOrder (New purchase order: mantle.order.PurchaseServices
+    create#PurchaseOrder, for a buyer; it opens the draft in OrderDetail); and the selected orders' ApprovePurchaseOrders (a
+    purchase approver's decide#PurchaseApproval) and ClosePurchaseOrders (a buyer's close#PurchaseRemainders with a reason),
+    each with a result per order (bulk#PurchaseOrderActions). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Purchase orders" default-menu-index="1">
+    <parameter name="view"/>
+    <parameter name="statusId"/>
+    <parameter name="vendorPartyId"/>
+    <parameter name="facilityId"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="text"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="createOrder">
+        <actions>
+            <service-call name="mantle.order.PurchaseServices.create#PurchaseOrder" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, vendorPartyId:vendorPartyId, orderName:orderName,
+                        facilityId:facilityId, currencyUomId:currencyUomId}"/>
+            <set field="orderId" from="created.orderId"/>
+        </actions>
+        <default-response url="../OrderDetail">
+            <parameter name="orderId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the selected orders (selectedIds) and the action, a result per order -->
+    <transition name="bulkAction">
+        <actions>
+            <service-call name="ironstone.purchasing.OrderServices.bulk#PurchaseOrderActions" out-map="bulkOut"
+                    in-map="{appRoot:appRoot, action:action, orderIds:selectedIds, reason:reason}"/>
+            <script>if (bulkOut?.summary) ec.message.addMessage(bulkOut.summary,
+                bulkOut.results.some((row) =&gt; row.resultCode != 'DONE') ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.OrderServices.find#PurchaseOrders" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, statusId:statusId, vendorPartyId:vendorPartyId, facilityId:facilityId,
+                    organizationPartyId:organizationPartyId, text:text, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="orderRows" from="found?.orderRows || []"/>
+        <set field="orderRowsCount" from="found?.orderRowsCount"/>
+        <set field="orderRowsPageIndex" from="found?.orderRowsPageIndex"/>
+        <set field="orderRowsPageSize" from="found?.orderRowsPageSize"/>
+        <set field="orderRowsPageMaxIndex" from="found?.orderRowsPageMaxIndex"/>
+        <set field="orderRowsPageRangeLow" from="found?.orderRowsPageRangeLow"/>
+        <set field="orderRowsPageRangeHigh" from="found?.orderRowsPageRangeHigh"/>
+        <set field="viewLabel" from="found?.viewLabel || 'All'"/>
+        <set field="can" from="purchasing.capabilities"/>
+        <set field="canBulkApprove" from="!!(can.approve &amp;&amp; can.orderApprove)"/>
+        <set field="newOrder" from="{organizationPartyId:purchasing.activeOrganizationPartyId || purchasing.organizationPartyIds[0]
+                || ''}"/>
+        <set field="viewLinks" from="[['', 'All'], ['draft', 'Draft'], ['approval', 'Awaiting approval'],
+                ['unsent', 'Approved, not sent'], ['open', 'Open'], ['held', 'On hold'], ['closed', 'Closed']]
+                .map(([key, label]) =&gt; ({key, label, current: (view || '') == key}))"/>
+        <set field="filtered" from="!!(view || statusId || vendorPartyId || facilityId || text)"/>
+        <set field="emptyText" from="filtered ? 'No purchase order matches these filters.' : (can.buy
+                ? 'No purchase order yet. Start one with New purchase order.' : 'Your organizations have no purchase order yet.')"/>
+    </actions>
+    <widgets>
+        <context title="Purchase orders" selection-form="PurchaseOrderList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Purchase orders" type="h5"/>
+                <label text="${viewLabel}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <container-dialog id="NewPurchaseOrderDialog" button-text="New purchase order" type="primary" icon="sym_o_add"
+                        title="New purchase order" width="720" condition="can.buy">
+                    <form-single name="CreatePurchaseOrder" transition="createOrder" map="newOrder">
+                        <field name="organizationPartyId">
+                            <default-field title="Buying organization">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="vendorPartyId">
+                            <default-field title="Supplier">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="orderName">
+                            <default-field title="Reference">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field title="Receive at" tooltip="Empty takes the buying policy's receiving facility">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'planFacilities'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton">
+                            <default-field title="Create draft">
+                                <submit/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="organizationPartyId"/>
+                                <field-ref name="vendorPartyId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="orderName"/>
+                                <field-ref name="facilityId"/>
+                            </field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="OrderViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="PurchaseOrderList" list="orderRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <row-selection id-field="orderId" parameter="selectedIds" list-mode="true" condition="canBulkApprove || can.buy">
+                        <action>
+                            <dialog button-text="Approve" button-icon="sym_o_approval"
+                                    title="Approve the selected purchase orders"/>
+                            <form-single name="BulkApprove" transition="bulkAction">
+                                <field name="action" from="'approve'"><default-field><hidden/></default-field></field>
+                                <field name="reason">
+                                    <default-field title="Note">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Approve">
+                                        <submit confirmation="Approve each selected purchase order at its current revision?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Close remainder" button-icon="sym_o_block"
+                                    title="Close what is left of the selected purchase orders"/>
+                            <form-single name="BulkClose" transition="bulkAction">
+                                <field name="action" from="'close'"><default-field><hidden/></default-field></field>
+                                <field name="reason">
+                                    <default-field title="Reason">
+                                        <text-line required="true"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Close remainder">
+                                        <submit type="danger"
+                                                confirmation="Close what is left to receive on each selected purchase order?"/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="orderId">
+                        <header-field title="Order" show-order-by="true"/>
+                        <default-field title="Order">
+                            <link url="../OrderDetail" text="${orderId}" link-type="anchor" parameter-map="{orderId:orderId}"/>
+                            <label text="${orderName}" type="div" style="text-caption m-muted" condition="orderName"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Order, reference or supplier reference">
+                            <text-find hide-options="true"/>
+                        </header-field>
+                    </field>
+                    <field name="vendorPartyId">
+                        <header-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:vendorPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Supplier">
+                            <display text="${supplierName}"/>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <header-field title="Buying organization">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Buyer">
+                            <display text="${organizationName}"/>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <header-field title="Receive at">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'planFacilities', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="statusId">
+                        <header-field title="Status">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${statusId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.StatusItem">
+                                        <econdition field-name="statusTypeId" value="OrderHeader"/>
+                                        <econdition field-name="statusId" operator="not-in"
+                                                value="OrderRequested,OrderProposed,OrderBeingChanged"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="entryText">
+                        <default-field title="Entered">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="orderedText" align="right">
+                        <default-field title="Ordered">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="receivedText" align="right">
+                        <default-field title="Received">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="totalText" align="right">
+                        <default-field title="Total">
+                            <label text="${totalText}" type="span" style="text-no-wrap"/>
+                        </default-field>
+                    </field>
+                    <field name="billedText" align="right">
+                        <default-field title="Billed">
+                            <label text="${billedText}" type="span" style="text-no-wrap"/>
+                        </default-field>
+                    </field>
+                    <field name="balanceText" align="right">
+                        <default-field title="Balance">
+                            <label text="${balanceText}" type="span" style="text-no-wrap text-weight-medium"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderId"/>
+                            <field-ref name="vendorPartyId"/>
+                        </column>
+                        <column>
+                            <field-ref name="totalText"/>
+                            <field-ref name="statusId"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!orderRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

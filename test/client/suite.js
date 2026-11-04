@@ -4,7 +4,8 @@ suite(
         "AccountingReceivablesWalk",
         "ProductsWalk",
         "WarehouseReceivingWalk",
-        "ManufacturingWorkOrdersWalk"
+        "ManufacturingWorkOrdersWalk",
+        "PurchasingOrdersWalk"
     ],
     {
         server: {
