@@ -14,6 +14,7 @@ const access = lib.access
 
 const replenishment = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js")
 const orders = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Orders.js")
+const approvals = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Approvals.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -233,7 +234,9 @@ const linkPaths = [
     "Settings/PurchasePolicy",
     // P3: the purchase orders and the shared OrderDetail
     "Orders/PurchaseOrders",
-    "Orders/OrderDetail"
+    "Orders/OrderDetail",
+    // P4: the approval policies
+    "Settings/ApprovalPolicies"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -614,6 +617,11 @@ const choiceSources = {
     // P3: the products a purchase order line may name, and the cost centres of a line (Orders.js)
     orderProducts: (userScope, term, selected) => orders().productChoices(userScope, term, selected),
     costCenters: (userScope, term, selected) => orders().costCenterChoices(userScope, term, selected),
+    // P4: an approval policy step's approver (a user holding PURCHASE_APPROVE in the user's organizations), its approver group
+    // (a group holding PURCHASE_APPROVE) and product category (Approvals.js)
+    approvers: (userScope, term, selected) => approvals().approverChoices(userScope, term, selected),
+    approverGroups: (userScope, term, selected) => approvals().approverGroupChoices(term, selected),
+    productCategories: (userScope, term, selected) => approvals().categoryChoices(term, selected),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

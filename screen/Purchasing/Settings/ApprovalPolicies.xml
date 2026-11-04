@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The approval policies (design-purchasing §12 ApprovalPolicies; impl-purchasing P4): ApprovalPolicyList, an organization's
+    approval steps in effect and starting later (or every row, with the ended ones) by source, band and step
+    (ironstone.purchasing.ApprovalServices.find#PurchaseApprovalPolicies); ApprovalPolicy, the New step dialog and each row's
+    Change (the next version from a date) and End, through mantle.order.PurchaseServices.store#PurchaseApprovalPolicy
+    (PURCHASE_POLICY_EDIT; an overlapping band, a second row for one step and a step no eligible approver can take are
+    refused); and ApprovalPreview, the steps an amount would take with who may approve each
+    (preview#PurchaseApproval). With no row for a source type one purchase approver decides. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Approval policies" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="inEffect"/>
+    <parameter name="previewAmount"/>
+    <parameter name="previewSourceTypeEnumId"/>
+    <parameter name="previewCurrencyUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.order.PurchaseServices.store#PurchaseApprovalPolicy"
+                    in-map="{purchaseApprovalPolicyId:purchaseApprovalPolicyId || null, organizationPartyId:organizationPartyId || null,
+                        sourceTypeEnumId:sourceTypeEnumId, fromAmount:fromAmount, thruAmount:thruAmount, currencyUomId:currencyUomId,
+                        productCategoryId:productCategoryId, facilityId:facilityId, sequenceNum:sequenceNum,
+                        approverUserId:approverUserId, approverUserGroupId:approverUserGroupId, quorum:quorum,
+                        selfApprovalAllowed:selfApprovalAllowed, separateApprover:separateApprover, expiryDays:expiryDays,
+                        description:description, fromDate:effectiveFromDate || null, changeReason:changeReason}"/>
+            <message type="success">Approval step saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endPolicy">
+        <actions>
+            <service-call name="mantle.order.PurchaseServices.store#PurchaseApprovalPolicy"
+                    in-map="{purchaseApprovalPolicyId:purchaseApprovalPolicyId, endPolicy:'Y', thruDate:endDate || null,
+                        changeReason:changeReason}"/>
+            <message type="success">Approval step ended</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.ApprovalServices.find#PurchaseApprovalPolicies" out-map="found"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId || null, inEffect:(inEffect == 'N' ? 'N' : 'Y')}"/>
+        <set field="policiesFound" from="!!found?.organizationPartyId"/>
+        <set field="policyRows" from="found?.policyRows || []"/>
+        <set field="newStepValue" from="{organizationPartyId:found?.organizationPartyId, sourceTypeEnumId:'PasOrder', sequenceNum:'1',
+                quorum:'1'}"/>
+        <set field="scopeValue" from="{organizationPartyId:organizationPartyId || found?.organizationPartyId, inEffect:inEffect || 'Y'}"/>
+        <set field="previewValue" from="{organizationPartyId:found?.organizationPartyId, previewAmount:previewAmount,
+                previewSourceTypeEnumId:previewSourceTypeEnumId || 'PasOrder', previewCurrencyUomId:previewCurrencyUomId}"/>
+        <if condition="policiesFound &amp;&amp; previewAmount">
+            <service-call name="mantle.order.PurchaseServices.preview#PurchaseApproval" out-map="previewOut"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:found.organizationPartyId, sourceTypeEnumId:previewSourceTypeEnumId || 'PasOrder',
+                        amount:previewAmount, currencyUomId:previewCurrencyUomId || null}"/>
+        </if>
+        <set field="preview" from="previewOut?.preview || null"/>
+        <set field="previewStepRows" from="preview?.stepRows || []"/>
+    </actions>
+    <widgets>
+        <form-single name="PolicyScope" transition="." map="scopeValue">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="inEffect">
+                <default-field title="Show">
+                    <drop-down>
+                        <option key="Y" text="In effect and starting later"/>
+                        <option key="N" text="Every step, with the ended ones"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show policies"/></default-field></field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="inEffect"/>
+                </field-row>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Approval policies are not available to you." type="p" condition="!policiesFound"/>
+        <section name="Policies" condition="policiesFound">
+            <widgets>
+                <label text="Approval policies of ${found.organizationName}: a source whose amount is in a band is approved in the band's steps, in order. With no step for a source type one purchase approver decides; with steps, an amount no band covers cannot be approved."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Approval steps · ${policyRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="NewApprovalStep" condition="found.canEdit" button-text="New step" icon="sym_o_add"
+                                type="primary" width="760" title="New approval step of ${found.organizationName}">
+                            <form-single name="ApprovalPolicy" transition="storePolicy" map="newStepValue">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="sourceTypeEnumId">
+                                    <default-field title="Approves">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="PurchaseApprovalSource"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="currencyUomId">
+                                    <default-field title="Currency">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${uomId}" text="${description} (${uomId})">
+                                                <entity-find entity-name="moqui.basic.Uom">
+                                                    <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromAmount">
+                                    <default-field title="From amount" tooltip="Included; empty is zero"><text-line size="12"/></default-field>
+                                </field>
+                                <field name="thruAmount">
+                                    <default-field title="Up to" tooltip="Not included; empty has no upper limit"><text-line size="12"/></default-field>
+                                </field>
+                                <field name="productCategoryId">
+                                    <default-field title="Only for a category">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'productCategories', selected:productCategoryId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="facilityId">
+                                    <default-field title="Only for a facility">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'planFacilities', selected:facilityId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum"><default-field title="Step"><text-line size="4"/></default-field></field>
+                                <field name="quorum">
+                                    <default-field title="Approvers needed"><text-line size="4"/></default-field>
+                                </field>
+                                <field name="approverUserId">
+                                    <default-field title="Approver" tooltip="Empty: any purchase approver of the organization">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'approvers', selected:approverUserId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="approverUserGroupId">
+                                    <default-field title="Approver group">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'approverGroups', selected:approverUserGroupId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="separateApprover">
+                                    <default-field title="Separate from earlier steps">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Yes: another approver than the earlier steps'"/>
+                                            <option key="N" text="No"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="selfApprovalAllowed">
+                                    <default-field title="Self-approval">
+                                        <drop-down allow-empty="true">
+                                            <option key="Y" text="Allowed"/>
+                                            <option key="N" text="Not allowed"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="expiryDays">
+                                    <default-field title="Approval good for (days)" tooltip="Empty: never expires"><text-line size="4"/></default-field>
+                                </field>
+                                <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                <field name="effectiveFromDate">
+                                    <default-field title="Effective from" tooltip="Leave empty to start now"><date-time/></default-field>
+                                </field>
+                                <field name="changeReason"><default-field title="Reason"><text-line required="true"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save step"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="sourceTypeEnumId"/>
+                                        <field-ref name="currencyUomId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="fromAmount"/>
+                                        <field-ref name="thruAmount"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="productCategoryId"/>
+                                        <field-ref name="facilityId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="sequenceNum"/>
+                                        <field-ref name="quorum"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="approverUserId"/>
+                                        <field-ref name="approverUserGroupId"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="separateApprover"/>
+                                        <field-ref name="selfApprovalAllowed"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="expiryDays"/>
+                                        <field-ref name="description"/>
+                                    </field-row>
+                                    <field-row>
+                                        <field-ref name="effectiveFromDate"/>
+                                        <field-ref name="changeReason"/>
+                                    </field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ApprovalPolicyList" list="policyRows" skip-form="true" paginate="false">
+                            <field name="sourceText">
+                                <default-field title="Approves"><display/></default-field>
+                            </field>
+                            <field name="bandText">
+                                <default-field title="Amount"><display/></default-field>
+                            </field>
+                            <field name="scopeText">
+                                <default-field title="Only for"><display/></default-field>
+                            </field>
+                            <field name="stepText">
+                                <default-field title="Step"><display/></default-field>
+                            </field>
+                            <field name="approverText">
+                                <default-field title="Approver"><display/></default-field>
+                            </field>
+                            <field name="rulesText">
+                                <default-field title="Rules"><display/></default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="In effect">
+                                    <label text="${stateText}" type="span"/>
+                                    <label text="${fromDateText}${thruDateText ? ' to ' + thruDateText : ''}" type="div"
+                                            style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeApprovalStep_${purchaseApprovalPolicyId}" button-text="Change"
+                                            icon="sym_o_edit" width="640" title="Change approval step ${stepText}, ${bandText}"
+                                            condition="canChange">
+                                        <form-single name="ChangeApprovalPolicy" transition="storePolicy">
+                                            <field name="purchaseApprovalPolicyId" from="purchaseApprovalPolicyId">
+                                                <default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId" from="found.organizationPartyId">
+                                                <default-field><hidden/></default-field></field>
+                                            <!-- the step's band and scope carry over to its next version -->
+                                            <field name="sourceTypeEnumId" from="sourceTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="fromAmount" from="fromAmount"><default-field><hidden/></default-field></field>
+                                            <field name="thruAmount" from="thruAmount"><default-field><hidden/></default-field></field>
+                                            <field name="currencyUomId" from="currencyUomId"><default-field><hidden/></default-field></field>
+                                            <field name="productCategoryId" from="productCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="facilityId" from="facilityId"><default-field><hidden/></default-field></field>
+                                            <field name="sequenceNum" from="sequenceNum"><default-field><hidden/></default-field></field>
+                                            <field name="description" from="description"><default-field><hidden/></default-field></field>
+                                            <field name="approverUserId" from="approverUserId">
+                                                <default-field title="Approver" tooltip="Empty: any purchase approver of the organization">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'approvers', selected:approverUserId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="approverUserGroupId" from="approverUserGroupId">
+                                                <default-field title="Approver group">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'approverGroups', selected:approverUserGroupId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="quorum" from="quorum">
+                                                <default-field title="Approvers needed"><text-line size="4"/></default-field>
+                                            </field>
+                                            <field name="separateApprover" from="separateApprover">
+                                                <default-field title="Separate from earlier steps">
+                                                    <drop-down allow-empty="true">
+                                                        <option key="Y" text="Yes: another approver than the earlier steps'"/>
+                                                        <option key="N" text="No"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="selfApprovalAllowed" from="selfApprovalAllowed">
+                                                <default-field title="Self-approval">
+                                                    <drop-down allow-empty="true">
+                                                        <option key="Y" text="Allowed"/>
+                                                        <option key="N" text="Not allowed"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="expiryDays" from="expiryDays">
+                                                <default-field title="Approval good for (days)"><text-line size="4"/></default-field>
+                                            </field>
+                                            <field name="effectiveFromDate">
+                                                <default-field title="Effective from" tooltip="Leave empty to start now"><date-time/></default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason"><text-line required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save change"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndApprovalStep_${purchaseApprovalPolicyId}" button-text="End"
+                                            icon="sym_o_event_busy" width="480" title="End approval step ${stepText}, ${bandText}"
+                                            condition="canChange">
+                                        <form-single name="EndApprovalPolicy" transition="endPolicy">
+                                            <field name="purchaseApprovalPolicyId" from="purchaseApprovalPolicyId">
+                                                <default-field><hidden/></default-field></field>
+                                            <field name="endDate">
+                                                <default-field title="End at" tooltip="Leave empty to end now"><date-time/></default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason"><text-line required="true"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="End step">
+                                                    <submit type="danger" confirmation="End approval step ${stepText} of ${bandText}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="bandText"/><field-ref name="stepText"/></column>
+                                <column><field-ref name="approverText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No approval step yet: one purchase approver decides each purchase order and supplier. Add the first with New step."
+                                type="p" style="q-pa-md m-muted" condition="!policyRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Preview an approval"/>
+                    <box-body>
+                        <form-single name="ApprovalPreview" transition="." map="previewValue">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="previewSourceTypeEnumId">
+                                <default-field title="Approves">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="PurchaseApprovalSource"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewAmount"><default-field title="Amount"><text-line size="12"/></default-field></field>
+                            <field name="previewCurrencyUomId">
+                                <default-field title="Currency">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${uomId}" text="${description} (${uomId})">
+                                            <entity-find entity-name="moqui.basic.Uom">
+                                                <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit"><default-field title=""><submit text="Preview"/></default-field></field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="previewSourceTypeEnumId"/>
+                                    <field-ref name="previewAmount"/>
+                                </field-row>
+                                <field-row>
+                                    <field-ref name="previewCurrencyUomId"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <label text="${preview?.missingMessage}" type="p" style="text-negative" condition="preview?.missing"/>
+                        <label text="${preview?.amountText}: ${preview?.noPolicy ? 'one purchase approver decides (no policy)' : previewStepRows.length + ' steps'}"
+                                type="p" condition="preview &amp;&amp; !preview.missing"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <section name="PreviewSteps" condition="previewStepRows.length">
+                            <widgets>
+                                <form-list name="ApprovalPreviewSteps" list="previewStepRows" skip-form="true" paginate="false">
+                                    <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                                    <field name="approverText"><default-field title="Approver"><display/></default-field></field>
+                                    <field name="quorum"><default-field title="Needed"><display/></default-field></field>
+                                    <field name="eligibleText">
+                                        <default-field title="Who may approve"><display/></default-field>
+                                    </field>
+                                    <field name="selfApprovalText">
+                                        <default-field title="Self-approval"><display/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="stepText"/><field-ref name="approverText"/></column>
+                                        <column><field-ref name="eligibleText"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

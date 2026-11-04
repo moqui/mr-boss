@@ -81,8 +81,9 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'approve'}"/>
             <service-call name="mantle.order.PurchaseServices.decide#PurchaseApproval"
-                    in-map="{orderId:orderId, orderRevision:orderRevision || null, reason:reason, operationKey:operationKey}"/>
-            <message type="success">Approved</message>
+                    in-map="{orderId:orderId, orderRevision:orderRevision || null, reason:reason, operationKey:operationKey,
+                        budgetOverrideReason:budgetOverrideReason || null}" out-map="decided"/>
+            <message type="success">${decided.pendingStepText ? 'Approved; waiting for ' + decided.pendingStepText : 'Approved'}</message>
         </actions>
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."/>
@@ -274,6 +275,12 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="orderRevision"><default-field><hidden/></default-field></field>
                                             <field name="operationKey"><default-field><hidden/></default-field></field>
                                             <field name="reason"><default-field title="Note"><text-area rows="2"/></default-field></field>
+                                            <!-- P4: a budget Stop passes only with a budget overrider's reason -->
+                                            <field name="budgetOverrideReason">
+                                                <conditional-field condition="po.approval?.budgetResult == 'STOP'"
+                                                        title="Budget override reason"><text-line/></conditional-field>
+                                                <default-field><hidden/></default-field>
+                                            </field>
                                             <field name="submitButton">
                                                 <default-field title="Approve revision ${po.orderRevision}"><submit/></default-field>
                                             </field>
@@ -424,24 +431,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-box>
                             </row-col>
                             <row-col md="6">
-                                <container-box>
-                                    <box-header title="Approvals · ${po.decisionRows.length}"/>
-                                    <box-body-nopad>
-                                        <form-list name="PurchaseOrderDecisions" list="po.decisionRows" skip-form="true"
-                                                paginate="false">
-                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
-                                            <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
-                                            <field name="byText"><default-field title="By"><display/></default-field></field>
-                                            <field name="dateText"><default-field title="When"><display/></default-field></field>
-                                            <columns type="mobile">
-                                                <column><field-ref name="decisionText"/><field-ref name="byText"/></column>
-                                                <column><field-ref name="dateText"/></column>
-                                            </columns>
-                                        </form-list>
-                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No approval decision yet."
-                                                condition="!po.decisionRows.length"/>
-                                    </box-body-nopad>
-                                </container-box>
+                                <!-- P4: the approval's steps, budget, decisions and Refuse -->
+                                <section-include name="PurchasingOrderApprovals"
+                                        location="component://mr-boss/template/PurchasingOrderApprovals.xml"/>
                             </row-col>
                         </container-row>
                         <container-box>

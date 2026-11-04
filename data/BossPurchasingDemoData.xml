@@ -123,4 +123,20 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.basic.email.EmailServer emailServerId="BOSS_PURCHASING_DEMO" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N"
             smtpSsl="N"/>
     <moqui.basic.email.EmailTemplate emailTemplateId="MANTLE_PURCHASE_ORDER_EMAIL" emailServerId="BOSS_PURCHASING_DEMO"/>
+    <!-- P4: Retail's purchase order approval policy (design §18, impl-purchasing §4: a buyer and manager split): up to $5,000
+        one purchase approver decides; from $5,000 a member of the purchase approver group and then the purchasing administrator,
+        who may not have taken the first step. Suppliers have no policy rows, so one purchase approver decides them. -->
+    <mantle.order.purchase.PurchaseApprovalPolicy purchaseApprovalPolicyId="BOSS_PUR_APR_SMALL"
+            organizationPartyId="ORG_ZIZI_RETAIL" sourceTypeEnumId="PasOrder" fromAmount="0" thruAmount="5000"
+            currencyUomId="USD" sequenceNum="1" quorum="1" fromDate="1265184000000" description="Up to $5,000: a purchase approver"
+            changeReason="Demo"/>
+    <mantle.order.purchase.PurchaseApprovalPolicy purchaseApprovalPolicyId="BOSS_PUR_APR_LARGE_1"
+            organizationPartyId="ORG_ZIZI_RETAIL" sourceTypeEnumId="PasOrder" fromAmount="5000" currencyUomId="USD"
+            sequenceNum="1" quorum="1" approverUserGroupId="BOSS_PURCHASING_APPROVE" fromDate="1265184000000"
+            description="From $5,000: a purchase approver"
+            changeReason="Demo"/>
+    <mantle.order.purchase.PurchaseApprovalPolicy purchaseApprovalPolicyId="BOSS_PUR_APR_LARGE_2"
+            organizationPartyId="ORG_ZIZI_RETAIL" sourceTypeEnumId="PasOrder" fromAmount="5000" currencyUomId="USD"
+            sequenceNum="2" quorum="1" approverUserId="BOSS_PUR_ADMIN" separateApprover="Y" fromDate="1265184000000"
+            description="From $5,000: then the purchasing administrator" changeReason="Demo"/>
 </entity-facade-xml>

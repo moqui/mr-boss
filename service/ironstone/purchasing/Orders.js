@@ -134,6 +134,8 @@ function findOrders(p) {
         return {
             orderId: row.orderId,
             orderName: row.orderName || "",
+            // the revision shown, which the list's bulk approval decides (bulk#PurchaseOrderActions orderRevisions)
+            orderRevision: row.orderRevision == null ? 1 : Number(row.orderRevision),
             supplierPartyId: row.vendorPartyId,
             supplierName: names[row.vendorPartyId] || row.vendorPartyId,
             organizationName: names[row.customerPartyId] || row.customerPartyId,
@@ -312,8 +314,14 @@ function detail(p) {
             revisionText: "Revision " + row.sourceRevision,
             byText: userName(row.decidedByUserId),
             dateText: lib.dateText(row.decisionDate),
-            reason: row.reason || ""
+            reason: row.reason || "",
+            // P4: the policy step it decided, and a later revision that superseded it
+            stepText: row.stepSeqId && row.approvalPolicyId ? "Step " + row.stepSeqId : "",
+            supersededText: row.supersededDate ? "Superseded " + lib.dateText(row.supersededDate) : ""
         }))
+    // P4: the approval's steps, who may decide the one waiting and the budget's decision (preview#PurchaseApproval), for a
+    // buyer, an approver or the policy administrator; the budget is withheld from a buyer
+    const approval = approvalPreview(orderId, can)
     const facility = part.facilityId ? one("mantle.facility.Facility", {facilityId: part.facilityId}) : null
     const received = receipts.length > 0
     const draft = statusId === "OrderOpen"
@@ -322,7 +330,8 @@ function detail(p) {
     const actions = {
         edit: draft && !!can.buy,
         place: draft && !!can.buy && itemRows.length > 0,
-        approve: statusId === "OrderPlaced" && !!can.approve && !!can.orderApprove,
+        approve: statusId === "OrderPlaced" && !!can.approve && !!can.orderApprove && (!approval || approval.canDecide),
+        refuse: statusId === "OrderPlaced" && !!can.approve && (!approval || approval.canDecide),
         send: ["OrderApproved", "OrderSent"].includes(statusId) && !!can.buy,
         hold: ["OrderPlaced", "OrderProcessing", "OrderApproved", "OrderSent"].includes(statusId) && !!can.buy && !purchaseHold,
         release: !!purchaseHold && !!can.holdRelease,
@@ -362,9 +371,34 @@ function detail(p) {
             contentRows,
             emailRows,
             decisionRows,
+            approval,
             historyRows: auditRows(orderId, showAmounts),
             actions
         }
+    }
+}
+
+// The order's approval preview (mantle.order.PurchaseServices.preview#PurchaseApproval) as a probe: null for a user it
+// refuses or when it fails, which is logged.
+function approvalPreview(orderId, can) {
+    if (!(can.buy || can.approve || can.policyEdit)) return null
+    ec.message.pushErrors()
+    try {
+        const out =
+            ec.service
+                .sync()
+                .name("mantle.order.PurchaseServices.preview#PurchaseApproval")
+                .parameters({orderId})
+                .requireNewTransaction(true)
+                .call() || {}
+        if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+        return out.preview || null
+    } catch (error) {
+        ec.logger.warn("Approval preview of purchase order " + orderId + ": " + error.message)
+        return null
+    } finally {
+        ec.message.clearErrors()
+        ec.message.popErrors()
     }
 }
 
@@ -390,14 +424,23 @@ function bulk(p) {
                     : "mantle.order.OrderServices.close#PurchaseRemainders"
             const parameters =
                 action === "approve"
-                    ? {orderId, orderRevision: one(ORDER, {orderId})?.orderRevision ?? null, reason: p.reason || null}
+                    ? {
+                          orderId,
+                          orderRevision: p.orderRevisions?.[orderId] ?? one(ORDER, {orderId})?.orderRevision ?? null,
+                          reason: p.reason || null
+                      }
                     : {orderId, reason: String(p.reason)}
             const out = ec.service.sync().name(service).parameters(parameters).requireNewTransaction(true).call() || {}
             if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
             results.push({
                 orderId,
                 resultCode: "DONE",
-                message: action === "approve" ? "Approved" : "Closed; now " + statusText(out.orderStatusId)
+                message:
+                    action === "approve"
+                        ? out.pendingStepText
+                            ? "Approved; waiting for " + out.pendingStepText
+                            : "Approved"
+                        : "Closed; now " + statusText(out.orderStatusId)
             })
         } catch (error) {
             const message = String(error.message || error)

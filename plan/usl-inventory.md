@@ -632,7 +632,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3) |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail |  |
 | OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11) |
-| OrderServices | reject#Order |  |  |
+| OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
 | OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3) |
@@ -712,10 +712,10 @@ Added in Accounting P15 (budgets), called by built screens:
 | BudgetServices | revise#Budget | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddAccountForm and AccountAmounts |
 | BudgetServices | store#BudgetParty | Accounting/Budgets/BudgetDetail | Accounting/Budgets/BudgetDetail#AddPartyForm |
 | BudgetServices | store#Policy | Accounting/Budgets/BudgetControls | Accounting/Budgets/BudgetControls#BudgetPolicy, PolicyVersion and EndPolicy |
-| BudgetServices | check#Budget | Accounting/Budgets/BudgetControls | Mantle (the preview of reserve#, convert#Commitment); Purchasing's callers are §7 |
-| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's request and order approvals are §7 |
+| BudgetServices | check#Budget | Accounting/Budgets/BudgetControls | Mantle (the preview of reserve#, convert#Commitment); Purchasing's order approval preview (preview#PurchaseApproval: Purchasing/Orders/OrderDetail Approvals; Purchasing P4); its request approval is §7 |
+| BudgetServices | reserve#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's order approval of a purchase order with no request (decide#PurchaseApproval, Purchasing P4); its request approval is §7 |
 | BudgetServices | convert#Commitment | Accounting/Payables/BillDetail | Accounting/Payables/BillDetail and ExpensePosting (through approve#Payable) |
-| BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close and cancel are §7 |
+| BudgetServices | release#Commitment | Accounting/Budgets/BudgetControls | Mantle; Purchasing's close (close#PurchaseRemainders) and order cancel (cancel#PurchaseOrder, Purchasing P4) release through release#ClosedSourceCommitments; a request cancel is §7 |
 | BudgetReportServices | run#BudgetVariance | Accounting/Reports/BudgetVariance; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Accounting/Reports/BudgetVariance |
 
 ## Party (86 services, 59 added)
@@ -1694,11 +1694,16 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/PriceServices | get#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
 | product/PriceServices | store#PricingSettings |  | Products/Settings/PricingSettings; Shared/Prices; Shared/SupplierPrices |
 | order/PurchaseServices | create#PurchaseOrder, update#PurchaseOrder, store#PurchaseOrderItem, delete#PurchaseOrderItem, place#PurchaseOrder, cancel#PurchaseOrder, clone#PurchaseOrder |  | Purchasing/Orders/PurchaseOrders (New purchase order); Purchasing/NewPurchaseOrder; Purchasing/Orders/OrderDetail (Edit order, Add line, Edit, Remove, Place, Cancel order, Clone) (Purchasing P3) |
-| order/PurchaseServices | decide#PurchaseApproval |  | Purchasing/Orders/OrderDetail (Approve); Purchasing/Orders/PurchaseOrders (Approve, bulk) (Purchasing P3) |
+| order/PurchaseServices | decide#PurchaseApproval |  | Purchasing/Orders/OrderDetail (Approve, Refuse); Purchasing/Orders/PurchaseOrders (Approve, bulk) (Purchasing P3; P4: the policy steps, refusal, budget) |
 | order/PurchaseServices | check#PurchaseApprovalRequired |  | (the OrderPreApprovePurchase SECA on check#OrderPreApprove, and approve#Order; Purchasing P3) |
 | order/OrderServices | send#PurchaseOrder |  | Purchasing/Orders/OrderDetail (Send) (Purchasing P3) |
 | order/OrderServices | get#PurchaseOrderPrint |  | Purchasing/Orders/OrderDetail (Print, Print as of) (Purchasing P3) |
 | order/OrderServices | accept#ServiceItem |  | Purchasing/Orders/OrderDetail (Record acceptance of a service line) (Purchasing P3) |
+| order/PurchaseServices | store#PurchaseApprovalPolicy |  | Purchasing/Settings/ApprovalPolicies (New step, Change, End) (Purchasing P4) |
+| order/PurchaseServices | preview#PurchaseApproval |  | Purchasing/Settings/ApprovalPolicies (ApprovalPreview); Purchasing/Orders/OrderDetail (Approvals, through ironstone.purchasing.OrderServices.get#OrderDetail) (Purchasing P4) |
+| order/PurchaseServices | approve#PurchaseSource, refuse#PurchaseSource |  | Purchasing/Approvals and Commons/Notifications (the PurchaseOrderApproval and PurchaseSupplierApproval topics' approve and refuse) (Purchasing P4) |
+| order/PurchaseServices | submit#SupplierApproval, decide#SupplierApproval, suspend#Supplier |  | Shared/Supplier360 (Purchasing: Approval menu) (Purchasing P4) |
+| order/PurchaseServices | handle#PurchaseApprovalRevision |  | (the OrderRevisionPurchaseApproval SECA on increment#OrderRevision; Purchasing P4) |
 
 
 ## Accounting native additions — P0–P3 (Oct 29, 2026)

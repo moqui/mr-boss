@@ -46,7 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="bulkAction">
         <actions>
             <service-call name="ironstone.purchasing.OrderServices.bulk#PurchaseOrderActions" out-map="bulkOut"
-                    in-map="{appRoot:appRoot, action:action, orderIds:selectedIds, reason:reason}"/>
+                    in-map="{appRoot:appRoot, action:action, orderIds:selectedIds, reason:reason,
+                        orderRevisions:(orderRevisionsText ? JSON.parse(orderRevisionsText) : null)}"/>
             <script>if (bulkOut?.summary) ec.message.addMessage(bulkOut.summary,
                 bulkOut.results.some((row) =&gt; row.resultCode != 'DONE') ? 'warning' : 'success')</script>
         </actions>
@@ -157,6 +158,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     title="Approve the selected purchase orders"/>
                             <form-single name="BulkApprove" transition="bulkAction">
                                 <field name="action" from="'approve'"><default-field><hidden/></default-field></field>
+                                <!-- the revision of each order shown, so an order changed since is refused naming its
+                                    current revision (F-P4-6) -->
+                                <field name="orderRevisionsText" from="JSON.stringify(Object.fromEntries(orderRows.map((row) =&gt;
+                                        [row.orderId, row.orderRevision])))"><default-field><hidden/></default-field></field>
                                 <field name="reason">
                                     <default-field title="Note">
                                         <text-line/>
@@ -164,7 +169,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="submitButton">
                                     <default-field title="Approve">
-                                        <submit confirmation="Approve each selected purchase order at its current revision?"/>
+                                        <submit confirmation="Approve each selected purchase order at the revision shown?"/>
                                     </default-field>
                                 </field>
                             </form-single>

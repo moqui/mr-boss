@@ -80,7 +80,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="bulk" noun="PurchaseOrderActions" allow-remote="false">
         <description>ApprovePurchaseOrders and ClosePurchaseOrders (design §6): each selected order the user may work with,
-            approved through mantle.order.PurchaseServices.decide#PurchaseApproval at its current revision, or its remainder
+            approved through mantle.order.PurchaseServices.decide#PurchaseApproval at the revision the user reviewed
+            (orderRevisions, P4: a superseded one is refused naming the current revision) else its current one, or its remainder
             closed through mantle.order.OrderServices.close#PurchaseRemainders with the reason, each in its own transaction:
             a refusal is named with its reason code and the others are done. Refuses another action (ACTION_INVALID), no or
             more than 100 orders (SELECTION_INVALID) and a close without a reason (REASON_REQUIRED).</description>
@@ -88,6 +89,8 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="action" required="true"/>
             <parameter name="orderIds" type="List" required="true"/>
+            <parameter name="orderRevisions" type="Map"><description>The revision of each order the user reviewed, by order
+                id (P4)</description></parameter>
             <parameter name="reason"/>
         </in-parameters>
         <out-parameters>
