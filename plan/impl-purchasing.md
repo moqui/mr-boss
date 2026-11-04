@@ -266,7 +266,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026; P14b built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
-| P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | — |
+| P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | built Nov 4, 2026 |
 | P17 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -2790,6 +2790,134 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
   - a signed-in supplier user sees only its own documents;
   - the same walk through a remote PASS frontend with only framework, webroot and PASS installed.
 
+**Built Nov 4 (P16).**
+- Mantle:
+  - `entity/SupplierPortalEntities.xml`: `ExternalAccessCapability.recordRevision` (the revision a link was issued for) and
+    `mantle.order.SupplierPortalResponse` (a quote response's private draft, and the receipt of each quote response,
+    acknowledgement and drop-ship delivery report: order, kind, revision, state, operation, capability or contact, late,
+    what was entered and the receipt); the content type `OctSupplierDeliveryReport`. `data/SupplierPortalSetupData.xml`:
+    the `PurchaseSupplierResponse` topic. `entity/SupplierPortal.eecas.xml`: SupplierPortalRevoke.
+  - `service/mantle/order/SupplierPortalServices.xml` (`mantle.order.SupplierPortalServices`) over the new
+    `SupplierPortal.js`, each taking PASS's input map, finding the supplier mount's organization and checking the
+    capability or the signed-in contact first (ExternalAccess.js `check`, check#AccessCapability's rule): `get#SupplierHome`
+    (a link's one record, or a contact's suppliers' requested and proposed quotes, orders from approval on and bills sent;
+    the buyer's public contact and the link's expiry), `get#QuoteInvitation` (the request's revision, response date,
+    specification and currency, the quote's lines with the supplier's offer and draft, the receipt), `save#QuoteResponse`
+    (the private draft of the current revision), `submit#QuoteResponse` (confirm and operation id; store#SupplierQuoteItem
+    per line and store#SupplierQuote, channel web, the file staged and scanned into OrderContent; OrderProposed; a repeat
+    or a second submit of the revision answers the first receipt; a changed request is a Conflict; late accepted and
+    marked), `get#PublishedPurchaseOrder` (revision, buyer, lines with price, required and promised dates, terms, ship-to,
+    a subcontract order's service lines with the components in custody, a drop-ship order's deliveries; for a link of an
+    earlier revision only `superseded`, SupersededRevision), `acknowledge#PurchaseOrder` (record#Acknowledgement of the
+    current revision: accept, accept with changes, reject, reference, note, each line's promised date and quantity, a
+    scanned file; SupersededRevision a Conflict; a repeat answers the first receipt) and `report#DropShipDelivery` (a
+    drop-ship supplier's shipped quantities, tracking and date as OrderContent for the buyer to confirm with
+    finalize#DropShipPurchaseOrder); every post counts against PASS's throttle (`record#Attempt`, 60 in ten minutes per
+    requester, Tarpit) and is told to the organization's buyers on `PurchaseSupplierResponse`. `revoke#QuoteCapabilities`
+    (for P12's close#QuoteRequest: an RFQ's quotes, or given quote orders; internal) and `revoke#OrderCapabilities` (the
+    EECA: a cancelled or rejected order's links, and a quote's once it leaves the quote statuses).
+  - CX-PORTALS (`party/ExternalAccess.js`, F32): a `Quote` record kind (scope QuoteResponse, a purchase order in
+    OrderRequested or OrderProposed, page `/QuoteResponse`, PURCHASE_ORDER_EDIT); the `Order` kind issued, revoked and
+    listed under PAYABLE_EDIT or PURCHASE_ORDER_EDIT, its link opening `/OrderAcknowledgement` when it has that scope;
+    `invite#Contact` for the supplier app under either; capabilities keep `recordRevision`; `check` answers it and the
+    expiry; `revokeActive` takes every issuer kind (null).
+  - The links: `send#QuoteRequest` mails each quote's own QuoteResponse link (Sourcing.js, one line per supplier) and
+    `send#PurchaseOrder` the revision's OrderAcknowledgement link with BillUpload (PurchaseOrderDocuments.js), when the
+    organization has a published Supplier site (`SupplierPortal.js quoteLink`, `orderLink`; a failure is logged and the
+    mail goes without it); `PurchaseOrderEmail` and `QuoteRequestEmail` show `linkUrl`.
+  - The supplier's claim (F-P16-2): `PurchaseOrders.js asSupplier` and `portalClaim`; `requirePermission` and
+    `purchaseOrder` (and Sourcing.js `requirePermission`) take the claim for its one order only. `Portal.js` exports `stage`
+    (a noun for its refusals); `PurchaseReceipts.js` exports `buyersOf`.
+  - PASS's operations in Mantle's copies: `forum/ForumSchema.js`, `script/PassRoutes.js`, and `TOKEN_WRITES` in
+    `PassAuthority.js` and `PassApi.js` (saveQuoteResponse, submitQuoteResponse, acknowledgePurchaseOrder,
+    reportDropShipDelivery).
+  - Spec `test/order/SupplierPortal.spec.js` (6 features, about 0.8 s).
+- mr-pass:
+  - The seven operations in `service/pass/Schema.js` and `Routes.js` (`supplier/home`, `supplier/quote`,
+    `supplier/quote/draft`, `supplier/quote/response`, `supplier/purchase-order`, `.../acknowledgement`, `.../delivery`),
+    the four writes in `Transport.js` `TOKEN_WRITES`; an operation with an optional file goes as an ordinary call without
+    one (F-P16-6).
+  - Screens (server HTML, phone and desktop): `Supplier/SupplierHome` (SupplierDocuments, SupplierContact; the app's
+    default page), `Supplier/QuoteResponse` (PublishedQuoteRequest; SupplierOffer with Save draft and Send quote, one block
+    per line; SubmitResponse, the receipt) and `Supplier/OrderAcknowledgement` (PublishedPurchaseOrder with the bill link;
+    the subcontract work; AcknowledgeOrder, one block per line; Report a delivery to the customer for a drop-ship order;
+    SupersededRevision); the header's Supplier documents link for a signed-in user.
+  - Specs: `test/Supplier/SupplierPages` (2: the three pages' one html render each, the superseded link and a bad one;
+    the operations registered alike on both sides) over `test/Supplier/SupplierFixtures.js`; acceptance
+    `acceptance/SupplierPortalFixtures` (the walk's and the remote check's documents and a signed-in supplier contact),
+    `acceptance/client/SupplierPortalHttp` (3: the usable-when items in the browser at 390 px and on the desktop) and a
+    RemoteHttp feature (the quote with a file and the acknowledgement through the remote frontend, the superseded link).
+- BOSS:
+  - Supplier360's Invite to the Supplier app (`template/PurchasingSupplierPortal.xml`, one transition-include and one
+    section-include in `Shared/Supplier360.xml`): check#Record with `buy`, then invite#Contact for the supplier app; the
+    invitation's link shown once for the buyer to send.
+  - The shell's `PurchaseSupplierResponse` topic (`Purchasing.xml`), its link to QuoteDetail or OrderDetail
+    (BossSetupData.xml).
+  - Demo: `ironstone.purchasing.DemoServices.load#SupplierPortalDemo` (`SupplierPortalDemo.js`,
+    `data/BossZPurchasingPortalDemoData.xml`, after Accounting's portal demo): on ZIZI_PORTAL (portal.zizi.localhost), an
+    RFQ of Retail's (BOSS_PUR_PORTAL_RFQ) with Ziddleman's quote requested (BOSS_PUR_PORTAL_QUOTE) and its link
+    (`/supplier/QuoteResponse?token=ZiziPortalDemoQuoteResponseLink00000000000001`), and the portal demo order's
+    acknowledgement link of its revision (`/supplier/OrderAcknowledgement?token=ZiziPortalDemoOrderAcknowledgeLink000000000001`);
+    Accounting's invited Ziddleman contact (ziddleman.billing, password moqui) sees both on SupplierHome.
+  - Specs: PurchasingAccess gains the topic and a feature (the invite is the buyer's, on a supplier in scope; 24
+    features); AccountingPayables' portal demo lists the two new links.
+  - Inventories: usl-inventory's P16 section (the Supplier portal services) and ExternalAccessServices' Implemented in;
+    ss-inventory has no mr-marble form for these pages.
+- Tests run: Mantle SupplierPortal (6), AccountingPortals, Sourcing, PurchaseOrders, PurchaseRevisions, DropShip,
+  OrderProcureToPayBasicFlow, PurchaseReceipts (79 features, pass); PASS SupplierPages (2), Portals, PortalFixtures,
+  ClientFixtures, Transport (9, pass); BOSS PurchasingAccess (24), PurchasingSuppliers, PurchasingSourcing,
+  PurchasingRevisions, AccountingPayables, AccountingAccess (pass). Acceptance: SupplierPortalHttp (3) and RemoteHttp (7)
+  against the served suite server, pass; the remote pair (REST: the authority serving ClientFixtures, PortalFixtures and
+  SupplierPortalFixtures, a frontend runtime of framework, webroot, tools and PASS serving RemoteFixtures): RemoteHttp 7 of
+  7 and SupplierPortalHttp 3 of 3 through the frontend, pass. `moqui lint --screens`: no parse failure or flagged site in
+  the new and changed BOSS and PASS screens.
+- Decisions:
+  - A purchase order's link names its revision. A new revision supersedes the link's acknowledgement (SupersededRevision,
+    and nothing of the new revision), while its BillUpload still takes a bill, as bills belong to the order; the send of
+    the new revision mails a new link. A cancel or decline, and a quote leaving the quote statuses (an award, P12's Not
+    awarded), revoke the links (the EECA), besides ExternalAccess already refusing those records (F-P16-1).
+  - A supplier's answer runs Mantle's own verbs on its claim of the one order (F-P16-2); nothing in PASS or BOSS writes the
+    order. Quote tiers stay prices only when a buyer publishes them (P11).
+  - A draft is the supplier's own SupplierPortalResponse row, never a write to the quote, so the buyer sees nothing before
+    the submit; a submit of the request's revision is final for that revision, and a later revision of the RFQ may be
+    answered again.
+  - A late quote is accepted and marked late for the buyer (no policy flag yet, F-P16-8).
+  - SupersededRevision on the page is a result, not an error, so a remote frontend shows it (F-P16-7).
+- Findings (provisional):
+  - **F-P16-1** ExternalAccessCapability had no revision (design §13 names one); added as `recordRevision`. The plan's "a new
+    revision revokes it" is built as the acknowledgement superseded on the older link, its bill upload kept.
+  - **F-P16-2** store#SupplierQuote, store#SupplierQuoteItem and record#Acknowledgement check PURCHASE_ORDER_EDIT and the
+    user's organizations, which a public supplier has neither of. A supplier's claim (`ec.context.sharedMap`, set only by
+    SupplierPortal.js after the capability check) stands in for both on that one order, and every other order stays
+    unavailable; the check is in PurchaseOrders.js and one line of Sourcing.js `requirePermission` (P12's file).
+  - **F-P16-3** Mantle's store verbs set a field that is passed, even as null; the portal passes only what the supplier gave.
+  - **F-P16-4** OrderContent counts a revision on an order without `commercialRevisionOnly` (Order.eecas.xml), so a
+    supplier's file or delivery report would supersede its own link; they are written uncounted (PurchaseRevisions.js
+    `uncounted`).
+  - **F-P16-5** Without a draft record, Save draft would write the quote's lines, which the buyer reads; drafts and receipts
+    are `SupplierPortalResponse`.
+  - **F-P16-6** PASS's REST and gRPC transports sent every operation with a `file` field as multipart and required the
+    file; the quote's and acknowledgement's file is optional, so without one it is an ordinary call. Lines cross a
+    multipart form as JSON text.
+  - **F-P16-7** A remote frontend shows only the envelope's generic message for an Unprocessable or Conflict (PassAuthority
+    MESSAGES), so a supplier's validation message ("Give the reason") reads "The authority could not complete this
+    request" remotely, as BillUpload's do. For the lead: pass the refusal's own text for those kinds.
+  - **F-P16-8** Design QuoteResponse accepts a late response "only if policy permits", and PurchasePolicy has no such flag;
+    late responses are accepted and marked (§7).
+  - **F-P16-9** invite#Contact makes the PASS invitation but mails nothing (as Accounting P18); Supplier360 shows its link
+    once for the buyer to send.
+  - **F-P16-10** QuoteResponse offers no file downloads (the published RFQ PDF, permitted files): PASS has no supplier file
+    operation yet, and the RFQ email carries the PDF (§7).
+  - **F-P16-11** A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery
+    does not prefill from it yet, and a subcontract order shows the components held at the custody facility but not the
+    dispatch and inspection evidence (§7).
+  - **F-P16-12** Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier
+    mount; P16 adds the quote and acknowledgement links to it. The Supplier app's default page is now SupplierHome (was
+    BillUpload).
+- For P12: `mantle.order.SupplierPortalServices.revoke#QuoteCapabilities` (`requestId`, or `orderId`/`orderIds`) ends an RFQ's
+  quote links from close#QuoteRequest; the SupplierPortalRevoke EECA also revokes a quote's links whenever it leaves
+  OrderRequested or OrderProposed, so an award or a Not awarded cancel needs no call.
+
 ### P17 — Finish
 
 - The terminal twins, and the server-static sweep, an acceptance test.
@@ -3024,6 +3152,9 @@ Designed, not in this build:
   - quantity tiers by a purchase promotion's auto-adjust (F41, F140): a purchasing ProductStore with calculation,
     emails and reservation off, and its promotions scoped to purchase orders;
   - an RFQ invitation's own contact, channel and deadline (F143).
+  - from the supplier pages (P16): a buying-policy flag refusing late quote responses (F-P16-8); file downloads on
+    QuoteResponse and OrderAcknowledgement (F-P16-10); OrderDetail's Confirm delivery prefilled from a supplier's
+    delivery report, and a subcontract order's dispatch and inspection evidence on its page (F-P16-11).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse

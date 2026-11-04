@@ -69,6 +69,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="submitSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
     <transition-include name="decideSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
     <transition-include name="suspendSupplier" location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
+    <!-- Purchasing P16: Invite to the Supplier app (template/PurchasingSupplierPortal.xml) -->
+    <transition-include name="inviteSupplierContact" location="component://mr-boss/template/PurchasingSupplierPortal.xml"/>
     <subscreens default-item="Overview">
         <subscreens-item name="Prices" menu-index="2" location="component://mr-boss/screen/Shared/SupplierPrices.xml" menu-title="Products &amp; prices"/>
         <!-- Purchasing (impl-purchasing P2): the buying profile, buyer and category, and the finance details for a finance
@@ -139,6 +141,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <!-- Purchasing P4: submit, approve or refuse, and suspend -->
                             <section-include name="PurchasingSupplierApproval"
                                     location="component://mr-boss/template/PurchasingSupplierApproval.xml"/>
+                            <!-- Purchasing P16: invite a contact of the supplier to the PASS Supplier app -->
+                            <section-include name="PurchasingSupplierPortal"
+                                    location="component://mr-boss/template/PurchasingSupplierPortal.xml"/>
                         </container>
                     </container>
                     <label text="${supplierCheck.message}" type="p" style="text-${supplierCheck.color} q-mt-sm q-mb-none"
