@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Costing policies (style-guide §3.10 Settings; design-accounting §15 CostingPolicies; impl-manufacturing P15): the
+    organization's production allocation policy as effective-dated rows (mantle.ledger.ProductionCostServices
+    get#AllocationPolicies, store#AllocationPolicy): the overhead basis (a rate per work-center hour from each center's
+    overhead rate, else the policy's; a percentage of direct labor; none), the co-product method (quantity in a common
+    unit, fixed shares on the BOM's output lines, relative sales value), explicit output weights, where the scrap of issued
+    material goes, and the variance account. A change ends the row in effect and starts the next; a posted cost close keeps
+    the row it applied. Finance administration changes it; Manufacturing's ProductionSettings links here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        default-menu-title="Costing policies"
+        default-menu-index="8"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
+    <transition name="savePolicy">
+        <actions>
+            <service-call name="mantle.ledger.ProductionCostServices.store#AllocationPolicy" in-map="context"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Costing policy saved</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="policies" from="null"/>
+        <if condition="organizationPartyId">
+            <service-call name="mantle.ledger.ProductionCostServices.get#AllocationPolicies" out-map="policies"
+                    transaction="force-new" ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+        </if>
+        <set field="current" from="policies?.policy || {}"/>
+        <set field="policyRows" from="policies?.policyRows || []"/>
+        <set field="policyForm" from="{organizationPartyId:organizationPartyId, expectedFromDate:policies?.expectedFromDate,
+                overheadBasisEnumId:current.overheadBasisEnumId, overheadRate:current.overheadRate,
+                overheadPercent:current.overheadPercent, coproductMethodEnumId:current.coproductMethodEnumId,
+                allowOutputWeights:current.allowOutputWeights ? 'Y' : 'N', scrapToVariance:current.scrapToVariance ? 'Y' : 'N',
+                varianceGlAccountId:current.varianceGlAccountId}"/>
+        <set field="currentText" from="current.overheadBasisText ? 'Overhead ' + current.overheadBasisText
+                + (current.overheadRate ? ' (' + current.overheadRate + ' ' + (current.rateUomId || '') + ' an hour where a work center has no overhead rate)' : '')
+                + (current.overheadPercent ? ' (' + current.overheadPercent + '%)' : '')
+                + '; co-products by ' + current.coproductMethodText
+                + (current.allowOutputWeights ? '; explicit output weights allowed' : '')
+                + (current.scrapToVariance ? '; scrap to variance' : '; scrap to the scrap account') : ''"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <label text="Costing policies" type="h5"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-sm">
+                <container-dialog id="ChangeCostingPolicy" button-text="Change policy" type="primary" icon="sym_o_edit"
+                        title="Change the production costing policy" width="760"
+                        condition="organizationPartyId &amp;&amp; policies?.canEdit">
+                    <form-single name="CostingPolicy" transition="savePolicy" map="policyForm">
+                        <field name="organizationPartyId">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="expectedFromDate">
+                            <default-field>
+                                <hidden/>
+                            </default-field>
+                        </field>
+                        <field name="overheadBasisEnumId">
+                            <default-field title="Overhead basis">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'enum:ProductionOverheadBasis',
+                                                organizationPartyId:organizationPartyId, selected:overheadBasisEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="overheadRate">
+                            <default-field title="Rate an hour" tooltip="For a work center with no overhead rate of its own">
+                                <text-line size="8"/>
+                            </default-field>
+                        </field>
+                        <field name="overheadPercent">
+                            <default-field title="Percentage of labor" tooltip="With the percentage of direct labor basis">
+                                <text-line size="6"/>
+                            </default-field>
+                        </field>
+                        <field name="coproductMethodEnumId">
+                            <default-field title="Co-products by">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'enum:ProductionCoproductMethod',
+                                                organizationPartyId:organizationPartyId, selected:coproductMethodEnumId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="allowOutputWeights">
+                            <default-field title="Explicit output weights" tooltip="Whether a cost close may weigh the outputs by hand">
+                                <drop-down>
+                                    <option key="N" text="Not allowed"/>
+                                    <option key="Y" text="Allowed"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="scrapToVariance">
+                            <default-field title="Scrap of issued material">
+                                <drop-down>
+                                    <option key="N" text="To the scrap account"/>
+                                    <option key="Y" text="To production variance"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="varianceGlAccountId">
+                            <default-field title="Variance account" tooltip="The organization's production variance account when empty">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'accounts', organizationPartyId:organizationPartyId,
+                                                selected:varianceGlAccountId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="fromDate">
+                            <default-field title="From" tooltip="Now when empty">
+                                <date-time type="timestamp"/>
+                            </default-field>
+                        </field>
+                        <field name="changeReason">
+                            <default-field title="Reason">
+                                <text-line/>
+                            </default-field>
+                        </field>
+                        <field name="submit">
+                            <default-field title="">
+                                <submit text="Save policy" confirmation="Start this costing policy row?"/>
+                            </default-field>
+                        </field>
+                        <field-layout>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="expectedFromDate"/>
+                            <field-row>
+                                <field-ref name="overheadBasisEnumId"/>
+                                <field-ref name="coproductMethodEnumId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="overheadRate"/>
+                                <field-ref name="overheadPercent"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="allowOutputWeights"/>
+                                <field-ref name="scrapToVariance"/>
+                            </field-row>
+                            <field-ref name="varianceGlAccountId"/>
+                            <field-row>
+                                <field-ref name="fromDate"/>
+                                <field-ref name="changeReason"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
+        <section name="Policies" condition="organizationPartyId &amp;&amp; policies">
+            <widgets>
+                <container-box>
+                    <box-header title="In effect"/>
+                    <box-body>
+                        <label text="${currentText}." type="p"/>
+                        <label text="${current.stateText == 'Default' ? 'No row yet: the default applies, overhead at each work center overhead rate times the actual hours and co-products by quantity.' : 'From ' + current.fromDateText + (current.changeReason ? ': ' + current.changeReason : '')}"
+                                type="p" style="text-caption m-muted"/>
+                        <label text="Work-center overhead rates are the centers' overhead cost component, kept with the work centers' rates in Manufacturing."
+                                type="p" style="text-caption m-muted"/>
+                    </box-body>
+                </container-box>
+                <section name="History" condition="policyRows.length">
+                    <widgets>
+                        <form-list name="CostingPolicyRows" list="policyRows" skip-form="true" paginate="false">
+                            <field name="fromDateText">
+                                <default-field title="From">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="overheadBasisText">
+                                <default-field title="Overhead">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="coproductMethodText">
+                                <default-field title="Co-products">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fromDateText"/>
+                                    <field-ref name="overheadBasisText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="coproductMethodText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+            <fail-widgets>
+                <label text="Choose an organization to see and change its production costing policy." type="p"/>
+            </fail-widgets>
+        </section>
+    </widgets>
+</screen>

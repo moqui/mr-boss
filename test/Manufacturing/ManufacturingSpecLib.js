@@ -65,7 +65,9 @@ const users = {
     // P5b: an operator who issues and moves stock (Warehouse's issue and move groups)
     material: "manufacturing.material",
     // P14: a production reader in Purchasing's buyer group (which reads supplier prices)
-    buyer: "manufacturing.buyer"
+    buyer: "manufacturing.buyer",
+    // P15: a production reader in Accounting's finance approver group (PRODUCTION_COST_POST), without the Accounting launcher
+    costClose: "manufacturing.costclose"
 }
 
 // Run action as username, with artifact authorization enabled or not, then sign in again as the user before.
@@ -293,6 +295,13 @@ function routeFixtures() {
         "Planning/ScheduleSnapshot": {parameters: {plantId: ids.plantId}, text: "Production schedule snapshot"},
         "Planning/Capacity": {parameters: {plantId: ids.plantId}, text: "Calendar-adjusted"}
     })
+    // P15: the Cost close tab, Accounting's shared ProductionCostClose with the Manufacturing context, on the Warehouse demo's
+    // released run
+    routes["WorkOrders/WorkOrderDetail/ProductionCostClose"] = {
+        parameters: {workEffortId: ids.releasedRunId},
+        text: "Coated filters"
+    }
+    mounts.push(["WorkOrders/WorkOrderDetail/ProductionCostClose", shared + "ProductionCostClose.xml"])
     // P10: the Shop floor area (the station, a .qvue: its component, by default), and the quality work order's Pack in
     // OperationExecution, Instructions and the instructions print, and its time
     const pack = {operationWorkEffortId: ids.qualityOperationIds[1]}

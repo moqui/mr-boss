@@ -92,6 +92,8 @@ const roles = [
             "PeriodClose",
             "FixedAssets",
             "Approvals",
+            // the production cost close (impl-manufacturing P15)
+            "Inventory",
             "Budgets",
             "Reports"
         ],

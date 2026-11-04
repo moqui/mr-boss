@@ -104,8 +104,9 @@ function runSource(p, app = warehouseApp) {
             required: number(line.stockQuantity),
             received: number(line.received),
             left: number(line.remaining),
-            // a by-product waits for its cost allocation (Mantle refuses it, BYPRODUCT_NOT_COSTED)
-            canReceive: canIssue && isReleased && line.lineRoleEnumId === "PrlrOutput" && number(line.remaining) > 0
+            // a by-product is received at its co-product share of the frozen estimate (Mantle refuses one without an estimate,
+            // BYPRODUCT_NOT_COSTED; impl-manufacturing P15)
+            canReceive: canIssue && isReleased && number(line.remaining) > 0
         }))
     const returnRows = Array.from(order.issuances || [])
         .filter(row => number(row.returnable) > 0)

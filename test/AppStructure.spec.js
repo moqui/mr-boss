@@ -360,6 +360,9 @@ spec({
             // the Accounting context of the shared inventory valuation, mounted under Inventory
             if (path === "Inventory/InventoryValuation")
                 screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/InventoryValuation.xml`])
+            // the Accounting context of the shared production cost close, mounted under Inventory (impl-manufacturing P15)
+            if (path === "Inventory/ProductionCostClose")
+                screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/ProductionCostClose.xml`])
             // the Accounting context of the shared equipment screen, mounted under Fixed assets
             if (path === "FixedAssets/EquipmentDetail") screens.push([`${base}/Accounting.xml`, path, `${base}/Shared/EquipmentDetail.xml`])
             // BillDetail's Match tab is the shared InvoiceMatch screen with the Accounting context

@@ -1583,6 +1583,13 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | work/ProductionServices | find#SubcontractOperations | Manufacturing/Subcontracting/SubcontractOperations | Manufacturing/Subcontracting/SubcontractOperations; Shared/Supplier360/SubcontractOrders (Manufacturing context) (P14) |
 | work/ProductionServices | get#SubcontractOrder |  | Shared/OrderDetail (Manufacturing context, P14) |
 | work/ProductionServices | get#SubcontractShipment |  | Shared/ShipmentDetail (Manufacturing context, P14) |
+| ledger/ProductionCostServices | get#AllocationPolicies | Accounting/Settings/CostingPolicies | Accounting/Settings/CostingPolicies; Manufacturing/Settings/ProductionSettings (the policy in effect, read only, no rates) (Manufacturing P15) |
+| ledger/ProductionCostServices | store#AllocationPolicy | Accounting/Settings/CostingPolicies | Accounting/Settings/CostingPolicies (Change policy, finance administration, P15) |
+| ledger/ProductionCostServices | preview#CostClose | Shared/ProductionCostClose | Accounting/Inventory/ProductionCostClose; Manufacturing/WorkOrders/WorkOrderDetail/ProductionCostClose (P15) |
+| ledger/ProductionCostServices | post#CostClose | Shared/ProductionCostClose | Accounting/Inventory/ProductionCostClose; Manufacturing/WorkOrders/WorkOrderDetail/ProductionCostClose (Post cost close, which also closes the run through transition#ProductionOrder; P15) |
+| ledger/ProductionCostServices | get#CostClose |  | Shared/ProductionCostClose (posted allocations); Manufacturing/WorkOrders/WorkOrderDetail/ByProducts (actual allocation) (P15) |
+| ledger/ProductionCostServices | return#CostReview |  | Shared/ProductionCostClose (More, Return to production; P15) |
+| ledger/ProductionCostServices | check#ProductionClose |  | Accounting/PeriodClose/PeriodCloseDetail (the PccProductionWip and PccProductionCostClose rows; P15) |
 | work/ProductionServices | get#ShopFloorQueue | Manufacturing/ShopFloor | Manufacturing/ShopFloor/Station (the board, through ironstone.manufacturing.ShopFloorServices.get#Station); the Manufacturing today-source (P10) |
 | work/ProductionServices | get#ProductionOperation | Manufacturing/ShopFloor/OperationExecution | Manufacturing/ShopFloor/OperationExecution (Work, start checks, PersonTimer, MachineRuntime) (P10) |
 | work/ProductionServices | get#ProductionInstructions | Manufacturing/ShopFloor/Instructions | Manufacturing/ShopFloor/Instructions (Steps, Evidence), InstructionsPrint (P10) |

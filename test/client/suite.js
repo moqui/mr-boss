@@ -57,6 +57,7 @@ suite(
         "ManufacturingWorkCentersWalk",
         "ManufacturingMethodsWalk",
         "ManufacturingCostsWalk",
+        "ManufacturingCostCloseWalk",
         "ManufacturingWorkOrdersWalk",
         "ManufacturingPlanningWalk",
         "ManufacturingMaterialsWalk",

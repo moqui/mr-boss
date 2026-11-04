@@ -16,9 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     ByProducts, the secondary output and by-product lines with their planned, received and lost quantities
     (mantle.work.ProductionServices.get#ProductionQuantities), changed, added or removed on a draft by the planner
     (store#ProductionOutput, after ironstone.manufacturing.AccessServices.check#Record with plan); and AllocationReview, the
-    frozen estimate shared by quantity across the outputs (the default co-product rule), with Products' cost read only. The
-    actual allocation, and receiving a by-product, wait for Accounting's cost close (P15): a by-product is not received until
-    then (BYPRODUCT_NOT_COSTED). -->
+    frozen estimate shared by quantity across the outputs (the default co-product rule), with Products' cost read only. A
+    by-product is received at its share of that estimate under Accounting's costing policy (impl-manufacturing P15), and the
+    actual allocation, each output line's share of the run's cost at the cost close, follows once it is posted
+    (mantle.ledger.ProductionCostServices.get#CostClose; amounts with financial read only). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="By-products" default-menu-index="7">
     <parameter name="workEffortId"/>
@@ -54,6 +55,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="outputForm" from="{workEffortId:workEffortId, expectedRevision:runInfo.revision, lineRoleEnumId:'PrlrByproduct',
                 operationKey:keyBase + '-new'}"/>
         <set field="allocationRows" from="allocation?.rows || []"/>
+        <!-- the actual allocation of the posted cost close (P15) -->
+        <set field="costClose" from="null"/>
+        <if condition="found">
+            <service-call name="mantle.ledger.ProductionCostServices.get#CostClose" out-map="costClose"
+                    transaction="force-new" ignore-error="true" in-map="{workEffortId:workEffortId}"/>
+        </if>
+        <set field="actualRows" from="(costClose?.allocationRows || []).filter((row) =&gt;
+                row.destinationEnumId == 'PcdOutput' || row.destinationEnumId == 'PcdByproduct')"/>
         <set field="labelParameters" from="{workEffortId:workEffortId, kind:'secondary', renderMode:'html-print', lastStandalone:'true'}"/>
     </actions>
     <widgets>
@@ -151,6 +160,48 @@ along with this software (see the LICENSE.md file). If not, see
                                     </widgets>
                                 </section>
                             </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ActualAllocation" condition="actualRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Actual allocation"/>
+                            <box-body-nopad>
+                                <label text="Each output's share of the work order's cost, posted by Accounting's cost close on ${costClose.closedDateText || ''}."
+                                        type="p" style="text-caption q-pa-md"/>
+                                <form-list name="ActualAllocations" list="actualRows" skip-form="true" paginate="false">
+                                    <field name="productName">
+                                        <default-field title="Output">
+                                            <display text="${productName || ''} · ${destinationText}${adjustment ? ' (adjustment)' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="basisQuantity">
+                                        <default-field title="Quantity">
+                                            <display format="#,##0.###" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="sharePercent">
+                                        <default-field title="Share %">
+                                            <display align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="allocatedAmount" hide="!costClose.financialRead">
+                                        <default-field title="Allocated">
+                                            <display currency-unit-field="amountUomId" align="right"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="productName"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="sharePercent"/>
+                                            <field-ref name="allocatedAmount"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
                         </container-box>
                     </widgets>
                 </section>
