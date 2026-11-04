@@ -930,7 +930,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | update#PhysicalInventoryDate | Warehouse/Counts/CountDetail | — Not used: post#Count sets the count's date before its lines post (P10) |
 | EquipmentServices | create#Equipment | Maintenance/Equipment; Maintenance/Equipment/EquipmentImport |  |
 | EquipmentServices | get#AssetMaintenanceNeeded |  |  |
-| EquipmentServices | create#AssetMaintenance | Manufacturing/Quality/Downtime |  |
+| EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | Manufacturing/WorkCenters/Downtime and EquipmentDetail (Request maintenance: through mantle.work.ProductionServices.request#ProductionMaintenance, AsMntCreated and MntTpCorrective, Manufacturing P11) |
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
 | EquipmentServices | update#AssetMaintenanceContent | Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
 | EquipmentServices | save#AssetMaintenanceContentFile | Shared/RecordFiles |  |
@@ -1055,7 +1055,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/Quality/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15) |
+| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11) |
 | RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; Warehouse/Transfers/RequestDetail (Submit, Complete, Cancel; approve#InventoryRequest, P15) |
 | RequestServices | create#ContactRequest | Projects/Requests/Intake |  |
 | RequestServices | create#ContactRequestReCaptcha | Projects/Requests/Intake |  |
@@ -1073,7 +1073,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | get#UserTodayRequests |  | Commons |
-| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/Quality/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
+| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11) |
 | RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
@@ -1207,7 +1207,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | get#ProductionRunDisplayInfo | Manufacturing/WorkOrders/WorkOrderDetail; Shared/MaterialIssueReceipt |  |
 | ManufacturingServices | create#ProductionRun |  | mantle.work.ProductionServices.create#ProductionOrder (without the legacy consume and produce products, P16a) |
 | ManufacturingServices | create#ShipmentAssemblyWorkEffort |  |  |
-| ManufacturingServices | set#ProducedProductQuantity |  |  |
+| ManufacturingServices | set#ProducedProductQuantity |  | — never called (F8): a target change is mantle.work.ProductionServices.change#ProductionQuantity (P7) |
 | ManufacturingServices | recreate#ConsumeProductsFromProduce |  |  |
 | ManufacturingServices | produce#AvailableAssemblies | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack; Shared/MaterialIssueReceipt | Warehouse/Shipping/Pack and Warehouse/Inventory/MaterialIssueReceipt (inside pack#ShipmentAssemblyComponent; the kit cost of kitCostFromComponents, F41) |
 | ManufacturingServices | breakDown#Assembly |  |  |
@@ -1215,8 +1215,8 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ManufacturingServices | unissue#Component |  |  |
 | ManufacturingServices | cancel#AssemblyWorkEffort |  |  |
 | ManufacturingServices | get#ConsumedAssetRemaining | Manufacturing/WorkOrders/Disassembly |  |
-| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly |  |
-| ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt || — Manufacturing/WorkOrders/WorkOrderDetail/Components and MaterialIssueReceipt: get#ProductionMaterials over the run's own lines (P5b) |
+| ManufacturingServices | get#ProducedProductComplete | Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Manufacturing/WorkOrders/Disassembly | — not used by Quantities: it reads mantle.work.ProductionServices.get#ProductionQuantities (the run lines and receipts, P7) |
+| ManufacturingServices | get#ProductionRunProduceConsumeDetail | Manufacturing/WorkOrders/WorkOrderDetail/Components; Manufacturing/WorkOrders/WorkOrderDetail/Quantities; Shared/MaterialIssueReceipt | — Manufacturing/WorkOrders/WorkOrderDetail/Components and MaterialIssueReceipt: get#ProductionMaterials over the run's own lines (P5b) |
 | ManufacturingServices | get#ProductBomDetail | Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion |  |
 | ManufacturingServices | get#ProductionRunPickInfo | Manufacturing/WorkOrders/WorkOrderDetail | — not used: Manufacturing/WorkOrders/WorkOrderDetail/PickSheet reads mantle.work.ProductionServices.get#ProductionPickList (the run lines, P5a) |
 | MeasurementServices | get#MeasurementUomsByMeasurementType |  |  |

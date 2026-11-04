@@ -103,9 +103,17 @@ function openMaintenanceCount(assetId) {
         )
         .count()
 }
-// An asset's availability for production: left, assigned to work now, in maintenance now, or its status.
+// An asset's availability for production: left, out of service (an open outage, P11), assigned to work now, in maintenance
+// now, or its status.
+const outOfService = assetId =>
+    find("mantle.work.effort.ResourceUnavailability")
+        .condition("assetId", assetId)
+        .condition("unavailabilityKindEnumId", "RukActual")
+        .condition("thruDate", "is-null", null)
+        .count() > 0
 function availabilityOf(asset, assignments) {
     if (hasLeft(asset)) return {availabilityText: "Left the facility", availabilityColor: "grey-8", blocked: true}
+    if (outOfService(asset.assetId)) return {availabilityText: "Out of service", availabilityColor: "negative", blocked: true}
     const now = assignments.find(row => row.current)
     if (now) return {availabilityText: "On " + now.workText, availabilityColor: "warning", blocked: false}
     if (openMaintenanceCount(asset.assetId))

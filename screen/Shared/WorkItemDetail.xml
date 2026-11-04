@@ -44,6 +44,12 @@ along with this software (see the LICENSE.md file). If not, see
     Projects). With peek=true (WorkItems' Peek pane, whose bar has Open full) it renders compact: the title row, the facts, then the
     description, the sub-items and Chatter one under the other (the tabs would load the whole page, not the pane).
 
+    Manufacturing (impl-manufacturing P11, crosscut §3.12 Manufacturing row; ironstone.manufacturing.DowntimeServices
+    get#WorkItemContext, template/ManufacturingRequestParts.xml ManufacturingWorkItemContext): a follow-up task of a maintenance
+    request of the user's plants, at Manufacturing/WorkCenters/WorkItemDetail: the Commons task with a Production box of its
+    requests, their stops and equipment. A production run or operation is no follow-up task: it is not available there and
+    links to its work order (F38); neither is a task of no such request.
+
     An item the user may not see is "not available" (IronStone R5, R28; in Projects the project's visibility, impl-projects.md
     F1). The keys of design §1.4 (a, s, t, b, m) wait for a screen-level key binding of the framework. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -405,6 +411,10 @@ along with this software (see the LICENSE.md file). If not, see
             appKey = projects ? 'projects' : 'commons'
             compact = peek === 'true'
             detailPath = projects ? '/qapps/Projects/WorkItems/WorkItemDetail' : '/qapps/Commons/Tasks/TaskDetail'
+            // Manufacturing (impl-manufacturing P11): a follow-up task of a maintenance request of the user's plants
+            mfgTask = appRoot === 'Manufacturing'
+            productionTask = {}
+            if (mfgTask) detailPath = '/qapps/Manufacturing/WorkCenters/WorkItemDetail'
             // the Development tab: when the item's project has the Code module on or a repository linked (design §5)
             devShown = false
             if (projects) {
@@ -428,6 +438,14 @@ along with this software (see the LICENSE.md file). If not, see
                 detail = ec.service.sync().name('ironstone.commons.TaskServices.get#TaskDetail').parameters({workEffortId: workEffortId}).call() || {}
             }
             recordFound = !!detail.visible
+            if (mfgTask && recordFound) {
+                ec.message.pushErrors()
+                try {
+                    productionTask = ec.service.sync().name('ironstone.manufacturing.DowntimeServices.get#WorkItemContext')
+                            .parameters({workEffortId: workEffortId}).call() || {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = !!productionTask.available
+            }
             if (!recordFound) return
             const L = (text) => ec.l10n.localize(text)
             const enc = (text) => String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
@@ -577,7 +595,14 @@ along with this software (see the LICENSE.md file). If not, see
     </actions>
 
     <widgets>
-        <section name="TaskNotFound" condition="!recordFound"><widgets>
+        <section name="ProductionTaskNotFound" condition="!recordFound &amp;&amp; mfgTask"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="${productionTask.productionWork ? 'This is an operation of a work order, not a follow-up task; open it in Work orders.' : 'Task ' + workEffortId + ' is not available in Manufacturing: it is not a follow-up task of a maintenance request of your plants.'}"/>
+                <link url="${productionTask.url}" url-type="plain" text="Open the work order" link-type="anchor" condition="productionTask.url"/>
+                <link url="${sharedLinks['WorkCenters/Downtime']}" text="Back to Downtime" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Task ${workEffortId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="tasks" text="${projects ? 'Back to Work items' : 'Back to Tasks'}" link-type="anchor"/>
@@ -590,8 +615,11 @@ along with this software (see the LICENSE.md file). If not, see
 
             <!-- ===== the header card (style-guide §3.3): the identity with the status-bar at its right, then the facts with the actions at
                 their right. Above it, Commons: the way back to Tasks; Projects: the path, the project then each ancestor ===== -->
-            <section name="CommonsBack" condition="!projects"><widgets>
+            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask"><widgets>
                 <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
+            </widgets></section>
+            <section name="ManufacturingBack" condition="mfgTask"><widgets>
+                <container style="q-mb-xs"><link url="${sharedLinks['WorkCenters/Downtime']}" link-type="anchor" text="Downtime" icon="arrow_back"/></container>
             </widgets></section>
             <section name="WorkItemPath" condition="projects &amp;&amp; !compact"><widgets>
                 <render-mode><text type="qvt"><![CDATA[${breadcrumbHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "WorkItemPath", text: breadcrumbList.map((crumb) => crumb.label).join(" > ")})}]]></text></render-mode>
@@ -816,6 +844,8 @@ along with this software (see the LICENSE.md file). If not, see
 
             <section name="FullBody" condition="!(projects &amp;&amp; compact)"><widgets>
             <render-mode><text type="qvt"><![CDATA[${tabsHtml}]]></text><text type="tui"><![CDATA[${JSON.stringify(tabsTui)}]]></text></render-mode>
+            <!-- Manufacturing (impl-manufacturing P11): the task's maintenance requests, their stops and equipment -->
+            <section-include name="ManufacturingWorkItemContext" location="component://mr-boss/template/ManufacturingRequestParts.xml"/>
 
             <!-- ===== Overview ===== -->
             <section name="OverviewTab" condition="tab == 'overview'"><widgets>

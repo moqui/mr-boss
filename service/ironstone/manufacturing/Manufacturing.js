@@ -1014,6 +1014,167 @@ Object.assign(choiceSources, {
     planningMethods: (userScope, term, selected) => enumOptions("PlanningSuggestionMethod", term, selected)
 })
 
+// ===== P11: downtime and maintenance =====
+// Downtime (WorkCenters/Downtime): a stop opens there, by its work center and organization; the shared RequestDetail and
+// WorkItemDetail are mounted under WorkCenters with the Manufacturing context, and quick create's report form at the root
+// (ReportDowntime, for the operators and supervisors); the drop-downs of a stop's reason and equipment.
+function readDowntime(productionDowntimeId) {
+    const row = one("mantle.work.production.ProductionDowntime", {productionDowntimeId})
+    const facility = facilityById(row?.facilityId)
+    if (!row || !facility) return null
+    return {
+        owners: [row.organizationPartyId],
+        facilities: [facility],
+        label: "Downtime " + productionDowntimeId,
+        detail: [facilityName(facility), row.reasonCode, statusText(row.statusId)].filter(Boolean).join(" · "),
+        facility
+    }
+}
+recordKinds.downtime = {
+    name: "Downtime",
+    icon: "sym_o_running_with_errors",
+    destination: "WorkCenters/Downtime?productionDowntimeId=",
+    read: readDowntime
+}
+linkPaths.push("WorkCenters/Downtime", "WorkCenters/RequestDetail", "WorkCenters/WorkItemDetail", "ReportDowntime")
+// the reasons a stop may name (downtime and hold), active now, of the center's organization or the user's
+const stopCategories = ["PrcDowntime", "PrcHold"]
+const stockTypes = ["AstTpInventory", "AstTpSupplies"]
+function reasonOrganizations(userScope, facilityId) {
+    const center = facilityById(facilityId)
+    if (center) return inScope(userScope, center) ? [center.ownerPartyId] : []
+    return userScope.ownerIds
+}
+// the facilities whose equipment serves a work center: the center, the plant above it and the facilities under it
+function equipmentFacilityIds(userScope, facilityId) {
+    const center = facilityById(facilityId)
+    if (!inScope(userScope, center)) return []
+    const ids = [center.facilityId]
+    const parent = facilityById(center.parentFacilityId)
+    if (inScope(userScope, parent)) ids.push(parent.facilityId)
+    for (const row of facilityFind(userScope).condition("parentFacilityId", center.facilityId).selectField("facilityId").list())
+        ids.push(row.facilityId)
+    return ids
+}
+Object.assign(choiceSources, {
+    downtimeReasons: (userScope, term, selected, p) => {
+        const factory = ec.entity.conditionFactory
+        const organizationIds = reasonOrganizations(userScope, p.facilityId)
+        if (organizationIds && !organizationIds.length) return []
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", stopCategories)
+            .condition("fromDate", "less-equals", ec.user.nowTimestamp)
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("thruDate", "is-null", null),
+                        factory.makeCondition("thruDate", "greater", ec.user.nowTimestamp)
+                    ],
+                    "or"
+                )
+            )
+            .orderBy("sequenceNum")
+            .orderBy("reasonName")
+            .limit(choiceLimit)
+        if (organizationIds) query = query.condition("organizationPartyId", "in", organizationIds)
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("reasonCode", "like", likeText(term)).ignoreCase(),
+                        factory.makeCondition("reasonName", "like", likeText(term)).ignoreCase()
+                    ],
+                    "or"
+                )
+            )
+        const label = row => (row.reasonName || row.reasonCode) + (row.equipmentFault === "Y" ? " (equipment fault)" : "")
+        const options = []
+        for (const row of query.list())
+            if (!options.some(option => option.value === row.reasonCode)) options.push({value: row.reasonCode, label: label(row)})
+        if (selected && !options.some(option => option.value === selected)) {
+            let kept = find("mantle.work.production.ProductionReason", {reasonCode: selected}).orderBy("-fromDate")
+            if (organizationIds) kept = kept.condition("organizationPartyId", "in", organizationIds)
+            const row = Array.from(kept.limit(1).list())[0]
+            if (row) options.push({value: row.reasonCode, label: label(row)})
+        }
+        return options
+    },
+    // equipment (not stock, not gone) that serves the given work center, else at the user's facilities
+    equipment: (userScope, term, selected, p) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.asset.Asset")
+            .condition("assetTypeEnumId", "not-in", stockTypes)
+            .condition(factory.makeCondition("assetTypeEnumId", "is-not-null", null))
+            .condition("statusId", "not-in", ["AstDelivered", "AstDeactivated"])
+            .orderBy("assetName")
+            .orderBy("assetId")
+        if (p.facilityId)
+            query = query.condition("facilityId", "in", equipmentFacilityIds(userScope, p.facilityId).concat(["_NA_"]))
+        else if (userScope.ownerIds) {
+            const facilityIds = Array.from(facilityFind(userScope).selectField("facilityId").list()).map(row => row.facilityId)
+            query = query.condition("facilityId", "in", facilityIds.concat(["_NA_"]))
+        }
+        const label = row => (row.assetName || row.assetId) + (row.serialNumber ? " · " + row.serialNumber : "")
+        let found = query.limit(choiceLimit)
+        if (term)
+            found = found.condition(
+                factory.makeCondition(
+                    ["assetId", "assetName", "serialNumber"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const options = Array.from(found.list()).map(row => ({value: row.assetId, label: label(row)}))
+        if (selected && !options.some(option => option.value === selected)) {
+            const row = one("mantle.product.asset.Asset", {assetId: selected})
+            if (row && !stockTypes.includes(row.assetTypeEnumId) && inScope(userScope, facilityById(row.facilityId)))
+                options.push({value: row.assetId, label: label(row)})
+        }
+        return options
+    }
+})
+
+// ===== P7: quantities, by-products and loss =====
+// WorkOrderDetail's Quantities and By-products tabs, its output labels and Quality's ScrapLoss (impl-manufacturing P7), whose
+// routes are in sharedLinks; and the drop-downs of their loss forms: the loss types and the active loss reasons (scrap,
+// process loss and rework) of the user's organizations, by category.
+linkPaths.push(
+    "WorkOrders/WorkOrderDetail/Quantities",
+    "WorkOrders/WorkOrderDetail/ByProducts",
+    "WorkOrders/WorkOrderDetail/OutputLabels",
+    "Quality/ScrapLoss"
+)
+Object.assign(choiceSources, {
+    lossTypes: (userScope, term, selected) => enumOptions("ProductionLossType", term, selected),
+    lossReasons: (userScope, term, selected) => {
+        const now = ec.user.nowTimestamp
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.work.production.ProductionReason")
+            .condition("reasonCategoryEnumId", "in", ["PrcScrap", "PrcProcessLoss", "PrcRework"])
+            .condition("fromDate", "less-equals", now)
+            .condition(
+                factory.makeCondition(
+                    [factory.makeCondition("thruDate", "is-null", null), factory.makeCondition("thruDate", "greater-than", now)],
+                    "or"
+                )
+            )
+            .orderBy("reasonCategoryEnumId")
+            .orderBy("sequenceNum")
+        if (userScope.ownerIds) query = query.condition("organizationPartyId", "in", userScope.ownerIds)
+        const category = {PrcScrap: "Scrap", PrcProcessLoss: "Process loss", PrcRework: "Rework"}
+        return rowOptions(
+            query,
+            "reasonCode",
+            row => (row.reasonName || row.reasonCode) + " · " + (category[row.reasonCategoryEnumId] || ""),
+            ["reasonCode", "reasonName"],
+            term,
+            selected,
+            () => null
+        )
+    }
+})
+
 // ===== P5b: materials and stock =====
 // WorkOrderDetail's Components and Materials (Shared/MaterialIssueReceipt) tabs and the Planning area's shared
 // InventoryAvailability (impl-manufacturing P5b), whose routes are in sharedLinks; Stage opens Warehouse's Move for those

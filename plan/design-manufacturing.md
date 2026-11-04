@@ -50,9 +50,9 @@ XML is the default implementation. All lists use saved finds, server paging and 
 - Routings — `Routings`
   - Routing record — `RoutingDetail`; operation catalogue — `OperationTemplates`
 - Work centers — `WorkCenters`
-  - Equipment — `Equipment`; calendar — `ResourceCalendar`
+  - Equipment — `Equipment`; calendar — `ResourceCalendar`; downtime — `Downtime`
 - Quality — `Inspections`
-  - Templates — `InspectionTemplates`; scrap/loss — `ScrapLoss`; downtime — `Downtime`; nonconformances — `Nonconformances` and gauges — `Gauges` (`later`)
+  - Templates — `InspectionTemplates`; scrap/loss — `ScrapLoss`; nonconformances — `Nonconformances` and gauges — `Gauges` (`later`)
 - Planning — `SupplyPlanning`
   - Availability — `InventoryAvailability`; schedule — `ProductionSchedule`; capacity — `Capacity`; forecast, master and finite schedules — `later`
 - Subcontracting — `SubcontractOperations`
@@ -128,11 +128,11 @@ All paths are under the BOSS app root; these are proposed screen routes, not cla
 | QualityInspection | `Manufacturing/Quality/QualityInspection` | task | xml | Open the canonical QualityInspection in production context. | mantle.product.quality.QualityInspection (built, Warehouse P8) | QualityInspection, [crosscut §3.19](design-crosscut.md#319-qualityinspection-and-inspectiontemplates) | app | new | inspection and source identity |
 | InspectionTemplates | `Manufacturing/Quality/InspectionTemplates` | settings | xml | Open the canonical InspectionTemplates in production context. | InspectionTemplate / InspectionTemplateItem (built, Warehouse P8) | InspectionTemplates, [crosscut §3.19](design-crosscut.md#319-qualityinspection-and-inspectiontemplates) | app | new | template and as-of date |
 | ScrapLoss | `Manufacturing/Quality/ScrapLoss` | list | xml | Record and review scrap, process loss and rework. | mantle.work.production.ProductionLoss (proposed) | own | app | new | ProductionLoss rows; list find parameters |
-| Downtime | `Manufacturing/Quality/Downtime` | list | xml | Capture reason-coded production stops and recovery. | mantle.work.production.ProductionDowntime (proposed) | own | app | new | ProductionDowntime rows; list find parameters |
+| Downtime | `Manufacturing/WorkCenters/Downtime` | list | xml | Capture reason-coded production stops and recovery. | mantle.work.production.ProductionDowntime (proposed) | own | app | new | ProductionDowntime rows; list find parameters |
 | Nonconformances | `Manufacturing/Quality/Nonconformances` | list | xml | Manage findings and corrective action without duplicating cases. | Request + proposed QualityNonconformance | own | quality inspector/verifier; quality administrator for setup | later | QualityNonconformance rows; list find parameters |
 | Gauges | `Manufacturing/Quality/Gauges` | list | xml | Track inspection instruments and calibration evidence. | Asset + proposed GaugeCalibration | own | quality inspector/verifier; quality administrator for calibration records | later | Asset rows; list find parameters |
-| RequestDetail | `Manufacturing/Quality/RequestDetail` | detail | xml | Open the canonical RequestDetail in production context. | mantle.request.Request | RequestDetail, [crosscut §3.11](design-crosscut.md#311-requestdetail) | app | new | Request requestId |
-| WorkItemDetail | `Manufacturing/Quality/WorkItemDetail` | detail | xml | Open the canonical WorkItemDetail in production context. | mantle.work.effort.WorkEffort | WorkItemDetail, [crosscut §3.12](design-crosscut.md#312-workitemdetail) | app | new | WorkEffort workEffortId |
+| RequestDetail | `Manufacturing/WorkCenters/RequestDetail` (built P11; Quality requests may mount it under Quality) | detail | xml | Open the canonical RequestDetail in production context. | mantle.request.Request | RequestDetail, [crosscut §3.11](design-crosscut.md#311-requestdetail) | app | new | Request requestId |
+| WorkItemDetail | `Manufacturing/WorkCenters/WorkItemDetail` (built P11) | detail | xml | Open the canonical WorkItemDetail in production context. | mantle.work.effort.WorkEffort | WorkItemDetail, [crosscut §3.12](design-crosscut.md#312-workitemdetail) | app | new | WorkEffort workEffortId |
 | SupplyPlanning | `Manufacturing/Planning/SupplyPlanning` | split | xml | Open the canonical SupplyPlanning in production context. | PlanningRun / PlanningSuggestion / RequirementSupply (proposed) | SupplyPlanning, [crosscut §3.20](design-crosscut.md#320-supplyplanning) | app | new | run, facilities and selected requirements |
 | InventoryAvailability | `Manufacturing/Planning/InventoryAvailability` | list | xml | Open the canonical InventoryAvailability in production context. | Asset / reservations / projected inventory | InventoryAvailability, [crosscut §3.7](design-crosscut.md#37-inventoryavailability) | app | parity | product/facility/lot filters; asset selection |
 | ProductionSchedule | `Manufacturing/Planning/ProductionSchedule` | calendar | qvue | Schedule operation slots against resources and calendars. | WorkEffort operations + WorkCenter capacity (proposed) | own | scheduler | new | plant, work centers and date range; selected operation |
@@ -323,6 +323,8 @@ Every stock movement carries the run's workEffortId; operation children never ca
 | ChangeQuantity | dialog | Change authorized target without rewriting history | target quantity/UOM, existing completions, delta demand, reason, expectedRevision | impact preview | `mantle.work.ProductionServices.change#ProductionQuantity` (proposed) | Odoo change production quantity wizard |
 
 **Actions.** Physical output awaiting inspection is shown as produced-held, outside accepted good and available stock. Produced-held output is received with `statusId` `AstQuarantine`. Held quantity is the quantity on hand of the source's assets in `AstQuarantine`, `AstOnHold` or `AstDefective`, because a quarantined asset still has full available-to-promise (R-MFG-24). Receive opens MaterialIssueReceipt in receive-output mode; its GenerateTracking dialog proposes lot and serial numbers (R-MFG-29). Good output becomes accepted stock only after required disposition; quantity reporting and stock receipt share one posting orchestration when coupled, with the operation identity preventing duplication. A rework quantity references a distinct rework order/operation and cannot count twice as good output. Scrap of an actual asset references its lot and disposition transaction; process loss has no fictional asset receipt. Scrap takes one of three paths (R-MFG-20). Scrap of issued components is a proposed `mantle.work.ProductionServices.record#ProductionLoss` with a scrap cost event and no stock movement, because the stock is already in WIP. Scrap of received output while the run is open is a `record#ProductionLoss` that issues the output asset back to the run, so the loss reaches production variance at cost close rather than a Warehouse scrap or shrinkage account. Process loss is a quantity event only. Free stock outside a run is scrapped in Warehouse through `mantle.shipment.WarehouseTaskServices.scrap#Asset` (built, Warehouse P6). Partial completion leaves the run open and offers explicit Backorder or Finish remainder with approved loss. Overproduction above policy needs supervisor approval. `change#ProductionQuantity` adjusts the `WeptConsume`/`WeptProduce` rows to the new target (R-SA-05).
+
+Complete (impl-manufacturing P7): nothing held awaiting disposition, no loss waiting for approval, no operation running or held (those not reported complete with the run), and material issued or its variance accepted by the supervisor; by-products do not block, since they are received only after the cost close allocates them. An exceptional loss is one above its reason's approval threshold as a percent of the line's quantity. Good and held are read from each output receipt's asset status, so an inspection's disposition moves them without a quantity write. A scrap of issued components records its value awaiting the cost close, apart from the WIP balance.
 
 **States.** `set#ProducedProductQuantity` currently recreates consumes and auto-completes the run. It is an unsafe direct BOSS transition for released runs and is not the designed completion service. Posted quantities are corrected by linked events/reversals; a smaller target cannot erase completed, reserved or consumed facts.
 
@@ -754,7 +756,7 @@ The task stays Accounting's contract, built with Manufacturing's cost events, ou
 
 ### EquipmentDetail
 
-**Context passed.** Pass equipment assetId, facility/plant, assigned operation and read/write capabilities. Show production assignments, qualifications, downtime, maintenance history and documents; allow authorized assignment and request-maintenance. The canonical EquipmentDetail has no request-maintenance action yet; it gains one, calling `request#ProductionMaintenance`, with the Manufacturing context (§13). Acquisition/depreciation and valuation remain Accounting actions. A read-only operator sees safe-use instructions and blocked state without procurement or asset book value.
+**Context passed.** Pass equipment assetId, facility/plant, assigned operation and read/write capabilities. Show production assignments, qualifications, downtime, maintenance history and documents; allow authorized assignment and request-maintenance. The canonical EquipmentDetail has no request-maintenance action yet; it gains one, calling `request#ProductionMaintenance`, with the Manufacturing context (§13). Built (P11): Report stop and Request maintenance in its header for operators and supervisors, a Downtime pane, and "Out of service" while an outage of it is open. Acquisition/depreciation and valuation remain Accounting actions. A read-only operator sees safe-use instructions and blocked state without procurement or asset book value.
 
 ### ResourceCalendar
 
@@ -826,6 +828,18 @@ planning, booking and Maintenance read, so it is never counted twice. Closing th
 does not restore the equipment. Maintenance owns restoration through `end#ResourceUnavailability`,
 after the required work or an authorized disposition. A later downtime on the same asset links the
 outage that is still open. Non-equipment reasons create no outage.
+
+**Built (P11, Nov 3, 2026).** At `Manufacturing/WorkCenters/Downtime`, not under Quality: a stop is a work center's and its
+equipment's availability, its readers are every Manufacturing user (Quality is for the quality groups and the supervisor
+only), and operators report it; it sits beside Equipment and the calendar, as Maintenance's Downtime sits under its
+equipment. Quick create's Downtime report is `Manufacturing/ReportDowntime`, for the operators and supervisors. The stop is
+`mantle.work.production.ProductionDowntime` (impl-manufacturing P11); its reasons are the organization's downtime and hold
+reason codes (ReasonCodes, categories PrcDowntime and PrcHold), whose classification it keeps. Maintenance is suggested (the
+row's Request maintenance) for an equipment fault of a machine only. A correction is a new row; the corrected one keeps its
+interval and reporter and shows in the stop's correction history. A stop that has ended and lasted longer than its reason's
+approval threshold (minutes, of the reason row at its start) is marked Needs approval, and a supervisor approves it from its
+row (`store#ProductionDowntime` action `approve`, PRODUCTION_SUPERVISE); the list filters the stops waiting for approval.
+Nothing yet holds an unapproved stop out of a total: the OEE and downtime reports (P12, P16) decide how they count it.
 
 **Source.** research §8; ERPNext `erpnext/manufacturing/doctype/downtime_entry/downtime_entry.json`.
 

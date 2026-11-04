@@ -916,7 +916,8 @@ feature("a work order's costs: the estimator reads the estimate and no actuals, 
         // the Mantle read the screen calls after the check (inheriting the screen's authorization), and the screen itself
         // with authorization enabled
         const read = user => asUser(user, () => invoke(production + "get#ProductionCosts", {workEffortId}), false)
-        const screen = user => asUser(user, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"}))
+        const screen = user =>
+            asUser(user, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"}))
         return {
             cost: read(users.cost),
             finance: read(users.finance),
@@ -976,7 +977,9 @@ feature("the cost estimator requests a work order's cost review; a reader is ref
         const costCheck = check(users.cost)
         const cost = review(users.cost)
         const run = system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one())
-        const after = asUser(users.cost, () => lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"}))
+        const after = asUser(users.cost, () =>
+            lib.page("WorkOrders/WorkOrderDetail/ProductionCosts", {workEffortId, lastStandalone: "true"})
+        )
         return {readerCheck, reader, costCheck, cost, run, after}
     },
     then({readerCheck, reader, costCheck, cost, run, after}) {
@@ -1052,9 +1055,7 @@ feature("a run's actions check their own permission: the supervisor cannot relea
 feature("another organization's reader reaches none of Retail's runs, and Retail's none of its", {
     when() {
         return {
-            check: asUser(users.services, () =>
-                refusal(access + "check#Record", {recordType: "run", recordId: ids.runId})
-            ),
+            check: asUser(users.services, () => refusal(access + "check#Record", {recordType: "run", recordId: ids.runId})),
             lifecycle: asService(users.services, () =>
                 refusal("mantle.work.ProductionServices.get#ProductionLifecycle", {workEffortId: ids.runId})
             ),
@@ -1191,6 +1192,319 @@ feature("Planning opens for the planner with its actions and not for a reader or
         other.status != 200 || !other.output.includes("Recalculate")
     }
 })
+
+// ===== P11: downtime and maintenance =====
+// Each refusal on the parameters a permitted user passes with: the reader may not report or ask for maintenance, the operator
+// may not correct, and the other organization's user reaches no Retail stop, center, robot or request.
+const downtimeKey = () => "spec-p11-access-" + Date.now() + "-" + Math.floor(Math.random() * 1000000)
+const reportOn = (user, facilityId = ids.lineBId) =>
+    asUser(
+        user,
+        () =>
+            refusal(production + "store#ProductionDowntime", {
+                operationKey: downtimeKey(),
+                action: "open",
+                facilityId,
+                reasonCode: "MATERIAL_HOLD"
+            }),
+        false
+    )
+feature("reporting a stop needs PRODUCTION_OPERATE or PRODUCTION_SUPERVISE; a correction PRODUCTION_SUPERVISE", {
+    when() {
+        const stopId = asUser(
+            users.operate,
+            () =>
+                invoke(production + "store#ProductionDowntime", {
+                    operationKey: downtimeKey(),
+                    action: "open",
+                    facilityId: ids.lineBId,
+                    reasonCode: "MATERIAL_HOLD",
+                    fromDate: new Date(Date.now() - 20 * 60000),
+                    thruDate: new Date(Date.now() - 10 * 60000)
+                }).result.productionDowntimeId,
+            false
+        )
+        const correction = {action: "correct", productionDowntimeId: stopId, expectedRevision: 1, changeReason: "Spec correction"}
+        const correct = user =>
+            asUser(
+                user,
+                () => refusal(production + "store#ProductionDowntime", Object.assign({operationKey: downtimeKey()}, correction)),
+                false
+            )
+        const maintenance = user =>
+            asUser(
+                user,
+                () =>
+                    refusal(production + "request#ProductionMaintenance", {
+                        operationKey: downtimeKey(),
+                        assetId: ids.equipmentId,
+                        problem: "Spec noise"
+                    }),
+                false
+            )
+        const check = user =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {recordType: "downtime", recordId: stopId, capability: "supervise"})
+            )
+        return {
+            operator: reportOn(users.operate),
+            supervisor: reportOn(users.supervise),
+            reader: reportOn(users.read),
+            // the other organization's reader is refused the line by the screens' check (Mantle's spec refuses an operator of
+            // another organization the same way)
+            services: asUser(users.services, () => refusal(access + "check#Record", {recordType: "workCenter", recordId: ids.lineBId})),
+            operatorCorrect: correct(users.operate),
+            operatorCheck: check(users.operate),
+            supervisorCheck: check(users.supervise),
+            supervisorCorrect: correct(users.supervise),
+            readerMaintenance: maintenance(users.read),
+            operatorMaintenance: maintenance(users.operate)
+        }
+    },
+    then(r) {
+        r.operator == ""
+        r.supervisor == ""
+        r.reader.includes("PERMISSION_DENIED")
+        r.services.includes("RECORD_UNAVAILABLE")
+        r.operatorCorrect.includes("PERMISSION_DENIED")
+        r.operatorCheck.includes("PERMISSION_DENIED")
+        r.supervisorCheck == ""
+        r.supervisorCorrect == ""
+        r.readerMaintenance.includes("PERMISSION_DENIED")
+        r.operatorMaintenance == ""
+    }
+})
+feature("the other organization's user reads none of Retail's stops, reasons, equipment or maintenance requests", {
+    when() {
+        const choices = (user, choice) =>
+            asUser(user, () => invoke(access + "get#Choices", {choice, facilityId: ids.lineId, selected: null}).options)
+        const requestId = system(
+            () =>
+                Array.from(
+                    ec.entity.find("mantle.request.Request").condition({requestTypeEnumId: "RqtMaintenance"}).limit(1).list()
+                )[0]?.requestId
+        )
+        return {
+            retailStops: asUser(
+                users.read,
+                () => invoke(production + "find#ProductionDowntime", {facilityId: ids.lineId}),
+                false
+            ),
+            servicesStops: asUser(
+                users.services,
+                () => invoke(production + "find#ProductionDowntime", {facilityId: ids.lineId}),
+                false
+            ),
+            servicesDemo: asUser(
+                users.services,
+                () => refusal(production + "find#ProductionDowntime", {productionDowntimeId: ids.downtimeId}),
+                false
+            ),
+            retailReasons: choices(users.operate, "downtimeReasons"),
+            servicesReasons: choices(users.services, "downtimeReasons"),
+            retailEquipment: choices(users.operate, "equipment"),
+            servicesEquipment: choices(users.services, "equipment"),
+            requestId,
+            servicesRequest: requestId ? asUser(users.services, () => lib.page("WorkCenters/RequestDetail", {requestId})) : null,
+            servicesDowntime: asUser(users.services, () => lib.page("WorkCenters/Downtime"))
+        }
+    },
+    then(r) {
+        r.retailStops.downtimeList.some(row => row.productionDowntimeId == ids.downtimeId)
+        r.servicesStops.downtimeList.length == 0
+        r.servicesDemo.includes("RECORD_UNAVAILABLE")
+        r.retailReasons.some(option => option.value == "ROBOT_FAULT")
+        !r.retailReasons.some(option => option.value == "SCRAP_DAMAGE")
+        r.servicesReasons.length == 0
+        r.retailEquipment.some(option => option.value == ids.equipmentId)
+        r.servicesEquipment.length == 0
+        r.requestId == null || r.servicesRequest.output.includes("not available")
+        r.servicesDowntime.errors.length == 0
+        !r.servicesDowntime.output.includes("Changeover")
+    }
+})
+feature("quick create's downtime report opens for the operator and the supervisor, and not for a reader, with authz enabled", {
+    when() {
+        return {
+            operator: asUser(users.operate, () => lib.page("ReportDowntime")),
+            supervisor: asUser(users.supervise, () => lib.page("ReportDowntime")),
+            reader: asUser(users.read, () => lib.page("ReportDowntime")),
+            readerList: asUser(users.read, () => lib.page("WorkCenters/Downtime")),
+            operatorList: asUser(users.operate, () => lib.page("WorkCenters/Downtime"))
+        }
+    },
+    then({operator, supervisor, reader, readerList, operatorList}) {
+        operator.errors.length == 0
+        operator.output.includes("Report stop")
+        supervisor.output.includes("Report stop")
+        reader.status != 200 || !reader.output.includes("Report stop")
+        readerList.errors.length == 0
+        readerList.output.includes("Changeover")
+        !readerList.output.includes("Report stop")
+        operatorList.output.includes("Report stop")
+    }
+})
+
+// ===== P7: quantities, by-products and loss =====
+// A started run of one DEMO_1_1 made by the planner and started by the supervisor; the Mantle verbs as the screens run them
+// (artifact authorization off, F-P3-2), and the screens with it enabled.
+const P7 = {state: {}}
+P7.run = () => {
+    if (P7.state.workEffortId) return P7.state.workEffortId
+    const created = asService(users.plan, () =>
+        invoke(production + "create#ProductionOrder", {
+            operationKey: "spec-p7-run-" + Date.now(),
+            organizationPartyId: "ORG_ZIZI_RETAIL",
+            productId: ids.productId,
+            productBomId: ids.methodId,
+            quantity: 1,
+            facilityId: ids.lineId
+        })
+    )
+    const workEffortId = created.workEffortId
+    const revision = () =>
+        Number(
+            system(() => ec.entity.find("mantle.work.effort.WorkEffort").condition({workEffortId}).one()).productionRevision || 0
+        )
+    for (const [user, action] of [
+        [users.plan, "release"],
+        [users.supervise, "start"]
+    ])
+        asService(user, () =>
+            invoke(production + "transition#ProductionOrder", {
+                operationKey: "spec-p7-" + action + "-" + Date.now(),
+                workEffortId,
+                action,
+                expectedRevision: revision()
+            })
+        )
+    P7.state.workEffortId = workEffortId
+    P7.state.revision = revision
+    return workEffortId
+}
+P7.call = (user, service, parameters) =>
+    asService(user, () =>
+        refusal(production + service, Object.assign({operationKey: "spec-p7-" + user + "-" + Date.now()}, parameters))
+    )
+feature(
+    "a run's quantities check their own permission: record needs OPERATE (and STOCK_ISSUE to receive), change PLAN, complete SUPERVISE",
+    {
+        when() {
+            const workEffortId = P7.run()
+            const readerLoss = P7.call(users.read, "record#ProductionLoss", {
+                workEffortId,
+                lossTypeEnumId: "PltProcessLoss",
+                quantity: 1,
+                reason: "Spec spill"
+            })
+            const operatorGood = P7.call(users.operate, "record#ProductionQuantity", {workEffortId, good: 1})
+            const operatorLoss = P7.call(users.operate, "record#ProductionLoss", {
+                workEffortId,
+                lossTypeEnumId: "PltProcessLoss",
+                quantity: 1,
+                reason: "Spec spill"
+            })
+            const operatorChange = P7.call(users.operate, "change#ProductionQuantity", {
+                workEffortId,
+                targetQuantity: 2,
+                reason: "Spec",
+                expectedRevision: P7.state.revision()
+            })
+            const plannerChange = P7.call(users.plan, "change#ProductionQuantity", {
+                workEffortId,
+                targetQuantity: 2,
+                reason: "Spec",
+                expectedRevision: P7.state.revision()
+            })
+            const plannerComplete = P7.call(users.plan, "transition#ProductionOrder", {
+                workEffortId,
+                action: "complete",
+                expectedRevision: P7.state.revision()
+            })
+            const supervisorComplete = P7.call(users.supervise, "transition#ProductionOrder", {
+                workEffortId,
+                action: "complete",
+                expectedRevision: P7.state.revision()
+            })
+            return {
+                readerLoss,
+                operatorGood,
+                operatorLoss,
+                operatorChange,
+                plannerChange,
+                plannerComplete,
+                supervisorComplete,
+                readerCheck: asUser(users.read, () =>
+                    refusal(access + "check#Record", {recordType: "run", recordId: workEffortId, capability: "operate"})
+                ),
+                operatorCheck: asUser(users.operate, () =>
+                    refusal(access + "check#Record", {recordType: "run", recordId: workEffortId, capability: "operate"})
+                ),
+                other: asService(users.services, () => refusal(production + "get#ProductionQuantities", {workEffortId})),
+                otherLosses: asService(users.services, () => invoke(production + "find#ProductionLosses", {workEffortId})),
+                read: asService(users.read, () => invoke(production + "get#ProductionQuantities", {workEffortId}))
+            }
+        },
+        then(r) {
+            r.readerLoss.includes("PERMISSION_DENIED")
+            r.operatorGood.includes("STOCK_ISSUE")
+            r.operatorLoss == ""
+            r.operatorChange.includes("PERMISSION_DENIED")
+            r.plannerChange == ""
+            r.plannerComplete.includes("PERMISSION_DENIED")
+            r.supervisorComplete.includes("QUANTITIES_UNRECONCILED")
+            r.readerCheck.includes("PERMISSION_DENIED")
+            r.operatorCheck == ""
+            r.other.includes("RECORD_UNAVAILABLE")
+            r.otherLosses.lossRowsCount == 0
+            r.read.outputRows.find(row => row.primary).target == "2"
+            r.read.outputRows.find(row => row.primary).processLoss == "1"
+            r.read.can.record == false
+            r.read.can.change == false
+        }
+    }
+)
+feature(
+    "the Quantities tab shows each user's actions, and ScrapLoss opens for the supervisor and not the operator, with authz enabled",
+    {
+        when() {
+            const workEffortId = P7.run()
+            const tab = user =>
+                asUser(user, () => lib.page("WorkOrders/WorkOrderDetail/Quantities", {workEffortId, lastStandalone: "true"}))
+            const losses = user => asUser(user, () => lib.page("Quality/ScrapLoss", {workEffortId}))
+            return {
+                operator: tab(users.operate),
+                planner: tab(users.plan),
+                reader: tab(users.read),
+                other: tab(users.services),
+                byProducts: asUser(users.read, () =>
+                    lib.page("WorkOrders/WorkOrderDetail/ByProducts", {workEffortId, lastStandalone: "true"})
+                ),
+                supervisorLosses: losses(users.supervise),
+                operatorLosses: losses(users.operate)
+            }
+        },
+        then(r) {
+            r.operator.errors.length == 0
+            r.operator.output.includes("Record quantities")
+            r.operator.output.includes("Record loss")
+            !r.operator.output.includes("Change quantity")
+            r.planner.output.includes("Change quantity")
+            !r.planner.output.includes("Record quantities")
+            r.reader.errors.length == 0
+            r.reader.output.includes("Output plan")
+            !r.reader.output.includes("Record quantities")
+            r.other.output.includes("This work order is not available.")
+            r.byProducts.errors.length == 0
+            r.byProducts.output.includes("By-products and secondary outputs")
+            r.supervisorLosses.status == 200
+            r.supervisorLosses.errors.length == 0
+            r.supervisorLosses.output.includes("Spec spill")
+            r.operatorLosses.status != 200 || !r.operatorLosses.output.includes("Spec spill")
+        }
+    }
+)
+
 // ===== P5b: materials and stock =====
 // The materials verbs as the screens run them (artifact authorization off, F-P3-2), each refusal against a success with the
 // same parameters; the drop-downs; the tabs and the Planning availability with artifact authorization enabled.

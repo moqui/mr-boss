@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Downtime (design-manufacturing Downtime: the list, ReportStop and Maintenance; style-guide §3.2 List; impl-manufacturing
+    P11): the current and past stops of the user's work centers (mantle.work.ProductionServices.find#ProductionDowntime),
+    found by center, equipment, reason, open only and waiting for approval, newest first, each with its equipment, work,
+    reason, interval, duration, state (with its approval) and maintenance. Report stop (the primary action; Request
+    maintenance while the stop a report answers with is an equipment fault with none) opens or records a stop; a row's End
+    stop closes an open one, Request maintenance asks for corrective maintenance of its equipment (offered for an equipment
+    fault only), Approve (supervisors) approves an ended stop longer than its reason's approval threshold, and Correct
+    (supervisors) makes a corrected row that keeps the original. With productionDowntimeId the stop's correction history
+    shows. Under Work centers, open to every Manufacturing user to read; Mantle checks PRODUCTION_OPERATE or
+    PRODUCTION_SUPERVISE to report and PRODUCTION_SUPERVISE to approve and correct. OperationExecution's Pause (P10) opens it
+    with workEffortId and operationWorkEffortId (and facilityId, assetId) and _openDialog=ReportStopDialog, so the report
+    carries the run and operation. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Downtime" default-menu-index="4">
+    <parameter name="facilityId"/>
+    <parameter name="assetId"/>
+    <parameter name="reasonCode"/>
+    <parameter name="open"/>
+    <parameter name="needsApproval"/>
+    <parameter name="workEffortId"/>
+    <parameter name="operationWorkEffortId"/>
+    <parameter name="productionDowntimeId"/>
+    <parameter name="pageIndex"/>
+    <transition-include name="downtimeChoices" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="reportStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="closeStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="correctStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="approveStop" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <transition-include name="requestMaintenance" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+    <actions>
+        <set field="downtimeList" from="null"/>
+        <set field="history" from="null"/>
+        <set field="canReport" from="false"/>
+        <set field="canCorrect" from="false"/>
+        <service-call name="mantle.work.ProductionServices.find#ProductionDowntime" out-map="context"
+                transaction="force-new" ignore-error="true"
+                in-map="{productionDowntimeId:productionDowntimeId || null, facilityId:facilityId || null,
+                    assetId:assetId || null, reasonCode:reasonCode || null, workEffortId:workEffortId || null,
+                    open:open == 'true', needsApproval:needsApproval == 'true', pageIndex:pageIndex || 0}"/>
+        <set field="downtimeAvailable" from="downtimeList != null"/>
+        <set field="downtimeList" from="downtimeList || []"/>
+        <set field="historyRows" from="history || []"/>
+        <!-- the stop selected (a report answers with it): its Request maintenance while an equipment fault waits for one -->
+        <set field="selectedStop" from="productionDowntimeId ? downtimeList.find(row =&gt; row.productionDowntimeId ==
+                productionDowntimeId) || null : null"/>
+        <set field="maintenanceValues" from="{operationKey:'dtmaint-' + productionDowntimeId,
+                productionDowntimeId:productionDowntimeId, problem:selectedStop?.description, priority:'2', createRequest:'Y'}"/>
+        <set field="reportStopValues" from="{operationKey:'downtime-' + ec.user.randomString(24), facilityId:facilityId,
+                assetId:assetId, workEffortId:workEffortId, operationWorkEffortId:operationWorkEffortId,
+                maintenanceDialog:'row'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-x-md q-mb-sm">
+            <container style="col-12 col-md">
+                <label text="Downtime" type="h5"/>
+                <label text="Stops of your work centers: no material, no operator, waiting for quality, changeovers and equipment faults."
+                        type="p" style="text-caption m-muted"/>
+            </container>
+            <container style="col-12 col-md-auto">
+                <container-dialog id="ReportStopDialog" condition="canReport"
+                        type="${selectedStop?.suggestMaintenance ? 'default' : 'primary'}" button-text="Report stop"
+                        icon="sym_o_report" title="Report a stop" width="720">
+                    <section-include name="ReportStopForm" location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <label text="Downtime is not available to you." type="p" condition="!downtimeAvailable"/>
+        <section name="SelectedStopMaintenance" condition="selectedStop?.suggestMaintenance">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="${selectedStop.assetName} stopped with ${selectedStop.reasonName}"/>
+                    <box-toolbar>
+                        <container-dialog id="MaintenanceDialog" type="primary" button-text="Request maintenance" icon="sym_o_build"
+                                title="Request maintenance of ${selectedStop.assetName}" width="620">
+                            <section-include name="MaintenanceForm"
+                                    location="component://mr-boss/template/ManufacturingDowntime.xml"/>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="An equipment fault: request maintenance if the equipment needs repair. Ending the stop does not restore it."
+                                type="p" style="text-caption"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StopHistory" condition="productionDowntimeId &amp;&amp; historyRows.length &gt; 1">
+            <widgets>
+                <container-box>
+                    <box-header title="Correction history of stop ${productionDowntimeId}"/>
+                    <box-body-nopad>
+                        <form-list name="StopHistoryList" list="historyRows" skip-form="true" paginate="false">
+                            <field name="productionDowntimeId">
+                                <default-field title="Stop">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reasonName">
+                                <default-field title="Reason">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="fromText">
+                                <default-field title="Stopped">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="thruText">
+                                <default-field title="Restarted">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="reportedByName">
+                                <default-field title="Reported by">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="correctedByName">
+                                <default-field title="Corrected by">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="changeReason">
+                                <default-field title="Why">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="productionDowntimeId"/>
+                                    <field-ref name="fromText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="statusText"/>
+                                    <field-ref name="correctedByName"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Stops" condition="downtimeAvailable">
+            <widgets>
+                <form-list name="DowntimeList" list="downtimeList" skip-form="true" paginate="true" header-dialog="true"
+                        select-columns="true">
+                    <field name="facilityId">
+                        <header-field title="Work center">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'workCenters', selected:facilityId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="assetId">
+                        <header-field title="Equipment">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'equipment', selected:assetId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="reasonCode">
+                        <header-field title="Reason">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="downtimeChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'downtimeReasons', selected:reasonCode}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="open">
+                        <header-field title="Show">
+                            <drop-down allow-empty="true">
+                                <option key="true" text="Open stops"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="needsApproval">
+                        <header-field title="Approval">
+                            <drop-down allow-empty="true">
+                                <option key="true" text="Waiting for approval"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="facilityName">
+                        <default-field title="Work center">
+                            <link url="." text="${facilityName}" link-type="anchor"
+                                    parameter-map="{productionDowntimeId:productionDowntimeId}"/>
+                        </default-field>
+                    </field>
+                    <field name="assetName">
+                        <default-field title="Equipment">
+                            <link url="${sharedLinks['WorkCenters/EquipmentDetail']}" text="${assetName}" link-type="anchor"
+                                    condition="assetId" parameter-map="{assetId:assetId}"/>
+                        </default-field>
+                    </field>
+                    <field name="workText">
+                        <default-field title="Work">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="reasonName">
+                        <default-field title="Reason">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="fromText">
+                        <default-field title="Stopped">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="thruText">
+                        <default-field title="Restarted">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="durationText" align="right">
+                        <default-field title="Duration">
+                            <display/>
+                        </default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>${approvalText ? '<div class="text-caption' +
+                                    (canApprove || !approvedByName ? ' text-warning' : ' m-muted') + '">' +
+                                    WebUtilities.encodeHtml(approvalText) + '</div>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", style: "strong", text: statusText +
+                                    (approvalText ? " · " + approvalText : "")})}]]></text>
+                                <text type="html">${statusText}${approvalText ? ' · ' + approvalText : ''}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="maintenanceText">
+                        <default-field title="Maintenance">
+                            <link url="${sharedLinks['WorkCenters/RequestDetail']}" text="${requestText}" link-type="anchor"
+                                    condition="requestId" parameter-map="{requestId:requestId}"/>
+                            <label text="${maintenanceText}" type="span" condition="!requestId"/>
+                        </default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="EndStop_${productionDowntimeId}" condition="canClose" button-text="End stop"
+                                    icon="sym_o_play_circle" title="End stop ${productionDowntimeId} at ${facilityName}" width="520">
+                                <label text="Ending the stop changes nothing else: its maintenance and the equipment's outage stay open until maintenance restores it."
+                                        type="p" style="text-caption" condition="assetMaintenanceId || outageOpen"/>
+                                <form-single name="EndStop" transition="closeStop"
+                                        map="{productionDowntimeId:productionDowntimeId, expectedRevision:revision,
+                                            operationKey:'dtclose-' + productionDowntimeId + '-' + revision}">
+                                    <field name="productionDowntimeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedRevision">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate">
+                                        <default-field title="Restarted at" tooltip="Leave empty for now">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="End stop"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="ApproveStop_${productionDowntimeId}" condition="canApprove" button-text="Approve"
+                                    icon="sym_o_task_alt" title="Approve stop ${productionDowntimeId} at ${facilityName}" width="520">
+                                <label text="${reasonName} for ${durationText}, longer than the reason's approval threshold; reported by ${reportedByName}."
+                                        type="p" style="text-caption"/>
+                                <form-single name="ApproveStop" transition="approveStop"
+                                        map="{productionDowntimeId:productionDowntimeId, expectedRevision:revision,
+                                            operationKey:'dtapprove-' + productionDowntimeId + '-' + revision}">
+                                    <field name="productionDowntimeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedRevision">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Approve stop"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="StopMaintenance_${productionDowntimeId}" condition="suggestMaintenance"
+                                    button-text="Request maintenance" icon="sym_o_build"
+                                    title="Request maintenance of ${assetName}" width="620">
+                                <form-single name="StopMaintenance" transition="requestMaintenance"
+                                        map="{productionDowntimeId:productionDowntimeId, priority:'2', createRequest:'Y',
+                                            problem:description, operationKey:'dtmaint-' + productionDowntimeId}">
+                                    <field name="productionDowntimeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="problem">
+                                        <default-field title="Problem">
+                                            <text-area rows="3"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="priority">
+                                        <default-field title="Urgency">
+                                            <drop-down>
+                                                <option key="2" text="Urgent"/>
+                                                <option key="5" text="Normal"/>
+                                                <option key="8" text="When convenient"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="createRequest">
+                                        <default-field title="Intake request"
+                                                tooltip="A maintenance request the plant triages, linked to the stop and the equipment">
+                                            <drop-down>
+                                                <option key="Y" text="Create a maintenance request"/>
+                                                <option key="N" text="Maintenance record only"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Request maintenance"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="CorrectStop_${productionDowntimeId}" condition="canCorrect"
+                                    button-text="Correct" icon="sym_o_edit_note" title="Correct stop ${productionDowntimeId}"
+                                    width="720">
+                                <label text="The stop as reported is kept, with who reported it; the correction becomes the stop in force."
+                                        type="p" style="text-caption"/>
+                                <form-single name="CorrectStop" transition="correctStop"
+                                        map="{productionDowntimeId:productionDowntimeId, expectedRevision:revision,
+                                            operationKey:'dtcorrect-' + productionDowntimeId + '-' + revision,
+                                            fromDate:fromDate, thruDate:thruDate, reasonCode:reasonCode,
+                                            description:description, facilityId:facilityId}">
+                                    <field name="productionDowntimeId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedRevision">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="operationKey">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="facilityId">
+                                        <default-field>
+                                            <hidden/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reasonCode">
+                                        <default-field title="Reason">
+                                            <drop-down>
+                                                <dynamic-options transition="downtimeChoices" server-search="true"
+                                                        min-length="0"
+                                                        parameter-map="{choice:'downtimeReasons', facilityId:facilityId,
+                                                            selected:reasonCode}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate">
+                                        <default-field title="Stopped at">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate">
+                                        <default-field title="Restarted at" tooltip="Leave empty while it is still stopped">
+                                            <date-time/>
+                                        </default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="What happened">
+                                            <text-area rows="2"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason">
+                                        <default-field title="Why it is corrected">
+                                            <text-line/>
+                                        </default-field>
+                                    </field>
+                                    <field name="submit">
+                                        <default-field title="">
+                                            <submit text="Save correction"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-ref name="reasonCode"/>
+                                        <field-row>
+                                            <field-ref name="fromDate"/>
+                                            <field-ref name="thruDate"/>
+                                        </field-row>
+                                        <field-ref name="description"/>
+                                        <field-ref name="changeReason"/>
+                                        <field-ref name="submit"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="facilityName"/>
+                            <field-ref name="reasonName"/>
+                            <field-ref name="assetName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusText"/>
+                            <field-ref name="durationText"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                </form-list>
+                <label text="No stops match. Report one when a work center stops." type="p" style="m-muted"
+                        condition="!downtimeList.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

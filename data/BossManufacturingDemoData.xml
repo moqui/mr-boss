@@ -207,4 +207,11 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.entity.EntityAuditLog auditHistorySeqId="BOSS_MFG_AUD_B7" changedEntityName="mantle.product.bom.ProductBom" changedFieldName="prepareDays"
             pkPrimaryValue="BOSS_MFG_BOM_PILOT" newValueText="1" changedDate="2026-11-01 00:00:00" changedByUserId="BOSS_MFG_METHOD"
             changeReason="Demo method"/>
+
+    <!-- P11: a closed changeover of line A reported by the operator (Downtime); a planned stop, so no outage or maintenance -->
+    <mantle.work.production.ProductionDowntime productionDowntimeId="BOSS_MFG_DT_1" organizationPartyId="ORG_ZIZI_RETAIL"
+            facilityId="BOSS_MFG_LINE_A" statusId="PdtClosed" reasonCode="CHANGEOVER" reasonCategoryEnumId="PrcDowntime"
+            equipmentFault="N" plannedStop="Y" fromDate="2026-11-02 10:00:00" thruDate="2026-11-02 10:40:00"
+            description="Changeover to the pilot assembly" revision="1" reportedByUserId="BOSS_MFG_OPERATE"
+            reportedDate="2026-11-02 10:41:00" closedByUserId="BOSS_MFG_OPERATE" closedDate="2026-11-02 10:41:00"/>
 </entity-facade-xml>

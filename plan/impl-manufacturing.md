@@ -213,11 +213,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Policy and reasons | Mantle, BOSS | ProductionSettings, ReasonCodes | built Nov 3 |
 | P5 Work orders | Mantle, BOSS | WorkOrders, NewWorkOrder, WorkOrderDetail, Overview, Operations, Components, MaterialIssueReceipt, InventoryAvailability | P5a built Nov 3 (the runs and their lifecycle); P5b built Nov 3 (materials and stock) |
 | P6 Cost evidence | Mantle, BOSS | ProductionCosts | built Nov 3 |
-| P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | — |
+| P7 Quantities, by-products and loss | Mantle, BOSS | Quantities, ByProducts, ScrapLoss | built Nov 3 |
 | P8 Quality | Mantle, BOSS | QualityGates, Inspections, QualityInspection, InspectionTemplates | — |
 | P9 Controlled changes | Mantle, BOSS | Components' Substitute, SplitWorkOrder, Disassembly, BillOfMaterialsCompare's amendment | — |
 | P10 Shop floor and time | Mantle, BOSS | ShopFloor, OperationExecution, Instructions, ProductionTime | — |
-| P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | — |
+| P11 Downtime and maintenance | Mantle, BOSS | Downtime, EquipmentDetail's request, RequestDetail, WorkItemDetail | built Nov 3 |
 | P12 Scheduling and capacity | Mantle, BOSS | ProductionSchedule, Capacity, Operations' Reschedule | — |
 | P13 Supply planning | Mantle, BOSS | SupplyPlanning | built Nov 3 |
 | P14 Subcontracting | Mantle, BOSS | SubcontractOperations, SubcontractDetail, Supplier360, OrderDetail, ShipmentDetail | — |
@@ -383,6 +383,9 @@ shortfall (QUANTITY_EXCEEDS_AVAILABLE), also at a facility that allows issue bey
   baseline WorkTimeEntries and WorkTimesheets), 11 skipped; mr-boss 1,668 passed, 1 failed: WarehouseFacilities expected
   ZIRET_WH's exact children and met ManufacturingWorkCenters' spec cell, so it now checks the demo children are there
   (fixed); `moqui lint --screens` clean; BOSS client walks 135 passed.
+- **Wave 3 suites (Nov 4, on master after P5a, P6 and P13 merged):** standalone mr-mantle 1,480 passed, 2 failed (the
+  baseline), 11 skipped; mr-boss 1,685 passed, 1 failed: ClientIsolation found `Shared/SupplyPlanning` unclassified, now
+  in its refused list (a client is refused it); `moqui lint --screens` clean; BOSS client walks 143 passed.
 
 ### P2 — Methods
 
@@ -1167,6 +1170,128 @@ Design §3 Quantities and ByProducts, §6 ScrapLoss and §12.2; M2, M4, M6 and M
   - overproduction above the tolerance waits for a supervisor;
   - complete is refused until the quantities reconcile, then succeeds; a retry posts nothing twice.
 
+**Built Nov 3 (P7).**
+- Mantle records (`entity/ProductionQuantityEntities.xml`, a new file): `ProductionQuantityEvent` (good, produced-held,
+  process loss, scrap, rework, target change with the targets before and after, and an overproduction request with its
+  approval), `ProductionLoss` (its type, line, product, asset and lot, quantity, the reason's code, name and category as
+  recorded, whether the output was held, its status PlsPending/PlsApproved/PlsRefused with the approver, the issuance of an
+  output scrapped back, the rework order), `AssetIssuance.productionLossId` and the output line's audit-logged
+  overproduction approval (`overApprovedQuantity`, by, date). `data/ProductionQuantityData.xml`: the event, loss type and
+  approval enumerations, the loss status flow (its two transitions carry PRODUCTION_SUPERVISE), the cost event types
+  PcetMaterialScrap and PcetOutputScrap, and the ProductionLossApproval and ProductionOverproduction topics.
+- Mantle services (`ProductionQuantities.js`, seven services appended to `ProductionServices.xml`):
+  - `get#ProductionQuantities` (PRODUCTION_VIEW or _OPERATE): per output line target, received, accepted good and
+    produced-held (each receipt's asset by its status now, less what was scrapped back), approved process loss, scrap,
+    rework, losses waiting, remaining, over, the policy's tolerance, the supervisor's approval and what it may still take;
+    per material line required, issued, returned, net, scrapped and to issue; the events and losses (cost with
+    ACCOUNTING_VIEW only); the reconciliation; the by-products' allocation estimate by quantity (Products' cost read only);
+    what the user may do;
+  - `store#ProductionOutput` (PLAN): a draft's secondary output or by-product line, never the run's own product
+    (OUTPUT_PRIMARY);
+  - `record#ProductionQuantity` (OPERATE): process loss, scrap and rework through their losses, then good and pending output
+    through `receive#ProductionOutput` (pending with the new `hold`: quarantine and an inspection), each under a sub-key of
+    the operation, with its event; beyond the target, tolerance and approval it records only an overproduction request
+    (APPROVAL_REQUESTED) and notifies the supervisors;
+  - `change#ProductionQuantity` (PLAN): the target delta event, never below good + held + loss + losses waiting
+    (TARGET_BELOW_FACTS); materials and by-products scale, never below what each issued or received; `writeProducts`
+    rewrites the Wept rows; the revision counts up; `set#ProducedProductQuantity` is never called (F8);
+  - `record#ProductionLoss` (OPERATE) by R-MFG-20's paths: PltComponentScrap (no stock moves; `record#ProductionCostEvent`
+    from the loss, PcetMaterialScrap at the asset's or the line's issued unit cost, PclAwaitingClose), PltOutputScrap of an
+    output asset of the open run (STOCK_ISSUE; `issue#AssetToWorkEffort` with `productionLossId`, so the hook posts it back
+    into WIP and its event is PcetOutputScrap/PrcOutput) or before receipt (no asset), PltProcessLoss and PltRework; above
+    the reason's `approvalThreshold` (percent of the line) it waits (PlsPending, ProductionLossApproval) unless a supervisor
+    records it;
+  - `approve#ProductionException` (SUPERVISE): a pending loss approved (applied then) or refused with a reason, an
+    overproduction request approved (the line's approval grows) or refused; marks the notices read;
+  - `find#ProductionLosses` (VIEW or OPERATE, paged, each run checked) and `get#ProductionLabels` (VIEW or STOCK_ISSUE).
+- The edits to shared files: `transition#ProductionOrder` complete (ProductionOrders.js `check`/`apply`): each output line
+  reconciled (QUANTITIES_UNRECONCILED, with `finishRemainder` writing the rest as an approved PltProcessLoss), nothing held
+  (OUTPUT_HELD), no loss waiting (LOSS_PENDING), no operation running or held (OPERATION_OPEN; the operations not reported
+  are completed with the run), material issued (MATERIAL_UNISSUED unless `acceptMaterialVariance`), then WeComplete at the
+  next revision; `factsOf` counts quantity events and losses. `receive#ProductionOutput` (Production.js `outputPlan`): its
+  limit is the line's target + tolerance + approval − what it accounts for (OVER_RECEIPT, unchanged with no policy and no
+  loss), `hold`, and after the receipt `afterReceipt` completes a running run that reconciles under
+  `completeOnFinalReceipt` (`completed` in the result). ProductionCosts.js: the ProductionLoss source, the output scrap's
+  issuance event, and actuals that show `scrapped` apart from the WIP balance.
+- BOSS: WorkOrderDetail's Quantities tab (index 5: the reconciliation line, Record quantities (primary), Record loss,
+  Change quantity, Add output on a draft, Complete with Finish remainder and the material variance, the supervisor's
+  decisions, Output plan, Materials, Losses, Quantity events) and By-products tab (index 7: the lines, editable on a draft,
+  and the allocation estimate); OutputLabels (html-print: finished, secondary and WIP labels, a held one "HELD: not
+  accepted"); Quality now a parent with ScrapLoss (Find, Losses, RecordLoss, the decisions; its placeholder replaced);
+  Manufacturing.js's P7 block (links, `lossTypes`, `lossReasons`); the two topics in the root, Approvals and BossSetupData's
+  links to the Quantities tab.
+- Specs: Mantle `test/work/ProductionQuantities.spec.js` (9 features, about 5 s: the run for 10 with 6 good, 1 process loss and
+  a component scrap with its event and no stock movement, 3 remaining; a received and a held output asset scrapped back to
+  the run, with the labels; the target cut refused below the facts and to 9 as a delta with the lines and Wept rows; the
+  overproduction within and beyond tolerance with the supervisor's approval; the threshold loss approved and refused;
+  complete refused then done, a retry posting nothing; Finish remainder and the material variance; the completeOnFinalReceipt
+  flag and its default; the draft by-product, its refused receipt and the allocation estimate); ProductionOrders' preview
+  expects QUANTITIES_UNRECONCILED. BOSS ManufacturingAccess P7 (2: each verb's permission and the other organization; the
+  tabs and ScrapLoss with authz enabled), the route fixtures, AppStructure's floor 65; client walk
+  `ManufacturingQuantitiesWalk` (3, with 390 px).
+- Tests run: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction, ManufacturingServices,
+  ProductionPolicy, ProductMethods (57, pass); BOSS ManufacturingAccess, AppStructure, TuiRender (94, pass),
+  ManufacturingWorkOrders, ManufacturingShell, ManufacturingPlanning, WarehouseAccess, Notifications (174, pass); walk
+  ManufacturingQuantitiesWalk (3, pass). `moqui lint --screens`: only informational anchor rows for the P7 screens.
+- Decisions:
+  - Quantities derive from the receipts and losses, never a stored counter: good and held by each receipt asset's status now,
+    so an inspection's disposition (P8) moves held to good or loss without a quantity write.
+  - Complete needs nothing held, no loss waiting and no operation running; operations never reported (no P10 yet) are
+    completed with the run; unissued material blocks unless the supervisor accepts the variance; by-products do not block
+    (received only after P15).
+  - A component scrap's event carries its value awaiting the close and is left out of the WIP balance (the issue already put
+    it in WIP); an output scrap's issuance is the event, so WIP rises by what the receipt relieved.
+  - An exceptional loss is one above its reason's `approvalThreshold` as a percent of the line's quantity; a supervisor's own
+    loss is approved as recorded. Overproduction approval is a quantity on the output line, so later receipts use it.
+  - record#ProductionQuantity's expected revision is optional (a station scan has none); its receipts and losses do not
+    count the revision up, change and store#ProductionOutput do.
+  - Labels use Products P11's 50 x 30 template and a Code 128 of the asset id; `prepare#ProductLabels` is not called, since
+    its items carry no lot, run or hold state (F-P7-4).
+- Deferred: the backorder (P9); a by-product's receipt and the actual allocation (P15); an inspection's scrap disposition
+  calling record#ProductionLoss (P8); operation-level quantity reporting (P10's complete#ProductionOperation); a handheld
+  mount of Reconcile (P10's shop floor).
+- Findings (provisional):
+  - **F-P7-1** A status field on a new record needs its StatusFlowTransition rows: the framework's status check refused
+    PlsPending → PlsApproved until `ProductionLoss`'s flow was seeded.
+  - **F-P7-2** receive#ProductionOutput's limit now counts losses (a process loss or a loss waiting lowers what may be
+    received; an output scrapped back stays counted, as scrap in place of good, so it frees nothing); with no policy row and
+    no loss it is the old target − received (WarehouseProduction's over-receipt case, which has no policy row).
+  - **F-P7-3** Nothing completes an operation before P10, so complete closes the untouched operations with the run; P10's
+    `complete#ProductionOperation` should make OPERATION_OPEN the usual refusal.
+  - **F-P7-4** Products' label contract (`prepare#ProductLabels`) labels a product by its identifier for catalog scope; a
+    production label needs the asset, lot, run and hold state, so `get#ProductionLabels` follows its template and barcode and
+    Products could add an item `caption` to share the print.
+  - **F-P7-5** `find#ProductionLosses` checks each loss's run (no WorkEffort filter, F3) and pages in memory, capped at 2000.
+  - **F-P7-6** For the merge: Production.js (`outputPlan`'s limit and `hold`, the `writeProducts` export), ProductionCosts.js
+    (sources, `issuanceEvent`, `actualsOf`), ProductionOrders.js (complete, `factsOf`, `blockedReasons`, the request fields),
+    ProductionServices.xml (`receive#ProductionOutput`, `transition#ProductionOrder`'s two parameters, the appended section),
+    Quality.xml (now a parent: P8's Inspections and P11's Downtime add files under `Quality/`), Approvals.xml, the root's
+    topics, BossSetupData's topic links, ManufacturingSpecLib, AppStructure's floor (65) and suite.js.
+  - **F-P7-7** ManufacturingAccess's P7 tab feature reads the process loss its first P7 feature records.
+- **Review (Nov 3).** Verified against the "usable when" items, R-MFG-20's three paths, F8 (no
+  set#ProducedProductQuantity), the change floor and its Wept delta, the §12.2 refusals, the completeOnFinalReceipt flag (one
+  transaction, off by default, both tested), the tolerance and approval, BYPRODUCT_NOT_COSTED and the permissions. Fixed:
+  approve#ProductionException takes the `workEffortId` the screen checked and refuses a loss or overproduction request of
+  another work order (RECORD_UNAVAILABLE; Quantities and ScrapLoss pass it), so the record check and the decision are of the
+  same run (low: Mantle still checked the organization). Specs added: a retry of record#ProductionLoss writes no second loss
+  or cost event; record#ProductionQuantity refused for a reader and another organization; the overproduction notice reaches
+  the supervisor and not the operator or the other organization; a decision naming another work order is refused;
+  WarehouseProduction's over-receipt case named as F-P7-2's no-policy test. F-P7-2's wording corrected. Left, for later
+  phases:
+  - **F-P7-8** (P10) Complete marks operations never reported WeComplete with no time, which reports (P16) and scheduling
+    (P12) would read as done work. Once complete#ProductionOperation exists, completeCheck should refuse an operation not
+    complete (or offer an explicit "close unreported operations" the supervisor accepts, as with the material variance)
+    rather than closing them silently.
+  - **F-P7-9** Good and pending output need STOCK_ISSUE (Warehouse's grant, §2 P1), which BOSS_MFG_OPERATOR lacks: an
+    operator alone can record losses but not receive output; the Quantities dialog still offers good and pending. Either the
+    operator holds the Warehouse issue group or the dialog hides the receipt fields without `can.issue` (P10's shop floor).
+  - **F-P7-10** (P5b merge) change#ProductionQuantity scales every PrlrMaterial line, so P5b's manual material lines scale
+    too; the merge should decide whether a manual line keeps its quantity. The Mantle collisions with P5b are append-only
+    (Production.js's export list, ProductionServices.xml's appended sections); BOSS collides with master (P11) only in
+    appended blocks (Manufacturing.js, ManufacturingAccess, ManufacturingSpecLib, suite.js).
+  - Review specs: Mantle ProductionQuantities, ProductionOrders, ProductionCosts, WarehouseProduction (32, then the two
+    touched again, 17, pass); BOSS ManufacturingAccess (73, pass); `moqui lint --screens` informational anchors only.
+
 ### P8 — Quality
 
 Design §3 QualityGates and §6 Inspections, QualityInspection and InspectionTemplates; M6's inspection part, over
@@ -1289,6 +1414,115 @@ Design §6 Downtime, Equipment, RequestDetail and WorkItemDetail; M6's downtime 
   - closing the downtime leaves the request, maintenance and outage open and starts no timer;
   - a no-material stop suggests no maintenance;
   - a supervisor's correction keeps the original interval and actor.
+
+**Built Nov 3 (P11).**
+- Mantle records: `entity/ProductionDowntimeEntities.xml` (new) `mantle.work.production.ProductionDowntime`: organization,
+  work center, optional asset, run and operation, status (PdtOpen, PdtClosed, PdtCorrected), the reason code with the
+  category, equipment fault and planned stop of the reason row in effect at its start, from and thru, note, revision, the
+  reporter and closer, the correction chain (`originalDowntimeId`, `correctionOfDowntimeId`, `supersededByDowntimeId`, the
+  corrector and `changeReason`) and its outage, AssetMaintenance and Request, key fields audit-logged.
+  `entity/ResourceBookingEntities.xml` (new) Maintenance's minimal `mantle.work.effort.ResourceUnavailability` (design Y3,
+  design-maintenance MT-07): kind (ResourceUnavailabilityKind RukActual, RukPlanned for MT-07), asset or facility,
+  organization, from and thru, description, `sourceProductionDowntimeId`. Seeds (`data/ProductionDowntimeData.xml`): the
+  ProductionDowntime statuses and flow, the kinds, `RqtMaintenance` and `MntTpCorrective` (F18).
+- Mantle services: `mantle.work.ResourceBookingServices.record#ResourceUnavailability` (new file; XML Actions): with the asset
+  locked, the open actual outage of the asset is linked, else one is created; internal, its caller checks. Appended to
+  `ProductionServices.xml` over `ProductionDowntime.js`: `store#ProductionDowntime` (open, close, correct; operation key;
+  PRODUCTION_OPERATE or PRODUCTION_SUPERVISE to open and close, PRODUCTION_SUPERVISE to correct; the center, equipment, run,
+  operation, reason, interval and revision checks of its description), `find#ProductionDowntime` (PRODUCTION_VIEW, OPERATE or
+  SUPERVISE; the user's organizations; filters, paging, display text, what the user may do, and a stop's correction history)
+  and `request#ProductionMaintenance` (operation key; an AssetMaintenance through `EquipmentServices.create#AssetMaintenance`
+  with AsMntCreated and MntTpCorrective; with createRequest a submitted RqtMaintenance Request at the stop's center with the
+  organization as OrgInternal, linked through `RequestServices.link#RequestRecord` to the stop, the equipment, the maintenance
+  and the stopped operation or run). An equipment-fault stop of an asset records or links the outage in its transaction;
+  closing changes the stop only.
+- BOSS: `screen/Manufacturing/WorkCenters/Downtime.xml` (the list with Find, Report stop as the primary action, the selected
+  stop's Request maintenance, each row's End stop, Request maintenance for an equipment fault and Correct for supervisors,
+  the correction history); `template/ManufacturingDowntime.xml` (the transitions and the ReportStop and Maintenance forms,
+  included by Downtime, EquipmentDetail and quick create); `screen/Manufacturing/ReportDowntime.xml`, quick create's
+  Downtime report (JSON answer with a link to the stop), behind the new `BOSS_MFG_REPORT_DOWNTIME` artifact group and the root's
+  `<quick-create kind="manufacturingReportDowntime">`; EquipmentDetail's Manufacturing context gains Report stop, Request
+  maintenance (for its open fault stop when there is one) and a Downtime pane, and `WorkCenters.js` availability reads the
+  open outage ("Out of service", blocked); Projects' `Shared/RequestDetail` and `Shared/WorkItemDetail` mounted under
+  WorkCenters with the Manufacturing context: the Commons request or task plus a Production box
+  (`template/ManufacturingRequestParts.xml`, `ironstone.manufacturing.DowntimeServices` `get#RequestContext` and
+  `get#WorkItemContext` over `Downtime.js`), for a maintenance request of the user's plants and its follow-up tasks; a
+  production operation is not a follow-up task there (F38) and links to its work order. `Manufacturing.js`: the `downtime`
+  record kind (destination Downtime), the P11 link paths, the `downtimeReasons` and `equipment` choices (`get#Choices` takes
+  `facilityId`). Demo: line A's closed changeover `BOSS_MFG_DT_1`.
+- OperationExecution (P10) does not exist yet: its Pause opens `WorkCenters/Downtime` with `workEffortId`,
+  `operationWorkEffortId`, `facilityId`, `assetId` and `_openDialog=ReportStopDialog`, and the report carries the run and
+  operation (hidden fields of ReportStopForm); P10 may instead include `ReportStopForm` and the `reportStop` transition with
+  its own `reportStopValues`.
+- Specs: Mantle `test/work/ProductionDowntime.spec.js` (6 features, about 1 s: the five usable-when items and the refusals,
+  spec-local users); BOSS `ManufacturingDowntime` (5, the usable-when items through the screens' calls and pages, and the
+  follow-up task), `ManufacturingAccess` P11 section (3: the permission refusals on the same parameters, the other
+  organization's reads and choices, quick create and the list with authz enabled), ManufacturingShell's quick-create rows,
+  ManufacturingSpecLib's routes (Downtime, ReportDowntime, RequestDetail, WorkItemDetail); client walk
+  `ManufacturingDowntimeWalk` (2, with 390 px), added to `suite.js`.
+- Tests run: Mantle ProductionDowntime, ManufacturingServices, WarehouseProduction, ProductMethods, ProductionPolicy,
+  ProductionCosts (43 features, pass); BOSS ManufacturingDowntime, ManufacturingAccess, ManufacturingShell, AppStructure,
+  TuiRender (114, pass), ManufacturingMethods, ManufacturingWorkCenters, WarehouseAccess, WarehouseShell (172, pass), and the
+  shared-screen specs Requests, ProjectRequests, WorkItemDetail, WorkItems, Tasks, TodayPanel, QuickCreate,
+  AccountingFixedAssets, WarehouseTransfers, WarehouseFacilities, ServerStatic, ClientWrites, Shell (128, pass); the walk
+  ManufacturingDowntimeWalk (2, pass). `moqui lint --screens`: no idiom or hazard site in the new or changed screens.
+- Decisions:
+  - Downtime is `Manufacturing/WorkCenters/Downtime`, not `Quality/Downtime` (design §6 and §1.2 updated): a stop is a work
+    center's and its equipment's availability, every Manufacturing user reads it, and operators, who have no Quality area,
+    report it. RequestDetail and WorkItemDetail are mounted under WorkCenters too.
+  - A stop names an organization's reason code of category PrcDowntime or PrcHold; only an equipment fault with an asset
+    records an outage and suggests maintenance (the Request maintenance action of a row). Supervisors may report and close
+    stops as well as correct them.
+  - A correction keeps the stop's request, maintenance and outage on the new row; it records or links an outage when it
+    becomes an equipment fault of an asset and leaves an existing outage to Maintenance.
+  - Operation keys: a report's is made per form render; End stop and Correct key on the stop and its revision, and a stop's
+    maintenance on the stop, so a double submit answers the first.
+  - `record#ResourceUnavailability` is internal for now (no permission of its own), as `record#ProductionCostEvent`; MT-07
+    gives it Maintenance's entry point.
+- Findings (provisional):
+  - **F-P11-1** Commons' RequestDetail lets only the request's people (reporter, assignee, customer) comment and add tasks. A
+    plant supervisor sees a maintenance request (its facility is theirs) but cannot add its follow-up tasks; the spec adds
+    them as the reporter. Triage of maintenance requests (assign, accept, resolve) waits for Maintenance or a Projects
+    intake that triages RqtMaintenance.
+  - **F-P11-2** `_openDialog` does not open a `container-dialog` inside a form-list row in qvt; Downtime answers a report with
+    the new stop selected and a top-level Maintenance dialog for it instead.
+  - **F-P11-3** (resolved in review) A reason's `approvalThreshold` (minutes for a stop) was not applied. The review built it:
+    see the review note below. How an unapproved stop counts in OEE and the downtime reports stays P12's and P16's.
+  - **F-P11-4** A correction does not move or end the outage it carries: MT-07's `correct#` and `end#ResourceUnavailability`
+    own that. There is no `find#ResourceUnavailability` yet, so `WorkCenters.js` reads the open outage directly for the
+    equipment's availability; P12's load and calendar should read it (with the stops) when they subtract downtime.
+  - **F-P11-5** The maintenance request's RequestWorkEffort link to the stopped operation makes the operation a row of the
+    Commons and Projects request's Tasks or Work tab; F38's guards refuse its changes there, and the Manufacturing context
+    links it to its work order instead.
+  - **F-P11-6** F57's Centers columns (next available, offline reason) are not built; P12 adds them with the load.
+- **Review (Nov 3).** Checked against the P11 scope and usable-when items, §2 and the design: the correction chain, the
+  permissions and organization checks, the one-outage rule (the asset row locked before the open-outage read), the
+  ResourceUnavailability names (design-maintenance MT-07, Y3; internal, allow-remote false), Mantle's
+  `create#AssetMaintenance` and `RequestServices.link#RequestRecord`, and the Shared screens' Manufacturing branches (gated
+  by `appRoot`). Fixed:
+  - Retry under concurrency: close, approve, correct and request#ProductionMaintenance now lock the stop (or the equipment)
+    in the service and call `posting.settled`, as the other production verbs do, so a double submit that waited on the lock
+    answers the first instead of REVISION_CHANGED or MAINTENANCE_REQUESTED.
+  - Downtime's `reportStop` and quick create's ReportDowntime check the equipment and the run or operation through
+    `check#Record`, not only the work center (Mantle checked them already).
+  - F-P11-3 built (the plan does not name it in P11, but the design's Downtime has "supervisors may correct and approve" and
+    P4 seeded the threshold): ProductionDowntime keeps `approvalThreshold` from its reason row and sets `approvalRequired`
+    when an ended stop is longer; `store#ProductionDowntime` action `approve` (PRODUCTION_SUPERVISE; DOWNTIME_OPEN,
+    APPROVAL_NOT_REQUIRED, DOWNTIME_APPROVED); `find#` `needsApproval`, `approvalText` and `canApprove`; Downtime's row
+    Approve and the Approval filter (`approveStop` in the template). A correction recomputes the need and is not an approval.
+  - Design: RequestDetail and WorkItemDetail routes are WorkCenters' (built), and the Downtime note describes the approval.
+  - Specs: Mantle ProductionDowntime gains the approval feature (7); BOSS ManufacturingDowntime gains it (6).
+  - Ran: Mantle ProductionDowntime, ManufacturingServices, WarehouseProduction, ProductionPolicy (29, pass); BOSS
+    ManufacturingDowntime, ManufacturingAccess, ManufacturingShell, ManufacturingWorkCenters, AppStructure, TuiRender,
+    Requests, ProjectRequests, WorkItemDetail, WorkItems, Tasks, AccountingFixedAssets, QuickCreate (199, pass); the walk
+    ManufacturingDowntimeWalk (2, pass); `moqui lint --screens` clean for the touched screens.
+  - Merge with master (P5a, P6, P13): Mantle merges clean. BOSS conflicts are both-sides appends: AccessServices
+    `get#Choices` parameters (keep `productId` and `facilityId`), ManufacturingAccess sections, suite.js walks,
+    ManufacturingImplementation.md sections, ManufacturingSpecLib (take master's WorkOrderDetail ProductionCosts route and
+    drop this branch's root `ProductionCosts`/`moved`, then add P11's routes and mounts), and ManufacturingShell's quick
+    kinds: plan and admin get `manufacturingWorkOrder`, operate, supervise and admin `manufacturingReportDowntime` (the admin
+    both, by sequence 85 then 95). Quick create screens differ in place (P5a's `WorkOrders/QuickCreate`, P11's root
+    `ReportDowntime`); both are behind their own artifact groups, which is consistent enough to leave.
 
 ### P12 — Scheduling and capacity
 
