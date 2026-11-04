@@ -20,7 +20,10 @@ const ids = {
     pendingSupplierId: "BOSS_PUR_SUP_PENDING",
     blockedSupplierId: "BOSS_PUR_SUP_BLOCKED",
     // P4: Retail's approval policy steps (BossPurchasingDemoData.xml): up to $5,000 one step, from $5,000 two
-    approvalPolicyIds: ["BOSS_PUR_APR_SMALL", "BOSS_PUR_APR_LARGE_1", "BOSS_PUR_APR_LARGE_2"]
+    approvalPolicyIds: ["BOSS_PUR_APR_SMALL", "BOSS_PUR_APR_LARGE_1", "BOSS_PUR_APR_LARGE_2"],
+    // P5: Retail's approved order from Ziddleman, late, with its expected receipt (nothing received)
+    receiptOrderId: "BOSS_PUR_PO_RCV",
+    receiptId: "BOSS_PUR_RCV_SHIP"
 }
 // The demo users of each group (each also in BOSS_PURCHASING but the administrator), and the other organization's reader.
 const users = {
@@ -141,7 +144,12 @@ function routeFixtures() {
         NewPurchaseOrder: {parameters: {}, text: "New purchase order"},
         // P4: the approvals waiting (Commons Notifications with Purchasing's topics) and the approval policies
         Approvals: {parameters: {}, text: "Approvals"},
-        "Settings/ApprovalPolicies": {parameters: {}, text: "Approval steps"}
+        "Settings/ApprovalPolicies": {parameters: {}, text: "Approval steps"},
+        // P5: the receipts, the late order's receipt in ShipmentDetail, the inspections and the receipt templates
+        "Receiving/Receipts": {parameters: {view: "late"}, text: "Receipts"},
+        "Receiving/ShipmentDetail": {parameters: {shipmentId: ids.receiptId}, text: "Receipt " + ids.receiptId},
+        "Receiving/Inspections": {parameters: {}, text: "Inspections"},
+        "Receiving/InspectionTemplates": {parameters: {}, text: "Inspection templates"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
@@ -152,7 +160,11 @@ function routeFixtures() {
         ["Suppliers/PriceExplain", "component://mr-boss/screen/Shared/PriceExplain.xml"],
         ["Products/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
         // P3: Projects' shared OrderDetail under Orders
-        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"]
+        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"],
+        // P5: Accounting's ShipmentDetail and Warehouse's QualityInspection and InspectionTemplates under Receiving
+        ["Receiving/ShipmentDetail", "component://mr-boss/screen/Shared/ShipmentDetail.xml"],
+        ["Receiving/QualityInspection", "component://mr-boss/screen/Shared/QualityInspection.xml"],
+        ["Receiving/InspectionTemplates", "component://mr-boss/screen/Shared/InspectionTemplates.xml"]
     ]
     return {routes, mounts}
 }

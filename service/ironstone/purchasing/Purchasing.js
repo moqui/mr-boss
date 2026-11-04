@@ -15,6 +15,7 @@ const access = lib.access
 const replenishment = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Replenishment.js")
 const orders = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Orders.js")
 const approvals = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Approvals.js")
+const receipts = () => ec.resource.script("component://mr-boss/service/ironstone/purchasing/Receipts.js")
 const rootLocation = "component://mr-boss/screen/Purchasing.xml"
 const areaLocation = area => "component://mr-boss/screen/Purchasing/" + area + ".xml"
 const choiceLimit = 30
@@ -48,7 +49,14 @@ const capabilityPermissions = {
     payableRead: "PAYABLE_VIEW",
     termsEdit: "SUPPLIER_TERMS_EDIT",
     supplierPriceEdit: "SUPPLIER_PRICE_EDIT",
-    catalogRead: "PRODUCT_CATALOG_VIEW"
+    catalogRead: "PRODUCT_CATALOG_VIEW",
+    // P5: AP intake's bill from a receipt (Accounting's), and the quality permissions of Warehouse's inspect, verify, dispose
+    // and template groups on the shared inspection screens
+    payableEdit: "PAYABLE_EDIT",
+    inspect: "QUALITY_INSPECT",
+    qualityVerify: "QUALITY_VERIFY",
+    qualityDispose: "QUALITY_DISPOSE",
+    qualityTemplateEdit: "QUALITY_TEMPLATE_EDIT"
 }
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_PUR_<Area>): listRead, the buying lists
 // (suppliers, sourcing, orders, agreements, receiving, returns, bills, performance), which every Purchasing group but the
@@ -236,7 +244,13 @@ const linkPaths = [
     "Orders/PurchaseOrders",
     "Orders/OrderDetail",
     // P4: the approval policies
-    "Settings/ApprovalPolicies"
+    "Settings/ApprovalPolicies",
+    // P5: the receipts, the shared ShipmentDetail, the inspections, the shared QualityInspection and InspectionTemplates
+    "Receiving/Receipts",
+    "Receiving/ShipmentDetail",
+    "Receiving/Inspections",
+    "Receiving/QualityInspection",
+    "Receiving/InspectionTemplates"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -371,7 +385,20 @@ const recordKinds = {
         read: readSupplier
     },
     // P2: a product opens Purchasing's Product360
-    product: {name: "Product", icon: "sym_o_inventory_2", destination: "Products/Product360?productId=", read: readProduct}
+    product: {name: "Product", icon: "sym_o_inventory_2", destination: "Products/Product360?productId=", read: readProduct},
+    // P5: a purchase receipt opens the shared ShipmentDetail under Receiving, and its inspection the shared QualityInspection
+    receipt: {
+        name: "Receipt",
+        icon: "sym_o_inbox",
+        destination: "Receiving/ShipmentDetail?shipmentId=",
+        read: id => receipts().readReceipt(id)
+    },
+    inspection: {
+        name: "Inspection",
+        icon: "sym_o_verified",
+        destination: "Receiving/QualityInspection?qualityInspectionId=",
+        read: id => receipts().readInspection(id)
+    }
 }
 
 // A record the user may work with: every buyer it names is one of their organizations and every supplier it names is in
@@ -622,6 +649,10 @@ const choiceSources = {
     approvers: (userScope, term, selected) => approvals().approverChoices(userScope, term, selected),
     approverGroups: (userScope, term, selected) => approvals().approverGroupChoices(term, selected),
     productCategories: (userScope, term, selected) => approvals().categoryChoices(term, selected),
+    // P5: the approved order parts a receipt is prepared for, the rejection reasons and a receipt's locations (Receipts.js)
+    receiptParts: (userScope, term, selected) => receipts().receiptParts(userScope, term, selected),
+    rejectionReasons: () => receipts().rejectionReasons(),
+    receiptLocations: (userScope, term, selected, p) => receipts().receiptLocations(userScope, term, selected, p),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
         let query = find("mantle.party.PartyClassification", {classificationTypeEnumId: "PcltSupplierCategory"})

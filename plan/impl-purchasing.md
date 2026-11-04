@@ -255,7 +255,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Suppliers and buying policy | Mantle, BOSS | Suppliers, Supplier360, SupplierPrices, PriceExplain, Product360, Settings, PurchasePolicy | built Nov 4, 2026 |
 | P3 Purchase orders | Mantle, BOSS | PurchaseOrders, OrderDetail | built Nov 4, 2026 |
 | P4 Approvals and budgets | Mantle, BOSS | Approvals, ApprovalPolicies | built Nov 4, 2026 |
-| P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | — |
+| P5 Receiving and inspection | Mantle, BOSS | Receipts, ShipmentDetail, Inspections, QualityInspection, InspectionTemplates | built Nov 4, 2026 |
 | P6 Bills and matching | Mantle, BOSS | Bills, InvoiceDetail, MatchExceptions, InvoiceMatch | — |
 | P7 Drop-ship | Mantle, BOSS | OrderDetail's drop-ship actions, PurchaseOrders' Drop-ship view | — |
 | P8 Supplier returns | Mantle, BOSS | Returns, ReturnDetail | — |
@@ -1022,6 +1022,113 @@ Purchasing's worklists and mounts over what Warehouse built (P7, P8): it posts n
   - Receipts shows 10 ordered, 8 received, 7 accepted, 1 rejected and the held quantity until disposition;
   - a buyer without the receive group cannot receive;
   - a receipt past its due date raises the late-receipt notice.
+
+**Built Nov 4 (P5).**
+- Mantle:
+  - `service/mantle/order/PurchaseReceipts.js`: each stock line of the approved, sent, processing or held purchase parts of
+    the given organizations (completed too on request) with its expected (ordered less cancelled, in the stock unit),
+    received, accepted, rejected, held and remaining quantities apart, its open receipt and expected arrival, its due date
+    (the line's required date, else the part's promised delivery, else the open receipt's expected arrival) and whether it
+    is late (due before today with something to come); the held quantity is Mantle's
+    `get#SourceInspectionStatus`, an inspection's rejection moves units from accepted to rejected and an undecided
+    inspection's units are neither (F-P5-5). At most 2,000 lines (`truncated`, F-P5-6). Purchasing posts no stock.
+  - `service/mantle/order/PurchaseReceiptServices.xml` `notify#LateReceipts` (new file): once per order part and due date,
+    the late lines to the organization's users with PURCHASE_ORDER_EDIT, a part that fails logged and the rest going on;
+    `data/PurchaseReceiptSetupData.xml`: the topic `PurchaseLateReceipt` and the ServiceJob `notify_LateReceipts` (daily
+    6:15).
+  - Spec `test/order/PurchaseReceipts.spec.js` (2: the quantities apart and lateness; the notice once, to the buyer, never
+    for a line received in full or not yet due).
+- BOSS:
+  - `ironstone.purchasing.ReceiptServices` (`Receipts.js`): `find#ExpectedReceipts` (views Expected, Partly received, Late,
+    Held, Completed, All; supplier, order, facility, organization and due dates), `find#PurchaseInspections` (the
+    inspections of the user's purchase receipts, open or all), `get#ReceiptDetail` (Shared/ShipmentDetail's Purchasing
+    context), `get#InspectionDetail` (Shared/QualityInspection's), `get#TemplateList` and `get#TemplateDetail` (the receipt
+    templates for Shared/InspectionTemplates), `get#InspectionChoices` (the status filters, else Warehouse's choices);
+    Home's `lateCount` and PurchaseOrders' Late view (`Orders.js` view `late`). `Purchasing.js`: the record kinds `receipt`
+    (a ShpTpPurchase shipment of the user's orders, ShipmentDetail) and `inspection` (QualityInspection), the capabilities
+    `payableEdit`, `inspect`, `qualityVerify`, `qualityDispose` and `qualityTemplateEdit`, the choices `receiptParts`,
+    `rejectionReasons` and `receiptLocations`, the Receiving link paths; `get#Choices` takes `shipmentId`.
+  - Screens: `Purchasing/Receiving.xml` (tabs Receipts and Inspections; ShipmentDetail, QualityInspection and
+    InspectionTemplates mounted, hidden), `Receiving/Receipts.xml` (ReceiptFind, ExpectedReceipts with saved finds,
+    PrepareReceipt "Expected receipt (ASN)"), `Receiving/Inspections.xml` (InspectionFind, InspectionList);
+    `template/PurchasingReceiptDetail.xml` (the transitions `purchaseReceiptChoices`, `prepareReceipt`, `purchaseReceive`,
+    `purchaseFinishReceipt`, `purchaseReceiveAll`, `purchaseBillReceipt`; the sections PrepareReceiptDialog and
+    PurchasingReceipt: the record header with Finish receipt, Receive all as expected and Create draft bill, a Receive dialog
+    per line, the lines with expected, received, accepted, rejected, held and due, the receipts, the inspections, files and
+    conversation; "Receiving is done by the warehouse's receivers" for a buyer without STOCK_RECEIVE);
+    `template/PurchasingOrderReceipts.xml` (OrderDetail's Receipts and inspection, one section-include in
+    `template/PurchasingOrderDetail.xml`, with Expected receipt (ASN) for an approved or sent order);
+    `Shared/Supplier360/PurchasingReceipts.xml` (Receipts and quality, menu index 8). Purchasing branches in
+    `Shared/ShipmentDetail.xml`, `Shared/QualityInspection.xml` (the receipt and order links, More only with an action),
+    `Shared/InspectionTemplates.xml` and `template/WarehouseInspectionParts.xml`'s `inspectionChoices`;
+    `Shared/OrderDetail.xml` includes `prepareReceipt`. Home's Late receipts card opens Receipts' Late view; Settings' landing
+    lists Inspection templates (Receiving/InspectionTemplates, design §1); PurchaseOrders' Late view; the root's
+    `notification-topic` PurchaseLateReceipt, whose link (BossSetupData) opens the order.
+  - Demo (`BossPurchasingDemoData.xml` P5 block): `BOSS_PUR_PO_RCV` ("Late restock", Retail from Ziddleman, ten DEMO_1_1
+    required by Oct 25, approved) and its expected receipt `BOSS_PUR_RCV_SHIP` at ZIRET_WH, nothing received.
+  - Specs: `PurchasingReceiving` (3: Receipts' late line with its quantities apart, Home's count and the orders' Late view,
+    refused to a requester, Receipts' html render; ShipmentDetail's html render for the receiver and the buyer's progress
+    only, another organization refused; the Inspections, InspectionTemplates and Supplier360 tab html renders);
+    PurchasingAccess gains the receipt's scope and the receive permission on it (14 features). Acceptance
+    `acceptance/Purchasing/PurchasingReceivingWalk` (5, the usable-when items); `routeFixtures` lists the Receiving routes and
+    mounts.
+- Tests run: Mantle PurchaseReceipts (2, pass); BOSS PurchasingReceiving, PurchasingAccess, PurchasingOrders,
+  PurchasingSuppliers, PurchasingReplenishment, WarehouseInspections, WarehouseReceiving, WarehouseAccess, AccountingPayables,
+  ManufacturingSubcontracting, ManufacturingAccess, ManufacturingShopFloor (all pass; PurchasingReceiving about 1.0 s);
+  acceptance PurchasingReceivingWalk (5), AppStructure (18) and PurchasingFoundationWalk (3), pass. `moqui lint --screens`:
+  no idiom or hazard site in the changed screens (informational anchors only). No existing Mantle service changed, so no
+  compatibility spec applies.
+- Decisions:
+  - Receiving on Purchasing's mount is the receive permission (STOCK_RECEIVE, Warehouse's receive group) on a receipt of
+    the user's orders, through Warehouse's receive guard (`receive#ShipmentStock`, `close#ReceiptRemainder`,
+    `receive#ExpectedShipment`), which checks the permission and the facility again; Purchasing's own transitions, not
+    Warehouse's (F-P5-1). Expected receipt (ASN) is for a buyer or a receiver (ensure#PurchaseReceipt's own rule).
+  - The inspect, verify and dispose actions under Purchasing are offered where Warehouse's scope also covers the
+    inspection's facility, since they are Warehouse's transitions and choices (F-P5-2); assign and cancel stay Warehouse's.
+  - AP intake's bill from a receipt is `create#InvoiceFromSource` on the received basis for PAYABLE_EDIT, a delivered receipt
+    with accepted units; P6 opens the bill under Bills.
+  - InspectionTemplates' "menu entry in Settings" is a row of Settings' landing (Settings' tab menu holds only its own
+    subscreens); the route stays Receiving/InspectionTemplates (design §1).
+  - Late is a stock line of an open part due before today with something to come; Home counts those lines, and the
+    orders' Late view their orders.
+- Findings (provisional):
+  - **F-P5-1** Warehouse's receipt transitions included in Shared/ShipmentDetail (`closeRemainder`, `receiveAll`) check
+    Warehouse's record scope (its root) and answer `sharedLinks['Receiving/ReceiptDetail']`, which no other app has, and
+    Accounting's `invoiceFromSource` refuses any root but Accounting; Purchasing's mount has its own transitions over the same
+    Mantle services.
+  - **F-P5-2** Shared/QualityInspection's and InspectionTemplates' transitions and choices are Warehouse's (or
+    Manufacturing's) and need Warehouse's root; a Purchasing reader without it got no status filter. Purchasing answers the
+    status filters itself and leaves the rest to Warehouse's choices.
+  - **F-P5-3** `ensure#PurchaseReceipt` takes no supplier shipment reference, which design PrepareReceipt lists; the receipt
+    keeps none from Purchasing (a later parameter on the Warehouse service).
+  - **F-P5-4** ZIRET_WH's demo operation policy names no quarantine location, so a receipt that needs inspection there is
+    refused LOCATION_REQUIRED unless the receiver chooses the quarantine cage (0901); the walk does.
+  - **F-P5-5** A line's accepted quantity counts its receipts' first inspections' decisions; a re-inspection's split shows
+    only through the held quantity. (Fixed in review R1: a re-inspection moves what it accepts back to accepted.)
+  - **F-P5-6** The due date is the line's, the part's or the open receipt's, so the Late, Partly received and Held views are
+    computed over the open lines read (at most 2,000, with a warning past it) rather than in the query.
+
+**Review Nov 4 (P5).** Checked: F-P5-1, each Purchasing receipt transition (`purchaseReceive`, `purchaseFinishReceipt`,
+`purchaseReceiveAll`, `purchaseBillReceipt`, `prepareReceipt`) runs `check#Record` (the receipt's organization, and the
+`receive` or `payableEdit` capability) and then the Mantle guard (`receive#ShipmentStock`, `close#ReceiptRemainder`,
+`receive#ExpectedShipment`, `create#InvoiceFromSource`, `ensure#PurchaseReceipt`), each checking its permission and facility or
+organization again, with no entity write of its own; a buyer posting `purchaseReceive` is refused (PurchasingAccess and the
+walk), another organization's receipt RECORD_UNAVAILABLE. F-P5-2, the inspection actions under Purchasing are offered only
+where Warehouse's `checkRecord` passes, and the included transitions call Warehouse's `check#Record` with the capability
+before the Mantle verb, so Purchasing widens nothing. The 10/8/7/1/held scenario reads correctly. Fixes:
+  - **R1 (medium)** `PurchaseReceipts.js` `inspectionSplit`: a re-inspection (rework of rejected, held stock) was ignored, so
+    what it accepted stayed rejected for good (F-P5-5). A re-inspection's units now leave rejected while it is undecided and
+    what it accepts returns to accepted; the Mantle spec gains the rework line (6 received, 2 rejected, 1 accepted again: 5
+    accepted, 1 rejected). Shared/ShipmentDetail's Purchasing lines use the same split.
+  - **R2 (medium)** `notify#LateReceipts` ran every organization in one transaction and one `lines` read capped at 2,000
+    parts newest first (the oldest, likeliest late, dropped first). The job now runs each internal organization through
+    `lib.probe` (its own transaction and error frame), logs a failing one and goes on, and warns when an organization is
+    truncated; a failed part clears its errors. The spec runs the job path, then the organization's run finds it sent.
+  - **R3 (low)** `lines` failure tolerance and cost (F-P5-6): the held and stock-factor reads ran through `lib.call`, whose
+    failure left an error message that failed every later call; they now run in an error frame. The per-line scans of
+    parts, receipts and sources (quadratic over 2,000 lines) are indexed; Home's late count, PurchaseOrders' Late view and
+    the notice skip the per-line held read (`withoutHeld`). An empty set of internal organizations answers no lines (plain
+    Mantle). Left: Receipts' Completed and All views still read held once per received line (up to 2,000 service calls).
 
 ### P6 — Bills and matching
 

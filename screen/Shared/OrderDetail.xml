@@ -84,6 +84,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="orderContent" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
     <!-- Purchasing P4: refuse the step waiting (the approvals section) -->
     <transition-include name="refuseOrder" location="component://mr-boss/template/PurchasingOrderApprovals.xml"/>
+    <!-- P5: Receipts and inspection's Expected receipt (ASN) -->
+    <transition-include name="prepareReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"

@@ -139,4 +139,22 @@ along with this software (see the LICENSE.md file). If not, see
             organizationPartyId="ORG_ZIZI_RETAIL" sourceTypeEnumId="PasOrder" fromAmount="5000" currencyUomId="USD"
             sequenceNum="2" quorum="1" approverUserId="BOSS_PUR_ADMIN" separateApprover="Y" fromDate="1265184000000"
             description="From $5,000: then the purchasing administrator" changeReason="Demo"/>
+    <!-- P5: an approved purchase order of Retail's from Ziddleman, ten of DEMO_1_1 required by Oct 25, 2026, with its expected
+        receipt (ASN) at ZIRET_WH due the same day and nothing received: Receipts' late line, Home's late count and the
+        receipt the shared ShipmentDetail shows; the receiving walks make their own orders -->
+    <mantle.order.OrderHeader orderId="BOSS_PUR_PO_RCV" orderName="Late restock" statusId="OrderApproved"
+            entryDate="2026-10-15 00:00:00" placedDate="2026-10-15 00:00:00" currencyUomId="USD" grandTotal="90"/>
+    <mantle.order.OrderPart orderId="BOSS_PUR_PO_RCV" orderPartSeqId="01" statusId="OrderApproved"
+            vendorPartyId="ZiddlemanInc" customerPartyId="ORG_ZIZI_RETAIL" facilityId="ZIRET_WH" partTotal="90"/>
+    <mantle.order.OrderItem orderId="BOSS_PUR_PO_RCV" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemInventory"
+            productId="DEMO_1_1" itemDescription="Demo product one-one" quantity="10" unitAmount="9"
+            requiredByDate="2026-10-25 00:00:00"/>
+    <mantle.shipment.Shipment shipmentId="BOSS_PUR_RCV_SHIP" shipmentTypeEnumId="ShpTpPurchase" statusId="ShipScheduled"
+            fromPartyId="ZiddlemanInc" toPartyId="ORG_ZIZI_RETAIL" estimatedArrivalDate="2026-10-25 00:00:00"/>
+    <mantle.shipment.ShipmentRouteSegment shipmentId="BOSS_PUR_RCV_SHIP" shipmentRouteSegmentSeqId="01"
+            destinationFacilityId="ZIRET_WH"/>
+    <mantle.shipment.ShipmentItem shipmentId="BOSS_PUR_RCV_SHIP" productId="DEMO_1_1" quantity="10"/>
+    <mantle.shipment.ShipmentItemSource shipmentItemSourceId="BOSS_PUR_RCV_SRC" shipmentId="BOSS_PUR_RCV_SHIP"
+            productId="DEMO_1_1" orderId="BOSS_PUR_PO_RCV" orderItemSeqId="01" quantity="10" quantityNotHandled="10"
+            statusId="SisPending"/>
 </entity-facade-xml>

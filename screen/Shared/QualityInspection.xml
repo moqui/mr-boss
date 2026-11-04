@@ -26,7 +26,11 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.manufacturing.QualityServices.get#InspectionDetail: the run and operation links, the gate and its template as
     of the release, the quality certificate), and at Quality/InspectionStation/Inspection in operator mode (operatorMode, at
     handheld density): the scan field and one step at a time, each characteristic for each sample with large pass and fail
-    controls or the measured value, then Submit result. The same records, transitions and Mantle verbs as Warehouse's. -->
+    controls or the measured value, then Submit result. The same records, transitions and Mantle verbs as Warehouse's.
+    Purchasing (impl-purchasing P5, crosscut §3.19 Purchasing row) mounts it at Purchasing/Receiving/QualityInspection for the
+    inspections of its purchase receipts (ironstone.purchasing.ReceiptServices.get#InspectionDetail: the receipt and order
+    links): the holders of the inspect, verify and dispose permissions act where Warehouse's scope covers the inspection's
+    facility (Warehouse's transitions and choices), others read. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspection"
@@ -52,6 +56,14 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="appRoot == 'Manufacturing'">
             <service-call name="ironstone.manufacturing.QualityServices.get#InspectionDetail"
                     in-map="{qualityInspectionId:qualityInspectionId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+        </if>
+        <!-- Purchasing (impl-purchasing P5): an inspection of the user's purchase receipts -->
+        <if condition="appRoot == 'Purchasing'">
+            <service-call name="ironstone.purchasing.ReceiptServices.get#InspectionDetail"
+                    in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId}"
                     out-map="detail"
                     transaction="force-new"
                     ignore-error="true"/>
@@ -89,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 condition="appRoot == 'Warehouse'"/>
                         <link url="${sharedLinks['Quality/Inspections']}" text="Inspections" link-type="anchor"
                                 icon="arrow_back" condition="appRoot == 'Manufacturing'"/>
+                        <link url="${sharedLinks['Receiving/Inspections']}" text="Inspections" link-type="anchor"
+                                icon="arrow_back" condition="appRoot == 'Purchasing'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -383,7 +397,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                 </form-single>
                             </container-dialog>
-                            <button-menu text="More" icon="more_horiz">
+                            <button-menu text="More" icon="more_horiz"
+                                    condition="appRoot != 'Purchasing' || actions.canAssign || actions.canCancel">
                                 <container-dialog id="AssignDialog" button-text="Assign" icon="sym_o_person_add"
                                         title="Assign inspection ${qualityInspectionId}" condition="actions.canAssign">
                                     <form-single name="AssignInspection" transition="assignInspection"
@@ -469,6 +484,8 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="links.asset"/>
                             <link url="${links.shipment}" text="Open the receipt" link-type="anchor" icon="sym_o_inbox"
                                     condition="links.shipment"/>
+                            <link url="${links.order}" text="Open the purchase order" link-type="anchor"
+                                    icon="sym_o_receipt_long" condition="links.order"/>
                             <link url="${links.run}" text="Open the work order" link-type="anchor"
                                     icon="sym_o_precision_manufacturing" condition="links.run"/>
                             <link url="${links.operation}" text="Open the operation" link-type="anchor" icon="sym_o_task_alt"

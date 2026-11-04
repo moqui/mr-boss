@@ -572,6 +572,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </box-body-nopad>
                         </container-box>
+                        <!-- P5: Receipts and inspection (template/PurchasingOrderReceipts.xml) -->
+                        <section-include name="PurchasingOrderReceipts"
+                                location="component://mr-boss/template/PurchasingOrderReceipts.xml"/>
                         <section name="PurchaseOrderHolds" condition="po.holdRows.length">
                             <widgets>
                                 <container-box>

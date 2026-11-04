@@ -51,6 +51,11 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- P4: the purchase approvals waiting for the user's decision, for the approval groups -->
             <set field="counters" from="Object.assign({}, counters, ec.resource.script('component://mr-boss/service/ironstone/purchasing/Approvals.js')
                     .homeCount(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope()))"/>
+            <!-- P5: the stock lines of the open purchase orders past their due date with something still to come (Receiving's
+                Late view), for the buying lists' groups -->
+            <set field="counters" from="Object.assign({}, counters, {lateCount: ec.resource
+                    .script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .lateCount(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope())})"/>
         </actions>
     </service>
     <service verb="find" noun="BuyerWork" allow-remote="false">

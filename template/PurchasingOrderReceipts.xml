@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Receipts and inspection (design-purchasing §6 OrderDetail, crosscut §3.6 Purchasing row; impl-purchasing
+    P5): template/PurchasingOrderDetail.xml includes the section PurchasingOrderReceipts for a purchase order: each stock line
+    with expected, received, accepted, rejected and held apart and its receipt (find#ExpectedReceipts), the order's
+    inspections (find#PurchaseInspections), and "Expected receipt (ASN)" for an approved or sent order (a buyer or a receiver;
+    the transition prepareReceipt of template/PurchasingReceiptDetail.xml, included by Shared/OrderDetail.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="PurchasingOrderReceipts" condition="po">
+            <actions>
+                <service-call name="ironstone.purchasing.ReceiptServices.find#ExpectedReceipts" out-map="orderReceiptsOut"
+                        transaction="force-new" ignore-error="true"
+                        in-map="{appRoot:appRoot, orderId:orderId, view:'all', pageSize:100}"/>
+                <service-call name="ironstone.purchasing.ReceiptServices.find#PurchaseInspections"
+                        out-map="orderInspectionsOut" transaction="force-new" ignore-error="true"
+                        in-map="{appRoot:appRoot, orderId:orderId, view:'all', pageSize:100}"/>
+                <set field="orderReceiptRows" from="orderReceiptsOut?.receiptRows || []"/>
+                <set field="orderInspectionRows" from="orderInspectionsOut?.inspectionRows || []"/>
+                <!-- a purchase order has one purchase part (impl-purchasing §4) -->
+                <set field="prepareOrderPart" from="['OrderApproved', 'OrderSent', 'OrderProcessing'].includes(po.statusId)
+                        ? orderId + ':' + (ec.entity.find('mantle.order.OrderPart').condition('orderId', orderId)
+                            .disableAuthz().list()[0]?.orderPartSeqId || '01') : null"/>
+            </actions>
+            <widgets>
+                <section name="PurchasingOrderReceiptsBox" condition="orderReceiptRows.length || prepareOrderPart">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Receipts and inspection"/>
+                            <box-toolbar>
+                                <section name="PurchaseOrderPrepareReceipt" condition="prepareOrderPart">
+                                    <widgets>
+                                        <section-include name="PrepareReceiptDialog"
+                                                location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+                                    </widgets>
+                                </section>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="PurchaseOrderReceiptLines" list="orderReceiptRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="lineText"><default-field title="Line"><display/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="shipmentId">
+                                        <default-field title="Receipt">
+                                            <link url="${sharedLinks['Receiving/ShipmentDetail']}" text="${shipmentId}"
+                                                    link-type="anchor" parameter-map="{shipmentId:shipmentId}"
+                                                    condition="shipmentId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="expectedQuantity" align="right">
+                                        <default-field title="Expected"><display/></default-field></field>
+                                    <field name="receivedQuantity" align="right">
+                                        <default-field title="Received"><display/></default-field></field>
+                                    <field name="acceptedQuantity" align="right">
+                                        <default-field title="Accepted"><display/></default-field></field>
+                                    <field name="rejectedQuantity" align="right">
+                                        <default-field title="Rejected"><display/></default-field></field>
+                                    <field name="heldQuantity" align="right">
+                                        <default-field title="Held"><display/></default-field></field>
+                                    <field name="remainingQuantity" align="right">
+                                        <default-field title="To come"><display/></default-field></field>
+                                    <field name="unitText"><default-field title="Unit"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                                    stateColor}">${WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="lineText"/><field-ref name="productName"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="remainingQuantity"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" condition="!orderReceiptRows.length"
+                                        text="Nothing is received yet; an expected receipt (ASN) records what the supplier is sending."/>
+                                <section name="PurchaseOrderInspections" condition="orderInspectionRows.length">
+                                    <widgets>
+                                        <form-list name="PurchaseOrderInspectionList" list="orderInspectionRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="qualityInspectionId">
+                                                <default-field title="Inspection">
+                                                    <link url="${sharedLinks['Receiving/QualityInspection']}"
+                                                            text="${qualityInspectionId}" link-type="anchor"
+                                                            parameter-map="{qualityInspectionId:qualityInspectionId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="heldText" align="right">
+                                                <default-field title="Held"><display/></default-field></field>
+                                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="qualityInspectionId"/><field-ref name="productName"/></column>
+                                                <column><field-ref name="statusText"/><field-ref name="heldText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

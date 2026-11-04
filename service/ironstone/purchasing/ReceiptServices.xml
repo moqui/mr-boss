@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's receiving reads (design-purchasing §9; impl-purchasing P5; Receipts.js): the expected receipts and purchase
+    inspections worklists, the Purchasing context of the shared ShipmentDetail, QualityInspection and InspectionTemplates.
+    Each refuses a user without Purchasing; a record outside the user's organizations or supplier scope is refused
+    (RECORD_UNAVAILABLE). Purchasing posts no stock: the screens call the Mantle receiving, quality and bill services after
+    ironstone.purchasing.AccessServices.check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="ExpectedReceipts" allow-remote="false">
+        <description>One page of the stock lines of the user's purchase orders in a view (open, the default; partial, late,
+            held, completed or all), by supplier, order, facility and due dates, the nearest due first: each line's expected,
+            received, accepted, rejected and held quantities apart in the product's stock unit (and the ordered quantity in
+            the order's unit when it differs), what is still to come, its due date, its open receipt's expected arrival and
+            its state. Refuses a user without the buying lists (PERMISSION_DENIED) and a supplier or organization outside
+            the scope (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="facilityId"/>
+            <parameter name="dueFrom" type="Timestamp"/>
+            <parameter name="dueThru" type="Timestamp"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="receiptRowsCount" type="Integer"/>
+            <parameter name="receiptRowsPageIndex" type="Integer"/>
+            <parameter name="receiptRowsPageSize" type="Integer"/>
+            <parameter name="receiptRowsPageMaxIndex" type="Integer"/>
+            <parameter name="receiptRowsPageRangeLow" type="Integer"/>
+            <parameter name="receiptRowsPageRangeHigh" type="Integer"/>
+            <parameter name="viewLabel"/>
+            <parameter name="truncated" type="Boolean"><description>More open lines than the list reads (2000): those past
+                them are not in the answer.</description></parameter>
+            <parameter name="canPrepare" type="Boolean"><description>Whether the user may prepare an expected receipt (a buyer
+                or a receiver).</description></parameter>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('expectedReceipts', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="find" noun="PurchaseInspections" allow-remote="false">
+        <description>One page of the inspections of the user's purchase receipts, open by default (view all for every one),
+            by status, supplier, order and product, the nearest due first: each with its receipt, order line, supplier,
+            product, quantity, held quantity, status, result, outcome, due date and inspector. Refuses as
+            find#ExpectedReceipts.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="statusId"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="productId"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="inspectionRows" type="List"/>
+            <parameter name="inspectionRowsCount" type="Integer"/>
+            <parameter name="inspectionRowsPageIndex" type="Integer"/>
+            <parameter name="inspectionRowsPageSize" type="Integer"/>
+            <parameter name="inspectionRowsPageMaxIndex" type="Integer"/>
+            <parameter name="inspectionRowsPageRangeLow" type="Integer"/>
+            <parameter name="inspectionRowsPageRangeHigh" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('purchaseInspections', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ReceiptDetail" allow-remote="false">
+        <description>Shared/ShipmentDetail's Purchasing context (crosscut §3.8 Purchasing row): a purchase receipt of the
+            user's orders with its header, each order line on it with what it expects and what was received, accepted,
+            rejected and held on it, its receipts and inspections, and the user's actions: receive, finish (close or
+            backorder the remainder) and receive all as expected for a holder of STOCK_RECEIVE (Warehouse's receive group)
+            while it is open; a bill from its accepted receipts for AP intake (PAYABLE_EDIT) once it is delivered. Refuses a
+            shipment that is not such a receipt (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="shipmentId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="receiptFound" type="Boolean"/>
+            <parameter name="receipt" type="Map"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="receiptRows" type="List"/>
+            <parameter name="inspectionRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('receiptDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionDetail" allow-remote="false">
+        <description>Shared/QualityInspection's Purchasing context (crosscut §3.19 Purchasing row): an inspection of the
+            user's purchase receipts (mantle.product.QualityServices.get#Inspection), its receipt and order links under
+            Purchasing, and the inspect, verify, dispose and re-inspect actions for holders of QUALITY_INSPECT,
+            QUALITY_VERIFY and QUALITY_DISPOSE where Warehouse's scope covers its facility (the actions are Warehouse's);
+            others read. Refuses an inspection of no such receipt (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="qualityInspectionId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="inspection" type="Map"/>
+            <parameter name="items" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="dispositions" type="List"/>
+            <parameter name="history" type="List"/>
+            <parameter name="acceptedLeft"/>
+            <parameter name="rejectedLeft"/>
+            <parameter name="missingReadings" type="List"/>
+            <parameter name="actions" type="Map"/>
+            <parameter name="links" type="Map"/>
+            <parameter name="submitDefaults" type="Map"/>
+            <parameter name="disposeDefaults" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('inspectionDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionChoices" allow-remote="false">
+        <description>The drop-downs of the shared inspection screens under Purchasing: the inspection and template status
+            filters, and the editor's and actor's choices from Warehouse's get#InspectionChoices, which refuses a user
+            outside Warehouse's scope (those actions are offered only within it). Refuses a user without
+            Purchasing.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="facilityId"/>
+        </in-parameters>
+        <out-parameters><parameter name="options" type="List"/></out-parameters>
+        <actions>
+            <set field="options" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('inspectionChoices', context).options"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateList" allow-remote="false">
+        <description>Shared/InspectionTemplates' Purchasing list: the receipt inspection templates of the user's
+            organizations by state and name, a page at a time, and whether the user edits them (QUALITY_TEMPLATE_EDIT with
+            Warehouse's scope, whose editor choices the screen uses). Refuses a user without the buying lists.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="statusId"/>
+            <parameter name="templateName"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="templates" type="List"/>
+            <parameter name="templatesCount" type="Integer"/>
+            <parameter name="templatesPageIndex" type="Integer"/>
+            <parameter name="templatesPageSize" type="Integer"/>
+            <parameter name="templatesPageMaxIndex" type="Integer"/>
+            <parameter name="templatesPageRangeLow" type="Integer"/>
+            <parameter name="templatesPageRangeHigh" type="Integer"/>
+            <parameter name="canEdit" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('templateList', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="TemplateDetail" allow-remote="false">
+        <description>One receipt inspection template (mantle.product.QualityServices.get#InspectionTemplate) with its
+            characteristics as of a date, its revisions and changes, and the edit actions as get#TemplateList's. Refuses a
+            template outside the user's organizations (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="inspectionTemplateId" required="true"/>
+            <parameter name="asOfDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="template" type="Map"/>
+            <parameter name="asOfText"/>
+            <parameter name="items" type="List"/>
+            <parameter name="draftItems" type="List"/>
+            <parameter name="editItems" type="List"/>
+            <parameter name="revisionRows" type="List"/>
+            <parameter name="changeRows" type="List"/>
+            <parameter name="canEdit" type="Boolean"/>
+            <parameter name="canPublish" type="Boolean"/>
+            <parameter name="canRetire" type="Boolean"/>
+            <parameter name="published" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Receipts.js')
+                    .execute('templateDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+</services>

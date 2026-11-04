@@ -151,6 +151,22 @@ function settings(p) {
                 " categories",
             owner: "Purchasing",
             url: null
+        },
+        // P5: the receipt inspection templates, at Receiving/InspectionTemplates (design §1), Warehouse's shared screen
+        {
+            area: "Inspection templates",
+            description: "The checks a purchase receipt is inspected against before its stock is released",
+            effectiveText:
+                String(
+                    find("mantle.product.quality.InspectionTemplate", {
+                        inspectionContextEnumId: "QicReceipt",
+                        statusId: "QtPublished"
+                    })
+                        .condition("organizationPartyId", organizationPartyId)
+                        .count()
+                ) + " published",
+            owner: "Warehouse",
+            url: "/qapps/Purchasing/Receiving/InspectionTemplates"
         }
     ]
     return {

@@ -1504,4 +1504,7 @@ along with this software (see the LICENSE.md file). If not, see
             linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
     <moqui.security.user.NotificationTopic topic="PurchaseSupplierApproval"
             linkTemplate="/qapps/Purchasing/Suppliers/Supplier360?vendorPartyId=${supplierPartyId}&amp;organizationPartyId=${organizationPartyId}"/>
+    <!-- a late purchase receipt (Mantle's notify#LateReceipts, impl-purchasing P5) opens the order in Purchasing -->
+    <moqui.security.user.NotificationTopic topic="PurchaseLateReceipt"
+            linkTemplate="/qapps/Purchasing/Orders/OrderDetail?orderId=${orderId}"/>
 </entity-facade-xml>
