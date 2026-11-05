@@ -2918,36 +2918,36 @@ Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases befor
   - The customer's satisfaction on Customer360 is the answers' mean score with its count for every Customer Service user; the
     comments stay service management's (P13).
 - Findings (provisional):
-  - **F-P14-1** Insights' catalog (`ironstone.insights.ReportCatalogEntry`, INS-02) is not built and no app registers with it
+  - **F189** Insights' catalog (`ironstone.insights.ReportCatalogEntry`, INS-02) is not built and no app registers with it
     yet (Purchasing P15 built none; Manufacturing F143 waits): Customer Service's entries are `Reporting.js`
     `catalogueEntries` in design-insights §6.1's contract (entry id, the one owner, title, description, route, parameters,
     the read capability, export), served by `get#ReportCatalogue` for ReportsHome, for Insights' registry to read when built.
-  - **F-P14-2** A dataset has one time field, so the shipped service data is two datasets over one DataDocument (by the clock's
+  - **F190** A dataset has one time field, so the shipped service data is two datasets over one DataDocument (by the clock's
     start and by its breach); the breach alert reads the second. Insights' admission (design-insights §5) is not built: the
     framework loads `report/*.json` read-only, and the alert template runs only as a saved copy, as Mantle's sales one.
-  - **F-P14-3** A report dataset is not filtered by the viewer's organizations at query time, so `BossServiceClock` is granted
+  - **F191** A report dataset is not filtered by the viewer's organizations at query time, so `BossServiceClock` is granted
     to ADMIN only, as Mantle's sales datasets are, until Insights' admission applies the organization filter.
-  - **F-P14-4** Home's open, overdue and unassigned are counts now: their previous period needs the statuses at its start
+  - **F192** Home's open, overdue and unassigned are counts now: their previous period needs the statuses at its start
     (the audit log), which nothing keeps as a measure; the change shows on the rates (SLA compliance, first response,
     resolution, CSAT).
-  - **F-P14-5** Design ResponseTimes' "next response" has no record: P4 keeps one first-response clock per case, never
+  - **F193** Design ResponseTimes' "next response" has no record: P4 keeps one first-response clock per case, never
     restarted, and no clock per later reply, so ResponseTimes measures first response and each resolution episode. Design
     ResponseTimes changed; a next-response clock is §7's.
-  - **F-P14-6** Design ReportCatalogue's "last run" and "favorite saved find" have no source (a report is a read, not a stored
+  - **F194** Design ReportCatalogue's "last run" and "favorite saved find" have no source (a report is a read, not a stored
     run); the catalogue shows what each report shows, its filters and its export. Design Reports changed.
-  - **F-P14-7** ReturnAnalysis' return rate against the quantity shipped and the refunded amounts (ReturnItem's refund
+  - **F195** ReturnAnalysis' return rate against the quantity shipped and the refunded amounts (ReturnItem's refund
     payment) are not read: the rate needs the organizations' shipped quantity per product in the period, and a refund is a
     payment, not a ReturnItemBilling link; the credited amount is the billing links'. Left for P16 or §7.
-  - **F-P14-8** The as-of time reads each fact by its own date (a clock's actual, due and breach; a receipt's received date; a
+  - **F196** The as-of time reads each fact by its own date (a clock's actual, due and breach; a receipt's received date; a
     billing link's settled date; the audit log's change date); a clock's cancellation has no date of its own, so a cancelled
     clock counts cancelled at any as-of time.
-  - **F-P14-9** F112 answered: the views by clock and Home's counts read the case with its clocks in one query; Mantle's
+  - **F197** F112 answered: the views by clock and Home's counts read the case with its clocks in one query; Mantle's
     `Sla.js` `riskRequestIds` and `awaitingResponseIds` (2,000 ids) are no longer used by BOSS and stay for Mantle callers.
-  - **F-P14-10** F186 answered: SatisfactionResults is out of the Reports menu, and the catalogue offers it to
+  - **F198** F186 answered: SatisfactionResults is out of the Reports menu, and the catalogue offers it to
     SUPPORT_CASE_MANAGE holders, who alone may read it.
-  - **F-P14-11** The export audit is a log line on `moqui.report.audit` (`audit#Export`: user, kind, definition, rows), not a
+  - **F199** The export audit is a log line on `moqui.report.audit` (`audit#Export`: user, kind, definition, rows), not a
     record; a report export appears there as `CustomerService.<report>`.
-  - **F-P14-12** AppStructure's placeholder floor is now 45 (ReportsHome built); P15 may lower it too.
+  - **F200** AppStructure's placeholder floor is now 45 (ReportsHome built); P15 may lower it too.
 
 **Review Nov 5 (P14).** Checked each measure against its definition (compliance: cancellations apart, open past due in the
 rate, SlsMerged never, the carried copy once; response times: business time on the clock's calendar less its pauses, which
@@ -2966,13 +2966,13 @@ DataDocumentUserGroup; F112's views (no id list; distinct counts are a sub-selec
   `CASE_SLA_EP_START`, `CASE_SLA_EP_ACTUAL` and `CASE_SLA_EP_BREACH` (an extend-entity in SupportReportEntities.xml).
 - R3 (medium, access) the shipped SLA-breach alert template's contact point was BOSS_CUSTOMER_SERVICE_MANAGER, so a saved copy
   would notify every organization's service managers of all organizations' breaches by queue; it is ADMIN, as Mantle's sales
-  alert is (F-P14-3), and a saved copy sets its own.
+  alert is (F191), and a saved copy sets its own.
 - R4 (low, test) CustomerServiceReports computes response times by hand on a spec calendar (Mon-Fri 9-17 Chicago): three clocks
   across a weekend, with a pause and within a day, and a merged one never timed: median 120, p90 420, mean 190 business minutes,
   median 480 and p90 3,960 elapsed. The spec is 1.5 s.
 - Left for the lead: CaseVolumes' backlog "open at the as-of time" uses the cases' current status, so an earlier as-of time
-  counts a case resolved since as closed (the statuses at a past time need the audit log, as F-P14-4); a viewer-scoped dataset
-  could use Insights' `contextFilters` on organizationPartyId when admission is built (F-P14-3). Acceptance
+  counts a case resolved since as closed (the statuses at a past time need the audit log, as F192); a viewer-scoped dataset
+  could use Insights' `contextFilters` on organizationPartyId when admission is built (F191). Acceptance
   CustomerServiceReportsWalk was not rerun after R1 (its volumes feature covers it); the new view was checked against the
   audit log filtered by hand in a throwaway feature.
 
@@ -3067,7 +3067,7 @@ Design §8; CS-PORTAL.
   message from the customer's side filed on the case, so P4's and P8's rules record it (the clocks, the assignee's notice, a
   reopen within the window or a follow-up); request#CaseReopen a reply with the reason within the window; cancel#CustomerCase
   the workflow's move to Cancelled at the shown revision, resolved RrWithdrawn. A return request is `submit#CustomerReturn` on
-  the Support claim (`ReturnPolicies.js asCustomer`; F-P15-4) for the customer's eligible lines only (a self-service policy,
+  the Support claim (`ReturnPolicies.js asCustomer`; F204) for the customer's eligible lines only (a self-service policy,
   in its window, at most what is left), customer-visible reasons and the policy's remedies, the server choosing the facility
   and keeping the policy, no assignee; withdraw#CustomerReturn is `cancel#CustomerReturn` on the claim before any effect,
   after it "ask an agent"; evidence a scanned file as ReturnContent RtcntCustomerEvidence; the label `labelImage` kept once as
@@ -3127,38 +3127,38 @@ Design §8; CS-PORTAL.
   RemoteFixtures passes): RemoteHttp's 9 features and SupportPagesHttp's 2 through the frontend. `moqui lint --screens`: 136
   flagged sites, as master; none in the screens added or changed.
 - Findings (provisional):
-  - **F-P15-1** ExternalAccessContact had no role for "a customer administrator, a role on that relationship": it gains
+  - **F201** ExternalAccessContact had no role for "a customer administrator, a role on that relationship": it gains
     `administrator` (audit-logged), set from the invitation's scope on redeem; a contact's case is one it filed or reports (or
     is the Customer party of) unless it is an administrator (the Request kind's `contactAllows`, inside `ExternalAccess.check`).
-  - **F-P15-2** "A verified email" is a framework `VerifiedAddress` row of the account; the self relationship holds only for an
+  - **F202** "A verified email" is a framework `VerifiedAddress` row of the account; the self relationship holds only for an
     account whose party is the record's outside party, not internal and working for no internal organization, on the kinds that
     allow it (Request, ReturnHeader), and the own account sees all of its own cases.
-  - **F-P15-3** The Support mount's settings (design ServiceDefaults' "the Support mount's queues, intake types and knowledge
+  - **F203** The Support mount's settings (design ServiceDefaults' "the Support mount's queues, intake types and knowledge
     spaces") have no field: `save#ServiceDefaults` starts each ServicePolicy row from its own fields, so new fields there would be
     dropped by every other save. They are a dated `SupportAppSetting` row of their own, saved by save#SupportAppSetting. Design
     ServiceDefaults changed.
-  - **F-P15-4** A public account holds no Mantle permission, so the customer writes run on a Support claim in
+  - **F204** A public account holds no Mantle permission, so the customer writes run on a Support claim in
     `ec.context.sharedMap` (`SupportCustomerClaim`, set only by CustomerReturns.js and CustomerOrders.js after ExternalAccess),
     as Purchasing's supplier claim: ReturnPolicies.js honours it for the lists naming SUPPORT_CASE_EDIT (and RETURN_AUTHORIZE only
     for a withdrawal) with the claim's organization and customer in place of the facility scope, and leaves the return
     unassigned; OrderChanges.js's `customerSide` takes it. Cases are written by SupportPortal.js through create#Request, the
     parties and ensure#CaseProfile rather than create#Case, which is an agent's (SUPPORT_CASE_EDIT, the queue's assignee).
-  - **F-P15-5** "Approved shared files" had no type: RequestContent RqCntCustomerShared ("Shared with the customer"); RecordFiles
+  - **F205** "Approved shared files" had no type: RequestContent RqCntCustomerShared ("Shared with the customer"); RecordFiles
     keeps its internal default (RqCntInternal), so an agent shares a file by choosing the type; customer files land in it.
-  - **F-P15-6** P9's ReturnHeader kind resolves no cancelled return, so a withdrawn return's page closes for its link and its
+  - **F206** P9's ReturnHeader kind resolves no cancelled return, so a withdrawn return's page closes for its link and its
     contact alike: the withdrawal's receipt says so and MyReturns lists a withdrawn return without a link.
-  - **F-P15-7** The rating's per-page nonce is a random value issued with the article; Mantle has no server secret to sign it,
+  - **F207** The rating's per-page nonce is a random value issued with the article; Mantle has no server secret to sign it,
     so it proves one rating per view (its digest unique on ArticleFeedback), not that the server issued it; the requester's
     limit (30 in ten minutes) bounds the rest.
-  - **F-P15-8** PASS's file downloads were Forum's and exports only: PassAuthority's DOWNLOADS list, `Facade.downloadFile` and
+  - **F208** PASS's file downloads were Forum's and exports only: PassAuthority's DOWNLOADS list, `Facade.downloadFile` and
     `Transport.downloadOperation` (REST: the operation's GET route with its input as the query; gRPC: the operation) stream a
     Support file; the label image is kept once as ReturnContent so the transports stream a location.
-  - **F-P15-9** BOSS's client deny pattern names the write verbs of ironstone services; `invite` is none of them, so BOSS's
+  - **F209** BOSS's client deny pattern names the write verbs of ironstone services; `invite` is none of them, so BOSS's
     service is `create#SupportInvitation`.
-  - **F-P15-10** Shop does not exist (mr-pass has only plan/design-shop.md and impl-shop.md; BOSS Commerce is placeholders): X7's
+  - **F210** Shop does not exist (mr-pass has only plan/design-shop.md and impl-shop.md; BOSS Commerce is placeholders): X7's
     Get help, Request return and cancel wait for Shop, which calls create#CustomerCase, request#CustomerReturn and
     request#CustomerCancel; the store's queue and the SalesOrder OrderView token (impl-shop F27) are not built.
-  - **F-P15-11** Admin's privacy provider contract (`org.moqui.admin.PrivacyServices`) does not exist, so CS-PRIVACY's provider
+  - **F211** Admin's privacy provider contract (`org.moqui.admin.PrivacyServices`) does not exist, so CS-PRIVACY's provider
     and F187's `redact#FormResponse` wait for it; P2's interim privacy cases take the requests (§7).
 - Not done: F181's readiness stays in CaseFeedbackServices. (The notices, the cursors and the label and immediate cancel
   specs were finished in the review.)
@@ -3464,6 +3464,32 @@ is written there too.
 | F186 | P13 review: the CSAT results tab shows to agents, who are then told it is not available; a menu item is hidden only by artifact authorization, which the shared survey screen cannot carry | P14: the Reports catalogue (ReportsHome) offers SatisfactionResults to managers, the tab not in the menu |
 | F187 | P13 review: P15's privacy anonymization needs a way past the response guard | P15: a `mantle.party.FormPublicationServices.redact#FormResponse` service checking a privacy permission and the organization, blanking text answers and logging who and why, the guard letting a write through only while that service is on the artifact execution stack |
 | F188 | P13 review: the true remote pair ran (an authority serving the acceptance fixtures, a frontend with only framework, webroot, tools and mr-pass): RemoteHttp 8 of 8, a rating of 2 kept as 2 of 5 on a repeat posting 5 | None |
+| F189 | P14: Insights' catalog (`ironstone.insights.ReportCatalogEntry`, INS-02) is not built and no app registers with it yet (Purchasing P15 built none; Manufacturing F143 waits): Customer Service's entries are `Reporting.js` `catalogueEntries` in design-insights §6.1's contract (entry id, the one owner, title, description, route, parameters, the read capability, export), served by `get#ReportCatalogue` for ReportsHome, for Insights' registry to read when built. | See P14 |
+| F190 | P14: A dataset has one time field, so the shipped service data is two datasets over one DataDocument (by the clock's start and by its breach); the breach alert reads the second. Insights' admission (design-insights §5) is not built: the framework loads `report/*.json` read-only, and the alert template runs only as a saved copy, as Mantle's sales one. | See P14 |
+| F191 | P14: A report dataset is not filtered by the viewer's organizations at query time, so `BossServiceClock` is granted to ADMIN only, as Mantle's sales datasets are, until Insights' admission applies the organization filter. | See P14 |
+| F192 | P14: Home's open, overdue and unassigned are counts now: their previous period needs the statuses at its start (the audit log), which nothing keeps as a measure; the change shows on the rates (SLA compliance, first response, resolution, CSAT). | See P14 |
+| F193 | P14: Design ResponseTimes' "next response" has no record: P4 keeps one first-response clock per case, never restarted, and no clock per later reply, so ResponseTimes measures first response and each resolution episode. Design ResponseTimes changed; a next-response clock is §7's. | See P14 |
+| F194 | P14: Design ReportCatalogue's "last run" and "favorite saved find" have no source (a report is a read, not a stored run); the catalogue shows what each report shows, its filters and its export. Design Reports changed. | See P14 |
+| F195 | P14: ReturnAnalysis' return rate against the quantity shipped and the refunded amounts (ReturnItem's refund payment) are not read: the rate needs the organizations' shipped quantity per product in the period, and a refund is a payment, not a ReturnItemBilling link; the credited amount is the billing links'. Left for P16 or §7. | See P14 |
+| F196 | P14: The as-of time reads each fact by its own date (a clock's actual, due and breach; a receipt's received date; a billing link's settled date; the audit log's change date); a clock's cancellation has no date of its own, so a cancelled clock counts cancelled at any as-of time. | See P14 |
+| F197 | P14: F112 answered: the views by clock and Home's counts read the case with its clocks in one query; Mantle's `Sla.js` `riskRequestIds` and `awaitingResponseIds` (2,000 ids) are no longer used by BOSS and stay for Mantle callers. | See P14 |
+| F198 | P14: F186 answered: SatisfactionResults is out of the Reports menu, and the catalogue offers it to SUPPORT_CASE_MANAGE holders, who alone may read it. | See P14 |
+| F199 | P14: The export audit is a log line on `moqui.report.audit` (`audit#Export`: user, kind, definition, rows), not a record; a report export appears there as `CustomerService.<report>`. | See P14 |
+| F200 | P14: AppStructure's placeholder floor is now 45 (ReportsHome built); P15 may lower it too. | See P14 |
+| F201 | P15: ExternalAccessContact had no role for "a customer administrator, a role on that relationship": it gains `administrator` (audit-logged), set from the invitation's scope on redeem; a contact's case is one it filed or reports (or is the Customer party of) unless it is an administrator (the Request kind's `contactAllows`, inside `ExternalAccess.check`). | See P15 |
+| F202 | P15: "A verified email" is a framework `VerifiedAddress` row of the account; the self relationship holds only for an account whose party is the record's outside party, not internal and working for no internal organization, on the kinds that allow it (Request, ReturnHeader), and the own account sees all of its own cases. | See P15 |
+| F203 | P15: The Support mount's settings (design ServiceDefaults' "the Support mount's queues, intake types and knowledge spaces") have no field: `save#ServiceDefaults` starts each ServicePolicy row from its own fields, so new fields there would be dropped by every other save. They are a dated `SupportAppSetting` row of their own, saved by save#SupportAppSetting. Design ServiceDefaults changed. | See P15 |
+| F204 | P15: A public account holds no Mantle permission, so the customer writes run on a Support claim in `ec.context.sharedMap` (`SupportCustomerClaim`, set only by CustomerReturns.js and CustomerOrders.js after ExternalAccess), as Purchasing's supplier claim: ReturnPolicies.js honours it for the lists naming SUPPORT_CASE_EDIT (and RETURN_AUTHORIZE only for a withdrawal) with the claim's organization and customer in place of the facility scope, and leaves the return unassigned; OrderChanges.js's `customerSide` takes it. Cases are written by SupportPortal.js through create#Request, the parties and ensure#CaseProfile rather than create#Case, which is an agent's (SUPPORT_CASE_EDIT, the queue's assignee). | See P15 |
+| F205 | P15: "Approved shared files" had no type: RequestContent RqCntCustomerShared ("Shared with the customer"); RecordFiles keeps its internal default (RqCntInternal), so an agent shares a file by choosing the type; customer files land in it. | See P15 |
+| F206 | P15: P9's ReturnHeader kind resolves no cancelled return, so a withdrawn return's page closes for its link and its contact alike: the withdrawal's receipt says so and MyReturns lists a withdrawn return without a link. | See P15 |
+| F207 | P15: The rating's per-page nonce is a random value issued with the article; Mantle has no server secret to sign it, so it proves one rating per view (its digest unique on ArticleFeedback), not that the server issued it; the requester's limit (30 in ten minutes) bounds the rest. | See P15 |
+| F208 | P15: PASS's file downloads were Forum's and exports only: PassAuthority's DOWNLOADS list, `Facade.downloadFile` and `Transport.downloadOperation` (REST: the operation's GET route with its input as the query; gRPC: the operation) stream a Support file; the label image is kept once as ReturnContent so the transports stream a location. | See P15 |
+| F209 | P15: BOSS's client deny pattern names the write verbs of ironstone services; `invite` is none of them, so BOSS's service is `create#SupportInvitation`. | See P15 |
+| F210 | P15: Shop does not exist (mr-pass has only plan/design-shop.md and impl-shop.md; BOSS Commerce is placeholders): X7's Get help, Request return and cancel wait for Shop, which calls create#CustomerCase, request#CustomerReturn and request#CustomerCancel; the store's queue and the SalesOrder OrderView token (impl-shop F27) are not built. | See P15 |
+| F211 | P15: Admin's privacy provider contract (`org.moqui.admin.PrivacyServices`) does not exist, so CS-PRIVACY's provider and F187's `redact#FormResponse` wait for it; P2's interim privacy cases take the requests (§7). | See P15 |
+| F212 | P14 review: CaseVolumes' open-at-the-as-of-time count uses each case's current status, so a case open at an earlier as-of time and resolved since is not counted; the clocks dataset could be granted beyond ADMIN once Insights' admission filters it by `organizationPartyId` | §7, with the statuses at a past time from the audit log (as F192) |
+| F213 | P15 review: the saved-reply preview does not say the mail will carry the Support link; the return label is always served as a PDF whatever the carrier returned; MyCases reads all of a customer's case ids before paging, fine at portal sizes | §7 |
+| F214 | P15 review: `send#EmailDraft` gains a hook adding the CustomerCase link to an agent's mail filed on a case when every recipient is on the case's customer side and the sender holds SUPPORT_CASE_EDIT; `authorize#Return` and `decide#ReturnException` now mail the customer a decision notice (no reason) where the organization has a service policy, so Retail's demo authorizations mail the customer | Kept: both act only on cases and service-policy returns (§2's Mantle rule changes) |
 
 ## 7. Later
 
