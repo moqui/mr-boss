@@ -284,6 +284,10 @@ along with this software (see the LICENSE.md file). If not, see
                 <if condition="customer == null || (customer.privateOwnerUserId &amp;&amp; customer.privateOwnerUserId != ec.user.userId)">
                     <return error="true" message="Customer ${customerPartyId} is not available"/></if>
             </if>
+            <!-- a request this makes a support case takes its due date from its service level (impl-customer-service P2, F64) -->
+            <if condition="responseRequiredDate &amp;&amp; !draft &amp;&amp; ec.resource.script(&apos;component://mr-boss/service/ironstone/customerservice/CaseGuard.js&apos;).wouldBeCase({requestTypeEnumId:requestTypeEnumId,
+                    customerPartyId:customerPartyId})">
+                <return error="true" message="CASE_DUE_DATE: This request is a support case: its due date comes from its service level; leave it empty"/></if>
             <service-call name="mantle.request.RequestServices.create#Request" out-map="context" in-map="{requestName:requestName.trim(),
                     requestTypeEnumId:requestTypeEnumId, priority:priority, customerPartyId:customerPartyId, description:description,
                     responseRequiredDate:responseRequiredDate, statusId:(draft ? 'ReqDraft' : 'ReqSubmitted')}"/>
@@ -444,6 +448,11 @@ along with this software (see the LICENSE.md file). If not, see
             </else-if><else>
                 <return error="true" message="Commons does not set a request to ${toStatusId}"/>
             </else></if>
+            <!-- a support case's cancel goes through Customer Service's transition#Case, or is refused (impl-customer-service P2, F64) -->
+            <if condition="toStatusId == 'ReqCancelled'">
+                <set field="routed" from="ec.resource.script(&apos;component://mr-boss/service/ironstone/customerservice/CaseGuard.js&apos;).resolve(requestId, 'ReqCancelled', 'RrRejected', ec.l10n.localize('Cancelled by its requester'))"/>
+                <if condition="routed"><set field="message" from="routed.message || message"/><return/></if>
+            </if>
             <service-call name="mantle.request.RequestServices.update#Request" in-map="toStatusId == 'ReqCancelled' ?
                     {requestId:requestId, statusId:toStatusId, requestResolutionEnumId:'RrRejected'} : {requestId:requestId, statusId:toStatusId}"/>
         </actions>
@@ -480,6 +489,8 @@ along with this software (see the LICENSE.md file). If not, see
                 if (priority != null) fields.priority = priority
                 if (description != null) fields.description = description
                 if (responseRequiredDate != null) fields.responseRequiredDate = responseRequiredDate
+                // a support case's due date is its service level's (impl-customer-service P2, F64)
+                if (responseRequiredDate != null) ec.resource.script('component://mr-boss/service/ironstone/customerservice/CaseGuard.js').refuseDue(requestId)
                 if (customerPartyId) fields.customerPartyId = customerPartyId
                 ec.service.sync().name('mantle.request.RequestServices.update#Request').parameters(fields).call()
             ]]></script>

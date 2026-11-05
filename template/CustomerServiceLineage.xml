@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseDetail's lineage (design-customer-service §3 CaseDetail, MergeCases, SplitCase, §9 StatusCategories;
+    impl-customer-service P8, CS-MERGE), the sections template/CustomerServiceCaseDetail.xml includes, over the case's lineage
+    in ironstone.customerservice.CaseServices.get#CaseDetail (mantle.request.SupportCaseServices.get#CaseLineage):
+    - CaseLineageBanner: a merged case's redirect (the case it went into, opened in CaseDetail, which checks the user's access
+      as any case does; this case's history stays readable and it is no longer worked) and a closed case's note;
+    - CaseFollowUpAction: Open a follow-up case, the primary action of a closed or cancelled case, or one past its reopen
+      window (followUpCase: create#FollowUpCase after the case's check);
+    - CaseLineageMenu: Merge cases (a service manager's) and Split into a new case, in the header's More menu, opening
+      MergeCases and SplitCase with this case;
+    - CaseLineageBox: Overview's lineage, each relation from or to the case with the other case, who, when, why and what it
+      referenced, each with who could see it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="followUpCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.create#FollowUpCase" out-map="followed"
+                    in-map="{requestId:requestId, requestName:(requestName || null), description:(description || null),
+                        reason:(reason || null)}"/>
+            <set field="closedRequestId" from="requestId"/>
+            <set field="requestId" from="followed.requestId"/>
+            <message type="success">Opened case ${requestId}, a follow-up of case ${closedRequestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CaseLineageBanner" condition="cd?.lineage?.mergedIntoRequestId || cd?.lineage?.closed">
+            <widgets>
+                <section name="CaseMergedBanner" condition="cd.lineage.mergedIntoRequestId">
+                    <widgets>
+                        <container-box type="info">
+                            <box-header title="Merged into case ${cd.lineage.mergedIntoRequestId}"/>
+                            <box-body>
+                                <label type="p" text="This case's history stays here; it is no longer worked, and the customer's replies to it go to case ${cd.lineage.mergedIntoRequestId} · ${cd.lineage.mergedIntoName}."/>
+                                <link url="${sharedLinks['Cases/CaseDetail']}" text="Open case ${cd.lineage.mergedIntoRequestId}" link-type="anchor-button"
+                                        btn-type="primary" icon="sym_o_call_merge" parameter-map="{requestId:cd.lineage.mergedIntoRequestId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CaseClosedBanner" condition="!cd.lineage.mergedIntoRequestId">
+                    <widgets>
+                        <label type="p" style="text-caption m-muted"
+                                text="Closed ${cd.lineage.closedText}: it is no longer reopened, and a reply from the customer makes a follow-up case."/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+        <section name="CaseFollowUpAction" condition="cd?.canFollowUp">
+            <widgets>
+                <container-dialog id="CaseFollowUp" button-text="Open a follow-up case" icon="sym_o_reply" type="primary" width="560"
+                        title="A follow-up of case ${requestId}">
+                    <form-single name="CaseFollowUpForm" transition="followUpCase" map="{requestId:requestId}">
+                        <field name="requestId"><default-field><hidden/></default-field></field>
+                        <field name="requestName">
+                            <default-field title="Subject" tooltip="Empty: Follow-up and this case's subject"><text-line size="60"/></default-field>
+                        </field>
+                        <field name="description"><default-field title="Description"><text-area rows="3" cols="60"/></default-field></field>
+                        <field name="reason"><default-field title="Why" tooltip="Internal"><text-line size="60"/></default-field></field>
+                        <field name="submitButton">
+                            <default-field title="Open a follow-up case">
+                                <submit confirmation="Open a new case for ${sc.customerName}, linked to case ${requestId}?"/>
+                            </default-field>
+                        </field>
+                    </form-single>
+                </container-dialog>
+            </widgets>
+        </section>
+        <section name="CaseLineageMenu" condition="cd?.canMerge || cd?.canSplit">
+            <widgets>
+                <link url="${sharedLinks['Cases/MergeCases']}" text="Merge cases" icon="sym_o_call_merge" link-type="anchor"
+                        parameter-map="{requestId:requestId}" condition="cd.canMerge"/>
+                <link url="${sharedLinks['Cases/SplitCase']}" text="Split into a new case" icon="sym_o_call_split" link-type="anchor"
+                        parameter-map="{requestId:requestId}" condition="cd.canSplit"/>
+            </widgets>
+        </section>
+        <section name="CaseLineageBox" condition="cd?.lineage?.relations?.length">
+            <widgets>
+                <container-box>
+                    <box-header title="Lineage"/>
+                    <box-body-nopad>
+                        <form-list name="CaseLineage" list="cd.lineage.relations" skip-form="true" paginate="false">
+                            <field name="relationText">
+                                <default-field title="Case">
+                                    <label text="${relationText}" type="div" style="text-caption m-muted"/>
+                                    <link url="${sharedLinks['Cases/CaseDetail']}" text="${otherRequestId}" link-type="anchor"
+                                            parameter-map="{requestId:otherRequestId}"/>
+                                    <label text="${otherName} · ${otherStatusText}" type="div" style="text-caption"/>
+                                </default-field>
+                            </field>
+                            <field name="dateText">
+                                <default-field title="When">
+                                    <display/>
+                                    <label text="${userName}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="reason"><default-field title="Why"><display/></default-field></field>
+                            <field name="itemsText"><default-field title="It took"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="relationText"/></column>
+                                <column><field-ref name="dateText"/><field-ref name="itemsText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

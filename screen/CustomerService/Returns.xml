@@ -12,11 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Returns / RMA section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Returns area of IronStone Customer Service (design-customer-service §1, §5; impl-customer-service P9): a menu group
+    holding Returns (the default: ReturnFind and ReturnList with the views of design Returns and the batch) and NewReturn,
+    with ReturnDetail (Shared/ReturnDetail in the Customer Service context, crosscut §3.18), QualityInspection
+    (Shared/QualityInspection, crosscut §3.19, F38) and ReturnAuthorization (the RMA to print) hidden from the menu; warranty
+    claims follow (P11). For the agent, manager and return authorizer (BOSS_CS_RETURNS); each list and record limited by
+    AccessServices and each action by Mantle's own permission. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Returns / RMA" default-menu-index="4" menu-image="sym_o_replay" menu-image-type="icon">
+        default-menu-title="Returns" default-menu-index="5" menu-image="sym_o_replay" menu-image-type="icon">
+    <subscreens default-item="Returns" always-use-full-path="true">
+        <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml" menu-include="false"/>
+        <subscreens-item name="QualityInspection" location="component://mr-boss/screen/Shared/QualityInspection.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Returns and RMAs." type="p"/>
+        <subscreens-panel id="CustomerServiceReturnsPanel" type="tab"/>
     </widgets>
 </screen>

@@ -346,7 +346,7 @@ spec({
     setupSpec() {
         login("john.doe")
         placeholders = findScreenFiles(apps, isPlaceholder)
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing"], (location) => !isPlaceholder(location))
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Projects", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing", "CustomerService"], (location) => !isPlaceholder(location))
         const accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [path, fixture] of Object.entries(accountingFixtures)) {
             demoRecords["Accounting/" + path] = fixture
@@ -388,6 +388,13 @@ spec({
         for (const [path, location] of purchasingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Purchasing.xml")))
                 screens.push([`${base}/Purchasing.xml`, path, location])
+        // Customer Service (P1): every built route's demo record and text (CustomerServiceSpecLib), and the shared screens under
+        // its root; its areas that are still placeholders are in the placeholder feature
+        const customerServiceFixtures = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(customerServiceFixtures.routes)) demoRecords["CustomerService/" + path] = fixture
+        for (const [path, location] of customerServiceFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/CustomerService.xml")))
+                screens.push([`${base}/CustomerService.xml`, path, location])
         // A direct shared-root render selects its default Contact leaf; the Accounting mount separately checks the header.
         demoRecords["Shared/Customer360/"] = Object.assign({}, accountingFixtures["Receivables/Customer360/Contact"], {
             text: "billing.acme@test.com"
@@ -471,8 +478,8 @@ feature("every placeholder screen renders in qvt without errors, with its menu",
     then({ failures }) {
         // fewer as the milestones replace them (129 after M4, 114 after M10 and the Comms mail settings, 110 after M9's
         // Knowledge and Notes, 104 after M8's Files and Shares and the public page moved out of Commons; Projects P1 adds the
-        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders, P7 Quality, P14 Subcontracting, P10 ShopFloor, P16 Reports; Purchasing P1 replaces Home and adds Agreements, Receiving, Bills, Approvals and Products, 66, which its phases replace; Purchasing P2 replaces Suppliers, Settings and Products, 63; P14a replaces Replenishment, 62; P3 replaces Orders, 61; P4 replaces Approvals, 60; P5 replaces Receiving, 59; P6 replaces Bills, 58; P8 replaces Returns, 57; P10 replaces Requests, 56; P13 replaces Agreements, 55; P11 replaces Sourcing, 54; P15 replaces Performance, 53)
-        placeholders.length >= 53
+        // placeholders of its menu, 25 more, which its phases replace: 102 after P7's Team planner and Allocations, 98 after P8a's billing, 97 after P9's reports; Products P2 replaces Settings; P6 replaces SupplierPrices; Warehouse P11 replaces Picking and Shipping; Warehouse P8 replaces Inspection; Warehouse P14 replaces Returns; Manufacturing P13 replaces Planning, P5a WorkOrders, P7 Quality, P14 Subcontracting, P10 ShopFloor, P16 Reports; Purchasing P1 replaces Home and adds Agreements, Receiving, Bills, Approvals and Products, 66, which its phases replace; Purchasing P2 replaces Suppliers, Settings and Products, 63; P14a replaces Replenishment, 62; P3 replaces Orders, 61; P4 replaces Approvals, 60; P5 replaces Receiving, 59; P6 replaces Bills, 58; P8 replaces Returns, 57; P10 replaces Requests, 56; P13 replaces Agreements, 55; P11 replaces Sourcing, 54; P15 replaces Performance, 53; Customer Service P1 replaces Home and adds Approvals and Reports, 54, which its phases replace; P2 replaces Cases and Settings, 52; P12 replaces Knowledge, 51; P3 replaces Customers, Orders and Availability, 48; P9 replaces Returns and Approvals, 46)
+        placeholders.length >= 46
         failures.join("\n") == ""
     },
 })
@@ -483,6 +490,9 @@ feature("every other Commons, Comms, Insights, Projects and Shared screen render
         for (const [root, path, location] of screens) {
             const app = root.substring(base.length + 1).replace(/\.xml$/, "")
             const demo = demoRecords[`${app}/${path}`] || {}
+            // a menu group whose default subscreen is a .qvue screen with no qvt (Customer Service's Knowledge, Commons Knowledge
+            // mounted): the shell opens it at its full path (always-use-full-path), which is rendered as its own route
+            if (demo.fullPathOnly) continue
             const parameters = Object.assign({ lastStandalone: "-2" }, demo.parameters)
             // a .qvue screen (render-modes "vue,qvue", with qvt and html after them for Inbox/Mail, a default subscreen whose
             // parents' levels the shell loads in qvt) answers its component in the qvue render mode

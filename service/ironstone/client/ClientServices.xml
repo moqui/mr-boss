@@ -607,6 +607,9 @@ along with this software (see the LICENSE.md file). If not, see
             <if condition="ec.message.hasError()"><return/></if>
             <if condition="writeOut.record.filedByPartyId != writeOut.client.userPartyId"><return error="true" message="Only a request you raised can be cancelled here"/></if>
             <if condition="['ReqCompleted', 'ReqCancelled'].includes(writeOut.record.statusId)"><return error="true" message="This request is closed"/></if>
+            <!-- a support case is Customer Service's; a customer cancels it through the Support app (impl-customer-service P2, F64) -->
+            <if condition="ec.resource.script(&apos;component://mr-boss/service/ironstone/customerservice/CaseGuard.js&apos;).isCase(requestId)">
+                <return error="true" message="CASE_IN_CUSTOMER_SERVICE: Request ${requestId} is a support case: the team closes it"/></if>
             <script><![CDATA[
                 const wasDisabled = ec.artifactExecution.disableAuthz()
                 try {

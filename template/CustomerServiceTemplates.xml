@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's case template parts (impl-customer-service P7, CS-TEMPLATES): CaseDetail's Overview values, the case's
+    template values as submitted with the form as it was at their time (labels and option texts then), each marked
+    customer-visible or internal (mantle.request.SupportCaseServices.get#CaseTemplateValues; CaseDetail checked the case
+    first). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="CaseTemplateValues">
+            <actions>
+                <service-call name="mantle.request.SupportCaseServices.get#CaseTemplateValues" out-map="caseTemplateOut"
+                        in-map="{requestId:requestId}" transaction="force-new" ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="caseTemplateValues" from="(caseTemplateOut?.values || []).map((row) =&gt; Object.assign({}, row,
+                        {audienceColor: row.audienceEnumId == 'CfaCustomer' ? 'positive' : 'warning'}))"/>
+            </actions>
+            <widgets>
+                <section name="CaseTemplateValueBox" condition="caseTemplateOut?.formResponseId">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${caseTemplateOut.templateName} · as submitted ${caseTemplateOut.responseDateText}"/>
+                            <box-body-nopad>
+                                <form-list name="CaseTemplateValueList" list="caseTemplateValues" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Field"><display/></default-field></field>
+                                    <field name="displayText"><default-field title="Value"><display/></default-field></field>
+                                    <field name="audienceText">
+                                        <default-field title="Who sees it">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${audienceColor}">${
+                                                    WebUtilities.encodeHtml(audienceText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: audienceText})}]]></text>
+                                                <text type="html">${audienceText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="displayText"/></column>
+                                        <column><field-ref name="audienceText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!caseTemplateValues.length"
+                                        text="Nothing was filled in."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

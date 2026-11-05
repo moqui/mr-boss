@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ServiceLevelPolicies (design-customer-service §9 ServiceLevelPolicies; impl-customer-service P4, CS-SLA): the
+    organization's service level policies, the most specific first (SlaPolicyList over Mantle's
+    mantle.request.SlaServices.find#Policies), each with its conditions, calendar, period and targets per priority band; New
+    policy and Change from a date (SlaPolicyEdit: save#Policy starts a row from its date and ends the one it replaces, or
+    keeps a draft; End ends a row), the administrator's (SUPPORT_POLICY_EDIT); and SlaSimulation (simulate#Policy): when a
+    case received at a time with a priority is due, on the calendar's working hours less holidays, with a pause. The
+    calendars, agreements and bands come from ironstone.customerservice.ConfigurationServices.get#ServiceLevelSettings;
+    working hours are kept on AgentTeams and in Commons. An open case keeps the row it began with. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Service levels" default-menu-index="7">
+    <parameter name="organizationPartyId"/>
+    <parameter name="simulatePolicyId"/>
+    <parameter name="receivedDate"/>
+    <parameter name="priority"/>
+    <parameter name="simulateCategoryId"/>
+    <parameter name="pauseFromDate"/>
+    <parameter name="pauseThruDate"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="savePolicy">
+        <actions>
+            <!-- the targets of the four priority bands, from the form's fields (business minutes) -->
+            <set field="targets" from="['CpbUrgent', 'CpbHigh', 'CpbNormal', 'CpbLow'].map((band) =&gt; ({priorityBandEnumId: band,
+                    firstResponseMinutes: ec.context.get('first_' + band) || null, resolutionMinutes: ec.context.get('resolution_' + band) || null,
+                    warningMinutes: ec.context.get('warning_' + band) || null}))"/>
+            <service-call name="mantle.request.SlaServices.save#Policy"
+                    in-map="{serviceLevelPolicyId:(serviceLevelPolicyId || null), organizationPartyId:organizationPartyId,
+                        policyName:policyName, requestCategoryId:(requestCategoryId ?? ''), requestTypeEnumId:(requestTypeEnumId ?? ''),
+                        customerPartyId:(customerPartyId ?? ''), agreementId:(agreementId ?? ''), calendarId:(calendarId ?? ''),
+                        holdPauses:(holdPauses || 'N'), maxPauseMinutes:(maxPauseMinutes ?? ''), reopenEnumId:(reopenEnumId || null),
+                        targets:targets, fromDate:(fromDate || null), draft:(draft == 'Y'), changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the policy ${policyName}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endPolicy">
+        <actions>
+            <service-call name="mantle.request.SlaServices.save#Policy"
+                    in-map="{serviceLevelPolicyId:serviceLevelPolicyId, end:true, fromDate:(fromDate || null)}"/>
+            <message type="success">Ended the policy</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="simulate">
+        <default-response url=".">
+            <parameter name="organizationPartyId"/><parameter name="simulatePolicyId"/><parameter name="receivedDate"/>
+            <parameter name="priority"/><parameter name="simulateCategoryId"/><parameter name="pauseFromDate"/><parameter name="pauseThruDate"/>
+        </default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceLevelSettings" out-map="cfg"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <if condition="cfgOrganizationPartyId">
+            <service-call name="mantle.request.SlaServices.find#Policies" out-map="policiesOut" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:cfgOrganizationPartyId}"/>
+        </if>
+        <if condition="cfgOrganizationPartyId &amp;&amp; simulatePolicyId">
+            <service-call name="mantle.request.SlaServices.simulate#Policy" out-map="simulated" transaction="force-new"
+                    ignore-error="true" in-map="{serviceLevelPolicyId:simulatePolicyId, organizationPartyId:cfgOrganizationPartyId,
+                        receivedDate:(receivedDate || null), priority:(priority || null), requestCategoryId:(simulateCategoryId || null),
+                        pauses:(pauseFromDate &amp;&amp; pauseThruDate ? [{fromDate:pauseFromDate, thruDate:pauseThruDate}] : [])}"/>
+        </if>
+        <set field="policiesFound" from="!!policiesOut?.policies"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="calendarOptions" from="cfg?.calendarOptions || []"/>
+        <set field="agreementOptions" from="cfg?.agreementOptions || []"/>
+        <set field="reopenOptions" from="cfg?.reopenOptions || []"/>
+        <!-- each policy with the values of its Change form (the targets as one field per band) -->
+        <set field="policies" from="(policiesOut?.policies || []).map((row) =&gt; Object.assign({}, row, {
+                stateColor: ({'In effect': 'positive', Scheduled: 'primary', Draft: 'warning'})[row.state] || 'grey-7',
+                targetText: row.targets.filter((target) =&gt; target.firstResponseMinutes || target.resolutionMinutes)
+                    .map((target) =&gt; target.bandText + ' ' + target.firstResponseText + ' / ' + target.resolutionText).join(' · '),
+                values: Object.assign({serviceLevelPolicyId: row.serviceLevelPolicyId, organizationPartyId: cfgOrganizationPartyId,
+                    policyName: row.policyName, requestCategoryId: row.requestCategoryId || '', requestTypeEnumId: row.requestTypeEnumId || '',
+                    customerPartyId: row.customerPartyId || '', agreementId: row.agreementId || '', calendarId: row.calendarId || '',
+                    holdPauses: row.holdPauses || 'N', maxPauseMinutes: row.maxPauseMinutes != null ? String(row.maxPauseMinutes) : '',
+                    reopenEnumId: row.reopenEnumId || 'SrpNewEpisode', draft: row.state == 'Draft' ? 'Y' : 'N'},
+                    Object.fromEntries(row.targets.flatMap((target) =&gt; [['first_' + target.priorityBandEnumId, target.firstResponseMinutes],
+                        ['resolution_' + target.priorityBandEnumId, target.resolutionMinutes], ['warning_' + target.priorityBandEnumId, target.warningMinutes]])))}))"/>
+        <set field="newValues" from="{organizationPartyId:cfgOrganizationPartyId, reopenEnumId:'SrpNewEpisode', holdPauses:'N', draft:'N',
+                first_CpbUrgent:'60', resolution_CpbUrgent:'480', warning_CpbUrgent:'15', first_CpbHigh:'120', resolution_CpbHigh:'960',
+                warning_CpbHigh:'30', first_CpbNormal:'240', resolution_CpbNormal:'1440', warning_CpbNormal:'60', first_CpbLow:'480',
+                resolution_CpbLow:'2400', warning_CpbLow:'120'}"/>
+        <set field="policyOptions" from="policies.filter((row) =&gt; row.state != 'Ended').map((row) =&gt; ({value: row.serviceLevelPolicyId,
+                label: row.policyName + ' (' + row.state.toLowerCase() + ')'}))"/>
+        <set field="sim" from="simulated?.simulation || null"/>
+        <set field="simValues" from="{organizationPartyId:cfgOrganizationPartyId, simulatePolicyId:(simulatePolicyId || policyOptions[0]?.value || ''),
+                receivedDate:receivedDate, priority:(priority || '5'), simulateCategoryId:simulateCategoryId, pauseFromDate:pauseFromDate,
+                pauseThruDate:pauseThruDate}"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfgOrganizationPartyId"/>
+        <section name="LevelSettings" condition="cfgOrganizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Service levels" type="h5"/></container>
+                    <container style="col-auto">
+                        <container-dialog id="NewPolicy" button-text="New policy" icon="sym_o_add" type="primary" width="900"
+                                title="New service level policy" condition="can.policyEdit">
+                            <form-single name="NewPolicyForm" transition="savePolicy" map="newValues">
+                                <field name="serviceLevelPolicyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="policyName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="requestCategoryId">
+                                    <default-field title="Queue" tooltip="Empty: any queue">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'queues', organizationPartyId:cfgOrganizationPartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="requestTypeEnumId">
+                                    <default-field title="Case type" tooltip="Empty: any type">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'caseTypes'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="customerPartyId">
+                                    <default-field title="Customer" tooltip="Empty: any customer">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'customers'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="agreementId">
+                                    <default-field title="Service agreement" tooltip="Empty: with or without one">
+                                        <drop-down allow-empty="true"><list-options list="agreementOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="calendarId">
+                                    <default-field title="Calendar" tooltip="Empty: the working hours of the queue's team">
+                                        <drop-down allow-empty="true"><list-options list="calendarOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="first_CpbUrgent"><default-field title="Urgent: first response (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="resolution_CpbUrgent"><default-field title="Resolution (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="warning_CpbUrgent"><default-field title="Warn before (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="first_CpbHigh"><default-field title="High: first response (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="resolution_CpbHigh"><default-field title="Resolution (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="warning_CpbHigh"><default-field title="Warn before (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="first_CpbNormal"><default-field title="Normal: first response (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="resolution_CpbNormal"><default-field title="Resolution (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="warning_CpbNormal"><default-field title="Warn before (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="first_CpbLow"><default-field title="Low: first response (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="resolution_CpbLow"><default-field title="Resolution (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="warning_CpbLow"><default-field title="Warn before (minutes)"><text-line size="6" input-type="number"/></default-field></field>
+                                <field name="holdPauses">
+                                    <default-field title="An internal hold pauses resolution" tooltip="Waiting for the customer always does">
+                                        <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="maxPauseMinutes">
+                                    <default-field title="Warn of a pause longer than (minutes)" tooltip="Empty: no limit">
+                                        <text-line size="6" input-type="number"/>
+                                    </default-field>
+                                </field>
+                                <field name="reopenEnumId">
+                                    <default-field title="A reopen">
+                                        <drop-down><list-options list="reopenOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="Empty: now; open cases keep the row they began with">
+                                        <date-time type="timestamp"/>
+                                    </default-field>
+                                </field>
+                                <field name="draft">
+                                    <default-field title="Save">
+                                        <radio><option key="N" text="Publish"/><option key="Y" text="As a draft"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save policy"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="policyName"/><field-ref name="calendarId"/></field-row>
+                                    <field-row><field-ref name="requestCategoryId"/><field-ref name="requestTypeEnumId"/></field-row>
+                                    <field-row><field-ref name="customerPartyId"/><field-ref name="agreementId"/></field-row>
+                                    <field-row><field-ref name="first_CpbUrgent"/><field-ref name="resolution_CpbUrgent"/><field-ref name="warning_CpbUrgent"/></field-row>
+                                    <field-row><field-ref name="first_CpbHigh"/><field-ref name="resolution_CpbHigh"/><field-ref name="warning_CpbHigh"/></field-row>
+                                    <field-row><field-ref name="first_CpbNormal"/><field-ref name="resolution_CpbNormal"/><field-ref name="warning_CpbNormal"/></field-row>
+                                    <field-row><field-ref name="first_CpbLow"/><field-ref name="resolution_CpbLow"/><field-ref name="warning_CpbLow"/></field-row>
+                                    <field-row><field-ref name="holdPauses"/><field-ref name="maxPauseMinutes"/><field-ref name="reopenEnumId"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="draft"/><field-ref name="changeReason"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <label type="p" style="text-caption m-muted" text="The most specific policy whose conditions hold applies to a new case:
+                        a service agreement, then the customer, the queue, the type, and the default. Its targets count working time
+                        less holidays; working hours are kept on Agent teams."/>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <!-- ===== SlaPolicyList ===== -->
+                <section-iterate name="Policies" list="policies" entry="policy">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${policy.policyName} · ${policy.rankText}"/>
+                            <box-toolbar>
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${policy.stateColor}">${
+                                        WebUtilities.encodeHtml(policy.state)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: policy.state})}]]></text>
+                                    <text type="html">${policy.state}</text>
+                                </render-mode>
+                                <container-dialog id="ChangePolicy_${policy.serviceLevelPolicyId}" button-text="${policy.state == 'Draft' ? 'Edit draft' : 'Change from a date'}"
+                                        icon="sym_o_edit" width="900" title="${policy.policyName}" condition="can.policyEdit">
+                                    <form-single name="ChangePolicyForm" transition="savePolicy" extends="NewPolicyForm" map="policy.values"/>
+                                </container-dialog>
+                                <link url="endPolicy" text="End" icon="sym_o_event_busy" link-type="hidden-form-link" btn-type="danger"
+                                        condition="can.policyEdit &amp;&amp; policy.state != 'Draft'"
+                                        parameter-map="{serviceLevelPolicyId:policy.serviceLevelPolicyId, organizationPartyId:cfgOrganizationPartyId}"
+                                        confirmation="End the policy ${policy.policyName} now? Open cases keep their clocks."/>
+                            </box-toolbar>
+                            <box-body>
+                                <form-single name="PolicyFacts" map="policy">
+                                    <field name="conditionText"><default-field title="Applies to"><display/></default-field></field>
+                                    <field name="calendarText"><default-field title="Calendar"><display/></default-field></field>
+                                    <field name="periodText"><default-field title="In effect"><display/></default-field></field>
+                                    <field name="holdText"><default-field title="Pauses"><display/></default-field></field>
+                                    <field name="reopenText"><default-field title="A reopen"><display/></default-field></field>
+                                </form-single>
+                                <form-list name="PolicyTargets" list="policy.targets" skip-form="true" paginate="false">
+                                    <field name="bandText"><default-field title="Priority"><display/></default-field></field>
+                                    <field name="firstResponseText"><default-field title="First response"><display/></default-field></field>
+                                    <field name="resolutionText"><default-field title="Resolution"><display/></default-field></field>
+                                    <field name="warningText"><default-field title="Warning"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="bandText"/><field-ref name="warningText"/></column>
+                                        <column><field-ref name="firstResponseText"/><field-ref name="resolutionText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <label type="p" style="m-muted" condition="policiesFound &amp;&amp; !policies.length"
+                        text="No service level policy yet: cases have no clocks. Make the organization's default with New policy."/>
+                <label type="p" style="m-muted" condition="!policiesFound"
+                        text="The service levels of this organization are not available to you; choose another organization."/>
+                <!-- ===== SlaSimulation ===== -->
+                <section name="Simulation" condition="policyOptions.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="When would a case be due?"/>
+                            <box-body>
+                                <form-single name="SlaSimulation" transition="simulate" map="simValues">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="simulatePolicyId">
+                                        <default-field title="Policy">
+                                            <drop-down><list-options list="policyOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="receivedDate"><default-field title="Received"><date-time type="timestamp"/></default-field></field>
+                                    <field name="priority">
+                                        <default-field title="Priority">
+                                            <drop-down>
+                                                <option key="1" text="1 (urgent)"/><option key="3" text="3 (high)"/><option key="5" text="5 (normal)"/>
+                                                <option key="7" text="7 (low)"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="simulateCategoryId">
+                                        <default-field title="Queue" tooltip="Its team's working hours; empty: the default queue">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'queues', organizationPartyId:cfgOrganizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="pauseFromDate"><default-field title="Waiting for the customer from"><date-time type="timestamp"/></default-field></field>
+                                    <field name="pauseThruDate"><default-field title="to"><date-time type="timestamp"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Show due times"><submit/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="simulatePolicyId"/><field-ref name="simulateCategoryId"/></field-row>
+                                        <field-row><field-ref name="receivedDate"/><field-ref name="priority"/></field-row>
+                                        <field-row><field-ref name="pauseFromDate"/><field-ref name="pauseThruDate"/></field-row>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                                <section name="SimulationResult" condition="sim">
+                                    <widgets>
+                                        <label text="${sim.policyName}, ${sim.bandText}: received ${sim.receivedText}, on ${sim.calendarText} (${sim.hoursText})"
+                                                type="p" style="text-body2"/>
+                                        <label text="${sim.explanation}" type="p" style="text-warning" condition="sim.explanation"/>
+                                        <form-list name="SimulatedClocks" list="sim.clocks" skip-form="true" paginate="false">
+                                            <field name="label"><default-field title="Clock"><display/></default-field></field>
+                                            <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                            <field name="warningText"><default-field title="Warning"><display/></default-field></field>
+                                            <field name="pausedText"><default-field title="Paused"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="label"/><field-ref name="targetText"/></column>
+                                                <column><field-ref name="dueText"/><field-ref name="warningText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <form-list name="SimulatedHolidays" list="sim.holidays" skip-form="true" paginate="false">
+                                            <field name="name"><default-field title="Holiday"><display/></default-field></field>
+                                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                            <field name="thruText"><default-field title="To"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="name"/></column>
+                                                <column><field-ref name="fromText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

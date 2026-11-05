@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's channel parts (impl-customer-service P6, CS-CHANNELS; design-customer-service §3 ChannelSessions
+    LogCall, CaseDetail's Reply publicly in forum), each transition included by name where it is used (CaseDetail through
+    Shared/RequestDetail); Log a call is template/CustomerServiceCallLog.xml's:
+    - previewForumReply and publishForumReply: CaseDetail's Reply publicly in forum for a case escalated from a PASS forum
+      topic (its PublicDiscussionLink): the exact public body and audience through Mantle's
+      mantle.forum.ForumServices.preview#CaseReply, then publish#CaseReply with the matching preview hash, as the user (the
+      forum checks their posting rights there); the case's private notes are never copied;
+    - CaseForumReply: the section that shows it on CaseDetail's Conversation for such a case. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="previewForumReply">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="tab" value="conversation"/>
+            <parameter name="forumReplyBody"/>
+        </default-response>
+    </transition>
+    <transition name="publishForumReply">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <check-errors/>
+            <service-call name="ironstone.customerservice.ChannelServices.get#CaseForumTopic" out-map="topicOut"
+                    in-map="{appRoot:appRoot, requestId:requestId}"/>
+            <check-errors/>
+            <if condition="!topicOut.topic">
+                <return error="true" message="Case ${requestId} came from no forum topic"/>
+            </if>
+            <service-call name="mantle.forum.ForumServices.publish#CaseReply" out-map="published"
+                    in-map="{input:{siteId:topicOut.topic.siteId, rootCommEventId:topicOut.topic.rootCommEventId, requestId:requestId,
+                        body:forumReplyBody, previewHash:previewHash, operationId:(operationId || null)}}"/>
+            <message type="success">Replied publicly in the forum topic of case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="conversation"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- CaseDetail's Conversation: Log a call, and for a case from a forum topic the public reply (preview, then publish) -->
+        <section name="CaseChannelActions">
+            <actions>
+                <service-call name="ironstone.customerservice.ChannelServices.get#CaseForumTopic" out-map="forumOut" transaction="force-new"
+                        ignore-error="true" in-map="{appRoot:appRoot, requestId:requestId}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="forumTopic" from="forumOut?.topic || null"/>
+                <set field="forumPreview" from="null"/>
+                <if condition="forumTopic &amp;&amp; forumReplyBody">
+                    <service-call name="mantle.forum.ForumServices.preview#CaseReply" out-map="previewOut" transaction="force-new"
+                            ignore-error="true"
+                            in-map="{input:{siteId:forumTopic.siteId, rootCommEventId:forumTopic.rootCommEventId, requestId:requestId, body:forumReplyBody}}"/>
+                    <set field="forumPreviewError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                    <script>ec.message.clearErrors()</script>
+                    <set field="forumPreview" from="previewOut?.result || null"/>
+                </if>
+                <set field="logRequestId" from="requestId"/>
+                <set field="logReturnRequestId" from="requestId"/>
+                <set field="logTab" from="'conversation'"/>
+                <set field="logCustomerPartyId" from="sc?.customerPartyId"/>
+            </actions>
+            <widgets>
+                <container style="row q-gutter-sm q-mb-sm">
+                    <container-dialog id="CaseLogCall" button-text="Log a call" icon="sym_o_call" width="640" title="Log a call on case ${requestId}"
+                            condition="cd?.canEdit">
+                        <section-include name="LogCallForm" location="component://mr-boss/template/CustomerServiceCallLog.xml"/>
+                    </container-dialog>
+                    <container-dialog id="CaseForumReply" button-text="Reply publicly in forum" icon="sym_o_forum" width="720"
+                            title="Reply in the forum topic ${forumTopic?.title || ''}" condition="forumTopic &amp;&amp; cd?.canEdit">
+                        <form-single name="ForumReplyPreviewForm" transition="previewForumReply" map="{requestId:requestId, forumReplyBody:forumReplyBody}">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="forumReplyBody">
+                                <default-field title="Public reply" tooltip="Everyone who reads the topic sees it; nothing else of the case is copied">
+                                    <text-area rows="6" cols="70"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+                <section name="ForumReplyPreview" condition="forumPreview || forumPreviewError">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Public reply preview"/>
+                            <box-body>
+                                <label type="p" style="text-negative" text="${forumPreviewError}" condition="forumPreviewError"/>
+                                <section name="ForumReplyPreviewBody" condition="forumPreview">
+                                    <widgets>
+                                        <label type="div" style="text-caption m-muted" text="${ec.l10n.localize('Audience')}: ${forumPreview.audience}"/>
+                                        <html-view id="ForumReplyBodyPreview" html="${forumPreview.body}"/>
+                                        <form-single name="ForumReplyPublishForm" transition="publishForumReply"
+                                                map="{requestId:requestId, forumReplyBody:forumReplyBody, previewHash:forumPreview.previewHash,
+                                                    operationId:ec.l10n.format(ec.user.nowTimestamp, 'yyyyMMddHHmmssSSS') + '-' + requestId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="forumReplyBody"><default-field><hidden/></default-field></field>
+                                            <field name="previewHash"><default-field><hidden/></default-field></field>
+                                            <field name="operationId"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Post publicly">
+                                                    <submit confirmation="Post this reply in the public forum topic? Everyone who reads it sees it."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The customer return authorization (RMA; design-customer-service §11 outputs; impl-customer-service P9): an authorized
+    customer return as the customer reads it, from Mantle's get#ReturnAuthorizationPrint (the same document authorize#Return
+    stores as the return's PDF and send#ReturnAuthorization mails): what to send back, why and by when, where to, the return
+    label's tracking and the policy's instructions, as of the print time; no amount, cost or internal note. Printed from
+    ReturnDetail as html-print (/apps/CustomerService/Returns/ReturnAuthorization?returnId=...&renderMode=html-print);
+    printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return authorization" default-menu-include="false">
+    <parameter name="returnId" required="true"/>
+    <actions>
+        <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}" out-map="checked"/>
+        <set field="returnFound" from="!ec.message.hasError()"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="returnFound">
+            <service-call name="mantle.order.ReturnPolicyServices.get#ReturnAuthorizationPrint" out-map="printed"
+                    transaction="force-new" ignore-error="true" in-map="{returnId:returnId}"/>
+            <set field="printError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="printBody" from="printed?.printHtml ? String(printed.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')
+                .replace(/&lt;\/body&gt;[\s\S]*$/i, '') : ''"/>
+    </actions>
+    <widgets>
+        <section name="RmaMissing" condition="!returnFound || !printBody">
+            <widgets>
+                <label text="${returnFound ? (printError || 'Return ' + returnId + ' is not authorized yet.') : 'Return ' + returnId + ' is not available.'}" type="p"/>
+            </widgets>
+        </section>
+        <section name="Rma" condition="returnFound &amp;&amp; printBody">
+            <widgets>
+                <render-mode>
+                    <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: "Return authorization " + returnId + ": print it from the browser"})}]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

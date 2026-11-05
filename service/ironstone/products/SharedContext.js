@@ -222,8 +222,86 @@ function purchasingContext() {
         activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null
     }
 }
+// Customer Service's mounts (impl-customer-service P3, F52; crosscut §3.5, §3.7, §3.21): Shared/Product360,
+// InventoryAvailability and PriceExplain under Availability. A Customer Service user who reads the catalog (PRODUCT_CATALOG_VIEW, every Customer
+// Service user) reads the product master read only with the crosscut's Customer Service tabs: Summary, Identifiers,
+// Dimensions & units, Stock (availability at the customer-serving facilities: the inventory facilities of the user's
+// organizations' stores, else their warehouses), Documents, and Prices with their explanation for a price reader
+// (PRICE_VIEW). No cost, supplier price, margin, method or stock policy: those capabilities are off here whatever the user
+// holds, so Mantle's reads leave them out. An unready projection shows unknown, never zero (Inventory.js projection, F31).
+// P10 (impl-customer-service): Associations, read only, shows a product's substitutes (PatEquivalent, PatReplacement)
+const customerServiceTabs = ["Summary", "Identifiers", "Dimensions", "Stock", "Documents", "Prices", "Associations"]
+const customerServicePaths = {
+    "": "Availability",
+    "Products/Product360": "Availability/Product360",
+    "Prices/PriceExplain": "Availability/PriceExplain",
+    "Availability/InventoryAvailability": "Availability/InventoryAvailability",
+    "Availability/StockAtDate": "Availability/StockAtDate"
+}
+function customerServiceFacilities(organizationPartyIds) {
+    const stores = Array.from(
+        ec.entity
+            .find("mantle.product.store.ProductStore")
+            .condition("organizationPartyId", "in", organizationPartyIds.length ? organizationPartyIds : ["_NA_"])
+            .disableAuthz()
+            .list()
+    )
+    const ids = new Set(stores.map(store => store.inventoryFacilityId).filter(Boolean))
+    if (stores.length)
+        for (const row of ec.entity
+            .find("mantle.product.store.ProductStoreFacility")
+            .condition(
+                "productStoreId",
+                "in",
+                stores.map(store => store.productStoreId)
+            )
+            .disableAuthz()
+            .list())
+            ids.add(row.facilityId)
+    if (!ids.size)
+        for (const row of ec.entity
+            .find("mantle.facility.Facility")
+            .condition("ownerPartyId", "in", organizationPartyIds.length ? organizationPartyIds : ["_NA_"])
+            .condition("facilityTypeEnumId", "FcTpWarehouse")
+            .disableAuthz()
+            .list())
+            ids.add(row.facilityId)
+    return Array.from(ids)
+}
+function customerServiceContext() {
+    const service = ec.resource.script("component://mr-boss/service/ironstone/customerservice/CustomerService.js")
+    const userScope = service.scope()
+    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {},
+        read = !!source.read
+    const capabilities = {systemAdmin: !!source.systemAdmin, read, priceRead: read && !!source.priceRead}
+    for (const name of ["catalogEdit", "catalogAdmin", "priceEdit", "supplierPriceRead", "supplierPriceEdit"])
+        capabilities[name] = false
+    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
+        capabilities[name] = false
+    Object.assign(capabilities, {stockPlan: false, stockManage: false, glPost: false, marginRead: false})
+    const organizationPartyIds = service.vendorIds(userScope)
+    return {
+        capabilities,
+        appRoot: "CustomerService",
+        linkBase: "//CustomerService",
+        webBase: "/qapps/CustomerService",
+        printBase: "/apps/CustomerService",
+        sharedLinks: Object.fromEntries(
+            Object.entries(customerServicePaths).map(([key, path]) => [key, "//CustomerService/" + path])
+        ),
+        productTabs: read ? customerServiceTabs.filter(tab => tab !== "Prices" || capabilities.priceRead) : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null,
+        facilityIds: read ? customerServiceFacilities(organizationPartyIds) : []
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
+    if (appRoot === "CustomerService") return customerServiceContext()
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()
     if (appRoot === "Purchasing") return purchasingContext()
@@ -259,6 +337,8 @@ function context(p) {
 }
 ;({
     mayOpen,
+    // Customer Service's customer-serving facilities (its StockAtDate and facility choices, impl-customer-service P3)
+    customerServiceFacilities,
     execute: (op, p) => {
         if (op !== "context") throw new Error("Unknown shared context action")
         return context(p)

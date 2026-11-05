@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's knowledge reads (impl-customer-service P12, CS-KNOWLEDGE; design-customer-service §3, §6, §9;
+    Knowledge.js): scoped by AccessServices (the user's organizations, and the cases of their queues or assigned to them).
+    The rules and writes are Mantle's mantle.request.KnowledgeServices (save#ServiceKnowledgeSource, find#ArticleSuggestions,
+    get#ArticlePublicLink, record#ArticleFeedback, review#ArticleFeedback, suggest#ArticleEdit, create#ArticleFromCase),
+    which the screens call after these checks. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="KnowledgeContext" allow-remote="false">
+        <description>The Customer Service row of Commons Knowledge (design Knowledge): the wiki spaces of the user's
+            organizations' knowledge sources and their draft spaces (the spaces the mount lists), the case worked on when
+            requestId is a case the user sees, and what the user may do from it: link it and send it to the customer
+            (SUPPORT_CASE_EDIT), suggest an edit, author (SUPPORT_KNOWLEDGE_EDIT) and open the feedback.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="requestId"/></in-parameters>
+        <out-parameters><parameter name="knowledgeContext" type="Map"/></out-parameters>
+        <actions>
+            <set field="knowledgeContext" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('knowledgeContext', context).knowledgeContext"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseKnowledge" allow-remote="false">
+        <description>A case's Knowledge tab (design CaseDetail Knowledge): the articles linked to it (WikiPageRequest) with their
+            space, state (published or draft) and audience, and the suggestions for its subject or the text searched
+            (mantle.request.KnowledgeServices.find#ArticleSuggestions: the requester's language first, drafts and internal
+            articles flagged), with what the user may do. Refuses a case the user does not see (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+            <parameter name="text"/>
+        </in-parameters>
+        <out-parameters><parameter name="knowledge" type="Map"/></out-parameters>
+        <actions>
+            <set field="knowledge" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('caseKnowledge', context).knowledge"/>
+        </actions>
+    </service>
+    <service verb="prepare" noun="ArticleSend" allow-remote="false">
+        <description>Send to customer: the Comms Compose address for the case's contact (else its customer) with the article's
+            published address in the body and the case as its record (the sent mail is filed on the case). The address is
+            mantle.request.KnowledgeServices.get#ArticlePublicLink's, which refuses a draft (ARTICLE_NOT_PUBLISHED) and an
+            internal article (ARTICLE_INTERNAL). Needs SUPPORT_CASE_EDIT and a case the user sees.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+            <parameter name="wikiPageId" required="true"/>
+        </in-parameters>
+        <out-parameters><parameter name="send" type="Map"/></out-parameters>
+        <actions>
+            <set field="send" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('prepareSend', context).send"/>
+        </actions>
+    </service>
+    <service verb="find" noun="ArticleFeedback" allow-remote="false">
+        <description>The feedback on the articles of the user's organizations (design ArticleFeedback FeedbackFind,
+            FeedbackList): by space, article, helpful, review state and period, newest first, paged; each with its article and
+            version, the case when the user sees it (else only that there is one), the number of cases on the article, who gave
+            it and the review (decision, reviewer, task). For a knowledge author or a service manager
+            (SUPPORT_KNOWLEDGE_EDIT, SUPPORT_CASE_MANAGE; else PERMISSION_DENIED); canReview for an author.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="wikiSpaceId"/>
+            <parameter name="wikiPageId"/>
+            <parameter name="helpful"/>
+            <parameter name="statusId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="feedbackList" type="List"/>
+            <parameter name="feedbackListCount" type="Integer"/>
+            <parameter name="feedbackListPageIndex" type="Integer"/>
+            <parameter name="feedbackListPageSize" type="Integer"/>
+            <parameter name="feedbackListPageMaxIndex" type="Integer"/>
+            <parameter name="feedbackListPageRangeLow" type="Integer"/>
+            <parameter name="feedbackListPageRangeHigh" type="Integer"/>
+            <parameter name="spaceOptions" type="List"/>
+            <parameter name="canReview" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('findFeedback', context)"/>
+            <set field="feedbackList" from="found.feedbackList"/>
+            <set field="feedbackListCount" from="found.feedbackListCount"/>
+            <set field="feedbackListPageIndex" from="found.feedbackListPageIndex"/>
+            <set field="feedbackListPageSize" from="found.feedbackListPageSize"/>
+            <set field="feedbackListPageMaxIndex" from="found.feedbackListPageMaxIndex"/>
+            <set field="feedbackListPageRangeLow" from="found.feedbackListPageRangeLow"/>
+            <set field="feedbackListPageRangeHigh" from="found.feedbackListPageRangeHigh"/>
+            <set field="spaceOptions" from="found.spaceOptions"/>
+            <set field="canReview" from="found.canReview"/>
+        </actions>
+    </service>
+    <service verb="prepare" noun="ArticleFromCase" allow-remote="false">
+        <description>CaseToArticle's first step (design CaseToArticle AnswerSelection): the case's outward and customer emails
+            with their audience (its internal notes are counted and never offered), the personal data found for the author to
+            check, the draft spaces of its organization's knowledge sources, and the redacted preview of the chosen answers
+            (communicationEventIds, else its outward replies) through mantle.request.KnowledgeServices.create#ArticleFromCase
+            with preview. For a knowledge author (SUPPORT_KNOWLEDGE_EDIT) on a case they see.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestId" required="true"/>
+            <parameter name="communicationEventIds" type="List"/>
+        </in-parameters>
+        <out-parameters><parameter name="prepared" type="Map"/></out-parameters>
+        <actions>
+            <set field="prepared" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('prepareArticle', context).prepared"/>
+        </actions>
+    </service>
+    <service verb="find" noun="KnowledgeSources" allow-remote="false">
+        <description>The knowledge sources of one of the user's organizations (design KnowledgeSources), current and drafts,
+            with their display text, and the edit form's options: the wiki spaces the user may read, the organization's teams
+            and queues. Refuses an organization not the user's (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="organizationPartyId"/></in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="sources" type="List"/>
+            <parameter name="spaceOptions" type="List"/>
+            <parameter name="teamOptions" type="List"/>
+            <parameter name="queueOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Knowledge.js').execute('findSources', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="sources" from="found.sources"/>
+            <set field="spaceOptions" from="found.spaceOptions"/>
+            <set field="teamOptions" from="found.teamOptions"/>
+            <set field="queueOptions" from="found.queueOptions"/>
+        </actions>
+    </service>
+</services>

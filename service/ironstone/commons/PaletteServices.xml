@@ -44,7 +44,7 @@ along with this software (see the LICENSE.md file). If not, see
                 moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time),
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
                 opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
-                order, supplier quote or purchase agreement opens under Purchasing for its users)</description></parameter>
+                order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users)</description></parameter>
             <parameter name="id" required="true"/>
             <parameter name="workEffortTypeEnumId"/>
             <parameter name="partyTypeEnumId"/>
@@ -59,6 +59,39 @@ along with this software (see the LICENSE.md file). If not, see
                 url = ec.resource.script('component://mr-boss/service/ironstone/accounting/Accounting.js').recordLink(financeKind, id)
                 icon = 'sym_o_account_balance'
                 return
+            }
+            // sales orders open under Customer Service for a user who may work with them there (ironstone.customerservice's
+            // scope: the root grant, the selling organization and the customer, impl-customer-service P1; Home's lookup until P3
+            // builds OrderDetail), else nowhere, as before (no other app has a sales order screen, impl-purchasing F46); a
+            // customer once Customer Service has its Customer360 (P3; until then its Commons contact below); cases, returns and
+            // warranty claims as their phases build them, leaving Projects' and Commons' requests as they are (F9)
+            // a support case (impl-customer-service P2) opens CaseDetail for a Customer Service user who sees it; anyone else
+            // keeps its Projects or Commons link below
+            if (ec.user.userId && (recordEntityName === 'mantle.request.Request' || docType === 'MantleRequest')
+                    && ec.entity.find('mantle.request.support.CaseProfile').condition('requestId', id).disableAuthz().count() > 0) {
+                const caseUrl = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js').recordLink('case', id)
+                if (caseUrl) {
+                    url = caseUrl
+                    icon = 'sym_o_support_agent'
+                    return
+                }
+            }
+            if (ec.user.userId && (recordEntityName === 'mantle.order.OrderHeader' || recordEntityName === 'mantle.party.Party'
+                    || docType === 'MantleParty')) {
+                const customerService = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js')
+                if (recordEntityName === 'mantle.order.OrderHeader' && customerService.isSalesOrder(id)) {
+                    url = customerService.recordLink('order', id)
+                    icon = 'sym_o_receipt_long'
+                    return
+                }
+                if (recordEntityName !== 'mantle.order.OrderHeader' && customerService.hasScreen('customer')) {
+                    const customerUrl = customerService.recordLink('customer', id)
+                    if (customerUrl) {
+                        url = customerUrl
+                        icon = 'sym_o_person'
+                        return
+                    }
+                }
             }
             // purchase orders, supplier quotes and purchase agreements open under Purchasing for a user who may work with them
             // there (ironstone.purchasing's scope: the root grant, the buying organization and the supplier,

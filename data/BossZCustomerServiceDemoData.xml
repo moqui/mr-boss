@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- P3: Retail's service mailbox, which the agent, manager and administrator send from (a confirmation resend through the
+        mail client, mantle.order.OrderConfirmationServices); delivery stays on a local sink, as Accounting's demo mail -->
+    <moqui.basic.email.EmailServer emailServerId="BOSS_CS_DEMO_MAIL" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N" smtpSsl="N"/>
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_CS_SERVICE_MAIL" ownerPartyId="ORG_ZIZI_RETAIL" accountKindEnumId="EakShared"
+            emailServerId="BOSS_CS_DEMO_MAIL" emailAddress="service@retail.example" accountName="Retail customer service"
+            statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_AGENT" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_MANAGER" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_ADMIN" fromDate="0" permissionEnumId="EapSend"/>
+    <!-- Customer Service's demo orders (impl-customer-service P1; P3 adds the held order), made through Mantle's order, shipment and payment services
+        once the products and stock of BossCustomerServiceDemoData.xml are committed: each order runs in a transaction of its
+        own, which sees only committed rows, so this file loads after that one (and after the other BOSS demo data). -->
+    <ironstone.customerservice.DemoServices.load-CustomerServiceDemo/>
+    <!-- P2: the demo requests made cases by the case rule (Mantle's ensure#CaseProfile) -->
+    <ironstone.customerservice.DemoServices.load-CaseDemo/>
+    <!-- P5: the demo teams' user groups (their saved replies' audience) in step with their members -->
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_SUPPORT"/>
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_PRIVACY"/>
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_SERVICES"/>
+    <!-- P12: the service articles, knowledge sources and feedback (wiki and Mantle services), after the cases -->
+    <ironstone.customerservice.DemoServices.load-KnowledgeDemo/>
+</entity-facade-xml>

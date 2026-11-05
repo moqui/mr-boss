@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Returns (design-customer-service §5 Returns; style-guide §3.2 List; impl-customer-service P9): ReturnFind and ReturnList
+    over ironstone.customerservice.ReturnServices.find#Returns (the customer returns of the user's organizations and customers;
+    supplier returns are Purchasing's), with the views of design Returns (Awaiting authorization, the default; Requested;
+    Authorized, awaiting goods; Received, awaiting disposition; Manual response; Settlement pending; Expiring; Cancelled; Closed;
+    All), each row with its RMA number, the customer's reference, order, assignee, expiry, the quantities authorized, received,
+    rejected and settled, and its status; and the batch for a return authorizer, Authorize or Cancel the selected returns, each
+    in its own transaction with a result per return (apply#ReturnBatch). New return opens NewReturn. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Returns" default-menu-index="1">
+    <parameter name="view"/>
+    <parameter name="text"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="orderId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- the selected returns authorized or cancelled, a result per return (a transition with actions, so the row selection posts
+        its ids) -->
+    <transition name="batchReturns">
+        <actions>
+            <set field="returnIds" from="(Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(','))
+                    .filter((id) =&gt; id)"/>
+            <service-call name="ironstone.customerservice.ReturnServices.apply#ReturnBatch" out-map="applied"
+                    in-map="{appRoot:appRoot, action:action, returnIds:returnIds, operationKey:operationKey,
+                        reason:(reason || null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(applied.summary, applied.doneCount == applied.results.length
+                    ? 'success' : 'warning')</script>
+        </actions>
+        <default-response url="."><parameter name="view"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ReturnServices.find#Returns" out-map="out" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, text:text, customerPartyId:customerPartyId, orderId:orderId,
+                    assigneePartyId:assigneePartyId, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="found" from="out?.found || {}"/>
+        <set field="returnRows" from="found.returnRows || []"/>
+        <set field="returnRowsCount" from="found.returnRowsCount || 0"/>
+        <set field="returnRowsPageIndex" from="found.returnRowsPageIndex || 0"/>
+        <set field="returnRowsPageSize" from="found.returnRowsPageSize || 25"/>
+        <set field="returnRowsPageMaxIndex" from="Math.max(0, Math.ceil(returnRowsCount / returnRowsPageSize) - 1)"/>
+        <set field="returnRowsPageRangeLow" from="returnRowsCount ? returnRowsPageIndex * returnRowsPageSize + 1 : 0"/>
+        <set field="returnRowsPageRangeHigh" from="Math.min(returnRowsCount, (returnRowsPageIndex + 1) * returnRowsPageSize)"/>
+        <set field="viewLinks" from="(found.views || []).map((option) =&gt; Object.assign({}, option,
+                {current: option.value == found.view}))"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="batchKey" from="'batch-' + ec.user.randomString(16)"/>
+        <set field="emptyText" from="text || customerPartyId || orderId || assigneePartyId ? 'No return matches these filters.'
+                : 'No return in this view.'"/>
+    </actions>
+    <widgets>
+        <context title="Returns" selection-form="ReturnList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Returns" type="h5"/>
+                <label text="${found.viewLabel || ''}${found.amountsWithheld ? ' · credit amounts withheld' : ''}" type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="${sharedLinks['Returns/NewReturn']}" text="New return" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_add" condition="found.canEnter"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="ReturnViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.value}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.value}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ReturnList" list="returnRows" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <row-selection id-field="returnId" parameter="selectedIds" list-mode="true" condition="found.canAuthorize">
+                        <action>
+                            <dialog button-text="Authorize" button-icon="sym_o_verified" title="Authorize the selected returns"/>
+                            <form-single name="BatchAuthorize" transition="batchReturns">
+                                <field name="action" from="'authorize'"><default-field><hidden/></default-field></field>
+                                <field name="operationKey" from="batchKey"><default-field><hidden/></default-field></field>
+                                <field name="reason">
+                                    <default-field title="Reason" tooltip="Needed for a return no policy covers (manual review)">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Authorize">
+                                        <submit confirmation="Authorize the selected returns? Each makes its return shipment;
+                                                nothing is credited yet."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Cancel" button-icon="sym_o_cancel" title="Cancel the selected returns"/>
+                            <form-single name="BatchCancel" transition="batchReturns">
+                                <field name="action" from="'cancel'"><default-field><hidden/></default-field></field>
+                                <field name="reason">
+                                    <default-field title="Reason"><text-line/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Cancel returns">
+                                        <submit confirmation="Cancel the selected returns? One with goods received or a credit is
+                                                left as it is."/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="returnId">
+                        <header-field title="Return" show-order-by="true"/>
+                        <default-field title="RMA">
+                            <link url="${url}" url-type="plain" text="${displayId}" link-type="anchor" style="text-mono"/>
+                            <label text="${customerReference}" type="div" style="text-caption m-muted" condition="customerReference"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="RMA or customer reference"><text-find hide-options="true"/></header-field>
+                    </field>
+                    <field name="customerName">
+                        <default-field title="Customer"><display/></default-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                        parameter-map="{selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="orderText">
+                        <header-field title="Order"/>
+                        <default-field title="Order"><display/></default-field>
+                    </field>
+                    <field name="orderId">
+                        <header-field title="Order"><text-line size="12"/></header-field>
+                    </field>
+                    <field name="assigneeName">
+                        <default-field title="Assignee"><display/></default-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <header-field title="Assignee">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'returnAssignees'}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="expireText">
+                        <default-field title="Expires">
+                            <display text="${expireText}${expired ? ' · expired' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="quantitiesText">
+                        <default-field title="Quantities"><display/></default-field>
+                    </field>
+                    <field name="creditedText" align="right">
+                        <default-field title="Credited"><display text="${creditedText || 'Withheld'}"/></default-field>
+                    </field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                            <label text="${exceptionAsked ? 'Exception asked' : manualReview ? 'Manual review' : ''}" type="div"
+                                    style="text-caption m-muted" condition="exceptionAsked || manualReview"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="returnId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="quantitiesText"/></column>
+                    </columns>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-sm m-muted" condition="!returnRows.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

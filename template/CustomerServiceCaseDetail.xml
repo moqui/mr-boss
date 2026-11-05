@@ -1,0 +1,613 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's Customer Service branch, CaseDetail (crosscut §3.11 Customer Service row; design-customer-service §3
+    CaseDetail; impl-customer-service P2, F49): the section Shared/RequestDetail includes when appRoot is CustomerService, over
+    ironstone.customerservice.CaseServices.get#CaseDetail (a case of the user's queues, or assigned to them). The header (the
+    case, its customer, queue, priority band, assignee and the workflow's agent status label, with the customer's label beside
+    it) with the moves its workflow allows (resolve with a resolution, hold and reopen with a reason; transition#Case) and
+    Assign, Priority and Queue (update#Case) and Tags (set#CaseTags), each after the case's check; the tabs Conversation
+    first (Chatter: reply, note and log), Overview (the description, the customer and people, the linked records, the tags),
+    Work (the linked work items, each opening WorkItemDetail here, and Add task) and Files; and the Recent cases pane (the
+    customer's other open or recent cases). The clocks (P4) beside the header and the Service level tab, over Mantle's
+    mantle.request.SlaServices.get#CaseSlaHistory, with a manager's Correct (correct#CaseSla). Later phases add saved
+    replies (P5: the Saved reply tab, template/CustomerServiceReplies.xml), merge and split (P8: the lineage, a merged case's
+    redirect, a closed case's follow-up, template/CustomerServiceLineage.xml), the RMA, order-change and warranty actions (P9-P11) and Knowledge (P12:
+    template/CustomerServiceKnowledge.xml). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="caseChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="updateCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.update#Case"
+                    in-map="{requestId:requestId, requestCategoryId:(requestCategoryId || null), priority:(priority || null),
+                        assigneePartyId:(caseAction == 'assign' ? (assigneePartyId ?? '') : null), caseRevision:(caseRevision || null)}"/>
+            <message type="success">Saved case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="transitionCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.transition#Case" out-map="moved"
+                    in-map="{requestId:requestId, toStatusId:toStatusId, resolutionEnumId:(resolutionEnumId || null),
+                        reason:(reason || null), caseRevision:(caseRevision || null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Case ' + requestId + ': ' + moved.statusLabel, 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="setCaseTags">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.set#CaseTags"
+                    in-map="{requestId:requestId, tagEnumIds:(tagEnumIds || []), mode:'replace'}"/>
+            <message type="success">Saved the tags of case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- P4: a manager's reasoned correction of a clock's due time -->
+    <transition name="correctCaseSla">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseManage'}"/>
+            <service-call name="mantle.request.SlaServices.correct#CaseSla"
+                    in-map="{requestId:requestId, caseSlaEpisodeId:caseSlaEpisodeId, dueDate:dueDate, reason:(reason || null)}"/>
+            <message type="success">Corrected the clock of case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceCase" condition="appRoot == 'CustomerService'">
+            <actions>
+                <service-call name="ironstone.customerservice.CaseServices.get#CaseDetail" out-map="caseOut"
+                        in-map="{appRoot:appRoot, requestId:requestId}" transaction="force-new" ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="cd" from="caseOut?.detail || null"/>
+                <set field="sc" from="cd?.theCase || {}"/>
+                <set field="csTab" from="['conversation', 'overview', 'work', 'files'].includes(tab) ? tab : tab == 'tasks' ? 'work'
+                        : 'conversation'"/>
+                <set field="csTabs" from="[['conversation', 'Conversation'], ['overview', 'Overview'],
+                        ['work', 'Work' + (cd?.work?.length ? ' (' + cd.work.length + ')' : '')], ['files', 'Files']]
+                        .map(([key, label]) =&gt; ({key, label, current: key == csTab}))"/>
+                <set field="csMoves" from="cd?.moves || []"/>
+                <set field="csPrimary" from="csMoves.find((move) =&gt; move.toStatusId == 'ReqCompleted' || move.reopens) || null"/>
+                <set field="csOtherMoves" from="csMoves.filter((move) =&gt; move !== csPrimary)"/>
+                <set field="csValues" from="{requestId:requestId, tab:csTab, caseRevision:sc.caseRevision, priority:String(sc.priority ?? 5),
+                        requestCategoryId:sc.requestCategoryId, assigneePartyId:sc.assigneePartyId || ''}"/>
+                <set field="csTagIds" from="(cd?.tags || []).map((tag) =&gt; tag.tagEnumId)"/>
+                <!-- P4: the case's clocks (the latest of each beside the header) and the Service level tab -->
+                <if condition="cd">
+                    <service-call name="mantle.request.SlaServices.get#CaseSlaHistory" out-map="slaOut" in-map="{requestId:requestId}"
+                            transaction="force-new" ignore-error="true"/>
+                    <script>ec.message.clearErrors()</script>
+                </if>
+                <set field="csClocks" from="slaOut?.clocks || []"/>
+                <set field="csClockCards" from="['SlcFirstResponse', 'SlcResolution'].map((id) =&gt; csClocks.filter((row) =&gt; row.clockEnumId == id).pop())
+                        .filter(Boolean)"/>
+                <set field="csSlaEvents" from="slaOut?.events || []"/>
+                <set field="csTab" from="tab == 'sla' ? 'sla' : csTab"/>
+                <set field="csTabs" from="csTabs.concat([{key: 'sla', label: 'Service level'}]).map((row) =&gt; Object.assign({}, row,
+                        {current: row.key == csTab}))"/>
+                <!-- P12: the Knowledge tab (template/CustomerServiceKnowledge.xml), after the others -->
+                <set field="csTab" from="tab == 'knowledge' ? 'knowledge' : csTab"/>
+                <script>csTabs.push({key: 'knowledge', label: 'Knowledge'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
+                <!-- P5: the Saved reply tab (template/CustomerServiceReplies.xml), for a user who works the case -->
+                <set field="csTab" from="tab == 'reply' &amp;&amp; cd?.canEdit ? 'reply' : csTab"/>
+                <script>if (cd?.canEdit) csTabs.splice(1, 0, {key: 'reply', label: 'Saved reply'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
+                <set field="csValues" from="Object.assign({}, csValues, {tab: csTab})"/>
+                <!-- P10: Request order change, for the case's linked order the user may work with -->
+                <set field="csChangeOrderId" from="(cd?.links || []).find((link) =&gt; link.recordEntityName == 'mantle.order.OrderHeader'
+                        &amp;&amp; link.url)?.recordId || null"/>
+            </actions>
+            <widgets>
+                <section name="CaseMissing" condition="!cd">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Case ${requestId} is not available: it does not exist, it is not a case of your
+                                        queues, or it is not assigned to you."/>
+                                <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CaseFound" condition="cd">
+                    <widgets>
+                        <context record-entity="mantle.request.Request" record-id="${requestId}" title="Case ${requestId} · ${sc.requestName}"/>
+                        <container style="q-mb-xs">
+                            <link url="${sharedLinks['Cases/Cases']}" link-type="anchor" text="Cases" icon="arrow_back"/>
+                        </container>
+                        <!-- P8: a merged case's redirect, a closed case's note (template/CustomerServiceLineage.xml) -->
+                        <section-include name="CaseLineageBanner" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+                        <!-- ===== the header (style-guide §3.3): the case, its customer and queue; its status; the facts and the actions ===== -->
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-baseline">
+                                        <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                                        <label text="${sc.requestName}" type="h5"/>
+                                    </container>
+                                    <label text="${[sc.customerName, sc.queueName, sc.typeText, sc.channelText ? 'by ' + sc.channelText : '',
+                                            'opened ' + sc.requestDateText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${sc.statusColor}">${
+                                            WebUtilities.encodeHtml(sc.statusLabel)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "CaseStatus", style: "strong", text: sc.statusLabel})}]]></text>
+                                        <text type="html">${sc.statusLabel}</text>
+                                    </render-mode>
+                                    <label text="The customer sees: ${sc.customerStatusLabel}" type="div" style="text-caption m-muted"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 col-md row q-col-gutter-lg">
+                                    <container style="col-auto">
+                                        <label text="Customer" type="div" style="text-caption m-muted"/>
+                                        <label text="${sc.customerName || '—'}" type="div" style="text-body2"/>
+                                    </container>
+                                    <container style="col-auto">
+                                        <label text="Priority" type="div" style="text-caption m-muted"/>
+                                        <label text="${sc.bandText}" type="div" style="text-body2 text-${sc.bandColor}"/>
+                                    </container>
+                                    <container style="col-auto">
+                                        <label text="Queue" type="div" style="text-caption m-muted"/>
+                                        <label text="${sc.queueName || '—'}" type="div" style="text-body2"/>
+                                    </container>
+                                    <container style="col-auto">
+                                        <label text="Assignee" type="div" style="text-caption m-muted"/>
+                                        <label text="${sc.assigneeName || 'Unassigned'}" type="div" style="text-body2${sc.assigneeName ? '' : ' text-warning'}"/>
+                                    </container>
+                                    <container style="col-auto">
+                                        <label text="Due" type="div" style="text-caption m-muted"/>
+                                        <label text="${sc.dueText || '—'}" type="div" style="text-body2${sc.overdue ? ' text-negative' : ''}"/>
+                                    </container>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-xs m-record-actions">
+                                    <!-- P8: a closed or cancelled case's follow-up -->
+                                    <section-include name="CaseFollowUpAction" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+                                    <container-dialog id="CasePrimaryMove" button-text="${csPrimary?.reopens ? 'Reopen' : 'Resolve'}"
+                                            icon="${csPrimary?.reopens ? 'sym_o_replay' : 'sym_o_task_alt'}" type="primary" width="560"
+                                            title="${csPrimary?.reopens ? 'Reopen' : 'Resolve'} case ${requestId}"
+                                            condition="cd.canTransition &amp;&amp; csPrimary">
+                                        <form-single name="CasePrimaryMoveForm" transition="transitionCase" map="csValues">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="tab"><default-field><hidden/></default-field></field>
+                                            <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                            <field name="toStatusId" from="csPrimary.toStatusId"><default-field><hidden/></default-field></field>
+                                            <field name="resolutionEnumId" from="'RrCompleted'">
+                                                <conditional-field title="Resolution" condition="csPrimary.resolutionRequired">
+                                                    <drop-down>
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="RequestResolution"/>
+                                                                <econdition field-name="enumId" operator="not-equals" value="RrUnresolved"/>
+                                                                <order-by field-name="description"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </conditional-field>
+                                                <default-field><ignored/></default-field>
+                                            </field>
+                                            <field name="reason">
+                                                <default-field title="${csPrimary.reasonRequired ? 'Reason' : 'Note on the conversation'}"
+                                                        tooltip="An internal note; the customer hears through a reply">
+                                                    <text-area rows="3"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="${csPrimary?.reopens ? 'Reopen' : 'Resolve'}">
+                                                    <submit confirmation="${csPrimary?.reopens ? 'Reopen' : 'Resolve'} case ${requestId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CaseAssign" button-text="Assign" icon="sym_o_person_add" width="480"
+                                            title="Assign case ${requestId}" condition="cd.canEdit">
+                                        <form-single name="CaseAssignForm" transition="updateCase" map="csValues">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="tab"><default-field><hidden/></default-field></field>
+                                            <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                            <field name="caseAction" from="'assign'"><default-field><hidden/></default-field></field>
+                                            <field name="assigneePartyId">
+                                                <default-field title="Assignee" tooltip="Empty unassigns it">
+                                                    <drop-down allow-empty="true" current-description="${sc.assigneeName}">
+                                                        <dynamic-options transition="caseChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'agents', queueId:sc.requestCategoryId, selected:sc.assigneePartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Assign"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <button-menu text="More" icon="more_horiz" condition="cd.canEdit || (cd.canTransition &amp;&amp; csOtherMoves.length)">
+                                        <!-- P10: a change of the case's order (Shared/OrderChangeDetail), linked to the case -->
+                                        <link url="${sharedLinks['Orders/OrderChangeDetail']}" text="Request order change" icon="sym_o_edit_note"
+                                                parameter-map="{orderId:csChangeOrderId, caseRequestId:requestId}"
+                                                condition="cd.canEdit &amp;&amp; csChangeOrderId &amp;&amp; customerService?.capabilities?.orderChangeRequest"/>
+                                        <section-iterate name="CaseMoves" list="csOtherMoves" entry="move">
+                                            <widgets>
+                                                <container-dialog id="CaseMove_${move.toStatusId}" button-text="${move.label}" icon="sym_o_flag"
+                                                        width="520" title="Case ${requestId}: ${move.label}" condition="cd.canTransition">
+                                                    <form-single name="CaseMoveForm" transition="transitionCase" map="csValues">
+                                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                                        <field name="tab"><default-field><hidden/></default-field></field>
+                                                        <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                                        <field name="toStatusId" from="move.toStatusId"><default-field><hidden/></default-field></field>
+                                                        <field name="resolutionEnumId" from="move.toStatusId == 'ReqCancelled' ? 'RrRejected' : 'RrCompleted'">
+                                                            <conditional-field title="Resolution" condition="move.resolutionRequired">
+                                                                <drop-down>
+                                                                    <entity-options key="${enumId}" text="${description}">
+                                                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                            <econdition field-name="enumTypeId" value="RequestResolution"/>
+                                                                            <econdition field-name="enumId" operator="not-equals" value="RrUnresolved"/>
+                                                                            <order-by field-name="description"/>
+                                                                        </entity-find>
+                                                                    </entity-options>
+                                                                </drop-down>
+                                                            </conditional-field>
+                                                            <default-field><ignored/></default-field>
+                                                        </field>
+                                                        <field name="reason">
+                                                            <default-field title="${move.reasonRequired ? 'Reason' : 'Note on the conversation'}"><text-area rows="2"/></default-field>
+                                                        </field>
+                                                        <field name="submitButton">
+                                                            <default-field title="${move.label}">
+                                                                <submit confirmation="Case ${requestId}: ${move.label}?"/>
+                                                            </default-field>
+                                                        </field>
+                                                    </form-single>
+                                                </container-dialog>
+                                            </widgets>
+                                        </section-iterate>
+                                        <container-dialog id="CasePriority" button-text="Change priority" icon="sym_o_priority_high" width="480"
+                                                title="The priority of case ${requestId}" condition="cd.canEdit">
+                                            <form-single name="CasePriorityForm" transition="updateCase" map="csValues">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="tab"><default-field><hidden/></default-field></field>
+                                                <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                                <field name="priority">
+                                                    <default-field title="Priority">
+                                                        <drop-down>
+                                                            <option key="1" text="1 (urgent)"/><option key="2" text="2 (urgent)"/>
+                                                            <option key="3" text="3 (high)"/><option key="4" text="4 (high)"/>
+                                                            <option key="5" text="5 (normal)"/><option key="6" text="6 (normal)"/>
+                                                            <option key="7" text="7 (low)"/><option key="8" text="8 (low)"/>
+                                                            <option key="9" text="9 (low)"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="CaseQueue" button-text="Move to queue" icon="sym_o_move_item" width="480"
+                                                title="Move case ${requestId} to another queue" condition="cd.canEdit">
+                                            <form-single name="CaseQueueForm" transition="updateCase" map="csValues">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="tab"><default-field><hidden/></default-field></field>
+                                                <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                                <field name="requestCategoryId">
+                                                    <default-field title="Queue">
+                                                        <drop-down current-description="${sc.queueName}">
+                                                            <dynamic-options transition="caseChoices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'queues', organizationPartyId:sc.organizationPartyId}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Move"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="CaseTags" button-text="Tags" icon="sym_o_sell" width="480"
+                                                title="The tags of case ${requestId}" condition="cd.canEdit">
+                                            <form-single name="CaseTagsForm" transition="setCaseTags" map="{requestId:requestId, tab:csTab, tagEnumIds:csTagIds}">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="tab"><default-field><hidden/></default-field></field>
+                                                <field name="tagEnumIds">
+                                                    <default-field title="Tags">
+                                                        <drop-down allow-multiple="true">
+                                                            <dynamic-options transition="caseChoices" server-search="true" min-length="0"
+                                                                    parameter-map="{choice:'tags'}"/>
+                                                        </drop-down>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Save tags"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <!-- P8: merge and split -->
+                                        <section-include name="CaseLineageMenu" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+                                        <!-- P9: request an RMA for the case's customer, the return linked to the case (link#RequestRecord) -->
+                                        <link url="${sharedLinks['Returns/NewReturn']}" text="Request RMA" link-type="anchor"
+                                                icon="sym_o_assignment_return" parameter-map="{requestId:requestId}"
+                                                condition="cd.canEdit &amp;&amp; customerService.capabilities.returns"/>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <!-- ===== P4: the clocks (first response, the current resolution) ===== -->
+                        <container style="row q-col-gutter-sm q-mb-sm">
+                            <section-iterate name="CaseClocks" list="csClockCards" entry="csClock">
+                                <widgets>
+                                    <container style="col-12 col-sm-6 col-md-auto">
+                                        <container style="q-pa-sm rounded-borders m-tonal text-${csClock.color}">
+                                            <label text="${csClock.label}: ${csClock.stateText}" type="div" style="text-caption"/>
+                                            <label text="${csClock.open ? 'Due ' + csClock.dueText : csClock.actualText ? 'Done ' + csClock.actualText : 'Due was ' + csClock.dueText}"
+                                                    type="div" style="text-body2"/>
+                                            <label text="${csClock.remainingText} left" type="div" style="text-caption" condition="csClock.open &amp;&amp; csClock.remainingText"/>
+                                        </container>
+                                    </container>
+                                </widgets>
+                            </section-iterate>
+                            <container style="col-auto self-center">
+                                <label text="${slaOut?.noPolicy ? 'No service level applies to this case' : ''}" type="span" style="text-caption m-muted"
+                                        condition="!csClockCards.length"/>
+                            </container>
+                        </container>
+                        <!-- ===== the tabs, Conversation first, with the Recent cases pane beside them ===== -->
+                        <container style="row q-gutter-xs q-mb-sm">
+                            <section-iterate name="CaseTabs" list="csTabs" entry="csTabLink">
+                                <widgets>
+                                    <link url="." text="${csTabLink.label}" link-type="anchor-button" icon="sym_o_check"
+                                            parameter-map="{requestId:requestId, tab:csTabLink.key}" condition="csTabLink.current"/>
+                                    <link url="." text="${csTabLink.label}" link-type="anchor-button"
+                                            parameter-map="{requestId:requestId, tab:csTabLink.key}" condition="!csTabLink.current"/>
+                                </widgets>
+                            </section-iterate>
+                        </container>
+                        <container-row>
+                            <row-col lg="8">
+                                <section name="CaseConversation" condition="csTab == 'conversation'">
+                                    <widgets>
+                                        <!-- P6: Log a call, and Reply publicly in forum for a case from a forum topic
+                                            (template/CustomerServiceChannels.xml) -->
+                                        <section-include name="CaseChannelActions" location="component://mr-boss/template/CustomerServiceChannels.xml"/>
+                                        <chatter id="CaseChatter" record-entity="mantle.request.Request" record-id="${requestId}"
+                                                default-tab="message"/>
+                                    </widgets>
+                                </section>
+                                <section name="CaseOverview" condition="csTab == 'overview'">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Case"/>
+                                            <box-body>
+                                                <label text="${sc.description}" type="p" style="text-body2" condition="sc.description"/>
+                                                <label text="No description" type="p" style="m-muted" condition="!sc.description"/>
+                                                <form-single name="CaseFacts" map="sc">
+                                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                                    <field name="contactName"><default-field title="Contact"><display/></default-field></field>
+                                                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                                                    <field name="typeText"><default-field title="Type"><display/></default-field></field>
+                                                    <field name="filedByName"><default-field title="Filed by"><display/></default-field></field>
+                                                    <field name="intakeText"><default-field title="Received"><display/></default-field></field>
+                                                    <field name="updatedText"><default-field title="Updated"><display/></default-field></field>
+                                                    <field name="resolutionText">
+                                                        <conditional-field condition="sc.resolutionText" title="Resolution"><display/></conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="tagText"><default-field title="Tags"><display/></default-field></field>
+                                                </form-single>
+                                            </box-body>
+                                        </container-box>
+                                        <!-- P7: the case's template values as submitted (template/CustomerServiceTemplates.xml) -->
+                                        <section-include name="CaseTemplateValues" location="component://mr-boss/template/CustomerServiceTemplates.xml"/>
+                                        <container-box>
+                                            <box-header title="Linked records"/>
+                                            <box-body-nopad>
+                                                <form-list name="CaseLinks" list="cd.links" skip-form="true" paginate="false">
+                                                    <!-- P3: each record opens its Customer Service screen when the user may work with it -->
+                                                    <field name="recordText">
+                                                        <default-field title="Record">
+                                                            <link url="${url}" url-type="plain" text="${recordText}" link-type="anchor"
+                                                                    condition="url"/>
+                                                            <label text="${recordText}" type="span" condition="!url"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="linkedText"><default-field title="Linked"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="recordText"/></column>
+                                                        <column><field-ref name="linkedText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!cd.links.length"
+                                                        text="Not on any order, return or other record yet."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                        <!-- P8: merged, split and followed-up cases (template/CustomerServiceLineage.xml) -->
+                                        <section-include name="CaseLineageBox" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+                                    </widgets>
+                                </section>
+                                <section name="CaseWork" condition="csTab == 'work'">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Work"/>
+                                            <box-toolbar>
+                                                <container-dialog id="CaseAddTask" button-text="Add task" icon="sym_o_add_task" width="520"
+                                                        title="A task for case ${requestId}" condition="cd.canEdit">
+                                                    <form-single name="CaseAddTaskForm" transition="addTask" map="{requestId:requestId}">
+                                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                                        <field name="workEffortName"><default-field title="Task"><text-line size="50"/></default-field></field>
+                                                        <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                                        <field name="submitButton"><default-field title="Add task"><submit/></default-field></field>
+                                                    </form-single>
+                                                </container-dialog>
+                                            </box-toolbar>
+                                            <box-body-nopad>
+                                                <form-list name="CaseWorkList" list="cd.work" skip-form="true" paginate="false">
+                                                    <field name="workEffortId">
+                                                        <default-field title="Work item">
+                                                            <link url="${url}" url-type="plain" text="${workEffortId}" link-type="anchor"/>
+                                                            <label text="${workEffortName}" type="div" style="text-caption m-muted"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="workEffortId"/></column>
+                                                        <column><field-ref name="statusText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!cd.work.length"
+                                                        text="No work on this case. Its work done tells you; it never resolves the case."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <!-- P4: the Service level tab: the clocks with their policy row and calendar, a manager's Correct, the events -->
+                                <section name="CaseServiceLevel" condition="csTab == 'sla'">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Clocks"/>
+                                            <box-toolbar>
+                                                <link url="${sharedLinks['Reports/CaseAnalytics']}" text="Case analytics"
+                                                        icon="sym_o_monitoring" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                            </box-toolbar>
+                                            <box-body-nopad>
+                                                <form-list name="CaseSlaClocks" list="csClocks" skip-form="true" paginate="false">
+                                                    <field name="label">
+                                                        <default-field title="Clock">
+                                                            <display/>
+                                                            <label text="${policyName} · ${calendarText}" type="div" style="text-caption m-muted"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="stateText">
+                                                        <default-field title="State">
+                                                            <render-mode>
+                                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${color}">${
+                                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                                <text type="html">${stateText}</text>
+                                                            </render-mode>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="startText"><default-field title="Started"><display/></default-field></field>
+                                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                                    <field name="actualText"><default-field title="Done"><display/></default-field></field>
+                                                    <field name="elapsedText"><default-field title="Business time"><display/></default-field></field>
+                                                    <field name="pausedText"><default-field title="Paused"><display/></default-field></field>
+                                                    <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                                                    <field name="actions">
+                                                        <default-field title="">
+                                                            <container-dialog id="CorrectClock_${caseSlaEpisodeId}" button-text="Correct" icon="sym_o_edit_calendar"
+                                                                    width="480" title="Correct ${label} of case ${requestId}" condition="cd.canManage">
+                                                                <form-single name="CorrectClockForm" transition="correctCaseSla"
+                                                                        map="{requestId:requestId, tab:'sla', caseSlaEpisodeId:caseSlaEpisodeId}">
+                                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                                    <field name="tab"><default-field><hidden/></default-field></field>
+                                                                    <field name="caseSlaEpisodeId"><default-field><hidden/></default-field></field>
+                                                                    <field name="dueDate"><default-field title="Due"><date-time type="timestamp"/></default-field></field>
+                                                                    <field name="reason">
+                                                                        <default-field title="Reason" tooltip="Kept with the earlier due time"><text-area rows="2"/></default-field>
+                                                                    </field>
+                                                                    <field name="submitButton">
+                                                                        <default-field title="Correct">
+                                                                            <submit confirmation="Correct ${label} of case ${requestId}? The earlier figure stays in its history."/>
+                                                                        </default-field>
+                                                                    </field>
+                                                                </form-single>
+                                                            </container-dialog>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="label"/><field-ref name="dueText"/></column>
+                                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                                    </columns>
+                                                </form-list>
+                                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!csClocks.length"
+                                                        text="No clock: no service level policy applied to this case when it came in."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                        <container-box>
+                                            <box-header title="What happened"/>
+                                            <box-body-nopad>
+                                                <form-list name="CaseSlaEvents" list="csSlaEvents" skip-form="true" paginate="false">
+                                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                                    <field name="typeText">
+                                                        <default-field title="Event">
+                                                            <display/>
+                                                            <label text="${clockLabel}" type="div" style="text-caption m-muted" condition="clockLabel"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                                                    <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                                                    <field name="userName"><default-field title="By"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="typeText"/><field-ref name="detail"/></column>
+                                                        <column><field-ref name="dateText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <!-- P5: a saved reply previewed and applied on confirmation (template/CustomerServiceReplies.xml) -->
+                                <section name="CaseReplyTab" condition="csTab == 'reply'">
+                                    <widgets>
+                                        <section-include name="CaseReplyAction" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
+                                    </widgets>
+                                </section>
+                                <!-- P12: linked and suggested articles (template/CustomerServiceKnowledge.xml) -->
+                                <section name="CaseKnowledgeTab" condition="csTab == 'knowledge'">
+                                    <widgets>
+                                        <section-include name="CaseKnowledge" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+                                    </widgets>
+                                </section>
+                                <section name="CaseFiles" condition="csTab == 'files'">
+                                    <widgets>
+                                        <record-files id="CaseFiles" record-entity="mantle.request.Request" record-id="${requestId}"/>
+                                    </widgets>
+                                </section>
+                            </row-col>
+                            <row-col lg="4">
+                                <container-box>
+                                    <box-header title="Recent cases of ${sc.customerName}"/>
+                                    <box-body-nopad>
+                                        <form-list name="RecentCases" list="cd.recent" skip-form="true" paginate="false">
+                                            <field name="requestId">
+                                                <default-field title="Case">
+                                                    <link url="${url}" url-type="plain" text="${requestId}" link-type="anchor"/>
+                                                    <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusLabel"><default-field title="Status"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="requestId"/></column>
+                                                <column><field-ref name="statusLabel"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!cd.recent.length"
+                                                text="No other open or recent case."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

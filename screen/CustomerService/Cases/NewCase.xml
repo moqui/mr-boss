@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewCase (design-customer-service §3 NewCase; style-guide §3.9 Wizard; impl-customer-service P2): CaseIdentity (the
+    customer the user serves, by name, email or phone, the organization and the type, by its customer label), the duplicate
+    warning (the customer's open cases from CaseDetail's Recent cases read; another customer's are never shown), then
+    CaseDescription and SubmitCase (subject, description, queue, priority band, channel, contact and assignee) over
+    mantle.request.SupportCaseServices.create#Case, after the customer's check, which opens the case in CaseDetail. The
+    choices come from ironstone.customerservice.CaseServices.prepare#Case. Template fields come in P7. P12: what the case is
+    about (subject) in the first step, and the articles it suggests (mantle.request.KnowledgeServices.find#ArticleSuggestions,
+    the customer's language first), each opening in Knowledge; suggestions never block the case. The quick create's New
+    case. P7: the template step: the template chosen in the first step, else the queue's
+    (ironstone.customerservice.TemplateServices.get#CaseTemplateChoice), whose fields SubmitCase takes from the DbForm as of
+    now (extends="DbForm#..."), customer-visible and internal alike; create#Case checks them on the server
+    (validate#TemplateValues: hidden ones dropped, required ones present) and keeps them as the case's FormResponse. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New case" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="requestTypeEnumId"/>
+    <parameter name="subject"/>
+    <!-- P3: the order a new case is on (OrderDetail's New case), linked by create#Case -->
+    <parameter name="orderId"/>
+    <!-- P7: the template chosen in the first step (empty: the queue's) -->
+    <parameter name="templateFormId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- CaseIdentity: the screen again with the customer, organization and type chosen (a link form) -->
+    <transition name="identify">
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="requestTypeEnumId"/>
+            <parameter name="subject"/>
+            <parameter name="orderId"/>
+            <parameter name="templateFormId"/>
+        </default-response>
+    </transition>
+    <transition name="createCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'customer', recordId:customerPartyId, capability:'caseEdit'}"/>
+            <!-- P3: an order the case is on, checked as the user's -->
+            <if condition="orderId">
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            </if>
+            <!-- P7: a queue changed in this step to one whose template was not the one shown is refused, so a field never shown
+                is never demanded; the template chosen in step one is the way to it -->
+            <if condition="templateQueueId &amp;&amp; requestCategoryId &amp;&amp; requestCategoryId != templateQueueId">
+                <service-call name="ironstone.customerservice.TemplateServices.get#CaseTemplateChoice" out-map="queueChoice"
+                        in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, requestCategoryId:requestCategoryId}"/>
+                <if condition="queueChoice.queueTemplateFormId &amp;&amp; queueChoice.queueTemplateFormId != (templateFormId || '')">
+                    <return error="true" message="This queue asks for the fields of its template ${queueChoice.templateName}: choose it as the Template in step 1, then fill it in"/></if>
+            </if>
+            <service-call name="mantle.request.SupportCaseServices.create#Case" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                        contactPartyId:(contactPartyId || null), requestTypeEnumId:(requestTypeEnumId || null),
+                        requestCategoryId:(requestCategoryId || null), requestName:requestName, description:(description || null),
+                        priority:(priority || null), salesChannelEnumId:(salesChannelEnumId || null),
+                        assigneePartyId:(assigneePartyId || null),
+                        records:(orderId ? [{recordEntityName:'mantle.order.OrderHeader', recordId:orderId}] : null),
+                        templateFormId:(templateFormId || null), templateValues:Object.assign({}, ec.web.parameters)}"/>
+            <set field="requestId" from="created.requestId"/>
+            <message type="success">Created case ${requestId}</message>
+        </actions>
+        <default-response url="../CaseDetail"><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.CaseServices.prepare#Case" out-map="prepareOut" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                    requestTypeEnumId:requestTypeEnumId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="prepared" from="prepareOut?.prepared || {organizations: [], typeOptions: [], queueOptions: [], duplicates: [],
+                bandOptions: [], configured: false}"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="identity" from="{organizationPartyId:prepared.organizationPartyId || '', customerPartyId:customerPartyId || '',
+                requestTypeEnumId:prepared.requestTypeEnumId || '', orderId:orderId || ''}"/>
+        <set field="caseValues" from="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId,
+                requestTypeEnumId:prepared.requestTypeEnumId, requestCategoryId:prepared.requestCategoryId,
+                priority:prepared.priority, salesChannelEnumId:'ScPhone', orderId:orderId || ''}"/>
+        <!-- P12: the subject asked in the first step is the case's subject -->
+        <script>identity.subject = subject || ''; caseValues.requestName = subject || null</script>
+        <set field="describe" from="!!(prepared.customerFound &amp;&amp; prepared.requestTypeEnumId &amp;&amp; prepared.queueOptions.length)"/>
+        <!-- P7: the template step, its fields in SubmitCase -->
+        <service-call name="ironstone.customerservice.TemplateServices.get#CaseTemplateChoice" out-map="templateChoice"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, organizationPartyId:prepared.organizationPartyId, requestCategoryId:prepared.requestCategoryId,
+                    templateFormId:templateFormId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="caseTemplateFormId" from="templateChoice?.templateFormId || ''"/>
+        <set field="caseTemplateOptions" from="templateChoice?.templateOptions || []"/>
+        <script>identity.templateFormId = caseTemplateFormId; caseValues.templateFormId = caseTemplateFormId
+            caseValues.templateQueueId = prepared.requestCategoryId || ''</script>
+    </actions>
+    <widgets>
+        <label text="New case" type="h5"/>
+        <section name="NewCaseUnavailable" condition="!can.caseEdit || !prepared.configured">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="${!can.caseEdit ? 'You do not enter cases here: ask a service manager to add you to a team.'
+                                : 'Customer Service is not set up for your organizations yet: the service defaults, a queue and a case type come first.'}"/>
+                        <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="NewCaseSteps" condition="can.caseEdit &amp;&amp; prepared.configured">
+            <widgets>
+                <!-- step 1: who and what -->
+                <container-box>
+                    <box-header title="1. Customer and type"/>
+                    <box-body>
+                        <form-single name="CaseIdentity" transition="identify" map="identity">
+                            <field name="customerPartyId">
+                                <default-field title="Customer" tooltip="By name, account, email or phone">
+                                    <drop-down allow-empty="false" current-description="${prepared.customerName}">
+                                        <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                                parameter-map="{selected:customerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <conditional-field title="Service organization" condition="prepared.organizations.length &gt; 1">
+                                    <drop-down><list-options list="prepared.organizations" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="requestTypeEnumId">
+                                <default-field title="Type">
+                                    <drop-down><list-options list="prepared.typeOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="subject">
+                                <default-field title="What is it about?" tooltip="The case's subject; it suggests articles that may answer it">
+                                    <text-line size="60"/>
+                                </default-field>
+                            </field>
+                            <field name="orderId"><default-field><hidden/></default-field></field>
+                            <!-- P7: the template, the queue's by default -->
+                            <field name="templateFormId">
+                                <conditional-field title="Template" condition="caseTemplateOptions.length"
+                                        tooltip="The fields the case asks for; empty takes the queue's">
+                                    <drop-down allow-empty="true"><list-options list="caseTemplateOptions" key="${value}" text="${label}"/></drop-down>
+                                </conditional-field>
+                                <default-field><hidden/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Continue"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="customerPartyId"/><field-ref name="requestTypeEnumId"/></field-row>
+                                <field-ref name="subject"/>
+                                <field-ref name="templateFormId"/>
+                                <field-ref name="organizationPartyId"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <!-- the duplicate warning: the customer's open cases; open one, or go on with a distinct case -->
+                <section name="PossibleDuplicates" condition="prepared.duplicates.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="${prepared.customerName} has ${prepared.duplicates.length} open case(s): is this one of them?"/>
+                            <box-body-nopad>
+                                <form-list name="DuplicateCases" list="prepared.duplicates" skip-form="true" paginate="false">
+                                    <field name="requestId">
+                                        <default-field title="Case">
+                                            <link url="${sharedLinks['Cases/CaseDetail']}" text="${requestId}" link-type="anchor"
+                                                    parameter-map="{requestId:requestId}"/>
+                                            <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusLabel"><default-field title="Status"><display/></default-field></field>
+                                    <field name="queueName"><default-field title="Queue"><display/></default-field></field>
+                                    <field name="updatedText"><default-field title="Updated"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="requestId"/></column>
+                                        <column><field-ref name="statusLabel"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none"
+                                        text="Open one of these to add to it, or describe a distinct case below."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- P12: the articles the subject suggests, the customer's language first (drafts and internal articles marked);
+                    reading one does not block the case -->
+                <section name="ArticleSuggestions" condition="subject &amp;&amp; prepared.customerFound">
+                    <actions>
+                        <service-call name="mantle.request.KnowledgeServices.find#ArticleSuggestions" out-map="suggestOut"
+                                in-map="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId, text:subject, limit:5}"
+                                transaction="force-new" ignore-error="true"/>
+                        <script>ec.message.clearErrors()</script>
+                        <set field="suggestedArticles" from="Array.from(suggestOut?.articleList || []).map((row) =&gt; Object.assign({}, row,
+                                {url: '/qapps/CustomerService/Knowledge/Knowledge?wikiPageId=' + encodeURIComponent(row.wikiPageId),
+                                    note: [row.spaceName, row.internal ? 'internal' : '', row.published ? '' : 'draft',
+                                        row.localeLanguage ? String(row.localeLanguage).toUpperCase() : ''].filter(Boolean).join(' · ')}))"/>
+                    </actions>
+                    <widgets>
+                        <section name="SuggestedArticleBox" condition="suggestedArticles.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Articles that may answer it"/>
+                                    <box-body-nopad>
+                                        <form-list name="SuggestedArticles" list="suggestedArticles" skip-form="true" paginate="false">
+                                            <field name="title">
+                                                <default-field title="Article">
+                                                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor" target-window="_blank"/>
+                                                    <label text="${note}" type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+                <section name="NoQueue" condition="prepared.customerFound &amp;&amp; !prepared.queueOptions.length">
+                    <widgets>
+                        <label type="p" style="m-muted" text="None of your queues takes this type. Choose another type, or ask a service manager for a queue."/>
+                    </widgets>
+                </section>
+                <!-- steps 2 and 3: the case and its submission -->
+                <section name="DescribeCase" condition="describe">
+                    <widgets>
+                        <container-box>
+                            <box-header title="2. The case"/>
+                            <box-body>
+                                <label text="${templateChoice.templateName}: its fields below; an internal one is never shown to the customer"
+                                        type="p" style="text-caption m-muted" condition="templateChoice?.templateName"/>
+                                <!-- P7: the template's fields as of now without its drafts (DbForm#..., no db-form-as-of or
+                                    db-form-include-drafts), else none -->
+                                <form-single name="SubmitCase" transition="createCase" map="caseValues" focus-field="requestName"
+                                        dynamic="true" extends="${caseTemplateFormId ? 'DbForm#' + caseTemplateFormId : 'CaseNoTemplate'}">
+                                    <field name="templateFormId"><default-field><hidden/></default-field></field>
+                                    <!-- the queue the template step was made for (createCase refuses another queue's unseen template) -->
+                                    <field name="templateQueueId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="requestTypeEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="requestName">
+                                        <default-field title="Subject"><text-line size="60"/></default-field>
+                                    </field>
+                                    <field name="description">
+                                        <default-field title="Description"><text-area rows="5" cols="60"/></default-field>
+                                    </field>
+                                    <field name="requestCategoryId">
+                                        <default-field title="Queue">
+                                            <drop-down><list-options list="prepared.queueOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="priority">
+                                        <default-field title="Priority">
+                                            <drop-down>
+                                                <option key="1" text="1 (urgent)"/><option key="2" text="2 (urgent)"/>
+                                                <option key="3" text="3 (high)"/><option key="4" text="4 (high)"/>
+                                                <option key="5" text="5 (normal)"/><option key="6" text="6 (normal)"/>
+                                                <option key="7" text="7 (low)"/><option key="8" text="8 (low)"/>
+                                                <option key="9" text="9 (low)"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="salesChannelEnumId">
+                                        <default-field title="Channel">
+                                            <drop-down allow-empty="true">
+                                                <entity-options key="${enumId}" text="${description}">
+                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                        <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                                        <econdition field-name="enumId" operator="in" value="ScPhone,ScEmail,ScWeb"/>
+                                                        <order-by field-name="description"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="contactPartyId">
+                                        <default-field title="Contact" tooltip="The customer's person you are dealing with">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'contacts', customerPartyId:customerPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="assigneePartyId">
+                                        <default-field title="Assignee" tooltip="Empty leaves it for the queue's team">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'agents', queueId:prepared.requestCategoryId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Create case"><submit/></default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-ref name="requestName"/>
+                                        <field-ref name="description"/>
+                                        <fields-not-referenced/>
+                                        <field-row><field-ref name="requestCategoryId"/><field-ref name="priority"/></field-row>
+                                        <field-row><field-ref name="salesChannelEnumId"/><field-ref name="contactPartyId"/></field-row>
+                                        <field-ref name="assigneePartyId"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- P7: the form SubmitCase extends when the case has no template: no fields -->
+                <section name="CaseNoTemplateHolder" condition="false">
+                    <widgets><form-single name="CaseNoTemplate"/></widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

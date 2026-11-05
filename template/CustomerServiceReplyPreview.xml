@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- A saved reply's preview on a case (impl-customer-service P5, CS-REPLIES): pv, the answer of
+    mantle.request.SupportCaseServices.preview#SavedReply: its recipient, mailbox and subject, its variable errors, its text
+    with the case's values, and each action with whether the case allows it. CaseDetail's Saved reply tab
+    (template/CustomerServiceReplies.xml) and SavedReplies' ReplyPreview include it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <!-- the preview of a reply on a case (pv: preview#SavedReply's answer) -->
+        <section name="ReplyPreviewBody">
+            <widgets>
+                <container style="q-mb-sm">
+                    <label text="To: ${pv.recipients.map((row) =&gt; row.name + ' &lt;' + row.address + '&gt;').join(', ') || 'no one'}" type="div" style="text-body2"/>
+                    <label text="From: ${pv.fromAddress || 'no mailbox'} · Subject: ${pv.subject}" type="div" style="text-caption m-muted"/>
+                </container>
+                <section-iterate name="ReplyErrors" list="pv.errors" entry="replyError">
+                    <widgets><label text="${replyError.message}" type="div" style="text-negative"/></widgets>
+                </section-iterate>
+                <container style="q-pa-sm q-mb-sm rounded-borders m-tonal">
+                    <label text="${pv.bodyText}" type="div" style="text-body2"/>
+                </container>
+                <form-list name="ReplyActionChecks" list="pv.actions" skip-form="true" paginate="false">
+                    <field name="text"><default-field title="Then"><display/></default-field></field>
+                    <field name="allowed">
+                        <default-field title="On this case">
+                            <display text="${allowed ? (message || 'Allowed') : 'Not allowed: ' + message}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="text"/></column>
+                        <column><field-ref name="allowed"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

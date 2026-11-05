@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service saved replies (impl-customer-service P5, CS-REPLIES, D24; Replies.js): the service replies the user may
+    use, their save (the text through Comms' store#TextBlock, then the service facts and case actions) and the bulk reply's
+    preview per case. A reply's preview and apply on a case are Mantle's mantle.request.SupportCaseServices.preview#SavedReply
+    and apply#SavedReply (SUPPORT_CASE_EDIT, the case's organization), which the screens call after check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="SavedReplies" allow-remote="false">
+        <description>The saved replies the user may use (design SavedReplies ReplyList), as Comms' find#EmailTextBlocks
+            reaches them (their own, and those shared with a group they are in now), kept to service replies: a personal
+            block with its service facts, a team's (its group SVT_ and the team), the service-wide one (its organization's group SVO_);
+            of the user's organizations (organizationPartyId: that one's and those of every organization); with text, those
+            whose title, shortcut or body has it; forCase, only those offered. Each with its scope, language, subject,
+            variables, actions and whether the user owns it; with the groups the user may share with and the
+            variables.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="forCase" type="Boolean" default="false"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="replies" type="List"/>
+            <parameter name="shareOptions" type="List"/>
+            <parameter name="variableNames" type="List"/>
+            <parameter name="organizationOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Replies.js').execute('findReplies', context)"/>
+            <set field="replies" from="found.replies"/>
+            <set field="shareOptions" from="found.shareOptions"/>
+            <set field="variableNames" from="found.variableNames"/>
+            <set field="organizationOptions" from="found.organizationOptions"/>
+        </actions>
+    </service>
+    <service verb="save" noun="SavedReplyAction" allow-remote="false">
+        <description>A saved reply (design SavedReplies ReplyEdit): its text through Comms'
+            org.moqui.comms.MailSettingsServices.store#TextBlock (a new block is the user's; only its owner changes it; it is
+            shared only with a group the user is in: GROUP_UNAVAILABLE), then its service facts (organization, one of the
+            user's: RECORD_UNAVAILABLE; language; subject; offered) and its case actions: the list given (actions), or one
+            added, changed or removed (actionAction add, update or remove, savedReplyActionId; actionEnumId with its status,
+            resolution, tag, assignee, priority or note). Each action is checked (ACTION_UNKNOWN, STATUS_UNKNOWN, TAG_UNKNOWN,
+            ASSIGNEE_UNAVAILABLE, PRIORITY_INVALID, NOTE_REQUIRED). Only the owner changes a reply (REPLY_UNAVAILABLE); needs
+            SUPPORT_CASE_EDIT.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="emailTextBlockId"/>
+            <parameter name="title"/>
+            <parameter name="shortcut"/>
+            <parameter name="bodyHtml" allow-html="safe"/>
+            <parameter name="userGroupId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="localeId"/>
+            <parameter name="subject"/>
+            <parameter name="disabled"/>
+            <parameter name="actions" type="List"/>
+            <parameter name="actionAction"/>
+            <parameter name="savedReplyActionId"/>
+            <parameter name="sequenceNum"/>
+            <parameter name="actionEnumId"/>
+            <parameter name="statusId"/>
+            <parameter name="resolutionEnumId"/>
+            <parameter name="tagEnumId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="priority"/>
+            <parameter name="noteText"/>
+        </in-parameters>
+        <out-parameters><parameter name="emailTextBlockId"/></out-parameters>
+        <actions>
+            <set field="emailTextBlockId" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Replies.js').execute('saveReply', context).emailTextBlockId"/>
+        </actions>
+    </service>
+    <service verb="preview" noun="BulkReply" allow-remote="false">
+        <description>A saved reply on each selected case (design Cases BulkCaseAction's reply): each checked and previewed on
+            its own through mantle.request.SupportCaseServices.preview#SavedReply, with its own recipient, subject, actions
+            and problems (a variable with no value, an action the case refuses); a case not available to the user (Forbidden)
+            or one that fails is named and the rest go on. revisions holds the revision each ready case was previewed at, for
+            the apply. At most 50 cases.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestIds"/>
+            <parameter name="emailTextBlockId"/>
+            <parameter name="operationKey"><description>The bulk reply's key: a case it applied shows its reply's state
+                (Sent, ReplyDeliveryPending, ReplyDeliveryFailed) instead of a new preview</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="title"/>
+            <parameter name="cases" type="List"/>
+            <parameter name="readyCount" type="Integer"/>
+            <parameter name="failedCount" type="Integer"/>
+            <parameter name="revisions" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Replies.js').execute('previewBulk', context)"/>
+            <set field="title" from="found.title"/>
+            <set field="cases" from="found.cases"/>
+            <set field="readyCount" from="found.readyCount"/>
+            <set field="failedCount" from="found.failedCount"/>
+            <set field="revisions" from="found.revisions"/>
+        </actions>
+    </service>
+</services>

@@ -12,11 +12,25 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Knowledge base section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Knowledge area of IronStone Customer Service (design-customer-service §1, §6 Knowledge, ArticleFeedback, CaseToArticle;
+    impl-customer-service P12): a menu group holding Knowledge (the default: Commons Knowledge with the Customer Service row,
+    its spaces those of the organization's knowledge sources; with a case, Link to case, Send to customer and Suggest edit;
+    ironstone.customerservice.KnowledgeServices.get#KnowledgeContext), its terminal twin KnowledgeTui, and ArticleFeedback (the
+    knowledge author's and the service manager's review queue, BOSS_CS_ARTICLE_FEEDBACK), with CaseToArticle (an article
+    drafted from a case, for the knowledge author, BOSS_CS_CASE_TO_ARTICLE) reached from a case. Every Customer Service user
+    reads Knowledge; the wiki's own rules decide each page. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Knowledge base" default-menu-index="7" menu-image="sym_o_article" menu-image-type="icon">
+        default-menu-title="Knowledge" default-menu-index="8" menu-image="sym_o_article" menu-image-type="icon">
+    <always-actions>
+        <!-- Commons Knowledge mounted here knows it is in Customer Service (its setup asks get#KnowledgeContext) -->
+        <set field="inCustomerService" from="true"/>
+    </always-actions>
+    <subscreens default-item="Knowledge" always-use-full-path="true">
+        <subscreens-item name="Knowledge" location="component://mr-boss/screen/Commons/Knowledge.xml" menu-title="Knowledge" menu-index="1"/>
+        <!-- the terminal twin (Knowledge.xml's tui text names ../KnowledgeTui) -->
+        <subscreens-item name="KnowledgeTui" location="component://mr-boss/screen/Commons/KnowledgeTui.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Knowledge base links." type="p"/>
+        <subscreens-panel id="CustomerServiceKnowledgePanel" type="tab"/>
     </widgets>
 </screen>

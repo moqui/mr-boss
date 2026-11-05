@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Cases (design-customer-service §3 Cases; style-guide §3.2 List, §3.6 Board; impl-customer-service P2): CaseFind and
+    CaseList over ironstone.customerservice.CaseServices.find#Cases (the cases of the user's queues and those assigned to
+    them), with the saved views of design Cases (Assigned to me, the default; New/unassigned; Waiting for customer; Needs
+    response, its first response running; SLA risk, a clock warned, due or breached (P4); Recently resolved; All permitted),
+    each row with its clock due first, saved finds and select-columns; the
+    board, a view of the same rows by status in the workflow's order, whose move and the row's Change status both run
+    mantle.request.SupportCaseServices.transition#Case after the case's check; and BulkCaseAction, row-selection actions to
+    assign, set the status of and tag the selected cases (apply#CaseBatch, a result per case), and P5's Reply, a saved reply
+    previewed per case on BulkReply. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cases" default-menu-index="1">
+    <parameter name="view"/>
+    <parameter name="text"/>
+    <parameter name="requestCategoryId"/>
+    <parameter name="statusCategoryEnumId"/>
+    <parameter name="bandEnumId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="assigneePartyId"/>
+    <parameter name="requestTypeEnumId"/>
+    <parameter name="tagEnumId"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="bulkCases" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- P5: BulkCaseAction's reply: the saved reply chosen for the selected cases, previewed per case on BulkReply (a transition
+        with actions, so the row selection posts its ids) -->
+    <transition name="bulkReply">
+        <actions>
+            <set field="requestIds" from="(Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(','))
+                    .filter((id) =&gt; id).join(',')"/>
+        </actions>
+        <default-response url="../BulkReply"><parameter name="requestIds"/><parameter name="emailTextBlockId"/></default-response>
+    </transition>
+    <transition name="bulkReplyChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.ReplyServices.find#SavedReplies" out-map="found"
+                    in-map="{appRoot:appRoot, text:(term || null), forCase:true}"/>
+            <script>ec.web.sendJsonResponse(Array.from(found.replies || []).map((row) =&gt; ({value: row.emailTextBlockId,
+                    label: row.title + ' · ' + row.scopeText})))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a board move (the new status as statusId) and the row's Change status (toStatusId): the case's workflow decides -->
+    <transition name="changeCaseStatus">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.transition#Case" out-map="moved"
+                    in-map="{requestId:requestId, toStatusId:(toStatusId || statusId), resolutionEnumId:(resolutionEnumId || null),
+                        reason:(reason || null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Case ' + requestId + ': ' + moved.statusLabel, 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.CaseServices.find#Cases" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, view:view, text:text, requestCategoryId:requestCategoryId,
+                    statusCategoryEnumId:statusCategoryEnumId, bandEnumId:bandEnumId, customerPartyId:customerPartyId,
+                    assigneePartyId:assigneePartyId, requestTypeEnumId:requestTypeEnumId, tagEnumId:tagEnumId,
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cases" from="found?.cases || []"/>
+        <set field="casesCount" from="found?.casesCount"/>
+        <set field="casesPageIndex" from="found?.casesPageIndex"/>
+        <set field="casesPageSize" from="found?.casesPageSize"/>
+        <set field="casesPageMaxIndex" from="found?.casesPageMaxIndex"/>
+        <set field="casesPageRangeLow" from="found?.casesPageRangeLow"/>
+        <set field="casesPageRangeHigh" from="found?.casesPageRangeHigh"/>
+        <set field="viewLinks" from="found?.views || []"/>
+        <set field="viewText" from="found?.viewText || ''"/>
+        <set field="can" from="customerService.capabilities"/>
+        <!-- the board's columns and the row's moves: the default workflow's statuses in order, draft left out -->
+        <service-call name="mantle.request.SupportCaseServices.get#CaseStatusMappings" out-map="workflow"/>
+        <set field="statusOptions" from="Array.from(workflow.mappingList || []).filter((row) =&gt; row.statusId != 'ReqDraft')
+                .map((row) =&gt; ({key: row.statusId, text: row.agentLabel}))"/>
+        <set field="boardColumns" from="statusOptions.map((option) =&gt; option.key)"/>
+        <set field="filtered" from="!!(text || requestCategoryId || statusCategoryEnumId || bandEnumId || customerPartyId
+                || assigneePartyId || requestTypeEnumId || tagEnumId)"/>
+        <set field="emptyText" from="filtered ? 'No case matches these filters.' : found?.view == 'slaRisk'
+                ? 'SLA risk shows once service levels are set up.' : found?.view == 'mine'
+                ? 'No case is assigned to you. New/unassigned lists the cases waiting for someone.'
+                : 'No case in this view.'"/>
+    </actions>
+    <widgets>
+        <context title="Cases" selection-form="CaseList"/>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Cases" type="h5"/>
+                <label text="${viewText}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto row items-center q-gutter-xs">
+                <link url="${sharedLinks['Cases/NewCase']}" text="New case" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_add" condition="can.caseEdit"/>
+            </container>
+        </container>
+        <container style="row q-gutter-xs q-mb-sm">
+            <section-iterate name="CaseViews" list="viewLinks" entry="viewLink">
+                <widgets>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" icon="sym_o_check"
+                            parameter-map="{view:viewLink.key}" condition="viewLink.current"/>
+                    <link url="." text="${viewLink.label}" link-type="anchor-button" parameter-map="{view:viewLink.key}"
+                            condition="!viewLink.current"/>
+                </widgets>
+            </section-iterate>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CaseList" list="cases" skip-form="true" paginate="true" header-dialog="true"
+                        saved-finds="true" select-columns="true">
+                    <row-selection id-field="requestId" parameter="selectedIds" list-mode="true" condition="can.caseEdit">
+                        <action>
+                            <dialog button-text="Assign" button-icon="sym_o_person_add" title="Assign the selected cases"/>
+                            <form-single name="BulkAssign" transition="bulkCases">
+                                <field name="operation" from="'assign'"><default-field><hidden/></default-field></field>
+                                <field name="assigneePartyId">
+                                    <default-field title="Assignee" tooltip="Empty unassigns them">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'agents'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Assign"><submit confirmation="Assign the selected cases?"/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Set status" button-icon="sym_o_flag" title="Set the status of the selected cases"/>
+                            <form-single name="BulkStatus" transition="bulkCases">
+                                <field name="operation" from="'status'"><default-field><hidden/></default-field></field>
+                                <field name="toStatusId">
+                                    <default-field title="Status">
+                                        <drop-down><list-options list="statusOptions" key="${key}" text="${text}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="resolutionEnumId">
+                                    <default-field title="Resolution" tooltip="To resolve or cancel">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="RequestResolution"/>
+                                                    <econdition field-name="enumId" operator="not-equals" value="RrUnresolved"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="reason">
+                                    <default-field title="Reason" tooltip="To hold, cancel or reopen"><text-line/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Set status"><submit confirmation="Set the status of the selected cases?"/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <action>
+                            <dialog button-text="Tag" button-icon="sym_o_sell" title="Tag the selected cases"/>
+                            <form-single name="BulkTag" transition="bulkCases">
+                                <field name="operation" from="'tags'"><default-field><hidden/></default-field></field>
+                                <field name="tagEnumIds">
+                                    <default-field title="Tags">
+                                        <drop-down allow-multiple="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'tags'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="tagMode" from="'add'">
+                                    <default-field title="">
+                                        <radio><option key="add" text="Add"/><option key="remove" text="Remove"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Tag"><submit/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <!-- P5: a saved reply on each selected case, previewed per case before it goes (BulkReply) -->
+                        <action>
+                            <dialog button-text="Reply" button-icon="sym_o_reply_all" title="Reply to the selected cases"/>
+                            <form-single name="BulkReplyPick" transition="bulkReply">
+                                <field name="emailTextBlockId">
+                                    <default-field title="Saved reply">
+                                        <drop-down>
+                                            <dynamic-options transition="bulkReplyChoices" server-search="true" min-length="0"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Preview each case's reply"><submit/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="requestId">
+                        <header-field title="Case" show-order-by="true"/>
+                        <default-field title="Case">
+                            <link url="${sharedLinks['Cases/CaseDetail']}" text="${requestId}" link-type="anchor"
+                                    parameter-map="{requestId:requestId}"/>
+                            <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="text">
+                        <header-field title="Case or subject"><text-find hide-options="true"/></header-field>
+                    </field>
+                    <field name="customerName">
+                        <default-field title="Customer"><display/></default-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <header-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                        parameter-map="{selected:customerPartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="requestCategoryId">
+                        <header-field title="Queue">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'queues'}"/>
+                            </drop-down>
+                        </header-field>
+                        <default-field title="Queue"><display text="${queueName}"/></default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusLabel)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusLabel})}]]></text>
+                                <text type="html">${statusLabel}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="bandText">
+                        <default-field title="Priority">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${bandColor}">${
+                                    WebUtilities.encodeHtml(bandText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: bandText})}]]></text>
+                                <text type="html">${bandText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="assigneeName">
+                        <default-field title="Assignee">
+                            <label text="${assigneeName || 'Unassigned'}" type="span" style="${assigneeName ? '' : 'text-warning'}"/>
+                        </default-field>
+                    </field>
+                    <field name="statusCategoryEnumId">
+                        <header-field title="Status category">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                        <econdition field-name="enumTypeId" value="CaseStatusCategory"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="bandEnumId">
+                        <header-field title="Priority">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                        <econdition field-name="enumTypeId" value="CasePriorityBand"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="assigneePartyId">
+                        <header-field title="Assignee">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'agents', selected:assigneePartyId}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="tagEnumId">
+                        <header-field title="Tag">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'tags'}"/>
+                            </drop-down>
+                        </header-field>
+                    </field>
+                    <field name="typeText"><default-field title="Type"><display/></default-field></field>
+                    <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                    <field name="dueText">
+                        <default-field title="Due">
+                            <label text="${dueText}" type="span" style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <!-- P4: the case's clock due first, coloured by its warning or breach -->
+                    <field name="slaText">
+                        <default-field title="Service level">
+                            <label text="${slaText}" type="span" style="${slaColor ? 'text-' + slaColor : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="updatedText"><default-field title="Updated"><display/></default-field></field>
+                    <field name="tagText">
+                        <default-field title="Tags"><display/></default-field>
+                    </field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="CaseStatus_${requestId}" button-text="Change status" icon="sym_o_flag"
+                                    width="520" title="Change the status of case ${requestId}" condition="can.caseEdit">
+                                <form-single name="ChangeCaseStatus" transition="changeCaseStatus" map="{requestId:requestId}">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="toStatusId" from="statusId">
+                                        <default-field title="Status">
+                                            <drop-down><list-options list="statusOptions" key="${key}" text="${text}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="resolutionEnumId">
+                                        <default-field title="Resolution" tooltip="To resolve or cancel">
+                                            <drop-down allow-empty="true">
+                                                <entity-options key="${enumId}" text="${description}">
+                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                        <econdition field-name="enumTypeId" value="RequestResolution"/>
+                                                        <econdition field-name="enumId" operator="not-equals" value="RrUnresolved"/>
+                                                        <order-by field-name="description"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="reason">
+                                        <default-field title="Reason" tooltip="To hold, cancel or reopen"><text-line/></default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title="Change status">
+                                            <submit confirmation="Change the status of case ${requestId}?"/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="requestId"/>
+                            <field-ref name="customerName"/>
+                        </column>
+                        <column>
+                            <field-ref name="statusId"/>
+                            <field-ref name="actions"/>
+                        </column>
+                    </columns>
+                    <view-board group-field="statusId" card-title-field="requestId" card-fields="customerName,bandText,assigneeName"
+                            key-fields="requestId" column-order="${boardColumns}" status-type-id="Request" status-flow-id="Default"
+                            transition="changeCaseStatus" move-condition="can.caseEdit"/>
+                </form-list>
+                <label text="${emptyText}" type="p" style="q-pa-md m-muted" condition="!cases.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

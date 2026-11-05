@@ -635,4 +635,102 @@ along with this software (see the LICENSE.md file). If not, see
             requestItemSeqId="01"/>
     <mantle.request.requirement.RequirementParty requirementId="BOSS_PUR_REQ_A_01" partyId="ORG_ZIZI_RETAIL"
             roleTypeId="OrgInternal" fromDate="0"/>
+    <!-- Customer Service (impl-customer-service P1): a user per group of design-customer-service §1, each in the root user
+        group BOSS_CUSTOMER_SERVICE and their capability group, agents of Ziziwork Retail (BossCustomerServiceDemoData.xml);
+        customerservice.admin is in BOSS_CUSTOMER_SERVICE_ADMIN alone, customerservice.agentwh an agent who also holds
+        Warehouse's receive and inspect groups (W, without the Warehouse launcher), customerservice.returnsar a return
+        authorizer who also holds Accounting's BOSS_ACCOUNTING_AR (F), customerservice.read a service reader in the root user
+        group alone, with no other launcher, and customerservice.services an agent of Ziziwork Services, whose customers and
+        orders Retail's users never reach. P15 adds the customer contacts. -->
+    <mantle.party.Party partyId="BOSS_CS_AGENT" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_AGENT" firstName="Service" lastName="Agent"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_AGENT_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_AGENT" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_AGENT" username="customerservice.agent"
+            userFullName="Service Agent" partyId="BOSS_CS_AGENT"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_AGENT" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userId="BOSS_CS_AGENT" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_MANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_MANAGER" firstName="Service" lastName="Manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_MANAGER" username="customerservice.manager"
+            userFullName="Service Manager" partyId="BOSS_CS_MANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userId="BOSS_CS_MANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_ORDER_DESK" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_ORDER_DESK" firstName="Service" lastName="Order desk"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_ORDER_DESK_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_ORDER_DESK" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_ORDER_DESK" username="customerservice.orderdesk"
+            userFullName="Service Order desk" partyId="BOSS_CS_ORDER_DESK"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_ORDER_DESK" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userId="BOSS_CS_ORDER_DESK" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_RETURNS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_RETURNS" firstName="Service" lastName="Return authorizer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_RETURNS_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_RETURNS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_RETURNS" username="customerservice.returns"
+            userFullName="Service Return authorizer" partyId="BOSS_CS_RETURNS"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_RETURNS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" userId="BOSS_CS_RETURNS" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_KNOWLEDGE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_KNOWLEDGE" firstName="Service" lastName="Knowledge author"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_KNOWLEDGE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_KNOWLEDGE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_KNOWLEDGE" username="customerservice.knowledge"
+            userFullName="Service Knowledge author" partyId="BOSS_CS_KNOWLEDGE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_KNOWLEDGE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" userId="BOSS_CS_KNOWLEDGE" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_ADMIN" firstName="Service" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_ADMIN" username="customerservice.admin"
+            userFullName="Service Administrator" partyId="BOSS_CS_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userId="BOSS_CS_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_AGENT_WH" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_AGENT_WH" firstName="Service" lastName="Agent receiver"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_AGENT_WH_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_AGENT_WH" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_AGENT_WH" username="customerservice.agentwh"
+            userFullName="Service Agent receiver" partyId="BOSS_CS_AGENT_WH"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_AGENT_WH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userId="BOSS_CS_AGENT_WH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_RECEIVE" userId="BOSS_CS_AGENT_WH" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE_INSPECT" userId="BOSS_CS_AGENT_WH" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_RETURNS_AR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_RETURNS_AR" firstName="Service" lastName="Return authorizer receivables"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_RETURNS_AR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_RETURNS_AR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_RETURNS_AR" username="customerservice.returnsar"
+            userFullName="Service Return authorizer receivables" partyId="BOSS_CS_RETURNS_AR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_RETURNS_AR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" userId="BOSS_CS_RETURNS_AR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_AR" userId="BOSS_CS_RETURNS_AR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_READ" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_READ" firstName="Service" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_READ_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_READ" username="customerservice.read"
+            userFullName="Service Reader" partyId="BOSS_CS_READ"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_READ" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_CS_SERVICES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_CS_SERVICES" firstName="Service" lastName="Services agent"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_CS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_CS_SERVICES" username="customerservice.services"
+            userFullName="Service Services agent" partyId="BOSS_CS_SERVICES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userId="BOSS_CS_SERVICES" fromDate="0"/>
 </entity-facade-xml>

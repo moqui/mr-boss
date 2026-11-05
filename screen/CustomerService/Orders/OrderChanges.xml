@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderChanges (design-customer-service §4 OrderChanges; style-guide §3.2 List; impl-customer-service P10): ChangeFind, by
+    order, customer, the person who asked, the state and the period, and ChangeList (mantle.order.OrderChangeServices
+    find#OrderChanges, which checks the order-change permissions and the user's organizations): each proposal with its order
+    and the order's revision, the kind, the requested lines, the reason, who asked and when, the decision and its approver, a
+    hold or conflict and the state, opening OrderChangeDetail. A user without an order-change permission is told so. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Changes" default-menu-index="2">
+    <parameter name="orderId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="state"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <actions>
+        <set field="caps" from="customerService.capabilities || {}"/>
+        <set field="mayRead" from="!!(caps.orderChangeRequest || caps.orderChangeApprove || caps.orderChangeApply)"/>
+        <set field="found" from="null"/>
+        <if condition="mayRead">
+            <service-call name="mantle.order.OrderChangeServices.find#OrderChanges" out-map="found" transaction="force-new"
+                    ignore-error="true"
+                    in-map="{orderId:(orderId || null), customerPartyId:(customerPartyId || null), state:(state || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="changeList" from="found?.changeList || []"/>
+        <set field="changeListCount" from="found?.changeListCount"/>
+        <set field="changeListPageIndex" from="found?.changeListPageIndex"/>
+        <set field="changeListPageSize" from="found?.changeListPageSize"/>
+        <set field="changeListPageMaxIndex" from="found?.changeListPageMaxIndex"/>
+        <set field="changeListPageRangeLow" from="found?.changeListPageRangeLow"/>
+        <set field="changeListPageRangeHigh" from="found?.changeListPageRangeHigh"/>
+        <set field="detailUrl" from="sharedLinks['Orders/OrderChangeDetail']"/>
+        <set field="stateColors" from="{requested: 'info', needsInfo: 'warning', approved: 'positive', applied: 'positive',
+                rejected: 'negative', cancelled: 'grey-7', stale: 'warning'}"/>
+        <set field="findValues" from="{orderId:orderId || '', customerPartyId:customerPartyId || '', state:state || '',
+                fromDate:fromDate || '', thruDate:thruDate || ''}"/>
+    </actions>
+    <widgets>
+        <context title="Order changes"/>
+        <label text="Order changes" type="h5"/>
+        <section name="NoChangeRead" condition="!mayRead">
+            <widgets>
+                <container-box type="info">
+                    <box-body>
+                        <label type="p" text="Order changes are for the service agents, managers and the order desk. Open an
+                                order to see its state."/>
+                        <link url="${sharedLinks['Orders/Orders']}" text="Orders" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ChangeLists" condition="mayRead">
+            <widgets>
+                <container-box>
+                    <box-body>
+                        <form-single name="ChangeFind" transition="." map="findValues">
+                            <field name="orderId"><default-field title="Order"><text-line size="16"/></default-field></field>
+                            <field name="customerPartyId">
+                                <default-field title="Customer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                                parameter-map="{selected:customerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="requested" text="Requested"/>
+                                        <option key="needsInfo" text="Needs information"/>
+                                        <option key="approved" text="Approved"/>
+                                        <option key="applied" text="Applied"/>
+                                        <option key="rejected" text="Rejected"/>
+                                        <option key="cancelled" text="Cancelled"/>
+                                        <option key="stale" text="Stale"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="Asked from"><date-time type="date"/></default-field></field>
+                            <field name="thruDate"><default-field title="Asked before"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big>
+                                    <field-ref name="orderId"/>
+                                    <field-ref name="customerPartyId"/>
+                                    <field-ref name="state"/>
+                                </field-row-big>
+                                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ChangeList" list="changeList" skip-form="true" paginate="true" select-columns="true">
+                            <field name="requestId">
+                                <default-field title="Change">
+                                    <link url="${detailUrl}" text="${requestId}" link-type="anchor" style="text-mono"
+                                            parameter-map="{requestId:requestId}"/>
+                                </default-field>
+                            </field>
+                            <field name="orderId">
+                                <default-field title="Order">
+                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId} · rev ${orderRevision}"
+                                            link-type="anchor" parameter-map="{orderId:orderId}"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="linesText"><default-field title="Requested"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                            <field name="requestedByName"><default-field title="Asked by"><display/></default-field></field>
+                            <field name="requestedText"><default-field title="Asked"><display/></default-field></field>
+                            <field name="decidedText"><default-field title="Decided"><display/></default-field></field>
+                            <field name="approverName"><default-field title="Approver"><display/></default-field></field>
+                            <field name="conflictText"><default-field title="Hold or conflict"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-7'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestId"/><field-ref name="customerName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="kindText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No order changes match."
+                                condition="!changeList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

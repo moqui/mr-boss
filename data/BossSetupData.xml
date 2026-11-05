@@ -87,6 +87,14 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_REQUESTER" description="Purchase requester"/>
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_APPROVE" description="Purchase approver"/>
     <moqui.security.UserGroup userGroupId="BOSS_PURCHASING_READ" description="Purchasing reader"/>
+    <!-- Customer Service P1 (design-customer-service §1): the root user group and the capability groups; the administrator
+        group is above -->
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE" description="Customer Service app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" description="Service agent"/>
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" description="Service manager"/>
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" description="Order desk"/>
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" description="Return authorizer"/>
+    <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" description="Service knowledge author"/>
 
     <!-- Ordinary users carry MANTLE_USER_ORG and private-contact filters. App administrators carry
         MANTLE_ACTIVE_ORG and private-contact filters; framework ADMIN records retain their grants.
@@ -127,6 +135,15 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_CUSTOMER_SERVICE" description="IronStone Customer Service App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/CustomerService.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+        <!-- the app's access, context and choices; the Mantle request, order and return services check their own permissions
+            and are not here, nor are the raw Mantle request, return and order mutators or the /mantle REST paths
+            (impl-customer-service §2) -->
+        <artifacts artifactName="ironstone\.customerservice\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <!-- the root user group (impl-customer-service §4, F3) -->
+        <authz artifactAuthzId="BOSS_CUSTOMER_SERVICE_ROOT" userGroupId="BOSS_CUSTOMER_SERVICE" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_CUSTOMER_SERVICE_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
@@ -407,17 +424,19 @@ along with this software (see the LICENSE.md file). If not, see
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself. The verbs are split over several rows, as an
             artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|reevaluate|refuse|release|remove|rename|reopen|replace|reply)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refuse|release|remove|rename|reopen|replace|reply)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
@@ -468,7 +487,8 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- and of the request topics (mantle.request.RequestServices notify#RequestTriage, complete#RequestFromWork): the request
         (impl-projects.md P5) -->
     <moqui.security.user.NotificationTopic topic="RequestTriage" linkTemplate="/qapps/Projects/Requests/RequestDetail?requestId=${requestId}"/>
-    <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/Projects/Requests/RequestDetail?requestId=${requestId}"/>
+    <!-- a support case's work done goes to its CaseDetail (the message's isCase, impl-customer-service P2) -->
+    <moqui.security.user.NotificationTopic topic="RequestUpdate" linkTemplate="/qapps/${isCase ? 'CustomerService/Cases/CaseDetail' : 'Projects/Requests/RequestDetail'}?requestId=${requestId}"/>
     <!-- and of the timesheet topics (mantle.work.TimesheetServices, impl-projects.md P6a): the approval opens the week's TimesheetDetail, the
         person's notices their week in My time -->
     <moqui.security.user.NotificationTopic topic="TimesheetApproval" linkTemplate="/qapps/Projects/Time/TimesheetDetail?timesheetId=${timesheetId}"/>
@@ -1576,4 +1596,266 @@ along with this software (see the LICENSE.md file). If not, see
         SourcingAwardSetupData.xml) opens the RFQ under Purchasing, decided from Approvals or the Commons inbox -->
     <moqui.security.user.NotificationTopic topic="PurchaseAwardApproval"
             linkTemplate="/qapps/Purchasing/Sourcing/QuoteRequestDetail?requestId=${requestId}"/>
+    <!-- Customer Service areas for their capability groups only (impl-customer-service P1, design-customer-service §1), as
+        Purchasing's (BOSS_PUR_<Area>): each denies the root user group BOSS_CUSTOMER_SERVICE and allows its groups, with the
+        root's filter sets. Home, Cases, Customers, Orders, Availability and Knowledge are open to every Customer Service user
+        (a service reader reads them; each list and record is limited by ironstone.customerservice.AccessServices); Returns and
+        Reports to the agent, manager and return authorizer; Approvals to the manager and return authorizer; Settings to the
+        administrator. CustomerService.js reads these authorizations as the returns, reports, approvals and settings
+        capabilities. Each service still checks its own permission and organization. A later phase that opens an area to
+        another group (a settings page for the manager, a borrowed group) adds its authz row here. -->
+    <artifactGroups artifactGroupId="BOSS_CS_RETURNS">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Returns.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_RETURNS_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_RETURNS_AGENT" userGroupId="BOSS_CUSTOMER_SERVICE_AGENT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_RETURNS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_RETURNS_RETURNS" userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_RETURNS_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_CS_APPROVALS">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Approvals.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_APPROVALS_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_APPROVALS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_APPROVALS_RETURNS" userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_APPROVALS_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_CS_REPORTS">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Reports.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_REPORTS_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_REPORTS_AGENT" userGroupId="BOSS_CUSTOMER_SERVICE_AGENT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_REPORTS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_REPORTS_RETURNS" userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_REPORTS_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_CS_SETTINGS">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Settings.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_SETTINGS_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_SETTINGS_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <!-- P2: the service manager reads the settings and changes the members of the teams they manage (AgentTeams,
+            save#ServiceTeamMember); every other save needs SUPPORT_POLICY_EDIT, the administrator's -->
+        <authz artifactAuthzId="BOSS_CS_SETTINGS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P5 (design §9 SavedReplies, capabilities A and S; impl-customer-service F-P5-2): SavedReplies for the agent too, a
+        child of the Settings area the root group is denied: the agent manages their own replies there (save#SavedReplyAction
+        lets only a reply's owner change it, and only a team's manager share with the team), the manager and administrator
+        reach it through Settings -->
+    <artifactGroups artifactGroupId="BOSS_CS_SAVED_REPLIES">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Settings/SavedReplies.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_SAVED_REPLIES_AGENT" userGroupId="BOSS_CUSTOMER_SERVICE_AGENT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P2: NewCase (and so quick create's Case) for the groups that enter cases: the agent, the manager and the
+        administrator (SUPPORT_CASE_EDIT); create#Case checks the permission again -->
+    <artifactGroups artifactGroupId="BOSS_CS_NEW_CASE">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Cases/NewCase.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_NEW_CASE_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_NEW_CASE_AGENT" userGroupId="BOSS_CUSTOMER_SERVICE_AGENT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_NEW_CASE_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_NEW_CASE_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- the record links of the palette, Today and notifications for Customer Service users (sales orders route through
+        ironstone.customerservice's scope; customers once Customer360 is built under Customer Service, P3; cases, returns and
+        warranty claims as their phases build them) -->
+    <artifactGroups artifactGroupId="BOSS_CS_RECORD_LINK">
+        <artifacts artifactName="ironstone.commons.PaletteServices.get#RecordLink" artifactTypeEnumId="AT_SERVICE"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_RECORD_LINK" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_RECORD_LINK_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_VIEW">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Customer Service P1 (impl-customer-service P1, §4; crosscut X4): the Mantle permissions of each group; the
+        administrator holds all of them with the policy edits. The root user group alone (a service reader) holds none; the
+        borrowed stock, quality and settlement grants are their owners' groups (crosscut §1.4). Later phases append their
+        grants below. -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="SUPPORT_CASE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="ORDER_CHANGE_REQUEST"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="CUSTOMER_CREDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CASE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CASE_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="RETURN_EXCEPTION_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="ORDER_CHANGE_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="WARRANTY_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CONTACT_INVITE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="ORDER_CHANGE_APPLY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="ORDER_CHANGE_HOLD_RELEASE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" userPermissionId="RETURN_AUTHORIZE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" userPermissionId="SUPPORT_KNOWLEDGE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_REQUEST"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="CUSTOMER_CREDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_EXCEPTION_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WARRANTY_APPROVE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CONTACT_INVITE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_APPLY"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_HOLD_RELEASE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_AUTHORIZE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_KNOWLEDGE_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_POLICY_EDIT"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_POLICY_EDIT"
+            fromDate="0"/>
+    <!-- Customer Service P2: the case topics Mantle sends (mantle.request.SupportCaseServices, F44) open the case -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseAssigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
+    <moqui.security.user.NotificationTopic topic="SupportCaseCustomerReply" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
+    <!-- Customer Service P12: ArticleFeedback, the review queue, for the knowledge author (who reviews: SUPPORT_KNOWLEDGE_EDIT), the
+        service manager (who reads it) and the administrator; find#ArticleFeedback and review#ArticleFeedback check again -->
+    <artifactGroups artifactGroupId="BOSS_CS_ARTICLE_FEEDBACK">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Knowledge/ArticleFeedback.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_KNOWLEDGE" userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P12: CaseToArticle, an article drafted from a case, for the knowledge author and the administrator
+        (SUPPORT_KNOWLEDGE_EDIT); prepare#ArticleFromCase and create#ArticleFromCase check again -->
+    <artifactGroups artifactGroupId="BOSS_CS_CASE_TO_ARTICLE">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Knowledge/CaseToArticle.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_KNOWLEDGE" userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Customer Service P4: the service level topics Mantle's scan sends (mantle.request.SlaServices.scan#CaseSla) open the
+        case's clocks; the administrator keeps any team's working hours (WORKING_HOURS_EDIT; a team's manager keeps their own
+        team's as its manager, mantle.work.CalendarServices.store#WorkingHours) -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseSlaWarning" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
+    <moqui.security.user.NotificationTopic topic="SupportCaseSlaBreach" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WORKING_HOURS_EDIT"
+            fromDate="0"/>
+    <!-- Customer Service P5: a case no eligible agent could take (Mantle's assign#Case, SupportCaseUnassigned) opens the case
+        for its queue team's managers -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseUnassigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
+    <!-- Customer Service P3 (impl-customer-service P3, F52): the product master read only for every Customer Service user
+        (Availability's Product360, InventoryAvailability and StockAtDate; Products' SharedContext.js turns cost, supplier
+        price and policy off in this context), and price read (Product360's Prices and PriceExplain) for the agent, manager,
+        order desk and administrator; the service reader reads no price. The Products app stays closed to them (its root
+        authorization). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <!-- Customer Service P10: an order change to decide (Mantle's OrderChangeApproval, sent to ORDER_CHANGE_APPROVE holders of
+        the order's organization) opens OrderChangeDetail; the decision is mantle.order.OrderChangeServices.decide#OrderChange
+        at the message's revision, from Notifications or the detail -->
+    <moqui.security.user.NotificationTopic topic="OrderChangeApproval"
+            linkTemplate="/qapps/CustomerService/Orders/OrderChangeDetail?requestId=${requestId}"/>
+    <!-- Customer Service P9 (impl-customer-service P9, F44): a customer return's exception waiting for a manager
+        (ReturnExceptionApproval, decided in Approvals or on ReturnDetail) and a decision on a return its assignee is told of
+        (ReturnDecision) open the return under Customer Service -->
+    <moqui.security.user.NotificationTopic topic="ReturnExceptionApproval" linkTemplate="/qapps/CustomerService/Returns/ReturnDetail?returnId=${returnId}"/>
+    <moqui.security.user.NotificationTopic topic="ReturnDecision" linkTemplate="/qapps/CustomerService/Returns/ReturnDetail?returnId=${returnId}"/>
 </entity-facade-xml>

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Products in Customer Service's Availability area (design-customer-service §6; impl-customer-service P3): find a product
+    a customer asks about (by id, name or code; the user's organizations' and shared products), then open its availability
+    at the customer-serving facilities (InventoryAvailability) or its record (Product360), each in Products' Customer Service
+    context: no cost or supplier price, and an unready projection says unknown, never zero (F31). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Products" default-menu-index="1">
+    <parameter name="productId"/>
+    <transition-include name="serviceAvailabilityChoices" location="component://mr-boss/template/CustomerServiceAvailability.xml"/>
+    <actions>
+        <set field="findValues" from="{productId:productId || ''}"/>
+        <if condition="productId">
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" out-map="chosen" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, choice:'products', selected:productId, term:productId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="product" from="Array.from(chosen?.options || []).find((option) =&gt; option.value == productId) || null"/>
+    </actions>
+    <widgets>
+        <context title="Availability"/>
+        <label text="Product availability" type="h5"/>
+        <container-box>
+            <box-body>
+                <form-single name="ServiceProductFind" transition="." map="findValues">
+                    <field name="productId">
+                        <default-field title="Product" tooltip="By id, name or code">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="serviceAvailabilityChoices" server-search="true" min-length="1"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="productId"/><field-ref name="submitButton"/></field-row></field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+        <section name="ServiceProductChosen" condition="product">
+            <widgets>
+                <container-box>
+                    <box-header title="${product.label}"/>
+                    <box-body>
+                        <container style="row q-gutter-sm">
+                            <link url="${sharedLinks['Availability/InventoryAvailability']}" text="Availability" icon="sym_o_inventory_2"
+                                    link-type="anchor-button" btn-type="primary" parameter-map="{productId:productId}"/>
+                            <link url="${sharedLinks['Availability/Product360']}" text="Product record" icon="sym_o_category"
+                                    link-type="anchor-button" parameter-map="{productId:productId}"/>
+                            <link url="${sharedLinks['Availability/StockAtDate']}" text="Stock at a past date" icon="sym_o_history"
+                                    link-type="anchor-button" parameter-map="{productId:productId}"/>
+                        </container>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label type="p" style="m-muted" text="Product ${productId} is not available." condition="productId &amp;&amp; !product"/>
+    </widgets>
+</screen>

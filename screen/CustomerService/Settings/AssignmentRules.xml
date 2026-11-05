@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AssignmentRules (design-customer-service §9 AssignmentRules; impl-customer-service P5, CS-ASSIGNMENT, F71): the
+    organization's assignment rules by queue and order (AssignmentRuleList over
+    ironstone.customerservice.AssignmentServices.find#Rules), each with its conditions, distribution, team, working hours,
+    load, fallback, state and last result; New rule; the chosen rule (AssignmentRuleEdit): its fields (a draft changes in
+    place; a change of a published rule starts a new row from its date and ends the one it replaces; End), and its typed
+    conditions as a non-multi editable form-list, each row's operator and value options depending on its field, with an
+    add-row form (no new form element, F71; the server checks each value: mantle.request.SupportCaseServices.save#AssignmentRule,
+    SUPPORT_POLICY_EDIT); AssignmentPreview over preview#Assignment, the same evaluator as assign#Case: which rule a case with
+    these facts meets and which agent it would go to now, each agent with why they are or are not eligible. The service
+    manager reads and previews; the administrator saves. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Assignment rules" default-menu-index="8">
+    <parameter name="organizationPartyId"/>
+    <parameter name="assignmentRuleId"/>
+    <parameter name="previewCategoryId"/>
+    <parameter name="previewTypeEnumId"/>
+    <parameter name="previewPriority"/>
+    <parameter name="previewChannelEnumId"/>
+    <parameter name="previewCustomerPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="ruleChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AssignmentServices.get#RuleChoices" out-map="found"
+                    in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, choice:choice, term:term, selected:selected,
+                        fieldEnumId:fieldEnumId, teamPartyId:teamPartyId, partyId:partyId}"/>
+            <script>ec.web.sendJsonResponse(found.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveRule">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#AssignmentRule" out-map="saved"
+                    in-map="{assignmentRuleId:(assignmentRuleId || null), organizationPartyId:organizationPartyId, requestCategoryId:requestCategoryId,
+                        ruleName:ruleName, sequenceNum:(sequenceNum ?? ''), distributionEnumId:distributionEnumId,
+                        eligibleTeamPartyId:(eligibleTeamPartyId ?? ''), eligiblePartyIds:(eligiblePartyIds ?? ''),
+                        respectSchedule:(respectSchedule || 'N'), maxOpenCases:(maxOpenCases ?? ''), fallbackPartyId:(fallbackPartyId ?? ''),
+                        fromDate:(fromDate || null), draft:(draft == 'Y'), changeReason:(changeReason || null)}"/>
+            <set field="assignmentRuleId" from="saved?.assignmentRuleId || assignmentRuleId"/>
+            <message type="success">Saved the rule ${ruleName}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="assignmentRuleId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endRule">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#AssignmentRule"
+                    in-map="{assignmentRuleId:assignmentRuleId, end:true, fromDate:(fromDate || null)}"/>
+            <message type="success">Ended the rule</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- a condition row added, changed or removed (a published rule's change starts its new row: the response opens it) -->
+    <transition name="saveCondition">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#AssignmentRule" out-map="saved"
+                    in-map="{assignmentRuleId:assignmentRuleId, conditionAction:(conditionAction || 'update'), conditionSeqId:(conditionSeqId || null),
+                        fieldEnumId:(fieldEnumId || null), operatorEnumId:(operatorEnumId || null), conditionValue:(conditionValue || null),
+                        draft:(draft == 'Y')}"/>
+            <set field="assignmentRuleId" from="saved?.assignmentRuleId || assignmentRuleId"/>
+            <message type="success">Saved the rule's conditions</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="assignmentRuleId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="preview">
+        <default-response url=".">
+            <parameter name="organizationPartyId"/><parameter name="assignmentRuleId"/><parameter name="previewCategoryId"/>
+            <parameter name="previewTypeEnumId"/><parameter name="previewPriority"/><parameter name="previewChannelEnumId"/>
+            <parameter name="previewCustomerPartyId"/>
+        </default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.AssignmentServices.find#Rules" out-map="cfg" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <if condition="cfgOrganizationPartyId &amp;&amp; previewCategoryId">
+            <service-call name="mantle.request.SupportCaseServices.preview#Assignment" out-map="previewed" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:cfgOrganizationPartyId, requestCategoryId:previewCategoryId,
+                        requestTypeEnumId:(previewTypeEnumId || null), priority:(previewPriority || null),
+                        salesChannelEnumId:(previewChannelEnumId || null), customerPartyId:(previewCustomerPartyId || null),
+                        assignmentRuleId:(assignmentRuleId || null)}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="rules" from="cfg?.rules || []"/>
+        <set field="queueOptions" from="cfg?.queueOptions || []"/>
+        <set field="teamOptions" from="cfg?.teamOptions || []"/>
+        <set field="distributionOptions" from="cfg?.distributionOptions || []"/>
+        <set field="fieldOptions" from="cfg?.fieldOptions || []"/>
+        <set field="rule" from="rules.find((row) =&gt; row.assignmentRuleId == assignmentRuleId) || null"/>
+        <set field="ruleValues" from="rule ? {assignmentRuleId:rule.assignmentRuleId, organizationPartyId:cfgOrganizationPartyId,
+                requestCategoryId:rule.requestCategoryId, ruleName:rule.ruleName, sequenceNum:rule.sequenceNum,
+                distributionEnumId:rule.distributionEnumId, eligibleTeamPartyId:rule.eligibleTeamPartyId, eligiblePartyIds:rule.eligiblePartyIds,
+                respectSchedule:rule.respectSchedule, maxOpenCases:rule.maxOpenCases, fallbackPartyId:rule.fallbackPartyId,
+                draft:(rule.draft ? 'Y' : 'N')} : {}"/>
+        <set field="newValues" from="{organizationPartyId:cfgOrganizationPartyId, requestCategoryId:(queueOptions[0]?.value || ''),
+                distributionEnumId:'AdRoundRobin', respectSchedule:'Y', sequenceNum:'10', draft:'Y'}"/>
+        <set field="pv" from="previewed?.outcomeText ? previewed : null"/>
+        <set field="previewValues" from="{organizationPartyId:cfgOrganizationPartyId, assignmentRuleId:assignmentRuleId,
+                previewCategoryId:(previewCategoryId || rule?.requestCategoryId || queueOptions[0]?.value || ''), previewTypeEnumId:previewTypeEnumId,
+                previewPriority:(previewPriority || '5'), previewChannelEnumId:previewChannelEnumId, previewCustomerPartyId:previewCustomerPartyId}"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfgOrganizationPartyId"/>
+        <section name="RuleSettings" condition="cfgOrganizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Assignment rules" type="h5"/></container>
+                    <container style="col-auto">
+                        <container-dialog id="NewRule" button-text="New rule" icon="sym_o_add" type="primary" width="720"
+                                title="New assignment rule" condition="can.policyEdit &amp;&amp; queueOptions.length">
+                            <form-single name="NewRuleForm" transition="saveRule" map="newValues">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="requestCategoryId">
+                                    <default-field title="Queue">
+                                        <drop-down><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Order" tooltip="The queue's rules are tried lowest first; the first whose conditions hold wins">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="distributionEnumId">
+                                    <default-field title="Give cases">
+                                        <drop-down><list-options list="distributionOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="eligibleTeamPartyId">
+                                    <default-field title="Team" tooltip="Empty: the queue's team">
+                                        <drop-down allow-empty="true"><list-options list="teamOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="respectSchedule">
+                                    <default-field title="Only agents in their working hours"><check><option key="Y" text=" "/></check></default-field>
+                                </field>
+                                <field name="maxOpenCases">
+                                    <default-field title="Most open cases" tooltip="Empty: no limit; an agent's own limit counts first">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="draft">
+                                    <default-field title="Keep as a draft"><check><option key="Y" text=" "/></check></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Create rule"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="ruleName"/><field-ref name="requestCategoryId"/></field-row>
+                                    <field-row><field-ref name="distributionEnumId"/><field-ref name="eligibleTeamPartyId"/></field-row>
+                                    <field-row><field-ref name="sequenceNum"/><field-ref name="maxOpenCases"/></field-row>
+                                    <field-row><field-ref name="respectSchedule"/><field-ref name="draft"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <label type="p" style="m-muted" condition="!queueOptions.length" text="The organization has no service queue yet: make one on Queues first."/>
+                <!-- ===== AssignmentRuleList ===== -->
+                <container-box>
+                    <box-header title="Rules by queue"/>
+                    <box-body-nopad>
+                        <form-list name="AssignmentRuleList" list="rules" skip-form="true" paginate="false">
+                            <field name="ruleName">
+                                <default-field title="Rule">
+                                    <link url="." text="${ruleName}" link-type="anchor"
+                                            parameter-map="{organizationPartyId:cfgOrganizationPartyId, assignmentRuleId:assignmentRuleId}"/>
+                                    <label text="${conditionsText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="queueName"><default-field title="Queue"><display/></default-field></field>
+                            <field name="sequenceNum" align="right"><default-field title="Order"><display/></default-field></field>
+                            <field name="distributionText">
+                                <default-field title="Gives cases">
+                                    <display/>
+                                    <label text="${teamName} · ${eligibleText} · ${scheduleText} · ${maxText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                    <label text="${periodText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="lastResultText"><default-field title="Last result"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="ruleName"/><field-ref name="queueName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="distributionText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!rules.length"
+                                text="No assignment rule yet: every case stays unassigned until an agent takes it. Make one with New rule."/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- ===== AssignmentRuleEdit: the chosen rule and its typed conditions ===== -->
+                <section name="AssignmentRuleEdit" condition="rule">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${rule.ruleName} · ${rule.queueName} · ${rule.stateText}"/>
+                            <box-toolbar>
+                                <link url="endRule" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="can.policyEdit &amp;&amp; !rule.draft"
+                                        parameter-map="{assignmentRuleId:rule.assignmentRuleId, organizationPartyId:cfgOrganizationPartyId}"
+                                        confirmation="End the rule ${rule.ruleName}? Its queue's cases go to its other rules or stay unassigned."/>
+                            </box-toolbar>
+                            <box-body>
+                                <form-single name="RuleEditForm" transition="saveRule" map="ruleValues">
+                                    <field name="assignmentRuleId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="requestCategoryId"><default-field><hidden/></default-field></field>
+                                    <field name="ruleName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="sequenceNum"><default-field title="Order"><text-line size="4"/></default-field></field>
+                                    <field name="distributionEnumId">
+                                        <default-field title="Give cases">
+                                            <drop-down><list-options list="distributionOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="eligibleTeamPartyId">
+                                        <default-field title="Team" tooltip="Empty: the queue's team">
+                                            <drop-down allow-empty="true"><list-options list="teamOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="eligiblePartyIds">
+                                        <default-field title="Only these agents" tooltip="Empty: every agent of the team">
+                                            <drop-down allow-multiple="true">
+                                                <dynamic-options transition="ruleChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'members', organizationPartyId:cfgOrganizationPartyId, teamPartyId:(rule.teamPartyId || '')}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="respectSchedule">
+                                        <default-field title="Only agents in their working hours"><check><option key="Y" text=" "/></check></default-field>
+                                    </field>
+                                    <field name="maxOpenCases"><default-field title="Most open cases"><text-line size="4"/></default-field></field>
+                                    <field name="fallbackPartyId">
+                                        <default-field title="Fallback" tooltip="When no agent is eligible; empty: the queue's fallback, else unassigned">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="ruleChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'members', organizationPartyId:cfgOrganizationPartyId, teamPartyId:(rule.teamPartyId || '')}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="draft">
+                                        <conditional-field title="Keep as a draft" condition="rule.draft"><check><option key="Y" text=" "/></check></conditional-field>
+                                        <default-field><hidden/></default-field>
+                                    </field>
+                                    <field name="fromDate">
+                                        <default-field title="From" tooltip="Empty: now; a published rule's change starts a new row and ends this one">
+                                            <date-time type="timestamp"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton">
+                                        <conditional-field title="Save rule" condition="can.policyEdit"><submit/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row><field-ref name="ruleName"/><field-ref name="sequenceNum"/></field-row>
+                                        <field-row><field-ref name="distributionEnumId"/><field-ref name="eligibleTeamPartyId"/></field-row>
+                                        <field-row><field-ref name="eligiblePartyIds"/><field-ref name="fallbackPartyId"/></field-row>
+                                        <field-row><field-ref name="maxOpenCases"/><field-ref name="respectSchedule"/></field-row>
+                                        <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                                        <field-ref name="draft"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Conditions: a case must meet all of them"/>
+                            <box-toolbar>
+                                <container-dialog id="AddCondition" button-text="Add condition" icon="sym_o_add" width="560"
+                                        title="Add a condition to ${rule.ruleName}" condition="can.policyEdit">
+                                    <form-single name="AddConditionForm" transition="saveCondition"
+                                            map="{assignmentRuleId:rule.assignmentRuleId, organizationPartyId:cfgOrganizationPartyId,
+                                                conditionAction:'add', draft:(rule.draft ? 'Y' : 'N'), fieldEnumId:'AcfType'}">
+                                        <field name="assignmentRuleId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="conditionAction"><default-field><hidden/></default-field></field>
+                                        <field name="draft"><default-field><hidden/></default-field></field>
+                                        <field name="fieldEnumId">
+                                            <default-field title="Field">
+                                                <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="operatorEnumId">
+                                            <default-field title="Is">
+                                                <drop-down>
+                                                    <dynamic-options transition="ruleChoices" parameter-map="{choice:'operators', organizationPartyId:cfgOrganizationPartyId}">
+                                                        <depends-on field="fieldEnumId"/>
+                                                    </dynamic-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="conditionValue">
+                                            <default-field title="Value">
+                                                <drop-down>
+                                                    <dynamic-options transition="ruleChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'values', organizationPartyId:cfgOrganizationPartyId}">
+                                                        <depends-on field="fieldEnumId"/>
+                                                    </dynamic-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Add condition"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <!-- a non-multi editable list: each row is its own form, its operator and value options depending on
+                                    its field (F71) -->
+                                <form-list name="ConditionList" list="rule.conditions" transition="saveCondition" paginate="false">
+                                    <field name="assignmentRuleId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="conditionSeqId"><default-field><hidden/></default-field></field>
+                                    <field name="conditionAction" from="'update'"><default-field><hidden/></default-field></field>
+                                    <field name="draft" from="rule.draft ? 'Y' : 'N'"><default-field><hidden/></default-field></field>
+                                    <field name="fieldEnumId">
+                                        <default-field title="Field">
+                                            <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="operatorEnumId">
+                                        <default-field title="Is">
+                                            <drop-down>
+                                                <dynamic-options transition="ruleChoices" parameter-map="{choice:'operators', organizationPartyId:organizationPartyId}">
+                                                    <depends-on field="fieldEnumId"/>
+                                                </dynamic-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="conditionValue">
+                                        <default-field title="Value">
+                                            <drop-down>
+                                                <dynamic-options transition="ruleChoices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'values', organizationPartyId:organizationPartyId, selected:conditionValue}">
+                                                    <depends-on field="fieldEnumId"/>
+                                                </dynamic-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <conditional-field title="Save" condition="can.policyEdit"><submit/></conditional-field>
+                                        <default-field title=""><display text=" "/></default-field>
+                                    </field>
+                                    <field name="removeLink">
+                                        <conditional-field title="" condition="can.policyEdit">
+                                            <link url="saveCondition" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger"
+                                                    parameter-map="{assignmentRuleId:assignmentRuleId, organizationPartyId:organizationPartyId,
+                                                        conditionSeqId:conditionSeqId, conditionAction:'remove', draft:(rule.draft ? 'Y' : 'N')}"
+                                                    confirmation="Remove the condition ${text}?"/>
+                                        </conditional-field>
+                                        <default-field title=""><display text=" "/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="fieldEnumId"/><field-ref name="operatorEnumId"/></column>
+                                        <column><field-ref name="conditionValue"/><field-ref name="submitButton"/><field-ref name="removeLink"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!rule.conditions.length"
+                                        text="No condition: every case of the queue meets this rule."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- ===== AssignmentPreview: the same evaluator as a new case's ===== -->
+                <container-box>
+                    <box-header title="Preview: who would a case go to now?"/>
+                    <box-body>
+                        <form-single name="AssignmentPreview" transition="preview" map="previewValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="assignmentRuleId"><default-field><hidden/></default-field></field>
+                            <field name="previewCategoryId">
+                                <default-field title="Queue">
+                                    <drop-down><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewTypeEnumId">
+                                <default-field title="Case type">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'caseTypes', organizationPartyId:cfgOrganizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewPriority">
+                                <default-field title="Priority">
+                                    <drop-down>
+                                        <option key="1" text="1 (urgent)"/><option key="3" text="3 (high)"/>
+                                        <option key="5" text="5 (normal)"/><option key="7" text="7 (low)"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewChannelEnumId">
+                                <default-field title="Channel">
+                                    <drop-down allow-empty="true">
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="previewCustomerPartyId">
+                                <default-field title="Customer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'customers', selected:previewCustomerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="previewCategoryId"/><field-ref name="previewTypeEnumId"/></field-row>
+                                <field-row><field-ref name="previewPriority"/><field-ref name="previewChannelEnumId"/></field-row>
+                                <field-row><field-ref name="previewCustomerPartyId"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                        <section name="PreviewResult" condition="pv">
+                            <widgets>
+                                <label text="${pv.outcomeText}${pv.assigneeName ? ': ' + pv.assigneeName : ''}" type="h6"/>
+                                <label text="${pv.reason}" type="p" style="text-caption m-muted"/>
+                                <form-list name="PreviewRules" list="pv.rules" skip-form="true" paginate="false">
+                                    <field name="ruleName"><default-field title="Rule"><display/></default-field></field>
+                                    <field name="matches">
+                                        <default-field title="Met">
+                                            <display text="${matches ? 'Yes' : 'No: ' + conditions.filter((row) =&gt; !row.holds).map((row) =&gt; row.text).join('; ')}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="ruleName"/></column>
+                                        <column><field-ref name="matches"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="PreviewAgents" list="pv.candidates" skip-form="true" paginate="false">
+                                    <field name="name"><default-field title="Agent"><display/></default-field></field>
+                                    <field name="openCaseCount" align="right"><default-field title="Open cases"><display/></default-field></field>
+                                    <field name="reasonText"><default-field title="Now"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/></column>
+                                        <column><field-ref name="reasonText"/><field-ref name="openCaseCount"/></column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

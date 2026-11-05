@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's case template reads (impl-customer-service P7, CS-TEMPLATES; design-customer-service §3 NewCase, §9
+    CaseTemplates; Templates.js), scoped by AccessServices (the user's organizations). The templates and their rules are
+    Mantle's mantle.request.SupportCaseServices (save#CaseTemplate, save#CaseTemplateField, save#CaseTemplateCondition,
+    end#CaseTemplatePart, validate#CaseTemplate, validate#TemplateValues, get#CaseTemplate, get#CaseTemplateValues), which the
+    screens call after these. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Templates" allow-remote="false">
+        <description>The case templates of one of the user's settings organizations (design CaseTemplates TemplateList): name,
+            state (draft, published, changes to publish), the queues using each, its fields by audience, first published and
+            last change; with the organization choice and the organization's service queues. Refuses an organization not the
+            user's (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="templates" type="List"/>
+            <parameter name="queueOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Templates.js').execute('findTemplates', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="templates" from="found.templates"/>
+            <set field="queueOptions" from="found.queueOptions"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseTemplateChoice" allow-remote="false">
+        <description>NewCase's template step: the organization's published templates and the one the case takes (the one
+            chosen, else the queue's), for an organization the user serves; none otherwise.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="requestCategoryId"/>
+            <parameter name="templateFormId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="templateOptions" type="List"/>
+            <parameter name="templateFormId"/>
+            <parameter name="queueTemplateFormId"/>
+            <parameter name="templateName"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Templates.js').execute('caseTemplateChoice', context)"/>
+            <set field="templateOptions" from="found.templateOptions"/>
+            <set field="templateFormId" from="found.templateFormId"/>
+            <set field="queueTemplateFormId" from="found.queueTemplateFormId"/>
+            <set field="templateName" from="found.templateName"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ConditionValues" allow-remote="false">
+        <description>The options of a template's source field, now and drafts (TemplateEdit's condition rows), for a template
+            of the user's organizations; none otherwise.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="formId"/>
+            <parameter name="sourceFieldName"/>
+        </in-parameters>
+        <out-parameters><parameter name="options" type="List"/></out-parameters>
+        <actions>
+            <set field="options" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Templates.js').execute('conditionValues', context).options"/>
+        </actions>
+    </service>
+</services>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service assignment reads (impl-customer-service P5, CS-ASSIGNMENT; Assignment.js): what AssignmentRules and
+    AgentTeams' participation show and choose from for one of the user's organizations. The saves and the evaluator are
+    Mantle's mantle.request.SupportCaseServices (save#AssignmentRule, preview#Assignment, save#ServiceTeamMember), which check
+    SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE and the organization themselves. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Rules" allow-remote="false">
+        <description>The organization's assignment rules (design AssignmentRules AssignmentRuleList): in effect, starting
+            later and drafts, by queue and order, each with its typed conditions, distribution, team and members, working
+            hours, most open cases, fallback, state, period and last result; with the queues, teams, distributions and
+            condition fields the forms choose from. Refuses an organization not the user's (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <in-parameters><parameter name="requestCategoryId"/></in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="rules" type="List"/>
+            <parameter name="queueOptions" type="List"/>
+            <parameter name="teamOptions" type="List"/>
+            <parameter name="distributionOptions" type="List"/>
+            <parameter name="fieldOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Assignment.js').execute('findRules', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="rules" from="found.rules"/>
+            <set field="queueOptions" from="found.queueOptions"/>
+            <set field="teamOptions" from="found.teamOptions"/>
+            <set field="distributionOptions" from="found.distributionOptions"/>
+            <set field="fieldOptions" from="found.fieldOptions"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TeamParticipation" allow-remote="false">
+        <description>Each current member's participation in the organization's teams (design AgentTeams TeamParticipation),
+            keyed by team and member: whether rules give them cases, the most open cases, the substitute and the
+            calendar.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="participation" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Assignment.js').execute('teamParticipation', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="participation" from="found.participation"/>
+        </actions>
+    </service>
+    <service verb="get" noun="RuleChoices" allow-remote="false">
+        <description>The options of the rule and participation forms: operators and values (of fieldEnumId: the operators it
+            takes, the values of its type), members (of teamPartyId), calendars (of the organization, its teams and partyId).
+            Refuses an unknown choice and a team not the organization's (TEAM_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <in-parameters>
+            <parameter name="choice"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+            <parameter name="fieldEnumId"/>
+            <parameter name="teamPartyId"/>
+            <parameter name="partyId"/>
+        </in-parameters>
+        <out-parameters><parameter name="options" type="List"/></out-parameters>
+        <actions>
+            <set field="options" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Assignment.js').execute('ruleChoices', context).options"/>
+        </actions>
+    </service>
+</services>

@@ -12,11 +12,215 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Customer Service landing page (initial-design.md); design-customer-service.md designs
-    it. -->
+<!-- Customer Service Home (design-customer-service §3 Home; style-guide §3.1 Landing): ServiceMetrics, the KPI strip of
+    every role (open, overdue, unassigned, SLA compliance, first response, resolution and CSAT, each with its period and the
+    time it was read; ironstone.customerservice.ReportingServices.get#ServiceDashboard), each "Not configured" until the
+    phase that measures it (P2, P4, P13), never zero; and the lookup of a record (lookupType and lookupId, through
+    ironstone.customerservice.AccessServices.check#Record): record links of kinds whose Customer Service screen is not built
+    yet open it here. The panels of design §1 by role (My cases, Team queues, Returns awaiting approval, Approvals waiting)
+    and the shortcuts (New case, Request return) arrive with their phases, each for the roles the dashboard's panels name. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <actions>
+        <service-call name="ironstone.customerservice.ReportingServices.get#ServiceDashboard" in-map="{appRoot:appRoot}"
+                out-map="dashboard"/>
+        <set field="measureText" from="Object.fromEntries((dashboard.measures || []).map((measure) =&gt;
+                [measure.key, measure.configured ? measure.valueText : 'Not configured']))"/>
+        <if condition="lookupId">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
+                    out-map="lookup"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="lookupFound" from="!!lookup?.recordId"/>
+        </if>
+        <!-- P2: My cases (the user's open cases) and Team queues (each queue's counts), for the roles that see them -->
+        <set field="can" from="customerService.capabilities"/>
+        <if condition="dashboard.panels.myCases">
+            <service-call name="ironstone.customerservice.CaseServices.find#Cases" out-map="myCasesOut" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, view:'mine', statusCategoryEnumId:'CscOpen,CscPaused', pageSize:10}"/>
+        </if>
+        <if condition="dashboard.panels.teamQueues">
+            <service-call name="ironstone.customerservice.CaseServices.get#QueueCounts" out-map="queuesOut" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot}"/>
+        </if>
+        <!-- P9: Returns awaiting approval (R, M) and Approvals waiting (M, R: the service topics' decisions, read only) -->
+        <if condition="dashboard.panels.awaitingReturns">
+            <service-call name="ironstone.customerservice.ReturnServices.get#AwaitingReturns" out-map="awaitingOut"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, limit:8}"/>
+        </if>
+        <if condition="dashboard.panels.approvalsWaiting">
+            <service-call name="org.moqui.impl.NotificationServices.get#UserNotifications" out-map="approvalsOut"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{approvals:true, pageSize:8, inboxEnumId:'NinNotifications',
+                        topicList:customerService.approvalTopics}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="awaitingReturns" from="awaitingOut?.approvalRows || []"/>
+        <set field="approvalsWaiting" from="Array.from(approvalsOut?.notificationList || []).map((row) =&gt; ({
+                notificationMessageId: row.notificationMessageId, title: row.titleText || row.topicDescription || row.topic,
+                ageText: row.sentDate ? ec.l10n.format(row.sentDate, 'd MMM HH:mm') : '',
+                url: row.linkText || (row.recordEntityName == 'mantle.order.return.ReturnHeader'
+                    ? '/qapps/CustomerService/Returns/ReturnDetail?returnId=' + encodeURIComponent(row.recordId) : null)}))"/>
+        <set field="myCases" from="myCasesOut?.cases || []"/>
+        <set field="teamQueues" from="queuesOut?.queueRows || []"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Customer Service landing page for support and the order desk." type="p"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Customer Service" type="h5"/></container>
+            <container style="col-auto">
+                <link url="${sharedLinks['Cases/NewCase']}" text="New case" link-type="anchor-button" btn-type="primary"
+                        icon="sym_o_add" condition="can.caseEdit"/>
+                <!-- P9: the Request return shortcut -->
+                <link url="${sharedLinks['Returns/NewReturn']}" text="Request return" link-type="anchor-button"
+                        icon="sym_o_assignment_return" condition="can.returns &amp;&amp; (can.caseEdit || can.returnAuthorize)"/>
+            </container>
+        </container>
+        <section name="LookupResult" condition="lookupId">
+            <widgets>
+                <container-box>
+                    <box-header title="Record"/>
+                    <box-body>
+                        <label text="${lookup.kindName} ${lookup.recordId}" type="strong" condition="lookupFound"/>
+                        <label text="${lookup.label}" type="p"
+                                condition="lookupFound &amp;&amp; lookup.label &amp;&amp; lookup.label != lookup.recordId"/>
+                        <label text="${lookup.detail}" type="p" style="text-caption m-muted"
+                                condition="lookupFound &amp;&amp; lookup.detail"/>
+                        <label text="${lookupId} is not available to you." type="p" condition="!lookupFound"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="Service health, ${dashboard.periodText}, as of ${dashboard.asOfText}" type="p" style="text-caption m-muted"/>
+        <dashboard min-width="170">
+            <number-card title="Open" value="${measureText.open}" icon="sym_o_inbox" size="sm"/>
+            <number-card title="Overdue" value="${measureText.overdue}" icon="sym_o_schedule" size="sm"/>
+            <number-card title="Unassigned" value="${measureText.unassigned}" icon="sym_o_person_off" size="sm"/>
+            <number-card title="SLA compliance" value="${measureText.slaCompliance}" icon="sym_o_verified" size="sm"/>
+            <number-card title="First response" value="${measureText.firstResponse}" icon="sym_o_reply" size="sm"/>
+            <number-card title="Resolution" value="${measureText.resolution}" icon="sym_o_task_alt" size="sm"/>
+            <number-card title="CSAT" value="${measureText.csat}" icon="sym_o_sentiment_satisfied" size="sm"/>
+        </dashboard>
+        <container-row>
+            <row-col md="7">
+                <section name="MyCases" condition="dashboard.panels.myCases">
+                    <widgets>
+                        <container-box>
+                            <box-header title="My cases"/>
+                            <box-toolbar>
+                                <link url="${sharedLinks['Cases/Cases']}" text="All my cases" link-type="anchor" parameter-map="{view:'mine'}"/>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="MyCaseList" list="myCases" skip-form="true" paginate="false">
+                                    <field name="requestId">
+                                        <default-field title="Case">
+                                            <link url="${url}" url-type="plain" text="${requestId}" link-type="anchor"/>
+                                            <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                    <field name="bandText"><default-field title="Priority"><display/></default-field></field>
+                                    <field name="statusLabel"><default-field title="Status"><display/></default-field></field>
+                                    <field name="dueText">
+                                        <default-field title="Due"><label text="${dueText}" type="span" style="${overdue ? 'text-negative' : ''}"/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="requestId"/><field-ref name="customerName"/></column>
+                                        <column><field-ref name="statusLabel"/><field-ref name="dueText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No open case is assigned to you." type="p" style="q-pa-sm m-muted q-mb-none"
+                                        condition="!myCases.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+            <row-col md="5">
+                <section name="TeamQueues" condition="dashboard.panels.teamQueues">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Team queues"/>
+                            <box-body-nopad>
+                                <form-list name="TeamQueueList" list="teamQueues" skip-form="true" paginate="false">
+                                    <field name="queueName">
+                                        <default-field title="Queue">
+                                            <link url="${url}" url-type="plain" text="${queueName}" link-type="anchor"/>
+                                            <label text="${teamName}" type="div" style="text-caption m-muted" condition="teamName"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="openCount" align="right"><default-field title="Open"><display/></default-field></field>
+                                    <field name="unassignedCount" align="right"><default-field title="Unassigned"><display/></default-field></field>
+                                    <field name="breachedText" align="right"><default-field title="Breached"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="queueName"/></column>
+                                        <column><field-ref name="openCount"/><field-ref name="unassignedCount"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="You work no queue yet: a service manager adds you to a team." type="p"
+                                        style="q-pa-sm m-muted q-mb-none" condition="!teamQueues.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+        </container-row>
+        <!-- P9: Returns awaiting approval and Approvals waiting -->
+        <container-row>
+            <row-col md="7">
+                <section name="AwaitingReturns" condition="dashboard.panels.awaitingReturns">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Returns awaiting approval"/>
+                            <box-body-nopad>
+                                <form-list name="AwaitingReturnList" list="awaitingReturns" skip-form="true" paginate="false">
+                                    <field name="returnId">
+                                        <default-field title="Return">
+                                            <link url="${url}" url-type="plain" text="${displayId}" link-type="anchor"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                    <field name="entryText"><default-field title="Requested"><display/></default-field></field>
+                                    <field name="previewExpireText"><default-field title="Valid until"><display/></default-field></field>
+                                    <field name="exceptionText"><default-field title="Exception"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="returnId"/><field-ref name="customerName"/></column>
+                                        <column><field-ref name="exceptionText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No return waits for authorization." type="p" style="q-pa-sm m-muted q-mb-none"
+                                        condition="!awaitingReturns.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+            <row-col md="5">
+                <section name="ApprovalsWaiting" condition="dashboard.panels.approvalsWaiting">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approvals waiting"/>
+                            <box-body-nopad>
+                                <form-list name="ApprovalsWaitingList" list="approvalsWaiting" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Decision">
+                                            <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                                            <label text="${title}" condition="!url"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="ageText"><default-field title="Since"><display/></default-field></field>
+                                </form-list>
+                                <label text="No decision waits for you." type="p" style="q-pa-sm m-muted q-mb-none"
+                                        condition="!approvalsWaiting.length"/>
+                                <link url="${sharedLinks['Approvals']}" text="Open Approvals" link-type="anchor"
+                                        style="q-pa-sm" condition="approvalsWaiting.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+        </container-row>
     </widgets>
 </screen>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseAnalytics (design-customer-service §7 CaseAnalytics CaseMetrics; impl-customer-service P4, CS-SLA): one case's
+    measurements: its clocks as cards (first response, each resolution episode with its policy row, calendar, target, pauses
+    and breach) and the event timeline as a table (received, status changes from any path, responses, customer replies, work,
+    pauses, warnings, breaches and corrections, each with its reason and who), over Mantle's
+    mantle.request.SlaServices.get#CaseSlaHistory after the case's check (ironstone.customerservice.AccessServices.check#Record).
+    Events are not edited here; a manager corrects a clock on CaseDetail's Service level tab. The terminal prints the same
+    times and durations. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Case analytics" default-menu-index="2">
+    <parameter name="requestId"/>
+    <actions>
+        <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="caseCheck" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'case', recordId:requestId}"/>
+        <if condition="caseCheck?.recordId">
+            <service-call name="mantle.request.SlaServices.get#CaseSlaHistory" out-map="history" transaction="force-new"
+                    ignore-error="true" in-map="{requestId:requestId}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="found" from="!!history?.events"/>
+        <set field="clocks" from="history?.clocks || []"/>
+        <set field="slaEvents" from="history?.events || []"/>
+        <set field="asOfText" from="ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy HH:mm')"/>
+    </actions>
+    <widgets>
+        <section name="CaseAnalyticsMissing" condition="!found">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Case ${requestId || ''} is not available: it does not exist or it is not a case of your queues."/>
+                        <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="CaseAnalyticsFound" condition="found">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-baseline">
+                        <label text="${requestId}" type="span" style="text-mono text-caption m-muted q-mr-sm"/>
+                        <label text="${caseCheck.label}" type="h5"/>
+                    </container>
+                    <label text="Measured as of ${asOfText}; times in each clock's zone"
+                            type="div" style="text-caption m-muted"/>
+                    <container style="m-record-actions">
+                        <link url="${sharedLinks['Cases/CaseDetail']}" text="Open the case" icon="arrow_back"
+                                link-type="anchor-button" parameter-map="{requestId:requestId, tab:'sla'}"/>
+                    </container>
+                </container>
+                <label text="No service level policy applied to this case when it came in." type="p" style="m-muted"
+                        condition="!clocks.length"/>
+                <container style="row q-col-gutter-sm q-mb-md">
+                    <section-iterate name="ClockCards" list="clocks" entry="clock">
+                        <widgets>
+                            <container style="col-12 col-sm-6 col-md-4">
+                                <container-box>
+                                    <box-header title="${clock.label}: ${clock.stateText}"/>
+                                    <box-body>
+                                        <form-single name="ClockFacts" map="clock">
+                                            <field name="startText"><default-field title="Started"><display/></default-field></field>
+                                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                            <field name="actualText"><default-field title="Done"><display/></default-field></field>
+                                            <field name="breachedText"><default-field title="Breached"><display/></default-field></field>
+                                            <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                                            <field name="elapsedText"><default-field title="Business time"><display/></default-field></field>
+                                            <field name="pausedText"><default-field title="Paused"><display/></default-field></field>
+                                            <field name="bandText"><default-field title="Priority"><display/></default-field></field>
+                                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                                            <field name="calendarText"><default-field title="Calendar"><display/></default-field></field>
+                                            <field name="timeZone"><default-field title="Time zone"><display/></default-field></field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </widgets>
+                    </section-iterate>
+                </container>
+                <container-box>
+                    <box-header title="Events"/>
+                    <box-body-nopad>
+                        <form-list name="CaseEvents" list="slaEvents" skip-form="true" paginate="false" show-csv-button="true">
+                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                            <field name="typeText"><default-field title="Event"><display/></default-field></field>
+                            <field name="clockLabel"><default-field title="Clock"><display/></default-field></field>
+                            <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="userName"><default-field title="By"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="typeText"/><field-ref name="detail"/></column>
+                                <column><field-ref name="dateText"/><field-ref name="userName"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

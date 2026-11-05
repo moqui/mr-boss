@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ServiceDefaults (design-customer-service §9 ServiceDefaults ServicePolicy; impl-customer-service P2, CS-SETTINGS): the
+    organization's service policy (ironstone.customerservice.ConfigurationServices.get#ServiceSettings) and its edit from now
+    over mantle.request.SupportCaseServices.save#ServiceDefaults: the default queue and workflow, what an unknown sender
+    makes, the reopen window, the auto-close delay, whether resolving needs a resolution, and customerImmediateCancel (off,
+    for P10). The first policy turns the case rules on for the organization. FeedbackDeliveryPolicy comes in P13. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Service defaults" default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition name="saveDefaults">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceDefaults"
+                    in-map="{organizationPartyId:organizationPartyId, defaultCategoryId:(defaultCategoryId || null),
+                        caseWorkflowId:(caseWorkflowId || null), unknownSenderEnumId:(unknownSenderEnumId || null),
+                        reopenWindowDays:(reopenWindowDays || null), autoCloseDays:(autoCloseDays || null),
+                        resolutionRequired:(resolutionRequired || 'Y'), customerImmediateCancel:(customerImmediateCancel || 'N')}"/>
+            <message type="success">Saved the service defaults</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cfg" from="settingsOut?.settings || null"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="policy" from="cfg?.policy || null"/>
+        <set field="policyValues" from="Object.assign({organizationPartyId:cfgOrganizationPartyId, caseWorkflowId:'CwfDefault',
+                unknownSenderEnumId:'SusReview', reopenWindowDays:'14', resolutionRequired:'Y', customerImmediateCancel:'N'}, policy || {})"/>
+        <set field="queueOptions" from="cfg?.queueOptions || []"/>
+        <set field="workflows" from="cfg?.workflows || []"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
+        <section name="DefaultSettings" condition="cfg">
+            <widgets>
+                <label text="Service defaults" type="h5"/>
+                <label type="p" style="text-caption m-muted" text="${policy ? 'In effect since ' + policy.fromText + '.' :
+                        'Not set: no request of the organization is a case until these are saved.'}"/>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-body>
+                        <form-single name="ServicePolicy" transition="saveDefaults" map="policyValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="defaultCategoryId">
+                                <default-field title="Default queue">
+                                    <drop-down allow-empty="true"><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="caseWorkflowId">
+                                <default-field title="Case workflow">
+                                    <drop-down><list-options list="workflows" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="unknownSenderEnumId">
+                                <default-field title="A message from an unknown sender makes">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="ServiceUnknownSender"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reopenWindowDays">
+                                <default-field title="Reopen within (days)" tooltip="After this a reply makes a follow-up case">
+                                    <text-line size="4" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="autoCloseDays">
+                                <default-field title="Close resolved cases after (days)" tooltip="Empty: never">
+                                    <text-line size="4" input-type="number"/>
+                                </default-field>
+                            </field>
+                            <field name="resolutionRequired">
+                                <default-field title="Resolving needs a resolution">
+                                    <radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="customerImmediateCancel">
+                                <default-field title="Customers cancel unshipped orders at once">
+                                    <radio><option key="N" text="No"/><option key="Y" text="Yes"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <conditional-field title="Save from now" condition="can.policyEdit"><submit/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="defaultCategoryId"/><field-ref name="caseWorkflowId"/></field-row>
+                                <field-ref name="unknownSenderEnumId"/>
+                                <field-row><field-ref name="reopenWindowDays"/><field-ref name="autoCloseDays"/></field-row>
+                                <field-row><field-ref name="resolutionRequired"/><field-ref name="customerImmediateCancel"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

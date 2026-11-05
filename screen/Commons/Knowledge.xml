@@ -44,11 +44,24 @@ along with this software (see the LICENSE.md file). If not, see
                 ec.message.clearErrors()
                 if (project == null) { ec.web.sendJsonResponse({spaceList: [], recentList: [], reviewCount: 0, me: {}, project: {notAvailable: true, linkedList: [], repositoryOptions: []}}); return }
             }
+            // in Customer Service (CustomerService/Knowledge's always-actions set inCustomerService) the spaces are its knowledge
+            // sources' (ironstone.customerservice.KnowledgeServices.get#KnowledgeContext, answered as service), with the case worked on
+            let service = null
+            if (ec.context.get('inCustomerService')) {
+                service = ec.service.sync().name('ironstone.customerservice.KnowledgeServices.get#KnowledgeContext').parameters({appRoot: 'CustomerService',
+                    requestId: ec.context.get('requestId') || null}).call()?.knowledgeContext || null
+                ec.message.clearErrors()
+                if (service == null) { ec.web.sendJsonResponse({spaceList: [], recentList: [], reviewCount: 0, me: {}, service: {spaceIds: []}}); return }
+            }
             const out = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#KnowledgeSetup').parameter('wikiSpaceId', project ? project.wikiSpaceId : (wikiSpaceId || null)).call()
             if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
-            const spaceList = project ? Array.from(out.spaceList || []).filter((space) => space.wikiSpaceId === project.wikiSpaceId) : out.spaceList
-            ec.web.sendJsonResponse({spaceList: spaceList, defaultWikiSpaceId: project ? (spaceList.length ? project.wikiSpaceId : null) : out.defaultWikiSpaceId,
-                recentList: project ? [] : out.recentList, reviewCount: out.reviewCount, me: out.me, failedParts: out.failedParts, project: project})
+            const spaceList = project ? Array.from(out.spaceList || []).filter((space) => space.wikiSpaceId === project.wikiSpaceId)
+                : service ? Array.from(out.spaceList || []).filter((space) => Array.from(service.spaceIds || []).includes(space.wikiSpaceId)) : out.spaceList
+            const defaultSpaceId = project ? (spaceList.length ? project.wikiSpaceId : null) : service
+                ? (spaceList.some((space) => space.wikiSpaceId === out.defaultWikiSpaceId) ? out.defaultWikiSpaceId : (spaceList[0]?.wikiSpaceId || null)) : out.defaultWikiSpaceId
+            ec.web.sendJsonResponse({spaceList: spaceList, defaultWikiSpaceId: defaultSpaceId,
+                recentList: project || service ? [] : out.recentList, reviewCount: out.reviewCount, me: out.me, failedParts: out.failedParts, project: project,
+                service: service})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>
@@ -81,6 +94,40 @@ along with this software (see the LICENSE.md file). If not, see
             ec.message.clearErrors()
             ec.web.sendJsonResponse(Array.from(out.pageList || []).filter((hit) => hit.wikiPageId && hit.wikiSpaceId !== own)
                     .map((hit) => ({value: hit.wikiPageId, label: (hit.title || hit.pagePath || hit.wikiSpaceId) + ' · ' + (hit.spaceDescription || hit.wikiSpaceId)})))
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- in Customer Service (impl-customer-service P12): Link to case, Send to customer (the Compose address, a draft or an
+        internal article refused) and Suggest edit (a task for the review team), each after the case's check; the case is the
+        requestId the mount was opened with -->
+    <transition name="linkCaseArticle">
+        <actions><script><![CDATA[
+            if (!ec.context.get('inCustomerService')) ec.message.addError(ec.l10n.localize('Not available here'))
+            if (!ec.message.hasError()) ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record').parameters({appRoot: 'CustomerService',
+                recordType: 'case', recordId: requestId || '', capability: 'caseEdit'}).call()
+            if (!ec.message.hasError()) ec.service.sync().name('mantle.request.RequestServices.link#RequestRecord').parameters({requestId: requestId,
+                recordEntityName: 'moqui.resource.wiki.WikiPage', recordId: wikiPageId || ''}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.resource.expand('Linked to case ${id}', '', {id: requestId})}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="sendArticle">
+        <actions><script><![CDATA[
+            if (!ec.context.get('inCustomerService')) ec.message.addError(ec.l10n.localize('Not available here'))
+            const out = ec.message.hasError() ? {} : ec.service.sync().name('ironstone.customerservice.KnowledgeServices.prepare#ArticleSend').parameters({appRoot: 'CustomerService',
+                requestId: requestId || '', wikiPageId: wikiPageId || ''}).call() || {}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {composeUrl: out.send?.composeUrl || null})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="suggestArticleEdit">
+        <actions><script><![CDATA[
+            if (!ec.context.get('inCustomerService')) ec.message.addError(ec.l10n.localize('Not available here'))
+            if (!ec.message.hasError() && requestId) ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record').parameters({appRoot: 'CustomerService',
+                recordType: 'case', recordId: requestId, capability: 'caseEdit'}).call()
+            if (!ec.message.hasError()) ec.service.sync().name('mantle.request.KnowledgeServices.suggest#ArticleEdit').parameters({wikiPageId: wikiPageId || '',
+                note: note || null, requestId: requestId || null}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {messageInfos: [{type: 'success', message: ec.l10n.localize('Your suggestion is with the review team')}]})
         ]]></script></actions>
         <default-response type="none"/>
     </transition>

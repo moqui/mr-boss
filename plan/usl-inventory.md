@@ -247,7 +247,7 @@ Added in Accounting P4, called by built screens (financial authority remains nat
 | InvoiceServices | create#Receivable |  | Accounting/Receivables/Invoices |
 | InvoiceServices | get#InvoiceOutput |  | Accounting/Receivables/InvoicePrint |
 | InvoiceServices | get#InvoiceDeliveryAttachments |  | Accounting/Receivables/InvoiceDetail (explicit supporting-file choices) |
-| InvoiceServices | send#Invoice |  | Accounting/Receivables/InvoiceDetail; Projects/Billing/InvoiceDetail |
+| InvoiceServices | send#Invoice |  | Accounting/Receivables/InvoiceDetail; Projects/Billing/InvoiceDetail; CustomerService/Orders/InvoiceDetail (Send a copy, for RECEIVABLE_EDIT; Customer Service P3) |
 | InvoiceServices | process#InvoiceBatch |  | Accounting/Receivables/InvoiceBatch |
 | InvoiceServices | get#InvoiceBatchResult |  | Accounting/Receivables/InvoiceBatch |
 | InvoiceServices | find#ApprovedTimeBilling |  | Accounting/Receivables/BillingQueue |
@@ -274,9 +274,9 @@ Added in Accounting P10 (collections, credit and recurring invoices), called by 
 | CreditServices | store#Defaults | Accounting/Settings/CollectionPolicies | Accounting/Settings/CollectionPolicies |
 | CreditServices | evaluate#OrderCredit | Accounting/Records/OrderDetail | (approve#Order; the OrderPreApproveCredit SECA) |
 | CreditServices | release#CreditHold | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360 | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360/Credit |
-| CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit |
-| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit); Purchasing/Orders/OrderDetail (Hold, a Purchase reason; Purchasing P3) |
-| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold); Purchasing/Orders/OrderDetail (Release hold, a Purchase reason; Purchasing P3) |
+| CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit; CustomerService/Customers/Customer360/ServiceBilling (read only, for CUSTOMER_CREDIT_VIEW; Customer Service P3) |
+| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit); Purchasing/Orders/OrderDetail (Hold, a Purchase reason; Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: the Change hold, through OrderChangeServices.apply#OrderChange; Customer Service P10) |
+| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold); Purchasing/Orders/OrderDetail (Release hold, a Purchase reason; Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange releases its Change hold, another hold kept; Customer Service P10) |
 | RecurringInvoiceServices | store#Schedule | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | preview#Period | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | generate#Invoices | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
@@ -603,7 +603,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; Sales/Orders/Orders; Sales/Quotes/Quotes | — Purchasing: one part per order, made by create#PurchaseOrder (Purchasing P3) |
 | OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's receiving facility through PurchaseServices.update#PurchaseOrder) |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3) |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: a short pick's substitute line; Customer Service P10) |
 | OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft line through PurchaseServices.store#PurchaseOrderItem, the entity update) |
 | OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Remove, through PurchaseServices.delete#PurchaseOrderItem) (Purchasing P3) |
 | OrderServices | recalc#OrderItemAmount |  |  |
@@ -632,7 +632,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders and Purchasing/Orders/OrderDetail (Close remainder: close#PurchaseRemainders completes the part) (Purchasing P3) |
 | OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3) |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail | — Purchasing: cancel#PurchaseOrder (Purchasing P3) |
-| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11); Purchasing/Orders/OrderDetail (Close remainder, through close#PurchaseRemainders) (Purchasing P3) |
+| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11); Purchasing/Orders/OrderDetail (Close remainder, through close#PurchaseRemainders) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: the open remainder or a short pick's, through apply#OrderChange; Customer Service P10) |
 | OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
@@ -645,31 +645,31 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | handle#OrderMajorChange |  |  |
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
-| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9) |
+| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9); (Customer Service P10: a sales order's commercial revision behind PartyAcctgPreference.salesCommercialRevisionOnly, F55) |
 | OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
 | OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
 | OrderServices | create#PurchaseRequestOrder | Projects/Requests/RequestDetail; Purchasing/Requests/RequestSourcing | — (BOSS never calls it: RequestSourcing calls convert#PurchaseSourcing, F4; Purchasing P10) |
-| ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext); — Purchasing: ironstone.purchasing.ReturnServices reads its ReturnDetail branch (Purchasing P8) |
+| ReturnServices | get#ReturnDisplayInfo | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/Returns; Shared/Customer360; Shared/ReturnDetail | — (§7: a return list on Customer360; Accounting/Records/ReturnDetail reads through ironstone.accounting.ReturnScreenServices.get#ReturnContext); — Purchasing: ironstone.purchasing.ReturnServices reads its ReturnDetail branch (Purchasing P8); CustomerService/Returns/ReturnDetail, CustomerService/Returns/Returns (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | ReturnServices | create#Return | Warehouse/Returns/Returns; Purchasing/Returns/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a supplier return from a facility); — Purchasing: create#ReturnFromOrder after check#Record (Purchasing P8, F100) |
-| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order); Purchasing/Returns/SupplierReturns (NewSupplierReturn: a supplier return from a purchase order) (Purchasing P8) |
-| ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; PASS:Support/RequestReturn |  |
-| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/RequestReturn | Warehouse/Returns/ReturnDetail (Eligible items of a customer return); — Purchasing: find#ReturnableReceipts (Purchasing P8) |
-| ReturnServices | calculate#OrderItemReturnable | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add: through add#OrderItemToReturn); — Purchasing: find#ReturnableReceipts (Purchasing P8) |
-| ReturnServices | add#OrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add); — Purchasing: add#ReceiptToReturn (Purchasing P8) |
+| ReturnServices | create#ReturnFromOrder | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/Returns (NewReturn: a customer return from a sales order); Purchasing/Returns/SupplierReturns (NewSupplierReturn: a supplier return from a purchase order) (Purchasing P8); CustomerService/Returns/NewReturn (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | find#OrderOpenReturns | CustomerService/Returns/NewReturn; PASS:Support/RequestReturn | CustomerService/Returns/NewReturn (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | find#ReturnableOrderItems | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail; PASS:Shop/Orders/RequestReturn | Warehouse/Returns/ReturnDetail (Eligible items of a customer return); — Purchasing: find#ReturnableReceipts (Purchasing P8); CustomerService/Returns/NewReturn (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | calculate#OrderItemReturnable | Warehouse/Returns/ReturnDetail; Purchasing/Returns; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add: through add#OrderItemToReturn); — Purchasing: find#ReturnableReceipts (Purchasing P8); CustomerService/Returns/NewReturn (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | add#OrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Eligible items, Add); — Purchasing: add#ReceiptToReturn (Purchasing P8); CustomerService/Returns/NewReturn (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | ReturnServices | change#ReturnStatusInterface |  |  |
 | ReturnServices | update#ReturnStatus |  |  |
 | ReturnServices | checkUpdate#ReturnHeaderStatus |  | (WarehouseTaskServices.ship#SupplierReturn: ReturnShipped) |
-| ReturnServices | request#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn | Warehouse/Returns/ReturnDetail (Submit for authorization); — Purchasing: ReturnDetail's Authorize (AuthorizeSupplierReturnForm, RETURN_AUTHORIZE) (Purchasing P8) |
-| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Authorize, through authorize#SupplierReturn) (Purchasing P8); — (Warehouse: authorization is Customer Service's RETURN_AUTHORIZE, which no Warehouse group holds) |
+| ReturnServices | request#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn | Warehouse/Returns/ReturnDetail (Submit for authorization); — Purchasing: ReturnDetail's Authorize (AuthorizeSupplierReturnForm, RETURN_AUTHORIZE) (Purchasing P8); CustomerService/Returns/NewReturn, CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | approve#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Authorize, through authorize#SupplierReturn) (Purchasing P8); — (Warehouse: authorization is Customer Service's RETURN_AUTHORIZE, which no Warehouse group holds); CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | ReturnServices | receive#ReturnShipmentItems | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt; Shared/ReturnDetail | — (Warehouse: replaced on the receipt path by WarehouseTaskServices.receive#ReturnItems) |
-| ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — (not offered: a receipt without a carrier uses ReturnReceipt, design §11) |
+| ReturnServices | receive#ReturnWithoutShipment | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — (not offered: a receipt without a carrier uses ReturnReceipt, design §11); CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | ReturnServices | receive#ReturnItem | Warehouse/Returns/ReturnDetail; Warehouse/Returns/ReturnReceipt | — (Warehouse: replaced by WarehouseTaskServices.receive#ReturnItems) |
-| ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (through settle#Return) |
-| ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a customer return, through settle#Return) |
-| ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Cancel return, before authorization) (Purchasing P8); — not built (P14): ReturnDetail has no cancel; it changes a return only by adding eligible items |
-| ReturnServices | cancel#ReturnItem | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only |
-| ReturnServices | update#ReturnItem | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only; — Purchasing: not built; items are added from receipts only (Purchasing P8) |
+| ReturnServices | complete#ReturnItem | CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (through settle#Return); CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | process#ReturnItemResponses | CustomerService/Returns/ReturnDetail; Accounting/Records/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail (a customer return, through settle#Return); CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | cancel#Return | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | Purchasing/Returns/ReturnDetail (Cancel return, before authorization) (Purchasing P8); — not built (P14): ReturnDetail has no cancel; it changes a return only by adding eligible items; CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | cancel#ReturnItem | Warehouse/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only; CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| ReturnServices | update#ReturnItem | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only; — Purchasing: not built; items are added from receipts only (Purchasing P8); CustomerService/Returns/NewReturn, CustomerService/Returns/ReturnDetail (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | ReturnServices | delete#ReturnItem | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail | — not built (P14): ReturnDetail does not change or remove an item; it adds eligible items only |
 | ReturnServices | create#ReturnShipment | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, for an approved return with none); (Purchasing P8: through authorize#SupplierReturn, the approval SECA) |
 | ReturnServices | add#ReturnToShipment | Warehouse/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Create return shipment, through create#ReturnShipment) |
@@ -726,7 +726,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail (Add file; Purchasing P13) |
 | AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | — Purchasing: an agreement's file is not edited after its upload (F135) (Purchasing P13) |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
-| CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions |  |
+| CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions | CustomerService/Cases/ChannelSessions |
 | CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose; Sales/Pipeline/OpportunityDetail | Comms/Inbox/Compose; Shared/Chatter |
 | CommunicationServices | reply#CommunicationEvent | Comms/Inbox/Compose; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter | Comms/Inbox/Compose; Shared/Chatter |
 | CommunicationServices | add#WikiPageComment | Commons/Knowledge; Commons/Knowledge/Review |  |
@@ -823,7 +823,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | findOrCreate#EmailCommunicationEvent |  | Comms/Inbox/Mail |
 | CommunicationServices | link#CommunicationEventRecord |  | Comms/Chat; Comms/Inbox/Compose; Comms/Inbox/Mail; Comms/Inbox/MessageDetail; Shared/Chatter |
 | CommunicationServices | unlink#CommunicationEventRecord |  | Comms/Inbox/Mail; Shared/Chatter |
-| CommunicationServices | send#EmailDraft | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Orders/OrderDetail; Sales/Quotes/QuoteRequestDetail | Comms/Inbox/Compose |
+| CommunicationServices | send#EmailDraft | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Orders/OrderDetail; Sales/Quotes/QuoteRequestDetail | Comms/Inbox/Compose; CustomerService/Orders/OrderDetail (Resend confirmation, through mantle.order.OrderConfirmationServices.resend#OrderConfirmation; Customer Service P3) |
 | CommunicationServices | get#RecordTimeline | Sales/Pipeline/OpportunityDetail | Shared/Chatter |
 | CommunicationServices | log#RecordNote |  | Commons/QuickCreate; Shared/Chatter |
 | CommunicationServices | update#RecordNote |  | Shared/Chatter |
@@ -885,9 +885,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | AssetServices | get#AssetDisplayInfo | Warehouse/Inventory/Adjustments; Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | — Warehouse/Inventory/Adjustments (AdjustmentServices.get#AdjustmentContext), AssetDetail (InventoryServices.get#AssetDetail) |
-| AssetServices | get#AvailableInventory | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/Product360; Shared/InventoryAvailability; Manufacturing/WorkOrders/NewWorkOrder; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion; PASS:Shop/Products/ProductDetail | Shared/InventoryAvailability/Summary; Shared/Product360/Summary (kits); — Warehouse/Inventory/Availability/Summary: get#ProductStockTotals per facility; Manufacturing/WorkOrders/NewWorkOrder (producible now) and Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion (the buildable quantity), through get#BomExplosion (Manufacturing P5a, P2); Purchasing/Replenishment/InventoryAvailability (Shared/InventoryAvailability) (Purchasing P14) |
+| AssetServices | get#AvailableInventory | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/Product360; Shared/InventoryAvailability; Manufacturing/WorkOrders/NewWorkOrder; Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion; PASS:Shop/Products/ProductDetail | Shared/InventoryAvailability/Summary; Shared/Product360/Summary (kits); — Warehouse/Inventory/Availability/Summary: get#ProductStockTotals per facility; Manufacturing/WorkOrders/NewWorkOrder (producible now) and Manufacturing/BillsOfMaterials/BillOfMaterialsDetail/BillOfMaterialsExplosion (the buildable quantity), through get#BomExplosion (Manufacturing P5a, P2); Purchasing/Replenishment/InventoryAvailability (Shared/InventoryAvailability) (Purchasing P14); CustomerService/Availability/InventoryAvailability (Summary: get#ProductStockTotals at the customer-serving facilities; Customer Service P3) |
 | AssetServices | get#AvailableForOrder | Warehouse/Inventory/Availability; Shared/InventoryAvailability | — Warehouse/Inventory/Availability/Summary: get#ProductStockTotals per facility (InventoryServices.get#InventorySummary) |
-| AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; PASS:Shop/Categories/CategoryDetail | — Warehouse/Inventory/Availability/Summary (get#ProductStockTotals per facility); Picking/PickLocationMoves (find#PickFaceReplenishment); — Purchasing: Purchasing/Replenishment/InventoryAvailability as Warehouse's (Purchasing P14) |
+| AssetServices | get#AvailableInventoryMulti | Warehouse/Inventory/Availability; Warehouse/Picking/PickLocationMoves; Purchasing/Replenishment/InventoryAvailability; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; PASS:Shop/Categories/CategoryDetail | — Warehouse/Inventory/Availability/Summary (get#ProductStockTotals per facility); Picking/PickLocationMoves (find#PickFaceReplenishment); — Purchasing: Purchasing/Replenishment/InventoryAvailability as Warehouse's (Purchasing P14); — CustomerService/Availability/InventoryAvailability (Summary per facility; Customer Service P3) |
 | AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail; Maintenance/Equipment/EquipmentDetail | Warehouse/Inventory/AssetDetail (through AssetRecordServices.update#AssetMetadata) |
 | AssetServices | update#Asset | Warehouse/Inventory/AssetDetail; Shared/EquipmentDetail | Warehouse/Inventory/AssetDetail (through AssetRecordServices.update#AssetMetadata); Warehouse/QualityInspection (Release and Scrap set the status through dispose#Inspection, P8) |
 | AssetServices | update#AssetAcquireCost | Shared/EquipmentDetail | Accounting/FixedAssets/EquipmentDetail (AssetBookServices.repair#AcquireCost) |
@@ -900,7 +900,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail; Sales/Orders/OrderDetail | (the expiry gate, behind WarehousePolicy expiryBlock: expired stock skipped, the shortfall named; impl-warehouse P5); Purchasing/Receiving/ShipmentDetail (Bought for customer orders: Reserve for this order, through mantle.order.PurchasePegServices.reserve#ReceiptPeg; Purchasing P14b, R-PUR-37) |
 | AssetServices | remove#OrderItemReservations | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | AssetServices | remove#OrderReservations |  |  |
-| AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail | — not offered: Warehouse/Orders/OrderDetail and ShipmentDetail show Reserved only; a held-stock disposition reduces it (Quality.js) |
+| AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail | — not offered: Warehouse/Orders/OrderDetail and ShipmentDetail show Reserved only; a held-stock disposition reduces it (Quality.js); — not called by apply#OrderChange: cancel#OrderItem's rule re-reserves the remainder (F66; Customer Service P10) |
 | AssetServices | reReserve#Assets |  |  |
 | AssetServices | reserve#IncreasedAsset |  |  |
 | AssetServices | move#AssetReservation |  |  |
@@ -936,7 +936,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | EquipmentServices | create#AssetMaintenanceContent | Shared/RecordFiles; Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail | Shared/RecordFiles |
 | EquipmentServices | update#AssetMaintenanceContent | Maintenance/RecordFiles; Maintenance/Equipment/EquipmentDetail; Maintenance/WorkOrders/WorkOrderDetail |  |
 | EquipmentServices | save#AssetMaintenanceContentFile | Shared/RecordFiles |  |
-| InventoryReportServices | get#InventoryProjectedInfo | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/SupplyPlanning; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; Shared/SupplyPlanning; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Shared/InventoryAvailability/Projection; Warehouse/Inventory/Availability/Projection (Shared/SupplyPlanning nets the same sources from the entities, impl-manufacturing P13); Purchasing/Replenishment/InventoryAvailability (Shared/InventoryAvailability/Projection) (Purchasing P14) |
+| InventoryReportServices | get#InventoryProjectedInfo | Products/Products/Product360/Stock; Warehouse/Inventory/Availability; Purchasing/Replenishment/SupplyPlanning; CustomerService/Availability/InventoryAvailability; Shared/InventoryAvailability; Shared/SupplyPlanning; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest | Shared/InventoryAvailability/Projection; Warehouse/Inventory/Availability/Projection (Shared/SupplyPlanning nets the same sources from the entities, impl-manufacturing P13); Purchasing/Replenishment/InventoryAvailability (Shared/InventoryAvailability/Projection) (Purchasing P14); CustomerService/Availability/InventoryAvailability/Projection (unknown, never zero, when not ready; Customer Service P3) |
 | InventoryReportServices | get#PriceHistoryInfo | Products/Pricing/PriceHistory | Products/Prices/PriceHistory |
 | PriceServices | modify#ProductPrice | |  |
 | PriceServices | get#ProductPriceByType |  |  |
@@ -1057,17 +1057,17 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: create#PurchaseRequest and create#QuoteRequest (Purchasing P10, P11) |
+| RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: create#PurchaseRequest and create#QuoteRequest (Purchasing P10, P11); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2) |
 | RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; Warehouse/Transfers/RequestDetail (Submit, Complete, Cancel; approve#InventoryRequest, P15); — Purchasing: the purchase request's own verbs (submit, cancel and complete#PurchaseRequest) (Purchasing P10, P17) |
 | RequestServices | create#ContactRequest | Projects/Requests/Intake |  |
 | RequestServices | create#ContactRequestReCaptcha | Projects/Requests/Intake |  |
-| RequestServices | replace#RequestParty | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; — Purchasing: the organization and requester are parties by role, set when filed (Purchasing P10) |
-| RequestServices | add#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail |
-| RequestServices | update#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter |
-| RequestServices | delete#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter |
+| RequestServices | replace#RequestParty | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; — Purchasing: the organization and requester are parties by role, set when filed (Purchasing P10); CustomerService/Cases/CaseDetail (Assign: SupportCaseServices.update#Case; Customer Service P2) |
+| RequestServices | add#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail (Chatter, and a move's reason through transition#Case; Customer Service P2) |
+| RequestServices | update#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter; CustomerService/Cases/CaseDetail (Chatter; Customer Service P2) |
+| RequestServices | delete#RequestComment | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail | Shared/Chatter; CustomerService/Cases/CaseDetail (Chatter; Customer Service P2) |
 | RequestServices | get#RequestContentLocation |  |  |
-| RequestServices | create#RequestContent | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Shared/RecordFiles |
-| RequestServices | update#RequestContent | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail |  |
+| RequestServices | create#RequestContent | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Shared/RecordFiles; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | Shared/RecordFiles; CustomerService/Cases/CaseDetail (Files; Customer Service P2) |
+| RequestServices | update#RequestContent | Projects/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Sales/Quotes/QuoteRequestDetail | CustomerService/Cases/CaseDetail (Files; Customer Service P2) |
 | RequestServices | save#RequestContentFile | Commons/Requests/RequestDetail; Shared/RecordFiles |  |
 
 Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
@@ -1075,8 +1075,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | get#UserTodayRequests |  | Commons |
-| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10) |
-| RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10) |
+| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2); CustomerService/Cases/CaseDetail (Knowledge tab: an article by WikiPageRequest, Customer Service P12); CustomerService/Knowledge/Knowledge (Link to case); CustomerService/Orders/OrderDetail (Link to case; NewCase with the order through create#Case; Customer Service P3); CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
+| RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/CaseDetail (Knowledge tab: Unlink an article, Customer Service P12) |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
 
@@ -1084,10 +1084,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | --- | --- | --- | --- |
 | RequestServices | convert#RequestToProject |  | Projects/Requests/RequestDetail |
 | RequestServices | create#IntakeRequest | PASS:Support/NewCustomerCase | RequestIntake |
-| RequestServices | create#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List |
+| RequestServices | create#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
 | RequestServices | get#IntakeSettings | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; Projects/Settings/Intake |
 | RequestServices | make#RequestWorkItem |  | Projects/Requests/List; Projects/Requests/RequestDetail |
-| RequestServices | remove#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List |
+| RequestServices | remove#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
 
 ## Sales (8 services)
 
@@ -1154,7 +1154,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | reset#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | — not built (P12): Warehouse/Shipping/Pack's Move and Remove cover it (edit#ShipmentPackage) |
 | ShipmentServices | ship#OrderPart |  |  |
 | ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail; Sales/Orders/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt; — Purchasing: ensure#PurchaseReceipt (Receipts' PrepareReceipt) (Purchasing P5) |
-| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Warehouse/Orders/OrderDetail (Create shipment: a new shipment per part, create#OutgoingShipment over create#OrderPartShipment) |
+| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Warehouse/Orders/OrderDetail (Create shipment: a new shipment per part, create#OutgoingShipment over create#OrderPartShipment); CustomerService/Orders/OrderChangeDetail (ApplyChange: the substitute on its short pick's shipment; Customer Service P10) |
 | ShipmentServices | pickMove#ProductToContainer | Warehouse/Inventory/ContainerDetail | — Warehouse/Picking/Pick (PickScan into a pick container: pick#ShipmentStock over pickMove#ShipmentProduct); ContainerDetail attaches only |
 | ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick and Handheld/Pick (PickScan) through WarehouseTaskServices.pick#ShipmentStock, for one line (its new shipmentItemSourceId and pickedMoveList) |
 | ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (inside pickMove#ShipmentProduct; the handheld product scan must be the line's product) |
@@ -1321,7 +1321,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | EventServices | book#Resource | Maintenance/Scheduling/ResourceCalendar; Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | cancel#ResourceBooking | Maintenance/Scheduling/ResourceCalendar | Commons/Calendar/EventDetail; Commons/Calendar/Schedules; Commons/Calendar/Schedules/ResourceDetail |
 | EventServices | store#WorkEffortReminders | People/Time/LeaveRequestDetail; People/Development/TrainingDetail; People/Development/Qualifications | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
-| WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail |
+| WorkEffortServices | link#WorkEffortRecord | Projects/QuickCreate; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment; Maintenance/WorkOrders/WorkOrderDetail | Commons/Calendar; Commons/Calendar/EventDetail; Commons/Panel/Today; Commons/QuickCreate; Commons/Requests/RequestDetail; Commons/Tasks/List; Commons/Tasks/TaskDetail; Shared/Chatter; Projects/Projects/ProjectDetail/Plan/Calendar; Projects/QuickCreate; Projects/Requests/RequestDetail; Projects/WorkItems/Backlog; Projects/WorkItems/List; Projects/WorkItems/WorkItemDetail; CustomerService/Returns/WarrantyAssessment (Customer Service P9, through mantle.order.ReturnPolicyServices and its Customer Service branch) |
 | WorkEffortServices | unlink#WorkEffortRecord | Projects/WorkItems/WorkItemDetail | Commons/Calendar/EventDetail |
 | WorkEffortServices | get#UserTodayItems |  | Commons/Home; Commons/Panel/Today; — a production run and its operations left out (Manufacturing P10, F41); Manufacturing's today-source ironstone.manufacturing.HomeServices.get#TodayItems lists the due operations |
 | WorkEffortServices | snooze#UserTodayItem |  | Commons/Panel/Today; Commons/Tasks/List; Commons/Tasks/TaskDetail; Projects/WorkItems/WorkItemDetail |
@@ -1900,3 +1900,84 @@ Purchasing's pages in the PASS Supplier app call these through `pass.Facade.call
 | order/SupplierPortalServices | revoke#QuoteCapabilities |  | for close#QuoteRequest (Purchasing P12) |
 | order/SupplierPortalServices | revoke#OrderCapabilities |  | the SupplierPortalRevoke EECA (Purchasing P16) |
 
+
+## Customer Service P12 — Knowledge (Nov 5, 2026)
+
+Added in `request/KnowledgeServices.xml` (impl-customer-service P12, CS-KNOWLEDGE), called by built screens; the Support
+app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleSuggestions` on its customer-visible surface.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/KnowledgeServices | save#ServiceKnowledgeSource | CustomerService/Settings/KnowledgeSources | CustomerService/Settings/KnowledgeSources (ServiceKnowledgeSources: Add source, Edit, End) |
+| request/KnowledgeServices | find#ArticleSuggestions | CustomerService/Cases/NewCase; CustomerService/Cases/CaseDetail; PASS:Support/CustomerArticle | CustomerService/Cases/NewCase (CaseIdentity's suggestions); CustomerService/Cases/CaseDetail (Knowledge tab, through ironstone.customerservice.KnowledgeServices.get#CaseKnowledge) |
+| request/KnowledgeServices | get#PublishedArticle | PASS:Support/CustomerArticle | for P15's CustomerArticle (F59) |
+| request/KnowledgeServices | get#ArticlePublicLink | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Send to customer); CustomerService/Knowledge/Knowledge (Send to customer), through prepare#ArticleSend |
+| request/KnowledgeServices | record#ArticleFeedback | PASS:Support/CustomerArticle | CustomerService/Cases/CaseDetail (Knowledge tab: Helpful?) |
+| request/KnowledgeServices | review#ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | CustomerService/Knowledge/ArticleFeedback (FeedbackReview) |
+| request/KnowledgeServices | suggest#ArticleEdit | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Suggest edit); CustomerService/Knowledge/Knowledge (Suggest edit) |
+| request/KnowledgeServices | create#ArticleFromCase | CustomerService/Knowledge/CaseToArticle | CustomerService/Knowledge/CaseToArticle (ArticleDraft; AnswerSelection's preview through prepare#ArticleFromCase) |
+| request/KnowledgeServices | make#ArticleTask |  | for review#ArticleFeedback and suggest#ArticleEdit |
+
+## Customer Service P8 — Merge, split and closing (Nov 5, 2026)
+
+Added in `request/SupportCaseServices.xml` (impl-customer-service P8, CS-MERGE, CS-JOBS; `CaseRelations.js`, the merge's
+clocks in `Sla.js`), called by built screens and jobs; the Support app's CustomerCase (P15) is to get its reopen and follow-up
+from the same reply rule (Sla.js recordMessage).
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/SupportCaseServices | preview#MergeCases | CustomerService/Cases/MergeCases | CustomerService/Cases/MergeCases (MergeSelection, MergePreview) |
+| request/SupportCaseServices | merge#Cases | CustomerService/Cases/MergeCases | CustomerService/Cases/MergeCases (MergeConfirm) |
+| request/SupportCaseServices | preview#SplitCase | CustomerService/Cases/SplitCase | CustomerService/Cases/SplitCase (SplitSelection) |
+| request/SupportCaseServices | split#Case | CustomerService/Cases/SplitCase | CustomerService/Cases/SplitCase (SplitNewCase) |
+| request/SupportCaseServices | create#FollowUpCase | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Open a follow-up case, template/CustomerServiceLineage.xml) |
+| request/SupportCaseServices | make#FollowUpCase |  | the reply rule after the commit (Sla.js recordMessage, CaseRelations.js replyArrived) |
+| request/SupportCaseServices | get#CaseLineage | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (the lineage, a merged case's redirect, through CaseServices.get#CaseDetail) |
+| request/SupportCaseServices | close#ResolvedCases, close#ResolvedCase | CustomerService/Settings/ServiceDefaults | the close_ResolvedCases ServiceJob (ServicePolicy.autoCloseDays, ServiceDefaults) |
+| RequestServices | link#RequestRecord, add#RequestComment, replace#RequestParty, create#Request, file#RequestEmail |  | through merge#Cases, split#Case and the follow-up (Customer Service P8) |
+
+## Customer Service P7 — Case templates (Nov 5, 2026)
+
+Added in `request/SupportCaseServices.xml` (impl-customer-service P7, CS-TEMPLATES; `CaseTemplates.js`), over the framework's
+dated DbForm services (`org.moqui.impl.ScreenServices`), called by built screens; the Support app's NewCustomerCase (P15) is to
+call `get#CaseTemplate` and `validate#TemplateValues` with the customer's audience.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/SupportCaseServices | save#CaseTemplate | CustomerService/Settings/CaseTemplates | CustomerService/Settings/CaseTemplates (New template, Rename, Publish, Use for a queue) |
+| request/SupportCaseServices | save#CaseTemplateField |  | CustomerService/Settings/CaseTemplates (Add field, Edit) |
+| request/SupportCaseServices | save#CaseTemplateCondition |  | CustomerService/Settings/CaseTemplates (the condition rows) |
+| request/SupportCaseServices | end#CaseTemplatePart |  | CustomerService/Settings/CaseTemplates (End a field or condition) |
+| request/SupportCaseServices | validate#CaseTemplate | CustomerService/Settings/CaseTemplates | CustomerService/Settings/CaseTemplates (TemplatePreview's check; the problems) |
+| request/SupportCaseServices | validate#TemplateValues | CustomerService/Cases/NewCase; PASS:Support/NewCustomerCase | CustomerService/Cases/NewCase (through create#Case) |
+| request/SupportCaseServices | get#CaseTemplate | PASS:Support/NewCustomerCase | CustomerService/Settings/CaseTemplates (TemplateEdit, with its drafts); the customer's projection for P15 |
+| request/SupportCaseServices | get#CaseTemplateValues | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Overview, template/CustomerServiceTemplates.xml) |
+| ScreenServices (framework) | publish#DbForm, create#DbFormFieldSuccessor, store#DbFormFieldDependency, end#DbFormField, end#DbFormFieldOption, end#DbFormFieldDependency, evaluate#DbFormDependencies, create#FormResponse, get#FormResponse |  | through the services above (Customer Service P7) |
+
+## Customer Service P3 — customers and orders (Nov 5, 2026)
+
+Mantle services Customer Service P3 added or calls that had no row.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderConfirmationServices | get#OrderConfirmationPrint | CustomerService/Orders/OrderDetail | — (the confirmation as placed; store#OrderConfirmation renders it) (Customer Service P3) |
+| order/OrderConfirmationServices | store#OrderConfirmation | CustomerService/Orders/OrderDetail | — (resend#OrderConfirmation stores it on the first resend) (Customer Service P3) |
+| order/OrderConfirmationServices | resend#OrderConfirmation | CustomerService/Orders/OrderDetail | CustomerService/Orders/OrderDetail (Resend confirmation) (Customer Service P3) |
+| product/InventoryReportServices | get#InventoryAtDate | CustomerService/Availability/StockAtDate; Shared/StockAtDate | Warehouse/Reports/StockAtDate (Warehouse P17); CustomerService/Availability/StockAtDate (AvailabilityServices.get#StockAtDate, the customer-serving facilities; Customer Service P3) |
+
+## Customer Service P10 — Order changes (Nov 5, 2026)
+
+Mantle services Customer Service P10 added or calls that had no row.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderChangeServices | save#OrderChange | CustomerService/Orders/OrderChangeDetail; Shared/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ChangeProposal, its Edit; from OrderDetail's Propose change and CaseDetail's Request order change) (Customer Service P10) |
+| order/OrderChangeServices | withdraw#OrderChange | CustomerService/Orders/OrderChanges | CustomerService/Orders/OrderChangeDetail (Withdraw) (Customer Service P10) |
+| order/OrderChangeServices | get#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (the record header, ChangeProposal, ChangeDecision) (Customer Service P10) |
+| order/OrderChangeServices | preview#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ChangeImpact) (Customer Service P10) |
+| order/OrderChangeServices | decide#OrderChange | CustomerService/Orders/OrderChangeDetail; CustomerService/Approvals | CustomerService/Orders/OrderChangeDetail (ChangeDecision) (Customer Service P10) |
+| order/OrderChangeServices | approve#OrderChangeMessage, refuse#OrderChangeMessage | CustomerService/Approvals | Commons/Notifications (the OrderChangeApproval topic's approve and refuse) (Customer Service P10) |
+| order/OrderChangeServices | apply#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ApplyChange) (Customer Service P10) |
+| order/OrderChangeServices | send#OrderChangeConfirmation | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (Send confirmation: the applied change's PDF) (Customer Service P10) |
+| order/OrderChangeServices | find#OrderChanges | CustomerService/Orders/OrderChanges | CustomerService/Orders/OrderChanges (ChangeFind, ChangeList) (Customer Service P10) |
+| shipment/WarehouseTaskServices | reopen#ShipmentPackageForChange |  | (internal: apply#OrderChange's reopen between pack and ship, under ORDER_CHANGE_APPLY; Customer Service P10) |

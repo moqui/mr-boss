@@ -12,11 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Availability lookup section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Availability area of IronStone Customer Service (design-customer-service §1, §6; impl-customer-service P3): a menu
+    group holding Products (the default: find a product, then its availability or record) and StockAtDate (Warehouse's
+    shared report in the Customer Service context, crosscut §3.26), with InventoryAvailability (Products' shared screen,
+    crosscut §3.7), Product360 (crosscut §3.5) and PriceExplain (crosscut §3.21, for a price reader) hidden from the menu, each
+    in Products' Customer Service context (ironstone.products.CatalogServices.get#SharedContext: no cost or supplier price,
+    the customer-serving facilities, F52). Every Customer Service user. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Availability lookup" default-menu-index="5" menu-image="sym_o_visibility" menu-image-type="icon">
+        default-menu-title="Availability" default-menu-index="7" menu-image="sym_o_visibility" menu-image-type="icon">
+    <subscreens default-item="Products" always-use-full-path="true">
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml"
+                menu-include="false"/>
+        <subscreens-item name="StockAtDate" location="component://mr-boss/screen/Shared/StockAtDate.xml" menu-index="2"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="PriceExplain" location="component://mr-boss/screen/Shared/PriceExplain.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Availability lookup." type="p"/>
+        <subscreens-panel id="CustomerServiceAvailabilityPanel" type="tab"/>
     </widgets>
 </screen>

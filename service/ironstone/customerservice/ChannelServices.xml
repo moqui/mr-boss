@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's channel reads and Comms hooks (impl-customer-service P6, CS-CHANNELS, CS-STACK L8; design-customer-service
+    §3 ChannelSessions, §9 ChannelRouting; Channels.js): scoped by AccessServices. The rules and writes are Mantle's
+    (mantle.request.SupportCaseServices save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest;
+    mantle.request.RequestServices create#IntakeToken, remove#IntakeToken), which the screens and hooks call after these
+    checks. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="ServiceRoutes" allow-remote="false">
+        <description>ChannelRouting's IntakeRoutes: one of the user's settings organizations' queues with their routes in
+            effect (mail, public form, forum, chat; each with its type, sender and automatic-mail rules, acknowledgement and
+            last error), the Comms mail rules whose createRequest action names one of the queues, each queue's public form
+            token state, the requests held for review, and the options of RouteEdit and RouteTest. For the administrator
+            and the service manager (PERMISSION_DENIED); another organization is refused (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="organizationPartyId"/></in-parameters>
+        <out-parameters><parameter name="routing" type="Map"/></out-parameters>
+        <actions>
+            <set field="routing" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Channels.js').execute('findRoutes', context)"/>
+        </actions>
+    </service>
+    <service verb="find" noun="ChannelSessions" allow-remote="false">
+        <description>ChannelSessions' SessionFind and SessionList: the calls, chats and mail of a customer the user serves and
+            its contacts (Mantle's find#PartyCommunicationEvents with the customer audience: no note, internal message or
+            internal call), or with no customer those filed on the cases the user sees; by channel (phone, chat, email),
+            agent, period and linked or not, newest first, at most 100, each with its case when the user sees it. Refuses a
+            customer the user does not serve (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="customerPartyId"/>
+            <parameter name="channel"/>
+            <parameter name="agentPartyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="linked"><description>Y, N or empty for both</description></parameter>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="sessions" type="List"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="customerName"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Channels.js').execute('findSessions', context)"/>
+            <set field="sessions" from="out.sessions"/>
+            <set field="customerPartyId" from="out.customerPartyId"/>
+            <set field="customerName" from="out.customerName"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CallContext">
+        <description>The call-context provider of the Customer Service root (Comms' ring bar and call; design §1 Stack
+            contributions): the caller's open cases the user sees (customer or reporter by the caller's number), each with
+            its CaseDetail link; the contacts are Comms' own provider's. Nothing for a user without Customer
+            Service.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Channels.js').execute('callContext', context)"/>
+            <set field="contactList" from="out.contactList"/>
+            <set field="recordList" from="out.recordList"/>
+        </actions>
+    </service>
+    <service verb="create" noun="CaseFromMessage" allow-remote="false">
+        <description>Create case from a message (the Comms hooks: a mail's MessageDetail, Chat's message actions and
+            Voicemail's actions): a case for the customer the sender is or is a contact of (CUSTOMER_UNAVAILABLE for staff or
+            anyone the user does not serve), in the queue given (one the user works: QUEUE_UNAVAILABLE) else the type's or
+            the policy's, through Mantle's create#Request and ensure#CaseProfile at once (the case rule: no template values,
+            so no P7 template check): a mail (one the user may read: RECORD_UNAVAILABLE; not on a request
+            yet: ALREADY_FILED) filed on it with its received date its intake time; a chat message (one of a room the user
+            reads) linked by its communication event; a voicemail (the user's) as an inbound call with its transcript, never
+            its audio. Needs SUPPORT_CASE_EDIT. Out: the case, its link and a message.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="kind" required="true"><description>email, chat or voicemail</description></parameter>
+            <parameter name="emailMessageId"/>
+            <parameter name="chatRoomId"/>
+            <parameter name="eventSeq" type="Integer"/>
+            <parameter name="voicemailId"/>
+            <parameter name="requestCategoryId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordEntityName"/>
+            <parameter name="recordId"/>
+            <parameter name="url"/>
+            <parameter name="message"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Channels.js').execute('caseFromMessage', context)"/>
+            <set field="recordEntityName" from="out.recordEntityName"/>
+            <set field="recordId" from="out.recordId"/>
+            <set field="url" from="out.url"/>
+            <set field="message" from="out.message"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseForumTopic" allow-remote="false">
+        <description>The PASS forum topic a case was escalated from (its PublicDiscussionLink of source case: site, topic
+            and title), for CaseDetail's Reply publicly in forum; topic null for a case from none. Refuses a case the user
+            does not see (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="requestId" required="true"/></in-parameters>
+        <out-parameters><parameter name="topic" type="Map"/></out-parameters>
+        <actions>
+            <set field="topic" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Channels.js').execute('caseForumTopic', context).topic"/>
+        </actions>
+    </service>
+</services>

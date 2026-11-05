@@ -1,0 +1,11 @@
+{
+    "description": "Skill retrieval over IronStone BOSS's skills (skill/), run with no model (moqui test mr-boss --skills). Each case: the query (a message as a user writes it), an optional page, the skills one of which must be in the top three (expect), and skills that must not match strongly (negatives).",
+    "cases": [
+        {"query": "reply to the customer on this case", "page": "/qapps/CustomerService/Cases/CaseDetail", "expect": ["case-reply"]},
+        {"query": "draft an answer to Joe's ticket", "expect": ["case-reply"]},
+        {"query": "write back to the customer about the late filters", "expect": ["case-reply"]},
+        {"query": "summarize this case for me", "page": "/qapps/CustomerService/Cases/CaseDetail", "expect": ["case-summary"]},
+        {"query": "give me a recap of the ticket before I hand it over", "expect": ["case-summary"]},
+        {"query": "what happened on case 100234", "expect": ["case-summary"]}
+    ]
+}

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service settings reads (impl-customer-service P2, CS-SETTINGS; Configuration.js): what the Settings forms show
+    for one of the user's organizations. The saves are Mantle's mantle.request.SupportCaseServices (save#ServiceQueue,
+    save#ServiceRequestType, save#CaseStatusMapping, save#CaseWorkflow, save#ServiceDefaults, save#ServiceTeam,
+    save#ServiceTeamMember), which check SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE and the organization themselves. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="SettingsParameters" type="interface">
+        <description>The organization a settings read is of (one of the user's; the active one, else their first, when
+            empty).</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+    </service>
+    <service verb="find" noun="ServiceQueues" allow-remote="false">
+        <description>The organization's queues as a tree (design Queues QueueList): each category with its current service
+            row (visibility, team, offered types, fallback assignee, since when), whether it is a service queue now, and its
+            draft rows. Refuses an organization not the user's (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="queues" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceQueues', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="queues" from="found.queues"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ServiceTeam" allow-remote="false">
+        <description>The organization's service teams (design AgentTeams TeamMembers), each with its current members (agent
+            or manager, since when, open assigned cases) and whether the user may change it (the administrator, or a
+            manager of the team); with teamPartyId, that team only.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <in-parameters><parameter name="teamPartyId"/></in-parameters>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="teams" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceTeam', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="teams" from="found.teams"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ServiceSettings" allow-remote="false">
+        <description>The organization's case types (each request type with its current service row), its workflow's status
+            mappings and moves, its service policy and the settings' readiness (design Settings SettingLinks, CaseTypes,
+            StatusCategories, ServiceDefaults).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <in-parameters><parameter name="caseWorkflowId"/></in-parameters>
+        <out-parameters><parameter name="settings" type="Map"/></out-parameters>
+        <actions>
+            <set field="settings" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceSettings', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ServiceLevelSettings" allow-remote="false">
+        <description>What ServiceLevelPolicies' forms choose from for the organization (P4): its calendars and its teams'
+            working hours calendars with their hours, its service agreements, the priority bands and the reopen policies. The
+            policies are Mantle's mantle.request.SlaServices.find#Policies.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="calendarOptions" type="List"/>
+            <parameter name="agreementOptions" type="List"/>
+            <parameter name="bandOptions" type="List"/>
+            <parameter name="reopenOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceLevelSettings', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="calendarOptions" from="found.calendarOptions"/>
+            <set field="agreementOptions" from="found.agreementOptions"/>
+            <set field="bandOptions" from="found.bandOptions"/>
+            <set field="reopenOptions" from="found.reopenOptions"/>
+        </actions>
+    </service>
+</services>
