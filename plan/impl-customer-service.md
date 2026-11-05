@@ -1860,11 +1860,49 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
     exception; an exception (outside the window, a reason or remedy not allowed, goods with no order line) needs a manager's
     approval at the return's current revision first. Goods with no order line are entered with a description of the goods and
     ownership and always need the exception.
-  - **F-P9-6** Under the default flag an immediate response is processed by Mantle at approval; in a fresh organization
-    `process#ReturnItemResponses` failed making the credit memo (Incoming to Approved), so the Mantle spec's organization settles
-    separately. Mantle's own behaviour, unchanged.
+  - **F-P9-6** Under the default flag an immediate response is processed by Mantle at approval, as the acting user; the credit
+    memo's Incoming to Approved transition needs `INVOICE_APPROVE` (StatusFlowTransition.userPermissionId), so an authorizer
+    without it failed the whole authorization. Not a fresh-organization effect: any organization at the default flag hits it
+    (review R1: an immediate credit or refund there also needs `INVOICE_APPROVE`, else it waits for receipt). The same
+    transition runs in Mantle's own receipt at delivery (`respond#ReturnItems` as the receiving user) — for the lead.
   - **F-P9-7** F22 changes an existing Mantle service's behaviour (not a refusal): `cancel#Return` now cancels its unreceived
     return shipment; the compatibility specs pass.
+
+**Review Nov 5 (P9).** Checked against the phase, §2 and the brief's points: eligibility and its locks, `authorize#Return`
+and F25, F22, F-P9-3, audience, F-P9-2's walk cleanup, merge-friendliness, tests. Specs run (all pass): Mantle ReturnPolicies,
+ReturnToResponseBasicFlow, WarehouseReturns, ShipmentReturnMisc, AccountingReturns, PurchaseReturns, OrderToCashBasicFlow;
+BOSS CustomerServiceReturns, WarehouseInspections, WarehouseReturns, AccountingReceivables; acceptance
+CustomerServiceReturnsWalk.
+- R1 (high) An immediate credit or refund at authorization in an organization at the default flag (Retail's) failed the
+  whole authorization for an authorizer without `INVOICE_APPROVE` (F-P9-6 restated). `immediateAllowed` needs it where Mantle
+  answers at approval; the Mantle spec now runs at Mantle's default flag with a RECEIVABLE_EDIT-only authorizer (no
+  immediate, no credit) and an `INVOICE_APPROVE` one (the credit made at approval).
+- R2 (medium) `add#OrderItemToReturn` locks its order line: Warehouse's addReturnItem (Warehouse context only) adds customer
+  return lines without `save#ReturnItem`, so two at once could exceed what is returnable; Mantle's own check (invoiced less
+  every return not cancelled, drafts included) now runs under the same lock `save#ReturnItem` takes. Lock order: return then
+  order line (`save#ReturnItem`, `authorize#Return`); receipt and settlement lock shipment then return and never the order
+  line; P10 locks shipments, parts, order — no cycle.
+- R3 (medium) The walk's last `then` had been joined by Prettier into one call expression (`a.includes(x)(b).includes(y)`);
+  split. The walk adds the usable-when "with no policy the return goes to manual review" (Retail's order evaluated before its
+  policy took effect).
+- R4 (medium) The walk's cleanup restores Retail's `returnSettlementRequired` first, each step on its own (a failed cancel or
+  grant end no longer skips it); its returns cancelled quietly. Workers run on their own database copy, so no other walk sees
+  the flag mid-run.
+- R5 (low) Merge-friendliness: ExternalAccess.js's Prettier churn of untouched lines reverted; OrderConfirmations.js's
+  `senderAccount` export made identical to P10's on master.
+- Checked, no change: F22 cancels only a ShipInput or ShipScheduled return shipment with no AssetReceipt that carries only
+  this return (and `cancel#ReturnItem` refuses received items first); Mantle's callers pass. F-P9-3: the branch is
+  `appRoot == 'CustomerService'` only, Warehouse's users unchanged (WarehouseInspections), the borrowed W acts only on
+  inspections of returns of its organizations and customers (`recordOf`), `verifyInspection` has no Customer Service branch
+  and `canVerify` is false. Audience: credited amounts for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW (the agent reads
+  credit, the usable-when), the settlement preview only for F; the RMA print carries no amount, cost or note; the ReturnHeader
+  link kind resolves the customer and refuses a cancelled return.
+- For the lead: (a) F25 under Retail's default flag: Mantle's `respond#ReturnItems` places (does not approve) a replacement
+  order at approval for an RrspReplace item whatever responseImmediate says; only `returnSettlementRequired` Y stops it, and
+  Retail's reason rows suggest RrspReplace. (b) Warehouse's addReturnItem still checks invoiced, not shipped, and no policy;
+  routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W lacks. (c) Merging master
+  (P10) conflicts in append points: MantleSetupData.xml, CustomerService.js, CaseDetail, CustomerServiceAccess.spec.js,
+  CustomerServiceSpecLib.js, this plan.
 
 ### P10 — Order changes
 
