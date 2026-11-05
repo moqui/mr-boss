@@ -103,14 +103,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="choice" required="true"/>
             <parameter name="term"/>
             <parameter name="selected"/>
-            <!-- P5: the receipt whose facility's locations a receiver chooses from (receiptLocations) -->
-            <parameter name="shipmentId"/>
-            <!-- P6: the supplier a choice is narrowed to (billOrders) -->
-            <parameter name="partyId"/>
-            <!-- P8: the order whose returnable receipts a supplier return chooses from (returnReceipts) -->
-            <parameter name="orderId"/>
-            <!-- P13: the agreement whose items or signers a form chooses from (agreementItems, agreementSigners) -->
-            <parameter name="agreementId"/>
+            <!-- later phases: the record a choice is narrowed to, with the choice source that reads it -->
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>
