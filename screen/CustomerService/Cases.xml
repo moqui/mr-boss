@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Cases area of IronStone Customer Service (design-customer-service §1, §3; impl-customer-service P2): a menu group
     holding Cases (the default: CaseFind, CaseList and the board, the saved views and the bulk actions) and NewCase, with
     CaseDetail (the shared RequestDetail in the Customer Service context, crosscut §3.11) and WorkItemDetail (the shared
-    WorkItemDetail, crosscut §3.12) hidden from the menu; merge and split (P8) and the channel sessions (P6) follow. Every
+    WorkItemDetail, crosscut §3.12) hidden from the menu; merge and split (P8) follow; ChannelSessions (P6) lists the
+    calls, chats and mail of the cases and customers. Every
     Customer Service user, each list limited to the cases of their queues and those assigned to them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cases" default-menu-index="2" menu-image="sym_o_flag" menu-image-type="icon">

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's Log a call (impl-customer-service P6, CS-CHANNELS; design-customer-service §3 ChannelSessions LogCall), for
+    ChannelSessions and CaseDetail (template/CustomerServiceChannels.xml), each including the transition by name:
+    - logCaseCall: a call on a case (mantle.request.SupportCaseServices.log#CaseCall) after the case's check (caseEdit);
+    - LogCallForm: its form (the case chosen, or the one given as logRequestId), its drop-downs through CaseDetail's
+      caseChoices transition (template/CustomerServiceCaseDetail.xml), which a screen showing it includes. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="logCaseCall">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.log#CaseCall"
+                    in-map="{requestId:requestId, contactPartyId:(contactPartyId || null), direction:(direction || 'out'),
+                        occurredDate:(occurredDate || null), durationMinutes:(durationMinutes || null), summary:summary,
+                        outcomeEnumId:(outcomeEnumId || null), internal:(internal || 'N')}"/>
+            <message type="success">Logged the call on case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId" from="returnRequestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="LogCallForm">
+            <widgets>
+                <form-single name="LogCaseCallForm" transition="logCaseCall"
+                        map="{requestId:(logRequestId || ''), returnRequestId:(logReturnRequestId || ''), tab:(logTab || ''), direction:'out',
+                            outcomeEnumId:'CcoReached', internal:'N'}">
+                    <field name="returnRequestId"><default-field><hidden/></default-field></field>
+                    <field name="tab"><default-field><hidden/></default-field></field>
+                    <field name="requestId">
+                        <conditional-field condition="logRequestId" title="Case"><hidden/></conditional-field>
+                        <default-field title="Case">
+                            <drop-down><dynamic-options transition="caseChoices" server-search="true" min-length="0" parameter-map="{choice:'cases'}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="direction">
+                        <default-field title="Call">
+                            <radio><option key="out" text="Outgoing"/><option key="in" text="Incoming"/></radio>
+                        </default-field>
+                    </field>
+                    <field name="contactPartyId">
+                        <default-field title="With" tooltip="Empty: the case's contact, else its customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="caseChoices" server-search="true" min-length="0" parameter-map="{choice:'contacts', customerPartyId:logCustomerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="occurredDate"><default-field title="When"><date-time type="timestamp"/></default-field></field>
+                    <field name="durationMinutes"><default-field title="Minutes"><text-line size="4" input-type="number"/></default-field></field>
+                    <field name="outcomeEnumId">
+                        <default-field title="Outcome">
+                            <drop-down>
+                                <entity-options key="${enumId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                        <econdition field-name="enumTypeId" value="CaseCallOutcome"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="summary"><default-field title="Summary"><text-area rows="4" cols="60"/></default-field></field>
+                    <field name="internal">
+                        <default-field title="Who sees it" tooltip="An internal call is never shown to the customer and is no response">
+                            <radio><option key="N" text="With the customer"/><option key="Y" text="Internal"/></radio>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Log the call"><submit/></default-field></field>
+                    <field-layout>
+                        <field-ref name="requestId"/>
+                        <field-row><field-ref name="direction"/><field-ref name="contactPartyId"/></field-row>
+                        <field-row><field-ref name="occurredDate"/><field-ref name="durationMinutes"/></field-row>
+                        <field-row><field-ref name="outcomeEnumId"/><field-ref name="internal"/></field-row>
+                        <field-ref name="summary"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

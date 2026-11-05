@@ -93,6 +93,10 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="sendArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
     <transition-include name="suggestArticleEdit" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
     <transition-include name="rateArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <!-- Customer Service P6: Log a call and Reply publicly in forum on CaseDetail (template/CustomerServiceChannels.xml) -->
+    <transition-include name="logCaseCall" location="component://mr-boss/template/CustomerServiceCallLog.xml"/>
+    <transition-include name="previewForumReply" location="component://mr-boss/template/CustomerServiceChannels.xml"/>
+    <transition-include name="publishForumReply" location="component://mr-boss/template/CustomerServiceChannels.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- IronStone's mail action in the BasicComms MessageDetail (Customer Service P6, CS-STACK L8; design-customer-service §1 Stack
+    contributions): Create a case from a received mail beside Link to a record, for a user with SUPPORT_CASE_EDIT
+    (ironstone.customerservice.ChannelServices.create#CaseFromMessage: a case for the customer who sent it, the mail on it,
+    timed by its received date), then CaseDetail. The Inbox has no message-actions slot yet (F-P6-2), so this is MessageDetail's;
+    mail to a queue's address is the Comms rule's createRequest action (ChannelRouting). -->
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createCase">
+        <actions>
+            <service-call name="ironstone.customerservice.ChannelServices.create#CaseFromMessage" out-map="caseMade"
+                    in-map="{appRoot:'CustomerService', kind:'email', emailMessageId:emailMessageId}"/>
+            <set field="caseMadeUrl" from="caseMade?.url"/>
+            <message type="success">${caseMade?.message || ''}</message>
+        </actions>
+        <default-response url="${caseMadeUrl}" url-type="plain"/>
+        <error-response url="."/>
+    </transition>
+    <widgets-extend name="LinkRecordDialog" where="after">
+        <link url="createCase" text="Create a case" icon="sym_o_support_agent" parameter-map="{emailMessageId:detail.emailMessageId}"
+                condition="detail?.kind == 'email' &amp;&amp; detail?.emailMessageId &amp;&amp; ec.user.hasPermission('SUPPORT_CASE_EDIT')"
+                confirmation="Make a case of this message for the customer who sent it?"/>
+    </widgets-extend>
+</screen-extend>

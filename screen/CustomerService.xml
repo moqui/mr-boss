@@ -62,6 +62,8 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P4: the service level warning and breach of a case (Mantle's scan#CaseSla) -->
         <notification-topic topic="SupportCaseSlaWarning"/>
         <notification-topic topic="SupportCaseSlaBreach"/>
+        <!-- P6: the caller's open cases in Comms' ring bar and call (Comms' own provider answers the contacts) -->
+        <call-context name="boss.cases" service="ironstone.customerservice.ChannelServices.get#CallContext"/>
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
             <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>

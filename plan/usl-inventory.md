@@ -726,7 +726,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | AgreementServices | create#AgreementContent | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | Shared/RecordFiles; Purchasing/Agreements/AgreementDetail (Add file; Purchasing P13) |
 | AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | — Purchasing: an agreement's file is not edited after its upload (F135) (Purchasing P13) |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
-| CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions |  |
+| CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions | CustomerService/Cases/ChannelSessions |
 | CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose; Sales/Pipeline/OpportunityDetail | Comms/Inbox/Compose; Shared/Chatter |
 | CommunicationServices | reply#CommunicationEvent | Comms/Inbox/Compose; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter | Comms/Inbox/Compose; Shared/Chatter |
 | CommunicationServices | add#WikiPageComment | Commons/Knowledge; Commons/Knowledge/Review |  |
@@ -1084,10 +1084,10 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | --- | --- | --- | --- |
 | RequestServices | convert#RequestToProject |  | Projects/Requests/RequestDetail |
 | RequestServices | create#IntakeRequest | PASS:Support/NewCustomerCase | RequestIntake |
-| RequestServices | create#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List |
+| RequestServices | create#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
 | RequestServices | get#IntakeSettings | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; Projects/Settings/Intake |
 | RequestServices | make#RequestWorkItem |  | Projects/Requests/List; Projects/Requests/RequestDetail |
-| RequestServices | remove#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List |
+| RequestServices | remove#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
 
 ## Sales (8 services)
 

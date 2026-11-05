@@ -310,6 +310,9 @@ function serviceLevelSettings(p) {
 
 const operations = {serviceQueues, serviceTeam, serviceSettings, serviceLevelSettings}
 ;({
+    // P6: the settings organization of ChannelRouting (Channels.js)
+    organizationOf,
+    organizationOptions,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service settings operation " + op)
         return operations[op](parameters || {})

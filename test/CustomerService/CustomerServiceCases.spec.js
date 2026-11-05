@@ -286,6 +286,9 @@ feature("CaseDetail's Customer Service section and NewCase's duplicate warning r
         // P4: the clocks beside the header and the Service level tab
         detail.output.includes("First response:")
         detail.output.includes("Service level")
+        // P6: Log a call on the Conversation; no forum reply for a case from no forum topic
+        detail.output.includes("Log a call")
+        !detail.output.includes("Reply publicly in forum")
         newCase.status == 200
         newCase.errors == []
         newCase.output.includes("open case(s)")

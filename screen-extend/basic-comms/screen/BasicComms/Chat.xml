@@ -12,8 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone's message actions in the BasicComms Chat (plans/Comms-Framework.md §3.3): a task, a request or an event made from
-    a message, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
+<!-- IronStone's message actions in the BasicComms Chat (plans/Comms-Framework.md §3.3): a task, a request, an event or (Customer
+    Service) a case made from a message, through Chat's createFrom transition and the create-from provider boss.records (Comms.xml), which files the
     message on the new record. -->
 <screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <ext-action name="boss.createTask" slot="chat-message-actions" sequence="10" label="Create a task" icon="sym_o_task_alt" transition="createFrom" hook="create-from">
@@ -24,5 +24,10 @@ along with this software (see the LICENSE.md file). If not, see
     </ext-action>
     <ext-action name="boss.createEvent" slot="chat-message-actions" sequence="30" label="Create an event" icon="sym_o_event" transition="createFrom" hook="create-from">
         <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="event"/>
+    </ext-action>
+    <!-- Customer Service P6: a case for the customer who sent the message (ChatServices.create#FromChat's kind case); refused
+        for a user without Customer Service and for a sender who is no customer the user serves -->
+    <ext-action name="boss.createCase" slot="chat-message-actions" sequence="40" label="Create a case" icon="sym_o_support_agent" transition="createFrom" hook="create-from">
+        <parameter name="chatRoomId"/><parameter name="eventSeq"/><parameter name="kind" value="case"/>
     </ext-action>
 </screen-extend>
