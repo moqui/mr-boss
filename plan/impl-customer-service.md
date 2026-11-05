@@ -3383,6 +3383,20 @@ SupportWarranty, SupportAssignment, AccountingControls, CustomerServiceAssignmen
   Recommended: (a). Not changed here; the AccessWalk keeps asserting today's behaviour (Commons and Comms open, no case
   record but Joe's own as one of its people).
 
+- **Final suites (Nov 5, on master after P16 merged, nothing else running):** standalone mr-mantle 1,751 passed, 2
+  failed (the baseline WorkTimeEntries and WorkTimesheets, which need mr-boss's demo data), 11 skipped; `./moq test-apps`
+  3,080 server features passed and 1 failed (SupportPortal read the return-decision notice's draft before its body was
+  written; it now waits past the draft, mr-mantle 397650d0, passing 8 of 8 and 33 of 33 with its neighbours), 14 client
+  features passed; no spec over 15 s; `moqui lint --screens` clean. The golden-path client walk §2 calls for,
+  CustomerServiceCasesWalk, was added after the run (mr-boss 26a41de1; 4.8 s; it found F220).
+- **Budgets (the user's agreement at the start: raise by Customer Service's measured share).** Customer Service's
+  regression specs took, in the final apps run: mr-boss 18.2 s server (the CustomerService* specs) and 4.8 s client
+  (CustomerServiceCasesWalk, measured alone); mr-mantle 34.2 s (its fifteen new specs); mr-pass 0.3 s (SupportAccess).
+  The budgets are now mr-boss 264 server (from 245) and 49 client (from 44), and mr-mantle 370 (from 335); mr-pass stays
+  15.
+- **Acceptance:** not run at the finish, at the user's call (Nov 5) to stop refining the tests; each phase ran the
+  acceptance specs it added or changed once, passing.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -3651,6 +3665,7 @@ is written there too.
 | F217 | P16: `ignore-error` on a screen's service-call leaves no error message, so `!ec.message.hasError()` after it says nothing; ReturnAuthorization took another organization's return for the user's (fixed here); other screens that test hasError after an ignored call may say "not authorized" or "empty" where "not available" is meant (none leaked a record in the walk). | See P16 |
 | F218 | P16: CaseDetail has no Items tab (design CaseDetail: "Items only when present"); a claim's product and an order change's lines show on WarrantyAssessment and OrderChangeDetail (§7). | See P16 |
 | F219 | P16: The case summary's internal variant shows the template's customer-visible answers only; an internal field's answer stays on CaseDetail (CaseTemplates.js has no staff projection of a response to reuse). | See P16 |
+| F220 | Final: `<conditional-response condition="...">` is not read by the framework, which reads only a `<condition>` child (crates/moqui-core/src/screen/definition.rs `ResponseDef::of`, about line 220), so such a response always applies; NewCase sent every new case to WarrantyAssessment (fixed with a `<condition>` child). The same attribute form is in template/ContactRecord.xml, Commons/Contacts/Compare.xml, Commons/Calendar/EventDetail.xml, Commons/Requests/List.xml, Projects/Projects/MilestoneDetail.xml, Projects/Projects/NewProject/Start.xml, Projects/Code/Compare.xml, Projects/Requests/List.xml, Projects/Billing/Unbilled.xml, Projects/Billing/Unbilled/CreateInvoice.xml and Shared/WorkItemDetail.xml | §7, the user's call: the framework reads the attribute (as it does for another element, definition.rs about line 571), or those files are rewritten |
 
 ## 7. Later
 
