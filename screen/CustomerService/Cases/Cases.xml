@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Cases (design-customer-service §3 Cases; style-guide §3.2 List, §3.6 Board; impl-customer-service P2): CaseFind and
     CaseList over ironstone.customerservice.CaseServices.find#Cases (the cases of the user's queues and those assigned to
     them), with the saved views of design Cases (Assigned to me, the default; New/unassigned; Waiting for customer; Needs
-    response; SLA risk, empty until service levels; Recently resolved; All permitted), saved finds and select-columns; the
+    response, its first response running; SLA risk, a clock warned, due or breached (P4); Recently resolved; All permitted),
+    each row with its clock due first, saved finds and select-columns; the
     board, a view of the same rows by status in the workflow's order, whose move and the row's Change status both run
     mantle.request.SupportCaseServices.transition#Case after the case's check; and BulkCaseAction, row-selection actions to
     assign, set the status of and tag the selected cases (apply#CaseBatch, a result per case). -->
@@ -276,6 +277,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <field name="dueText">
                         <default-field title="Due">
                             <label text="${dueText}" type="span" style="${overdue ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <!-- P4: the case's clock due first, coloured by its warning or breach -->
+                    <field name="slaText">
+                        <default-field title="Service level">
+                            <label text="${slaText}" type="span" style="${slaColor ? 'text-' + slaColor : ''}"/>
                         </default-field>
                     </field>
                     <field name="updatedText"><default-field title="Updated"><display/></default-field></field>

@@ -115,9 +115,19 @@ function serviceTeam(p) {
             }))
             .sort((a, b) => a.name.localeCompare(b.name))
         const managed = userScope.managedTeamIds.includes(team.partyId)
+        // P4: the team's working hours (its schedule calendar, mantle.work.CalendarServices), which its clocks count on
+        const hours = lib.call("mantle.work.CalendarServices.get#WorkingHours", {partyId: team.partyId})
         return {
             teamPartyId: team.partyId,
             teamName: team.organizationName || team.partyId,
+            hoursText: hours.configured ? hours.text : "Not set: its cases' clocks run around the clock",
+            hoursValues: {
+                teamPartyId: team.partyId,
+                workDays: (hours.workDays || [1, 2, 3, 4, 5]).map(String),
+                workStart: hours.workStart || "09:00",
+                workEnd: hours.workEnd || "17:00",
+                timeZone: hours.timeZone || ec.user.timeZone || ""
+            },
             members,
             memberCount: members.length,
             canChange: !!userScope.capabilities.policyEdit || (!!userScope.capabilities.caseManage && managed)
@@ -208,6 +218,17 @@ function serviceSettings(p) {
         },
         {key: "statuses", label: "Status categories", ready: mappings.length > 0, text: mappings.length + " statuses mapped"}
     ]
+    // P4: the service level policies in effect
+    const levelCount = find("mantle.request.support.ServiceLevelPolicy", {organizationPartyId})
+        .condition("fromDate", "is-not-null", null)
+        .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+        .count()
+    readiness.push({
+        key: "levels",
+        label: "Service levels",
+        ready: levelCount > 0,
+        text: levelCount ? levelCount + " policies in effect" : "No policy: cases have no clocks"
+    })
     return {
         organizationPartyId,
         organizations: organizationOptions(userScope),
@@ -235,7 +256,47 @@ function serviceSettings(p) {
     }
 }
 
-const operations = {serviceQueues, serviceTeam, serviceSettings}
+// ===== get#ServiceLevelSettings (P4) =====
+// What ServiceLevelPolicies' forms choose from for the organization: its calendars and its teams' working hours calendars
+// (each with its hours), its service agreements, the priority bands and the reopen policies. The policies themselves are
+// Mantle's mantle.request.SlaServices.find#Policies, which the screen calls.
+function serviceLevelSettings(p) {
+    const userScope = cs.required()
+    const organizationPartyId = organizationOf(userScope, p.organizationPartyId)
+    const teamIds = Array.from(
+        find("mantle.party.PartyDetailAndRole", {roleTypeId: "OrgTeam", ownerPartyId: organizationPartyId}).list()
+    ).map(row => row.partyId)
+    const calendarOptions = Array.from(
+        find("mantle.work.calendar.Calendar")
+            .condition("ownerPartyId", "in", [organizationPartyId].concat(teamIds))
+            .condition("calendarKindEnumId", "in", ["CalkShared", "CalkResource"])
+            .list()
+    ).map(row => {
+        const hours = lib.call("mantle.work.CalendarServices.get#WorkingHours", {calendarId: row.calendarId})
+        return {value: row.calendarId, label: (row.calendarName || row.calendarId) + (hours.configured ? " · " + hours.text : "")}
+    })
+    const agreementOptions = rows("mantle.party.agreement.Agreement", {
+        agreementTypeEnumId: "AgrService",
+        organizationPartyId
+    }).map(row => ({
+        value: row.agreementId,
+        label: (row.description || row.agreementId) + " · " + cs.partyName(row.otherPartyId)
+    }))
+    const enumOptions = enumTypeId =>
+        rows("moqui.basic.Enumeration", {enumTypeId})
+            .sort((a, b) => Number(a.sequenceNum || 0) - Number(b.sequenceNum || 0))
+            .map(row => ({value: row.enumId, label: row.description || row.enumId}))
+    return {
+        organizationPartyId,
+        organizations: organizationOptions(userScope),
+        calendarOptions,
+        agreementOptions,
+        bandOptions: enumOptions("CasePriorityBand"),
+        reopenOptions: enumOptions("SlaReopen")
+    }
+}
+
+const operations = {serviceQueues, serviceTeam, serviceSettings, serviceLevelSettings}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service settings operation " + op)

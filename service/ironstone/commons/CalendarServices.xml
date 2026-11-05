@@ -130,46 +130,40 @@ along with this software (see the LICENSE.md file). If not, see
         ]]></script></actions>
     </service>
     <service verb="store" noun="WorkingHours">
-        <description>The current user's working hours (the CalendarDefaults preferences: the working days and hours) as Mantle
-            reads them for free/busy (mantle.work.EventServices.get#FreeBusy, Find a time): a WetAvailable work effort of the
-            user's party, repeating weekly on the working days from the start to the end of the working day in the user's time
-            zone, made once (sourceReferenceId BossWorkingHours) and changed after.</description>
-        <out-parameters><parameter name="workEffortId"/></out-parameters>
+        <description>Working hours as Mantle reads them for free/busy (mantle.work.EventServices.get#FreeBusy, Find a time) and
+            business time (mantle.work.CalendarServices.get#BusinessTimeDue): with no party, the current user's from the
+            CalendarDefaults preferences (the working days and hours), a WetAvailable work effort of the user's party repeating
+            weekly in the user's time zone, made once (sourceReferenceId BossWorkingHours) and changed after; with partyId (a
+            service team, from Customer Service's AgentTeams) the days and hours given on the party's schedule calendar, from
+            fromDate. Mantle's mantle.work.CalendarServices.store#WorkingHours stores them and checks who may.</description>
+        <in-parameters>
+            <parameter name="partyId"/>
+            <parameter name="workDays" type="Object"/>
+            <parameter name="workStart"/>
+            <parameter name="workEnd"/>
+            <parameter name="timeZone"/>
+            <parameter name="fromDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="workEffortId"/>
+            <parameter name="calendarId"/>
+        </out-parameters>
         <actions><script><![CDATA[
-            const partyId = ec.user.userAccount?.partyId
-            if (!partyId) return
-            const defaults = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarDefaults').call()?.defaults || {}
-            const codes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
-            const days = (defaults.workDays || [1, 2, 3, 4, 5]).map(Number)
-            const pattern = 'yyyy-MM-dd HH:mm:ss.SSS'
-            const today = ec.l10n.format(ec.user.nowTimestamp, 'yyyy-MM-dd')
-            const addDays = (text, count) => { const [y, m, d] = text.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d + count)).toISOString().substring(0, 10) }
-            const weekdayOf = (text) => { const [y, m, d] = text.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).getUTCDay() }
-            // the first working day of the last week, so the series has started
-            let first = addDays(today, -7)
-            for (let i = 0; i < 7 && !days.includes(weekdayOf(first)); i++) first = addDays(first, 1)
-            const startMs = Number(String(ec.l10n.parseTimestamp(first + ' ' + defaults.workStart + ':00.000', pattern)))
-            const endMs = Number(String(ec.l10n.parseTimestamp(first + ' ' + defaults.workEnd + ':00.000', pattern)))
-            const rule = 'FREQ=WEEKLY;BYDAY=' + ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'].filter((code) => days.includes(codes.indexOf(code))).join(',')
-            const existing = ec.entity.find('mantle.work.effort.WorkEffort').condition('ownerPartyId', partyId).condition('workEffortTypeEnumId', 'WetAvailable')
-                    .condition('sourceReferenceId', 'BossWorkingHours').one()
-            const fields = {estimatedStartDate: new Date(startMs), estimatedCompletionDate: new Date(endMs), estimatedWorkDuration: (endMs - startMs) / 3600000}
-            if (existing != null) {
-                for (const [field, value] of Object.entries(fields)) existing.set(field, value)
-                existing.update()
-                workEffortId = existing.workEffortId
+            const own = !partyId || partyId === ec.user.userAccount?.partyId
+            if (own && !ec.user.userAccount?.partyId) return
+            let parameters
+            if (own) {
+                const defaults = ec.service.sync().name('ironstone.commons.CalendarServices.get#CalendarDefaults').call()?.defaults || {}
+                parameters = {workDays: defaults.workDays || [1, 2, 3, 4, 5], workStart: defaults.workStart, workEnd: defaults.workEnd,
+                    timeZone: ec.user.timeZone || null, sourceReferenceId: 'BossWorkingHours'}
             } else {
-                workEffortId = ec.service.sync().name('create#mantle.work.effort.WorkEffort').parameters(Object.assign({workEffortTypeEnumId: 'WetAvailable',
-                    workEffortName: ec.l10n.localize('Working hours'), statusId: 'WeApproved', ownerPartyId: partyId, timeUomId: 'TF_hr',
-                    sourceReferenceId: 'BossWorkingHours', visibilityEnumId: 'WevRestricted'}, fields)).call()?.workEffortId
-                if (ec.message.hasError()) return
-                ec.service.sync().name('create#mantle.work.effort.WorkEffortParty').parameters({workEffortId: workEffortId, partyId: partyId,
-                    roleTypeId: 'Assignee', fromDate: ec.user.nowTimestamp, statusId: 'WeptAssigned'}).call()
+                parameters = {partyId: partyId, workDays: workDays, workStart: workStart, workEnd: workEnd, timeZone: timeZone || null,
+                    fromDate: fromDate || null}
             }
-            const recurrence = ec.entity.find('mantle.work.effort.WorkEffortRecurrence').condition('workEffortId', workEffortId).one()
-            if (recurrence == null) ec.service.sync().name('create#mantle.work.effort.WorkEffortRecurrence').parameters({workEffortId: workEffortId,
-                rrule: rule, timeZone: ec.user.timeZone || null}).call()
-            else { recurrence.set('rrule', rule); recurrence.set('timeZone', ec.user.timeZone || null); recurrence.update() }
+            const out = ec.service.sync().name('mantle.work.CalendarServices.store#WorkingHours').parameters(parameters).call()
+            if (ec.message.hasError()) return
+            workEffortId = out?.workEffortId || null
+            calendarId = out?.calendarId || null
         ]]></script></actions>
     </service>
 

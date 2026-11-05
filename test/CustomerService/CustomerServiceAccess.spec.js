@@ -427,3 +427,46 @@ feature("a case is its queue's team's and its assignee's; another organization's
         problems.join("\n") == ""
     }
 })
+
+// P4: a service level policy is the administrator's to save (SUPPORT_POLICY_EDIT), its list the settings readers' and another
+// organization's refused; a case's clocks are read by the agent of its queue and not by another organization's agent; and
+// ServiceLevelPolicies renders for the administrator (qvt) with the demo policy and New policy
+feature("service levels: the administrator saves a policy and the manager may not; a case's clocks are its organization's", {
+    when() {
+        const problems = []
+        const draft = {
+            organizationPartyId: ids.organizationId,
+            policyName: "Access spec draft",
+            requestCategoryId: ids.supportQueueId,
+            draft: true,
+            targets: [{priorityBandEnumId: "CpbNormal", firstResponseMinutes: 60, resolutionMinutes: 480}]
+        }
+        const sla = "mantle.request.SlaServices."
+        for (const [user, service, parameters, expected] of [
+            [users.admin, "save#Policy", draft, ""],
+            [users.manager, "save#Policy", draft, "PERMISSION_DENIED"],
+            [users.manager, "find#Policies", {organizationPartyId: ids.organizationId}, ""],
+            [users.agent, "find#Policies", {organizationPartyId: ids.otherOrganizationId}, "RECORD_UNAVAILABLE"],
+            [users.agent, "get#CaseSlaHistory", {requestId: ids.thermostatCaseId}, ""],
+            [users.services, "get#CaseSlaHistory", {requestId: ids.thermostatCaseId}, "RECORD_UNAVAILABLE"]
+        ]) {
+            // Mantle's services check their permission and organization themselves (the screens call them after the case's
+            // check, under the screen's authorization)
+            const message = asUser(user, () => refusal(sla + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const page = asUser(users.admin, () =>
+            lib.page("Settings/ServiceLevelPolicies", {organizationPartyId: ids.organizationId})
+        )
+        return {problems, page}
+    },
+    then({problems, page}) {
+        problems.join("\n") == ""
+        page.status == 200
+        page.errors == []
+        page.output.includes("Retail standard")
+        page.output.includes("Privacy requests")
+        page.output.includes("New policy")
+    }
+})

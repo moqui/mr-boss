@@ -291,7 +291,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Customer Service root and menu, Home | built Nov 5, 2026 |
 | P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | built Nov 5, 2026 |
 | P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | — |
-| P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | — |
+| P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | built Nov 5, 2026 |
 | P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | — |
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | — |
 | P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | — |
@@ -867,6 +867,111 @@ Design §3 CaseDetail's clocks, §7 CaseAnalytics, §9 ServiceLevelPolicies; CS-
   - a reopen starts a new resolution episode and keeps the first breach;
   - a policy row started from a date leaves an open case on the row it began with;
   - a scan with one failing case names it and warns the rest.
+
+**Built Nov 5 (P4).**
+- Business time (Mantle, F13, F65): `service/mantle/work/BusinessTime.js`, the shared module: the interval functions
+  (`merge`, `subtract`, `intersect`, `length`, `hoursOf`), `dayStartIn` and a calendar-based `calendarOf(ctx, schedule, from,
+  thru)` moved from `ProductionCalendar.js`, which now calls them (its own `calendarOf` passes the work center's calendar,
+  zone and organization); `dueAfter` and `elapsedMinutes` on a schedule (a Calendar with its zone, else around the clock,
+  `configured` false); a party's schedule calendar (a `CalkResource` calendar it owns); and the working hours store and read.
+  `mantle.work.CalendarServices` gains `get#BusinessTimeDue`, `get#BusinessTimeElapsed` (with pauses), `store#WorkingHours`
+  and `get#WorkingHours` (the `define#Schedule` interface: calendarId, partyId, organizationPartyId, timeZone). The holiday
+  convention is one: an all-day `WepHoliday` work effort owned by the organization (`allDayStart`), as `get#NextBusinessDay`
+  and Manufacturing read it; a `WepHoliday` event in the schedule's own calendar counts for that calendar (kept for
+  ProductionCalendar); holiday categories are not read. `store#WorkingHours`: the user's own (a `WetAvailable` of the user's
+  party, named by `sourceReferenceId`), or a party's or calendar's on its schedule calendar, made on first use; from a date
+  it ends the open series by its rule's `UNTIL` and starts another (dated rows), without one it changes the open series in
+  place. Another party's hours need edit on its calendar, to manage the party (a current relationship in the Manager role),
+  or the new `WORKING_HOURS_EDIT` (ADMIN, and BOSS_CUSTOMER_SERVICE_ADMIN). BOSS's `ironstone.commons.CalendarServices.store#WorkingHours`
+  keeps its forms (no party: the user's Preferences, `BossWorkingHours`) and calls it, with a party for AgentTeams.
+- CS-SLA (Mantle): `entity/SupportSlaEntities.xml`: `ServiceLevelPolicy` (conditions queue, type, customer, service agreement;
+  calendar or zone; whether an internal hold pauses; the longest pause before a warning; the reopen policy `SlaReopen`;
+  `previousPolicyId`; dated, key fields audit-logged), `ServiceLevelTarget` (per `CasePriorityBand`: first response,
+  resolution and warning in business minutes, dated with its row), `CaseSlaEpisode` (per clock `SlaClock`, a resolution
+  episode per opening; the policy row, target, calendar, zone and organization bound at start; start, due, warning, actual,
+  pause running and paused minutes, warned and breached; state `CaseSlaState`) and `CaseSlaEvent` (`CaseSlaEventType`; the
+  earlier and new due date, the reason, who; unique `eventKey`); seeds `AgrService` (F32, F50) and the purpose
+  `CpAcknowledgement`. `service/mantle/request/SlaServices.xml` over `Sla.js`: `start#CaseEpisode` (from `ensure#CaseProfile`),
+  `record#CaseEvent` (status, message, work; failure logged), `get#CaseSlaHistory`, `correct#CaseSla` (SUPPORT_CASE_MANAGE),
+  `find#Policies`, `save#Policy` (SUPPORT_POLICY_EDIT), `simulate#Policy`, `scan#CaseSla` and `mark#CaseSlaEpisode` (each clock
+  in its own transaction). The rules in `entity/Request.eecas.xml`: `SupportCaseSlaRule` (one after rule on Request's status,
+  due date and resolution, get-original-value; F64, F83), `SupportCaseSlaMessage` (RequestCommEvent made) and
+  `SupportCaseSlaWork` (RequestWorkEffort made). `SupportCases.js`: `ensure` starts the clocks (a failure logged, never the
+  case's), `transition` puts its reason on the clocks' events. `MantleSetupData.xml`: `WORKING_HOURS_EDIT`, the topics
+  `SupportCaseSlaWarning` and `SupportCaseSlaBreach`, the ServiceJob `scan_CaseSla` (every five minutes, 200 a batch).
+- CS-JOBS: `scan#CaseSla` records a breach (at its due time) or a warning once per episode by its event key and tells the
+  case's assignee, else the queue team's managers; a pause past the policy's longest records `SetPauseLimit`; a clock that
+  fails is logged with its case and named in `failedList`, the rest go on.
+- BOSS: `Settings/ServiceLevelPolicies.xml` (SlaPolicyList as a box per policy with its conditions, rank, calendar, period,
+  state and targets; New policy and Change from a date over `save#Policy`, End; SlaSimulation over `simulate#Policy` with a
+  queue and one pause) and `ConfigurationServices.get#ServiceLevelSettings` (calendars with their hours, service agreements,
+  bands, reopen policies); `Settings/AgentTeams.xml` shows each team's hours and Working hours (from a date) for the team's
+  manager and the administrator; `template/CustomerServiceCaseDetail.xml` the clocks beside the header and the Service level
+  tab (clocks with policy and calendar, a manager's Correct over `correct#CaseSla`, the events); `Reports.xml` a menu group
+  with `Reports/ReportsHome` (P14's placeholder) and `Reports/CaseAnalytics` (CaseMetrics: clock cards and the event table
+  over `get#CaseSlaHistory` after `check#Record`); Cases' SLA risk view (a running clock warned, due or breached), Needs
+  response (first response running, or new with no clock) and each row's clock due first (`Cases.js`); Home's SLA compliance,
+  first response and resolution (`Cases.js slaMeasures`, the share of clocks decided in the period met on time, with its
+  denominator and change) and Team queues' breached count; SettingsHome's Service levels readiness; `BossSetupData.xml` the
+  topics' links (CaseDetail's Service level tab) and `WORKING_HOURS_EDIT` for the administrator; the topics in the root's
+  shell providers.
+- Demo (Retail only, F82): `BossCustomerServiceDemoData.xml` the policies `BOSS_CS_SLA_RETAIL` (the default, four bands) and
+  `BOSS_CS_SLA_PRIVACY` (the Privacy queue, around the clock); `BossXCustomerServiceHoursDemoData.xml` (new) runs
+  `DemoServices.load#WorkingHoursDemo` (the Support team Monday to Friday 9:00-17:00, America/Chicago) before
+  `BossYCustomerServiceCasesDemoData.xml`'s requests become cases, so their clocks count on the hours.
+- Specs: Mantle `test/work/BusinessTime` (3 features, 0.2 s: a team's hours by its manager and refused to another; minutes
+  due past a weekend and a holiday, elapsed less a pause, around the clock; hours from a date leaving the days before) and
+  `test/request/SupportSla` (8 features, 1.3 s: no policy no clocks; the policy saves and refusals with the overlap;
+  precedence; Friday 16:30 on the team's hours with a holiday Monday; note, failed send and sent reply; pause, hold and
+  another path's move; reopen keeping the first breach and a later policy row; correction; the scan naming a failing clock
+  and warning once). BOSS `CustomerServiceAccess` (+1 feature: save#Policy for the administrator, not the manager; another
+  organization's policies and case clocks refused; ServiceLevelPolicies' one qvt render) and `CustomerServiceCases` (the
+  team's hours and the levels readiness on the settings feature; the clocks and tab on CaseDetail's one render). Acceptance
+  `acceptance/CustomerService/CustomerServiceSlaWalk` (the usable-when, 7 features, all pass), and `AppStructure`'s fixtures
+  for ServiceLevelPolicies and CaseAnalytics (the placeholder count unchanged: Reports' placeholder moved to ReportsHome).
+- Tests run (all pass): Mantle BusinessTime, SupportSla, SupportCases, WorkCenters, ProductionSchedule, ProductionReports,
+  CalendarServices, SupplyPlanning, ProductionShopFloor, ProductionSubcontract, WorkResources, Dav, CalendarChanges,
+  WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow,
+  ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow; BOSS CustomerServiceAccess, CustomerServiceCases,
+  CalendarSettings, ManufacturingWorkCenters, ManufacturingSchedule, ManufacturingPlanning, ManufacturingDowntime,
+  ManufacturingReports, Requests, ProjectRequests, Chat, QuickCreate, TodayPanel, Chatter, Inbox; mr-pass Integrations and
+  Forum; acceptance CustomerServiceSlaWalk, AppStructure, CustomerServiceFoundationWalk and CustomerServiceCasesWalk.
+  `moqui lint --screens`: 136 flagged sites, as master; none in the Customer Service screens.
+- Inventories: no ss-inventory or usl-inventory row is designed for P4's screens or new services (the SLA forms and
+  services are new; Commons' working hours row is BOSS's).
+- Decisions:
+  - The business-time services read only working times and take no permission; the SLA reads and saves check theirs.
+  - A policy's precedence is its rank, computed from its conditions (agreement 8, customer 4, queue 2, type 1), not a stored
+    number (F-P4-1); the list shows it.
+  - The scan runs every five minutes over at most 200 clocks.
+  - A first response clock still running when the case resolves closes as unmet, never met; a breach it had stays.
+  - While resolution is paused the case's due date is empty (no current due date); after a resolve it keeps the last one.
+- Findings (provisional):
+  - **F-P4-1** Design ServiceLevelPolicies' "precedence" is not a field: the most specific condition ranks the policy, and
+    two rows of one rank can both hold for a case only when their conditions are equal, so the refused overlap is two
+    published rows with the same conditions over overlapping dates (EQUAL_RANK_OVERLAP); a replacement names its row and
+    ends it.
+  - **F-P4-2** The case rule makes the profile after the commit (F84), so loaded data gets its clocks then: the demo team's
+    hours are stored by a demo file that loads before the requests (BossX before BossY). A request made before any policy
+    started (a backfill) takes the row in effect now.
+  - **F-P4-3** A declared in-parameter not passed arrives as null, so save#Policy reads null as "unchanged" and an empty
+    string (a form's cleared field) as "none".
+  - **F-P4-4** Ending a weekly working-hours series from a date needs no new field: its RRULE's `UNTIL` (RFC 5545) ends it
+    for get#EventInstances, get#FreeBusy and business time alike.
+  - **F-P4-5** A sent mail is filed on its case (RequestCommEvent) only once it is ES_SENT (file#SentEmail), so the
+    RequestCommEvent rule sees a send the channel accepted; a failed send waits in the Outbox unfiled. Projects' intake
+    confirmation is a RequestEmailMessage with no CommunicationEvent and never reaches the rule; `CpAcknowledgement` marks
+    any other automatic message.
+  - **F-P4-6** BOSS's settings organization choice (every internal organization for the administrator) can be one Mantle's
+    scope refuses (`get#PartyOrganizationInfo`; the administrator's first option ORG_ZIZI_CORP): ServiceLevelPolicies then
+    says the organization's levels are not available. P2's settings saves have the same mismatch. For the lead.
+  - **F-P4-7** CaseAnalytics (design §2: `CustomerService/Reports/CaseAnalytics`) made Reports a menu group before P14:
+    Reports' placeholder is now `Reports/ReportsHome`.
+  - **F-P4-8** F50: P4 seeds `AgrService` and builds no store or expiry for service agreements; a policy's agreement
+    condition reads an Agreement of that type between the organization and the customer, active by its dates and, when it
+    has a status, AgmStActive. The purchase agreement services still refuse it. P11 builds the store.
+  - **F-P4-9** A customer's reply while the case waits for them is recorded (`SetCustomerReply`) but does not resume the
+    clock: design ServiceDefaults' "customer reply before close reopens via policy" is P8's.
 
 ### P5 — Assignment and saved replies
 

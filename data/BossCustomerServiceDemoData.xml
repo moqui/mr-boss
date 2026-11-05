@@ -110,4 +110,25 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.request.support.ServiceRequestType serviceRequestTypeId="BOSS_CS_ST_PRIVACY" organizationPartyId="ORG_ZIZI_RETAIL"
             requestTypeEnumId="RqtPrivacy" serviceEnabled="Y" customerLabel="A privacy request about my data"
             defaultCategoryId="BOSS_CS_Q_PRIVACY" defaultPriority="3" publicAvailable="N" fromDate="0"/>
+    <!-- P4: Ziziwork Retail's service levels (F82: Retail only). The default policy counts on the Support team's working hours
+        (Monday to Friday 9:00-17:00 in Chicago, stored through store#WorkingHours by BossXCustomerServiceHoursDemoData.xml
+        before the demo requests become cases, so their clocks start on them); the Privacy queue's policy is more specific (a queue condition) and
+        counts around the clock, as a privacy request's deadline is in calendar days. -->
+    <mantle.request.support.ServiceLevelPolicy serviceLevelPolicyId="BOSS_CS_SLA_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            policyName="Retail standard" holdPauses="N" maxPauseMinutes="4800" reopenEnumId="SrpNewEpisode" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_RETAIL_U" serviceLevelPolicyId="BOSS_CS_SLA_RETAIL"
+            priorityBandEnumId="CpbUrgent" firstResponseMinutes="60" resolutionMinutes="480" warningMinutes="15" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_RETAIL_H" serviceLevelPolicyId="BOSS_CS_SLA_RETAIL"
+            priorityBandEnumId="CpbHigh" firstResponseMinutes="120" resolutionMinutes="960" warningMinutes="30" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_RETAIL_N" serviceLevelPolicyId="BOSS_CS_SLA_RETAIL"
+            priorityBandEnumId="CpbNormal" firstResponseMinutes="240" resolutionMinutes="1440" warningMinutes="60" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_RETAIL_L" serviceLevelPolicyId="BOSS_CS_SLA_RETAIL"
+            priorityBandEnumId="CpbLow" firstResponseMinutes="480" resolutionMinutes="2400" warningMinutes="120" fromDate="0"/>
+    <mantle.request.support.ServiceLevelPolicy serviceLevelPolicyId="BOSS_CS_SLA_PRIVACY" organizationPartyId="ORG_ZIZI_RETAIL"
+            policyName="Privacy requests" requestCategoryId="BOSS_CS_Q_PRIVACY" timeZone="America/Chicago" holdPauses="N"
+            reopenEnumId="SrpNewEpisode" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_PRIVACY_H" serviceLevelPolicyId="BOSS_CS_SLA_PRIVACY"
+            priorityBandEnumId="CpbHigh" firstResponseMinutes="1440" resolutionMinutes="43200" warningMinutes="240" fromDate="0"/>
+    <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_PRIVACY_N" serviceLevelPolicyId="BOSS_CS_SLA_PRIVACY"
+            priorityBandEnumId="CpbNormal" firstResponseMinutes="1440" resolutionMinutes="43200" warningMinutes="240" fromDate="0"/>
 </entity-facade-xml>

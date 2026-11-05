@@ -15,8 +15,10 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- AgentTeams (design-customer-service §9 AgentTeams TeamMembers; impl-customer-service P2): the organization's service
     teams and their members (ironstone.customerservice.ConfigurationServices.get#ServiceTeam): New team
     (mantle.request.SupportCaseServices.save#ServiceTeam, the administrator), Add member and Remove (save#ServiceTeamMember, a
-    dated PartyRelationship; a manager of the team or the administrator). Participation (eligibility, maximum cases,
-    substitute) comes in P5. -->
+    dated PartyRelationship; a manager of the team or the administrator). Working hours (P4): each team's weekly hours on its
+    schedule calendar, which its queues' case clocks count on, kept from a date through Commons'
+    ironstone.commons.CalendarServices.store#WorkingHours (Mantle's mantle.work.CalendarServices.store#WorkingHours checks the
+    team's manager or WORKING_HOURS_EDIT). Participation (eligibility, maximum cases, substitute) comes in P5. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Agent teams" default-menu-index="3">
     <parameter name="organizationPartyId"/>
@@ -36,6 +38,16 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.request.SupportCaseServices.save#ServiceTeam"
                     in-map="{organizationPartyId:organizationPartyId, teamPartyId:(teamPartyId || null), teamName:teamName}"/>
             <message type="success">Saved the team ${teamName}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveHours">
+        <actions>
+            <service-call name="ironstone.commons.CalendarServices.store#WorkingHours"
+                    in-map="{partyId:teamPartyId, workDays:workDays, workStart:workStart, workEnd:workEnd, timeZone:(timeZone || null),
+                        fromDate:(fromDate || ec.user.nowTimestamp)}"/>
+            <message type="success">Saved the team's working hours</message>
         </actions>
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."/>
@@ -91,6 +103,38 @@ along with this software (see the LICENSE.md file). If not, see
                         <container-box>
                             <box-header title="${team.teamName} · ${team.memberCount} members"/>
                             <box-toolbar>
+                                <container-dialog id="TeamHours_${team.teamPartyId}" button-text="Working hours" icon="sym_o_schedule"
+                                        width="560" title="Working hours of ${team.teamName}" condition="team.canChange">
+                                    <form-single name="TeamHoursForm" transition="saveHours"
+                                            map="Object.assign({organizationPartyId:cfgOrganizationPartyId}, team.hoursValues)">
+                                        <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="workDays">
+                                            <default-field title="Working days">
+                                                <check>
+                                                    <option key="1" text="Mon"/><option key="2" text="Tue"/><option key="3" text="Wed"/>
+                                                    <option key="4" text="Thu"/><option key="5" text="Fri"/><option key="6" text="Sat"/>
+                                                    <option key="0" text="Sun"/>
+                                                </check>
+                                            </default-field>
+                                        </field>
+                                        <field name="workStart"><default-field title="From (HH:mm)"><text-line size="5"/></default-field></field>
+                                        <field name="workEnd"><default-field title="To (HH:mm)"><text-line size="5"/></default-field></field>
+                                        <field name="timeZone"><default-field title="Time zone" tooltip="An IANA name such as America/Chicago"><text-line size="24"/></default-field></field>
+                                        <field name="fromDate">
+                                            <default-field title="From" tooltip="Empty: now; the days before keep their hours">
+                                                <date-time type="timestamp"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save hours"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-ref name="workDays"/>
+                                            <field-row><field-ref name="workStart"/><field-ref name="workEnd"/></field-row>
+                                            <field-row><field-ref name="timeZone"/><field-ref name="fromDate"/></field-row>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
                                 <container-dialog id="AddMember_${team.teamPartyId}" button-text="Add member" icon="sym_o_person_add"
                                         width="480" title="Add a member to ${team.teamName}" condition="team.canChange">
                                     <form-single name="AddMemberForm" transition="saveMember"
@@ -112,6 +156,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                             </box-toolbar>
                             <box-body-nopad>
+                                <label type="p" style="q-px-sm q-pt-sm text-caption m-muted q-mb-none" text="Working hours: ${team.hoursText}"/>
                                 <form-list name="TeamMembers" list="team.members" skip-form="true" paginate="false">
                                     <field name="name"><default-field title="Member"><display/></default-field></field>
                                     <field name="roleText"><default-field title="Role"><display/></default-field></field>

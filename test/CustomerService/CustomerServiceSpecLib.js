@@ -31,7 +31,9 @@ const ids = {
     filtersCaseId: "BOSS_CS_CASE_FILTERS",
     pickCaseId: "BOSS_CS_CASE_PICK",
     privacyCaseId: "BOSS_CS_CASE_PRIVACY",
-    otherCaseId: "BOSS_CS_CASE_OTHER"
+    otherCaseId: "BOSS_CS_CASE_OTHER",
+    // P4: Retail's default service level policy (its Privacy queue has its own)
+    slaPolicyId: "BOSS_CS_SLA_RETAIL"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -135,7 +137,10 @@ function routeFixtures() {
         "Settings/CaseTypes": {parameters: {}, text: "Case types"},
         "Settings/StatusCategories": {parameters: {}, text: "Status categories"},
         "Settings/ServiceDefaults": {parameters: {}, text: "Service defaults"},
-        "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"}
+        "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"},
+        // P4: the service levels and one case's measurements
+        "Settings/ServiceLevelPolicies": {parameters: {}, text: "Service levels"},
+        "Reports/CaseAnalytics": {parameters: {requestId: ids.thermostatCaseId}, text: "Events"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],

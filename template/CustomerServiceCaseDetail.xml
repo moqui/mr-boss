@@ -20,8 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     Assign, Priority and Queue (update#Case) and Tags (set#CaseTags), each after the case's check; the tabs Conversation
     first (Chatter: reply, note and log), Overview (the description, the customer and people, the linked records, the tags),
     Work (the linked work items, each opening WorkItemDetail here, and Add task) and Files; and the Recent cases pane (the
-    customer's other open or recent cases). Later phases add the clocks (P4), saved replies (P5), merge and split (P8), the
-    RMA, order-change and warranty actions (P9-P11) and Knowledge (P12). -->
+    customer's other open or recent cases). The clocks (P4) beside the header and the Service level tab, over Mantle's
+    mantle.request.SlaServices.get#CaseSlaHistory, with a manager's Correct (correct#CaseSla). Later phases add saved
+    replies (P5), merge and split (P8), the RMA, order-change and warranty actions (P9-P11) and Knowledge (P12). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="caseChoices" read-only="true">
@@ -66,6 +67,18 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- P4: a manager's reasoned correction of a clock's due time -->
+    <transition name="correctCaseSla">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseManage'}"/>
+            <service-call name="mantle.request.SlaServices.correct#CaseSla"
+                    in-map="{requestId:requestId, caseSlaEpisodeId:caseSlaEpisodeId, dueDate:dueDate, reason:(reason || null)}"/>
+            <message type="success">Corrected the clock of case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab"/></default-response>
+        <error-response url="."/>
+    </transition>
     <widgets>
         <section name="CustomerServiceCase" condition="appRoot == 'CustomerService'">
             <actions>
@@ -85,6 +98,20 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="csValues" from="{requestId:requestId, tab:csTab, caseRevision:sc.caseRevision, priority:String(sc.priority ?? 5),
                         requestCategoryId:sc.requestCategoryId, assigneePartyId:sc.assigneePartyId || ''}"/>
                 <set field="csTagIds" from="(cd?.tags || []).map((tag) =&gt; tag.tagEnumId)"/>
+                <!-- P4: the case's clocks (the latest of each beside the header) and the Service level tab -->
+                <if condition="cd">
+                    <service-call name="mantle.request.SlaServices.get#CaseSlaHistory" out-map="slaOut" in-map="{requestId:requestId}"
+                            transaction="force-new" ignore-error="true"/>
+                    <script>ec.message.clearErrors()</script>
+                </if>
+                <set field="csClocks" from="slaOut?.clocks || []"/>
+                <set field="csClockCards" from="['SlcFirstResponse', 'SlcResolution'].map((id) =&gt; csClocks.filter((row) =&gt; row.clockEnumId == id).pop())
+                        .filter(Boolean)"/>
+                <set field="csSlaEvents" from="slaOut?.events || []"/>
+                <set field="csTab" from="tab == 'sla' ? 'sla' : csTab"/>
+                <set field="csTabs" from="csTabs.concat([{key: 'sla', label: 'Service level'}]).map((row) =&gt; Object.assign({}, row,
+                        {current: row.key == csTab}))"/>
+                <set field="csValues" from="Object.assign({}, csValues, {tab: csTab})"/>
             </actions>
             <widgets>
                 <section name="CaseMissing" condition="!cd">
@@ -297,6 +324,25 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container>
                             </container>
                         </container>
+                        <!-- ===== P4: the clocks (first response, the current resolution) ===== -->
+                        <container style="row q-col-gutter-sm q-mb-sm">
+                            <section-iterate name="CaseClocks" list="csClockCards" entry="csClock">
+                                <widgets>
+                                    <container style="col-12 col-sm-6 col-md-auto">
+                                        <container style="q-pa-sm rounded-borders m-tonal text-${csClock.color}">
+                                            <label text="${csClock.label}: ${csClock.stateText}" type="div" style="text-caption"/>
+                                            <label text="${csClock.open ? 'Due ' + csClock.dueText : csClock.actualText ? 'Done ' + csClock.actualText : 'Due was ' + csClock.dueText}"
+                                                    type="div" style="text-body2"/>
+                                            <label text="${csClock.remainingText} left" type="div" style="text-caption" condition="csClock.open &amp;&amp; csClock.remainingText"/>
+                                        </container>
+                                    </container>
+                                </widgets>
+                            </section-iterate>
+                            <container style="col-auto self-center">
+                                <label text="${slaOut?.noPolicy ? 'No service level applies to this case' : ''}" type="span" style="text-caption m-muted"
+                                        condition="!csClockCards.length"/>
+                            </container>
+                        </container>
                         <!-- ===== the tabs, Conversation first, with the Recent cases pane beside them ===== -->
                         <container style="row q-gutter-xs q-mb-sm">
                             <section-iterate name="CaseTabs" list="csTabs" entry="csTabLink">
@@ -389,6 +435,93 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </form-list>
                                                 <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!cd.work.length"
                                                         text="No work on this case. Its work done tells you; it never resolves the case."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                                <!-- P4: the Service level tab: the clocks with their policy row and calendar, a manager's Correct, the events -->
+                                <section name="CaseServiceLevel" condition="csTab == 'sla'">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Clocks"/>
+                                            <box-toolbar>
+                                                <link url="${sharedLinks['Reports/CaseAnalytics']}" text="Case analytics"
+                                                        icon="sym_o_monitoring" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                            </box-toolbar>
+                                            <box-body-nopad>
+                                                <form-list name="CaseSlaClocks" list="csClocks" skip-form="true" paginate="false">
+                                                    <field name="label">
+                                                        <default-field title="Clock">
+                                                            <display/>
+                                                            <label text="${policyName} · ${calendarText}" type="div" style="text-caption m-muted"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="stateText">
+                                                        <default-field title="State">
+                                                            <render-mode>
+                                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${color}">${
+                                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                                <text type="html">${stateText}</text>
+                                                            </render-mode>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="startText"><default-field title="Started"><display/></default-field></field>
+                                                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                                    <field name="actualText"><default-field title="Done"><display/></default-field></field>
+                                                    <field name="elapsedText"><default-field title="Business time"><display/></default-field></field>
+                                                    <field name="pausedText"><default-field title="Paused"><display/></default-field></field>
+                                                    <field name="targetText"><default-field title="Target"><display/></default-field></field>
+                                                    <field name="actions">
+                                                        <default-field title="">
+                                                            <container-dialog id="CorrectClock_${caseSlaEpisodeId}" button-text="Correct" icon="sym_o_edit_calendar"
+                                                                    width="480" title="Correct ${label} of case ${requestId}" condition="cd.canManage">
+                                                                <form-single name="CorrectClockForm" transition="correctCaseSla"
+                                                                        map="{requestId:requestId, tab:'sla', caseSlaEpisodeId:caseSlaEpisodeId}">
+                                                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                                                    <field name="tab"><default-field><hidden/></default-field></field>
+                                                                    <field name="caseSlaEpisodeId"><default-field><hidden/></default-field></field>
+                                                                    <field name="dueDate"><default-field title="Due"><date-time type="timestamp"/></default-field></field>
+                                                                    <field name="reason">
+                                                                        <default-field title="Reason" tooltip="Kept with the earlier due time"><text-area rows="2"/></default-field>
+                                                                    </field>
+                                                                    <field name="submitButton">
+                                                                        <default-field title="Correct">
+                                                                            <submit confirmation="Correct ${label} of case ${requestId}? The earlier figure stays in its history."/>
+                                                                        </default-field>
+                                                                    </field>
+                                                                </form-single>
+                                                            </container-dialog>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="label"/><field-ref name="dueText"/></column>
+                                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                                    </columns>
+                                                </form-list>
+                                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!csClocks.length"
+                                                        text="No clock: no service level policy applied to this case when it came in."/>
+                                            </box-body-nopad>
+                                        </container-box>
+                                        <container-box>
+                                            <box-header title="What happened"/>
+                                            <box-body-nopad>
+                                                <form-list name="CaseSlaEvents" list="csSlaEvents" skip-form="true" paginate="false">
+                                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                                    <field name="typeText">
+                                                        <default-field title="Event">
+                                                            <display/>
+                                                            <label text="${clockLabel}" type="div" style="text-caption m-muted" condition="clockLabel"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                                                    <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                                                    <field name="userName"><default-field title="By"><display/></default-field></field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="typeText"/><field-ref name="detail"/></column>
+                                                        <column><field-ref name="dateText"/></column>
+                                                    </columns>
+                                                </form-list>
                                             </box-body-nopad>
                                         </container-box>
                                     </widgets>

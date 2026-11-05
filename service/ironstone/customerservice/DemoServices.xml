@@ -55,4 +55,19 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="errors" from="demoResult.errors"/>
         </actions>
     </service>
+    <service verb="load" noun="WorkingHoursDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>P4: the Retail support team's working hours (Monday to Friday 9:00-17:00, America/Chicago) through Mantle's
+            store#WorkingHours, from BossXCustomerServiceHoursDemoData.xml, before the demo requests become cases. Idempotent.
+            Only data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Demo.js')
+                .execute('loadHours', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
 </services>

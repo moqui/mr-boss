@@ -71,4 +71,27 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="settings" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceSettings', context)"/>
         </actions>
     </service>
+    <service verb="get" noun="ServiceLevelSettings" allow-remote="false">
+        <description>What ServiceLevelPolicies' forms choose from for the organization (P4): its calendars and its teams'
+            working hours calendars with their hours, its service agreements, the priority bands and the reopen policies. The
+            policies are Mantle's mantle.request.SlaServices.find#Policies.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="calendarOptions" type="List"/>
+            <parameter name="agreementOptions" type="List"/>
+            <parameter name="bandOptions" type="List"/>
+            <parameter name="reopenOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Configuration.js').execute('serviceLevelSettings', context)"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="calendarOptions" from="found.calendarOptions"/>
+            <set field="agreementOptions" from="found.agreementOptions"/>
+            <set field="bandOptions" from="found.bandOptions"/>
+            <set field="reopenOptions" from="found.reopenOptions"/>
+        </actions>
+    </service>
 </services>

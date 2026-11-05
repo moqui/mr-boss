@@ -264,7 +264,10 @@ const linkPaths = [
     "Settings/AgentTeams",
     "Settings/CaseTypes",
     "Settings/StatusCategories",
-    "Settings/ServiceDefaults"
+    "Settings/ServiceDefaults",
+    // P4: the service levels and one case's measurements
+    "Settings/ServiceLevelPolicies",
+    "Reports/CaseAnalytics"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

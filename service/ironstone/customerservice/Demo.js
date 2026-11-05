@@ -168,7 +168,28 @@ function loadCases() {
     })
 }
 
-const operations = {load, loadOrder, loadCases}
+// P4: the Retail support team's working hours (Monday to Friday 9:00-17:00 in Chicago) on its schedule calendar, through
+// Mantle's store#WorkingHours, before the demo requests are made cases (BossYCustomerServiceCasesDemoData.xml, whose rule starts
+// their clocks on these hours). Idempotent: a second run changes the series in place.
+function loadHours() {
+    return asDemoAdministrator(() => {
+        try {
+            lib.probe("mantle.work.CalendarServices.store#WorkingHours", {
+                partyId: "BOSS_CS_TEAM_SUPPORT",
+                workDays: "1,2,3,4,5",
+                workStart: "09:00",
+                workEnd: "17:00",
+                timeZone: "America/Chicago"
+            })
+            return {complete: true, errors: []}
+        } catch (error) {
+            ec.logger.error("Customer Service demo working hours were not stored: " + error.message)
+            return {complete: false, errors: ["working hours: " + error.message]}
+        }
+    })
+}
+
+const operations = {load, loadOrder, loadCases, loadHours}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service demonstration operation " + op)
