@@ -697,6 +697,10 @@ function caseDetail(p) {
         ? findCases({recentFor: decorated.customerPartyId, excludeRequestId: p.requestId, pageSize: 10}).cases
         : []
     const profile = one("mantle.request.support.CaseProfile", {requestId: p.requestId})
+    // P8: the case's lineage (Mantle's get#CaseLineage): a case merged into another or closed is no longer worked here (its
+    // history stays readable; a reply to it goes to the kept case or makes a follow-up)
+    const lineage = caseLineage(p.requestId)
+    const worked = !lineage || lineage.actionable
     return {
         theCase: Object.assign(decorated, {
             description: row.description || "",
@@ -712,14 +716,39 @@ function caseDetail(p) {
             projectId: row.rootWorkEffortId || null,
             open
         }),
-        moves,
+        moves: worked ? moves : [],
         work,
         links,
         tags,
         recent,
-        canEdit: canEdit && open,
-        canTransition: canEdit,
-        canManage: !!userScope.capabilities.caseManage
+        lineage,
+        canEdit: canEdit && open && worked,
+        canTransition: canEdit && worked,
+        canManage: !!userScope.capabilities.caseManage,
+        // P8: merge (a service manager's) and split from an open case, a follow-up of a closed or cancelled one
+        canMerge: !!userScope.capabilities.caseManage && open && worked,
+        canSplit: canEdit && open && worked,
+        canFollowUp: !!userScope.capabilities.caseEdit && !!lineage?.canFollowUp
+    }
+}
+// The lineage of a case the user may see (checked by the caller): Mantle's read, or null when it cannot be read.
+function caseLineage(requestId) {
+    ec.message.pushErrors()
+    try {
+        const out =
+            ec.service
+                .sync()
+                .name("mantle.request.SupportCaseServices.get#CaseLineage")
+                .parameters({requestId})
+                .disableAuthz()
+                .call() || {}
+        return ec.message.hasError() ? null : out.lineage || null
+    } catch (error) {
+        ec.logger.warn("Case " + requestId + ": its lineage was not read: " + (error?.message || error))
+        return null
+    } finally {
+        ec.message.clearErrors()
+        ec.message.popErrors()
     }
 }
 

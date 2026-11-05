@@ -1918,6 +1918,24 @@ app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleS
 | request/KnowledgeServices | create#ArticleFromCase | CustomerService/Knowledge/CaseToArticle | CustomerService/Knowledge/CaseToArticle (ArticleDraft; AnswerSelection's preview through prepare#ArticleFromCase) |
 | request/KnowledgeServices | make#ArticleTask |  | for review#ArticleFeedback and suggest#ArticleEdit |
 
+## Customer Service P8 — Merge, split and closing (Nov 5, 2026)
+
+Added in `request/SupportCaseServices.xml` (impl-customer-service P8, CS-MERGE, CS-JOBS; `CaseRelations.js`, the merge's
+clocks in `Sla.js`), called by built screens and jobs; the Support app's CustomerCase (P15) is to get its reopen and follow-up
+from the same reply rule (Sla.js recordMessage).
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/SupportCaseServices | preview#MergeCases | CustomerService/Cases/MergeCases | CustomerService/Cases/MergeCases (MergeSelection, MergePreview) |
+| request/SupportCaseServices | merge#Cases | CustomerService/Cases/MergeCases | CustomerService/Cases/MergeCases (MergeConfirm) |
+| request/SupportCaseServices | preview#SplitCase | CustomerService/Cases/SplitCase | CustomerService/Cases/SplitCase (SplitSelection) |
+| request/SupportCaseServices | split#Case | CustomerService/Cases/SplitCase | CustomerService/Cases/SplitCase (SplitNewCase) |
+| request/SupportCaseServices | create#FollowUpCase | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Open a follow-up case, template/CustomerServiceLineage.xml) |
+| request/SupportCaseServices | make#FollowUpCase |  | the reply rule after the commit (Sla.js recordMessage, CaseRelations.js replyArrived) |
+| request/SupportCaseServices | get#CaseLineage | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (the lineage, a merged case's redirect, through CaseServices.get#CaseDetail) |
+| request/SupportCaseServices | close#ResolvedCases, close#ResolvedCase | CustomerService/Settings/ServiceDefaults | the close_ResolvedCases ServiceJob (ServicePolicy.autoCloseDays, ServiceDefaults) |
+| RequestServices | link#RequestRecord, add#RequestComment, replace#RequestParty, create#Request, file#RequestEmail |  | through merge#Cases, split#Case and the follow-up (Customer Service P8) |
+
 ## Customer Service P7 — Case templates (Nov 5, 2026)
 
 Added in `request/SupportCaseServices.xml` (impl-customer-service P7, CS-TEMPLATES; `CaseTemplates.js`), over the framework's

@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- MergeCases (design-customer-service §3 MergeCases; style-guide §3.9 Wizard; impl-customer-service P8, CS-MERGE): a service
+    manager's merge of a customer's duplicate cases into the one kept, opened from CaseDetail's More menu with that case.
+    MergeSelection (the case kept and the customer's other open cases to merge into it, and the reason), MergePreview (each
+    case side by side: subject, queue, status, assignee, participants, messages by audience, files, work, linked records and
+    clocks; the clocks the sources carry, an open one as an obligation due as it was and a breach kept; what stops the merge,
+    naming its case) and MergeConfirm (the reason and an explicit Merge, with the revisions previewed and an operation key, so
+    a retry answers the first result and a case changed since is refused). Each case is checked as the user's with
+    SUPPORT_CASE_MANAGE (ironstone.customerservice.AccessServices.check#Record), then mantle.request.SupportCaseServices
+    preview#MergeCases and merge#Cases; the merge opens the kept case. A merged case's CaseDetail says where it went. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Merge cases" default-menu-include="false">
+    <parameter name="requestId"/>
+    <parameter name="targetRequestId"/>
+    <parameter name="sourceRequestIds"/>
+    <parameter name="reason"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- MergeSelection: the screen again with the cases chosen (a link form) -->
+    <transition name="previewMerge">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="targetRequestId"/>
+            <parameter name="sourceRequestIds"/>
+            <parameter name="reason"/>
+        </default-response>
+    </transition>
+    <transition name="mergeCases">
+        <actions>
+            <set field="mergeSources" from="String(sourceIdsText || '').split(',').map((id) =&gt; id.trim()).filter((id) =&gt; id)"/>
+            <iterate list="[targetRequestId].concat(mergeSources)" entry="mergeCaseId">
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'case', recordId:mergeCaseId, capability:'caseManage'}"/>
+            </iterate>
+            <service-call name="mantle.request.SupportCaseServices.merge#Cases" out-map="merged"
+                    in-map="{targetRequestId:targetRequestId, sourceRequestIds:mergeSources, reason:(reason || null),
+                        operationKey:operationKey, caseRevisions:(caseRevisions || null)}"/>
+            <set field="requestId" from="merged.targetRequestId"/>
+            <message type="success">Merged ${mergeSources.length} case(s) into case ${requestId}</message>
+        </actions>
+        <default-response url="../CaseDetail"><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="mergeTarget" from="targetRequestId || requestId || ''"/>
+        <set field="mergeSourceList" from="(sourceRequestIds == null ? [] : typeof sourceRequestIds === 'string' ? sourceRequestIds.split(',')
+                : Array.from(sourceRequestIds)).map((id) =&gt; String(id).trim()).filter((id) =&gt; id &amp;&amp; id != mergeTarget)"/>
+        <!-- the case kept, as the user sees it (its customer's other cases are the ones offered) -->
+        <if condition="mergeTarget &amp;&amp; can.caseManage">
+            <service-call name="ironstone.customerservice.CaseServices.get#CaseDetail" out-map="targetOut" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, requestId:mergeTarget}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="keptCase" from="targetOut?.detail?.theCase || null"/>
+        <set field="mergeCheckErrors" from="[]"/>
+        <set field="mergeError" from="null"/>
+        <!-- the preview of the cases chosen, each checked as the user's first -->
+        <if condition="keptCase &amp;&amp; mergeSourceList.length">
+            <script><![CDATA[
+                for (const mergeCaseId of mergeSourceList) {
+                    ec.message.pushErrors()
+                    try {
+                        ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record').parameters({appRoot: appRoot,
+                            recordType: 'case', recordId: mergeCaseId, capability: 'caseManage'}).call()
+                        if (ec.message.hasError()) mergeCheckErrors.push(ec.message.getErrorsString())
+                    } catch (err) {
+                        mergeCheckErrors.push(String(err && err.message ? err.message : err))
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                }
+            ]]></script>
+            <if condition="!mergeCheckErrors.length">
+                <service-call name="mantle.request.SupportCaseServices.preview#MergeCases" out-map="previewOut" transaction="force-new"
+                        ignore-error="true" in-map="{targetRequestId:mergeTarget, sourceRequestIds:mergeSourceList}"/>
+                <set field="mergeError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+        </if>
+        <set field="mergePreview" from="previewOut?.preview || null"/>
+        <set field="mergeRows" from="mergePreview ? [Object.assign({}, mergePreview.target, {roleText: 'Kept'})].concat(mergePreview.sources.map((row) =&gt;
+                Object.assign({}, row, {roleText: 'Merged into it'}))).map((row) =&gt; Object.assign({}, row, {
+                messagesText: row.messageCount + ' (' + row.customerMessageCount + ' customer-visible, ' + row.internalMessageCount + ' internal)',
+                clocksText: row.openClockCount + ' running' + (row.breachedClockCount ? ', ' + row.breachedClockCount + ' breached' : '')})) : []"/>
+        <set field="mergeSelection" from="{requestId:requestId || mergeTarget, targetRequestId:mergeTarget, sourceRequestIds:mergeSourceList,
+                reason:reason || ''}"/>
+        <set field="mergeConfirm" from="{targetRequestId:mergeTarget, sourceIdsText:mergeSourceList.join(','), reason:reason || '',
+                caseRevisions:mergePreview?.caseRevisions || '', operationKey:'mg' + Date.now().toString(36)}"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-xs">
+            <link url="../CaseDetail" link-type="anchor" text="Case ${mergeTarget}" icon="arrow_back" parameter-map="{requestId:mergeTarget}"
+                    condition="mergeTarget"/>
+            <link url="../Cases" link-type="anchor" text="Cases" icon="arrow_back" condition="!mergeTarget"/>
+        </container>
+        <label text="Merge cases" type="h5"/>
+        <section name="MergeUnavailable" condition="!can.caseManage || !keptCase">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="${!can.caseManage ? 'Merging cases is for service managers.'
+                                : 'Open the case to keep, then Merge cases from its More menu: case ' + mergeTarget + ' is not available to you.'}"/>
+                        <link url="../Cases" text="Back to Cases" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="MergeSteps" condition="can.caseManage &amp;&amp; keptCase">
+            <widgets>
+                <!-- MergeSelection: the case kept and the customer's cases to merge into it -->
+                <container-box>
+                    <box-header title="1. The case to keep and its duplicates"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted"
+                                text="Case ${keptCase.requestId} · ${keptCase.requestName} of ${keptCase.customerName} is kept, with its clocks as they are. Only the same customer's cases merge; another customer's case is linked as related instead."/>
+                        <form-single name="MergeSelection" transition="previewMerge" map="mergeSelection">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="targetRequestId"><default-field><hidden/></default-field></field>
+                            <field name="sourceRequestIds">
+                                <default-field title="Merge into it" tooltip="The customer's other open cases">
+                                    <drop-down allow-multiple="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'customerCases', customerPartyId:keptCase.customerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Why" tooltip="Kept on each case's history"><text-line size="60"/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview the merge"><submit/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <section name="MergeRefused" condition="mergeCheckErrors.length || mergeError">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="These cases cannot be merged"/>
+                            <box-body>
+                                <label type="p" text="${mergeCheckErrors.concat(mergeError ? [mergeError] : []).join(' ')}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- MergePreview: the cases side by side, what the sources carry, what stops the merge -->
+                <section name="MergePreview" condition="mergePreview">
+                    <widgets>
+                        <container-box>
+                            <box-header title="2. What the merge does"/>
+                            <box-body-nopad>
+                                <form-list name="MergeComparison" list="mergeRows" skip-form="true" paginate="false">
+                                    <field name="requestId">
+                                        <default-field title="Case">
+                                            <link url="../CaseDetail" text="${requestId}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                            <label text="${roleText} · ${requestName}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                    <field name="queueName"><default-field title="Queue"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="assigneeName"><default-field title="Assignee"><display/></default-field></field>
+                                    <field name="participantNames"><default-field title="People"><display/></default-field></field>
+                                    <field name="messagesText"><default-field title="Messages"><display/></default-field></field>
+                                    <field name="fileCount"><default-field title="Files"><display/></default-field></field>
+                                    <field name="workCount"><default-field title="Work"><display/></default-field></field>
+                                    <field name="recordText"><default-field title="Linked"><display/></default-field></field>
+                                    <field name="clocksText"><default-field title="Clocks"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="requestId"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="messagesText"/><field-ref name="clocksText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none"
+                                        text="Each merged case's messages, linked records and work are added to the kept case as they are, each keeping who could see it; its files stay on it and are listed. Returns, order changes and other documents are linked, never merged. Each merged case is closed and its replies come to the kept case."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="MergeCarried" condition="mergePreview.carried.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="The service level the merged cases carry"/>
+                                    <box-body-nopad>
+                                        <form-list name="MergeCarriedClocks" list="mergePreview.carried" skip-form="true" paginate="false">
+                                            <field name="requestId"><default-field title="From case"><display/></default-field></field>
+                                            <field name="clockText"><default-field title="Clock"><display/></default-field></field>
+                                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                                            <field name="breachedText"><default-field title="Breached"><display/></default-field></field>
+                                            <field name="carriedText"><default-field title="After the merge"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="clockText"/><field-ref name="requestId"/></column>
+                                                <column><field-ref name="dueText"/><field-ref name="carriedText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="MergeProblems" condition="mergePreview.problems.length">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="These stop the merge"/>
+                                    <box-body-nopad>
+                                        <form-list name="MergeProblemList" list="mergePreview.problems" skip-form="true" paginate="false">
+                                            <field name="requestId"><default-field title="Case"><display/></default-field></field>
+                                            <field name="message"><default-field title="Why"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="requestId"/></column>
+                                                <column><field-ref name="message"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <!-- MergeConfirm: the reason and an explicit Merge -->
+                        <section name="MergeConfirm" condition="mergePreview.canMerge">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="3. Merge"/>
+                                    <box-body>
+                                        <form-single name="MergeConfirmForm" transition="mergeCases" map="mergeConfirm">
+                                            <field name="targetRequestId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceIdsText"><default-field><hidden/></default-field></field>
+                                            <field name="caseRevisions"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Why" tooltip="Kept on each case's history"><text-area rows="2" cols="60"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Merge ${mergePreview.sources.length} case(s)">
+                                                    <submit confirmation="Merge ${mergeSourceList.join(', ')} into case ${mergeTarget}? They are closed, and their replies come to case ${mergeTarget}."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

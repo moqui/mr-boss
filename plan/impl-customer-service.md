@@ -295,7 +295,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | built Nov 5, 2026 |
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | built Nov 5, 2026 |
 | P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | built Nov 5, 2026 |
-| P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | — |
+| P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | built Nov 5, 2026 |
 | P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | — |
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | — |
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
@@ -1714,6 +1714,111 @@ CS-JOBS.
   - a message split into a new case starts its clock at that message's receipt, and the source stays open;
   - a reply 20 days after resolution makes a linked follow-up case; one within 14 days reopens;
   - auto-close sets the closed date, and a rerun changes nothing.
+
+**Built Nov 5 (P8).**
+- Mantle entities (`entity/SupportRelationEntities.xml`, new): `mantle.request.support.CaseRelation` (from and to case, type
+  `CaseRelationType` CrtMerge, CrtSplit, CrtFollowUp, organization, user, date, reason, operation key, the source's revision)
+  and `CaseRelationItem` (`CaseRelationItemType`: a message with its mail, a file, a linked record, a work item or a clock the
+  merge carried with its copy; the audience `CaseFieldAudience` as on the source; `toRequestId`, the case it was referenced
+  on); `CaseSlaEpisode` gains `carriedFromEpisodeId` and `caseRelationId`; the view `CaseRequestOrganization`.
+  `MantleSetupData.xml`: the state `SlsMerged`, the events `SetMerged` and `SetCarried`, the ServiceJob `close_ResolvedCases`
+  (hourly, 200 a batch).
+- Mantle services (`service/mantle/request/CaseRelations.js`, new; appended to `SupportCaseServices.xml`):
+  `preview#MergeCases` and `merge#Cases` (SUPPORT_CASE_MANAGE; the cases of the user's organizations, locked in id order; one
+  customer and organization, CUSTOMER_MISMATCH and ORGANIZATION_MISMATCH naming the case; none closed, cancelled or merged,
+  the kept case open, TARGET_NOT_OPEN; at most 10, SAME_CASE; a reason; STALE_CASE by the previewed revisions; the operation
+  key answering a retry), `preview#SplitCase` and `split#Case` (SUPPORT_CASE_EDIT, another agent's case SUPPORT_CASE_MANAGE;
+  an open case not merged, CASE_NOT_OPEN; the messages, records, work and files chosen, EVIDENCE_UNAVAILABLE for one not on
+  it; the clock from the earliest chosen message's receipt, or a manager's start with START_REASON_REQUIRED and DATE_INVALID;
+  the queue's rules assign it unless an assignee is given; no template values unless given; operation key and revision),
+  `create#FollowUpCase` (an agent's follow-up of a closed or cancelled case or one past its window; CASE_OPEN,
+  CASE_REOPENABLE), the internal `make#FollowUpCase` (after the commit of a reply), `get#CaseLineage` (the case's relations
+  with their items and audiences, its redirect, closed, reopenable, follow-up) and `close#ResolvedCases` with the internal
+  `close#ResolvedCase` (each organization's current autoCloseDays; a case with a clock still running refused, CLOCK_OPEN,
+  and named; idempotent). A merge references the source's messages on the kept case (RequestCommEvent, each
+  CommunicationEvent as it was), links its records and work, lists its files, carries each open clock as an obligation
+  (`Sla.js carryOnMerge`, F-P8-3) and leaves the source cancelled as a duplicate when open (RrDuplicate) and closed.
+- Mantle changes to existing code: `SupportCases.js` refuses an update, move or tags of a merged case naming the kept one
+  (CASE_MERGED) and `notify#CaseCustomerReply` skips a message a merge or split referenced; `Sla.js`: a case's own clocks and
+  the carried ones (`openEpisode` own only; a response meets both, a pause, resume, resolve or cancel acts on both, a reopen
+  starts from the own clock; `get#CaseSlaHistory` labels a carried clock with its case and lists it before the own one),
+  a referenced message records nothing, and a customer reply goes on, beside P4's `endCustomerWait`, to
+  `CaseRelations.js replyArrived` (a merged case: the message referenced on the kept case; resolved within the reopen window:
+  reopened by the workflow's move back to an open status, the status rule starting the new resolution episode; past it, closed
+  or cancelled: the follow-up after the commit, or the open follow-up it has; a message older than the resolution nothing);
+  `Channels.js resolveMail` (P6's threading, after R1's sender checks): a mail answering a merged case joins the kept case,
+  the customer side's own mail to a closed or cancelled case or one past its window makes its follow-up (`followUp`, in the
+  intake's transaction, acknowledged as a new case) or joins the open one, `preview#ServiceRoute` showing it.
+- BOSS: `Cases/MergeCases.xml` (MergeSelection: the kept case from CaseDetail and the customer's other open cases; MergePreview:
+  the cases side by side, the clocks carried, the problems; MergeConfirm: the reason, the revisions and an operation key;
+  check#Record caseManage on each case) and `Cases/SplitCase.xml` (SplitSelection: the messages oldest first with their
+  audience, the records, work and files; SplitNewCase: subject, type, queue, priority, assignee, description, a manager's
+  start and its reason), both out of the menu; `template/CustomerServiceLineage.xml` (new: a merged case's redirect and a
+  closed case's note above the header, Open a follow-up case as a closed or cancelled case's primary action, Merge cases and
+  Split into a new case in More, Overview's Lineage box; `followUpCase` included by Shared/RequestDetail), included by
+  `template/CustomerServiceCaseDetail.xml`; `CaseServices.get#CaseDetail` (`Cases.js`) reads the lineage (Mantle's
+  get#CaseLineage), gives no moves or edits to a merged or closed case and says `canMerge`, `canSplit` and `canFollowUp`;
+  `CustomerService.js` linkPaths `Cases/MergeCases` and `Cases/SplitCase`.
+- Demo: none; the demo cases stay as they are (the walk makes its own).
+- Specs: Mantle `test/request/SupportRelations` (5 features, about 2.4 s: the merge keeping the kept case's clock and
+  carrying the source's breach, its messages referenced as no reply, the source no longer worked, a retry and the refusals;
+  the split's clock from the message's receipt, the source open, a manager's start and the refusals; a reply reopening within
+  the window, making follow-ups after it and to a cancelled case, going to the kept case of a merged one, and nothing on a plain
+  request; auto-close with a failing case named and a rerun changing nothing, a reply after it a follow-up; mail threading to
+  the kept case and a closed case's follow-up) and `test/request/SupportSla` (its status events read in order, F-P8-8). BOSS
+  `CustomerService/CustomerServiceRelations` (2 features, about 0.3 s: CaseDetail's merge and split by capability; MergeCases'
+  and SplitCase's one qvt render) and `CustomerServiceAccess` (+1 feature: merge the manager's and not the agent's, split a case
+  editor's and not the reader's, another organization's case and lineage refused). Acceptance
+  `acceptance/CustomerService/CustomerServiceRelationsWalk` (the usable-when, 4 features, all pass) and `AppStructure`'s
+  fixtures for the two screens (18 features pass).
+- Tests run (all pass): Mantle SupportRelations, SupportSla, SupportCases, SupportChannels, SupportAssignment,
+  SupportReplies, SupportTemplates, SupportKnowledge, WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients,
+  CommonsToday, OrderToCashBasicFlow, ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow (200 features;
+  SupportSla failed once there before F-P8-8, and passed alone and after); BOSS CustomerServiceRelations,
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceChannels, CustomerServiceAssignment, CustomerServiceTemplates,
+  CustomerServiceKnowledge, CustomerServiceOrders, Requests, ProjectRequests, MergeRequests, WorkItemDetail (85 features);
+  acceptance CustomerServiceRelationsWalk (4) and AppStructure (18). `moqui lint --screens`: 136 flagged sites, as master;
+  none in the new screens.
+- Inventories: usl-inventory's Customer Service P8 table; no ss-inventory row is designed for MergeCases or SplitCase (new in
+  design §2, no baseline form).
+- Decisions:
+  - The source of a merge is closed (`CaseProfile.closedDate`) and, when open, cancelled with the resolution Duplicate, so it
+    leaves every open list and view; a resolved source keeps ReqCompleted. Its CaseDetail stays readable with the redirect,
+    which opens the kept case through CaseDetail's own check.
+  - A merge references messages (the same CommunicationEvent on both cases, so a customer-visible one stays so and a note stays a
+    note) and links records and work; files stay on the source and are listed in the lineage (re-authorized, never copied).
+  - A reply reopens only from the customer side (the case's customer, reporter or a contact of its customer) and only when it
+    is newer than the resolution; staff mail and automatic mail to a closed case join it as before.
+  - The kept case must be open, the sources open or resolved (not closed, cancelled or merged); merge is offered from the kept
+    case's CaseDetail (More), over the customer's open cases.
+  - Auto-close runs hourly; with no `autoCloseDays` in an organization's policy (the demo's), nothing closes there.
+- Findings (provisional):
+  - **F-P8-1** No request merge exists in Commons or Projects to keep: BOSS's MergeRequests spec is Projects Code's git merge
+    requests (`moqui.resource.GitMergeRequest`), untouched by case merges (it passes).
+  - **F-P8-2** ServicePolicy already had `reopenWindowDays` and `autoCloseDays` (P2), and `transition#Case` already refused a
+    reopen past the window (REOPEN_WINDOW_PASSED) or of a closed case (CASE_CLOSED); P8 adds the customer's reply path, the
+    follow-up and the job that sets the closed date.
+  - **F-P8-3** "Obligations carried" needs a record of each: a merge copies each open clock of the source onto the kept case
+    (`CaseSlaEpisode.carriedFromEpisodeId`, its start, due, pauses and breach kept), which then follows the kept case's own clock
+    of its kind, and the source's own clock ends `SlsMerged` with its figures. So compliance counts the copy and never the
+    Merged clock, and a breach is never counted twice; Home's measures already read only met, missed, running, paused and unmet
+    clocks, and P14's reports must too. Design MergeCases changed.
+  - **F-P8-4** A message referenced on another case (RequestCommEvent) fires that case's RequestCommEvent rules as a new
+    response or customer reply; the CaseRelationItem is written before the link, and `Sla.js recordMessage` and
+    `notify#CaseCustomerReply` skip a message referenced there. `delete#RequestComment` on either case deletes the comment from
+    both (§7).
+  - **F-P8-5** The follow-up of a reply that is not mail runs after the commit (`make#FollowUpCase` by `registerOnCommit`): the
+    reply's transaction is its caller's (Chatter, a filing) and a failed insert would abort it on PostgreSQL. A mail's follow-up
+    is made in the intake's own transaction (`resolveMail`). The after-commit call runs on the real clock, not a spec's effective
+    time, so SupportRelations makes the cases it follows up in the past and moves ahead only for the mail and the job.
+  - **F-P8-6** `close#ResolvedCases` takes a batch by `lastUpdatedStamp` before the cutoff (resolving is an update, so the
+    stamp is at or after it; the per-case check reads the status audit log), so cases of organizations without auto-close or
+    resolved recently never fill the batch. `lastUpdatedStamp` is the transaction's real start time, not the effective time.
+  - **F-P8-7** A second reply to a closed case would make a second follow-up; it joins the follow-up still open instead (mail
+    and other replies alike).
+  - **F-P8-8** SupportSla's status-event check read events with no order, which a longer run returned out of order (the
+    table's order after updates); it sorts them by id.
+
 
 ### P9 — Returns
 

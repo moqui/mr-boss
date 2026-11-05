@@ -758,3 +758,45 @@ feature("assignment rules are the administrator's, saved replies on a case a cas
         problems.join("\n") == ""
     }
 })
+
+feature("merge is a service manager's and split a case editor's, each on their organization's cases; the lineage too", {
+    when() {
+        const problems = []
+        const S = "mantle.request.SupportCaseServices."
+        const merge = {targetRequestId: ids.thermostatCaseId, sourceRequestIds: [ids.filtersCaseId]}
+        const split = {requestId: ids.filtersCaseId}
+        for (const [user, service, parameters, expected] of [
+            [users.manager, "preview#MergeCases", merge, ""],
+            [users.agent, "preview#MergeCases", merge, "PERMISSION_DENIED"],
+            [users.agent, "preview#SplitCase", split, ""],
+            [users.read, "preview#SplitCase", split, "PERMISSION_DENIED"],
+            [users.services, "preview#SplitCase", split, "RECORD_UNAVAILABLE"],
+            [users.read, "get#CaseLineage", split, ""],
+            [users.services, "get#CaseLineage", split, "RECORD_UNAVAILABLE"]
+        ]) {
+            const message = asUser(user, () => refusal(S + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        // the screens' check: a merge needs the manager's capability on each case
+        for (const [user, expected] of [
+            [users.manager, ""],
+            [users.agent, "PERMISSION_DENIED"]
+        ]) {
+            const message = asUser(user, () =>
+                refusal(access + "check#Record", {
+                    appRoot: "CustomerService",
+                    recordType: "case",
+                    recordId: ids.filtersCaseId,
+                    capability: "caseManage"
+                })
+            )
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} check#Record caseManage: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

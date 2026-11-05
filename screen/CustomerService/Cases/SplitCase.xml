@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SplitCase (design-customer-service §3 SplitCase; style-guide §3.9 Wizard; impl-customer-service P8, CS-MERGE): a separate
+    issue of an open case made a case of its own, opened from CaseDetail's More menu. SplitSelection (the case's messages,
+    oldest first, each with who could see it, its linked records, work and files) and SplitNewCase (subject, type, queue,
+    priority, assignee, description; when its clock starts: the earliest chosen message's receipt, or for a service manager a
+    start with its reason). The new case is the same customer's, so a customer-visible message stays customer-visible and an
+    internal one internal; nothing is copied, the source keeps all of it and stays open. The case is checked as the user's
+    with SUPPORT_CASE_EDIT (ironstone.customerservice.AccessServices.check#Record), then mantle.request.SupportCaseServices
+    preview#SplitCase and split#Case; the split opens the new case, assigned by the queue's rules unless an assignee is
+    chosen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Split case" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="communicationEventIds"/>
+    <parameter name="recordKeys"/>
+    <parameter name="workEffortIds"/>
+    <parameter name="requestContentIds"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- SplitSelection: the screen again with the evidence chosen (a link form) -->
+    <transition name="previewSplit">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="communicationEventIds"/>
+            <parameter name="recordKeys"/>
+            <parameter name="workEffortIds"/>
+            <parameter name="requestContentIds"/>
+        </default-response>
+    </transition>
+    <transition name="splitCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <set field="splitLists" from="{}"/>
+            <script><![CDATA[
+                const idsOf = (text) => String(text || '').split(',').map((id) => id.trim()).filter((id) => id)
+                splitLists.messages = idsOf(messageIdsText); splitLists.records = idsOf(recordKeysText)
+                splitLists.work = idsOf(workIdsText); splitLists.files = idsOf(fileIdsText)
+            ]]></script>
+            <service-call name="mantle.request.SupportCaseServices.split#Case" out-map="made"
+                    in-map="{requestId:requestId, communicationEventIds:splitLists.messages, recordKeys:splitLists.records,
+                        workEffortIds:splitLists.work, requestContentIds:splitLists.files, requestName:(requestName || null),
+                        description:(description || null), requestTypeEnumId:(requestTypeEnumId || null),
+                        requestCategoryId:(requestCategoryId || null), priority:(priority || null),
+                        assigneePartyId:(assigneePartyId || null), intakeDate:(intakeDate || null), startReason:(startReason || null),
+                        reason:(reason || null), caseRevision:(caseRevision || null), operationKey:operationKey}"/>
+            <set field="sourceRequestId" from="requestId"/>
+            <set field="requestId" from="made.requestId"/>
+            <message type="success">Split case ${requestId} from case ${sourceRequestId}</message>
+        </actions>
+        <default-response url="../CaseDetail"><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="splitChosen" from="{}"/>
+        <script><![CDATA[
+            const listOf = (value) => (value == null ? [] : typeof value === 'string' ? value.split(',') : Array.from(value))
+                .map((id) => String(id).trim()).filter((id) => id)
+            splitChosen.communicationEventIds = listOf(communicationEventIds); splitChosen.recordKeys = listOf(recordKeys)
+            splitChosen.workEffortIds = listOf(workEffortIds); splitChosen.requestContentIds = listOf(requestContentIds)
+        ]]></script>
+        <if condition="can.caseEdit">
+            <service-call name="ironstone.customerservice.CaseServices.get#CaseDetail" out-map="sourceOut" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, requestId:requestId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="sourceCase" from="sourceOut?.detail?.theCase || null"/>
+        <set field="splitError" from="null"/>
+        <if condition="sourceCase">
+            <service-call name="mantle.request.SupportCaseServices.preview#SplitCase" out-map="previewOut" transaction="force-new"
+                    ignore-error="true" in-map="{requestId:requestId, communicationEventIds:splitChosen.communicationEventIds,
+                        recordKeys:splitChosen.recordKeys, workEffortIds:splitChosen.workEffortIds,
+                        requestContentIds:splitChosen.requestContentIds}"/>
+            <set field="splitError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="splitPreview" from="previewOut?.preview || null"/>
+        <set field="messageOptions" from="(splitPreview?.messages || []).map((row) =&gt; ({value: row.communicationEventId,
+                label: [row.receivedText, row.typeText, row.fromName, row.audienceText].filter(Boolean).join(' · ') + (row.snippet ? ': ' + row.snippet : '')}))"/>
+        <set field="recordOptions" from="(splitPreview?.records || []).map((row) =&gt; ({value: row.recordKey, label: row.recordText}))"/>
+        <set field="workOptions" from="(splitPreview?.work || []).map((row) =&gt; ({value: row.workEffortId, label: row.workEffortName}))"/>
+        <set field="fileOptions" from="(splitPreview?.files || []).map((row) =&gt; ({value: row.requestContentId,
+                label: row.fileName + ' · ' + row.audienceText}))"/>
+        <set field="splitSelection" from="Object.assign({requestId:requestId}, splitChosen)"/>
+        <set field="splitNew" from="{requestId:requestId, messageIdsText:splitChosen.communicationEventIds.join(','),
+                recordKeysText:splitChosen.recordKeys.join(','), workIdsText:splitChosen.workEffortIds.join(','),
+                fileIdsText:splitChosen.requestContentIds.join(','), caseRevision:sourceCase?.caseRevision || '',
+                operationKey:'sp' + Date.now().toString(36), requestTypeEnumId:sourceCase?.requestTypeEnumId || '',
+                requestCategoryId:sourceCase?.requestCategoryId || '', priority:String(sourceCase?.priority ?? 5)}"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-xs">
+            <link url="../CaseDetail" link-type="anchor" text="Case ${requestId}" icon="arrow_back" parameter-map="{requestId:requestId}"/>
+        </container>
+        <label text="Split case ${requestId}${sourceCase ? ': ' + sourceCase.requestName : ''}" type="h5"/>
+        <section name="SplitUnavailable" condition="!sourceCase || !splitPreview">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="${!can.caseEdit ? 'Splitting a case is for those who work cases.' : splitError
+                                ? splitError : 'Case ' + requestId + ' is not available to you.'}"/>
+                        <link url="../CaseDetail" text="Back to case ${requestId}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SplitSteps" condition="sourceCase &amp;&amp; splitPreview">
+            <widgets>
+                <!-- SplitSelection: what the new case takes -->
+                <container-box>
+                    <box-header title="1. What the new case takes"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted"
+                                text="The new case is ${sourceCase.customerName}'s too: each message keeps who could see it, and case ${requestId} keeps all of it and stays open."/>
+                        <form-single name="SplitSelection" transition="previewSplit" map="splitSelection">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="communicationEventIds">
+                                <conditional-field title="Messages" condition="messageOptions.length">
+                                    <check><list-options list="messageOptions" key="${value}" text="${label}"/></check>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="recordKeys">
+                                <conditional-field title="Linked records" condition="recordOptions.length">
+                                    <check><list-options list="recordOptions" key="${value}" text="${label}"/></check>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="workEffortIds">
+                                <conditional-field title="Work" condition="workOptions.length">
+                                    <check><list-options list="workOptions" key="${value}" text="${label}"/></check>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="requestContentIds">
+                                <conditional-field title="Files" condition="fileOptions.length">
+                                    <check><list-options list="fileOptions" key="${value}" text="${label}"/></check>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Use these"><submit/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <!-- SplitNewCase: the new case and when its clock starts -->
+                <container-box>
+                    <box-header title="2. The new case"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted"
+                                text="${splitPreview.startFrom == 'message' ? 'Its clock starts ' + splitPreview.startText + ', when the earliest message chosen came in.'
+                                    : 'No message is chosen: its clock starts when it is made' + (can.caseManage ? ', or at the start you give below with its reason.' : '.')}"/>
+                        <label type="p" style="text-caption m-muted" condition="splitPreview.chosenCount"
+                                text="${splitPreview.chosenCount} item(s) chosen."/>
+                        <form-single name="SplitNewCase" transition="splitCase" map="splitNew" focus-field="requestName">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="messageIdsText"><default-field><hidden/></default-field></field>
+                            <field name="recordKeysText"><default-field><hidden/></default-field></field>
+                            <field name="workIdsText"><default-field><hidden/></default-field></field>
+                            <field name="fileIdsText"><default-field><hidden/></default-field></field>
+                            <field name="caseRevision"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="requestName"><default-field title="Subject"><text-line size="60"/></default-field></field>
+                            <field name="description">
+                                <default-field title="Description"><text-area rows="4" cols="60"/></default-field>
+                            </field>
+                            <field name="requestTypeEnumId">
+                                <default-field title="Type">
+                                    <drop-down current-description="${sourceCase.typeText}">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'caseTypes', organizationPartyId:sourceCase.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requestCategoryId">
+                                <default-field title="Queue">
+                                    <drop-down current-description="${sourceCase.queueName}">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'queues', organizationPartyId:sourceCase.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="priority">
+                                <default-field title="Priority">
+                                    <drop-down>
+                                        <option key="1" text="1 (urgent)"/><option key="2" text="2 (urgent)"/>
+                                        <option key="3" text="3 (high)"/><option key="4" text="4 (high)"/>
+                                        <option key="5" text="5 (normal)"/><option key="6" text="6 (normal)"/>
+                                        <option key="7" text="7 (low)"/><option key="8" text="8 (low)"/>
+                                        <option key="9" text="9 (low)"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="assigneePartyId">
+                                <default-field title="Assignee" tooltip="Empty: the queue's assignment rules">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'agents', queueId:sourceCase.requestCategoryId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="intakeDate">
+                                <conditional-field title="Clock starts" condition="can.caseManage"
+                                        tooltip="Only when the messages do not show when the issue came in">
+                                    <date-time type="timestamp"/>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="startReason">
+                                <conditional-field title="Why it starts then" condition="can.caseManage"><text-line size="60"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="reason">
+                                <default-field title="Note on both cases" tooltip="Internal"><text-line size="60"/></default-field>
+                            </field>
+                            <field name="submitButton">
+                                <default-field title="Make the new case">
+                                    <submit confirmation="Make a new case from case ${requestId}? Case ${requestId} stays open."/>
+                                </default-field>
+                            </field>
+                            <field-layout>
+                                <field-ref name="requestName"/>
+                                <field-ref name="description"/>
+                                <field-row><field-ref name="requestTypeEnumId"/><field-ref name="requestCategoryId"/></field-row>
+                                <field-row><field-ref name="priority"/><field-ref name="assigneePartyId"/></field-row>
+                                <field-row><field-ref name="intakeDate"/><field-ref name="startReason"/></field-row>
+                                <field-ref name="reason"/>
+                                <fields-not-referenced/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
