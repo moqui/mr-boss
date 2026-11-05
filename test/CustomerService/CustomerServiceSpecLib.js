@@ -321,6 +321,8 @@ function routeFixtures() {
         // P8: merge and split, opened from a case
         "Cases/MergeCases": {parameters: {requestId: ids.thermostatCaseId}, text: "Merge cases"},
         "Cases/SplitCase": {parameters: {requestId: ids.thermostatCaseId}, text: "Split case"},
+        // P16: the case summary of Joe's case (the customer copy)
+        "Cases/CaseSummary": {parameters: {requestId: ids.thermostatCaseId}, text: "Customer copy"},
         // P10: the order changes and the shared change detail
         "Orders/OrderChanges": {parameters: {}, text: "Order changes"},
         "Orders/OrderChangeDetail": {parameters: {requestId: "BOSS_CS_NO_CHANGE"}, text: "Order change not available"},

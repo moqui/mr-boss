@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The case summary (design-customer-service §11 outputs; impl-customer-service P16): a case as of the print time from Mantle's
+    get#CaseSummaryPrint, in its customer-visible variant (the default: outward messages, files shared with the customer,
+    customer labels and the customer's own order and return links) or its internal one (every message, note, file and link,
+    with the queue, priority and assignee), each labeled. Opened from CaseDetail's More menu; Print opens it as html-print
+    (renderMode=html-print), and Send to the customer mails the customer-visible summary to an address of the customer or its
+    contacts through send#CaseSummary, which stores it as the case's RequestContent first. The case is checked as the user's
+    (ironstone.customerservice.AccessServices.check#Record); printing posts nothing. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Case summary" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="audience"/>
+    <transition name="sendSummary">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.send#CaseSummary" out-map="sent"
+                    in-map="{operationKey:operationKey, requestId:requestId, toAddress:toAddress, emailAccountId:emailAccountId || null,
+                        note:note || null}"/>
+            <message type="success">Sent the case summary to ${sent.recipient} (${sent.status})</message>
+        </actions>
+        <default-response url="../CaseDetail"><parameter name="requestId"/><parameter name="tab" value="files"/></default-response>
+        <error-response url="."><parameter name="requestId"/></error-response>
+    </transition>
+    <actions>
+        <set field="summaryAudience" from="audience == 'internal' ? 'internal' : 'customer'"/>
+        <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, recordType:'case', recordId:requestId}" out-map="checked"/>
+        <!-- an ignored error leaves no message: the answer's record says whether the case is the user's -->
+        <set field="caseFound" from="!ec.message.hasError() &amp;&amp; !!checked?.recordId"/>
+        <script>ec.message.clearErrors()</script>
+        <if condition="caseFound">
+            <service-call name="mantle.request.SupportCaseServices.get#CaseSummaryPrint" out-map="printed"
+                    transaction="force-new" ignore-error="true" in-map="{requestId:requestId, audience:summaryAudience}"/>
+            <set field="printError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : ''"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="printBody" from="printed?.printHtml ? String(printed.printHtml).replace(/^[\s\S]*&lt;body[^&gt;]*&gt;/i, '')
+                .replace(/&lt;\/body&gt;[\s\S]*$/i, '') : ''"/>
+        <set field="printing" from="String(ec.web?.requestParameters?.renderMode || context.renderMode || '') == 'html-print'"/>
+        <set field="canSend" from="caseFound &amp;&amp; printBody &amp;&amp; !printing &amp;&amp; customerService?.capabilities?.caseEdit"/>
+        <if condition="canSend">
+            <script><![CDATA[
+                const orders = ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js')
+                const customerPartyId = Array.from(ec.entity.find('mantle.request.RequestParty').condition({requestId: requestId,
+                    roleTypeId: 'Customer'}).conditionDate('fromDate', 'thruDate', ec.user.nowTimestamp).disableAuthz().list())[0]?.partyId
+                recipientOptions = customerPartyId ? orders.recipientOptions([customerPartyId]) : []
+                senderOptions = orders.senderOptions()
+                opKey = 'summary-' + ec.user.randomString(20)
+            ]]></script>
+        </if>
+    </actions>
+    <widgets>
+        <section name="SummaryMissing" condition="!caseFound || !printBody">
+            <widgets>
+                <label text="${caseFound ? (printError || 'The summary of case ' + requestId + ' is not available to you') : 'Case ' + requestId + ' is not available'}" type="p"/>
+            </widgets>
+        </section>
+        <section name="Summary" condition="caseFound &amp;&amp; printBody">
+            <widgets>
+                <section name="SummaryActions" condition="!printing">
+                    <widgets>
+                        <container style="row items-center q-gutter-xs q-mb-sm">
+                            <link url="../CaseDetail" text="Back to the case" link-type="anchor" icon="arrow_back" parameter-map="{requestId:requestId}"/>
+                            <link url="." text="Customer copy" link-type="anchor-button" parameter-map="{requestId:requestId, audience:'customer'}"
+                                    condition="summaryAudience == 'internal'"/>
+                            <link url="." text="Internal summary" link-type="anchor-button" parameter-map="{requestId:requestId, audience:'internal'}"
+                                    condition="summaryAudience == 'customer'"/>
+                            <link url="." text="Print" link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                                    parameter-map="{requestId:requestId, audience:summaryAudience, renderMode:'html-print'}"/>
+                            <container-dialog id="SendCaseSummary" button-text="Send to the customer" icon="sym_o_send" width="560"
+                                    title="Send the summary of case ${requestId}" condition="canSend &amp;&amp; recipientOptions.length">
+                                <form-single name="SendCaseSummaryForm" transition="sendSummary"
+                                        map="{requestId:requestId, operationKey:opKey, toAddress:recipientOptions[0]?.value,
+                                            emailAccountId:senderOptions[0]?.value}">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="toAddress">
+                                        <default-field title="To">
+                                            <drop-down><list-options list="recipientOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="emailAccountId">
+                                        <default-field title="From">
+                                            <drop-down><list-options list="senderOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="note"><default-field title="Note"><text-area rows="3"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Send">
+                                            <submit confirmation="Send the customer copy? It is kept with the case's files."/>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                                <label text="The customer copy goes: outward messages, shared files and the customer's labels; never a note or an internal file."
+                                        type="p" style="text-caption m-muted q-mb-none"/>
+                            </container-dialog>
+                        </container>
+                    </widgets>
+                </section>
+                <render-mode>
+                    <text type="html,html-print,qvt"><![CDATA[<div class="m-print-document">${printBody}</div>]]></text>
+                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: (summaryAudience == 'internal' ? 'Internal summary' : 'Customer copy') + " of case " + requestId + ": print it from the browser"})}]]></text>
+                </render-mode>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

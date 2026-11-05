@@ -339,6 +339,9 @@ along with this software (see the LICENSE.md file). If not, see
                                                 <field name="submitButton"><default-field title="Save tags"><submit/></default-field></field>
                                             </form-single>
                                         </container-dialog>
+                                        <!-- P16: the case summary, customer-visible or internal, to print or send (Cases/CaseSummary) -->
+                                        <link url="${sharedLinks['Cases/CaseSummary']}" text="Case summary" link-type="anchor"
+                                                icon="sym_o_summarize" parameter-map="{requestId:requestId}" condition="cd.canEdit &amp;&amp; sharedLinks['Cases/CaseSummary']"/>
                                         <!-- P8: merge and split -->
                                         <section-include name="CaseLineageMenu" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
                                         <!-- P9: request an RMA for the case's customer, the return linked to the case (link#RequestRecord) -->
