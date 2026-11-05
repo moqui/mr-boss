@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <parameter name="dataDocumentId" required="true"/>
 
-    <transition-include name="DocumentExport.json" location="component://tools/screen/System/DataDocument/Edit/ViewDataDocument.xml"/>
+    <transition-include name="DocumentExport.json" location="component://tools/screen/Tools/Data/Export.xml"/>
 
     <widgets>
         <!-- NOTE: this section reused on the Insights/Reports.xml screen, is why it checks for dataDocumentId even though required parameter on this screen -->
