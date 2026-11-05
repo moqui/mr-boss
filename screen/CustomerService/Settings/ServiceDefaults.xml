@@ -16,7 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     organization's service policy (ironstone.customerservice.ConfigurationServices.get#ServiceSettings) and its edit from now
     over mantle.request.SupportCaseServices.save#ServiceDefaults: the default queue and workflow, what an unknown sender
     makes, the reopen window, the auto-close delay, whether resolving needs a resolution, and customerImmediateCancel (off,
-    for P10). The first policy turns the case rules on for the organization. FeedbackDeliveryPolicy comes in P13. -->
+    for P10). The first policy turns the case rules on for the organization. P13: FeedbackDeliveryPolicy, when a resolved
+    case's customer is asked for feedback (ironstone.customerservice.FeedbackServices.get#FeedbackPolicy; saved from a date
+    by mantle.request.CaseFeedbackServices.save#InvitationPolicy, which ends the row it replaces): the case types and queues,
+    the delay, once per case or per resolution, the feedback form, the channel, the link's days, the reminders, the low score
+    and the follow-up team. No transport credentials are here: the mail goes from the organization's address. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Service defaults" default-menu-index="6">
     <parameter name="organizationPartyId"/>
@@ -35,6 +39,29 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- P13: the feedback delivery policy from a date, or ended -->
+    <transition name="saveFeedbackPolicy">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.save#InvitationPolicy"
+                    in-map="{organizationPartyId:organizationPartyId, formId:formId, requestTypeEnumIds:(requestTypeEnumIds || null),
+                        requestCategoryIds:(requestCategoryIds || null), delayMinutes:delayMinutes, frequencyEnumId:frequencyEnumId,
+                        channelEnumId:'FdcEmail', tokenDays:tokenDays, reminderCount:reminderCount, reminderDays:reminderDays,
+                        lowScoreThreshold:lowScoreThreshold, followUpTeamPartyId:(followUpTeamPartyId || null),
+                        followUpDays:followUpDays, fromDate:(fromDate || null), changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the feedback delivery</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endFeedbackPolicy">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.save#InvitationPolicy"
+                    in-map="{organizationPartyId:organizationPartyId, end:true, changeReason:(changeReason || null)}"/>
+            <message type="success">Resolved cases are no longer asked for feedback</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
                 transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
@@ -48,6 +75,27 @@ along with this software (see the LICENSE.md file). If not, see
                 unknownSenderEnumId:'SusReview', reopenWindowDays:'14', resolutionRequired:'Y', customerImmediateCancel:'N'}, policy || {})"/>
         <set field="queueOptions" from="cfg?.queueOptions || []"/>
         <set field="workflows" from="cfg?.workflows || []"/>
+        <!-- P13: the feedback delivery policy -->
+        <if condition="cfg">
+            <service-call name="ironstone.customerservice.FeedbackServices.get#FeedbackPolicy" out-map="feedbackOut"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:cfgOrganizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="feedbackPolicy" from="feedbackOut?.policy || null"/>
+        <set field="feedbackHistory" from="feedbackOut?.history || []"/>
+        <set field="feedbackFormOptions" from="feedbackOut?.formOptions || []"/>
+        <set field="feedbackTypeOptions" from="feedbackOut?.typeOptions || []"/>
+        <set field="feedbackQueueOptions" from="feedbackOut?.queueOptions || []"/>
+        <set field="feedbackTeamOptions" from="feedbackOut?.teamOptions || []"/>
+        <set field="feedbackValues" from="Object.assign({organizationPartyId:cfgOrganizationPartyId, formId:feedbackFormOptions[0]?.value || '',
+                delayMinutes:'60', frequencyEnumId:'FdfPerCase', tokenDays:'14', reminderCount:'1', reminderDays:'3',
+                lowScoreThreshold:'2', followUpDays:'2'}, feedbackPolicy ? {formId:feedbackPolicy.formId,
+                requestTypeEnumIds:String(feedbackPolicy.requestTypeEnumIds || '').split(',').filter(Boolean),
+                requestCategoryIds:String(feedbackPolicy.requestCategoryIds || '').split(',').filter(Boolean),
+                delayMinutes:feedbackPolicy.delayMinutes, frequencyEnumId:feedbackPolicy.frequencyEnumId,
+                tokenDays:feedbackPolicy.tokenDays, reminderCount:feedbackPolicy.reminderCount, reminderDays:feedbackPolicy.reminderDays,
+                lowScoreThreshold:feedbackPolicy.lowScoreThreshold, followUpTeamPartyId:feedbackPolicy.followUpTeamPartyId,
+                followUpDays:feedbackPolicy.followUpDays} : {})"/>
     </actions>
     <widgets>
         <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
@@ -127,6 +175,115 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                     </box-body>
                 </container-box>
+                <!-- P13: FeedbackDeliveryPolicy -->
+                <container-box>
+                    <box-header title="Feedback delivery"/>
+                    <box-toolbar>
+                        <container-dialog id="EndFeedbackPolicy" button-text="Stop asking" icon="sym_o_block" width="480"
+                                title="Stop asking for feedback" condition="can.policyEdit &amp;&amp; feedbackPolicy">
+                            <form-single name="EndFeedbackPolicyForm" transition="endFeedbackPolicy" map="{organizationPartyId:cfgOrganizationPartyId}">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Stop from now"><submit type="danger" confirmation="Stop asking resolved cases for feedback?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" text="${feedbackPolicy ? 'In effect since ' + feedbackPolicy.fromText + ': ' +
+                                feedbackPolicy.formText + ', ' + feedbackPolicy.typesText + ', ' + feedbackPolicy.queuesText + '.' :
+                                feedbackFormOptions.length ? 'Not set: resolved cases are not asked for feedback.' :
+                                'Not set: publish a feedback form first (Settings, Feedback forms).'}"/>
+                        <form-single name="FeedbackDeliveryPolicy" transition="saveFeedbackPolicy" map="feedbackValues">
+                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                            <field name="formId">
+                                <default-field title="Feedback form">
+                                    <drop-down><list-options list="feedbackFormOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requestTypeEnumIds">
+                                <default-field title="Case types" tooltip="Empty: every type">
+                                    <drop-down allow-multiple="true" allow-empty="true">
+                                        <list-options list="feedbackTypeOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requestCategoryIds">
+                                <default-field title="Queues" tooltip="Empty: every queue">
+                                    <drop-down allow-multiple="true" allow-empty="true">
+                                        <list-options list="feedbackQueueOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="delayMinutes">
+                                <default-field title="Send after resolving (minutes)"><text-line size="6" input-type="number"/></default-field>
+                            </field>
+                            <field name="frequencyEnumId">
+                                <default-field title="Ask">
+                                    <radio><option key="FdfPerCase" text="Once per case"/><option key="FdfPerResolution" text="Each time it is resolved"/></radio>
+                                </default-field>
+                            </field>
+                            <field name="tokenDays">
+                                <default-field title="The link works for (days)"><text-line size="4" input-type="number"/></default-field>
+                            </field>
+                            <field name="reminderCount">
+                                <default-field title="Reminders" tooltip="0 to 3"><text-line size="2" input-type="number"/></default-field>
+                            </field>
+                            <field name="reminderDays">
+                                <default-field title="Days between reminders"><text-line size="3" input-type="number"/></default-field>
+                            </field>
+                            <field name="lowScoreThreshold">
+                                <default-field title="Follow up a score of at most" tooltip="Empty: no follow-up">
+                                    <text-line size="3" input-type="number"/></default-field>
+                            </field>
+                            <field name="followUpTeamPartyId">
+                                <default-field title="Follow-up team" tooltip="Empty: the case's queue team">
+                                    <drop-down allow-empty="true"><list-options list="feedbackTeamOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="followUpDays">
+                                <default-field title="Follow up within (days)"><text-line size="3" input-type="number"/></default-field>
+                            </field>
+                            <field name="fromDate">
+                                <default-field title="From" tooltip="Empty: now; an invitation keeps the row it was made under">
+                                    <date-time/></default-field>
+                            </field>
+                            <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                            <field name="submitButton">
+                                <conditional-field title="Save from that date" condition="can.policyEdit &amp;&amp; feedbackFormOptions.length"><submit/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="formId"/><field-ref name="frequencyEnumId"/></field-row>
+                                <field-row><field-ref name="requestTypeEnumIds"/><field-ref name="requestCategoryIds"/></field-row>
+                                <field-row><field-ref name="delayMinutes"/><field-ref name="tokenDays"/></field-row>
+                                <field-row><field-ref name="reminderCount"/><field-ref name="reminderDays"/></field-row>
+                                <field-row><field-ref name="lowScoreThreshold"/><field-ref name="followUpTeamPartyId"/></field-row>
+                                <field-row><field-ref name="followUpDays"/><field-ref name="fromDate"/></field-row>
+                                <field-ref name="changeReason"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <section name="FeedbackPolicyHistory" condition="feedbackHistory.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Earlier feedback delivery"/>
+                            <box-body-nopad>
+                                <form-list name="FeedbackPolicyRows" list="feedbackHistory" skip-form="true" paginate="false">
+                                    <field name="formText"><default-field title="Form"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="changeReason"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="formText"/><field-ref name="changeReason"/></column>
+                                        <column><field-ref name="fromText"/><field-ref name="thruText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
             </widgets>
         </section>
     </widgets>

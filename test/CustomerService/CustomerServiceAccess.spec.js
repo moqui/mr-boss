@@ -117,7 +117,7 @@ feature("the Customer Service menu and providers follow each group's areas; the 
     }
 })
 
-feature("Home counts the agent's open cases, shows the later measures as not configured, My cases and the lookup of the order", {
+feature("Home counts the agent's open cases, shows every measure with its period, My cases and the lookup of the order", {
     when() {
         return asUser(users.agent, () => lib.page("Home", {lookupType: "order", lookupId: ids.deliveredOrderId}))
     },
@@ -126,7 +126,8 @@ feature("Home counts the agent's open cases, shows the later measures as not con
         errors == []
         output.includes("SLA compliance")
         output.includes("CSAT")
-        output.includes("Not configured")
+        // P13: CSAT is measured (the demo's answered feedback), the last measure that was not configured
+        !output.includes("Not configured")
         output.includes("Service health,")
         output.includes("Sales order " + ids.deliveredOrderId)
         output.includes("Thermostat and filters")
@@ -977,3 +978,48 @@ feature(
         }
     }
 )
+
+// P13: feedback forms are the administrator's to change (SUPPORT_POLICY_EDIT), not the manager's; the answers are service
+// management's (an agent is refused SatisfactionResults); another organization's form, policy and answers are refused
+feature("feedback: the administrator keeps the forms, the manager reads the answers, the agent neither; another organization's refused", {
+    when() {
+        const problems = []
+        const form = system(() =>
+            Array.from(
+                ec.entity
+                    .find("moqui.screen.form.DbForm")
+                    .condition({purposeEnumId: "DbfpCaseFeedback", ownerPartyId: ids.organizationId})
+                    .list()
+            )[0]
+        )
+        const answer = system(() =>
+            Array.from(
+                ec.entity
+                    .find("mantle.party.FormInvitation")
+                    .condition({organizationPartyId: ids.organizationId, statusEnumId: "FinResponded"})
+                    .list()
+            )[0]
+        )
+        const F = "mantle.request.CaseFeedbackServices.",
+            B = "ironstone.customerservice.FeedbackServices."
+        for (const [user, service, parameters, expected] of [
+            [users.admin, F + "get#FeedbackForm", {formId: form.formId}, ""],
+            [users.manager, F + "rename#FeedbackForm", {formId: form.formId, description: "Mine now"}, "PERMISSION_DENIED"],
+            [users.services, F + "get#FeedbackForm", {formId: form.formId}, "RECORD_UNAVAILABLE"],
+            [users.services, F + "save#InvitationPolicy", {organizationPartyId: ids.organizationId, formId: form.formId}, "PERMISSION_DENIED"],
+            [users.manager, B + "find#CaseResponses", {appRoot: "CustomerService"}, ""],
+            [users.agent, B + "find#CaseResponses", {appRoot: "CustomerService"}, "PERMISSION_DENIED"],
+            [users.manager, B + "get#CaseResponse", {appRoot: "CustomerService", formResponseId: answer.formResponseId}, ""],
+            [users.services, B + "get#CaseResponse", {appRoot: "CustomerService", formResponseId: answer.formResponseId}, "RECORD_UNAVAILABLE"],
+            [users.agent, B + "get#CaseResponse", {appRoot: "CustomerService", formResponseId: answer.formResponseId}, "RECORD_UNAVAILABLE"]
+        ]) {
+            const message = asUser(user, () => refusal(service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

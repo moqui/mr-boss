@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SurveyFormDetail, the survey builder's form editor (crosscut §2, §8; Commons' builder, built by impl-customer-service P13
+    with the Customer Service context only): mounted by Customer Service as Settings/FeedbackFormDetail (design
+    FeedbackFormDetail), any other app root seeing "not available". For a feedback form of one of the user's settings
+    organizations (mantle.request.CaseFeedbackServices.get#FeedbackForm with its drafts):
+    - FeedbackFormHeader: its name, purpose, version and state, Publish from a date (publish#FeedbackForm, refused while it has
+      a problem: no rating, a choice with no option, an expression, a cycle) and Rename;
+    - FormAccess: who may change it (SUPPORT_POLICY_EDIT in its organization) and read its answers (service management), from
+      the permissions Mantle checks, never a per-form grant;
+    - FormFields: its questions with Add question, Edit and End (save#FeedbackFormField, end#FeedbackFormPart): a draft changes
+      in place; a published question's label, help, required flag and order change from now; a new kind or a change from a
+      later date is a successor question; an answered question is ended, never deleted;
+    - FieldOptions: each choice's options with the value that is the rating's score, End an option;
+    - the rules (show or require one question by another's answer; save#FeedbackFormCondition);
+    - FormPreview: the form as the customer's page asks it, drafts included (db-form-include-drafts), in qvt and tui.
+    Every save checks SUPPORT_POLICY_EDIT in Mantle; its dialogs show only to a user who may save. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Survey form" default-menu-include="false">
+    <parameter name="formId"/>
+    <transition name="conditionValues" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.TemplateServices.get#ConditionValues" out-map="found"
+                    in-map="{appRoot:appRoot, formId:formId, sourceFieldName:sourceFieldName}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the preview's form submits nothing: back to the page -->
+    <transition name="previewForm">
+        <default-response url="."><parameter name="formId"/></default-response>
+    </transition>
+    <transition name="publishForm">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.publish#FeedbackForm" out-map="published"
+                    in-map="{formId:formId, fromDate:(fromDate || null)}"/>
+            <message type="success">Published ${published.publishedFieldNames?.length || 0} new question(s) and the form's other changes</message>
+        </actions>
+        <default-response url="."><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="renameForm">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.rename#FeedbackForm"
+                    in-map="{formId:formId, description:description, comments:(comments ?? '')}"/>
+            <message type="success">Saved the form</message>
+        </actions>
+        <default-response url="."><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveField">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.save#FeedbackFormField" out-map="savedField"
+                    in-map="{formId:formId, fieldName:(fieldName || null), title:title, tooltip:(tooltip || null),
+                        fieldTypeEnumId:fieldTypeEnumId, isRequired:(isRequired || 'N'), layoutSequenceNum:(layoutSequenceNum || null),
+                        optionText:(optionText || null), fromDate:(fromDate || null)}"/>
+            <message type="success">${savedField.successor ? 'Saved as a new question that replaces the old one when it starts; publish it if it has no date' : 'Saved the question'}</message>
+        </actions>
+        <default-response url="."><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endPart">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.end#FeedbackFormPart"
+                    in-map="{formId:formId, part:part, fieldName:(fieldName || null), sequenceNum:(sequenceNum || null),
+                        dependencySeqId:(dependencySeqId || null), thruDate:(thruDate || null)}"/>
+            <message type="success">Ended; earlier answers keep it</message>
+        </actions>
+        <default-response url="."><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveCondition">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.save#FeedbackFormCondition"
+                    in-map="{formId:formId, dependencySeqId:(dependencySeqId || null), sourceFieldName:sourceFieldName,
+                        operator:operator, value:(value || null), targetFieldName:targetFieldName, effect:effect}"/>
+            <message type="success">Saved the rule</message>
+        </actions>
+        <default-response url="."><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
+        <!-- the form of one of the user's settings organizations, with its drafts (Mantle refuses another organization's) -->
+        <if condition="inCustomerService">
+            <service-call name="ironstone.customerservice.FeedbackServices.find#FeedbackForms" out-map="found"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="formOwnerId" from="formId ? ec.entity.find('moqui.screen.form.DbForm').condition('formId', formId).disableAuthz()
+                .one()?.ownerPartyId : null"/>
+        <set field="ownForm" from="!!formOwnerId &amp;&amp; (found?.organizations || []).some((org) =&gt; org.value == formOwnerId)"/>
+        <if condition="ownForm">
+            <service-call name="mantle.request.CaseFeedbackServices.get#FeedbackForm" out-map="formOut" transaction="force-new"
+                    ignore-error="true" in-map="{formId:formId, includeDrafts:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="form" from="formOut?.form || null"/>
+        <set field="editing" from="!!form"/>
+        <set field="can" from="customerService?.capabilities || {}"/>
+        <set field="formFields" from="editing ? form.editFields || [] : []"/>
+        <set field="formRules" from="editing ? form.conditions || [] : []"/>
+        <set field="formProblems" from="editing ? form.problems || [] : []"/>
+        <set field="fieldOptions" from="formFields.map((row) =&gt; ({value: row.fieldName, label: row.title + (row.draft ? ' (draft)' : '')}))"/>
+        <set field="optionRows" from="formFields.filter((row) =&gt; row.choice).flatMap((row) =&gt; row.options.map((option) =&gt;
+                ({fieldName: row.fieldName, fieldTitle: row.title, sequenceNum: option.sequenceNum, keyValue: option.keyValue,
+                    text: option.text, scoreText: form.rating?.fieldName == row.fieldName ? option.keyValue : '',
+                    stateText: option.draft ? 'Draft' : 'Published', draft: option.draft})))"/>
+        <set field="ruleRows" from="formRules.map((row) =&gt; Object.assign({}, row, {formId: formId, saveLabel: 'Save'}))
+                .concat(editing &amp;&amp; can.policyEdit &amp;&amp; formFields.length &gt; 1 ? [{formId: formId, dependencySeqId: '',
+                    effect: 'show', operator: 'not-empty', sourceFieldName: '', targetFieldName: '', value: '',
+                    conditionText: 'New rule', stateText: '', saveLabel: 'Add'}] : [])"/>
+        <set field="accessRows" from="editing ? [
+                {who: 'Service administrators of its organization', what: 'Change and publish the form', how: 'Support policy edit (SUPPORT_POLICY_EDIT)'},
+                {who: 'Service managers', what: 'Read the answers and their comments, follow up low scores', how: 'Support case manage (SUPPORT_CASE_MANAGE)'},
+                {who: 'The follow-up team', what: 'Read the answers of the follow-ups it is given; comments only when the customer agreed to be contacted', how: 'Its team membership'},
+                {who: 'The customer', what: 'Answer once, from the invitation link', how: 'The invitation link (Support app, Feedback)'}] : []"/>
+        <set field="newField" from="{formId: formId, fieldTypeEnumId: 'DBFFT_radio', isRequired: 'N'}"/>
+        <set field="previewFormId" from="editing ? formId : ''"/>
+        <set field="formsLink" from="sharedLinks?.['Settings/FeedbackForms']"/>
+    </actions>
+    <widgets>
+        <section name="SurveyFormUnavailable" condition="!editing">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Form ${formId} is not available: it does not exist or is not one of your organization's feedback forms."/>
+                        <link url="${formsLink}" text="Back to feedback forms" link-type="anchor" condition="formsLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SurveyFormEdit" condition="editing">
+            <widgets>
+                <context record-entity="moqui.screen.form.DbForm" record-id="${formId}" title="Feedback form ${form.description}"/>
+                <!-- FeedbackFormHeader -->
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Feedback form" type="span" style="text-caption m-muted"/>
+                        <label text="${form.description}" type="h5"/>
+                        <label text="${['Case feedback', form.rating ? 'rating ' + form.rating.low + '–' + form.rating.high : 'no rating yet',
+                                form.publishedFromText ? 'published ' + form.publishedFromText : '', form.policies?.length ? 'sent for resolved cases' : '']
+                                .filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${form.stateColor}">${
+                                WebUtilities.encodeHtml(form.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: form.stateText})}]]></text>
+                            <text type="html">${form.stateText}</text>
+                        </render-mode>
+                    </container>
+                    <container style="m-record-actions">
+                        <container-dialog id="PublishFeedbackForm" button-text="Publish" icon="sym_o_publish" type="primary" width="520"
+                                title="Publish ${form.description}" condition="can.policyEdit &amp;&amp; form.hasDrafts">
+                            <form-single name="PublishFeedbackFormForm" transition="publishForm" map="{formId:formId}">
+                                <field name="formId"><default-field><hidden/></default-field></field>
+                                <field name="fromDate">
+                                    <default-field title="From" tooltip="Empty: from now. Invitations answered from then ask the new questions; earlier answers keep theirs">
+                                        <date-time/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Publish"><submit confirmation="Publish the drafts of ${form.description}?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="RenameFeedbackForm" button-text="Rename" icon="sym_o_edit" width="520"
+                                    title="Rename ${form.description}" condition="can.policyEdit">
+                                <form-single name="RenameFeedbackFormForm" transition="renameForm"
+                                        map="{formId:formId, description:form.description, comments:form.comments}">
+                                    <field name="formId"><default-field><hidden/></default-field></field>
+                                    <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="comments"><default-field title="What it is for"><text-area rows="2" cols="40"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+                <link url="${formsLink}" text="All feedback forms" link-type="anchor" condition="formsLink"/>
+                <section name="FormProblems" condition="formProblems.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="To fix before publishing"/>
+                            <box-body-nopad>
+                                <form-list name="Problems" list="formProblems" skip-form="true" paginate="false" skip-header="true">
+                                    <field name="message"><default-field title="Problem"><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="message"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- FormFields -->
+                <container-box>
+                    <box-header title="Questions"/>
+                    <box-toolbar>
+                        <container-dialog id="AddQuestion" button-text="Add question" icon="sym_o_add" width="640" title="Add a question"
+                                condition="can.policyEdit">
+                            <form-single name="AddQuestionForm" transition="saveField" map="newField">
+                                <field name="formId"><default-field><hidden/></default-field></field>
+                                <field name="fieldName"><default-field><hidden/></default-field></field>
+                                <field name="title"><default-field title="Question"><text-line size="40"/></default-field></field>
+                                <field name="tooltip"><default-field title="Help"><text-line size="40"/></default-field></field>
+                                <field name="fieldTypeEnumId">
+                                    <default-field title="Kind">
+                                        <drop-down>
+                                            <option key="DBFFT_radio" text="Choice buttons (a rating)"/>
+                                            <option key="DBFFT_drop-down" text="Choice list"/>
+                                            <option key="DBFFT_check" text="Checkboxes"/>
+                                            <option key="DBFFT_text-area" text="Long text"/>
+                                            <option key="DBFFT_text-line" text="Short text"/>
+                                            <option key="DBFFT_date-time" text="Date"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="isRequired">
+                                    <default-field title="Required">
+                                        <radio><option key="Y" text="Always"/><option key="N" text="Only by a rule"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="layoutSequenceNum">
+                                    <default-field title="Order" tooltip="Lower comes first; empty: last"><text-line size="4" input-type="number"/></default-field>
+                                </field>
+                                <field name="optionText">
+                                    <default-field title="Options" tooltip="For a choice: one a line, as value | label. A rating's values are its scores (1 | 1 - Poor)">
+                                        <text-area rows="5" cols="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add as a draft"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="FormFields" list="formFields" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Question">
+                                    <label text="${title}" type="span"/>
+                                    <label text="${[typeText, requiredText, replacesText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="optionSummary"><default-field title="Options"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditQuestion_${fieldName}" button-text="Edit" icon="sym_o_edit" width="640"
+                                            title="Edit the question ${title}" condition="can.policyEdit">
+                                        <form-single name="EditQuestionForm" transition="saveField" extends="AddQuestionForm"
+                                                map="{formId:formId, fieldName:fieldName, title:title, tooltip:tooltip, fieldTypeEnumId:fieldTypeEnumId,
+                                                    isRequired:isRequired, layoutSequenceNum:layoutSequenceNum, optionText:optionText}">
+                                            <field name="fromDate">
+                                                <conditional-field title="Change from" condition="!draft"
+                                                        tooltip="Empty: from now. A later date, or a new kind, makes a new question that replaces this one">
+                                                    <date-time/>
+                                                </conditional-field>
+                                                <default-field><ignored/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndQuestion_${fieldName}" button-text="End" icon="sym_o_block" width="480"
+                                            title="End the question ${title}" condition="can.policyEdit">
+                                        <form-single name="EndQuestionForm" transition="endPart" map="{formId:formId, part:'field', fieldName:fieldName}">
+                                            <field name="formId"><default-field><hidden/></default-field></field>
+                                            <field name="part"><default-field><hidden/></default-field></field>
+                                            <field name="fieldName"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate">
+                                                <conditional-field title="Until" condition="!draft" tooltip="Empty: now"><date-time/></conditional-field>
+                                                <default-field><ignored/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="${draft ? 'Delete' : 'End'}">
+                                                    <submit type="danger" confirmation="${draft ? 'Delete the draft question ' + title + '?' : 'End the question ' + title + '? Answers given before keep it.'}"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!formFields.length"
+                                text="No question yet. Add the rating first: a choice whose values are its scores."/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- FieldOptions -->
+                <container-box>
+                    <box-header title="Options and scores"/>
+                    <box-body-nopad>
+                        <form-list name="FieldOptions" list="optionRows" skip-form="true" paginate="false">
+                            <field name="fieldTitle"><default-field title="Question"><display/></default-field></field>
+                            <field name="keyValue"><default-field title="Value"><display/></default-field></field>
+                            <field name="text"><default-field title="Label"><display/></default-field></field>
+                            <field name="scoreText"><default-field title="Score" tooltip="The rating's value is the score"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="endLink">
+                                <conditional-field title="" condition="can.policyEdit">
+                                    <link url="endPart" text="${draft ? 'Delete' : 'End'}" icon="sym_o_block" btn-type="danger"
+                                            confirmation="${draft ? 'Delete' : 'End'} the option ${text}? Answers given before keep it."
+                                            parameter-map="{formId:formId, part:'option', fieldName:fieldName, sequenceNum:sequenceNum}"/>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="fieldTitle"/><field-ref name="text"/></column>
+                                <column><field-ref name="scoreText"/><field-ref name="endLink"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!optionRows.length" text="No choice question yet."/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- the rules: show or require a question by another's answer (the page and the authority both apply them) -->
+                <container-box>
+                    <box-header title="Rules"/>
+                    <box-body-nopad>
+                        <form-list name="FormRules" list="ruleRows" transition="saveCondition" paginate="false">
+                            <field name="formId"><default-field><hidden/></default-field></field>
+                            <field name="dependencySeqId"><default-field><hidden/></default-field></field>
+                            <field name="effect">
+                                <default-field title="">
+                                    <drop-down><option key="show" text="Show"/><option key="require" text="Require"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="targetFieldName">
+                                <default-field title="Question">
+                                    <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sourceFieldName">
+                                <default-field title="When">
+                                    <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="operator">
+                                <default-field title="">
+                                    <drop-down>
+                                        <option key="equals" text="is"/><option key="not-equals" text="is not"/>
+                                        <option key="empty" text="is empty"/><option key="not-empty" text="is answered"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="value">
+                                <default-field title="Value" tooltip="For is and is not: one of the question's options">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="conditionValues" parameter-map="{formId:formId}">
+                                            <depends-on field="sourceFieldName"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="submitButton">
+                                <conditional-field title="" condition="can.policyEdit"><submit text="${saveLabel}" type="default"/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field name="endLink">
+                                <conditional-field title="" condition="can.policyEdit &amp;&amp; dependencySeqId">
+                                    <link url="endPart" text="End" icon="sym_o_block" btn-type="danger" confirmation="End the rule: ${conditionText}?"
+                                            parameter-map="{formId:formId, part:'condition', dependencySeqId:dependencySeqId}"/>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="effect"/><field-ref name="targetFieldName"/><field-ref name="sourceFieldName"/></column>
+                                <column><field-ref name="operator"/><field-ref name="value"/><field-ref name="submitButton"/><field-ref name="endLink"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!ruleRows.length"
+                                text="Add two questions first: a rule shows or requires one question by the answer to another."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <!-- FormPreview: the form as the customer's Feedback page asks it, drafts included -->
+                    <row-col lg="7">
+                        <container-box>
+                            <box-header title="Preview: what the customer answers"/>
+                            <box-body>
+                                <form-single name="FeedbackFormPreview" transition="previewForm" dynamic="true" db-form-include-drafts="editing"
+                                        extends="${previewFormId ? 'DbForm#' + previewFormId : 'FeedbackFormPreviewNone'}" map="{}"/>
+                                <label type="p" style="text-caption m-muted"
+                                        text="The customer's page (the Support app's Feedback) asks the published questions with these rules, and the server checks the answer again."/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <!-- FormAccess: from the permissions Mantle checks -->
+                    <row-col lg="5">
+                        <container-box>
+                            <box-header title="Who may change and read it"/>
+                            <box-body-nopad>
+                                <form-list name="FormAccess" list="accessRows" skip-form="true" paginate="false">
+                                    <field name="who"><default-field title="Who"><display/></default-field></field>
+                                    <field name="what"><default-field title="May"><display/></default-field></field>
+                                    <field name="how"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="who"/><field-ref name="how"/></column>
+                                        <column><field-ref name="what"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+        <section name="FeedbackFormPreviewNoneHolder" condition="false">
+            <widgets><form-single name="FeedbackFormPreviewNone"/></widgets>
+        </section>
+    </widgets>
+</screen>

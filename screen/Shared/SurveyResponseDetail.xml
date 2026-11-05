@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SurveyResponseDetail, one answer of the survey builder (crosscut §2, §8; Commons' builder, built by impl-customer-service
+    P13 with the Customer Service context only): mounted by Customer Service as Reports/ResponseDetail (design ResponseDetail:
+    ResponseDetails and FeedbackFollowUp); any other app root sees "not available". An invited response of the user's
+    organizations (ironstone.customerservice.FeedbackServices.get#CaseResponse): its answers with the form as of the response,
+    the case and its resolution episode, the dates, the score and the customer's consent; the text answers for service
+    management, and for the follow-up team only when the customer agreed to be contacted. The follow-up of a low score is
+    recorded here (mantle.request.CaseFeedbackServices.record#FeedbackFollowUp: its assignee, due date, action, a note and its
+    state). The response itself is never changed: the framework's update and delete of it are refused. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Survey response" default-menu-include="false">
+    <parameter name="formResponseId"/>
+    <transition name="recordFollowUp">
+        <actions>
+            <service-call name="ironstone.customerservice.FeedbackServices.get#CaseResponse" out-map="checked"
+                    in-map="{appRoot:appRoot, formResponseId:formResponseId}"/>
+            <service-call name="mantle.request.CaseFeedbackServices.record#FeedbackFollowUp"
+                    in-map="{followUpId:checked.followUp?.followUpId, assigneePartyId:(assigneePartyId || null), dueDate:(dueDate || null),
+                        actionEnumId:(actionEnumId || null), note:(note || null), statusEnumId:(statusEnumId || null)}"/>
+            <message type="success">Saved the follow-up</message>
+        </actions>
+        <default-response url="."><parameter name="formResponseId"/></default-response>
+        <error-response url="."><parameter name="formResponseId"/></error-response>
+    </transition>
+    <actions>
+        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
+        <if condition="inCustomerService">
+            <service-call name="ironstone.customerservice.FeedbackServices.get#CaseResponse" out-map="found"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, formResponseId:formResponseId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="response" from="found?.response || null"/>
+        <set field="followUp" from="found?.followUp || null"/>
+        <set field="answerRows" from="response?.answers || []"/>
+        <set field="detailLines" from="response ? [
+                {label: 'Form', value: response.formText + ' · ' + response.versionText},
+                {label: 'Customer', value: response.customerText},
+                {label: 'Answered by', value: response.respondentText},
+                {label: 'Case', value: response.caseText},
+                {label: 'Episode', value: response.episodeText},
+                {label: 'Invited', value: response.invitedText},
+                {label: 'Sent', value: response.sentText || '–'},
+                {label: 'Answered', value: response.respondedText},
+                {label: 'Score', value: response.scoreText || '–'},
+                {label: 'Contact', value: response.consentText}] : []"/>
+        <set field="followUpValue" from="followUp ? {formResponseId: formResponseId, assigneePartyId: followUp.assigneePartyId,
+                actionEnumId: followUp.actionEnumId, statusEnumId: followUp.statusEnumId, note: ''} : null"/>
+        <set field="resultsLink" from="sharedLinks?.['Reports/SatisfactionResults']"/>
+    </actions>
+    <widgets>
+        <section name="ResponseUnavailable" condition="!response">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This response is not available: it does not exist, it answers no invitation of your organization's, or you do not follow it up."/>
+                        <link url="${resultsLink}" text="Back to satisfaction results" link-type="anchor" condition="resultsLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ResponseFound" condition="response">
+            <widgets>
+                <context record-entity="moqui.screen.form.FormResponse" record-id="${formResponseId}" title="Feedback ${response.scoreText}: ${response.customerText}"/>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Feedback" type="span" style="text-caption m-muted"/>
+                        <label text="${response.scoreText ? 'Rated ' + response.scoreText : 'Answered'} · ${response.customerText}" type="h5"/>
+                        <label text="${response.respondedText}" type="div" style="text-caption m-muted"/>
+                    </container>
+                    <container style="m-record-actions">
+                        <link url="${response.caseUrl}" url-type="plain" text="Open the case" link-type="anchor-button" icon="sym_o_support_agent"
+                                condition="response.caseUrl"/>
+                        <container-dialog id="FeedbackFollowUp" button-text="Follow up" icon="sym_o_assignment_ind" type="primary" width="560"
+                                title="Follow up this answer" condition="followUp?.canRecord">
+                            <form-single name="FeedbackFollowUpForm" transition="recordFollowUp" map="followUpValue">
+                                <field name="formResponseId"><default-field><hidden/></default-field></field>
+                                <field name="assigneePartyId">
+                                    <conditional-field title="Assignee" condition="followUp.canAssign">
+                                        <drop-down allow-empty="true"><list-options list="followUp.teamOptions" key="${value}" text="${label}"/></drop-down>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                <field name="actionEnumId">
+                                    <default-field title="Action">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="FeedbackFollowUpAction"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="statusEnumId">
+                                    <default-field title="State">
+                                        <radio><option key="FfsOpen" text="Open"/><option key="FfsAcknowledged" text="Acknowledged"/>
+                                            <option key="FfsDone" text="Done"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="note"><default-field title="Note"><text-area rows="3" cols="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <link url="${resultsLink}" text="Satisfaction results" link-type="anchor" condition="resultsLink"/>
+                <container-row>
+                    <!-- ResponseDetails -->
+                    <row-col lg="7">
+                        <container-box>
+                            <box-header title="Answers"/>
+                            <box-body-nopad>
+                                <form-list name="ResponseAnswers" list="answerRows" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Question"><display/></default-field></field>
+                                    <field name="valueText"><default-field title="Answer"><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="title"/></column><column><field-ref name="valueText"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Details"/>
+                            <box-body-nopad>
+                                <form-list name="ResponseDetails" list="detailLines" skip-form="true" paginate="false" skip-header="true">
+                                    <field name="label"><default-field title=""><display/></default-field></field>
+                                    <field name="value"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <!-- FeedbackFollowUp -->
+                    <row-col lg="5">
+                        <container-box>
+                            <box-header title="Follow-up"/>
+                            <box-body>
+                                <label type="p" condition="!followUp" text="No follow-up: the score was not low enough for one."/>
+                                <section name="FollowUpState" condition="followUp">
+                                    <widgets>
+                                        <label type="p" text="${followUp.stateText} · ${followUp.assigneeText}${followUp.teamText ? ' (' + followUp.teamText + ')' : ''}${followUp.dueText ? ' · due ' + followUp.dueText : ''}"/>
+                                        <label type="p" text="${followUp.actionText}" condition="followUp.actionText"/>
+                                        <label type="pre" text="${followUp.note}" condition="followUp.note"/>
+                                    </widgets>
+                                </section>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

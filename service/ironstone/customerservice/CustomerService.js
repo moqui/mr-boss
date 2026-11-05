@@ -312,7 +312,12 @@ const linkPaths = [
     "Approvals/Notifications",
     // P11: the warranty claims and one claim's assessment
     "Returns/WarrantyClaims",
-    "Returns/WarrantyAssessment"
+    "Returns/WarrantyAssessment",
+    // P13: the survey builder's mounts (feedback forms, CSAT results and one answer)
+    "Settings/FeedbackForms",
+    "Settings/FeedbackFormDetail",
+    "Reports/SatisfactionResults",
+    "Reports/ResponseDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

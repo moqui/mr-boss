@@ -1862,4 +1862,9 @@ along with this software (see the LICENSE.md file). If not, see
         the claim's assessment under Customer Service -->
     <moqui.security.user.NotificationTopic topic="WarrantyRepairFinished"
             linkTemplate="/qapps/CustomerService/Returns/WarrantyAssessment?requestId=${requestId}"/>
+    <!-- Customer Service P13: a low feedback score's follow-up (Mantle's CaseFeedbackFollowUp, mantle.request.CaseFeedbackServices)
+        opens the answer's ResponseDetail; SatisfactionResults, ResponseDetail and the feedback forms are checked in their
+        services (find#CaseResponses for service management, get#CaseResponse for it and the follow-up team, the forms'
+        saves SUPPORT_POLICY_EDIT), so the Reports and Settings areas' groups open them -->
+    <moqui.security.user.NotificationTopic topic="CaseFeedbackFollowUp" linkTemplate="/qapps/CustomerService/Reports/ResponseDetail?formResponseId=${formResponseId}"/>
 </entity-facade-xml>

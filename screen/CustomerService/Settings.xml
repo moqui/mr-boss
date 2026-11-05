@@ -19,7 +19,13 @@ along with this software (see the LICENSE.md file). If not, see
     checks SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE, and a form shows only to a user who may save it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
-    <subscreens default-item="SettingsHome" always-use-full-path="true"/>
+    <subscreens default-item="SettingsHome" always-use-full-path="true">
+        <!-- P13: the survey builder's forms in the Customer Service context (Shared/SurveyForms, SurveyFormDetail; crosscut §2) -->
+        <subscreens-item name="FeedbackForms" location="component://mr-boss/screen/Shared/SurveyForms.xml"
+                menu-title="Feedback forms" menu-index="13"/>
+        <subscreens-item name="FeedbackFormDetail" location="component://mr-boss/screen/Shared/SurveyFormDetail.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
         <subscreens-menu id="CustomerServiceSettingsTabs" type="tab"/>
         <subscreens-active/>

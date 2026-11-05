@@ -21,6 +21,12 @@ along with this software (see the LICENSE.md file). If not, see
     <subscreens default-item="ReportsHome" always-use-full-path="true">
         <subscreens-item name="CaseAnalytics" location="component://mr-boss/screen/CustomerService/Reports/CaseAnalytics.xml"
                 menu-include="false"/>
+        <!-- P13: CSAT results and one answer, the survey builder's answers in the Customer Service context (Shared/SurveyResponses,
+            SurveyResponseDetail; crosscut §2), for service management: find#CaseResponses and get#CaseResponse check it (F-P13-11) -->
+        <subscreens-item name="SatisfactionResults" location="component://mr-boss/screen/Shared/SurveyResponses.xml"
+                menu-title="CSAT results" menu-index="3"/>
+        <subscreens-item name="ResponseDetail" location="component://mr-boss/screen/Shared/SurveyResponseDetail.xml"
+                menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="CustomerServiceReportsPanel" type="tab"/>

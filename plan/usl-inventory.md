@@ -1901,6 +1901,27 @@ Purchasing's pages in the PASS Supplier app call these through `pass.Facade.call
 | order/SupplierPortalServices | revoke#OrderCapabilities |  | the SupplierPortalRevoke EECA (Purchasing P16) |
 
 
+## Customer Service P13 — Feedback (Nov 5, 2026)
+
+Added in `request/CaseFeedbackServices.xml` (impl-customer-service P13, CS-FEEDBACK, CS-JOBS; `CaseFeedback.js`) and Commons'
+`party/FormPublicationServices.xml` (`FormPublication.js`, built under the owner-contract rule), called by built screens, the
+send job and the PASS Support app's Feedback page (operations getCaseFeedbackInvitation and submitCaseFeedback).
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/CaseFeedbackServices | create#FeedbackForm | CustomerService/Settings/FeedbackForms | CustomerService/Settings/FeedbackForms (NewFeedbackForm, Shared/SurveyForms) |
+| request/CaseFeedbackServices | publish#FeedbackForm | CustomerService/Settings/FeedbackFormDetail | CustomerService/Settings/FeedbackFormDetail (Publish) |
+| request/CaseFeedbackServices | save#FeedbackFormField, save#FeedbackFormCondition, end#FeedbackFormPart, rename#FeedbackForm, get#FeedbackForm |  | CustomerService/Settings/FeedbackFormDetail (FormFields, FieldOptions, the rules, Rename; Shared/SurveyFormDetail) |
+| request/CaseFeedbackServices | save#InvitationPolicy | CustomerService/Settings/ServiceDefaults | CustomerService/Settings/ServiceDefaults (FeedbackDeliveryPolicy, Stop asking) |
+| request/CaseFeedbackServices | queue#Invitation, create#Invitation |  | the SupportCaseFeedbackInvitation rule (entity/FormPublication.eecas.xml), after a case's resolution |
+| request/CaseFeedbackServices | send#Invitations, send#Invitation |  | the send_CaseFeedbackInvitations ServiceJob (CS-JOBS) |
+| request/CaseFeedbackServices | get#Invitation | PASS:Support/Feedback | PASS:Support/Feedback (CaseFeedback; getCaseFeedbackInvitation, PassApi for a remote frontend) |
+| request/CaseFeedbackServices | submit#CaseFeedback | PASS:Support/Feedback | PASS:Support/Feedback (Send my answer; submitCaseFeedback, a TOKEN_WRITE) |
+| request/CaseFeedbackServices | record#FeedbackFollowUp | CustomerService/Reports/ResponseDetail | CustomerService/Reports/ResponseDetail (FeedbackFollowUp, Shared/SurveyResponseDetail) |
+| request/CaseFeedbackServices | check#SupportAppReadiness |  | a site's readiness (PublicApps.js, Forum's site checks) for its support mount |
+| party/FormPublicationServices | guard#FormResponse |  | the InvitedFormResponseImmutable rules (FormPublication.eecas.xml): update#FormResponse and delete#FormResponse refuse an invited response |
+| ScreenServices (framework) | create#FormResponse, get#FormResponse, evaluate#DbFormDependencies, publish#DbForm |  | through submit#CaseFeedback, ironstone.customerservice.FeedbackServices.get#CaseResponse and the feedback form services (Customer Service P13) |
+
 ## Customer Service P12 — Knowledge (Nov 5, 2026)
 
 Added in `request/KnowledgeServices.xml` (impl-customer-service P12, CS-KNOWLEDGE), called by built screens; the Support

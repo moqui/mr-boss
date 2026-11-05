@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SurveyForms, the survey builder's form list (crosscut §2, §8; design-drawers-commons §19; Commons owns the builder,
+    impl-customer-service §4, P13 builds it with the Customer Service context only): mounted by Customer Service as
+    Settings/FeedbackForms (design FeedbackForms: FeedbackFormList and NewFeedbackForm) and later by Marketing and People with
+    their own purpose and context; any other app root sees "not available". In the Customer Service context the forms are
+    the feedback forms of one of the user's settings organizations (ironstone.customerservice.FeedbackServices.find#FeedbackForms),
+    and New feedback form makes one (mantle.request.CaseFeedbackServices.create#FeedbackForm: the default required rating of
+    1 to 5, or 1 to 3, with an optional reason, comment and consent, or a copy of a published form), its fields drafts until
+    published in FeedbackFormDetail. Saves check SUPPORT_POLICY_EDIT in Mantle; the dialog shows only to a user who may save. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Survey forms">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition name="createForm">
+        <actions>
+            <service-call name="mantle.request.CaseFeedbackServices.create#FeedbackForm" out-map="created"
+                    in-map="{organizationPartyId:organizationPartyId, description:description, comments:(comments || null),
+                        scale:(sourceFormId ? null : (scale || 5)), sourceFormId:(sourceFormId || null)}"/>
+            <message type="success">Made the form ${description}: check its questions, then publish it</message>
+        </actions>
+        <default-response url="../FeedbackFormDetail"><parameter name="formId" from="created.formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
+        <if condition="inCustomerService">
+            <service-call name="ironstone.customerservice.FeedbackServices.find#FeedbackForms" out-map="found"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="formsFound" from="!!found?.forms"/>
+        <set field="forms" from="found?.forms || []"/>
+        <set field="orgOptions" from="found?.organizations || []"/>
+        <set field="orgId" from="found?.organizationPartyId"/>
+        <set field="sourceOptions" from="found?.sourceOptions || []"/>
+        <set field="can" from="customerService?.capabilities || {}"/>
+        <set field="detailLink" from="sharedLinks?.['Settings/FeedbackFormDetail']"/>
+    </actions>
+    <widgets>
+        <label text="The survey forms are not available to you here." type="p" condition="!formsFound"/>
+        <section name="FeedbackFormList" condition="formsFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Feedback forms" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="The questions a customer answers once a case is resolved. A form changes by dated questions and options, so earlier answers keep the questions they answered."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="NewFeedbackForm" button-text="New feedback form" icon="sym_o_add" type="primary" width="560"
+                                title="New feedback form" condition="can.policyEdit">
+                            <form-single name="NewFeedbackFormForm" transition="createForm" map="{organizationPartyId:orgId, scale:'5'}">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="comments">
+                                    <default-field title="What it is for"><text-area rows="2" cols="40"/></default-field>
+                                </field>
+                                <field name="scale">
+                                    <default-field title="Rating" tooltip="The rating's value is its score">
+                                        <radio><option key="5" text="1 to 5"/><option key="3" text="1 to 3"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="sourceFormId">
+                                    <default-field title="Or copy" tooltip="The published questions of another form">
+                                        <drop-down allow-empty="true"><list-options list="sourceOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Make form"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="OrganizationPicker" condition="orgOptions.length &gt; 1">
+                    <widgets>
+                        <form-single name="SurveyFormsOrganization" transition="chooseOrganization" map="{organizationPartyId:orgId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="orgOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="FeedbackForms" list="forms" skip-form="true" paginate="false">
+                            <field name="description">
+                                <default-field title="Form">
+                                    <link url="${detailLink}" text="${description}" link-type="anchor" parameter-map="{formId:formId}"/>
+                                    <label text="${comments}" type="div" style="text-caption m-muted" condition="comments"/>
+                                </default-field>
+                            </field>
+                            <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="versionText"><default-field title="Version"><display/></default-field></field>
+                            <field name="scaleText"><default-field title="Rating"><display/></default-field></field>
+                            <field name="policyText"><default-field title="Assigned"><display/></default-field></field>
+                            <field name="answeredText"><default-field title="Answers"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="versionText"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="answeredText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!forms.length"
+                                text="No feedback form yet: resolved cases ask nothing. Make one with New feedback form, publish it, then choose it in Service defaults."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

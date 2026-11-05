@@ -74,6 +74,8 @@ along with this software (see the LICENSE.md file). If not, see
         <notification-topic topic="ReturnDecision"/>
         <!-- P11: a warranty claim's repair finished (Mantle's WarrantyRepairFinished, opening WarrantyAssessment) -->
         <notification-topic topic="WarrantyRepairFinished"/>
+        <!-- P13: a low feedback score to follow up (Mantle's CaseFeedbackFollowUp, opening ResponseDetail) -->
+        <notification-topic topic="CaseFeedbackFollowUp"/>
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
             <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>

@@ -107,6 +107,10 @@ along with this software (see the LICENSE.md file). If not, see
                         <link url="/qapps/CustomerService/Settings/KnowledgeSources?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
                                 text="Knowledge sources" link-type="anchor"/>
                         <label type="div" style="text-caption m-muted" text="The wiki spaces whose articles agents are offered and send to customers."/>
+                        <!-- P13: the feedback forms; when they are sent is ServiceDefaults' Feedback delivery -->
+                        <link url="/qapps/CustomerService/Settings/FeedbackForms?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
+                                text="Feedback forms" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted" text="The questions a customer answers once a case is resolved; Service defaults says when they are sent."/>
                     </box-body>
                 </container-box>
                 <!-- P6: the channels (design Settings), how mail, the public form, the forum and chat reach the queues -->
