@@ -95,10 +95,14 @@ function caseKnowledge(p) {
     const parties = rows("mantle.request.RequestParty", {requestId: p.requestId}).filter(row => lib.active(row))
     const organizationPartyId = parties.find(row => row.roleTypeId === "OrgInternal")?.partyId || null
     const sources = mantleKnowledge.currentSources(organizationPartyId ? [organizationPartyId] : [])
+    // a linked page only when the wiki lets the user view it (a link never widens who reads a page)
+    const scope = ec.service.sync().name("org.moqui.impl.WikiServices.get#WikiViewScope").call() || {}
+    const viewSpaceIds = new Set(Array.from(scope.viewSpaceIdList || []))
+    const hiddenPageIds = new Set(Array.from(scope.hiddenPageIdList || []))
     const linked = []
     for (const link of rows("mantle.request.WikiPageRequest", {requestId: p.requestId})) {
         const page = one(PAGE, {wikiPageId: link.wikiPageId})
-        if (!page) continue
+        if (!page || !viewSpaceIds.has(page.wikiSpaceId) || hiddenPageIds.has(page.wikiPageId)) continue
         const source = mantleKnowledge.sourceOfPage(sources, page)
         linked.push(
             articleRow(page, source, {
@@ -170,9 +174,10 @@ function prepareSend(p) {
     cs.recordOf(userScope, "case", p.requestId)
     const link = mantle("get#ArticlePublicLink", {wikiPageId: p.wikiPageId, requestId: p.requestId})
     const parties = rows("mantle.request.RequestParty", {requestId: p.requestId}).filter(row => lib.active(row))
+    // the contact, else the customer; never an agent who filed the case (its Reporter, F-P12-6)
     const to = ["Reporter", "Customer"]
         .map(roleTypeId => parties.find(row => row.roleTypeId === roleTypeId)?.partyId)
-        .filter(Boolean)
+        .filter(partyId => partyId && !mantleKnowledge.isStaff(partyId))
         .map(emailOf)
         .find(Boolean)
     const encode = value =>

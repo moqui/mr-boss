@@ -1317,6 +1317,39 @@ CS-KNOWLEDGE.
   - **F-P12-8** A knowledge author sees no case unless in a team of its queue (the Support queue is SqvTeam); the demo
     author joined the Support team.
 
+**Review Nov 5 (P12).** Checked both repos' diffs against this section, §2, design §3, §6 and §9, AGENTS.md and
+Practices-App-Dev: the audience of each customer-visible read (find#ArticleSuggestions with customerVisible,
+get#PublishedArticle by id or by space and path, get#ArticlePublicLink), the exact published version, the wiki's view rule
+on the agent's reads, create#ArticleFromCase's redaction, message audience and checks, the Commons Knowledge mount for
+non-Customer Service users, review#ArticleFeedback's failure tolerance and operation key, and the acceptance walk against
+the usable-when (it covers all four).
+- R1 (high) find#ArticleSuggestions found a page's source among the suggested sources only, so a part of a space kept
+  internal and not suggested (allowSuggestions N) fell to the broader customer source and its pages were suggested on a
+  customer-visible surface. A page's source is found among all current sources, and of two equal ones the internal source
+  wins (also for get#PublishedArticle across organizations). Mantle SupportKnowledge feature.
+- R2 (medium) CaseDetail's Knowledge tab listed every linked page with its title and path, whether or not the wiki let the
+  agent view it (a link widened page access). It lists only pages of the user's view scope (get#WikiViewScope).
+  CustomerServiceKnowledge case.
+- R3 (medium) create#ArticleFromCase took any email not from the customer as "our reply (customer-visible)", so a staff
+  email or one to a supplier could go into an article; now outward is an email of the service desk to the customer or
+  contact, anything else internal (INTERNAL_MESSAGE). Redaction missed the first name alone ("Thanks, Ana"), and an email
+  address lost its name before its shape was matched; it now takes out first names and nicknames, party ids, address2, every
+  linked record but products and categories, the customer's own orders, returns and invoices (the latest 200 each), and the
+  parties of the case's emails, emails by shape first. Mantle spec cases.
+- R4 (medium) review#ArticleFeedback made the task and reviewed the feedback in two transactions, so a failed review left a
+  task behind; each feedback is one transaction (the internal review#ArticleFeedbackItem, as PurchaseRequests' groups).
+- R5 (low) Send to customer addressed the case's Reporter even when an agent filed the case (F-P12-6); a staff party is
+  skipped for the customer.
+- R6 (low) get#PublishedArticle accepted an answer with no version; the version read must be the page's published one.
+- Checked and kept: get#PublishedArticle refuses a page of an internal source, of no source, a draft or a restricted page
+  whatever id or path is guessed, and reads the published version with no version asked; Commons Knowledge's own behaviour
+  is unchanged outside Customer Service (`inCustomerService` only narrows the spaces, and its transitions check the case);
+  the operation key answers a retry; the feedback list's comments are of the user's organizations. Left: a retry with an
+  operation key after the batch committed and before the key was recorded reviews nothing again (AlreadyReviewed), as other
+  batches.
+- Specs (pass): Mantle SupportKnowledge (7), SupportCases; BOSS CustomerServiceKnowledge, CustomerServiceAccess,
+  CustomerServiceCases, Commons Knowledge, KnowledgeReview, Notes. Acceptance not rerun (not changed).
+
 ### P13 — Feedback
 
 Design §7 SatisfactionResults and ResponseDetail, §8 Feedback, §9 FeedbackForms, FeedbackFormDetail and

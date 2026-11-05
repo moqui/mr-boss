@@ -24,6 +24,25 @@ feature(
     "the case's Knowledge tab suggests the published customer article first, the internal one flagged; the mount lists the sources' spaces",
     {
         when() {
+            // a restricted page linked to the case is not listed to an agent the wiki does not let view it
+            const restricted = system(() => {
+                const out = ec.service
+                    .sync()
+                    .name("org.moqui.impl.WikiServices.update#WikiPage")
+                    .parameters({wikiSpaceId: "ZZW_SVC", parentPath: "", pageName: "Knowledge spec restricted", pageText: "x"})
+                    .call()
+                ec.service
+                    .sync()
+                    .name("update#moqui.resource.wiki.WikiPage")
+                    .parameters({wikiPageId: out.wikiPageId, restrictView: "Y"})
+                    .call()
+                ec.service
+                    .sync()
+                    .name("create#mantle.request.WikiPageRequest")
+                    .parameters({wikiPageId: out.wikiPageId, requestId: ids.thermostatCaseId})
+                    .call()
+                return out.wikiPageId
+            })
             const knowledge = asUser(
                 users.agent,
                 () => invoke(K + "get#CaseKnowledge", {appRoot: "CustomerService", requestId: ids.thermostatCaseId}).knowledge
@@ -41,6 +60,7 @@ feature(
                         .knowledgeContext
             )
             return {
+                restricted,
                 knowledge,
                 context,
                 readerContext,
@@ -48,8 +68,9 @@ feature(
                 internal: page(ids.articlePaths.internal)
             }
         },
-        then({knowledge, context, readerContext, english, internal}) {
+        then({restricted, knowledge, context, readerContext, english, internal}) {
             knowledge.configured == true
+            !knowledge.linked.some(row => row.wikiPageId == restricted)
             knowledge.suggestions[0].wikiPageId == english.wikiPageId
             knowledge.suggestions.find(row => row.wikiPageId == internal.wikiPageId).internal == true
             knowledge.canLink == true
