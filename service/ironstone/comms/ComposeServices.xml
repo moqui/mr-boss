@@ -1155,7 +1155,7 @@ along with this software (see the LICENSE.md file). If not, see
                 sent = out.sent === true
                 sendError = out.sendError ?? null
                 scheduledSendDate = out.scheduledSendDate ?? null
-                message = statusId === 'ES_SCHEDULED' ? (hold ? L('Sending…') : L('Scheduled')) : (sent ? L('Sent') : (sendError ? L('Not sent yet: it waits in the Outbox') + ' (' + sendError + ')' : L('Sent')))
+                message = statusId === 'ES_SCHEDULED' ? (hold ? L('Sending…') : L('Scheduled')) : (sent ? L('Sent') : (sendError ? L('Not sent yet: it waits in the Outbox') + ' (' + sendError + ')' : L('Sending…')))
             } else {
                 mode = 'internal'
                 if (!partyId) { ec.message.addError('Internal messages need a user with a party'); return }

@@ -30,6 +30,18 @@ const one = (entityName, fields) => sys(() => ec.entity.find(entityName).conditi
 const list = (entityName, fields) => sys(() => Array.from(ec.entity.find(entityName).condition(fields).list()))
 const chips = (values) => JSON.stringify(values.map((value) => ({ value, label: value })))
 const settle = () => ec.factory.waitWorkerPoolEmpty(100)
+// a send now goes after the commit of send#Compose's transaction (EmailClientServices.send#Draft claims it there and answers
+// ES_READY, not sent yet): the message once its send has a result, and the work that result starts (the filing) done
+function settled(emailMessageId) {
+    const deadline = Date.now() + 3000
+    let row = one("moqui.basic.email.EmailMessage", { emailMessageId })
+    while (row && row.statusId == "ES_READY" && !row.sendError && Date.now() < deadline) {
+        settle()
+        row = one("moqui.basic.email.EmailMessage", { emailMessageId })
+    }
+    settle()
+    return row
+}
 
 spec({
     setupSpec() {
@@ -146,16 +158,20 @@ feature("a contact group in the recipients expands to its members on send", {
         const found = post("recipients", { term: "Family", mode: "email" })
         const sent = post("send", { fromValue: identityValue, toJson: JSON.stringify([{ value: "group:BOSS_DEMO_GRP_FAMILY", label: "Family" }]),
             subject: "Family note", body: "<p>Hello</p>", holdSeconds: "0" })
+        const sentRow = settled(sent.json.emailMessageId)
         const captured = capture.last()
         const emptyId = sys(() => call("mantle.party.ContactBookServices.create#ContactBookGroup", { contactBookId: "BOSS_DEMO_BOOK_JD", groupName: "Nobody" })).contactBookGroupId
         const empty = post("send", { fromValue: identityValue, toJson: JSON.stringify([{ value: "group:" + emptyId, label: "Nobody" }]),
             subject: "x", body: "<p>x</p>", holdSeconds: "0" })
-        return { found, sent, captured, empty }
+        return { found, sent, sentRow, captured, empty }
     },
-    then({ found, sent, captured, empty }) {
+    then({ found, sent, sentRow, captured, empty }) {
         found.json.some((option) => option.value == "group:BOSS_DEMO_GRP_FAMILY" && option.kind == "group" && option.label.includes("Family"))
         sent.errors == ""
         sent.status == 200
+        sent.json.statusId == "ES_READY"
+        sentRow.statusId == "ES_SENT"
+        sentRow.toAddresses.includes("mary.doe@example.com")
         captured.toList[0].includes("mary.doe@example.com")
         !String(captured.toList).includes("group:")
         empty.errors.includes("no email addresses")
@@ -190,6 +206,7 @@ feature("an email goes now, or waits the undo hold and comes back to Drafts, or 
     when() {
         capture.clear()
         const now = post("send", { fromValue: identityValue, toJson: chips(['"Ada Lovelace" <ada@math.example>']), subject: "Sent now", body: "<p>Hello Ada</p>", holdSeconds: "0" })
+        const nowRow = settled(now.json.emailMessageId)
         const captured = capture.last()
         const held = post("send", { fromValue: identityValue, toJson: chips(["ada@math.example"]), subject: "Held", body: "<p>Wait</p>", holdSeconds: "30" })
         const undone = post("cancelSend", { emailMessageId: held.json.emailMessageId })
@@ -199,13 +216,18 @@ feature("an email goes now, or waits the undo hold and comes back to Drafts, or 
         const noRecipient = post("send", { fromValue: identityValue, toJson: "[]", subject: "Nobody", body: "<p>x</p>" })
         const reply = post("send", { fromValue: "identity:BOSS_DEMO_MAIL_IDENT", parentEmailMessageId: "BOSS_DEMO_MAIL_ACME3", toJson: chips(["bob.acme@test.com"]),
             subject: "Re: Quarterly order for the Ziziwork parts", body: "<p>Yes</p>", holdSeconds: "0" })
-        return { now, captured, held, undone, heldRow, later, noRecipient, reply }
+        return { now, nowRow, captured, held, undone, heldRow, later, noRecipient, reply }
     },
     then(v) {
         v.now.status == 200
         v.now.json.mode == "email"
-        v.now.json.sent == true
-        v.now.json.statusId == "ES_SENT"
+        // sent once send#Compose's transaction commits: the answer is that it is sending, the message then sent
+        v.now.json.sent == false
+        v.now.json.statusId == "ES_READY"
+        v.now.json.sendError == null
+        v.now.json.message == "Sending…"
+        v.nowRow.statusId == "ES_SENT"
+        v.nowRow.sendError == null
         v.captured.subject == "Sent now"
         v.captured.toList[0].includes("ada@math.example")
         v.captured.fromAddress == "john.compose@ziziwork.example"
@@ -225,7 +247,7 @@ feature("an email with the record chip is filed on the record once sent and show
         capture.clear()
         const sent = post("send", { fromValue: identityValue, toJson: chips(['"Bob Acme" <bob.acme@test.com>']), subject: "About the shared calendar",
             body: "<p>Bob, the calendar is ready.</p>", recordEntity: "mantle.request.Request", recordId: "BOSS_DEMO_REQUEST", holdSeconds: "0" })
-        settle()
+        const sentRow = settled(sent.json.emailMessageId)
         const event = list("mantle.party.communication.CommunicationEvent", { emailMessageId: sent.json.emailMessageId })[0] || null
         const join = event ? one("mantle.request.RequestCommEvent", { requestId: "BOSS_DEMO_REQUEST", communicationEventId: event.communicationEventId }) : null
         // the record's Chatter, as its timeline transition reads it (Chat renders the transition)
@@ -234,10 +256,11 @@ feature("an email with the record chip is filed on the record once sent and show
         ec.message.clearErrors()
         const hidden = post("send", { fromValue: identityValue, toJson: chips(["bob.acme@test.com"]), subject: "x", body: "<p>x</p>",
             recordEntity: "mantle.request.Request", recordId: "BOSS_NO_SUCH_REQUEST", holdSeconds: "0" })
-        return { sent, event, join, entries, hidden }
+        return { sent, sentRow, event, join, entries, hidden }
     },
-    then({ sent, event, join, entries, hidden }) {
-        sent.json.sent == true
+    then({ sent, sentRow, event, join, entries, hidden }) {
+        sent.json.statusId == "ES_READY"
+        sentRow.statusId == "ES_SENT"
         event != null
         event.communicationEventTypeId == "Email"
         event.toPartyId == "ORG_ACME_BA"
