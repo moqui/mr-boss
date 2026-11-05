@@ -5,7 +5,17 @@ feature("an editor generates one choice, retries it, resumes a durable batch and
         page.goto("/qapps/Products/Products/VariantBuilder?productId=BOSS_PRD_VIRT").status == 200
         page.waitFor(() => document.querySelectorAll("[data-feature-key]").length === 4)
         page.evaluate(() => {
-            window.confirm = () => true
+            // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+            if (!window.walkConfirmations) {
+                window.walkConfirmations = new MutationObserver(() => {
+                    for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                        if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                        button.dataset.walkConfirmed = "Y"
+                        button.click()
+                    }
+                })
+                window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+            }
             return true
         }) == true
         page.getByRole("checkbox", {name: "BOSS_PRD_VIRT_BL_L", exact: true}).click()

@@ -67,7 +67,17 @@ feature("a quality manager verifies it and releases the accepted part", {
         page.getByRole("dialog").getByRole("button", {name: "Record decision", exact: true}).click()
         waitForText(page, "Verified by")
         page.evaluate(() => {
-            window.confirm = () => true
+            // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+            if (!window.walkConfirmations) {
+                window.walkConfirmations = new MutationObserver(() => {
+                    for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                        if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                        button.dataset.walkConfirmed = "Y"
+                        button.click()
+                    }
+                })
+                window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+            }
             return true
         }) == true
         page.getByRole("button", {name: "Dispose", exact: true}).first().click()

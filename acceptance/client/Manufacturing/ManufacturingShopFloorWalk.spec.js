@@ -27,7 +27,17 @@ function waitForText(page, text) {
 // accept the confirmation of the next action, as the user does
 function confirmNext(page) {
     page.evaluate(() => {
-        window.confirm = () => true
+        // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+        if (!window.walkConfirmations) {
+            window.walkConfirmations = new MutationObserver(() => {
+                for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                    if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                    button.dataset.walkConfirmed = "Y"
+                    button.click()
+                }
+            })
+            window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+        }
     })
 }
 const fits = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
@@ -63,7 +73,7 @@ feature(
             waitForText(page, "fasten the four screws")
             page.getByRole("button", {name: "Acknowledge"}).click()
             waitForText(page, "Acknowledged")
-            page.getByLabel("Photo of the fastened assembly").fill("Photo of unit 1")
+            page.getByLabel("Photo of the fastened assembly", {exact: true}).fill("Photo of unit 1")
             page.getByRole("button", {name: "Record evidence"}).click()
             waitForText(page, "Recorded")
             // the scan at the station selects the card; Start asks to switch the timer on other work, then starts
@@ -124,7 +134,7 @@ feature("Test and pack's refused completion keeps what was entered, then it comp
         page.keyboard.press("Escape")
         // the evidence, then the completion with the coupled receipt
         page.goto("/qapps/Manufacturing/ShopFloor/Instructions?operationWorkEffortId=" + encodeURIComponent(testId))
-        page.getByLabel("Test result").fill("Passed")
+        page.getByLabel("Test result", {exact: true}).fill("Passed")
         page.getByRole("button", {name: "Record evidence"}).click()
         waitForText(page, "Recorded")
         page.goto("/qapps/Manufacturing/ShopFloor/OperationExecution?operationWorkEffortId=" + encodeURIComponent(testId))

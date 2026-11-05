@@ -34,9 +34,18 @@ feature("a counter starts the planned blind count and enters it without an expec
         waitForText(page, /BOSS_WH_COUNT/)
         page.getByRole("link", {name: "BOSS_WH_COUNT", exact: true}).first().click()
         waitForText(page, /Cycle count: location 01020301/)
-        // the confirmation is the browser's confirm, accepted
         page.evaluate(() => {
-            window.confirm = () => true
+            // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+            if (!window.walkConfirmations) {
+                window.walkConfirmations = new MutationObserver(() => {
+                    for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                        if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                        button.dataset.walkConfirmed = "Y"
+                        button.click()
+                    }
+                })
+                window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+            }
             return true
         }) == true
         page.getByRole("button", {name: "Start count"}).first().click()

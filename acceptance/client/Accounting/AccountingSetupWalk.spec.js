@@ -29,7 +29,17 @@ feature("a finance administrator sets up a new organization's accounting and act
         const next = () => page.getByRole("button", {name: "Next", exact: true}).click()
         const confirmDialogs = () =>
             page.evaluate(() => {
-                window.confirm = () => true
+                // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+                if (!window.walkConfirmations) {
+                    window.walkConfirmations = new MutationObserver(() => {
+                        for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                            if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                            button.dataset.walkConfirmed = "Y"
+                            button.click()
+                        }
+                    })
+                    window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+                }
                 return true
             })
         page.goto("/qapps/Accounting/Home?organizationPartyId=" + organizationPartyId).status == 200

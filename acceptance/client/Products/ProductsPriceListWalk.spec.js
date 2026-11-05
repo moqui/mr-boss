@@ -25,7 +25,17 @@ feature("an editor drafts a policy, adds a fixed rule, publishes the reviewed sc
         page.waitFor(() => !document.querySelector("[role=dialog]"))
         page.locator("#PublishPriceList input[name=changeReason]").fill("Browser confirmed scope")
         page.evaluate(() => {
-            window.confirm = () => true
+            // the confirmation is the in-app dialog (moqui.confirmAction): Confirm it each time it opens, until the page reloads
+            if (!window.walkConfirmations) {
+                window.walkConfirmations = new MutationObserver(() => {
+                    for (const button of document.querySelectorAll(".q-dialog-plugin button")) {
+                        if (button.innerText.trim() !== "Confirm" || button.dataset.walkConfirmed) continue
+                        button.dataset.walkConfirmed = "Y"
+                        button.click()
+                    }
+                })
+                window.walkConfirmations.observe(document.body, {childList: true, subtree: true})
+            }
             return true
         }) == true
         page.getByRole("button", {name: "Publish reviewed list", exact: true}).click()

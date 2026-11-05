@@ -42,13 +42,6 @@ feature("an editor moves one category edge, retains the other parent and manages
             },
             {arg: destination}
         )
-        page.evaluate(() => {
-            window.confirm = text => {
-                window.taxonomyConfirmation = text
-                return false
-            }
-            return true
-        }) == true
         const childKey = page.evaluate(
             () =>
                 Array.from(document.querySelectorAll("[data-tree-key]")).find(row => {
@@ -58,10 +51,12 @@ feature("an editor moves one category edge, retains the other parent and manages
         )
         page.locator('[data-tree-key="' + childKey + '"]').focus()
         page.keyboard.press("Shift+Tab")
-        page.waitFor(() => !!window.taxonomyConfirmation)
-        page.evaluate(
-            () => window.taxonomyConfirmation.includes("Industries") && window.taxonomyConfirmation.includes("Services catalog")
-        ) == true
+        // the move asks in the in-app confirmation (moqui.confirmAction), which names both parents; Cancel leaves it
+        page.waitFor(() => !!document.querySelector(".q-dialog-plugin"))
+        const confirmation = page.evaluate(() => document.querySelector(".q-dialog-plugin").innerText)
+        confirmation.includes("Industries") && confirmation.includes("Services catalog")
+        page.locator(".q-dialog-plugin").getByRole("button", {name: "Cancel", exact: true}).click()
+        page.waitFor(() => !document.querySelector(".q-dialog-plugin"))
         const featureId = "P3_BROWSER_F_" + stamp
         page.goto("/qapps/Products/Features/NewFeature")
         page.fill("input[name=productFeatureId]", featureId)
