@@ -429,8 +429,8 @@ feature("a case is its queue's team's and its assignee's; another organization's
 })
 
 // P4: a service level policy is the administrator's to save (SUPPORT_POLICY_EDIT), its list the settings readers' and another
-// organization's refused; a case's clocks are read by the agent of its queue and not by another organization's agent; and
-// ServiceLevelPolicies renders for the administrator (qvt) with the demo policy and New policy
+// organization's refused; a case's clocks are read by the agent of its queue and not by another organization's agent; the
+// settings offer only organizations Mantle's saves take; and ServiceLevelPolicies renders for the administrator (qvt) with the demo policy and New policy
 feature("service levels: the administrator saves a policy and the manager may not; a case's clocks are its organization's", {
     when() {
         const problems = []
@@ -455,6 +455,19 @@ feature("service levels: the administrator saves a policy and the manager may no
             const message = asUser(user, () => refusal(sla + service, parameters), false)
             if (expected === "" ? message !== "" : !message.includes(expected))
                 problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        // the settings offer only organizations Mantle's saves take (F-P4-6: not every internal organization)
+        const offered = asUser(
+            users.admin,
+            () =>
+                invoke("ironstone.customerservice.ConfigurationServices.get#ServiceLevelSettings", {appRoot: "CustomerService"})
+                    .organizations || [],
+            false
+        )
+        if (!offered.some(row => row.value === ids.organizationId)) problems.push("the settings do not offer the organization")
+        for (const row of offered) {
+            const message = asUser(users.admin, () => refusal(sla + "find#Policies", {organizationPartyId: row.value}), false)
+            if (message) problems.push(`the settings offer ${row.value}, which Mantle refuses: ${message}`)
         }
         const page = asUser(users.admin, () =>
             lib.page("Settings/ServiceLevelPolicies", {organizationPartyId: ids.organizationId})

@@ -4,6 +4,7 @@
 // (SUPPORT_POLICY_EDIT, SUPPORT_CASE_MANAGE), which the screens call after the shared context.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const cs = ec.resource.script("component://mr-boss/service/ironstone/customerservice/CustomerService.js")
+const facilityScope = ec.resource.script("component://mr-mantle/service/mantle/facility/FacilityScope.js")
 const {find, one, rows, denied, ms} = lib
 
 const dayText = value => (value == null ? "" : ec.l10n.format(new Date(ms(value)), "d MMM yyyy"))
@@ -23,14 +24,25 @@ function datedRows(entity, conditions) {
     return {current, drafts: all.filter(row => !row.fromDate && !row.thruDate)}
 }
 
+// The organizations whose settings the user works on: of the user's service organizations, those Mantle's saves take
+// (FacilityScope, as mantle.request.SupportCaseServices and SlaServices check them), so the choice never offers one whose
+// saves are refused (F-P4-6: the administrator's every internal organization).
+function settingsIds(userScope) {
+    if (!userScope.settingsIds) {
+        const mantleScope = facilityScope.scope()
+        userScope.settingsIds = cs.vendorIds(userScope).filter(partyId => facilityScope.owns(mantleScope, partyId))
+    }
+    return userScope.settingsIds
+}
 // The organization the settings are of: the one asked for, else the active one, else the user's first.
 function organizationOf(userScope, organizationPartyId) {
-    const ids = cs.vendorIds(userScope)
-    const chosen = organizationPartyId || userScope.activeOrganizationPartyId || ids[0] || null
+    const ids = settingsIds(userScope)
+    const active = ids.includes(userScope.activeOrganizationPartyId) ? userScope.activeOrganizationPartyId : null
+    const chosen = organizationPartyId || active || ids[0] || null
     if (!chosen || !ids.includes(chosen)) denied("RECORD_UNAVAILABLE", "Organization " + (chosen || "") + " is not available")
     return chosen
 }
-const organizationOptions = userScope => cs.vendorIds(userScope).map(partyId => ({value: partyId, label: cs.partyName(partyId)}))
+const organizationOptions = userScope => settingsIds(userScope).map(partyId => ({value: partyId, label: cs.partyName(partyId)}))
 
 // ===== find#ServiceQueues =====
 // The organization's queues as a tree (parents first, each with its depth) with their current service row: visibility,
