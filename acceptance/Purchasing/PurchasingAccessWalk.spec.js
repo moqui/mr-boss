@@ -283,7 +283,8 @@ function records(side) {
     }).returnId
     call("update#mantle.order.return.ReturnHeader", {returnId: out.returnId, supplierRmaId: `${s.text} RMA`})
     // the organization's own purchase price of DEMO_1_1 from its supplier
-    call("create#mantle.product.ProductPrice", {
+    // (ended by cleanupSpec: at 8888.88 it would put the later walks' orders from Brightline in the large approval band)
+    out.productPriceId = call("create#mantle.product.ProductPrice", {
         productId: "DEMO_1_1",
         vendorPartyId: s.supplier,
         customerPartyId: s.org,
@@ -293,7 +294,7 @@ function records(side) {
         priceUomId: "USD",
         minQuantity: 1,
         fromDate: ec.user.nowTimestamp
-    })
+    }).productPriceId
     return out
 }
 
@@ -394,6 +395,13 @@ spec({
     },
     cleanupSpec() {
         ec.message.clearErrors()
+        // the sides' purchase prices end with the walk; the specs after it in a shared database price DEMO_1_1 as before
+        for (const side of ["retail", "services"])
+            if (state[side]?.productPriceId)
+                call("update#mantle.product.ProductPrice", {
+                    productPriceId: state[side].productPriceId,
+                    thruDate: ec.user.nowTimestamp
+                })
         login("john.doe")
         ec.artifactExecution.enableAuthz()
     }
