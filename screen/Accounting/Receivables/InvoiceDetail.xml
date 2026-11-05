@@ -67,13 +67,10 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
     <transition name="financeCreditInvoice">
         <actions>
-            <!-- create#InvoiceCreditMemo checks the finance access itself for a linked credit -->
-            <service-call name="mantle.account.InvoiceServices.create#InvoiceCreditMemo"
+            <service-call name="ironstone.accounting.ReceivableServices.create#InvoiceCredit"
                     out-map="financeResult"
-                    disable-authz="true"
                     in-map="{originalInvoiceId:invoiceId, organizationPartyId:organizationPartyId,
-                        amount:creditAmount, description:description, operationKey:operationKey,
-                        linkToOriginal:true, allocateToLines:true}"/>
+                        amount:creditAmount, description:description, operationKey:operationKey}"/>
         </actions>
         <default-response url="${sharedLinks['Receivables/InvoiceDetail']}">
             <parameter name="recordId" from="financeResult.invoiceId"/>

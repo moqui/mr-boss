@@ -232,4 +232,30 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="fileName" from="screenContext.fileName"/>
         </actions>
     </service>
+    <service verb="create" noun="InvoiceCredit" allow-remote="false">
+        <description>A finance credit linked to its original (mantle.account.InvoiceServices.create#InvoiceCreditMemo
+            with linkToOriginal): the original must be issued and the user hold its side's edit permission in the
+            organization, and the credits of an original stay within its total. The Mantle service is granted to the
+            finance groups only through this one, since without linkToOriginal it makes a credit memo with no finance
+            check (the Java path).</description>
+        <implements service="ironstone.accounting.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="originalInvoiceId" type="String" required="true"/>
+            <parameter name="amount" type="BigDecimal"/>
+            <parameter name="description" type="String"/>
+            <parameter name="allocateToLines" type="Boolean" default="true"/>
+            <parameter name="operationKey" type="String"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="invoiceId" type="String"/>
+            <parameter name="alreadyApplied" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <service-call name="mantle.account.InvoiceServices.create#InvoiceCreditMemo" out-map="context"
+                    disable-authz="true"
+                    in-map="{originalInvoiceId:originalInvoiceId, organizationPartyId:organizationPartyId, amount:amount,
+                        description:description, operationKey:operationKey, linkToOriginal:true,
+                        allocateToLines:allocateToLines}"/>
+        </actions>
+    </service>
 </services>

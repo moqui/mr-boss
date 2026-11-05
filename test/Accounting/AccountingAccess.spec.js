@@ -727,20 +727,16 @@ feature("receivables and treasury: each AR permission refuses the other roles wh
             ["the approver's controls", approver.canDraftEdit === false && approver.canApprove === true, true]
         )
         // a linked customer credit is an AR record and never an AP bill
-        // made with artifact authz off: create#InvoiceCreditMemo is granted through its screen transition only
-        const creditId = lib.asUser(
+        const creditId = as(
             "finance.ar",
             () =>
-                lib.call(invoices + "create#InvoiceCreditMemo", {
+                lib.call("ironstone.accounting.ReceivableServices.create#InvoiceCredit", {
                     ...receivable,
                     originalInvoiceId: ids.finalizedInvoiceId,
                     amount: 5,
                     description: "Credit access fixture",
-                    linkToOriginal: true,
-                    allocateToLines: true,
                     operationKey: "access-credit-" + ec.user.randomString(20)
-                }).invoiceId,
-            false
+                }).invoiceId
         )
         const record = {...receivable, recordId: creditId}
         const records = kind => lib.call("mantle.ledger.AccountingServices.find#Records", {...record, kind}).records
@@ -1189,8 +1185,7 @@ feature("a section a role lacks does not open, and the screens with no logic spe
 
 feature("server choices keep a selected label outside the search page", {
     when() {
-        // the fixtures are made with artifact authz off (create#InvoiceCreditMemo is granted through its screen
-        // transition only), the choices are read with it on
+        // the fixtures are made with artifact authz off, the choices are read with it on
         return lib.asUser(
             "finance.admin",
             () => {
@@ -1220,13 +1215,11 @@ feature("server choices keep a selected label outside the search page", {
                         changeReason: "Prepare a valid selected choice"
                     })
                 finalize(target.invoiceId)
-                const credit = lib.call(service + "create#InvoiceCreditMemo", {
+                const credit = lib.call("ironstone.accounting.ReceivableServices.create#InvoiceCredit", {
                     organizationPartyId: org,
                     originalInvoiceId: target.invoiceId,
                     amount: 5,
                     description: "Choice customer credit",
-                    linkToOriginal: true,
-                    allocateToLines: true,
                     operationKey: "choice-credit-" + ec.user.randomString(20)
                 })
                 finalize(credit.invoiceId)

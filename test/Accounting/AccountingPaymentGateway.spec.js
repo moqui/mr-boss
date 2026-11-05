@@ -80,7 +80,7 @@ feature("the gateway dialogs send only the action, reason and a refund's amount"
     }
 })
 
-feature("treasury reviews and confirms an authorization and a capture; the review and its answer render in every mode", {
+feature("treasury reviews and confirms an authorization and a capture; the review and its answer render", {
     when() {
         const paymentId = promised()
         return app.asUser("finance.treasury", () => {
@@ -97,14 +97,14 @@ feature("treasury reviews and confirms an authorization and a capture; the revie
                 }),
                 preview = app.call(native + "preview#PaymentGatewayAction", input),
                 parameters = {paymentId, previewId: preview.previewId, previewKind: "gateway"},
-                reviewPages = ["qvt", "tui", "html"].map(mode => app.page("Payments/PaymentDetail/Review", parameters, mode)),
+                reviewPages = [app.page("Payments/PaymentDetail/Review", parameters, "qvt")],
                 context = app.call(
                     "ironstone.accounting.PaymentScreenServices.get#PaymentReviewContext",
                     Object.assign({organizationPartyId: org}, parameters)
                 ),
                 first = app.call(native + "execute#PaymentGatewayAction", context.paymentReview.confirmParameters),
                 retry = app.call(native + "execute#PaymentGatewayAction", context.paymentReview.confirmParameters),
-                resultPages = ["qvt", "html"].map(mode => app.page("Payments/PaymentDetail/Review", parameters, mode)),
+                resultPages = [app.page("Payments/PaymentDetail/Review", parameters, "qvt")],
                 after = app.call(native + "get#PaymentFinanceDetail", {organizationPartyId: org, paymentId})
             return {detail, context, reviewPages, first, retry, resultPages, after}
         })

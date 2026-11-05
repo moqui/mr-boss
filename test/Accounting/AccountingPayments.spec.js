@@ -268,9 +268,10 @@ feature("payment list and all seven tabs render actual authorized fields in QVT 
                 ["Payments/PaymentDetail/History", "Payment history"],
                 ["Payments/GatewayTransactions", "Gateway transactions"]
             ]
+            // the Refunds tab's qvt render is AccountingPaymentRefunds'; its tui render is here
             return {
                 renders: paths.flatMap(([path, caption]) =>
-                    ["qvt", "tui"].map(mode => ({
+                    (path.endsWith("/Refunds") ? ["tui"] : ["qvt", "tui"]).map(mode => ({
                         caption,
                         result: helper.page(
                             path,
@@ -283,7 +284,7 @@ feature("payment list and all seven tabs render actual authorized fields in QVT 
         })
     },
     then({renders}) {
-        renders.length == 18
+        renders.length == 17
         renders.every(row => row.result.status === 200 && !row.result.errors.length && row.result.output.includes(row.caption))
     }
 })
@@ -529,44 +530,32 @@ feature("a completed payment owned by #user renders authorized posting reference
                     lastStandalone: "-4"
                 },
                 presented = helper.call(reviewService, parameters).paymentReview
-            // The real app mount supplies its authorized shared links and resolves //Accounting destinations.
-            const pages = ["qvt", "tui", "html"].map(mode => {
-                const renderer = ec.screen.makeTest().rootScreen("component://webroot/screen/webroot.xml").renderMode(mode)
-                if (mode === "qvt") renderer.withStaticData()
-                // the shell loads a qvt tab on its own, so the qvt render is the review alone
-                const rendered = renderer.render(
-                        "apps/Accounting/Payments/PaymentDetail/Review",
-                        mode === "qvt" ? Object.assign({}, parameters, {lastStandalone: "true"}) : parameters,
-                        null
-                    ),
+            // The real app mount supplies its authorized shared links and resolves //Accounting destinations. Review
+            // has no template of its own in any mode, so it renders once, in qvt; the shell loads a qvt tab on its own,
+            // so the render is the review alone.
+            const pages = ["qvt"].map(mode => {
+                const rendered = ec.screen
+                        .makeTest()
+                        .rootScreen("component://webroot/screen/webroot.xml")
+                        .renderMode(mode)
+                        .withStaticData()
+                        .render(
+                            "apps/Accounting/Payments/PaymentDetail/Review",
+                            Object.assign({}, parameters, {lastStandalone: "true"}),
+                            null
+                        ),
                     output = String(rendered.output || ""),
                     links = []
-                let postingGridPresent = false,
-                    effectGridPresent = false
-                if (mode === "tui") {
-                    const pending = [JSON.parse(output)]
-                    while (pending.length) {
-                        const value = pending.pop()
-                        if (Array.isArray(value)) pending.push(...value)
-                        else if (value && typeof value === "object") {
-                            if (value.t === "link") links.push(value)
-                            if (value.t === "formList" && value.name === "ReviewPostingResults") postingGridPresent = true
-                            if (value.t === "formList" && value.name === "ReviewEffects") effectGridPresent = true
-                            pending.push(...Object.values(value).filter(item => item && typeof item === "object"))
-                        }
-                    }
-                } else {
-                    postingGridPresent = /\bid="ReviewPostingResults[^"]*_table"/.test(output)
+                const postingGridPresent = /\bid="ReviewPostingResults[^"]*_table"/.test(output),
                     effectGridPresent = /\bid="ReviewEffects[^"]*_table"/.test(output)
-                    for (const match of output.matchAll(/<(a|m-link)\b([^>]*)>([\s\S]*?)<\/\1>/g)) {
-                        const href = match[2].match(/\bhref="([^"]*)"/)
-                        if (href)
-                            links.push({
-                                text: match[3],
-                                url: href[1].replace(/&amp;/g, "&"),
-                                disabled: /\baria-disabled="true"|\bclass="[^"]*\bdisabled\b/.test(match[2])
-                            })
-                    }
+                for (const match of output.matchAll(/<(a|m-link)\b([^>]*)>([\s\S]*?)<\/\1>/g)) {
+                    const href = match[2].match(/\bhref="([^"]*)"/)
+                    if (href)
+                        links.push({
+                            text: match[3],
+                            url: href[1].replace(/&amp;/g, "&"),
+                            disabled: /\baria-disabled="true"|\bclass="[^"]*\bdisabled\b/.test(match[2])
+                        })
                 }
                 return {
                     mode,

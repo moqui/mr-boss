@@ -27,13 +27,11 @@ feature("the payables screens render in #mode for AP", {
                 ["Payables/ExpensePosting", {}, "Expense posting"],
                 ["Payables/Supplier360", {supplierPartyId: supplier}, "Accounting Demo Supplier"],
                 ["Payables/Supplier360/Terms", {supplierPartyId: supplier, lastStandalone: "true"}, "Net 30 days"],
-                ["Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "Bill from order"],
                 ["Records/ShipmentDetail", {shipmentId: "BOSS_ACCT_NO_SHIPMENT"}, "Shipment not available"],
                 ["Records/ShipmentDetail", {shipmentId: lib().receivedShipmentId()}, "Bill accepted receipts"],
                 ["Approvals", {}, "Approvals"]
             ]
-                // OrderDetail's qvt render is AccountingCollections'; its tui render is here
-                .filter(([path]) => mode == "tui" || path != "Records/OrderDetail")
+                // OrderDetail (its purchase order's Bill from order too) is rendered by AccountingCollections
                 .map(([path, parameters, text]) => {
                     const page = lib().page(path, parameters, mode)
                     return {path, status: page.status, errors: page.errors, found: page.output.includes(text)}

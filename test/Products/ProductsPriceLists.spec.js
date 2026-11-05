@@ -87,14 +87,14 @@ feature("a reader cannot write rules through the native service the shared scree
         native.error.includes("not available")
     }
 })
+// One render per mode, and a second mode only where the screen has its own template: PriceLists has qvt and tui
+// sections, PricingSettings none. PriceListDetail and PriceExplain are rendered in each of their modes by ProductsFinish.
 const cases = [
-    ["Prices/PriceLists", {}],
-    ["Prices/PriceLists/PriceListDetail", {priceListId: "BOSS_PRICE_LIST"}],
-    ["Prices/PriceExplain", {productId: "BOSS_PRD_OWN", organizationPartyId: "ORG_ZIZI_SERVICES"}],
-    ["Settings/PricingSettings", {organizationPartyId: "ORG_ZIZI_SERVICES"}]
+    ["Prices/PriceLists", {}, ["qvt", "tui"]],
+    ["Settings/PricingSettings", {organizationPartyId: "ORG_ZIZI_SERVICES"}, ["qvt"]]
 ]
 feature("price-list screen #path renders its populated data in #mode", {
-    where: cases.flatMap(([path, parameters]) => ["qvt", "html", "html-print", "tui"].map(mode => ({path, parameters, mode}))),
+    where: cases.flatMap(([path, parameters, modes]) => modes.map(mode => ({path, parameters, mode}))),
     expect({path, parameters, mode}) {
         const result = as("john.doe", () =>
             ec.screen

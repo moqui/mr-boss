@@ -301,3 +301,54 @@ feature("an invoice's header colors its status, links its print and leaves the w
         customer.output.includes("Last payment")
     }
 })
+
+// InvoiceDetail's Credit runs ironstone.accounting.ReceivableServices.create#InvoiceCredit with artifact authorization on:
+// AR, who edits receivables, makes a credit linked to the issued invoice; a reader makes none. Mantle's
+// create#InvoiceCreditMemo is not granted to the finance groups, since its unlinked path has no finance check.
+feature("AR credits an issued invoice from its detail with authorization on; a reader is refused", {
+    when() {
+        const credit = (user, description) =>
+            helper.asUser(user, () => {
+                const str = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render(
+                        "apps/Accounting/Receivables/InvoiceDetail/financeCreditInvoice",
+                        {
+                            organizationPartyId: ids.organizationPartyId,
+                            invoiceId: ids.finalizedInvoiceId,
+                            creditAmount: "1",
+                            description,
+                            operationKey: "credit-transition-" + ec.user.randomString(20)
+                        },
+                        "post"
+                    )
+                const errors = Array.from(str.errorMessages || []).join(" | ")
+                ec.message.clearErrors()
+                return errors
+            })
+        const made = description =>
+            ec.entity
+                .find("mantle.account.invoice.Invoice")
+                .condition("creditForInvoiceId", ids.finalizedInvoiceId)
+                .condition("description", description)
+                .disableAuthz()
+                .list()
+        const arDescription = "Transition credit " + ec.user.randomString(8),
+            readerDescription = "Reader credit " + ec.user.randomString(8)
+        return {
+            arErrors: credit("finance.ar", arDescription),
+            readerErrors: credit("finance.read", readerDescription),
+            arCredits: made(arDescription),
+            readerCredits: made(readerDescription)
+        }
+    },
+    then({arErrors, readerErrors, arCredits, readerCredits}) {
+        arErrors == ""
+        arCredits.length == 1
+        arCredits[0].invoiceTypeEnumId == "InvoiceCreditMemo"
+        arCredits[0].financeDirection == "receivable"
+        readerErrors != ""
+        readerCredits.length == 0
+    }
+})

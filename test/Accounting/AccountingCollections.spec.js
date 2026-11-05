@@ -35,7 +35,14 @@ feature("the collections, credit and recurring screens render in #mode", {
                 {customerPartyId: "BOSS_ACCT_CREDIT", lastStandalone: "true"},
                 heldOrder
             ],
-            ["finance.approve", "Records/OrderDetail", {orderId: heldOrder}, "Release hold"],
+            // OrderDetail has no tui template of its own, so it renders in qvt only: the held order for the approver,
+            // and a purchase order for AP, whose primary action is Bill from order
+            ...(mode == "qvt"
+                ? [
+                      ["finance.approve", "Records/OrderDetail", {orderId: heldOrder}, "Release hold"],
+                      ["finance.ap", "Records/OrderDetail", {orderId: "BOSS_ACCT_PO"}, "Bill from order"]
+                  ]
+                : []),
             ["finance.admin", "Settings/CollectionPolicies", {}, "A friendly reminder"],
             ["finance.read", "Reports/Aging", {}, "Granite Peak Supply"]
         ]
@@ -46,14 +53,17 @@ feature("the collections, credit and recurring screens render in #mode", {
             })
         )
         // AR sees the hold but cannot release it; the reader sees the aging but no contact dialog
-        const arOrder = lib().asUser("finance.ar", () => lib().page("Records/OrderDetail", {orderId: heldOrder}, mode).output)
+        const arOrder =
+            mode == "qvt" ? lib().asUser("finance.ar", () => lib().page("Records/OrderDetail", {orderId: heldOrder}, mode).output) : null
         const readCollections = lib().asUser("finance.read", () => lib().page("Receivables/Collections", {}, mode).output)
         return {rows, arOrder, readCollections}
     },
-    then({rows, arOrder, readCollections}) {
+    then({rows, arOrder, readCollections, mode}) {
         rows.filter(row => row.status != 200 || row.errors.length || !row.found).map(row => row.path) == []
-        arOrder.includes("On hold")
-        !arOrder.includes("Release hold")
+        if (mode == "qvt") {
+            arOrder.includes("On hold")
+            !arOrder.includes("Release hold")
+        }
         readCollections.includes("Granite Peak Supply")
         !readCollections.includes("Record contact")
     }

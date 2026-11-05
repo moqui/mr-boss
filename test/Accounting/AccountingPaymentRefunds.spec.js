@@ -173,6 +173,7 @@ feature("a refund through the gateway dialog delivers a refund payment linked to
         refunded.refundStatusId == "PmntDelivered"
         after.refundRows.some(row => row.paymentId == refunded.refundPaymentId)
         after.refundSummaryRows.find(row => row.label == "Available to refund").amount == 18
+        page.output.includes("Linked refunds")
         page.output.includes(refunded.refundPaymentId)
     }
 })
