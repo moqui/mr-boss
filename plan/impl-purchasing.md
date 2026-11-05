@@ -3412,6 +3412,12 @@ Left for the lead: the drop-down checks of the walk have no own-side control.
   rest is the other specs' growth over the build (more demo data and SECAs for them to meet) and run-to-run variance
   (the same mr-mantle specs took 267 s and 363 s in two runs an hour apart), not Purchasing's own specs, so it is left
   as a warning for the user's call rather than folded into the share.
+- **Acceptance (Nov 4, on master after the budgets):** `./moq accept` mr-mantle 6 passed; mr-pass 25 and 5 (2
+  ignored, as before) passed; mr-boss 166 client features passed, server 331 passed and 3 failed, all from earlier
+  walks' data in the shared database, none a code bug: PurchasingAwardWalk's purchase block left Brightline's profile
+  with no approval status (it now keeps it), and PurchasingAccessWalk left its marked Brightline prices in effect, which
+  put later walks' orders in the two-step approval band and swelled PerformanceWalk's billed spend (it now ends them,
+  and PerformanceWalk counts its own bill). After the fixes the mr-boss server acceptance suite passes, 343 of 343.
 
 ## 4. Decisions
 
