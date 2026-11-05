@@ -1985,12 +1985,18 @@ reserved, picked, shipped or invoiced; the walk restores salesInvoiceFinalizedAt
   reopen of the same order. `orderOf` with a lock now locks the order's shipments (by its ShipmentItemSources, in id order)
   before the order, so a concurrent pick, pack or reopen either commits before the checks, which then answer
   STOCK_CHANGED, or waits for the change.
+- **R2 (medium, Mantle; at the lead's request)** `hold#Order` and `release#OrderHold` locked the order header, then the
+  part, the reverse of Warehouse's `lockOrders` (F294: the parts, then the header), so a Credit or Change hold could
+  deadlock against a pack or reopen of the order. Both now lock the order's parts (the one named, else all, in sequence)
+  before the header, their behaviour otherwise unchanged; apply's `orderOf` takes the parts after the shipments, so the
+  hold it places inside apply takes nothing new. AccountingCredit, PurchaseHoldPermission, PurchaseRevisions, OrderChanges,
+  WarehousePacking, WarehousePicking and OrderToCashBasicFlow pass (84 features).
 - Left for the lead: F-P10-7 is the framework's design, not a P10 bug: `HostFind`'s chain methods
   (`crates/moqui-core/src/script/runtime/entities.rs`, `take_find`) take the inner find and return a new object, so
   Java-style `q.condition(...); q.list()` fails loudly ("entity find was already used") where Java's mutable EntityFind
-  works; returning the same object with the find changed in place would make both styles work. `hold#Order` locks the
-  header then the part and Warehouse's `lockOrders` the part then the header (master, not P10's): a Credit hold placed
-  while Warehouse reopens the order can deadlock. A customer filer's `get#OrderChange` is scoped to the user's
+  works; returning the same object with the find changed in place would make both styles work. Callers that lock the
+  order header themselves before hold#Order (PurchaseOrders.js `purchaseOrder(orderId, true)` for the purchase revisions,
+  several OrderServices verbs) still take the header first. A customer filer's `get#OrderChange` is scoped to the user's
   organizations and shows the decisions' reasons and approvers; P15's Support app needs its own audience read.
 
 ### P11 — Warranty
