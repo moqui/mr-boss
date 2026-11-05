@@ -39,6 +39,17 @@ const enumText = enumId => cs.enumText(enumId)
 const ownerCondition = (query, userScope, field = "organizationPartyId") =>
     userScope.ownerIds ? query.condition(field, "in", userScope.ownerIds) : query
 
+// The case's CaseDetail link when the user may open it (the scope read once for a list), else null.
+function caseLink(userScope, requestId) {
+    try {
+        cs.recordOf(userScope, "case", requestId)
+        return cs.recordUrl("case", requestId)
+    } catch (error) {
+        ec.message.clearErrors()
+        return null
+    }
+}
+
 // ===== the forms (the survey builder's Customer Service list) =====
 // A form's published periods: each date a field or option of it started, oldest first, with the date the next one started.
 function periodsOf(formId) {
@@ -276,7 +287,7 @@ function findCaseResponses(p) {
     )
     const listed = kept.slice(0, LIST_LIMIT).map(row => {
         const request = requestOf(row.recordId)
-        const caseUrl = cs.recordLink ? cs.recordLink("case", row.recordId) : null
+        const caseUrl = caseLink(userScope, row.recordId)
         const followUp = followUps.get(row.invitationId)
         return {
             invitationId: row.invitationId,
@@ -362,7 +373,7 @@ function getCaseResponse(p) {
         return {fieldName: field.fieldName, title: field.title, valueText}
     })
     const request = one(REQUEST, {requestId: invitation.recordId})
-    const caseUrl = cs.recordLink("case", invitation.recordId)
+    const caseUrl = caseLink(userScope, invitation.recordId)
     const rating = feedback.ratingOf(fields)
     const teamOptions = followUp?.teamPartyId
         ? lib
