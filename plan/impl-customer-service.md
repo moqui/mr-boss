@@ -2814,6 +2814,15 @@ consent, the notice naming no comment); no per-agent ranking; leanness.
   is tried again on the next runs as an unsent mail is, up to three tries. The expiry sweep marks each row in its own catch,
   naming a failing invitation and going on. CaseFeedback reran with BOSS loaded, and SupportAccess: pass.
 
+- **Wave 6 suites (Nov 5, on master after P11 and P13 merged, nothing else running):** standalone mr-mantle 1,741
+  passed, 3 failed, 11 skipped: the baseline WorkTimeEntries and WorkTimesheets (they read mr-boss demo data, IRON-3 and
+  the BOSS demo's line manager, so they fail where mr-mantle runs alone and pass with mr-boss), and ProductionShopFloor,
+  whose reopen check read its labor events with no order (now by id; mr-mantle 5270735f); `./moq test-apps` 3,066 server
+  features passed and 1 failed (AccountingPayables expected ZIZI_PORTAL's mounts and links before P13 added the Support
+  mount and the demo's feedback link; mr-boss a14bd353), 14 client features passed; within every budget (server:
+  mr-mantle 323.1 of 335 s, mr-boss 230.7 of 245 s, mr-pass 12.3 of 15 s; client: mr-boss 41.9 of 44 s); `moqui lint
+  --screens` clean.
+
 ### P14 — Reports
 
 Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases before recorded.
