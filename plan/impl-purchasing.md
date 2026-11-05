@@ -3046,6 +3046,10 @@ withheld as null and "Withheld", never zero; Commitments' stage arithmetic again
   incomplete); SupplierStatement reads bills and payments from the beginning, oldest first, to carry the opening balance, so
   a supplier with over 5,000 of them shows an incomplete period (flagged) where an aggregated opening balance would not; an
   evaluation's price variance reads every billing of the supplier's (up to 5,000) orders before the period filter.
+- **Wave 9 suites (Nov 4, on master after P15 merged, run alone):** standalone mr-mantle 1,653 passed, 2 failed (the
+  baseline), 11 skipped; `./moq test-apps` 2,930 server and 14 client features passed, none failed; feature time mr-mantle
+  346 of 300 s in the apps run (283 s standalone), mr-boss 250 of 220 s server and 41 of 36 s client, mr-pass 14 of 15 s:
+  warnings, for the end's measured budget; no spec over 15 s; `moqui lint --screens` clean.
 
 ### P16 — Supplier portal
 
