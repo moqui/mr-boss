@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commitments (design-purchasing §11 Commitments; style-guide §3.12 Report; impl-purchasing P15): CommitmentsOptions
+    (organization, supplier, stage, commitment dates, open or every commitment) and CommitmentsRows
+    (ironstone.purchasing.ReportServices.get#PurchaseCommitments over Accounting's BudgetCommitment): each request
+    reservation, purchase order commitment and actual with its source, supplier, account, status and open or actual
+    amount, a reservation's part its order converted and an order's part its bill converted left out, so a reservation, its
+    order and its actual count once; totals of reserved, ordered and actual per currency. Amounts are a financial reader's;
+    others see them withheld. Warn and Stop are the budget policy's (Accounting). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Commitments" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="stageEnumId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="view"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#PurchaseCommitments" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, supplierPartyId:supplierPartyId || null,
+                stageEnumId:stageEnumId || null, fromDate:fromDate || null, thruDate:thruDate || null, view:view || 'open'}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#PurchaseCommitments" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="commitmentRows" from="answer?.commitmentRows || []"/>
+        <set field="totalRows" from="answer?.totalRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['commitmentRows' + key] = answer['commitmentRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+        <set field="stageOptions" from="[{value:'BcsRequest', label:'Request'}, {value:'BcsOrder', label:'Purchase order'},
+                {value:'BcsExpense', label:'Actual'}]"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Commitments" type="h5"/>
+                <label text="Budget commitments of purchase requests, purchase orders and bills: a reservation, its order and its actual count once, each at the stage it is at."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="CommitmentsOptions" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="supplierPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="stageEnumId">
+                <default-field title="Stage">
+                    <drop-down allow-empty="true">
+                        <list-options list="stageOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="view">
+                <default-field title="Show">
+                    <drop-down>
+                        <option key="open" text="Open and actual"/>
+                        <option key="all" text="Every commitment"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="supplierPartyId"/>
+                    <field-ref name="stageEnumId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="view"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The commitments report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+        <section name="CommitmentTotalsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Totals by currency"/>
+                    <box-body-nopad>
+                        <label text="No commitment for these choices." type="p" style="q-pa-md m-muted" condition="!totalRows.length"/>
+                        <form-list name="CommitmentTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="reservedText" align="right"><default-field title="Reserved by requests"><display/></default-field></field>
+                            <field name="orderedText" align="right"><default-field title="Committed by orders"><display/></default-field></field>
+                            <field name="actualText" align="right"><default-field title="Actual"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="currencyUomId"/>
+                                    <field-ref name="reservedText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="orderedText"/>
+                                    <field-ref name="actualText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="CommitmentRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Commitments"/>
+                    <box-body-nopad>
+                        <label text="No commitment for these choices." type="p" style="q-pa-md m-muted" condition="!commitmentRows.length"/>
+                        <form-list name="CommitmentsRows" list="commitmentRows" skip-form="true" paginate="true" select-columns="true">
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <link url="${sourceUrl}" url-type="plain" text="${sourceText}" link-type="anchor" condition="sourceUrl"/>
+                                    <label text="${sourceText}" condition="!sourceUrl"/>
+                                </default-field>
+                            </field>
+                            <field name="stageText"><default-field title="Stage"><display/></default-field></field>
+                            <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                            <field name="glAccountId"><default-field title="Account"><display/></default-field></field>
+                            <field name="commitmentDateText"><default-field title="Date"><display/></default-field></field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="openText" align="right"><default-field title="Open"><display/></default-field></field>
+                            <field name="actualText" align="right"><default-field title="Actual"><display/></default-field></field>
+                            <field name="decisionText"><default-field title="Budget decision"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="sourceText"/>
+                                    <field-ref name="stageText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="openText"/>
+                                    <field-ref name="actualText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

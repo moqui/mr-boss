@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Scorecards (design-purchasing §11 Scorecards; impl-purchasing P15): ScorecardFind (organization, supplier, result, a score
+    below, the latest of each supplier or every evaluation) and ScorecardList (ironstone.purchasing.ReportServices
+    find#SupplierScorecards: each supplier's period, result, score, the four measures with their numerators and denominators,
+    the response it drew, linking to ScorecardDetail), with the report's snapshot, filters, what it left out and its CSV export.
+    EvaluateSuppliers (a SUPPLIER_SCORECARD_EDIT holder) evaluates the suppliers chosen, or every supplier with a receipt in
+    the period, through mantle.party.SupplierServices.evaluate#SupplierScorecard, a result per supplier: Insufficient data is
+    never a zero score, and a recalculation is a new evaluation beside the earlier one. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Scorecards" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="resultEnumId"/>
+    <parameter name="scoreBelow"/>
+    <parameter name="view"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="evaluateSuppliers">
+        <actions>
+            <if condition="evaluateSupplierPartyId">
+                <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'supplier', recordId:evaluateSupplierPartyId}"/>
+            </if>
+            <service-call name="mantle.party.SupplierServices.evaluate#SupplierScorecard" out-map="evaluated"
+                    in-map="{organizationPartyId:evaluateOrganizationPartyId || null, supplierPartyId:evaluateSupplierPartyId || null,
+                        periodFromDate:periodFromDate || null, periodThruDate:periodThruDate || null, operationKey:operationKey || null}"/>
+            <set field="failedText" from="(evaluated.resultRows || []).filter((row) =&gt; row.errorText)
+                    .map((row) =&gt; row.supplierName + ': ' + row.errorText).join('; ')"/>
+            <message type="success">Evaluated ${evaluated.evaluatedCount} suppliers</message>
+            <if condition="failedText">
+                <message type="warning">Not evaluated: ${failedText}</message>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="organizationPartyId"/>
+            <parameter name="view"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.find#SupplierScorecards" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, supplierPartyId:supplierPartyId || null,
+                resultEnumId:resultEnumId || null, scoreBelow:scoreBelow || null, view:view || 'latest'}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.find#SupplierScorecards" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="scorecardRows" from="answer?.scorecardRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['scorecardRows' + key] = answer['scorecardRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+        <set field="evaluateValue" from="{evaluateOrganizationPartyId:organizationPartyId || purchasing.activeOrganizationPartyId || null,
+                operationKey:'score-' + (ec.user.userId || '') + '-' + Number(ec.user.nowTimestamp)}"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Supplier scorecards" type="h5"/>
+                <label text="On-time delivery from the first acknowledged date, else the required date; quality from rejections and inspection dispositions; price variance and RFQ response. Under the minimum sample a supplier has insufficient data and draws no response."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <container-dialog id="EvaluateSuppliersDialog" button-text="Evaluate suppliers" icon="sym_o_calculate" type="primary"
+                        width="640" title="Evaluate suppliers" condition="answer?.canEvaluate">
+                    <form-single name="EvaluateSuppliers" transition="evaluateSuppliers" map="evaluateValue">
+                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                        <field name="evaluateOrganizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:evaluateOrganizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="evaluateSupplierPartyId">
+                            <default-field title="Supplier" tooltip="Empty: every supplier with a receipt in the period">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'suppliers', selected:evaluateSupplierPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="periodFromDate">
+                            <default-field title="From" tooltip="Empty: the scorecard policy's period before the end">
+                                <date-time type="date"/>
+                            </default-field>
+                        </field>
+                        <field name="periodThruDate">
+                            <default-field title="Through" tooltip="Empty: now"><date-time type="date"/></default-field>
+                        </field>
+                        <field name="submit"><default-field title=""><submit text="Evaluate" type="primary"/></default-field></field>
+                        <field-layout>
+                            <field-row>
+                                <field-ref name="evaluateOrganizationPartyId"/>
+                                <field-ref name="evaluateSupplierPartyId"/>
+                            </field-row>
+                            <field-row>
+                                <field-ref name="periodFromDate"/>
+                                <field-ref name="periodThruDate"/>
+                            </field-row>
+                            <field-ref name="submit"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="ScorecardFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="supplierPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="resultEnumId">
+                <default-field title="Result">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="ScorecardResult"/>
+                                <order-by field-name="sequenceNum"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="scoreBelow">
+                <default-field title="Score below"><text-line size="5"/></default-field>
+            </field>
+            <field name="view">
+                <default-field title="Show">
+                    <drop-down>
+                        <option key="latest" text="The latest of each supplier"/>
+                        <option key="all" text="Every evaluation"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Find"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="supplierPartyId"/>
+                    <field-ref name="resultEnumId"/>
+                    <field-ref name="scoreBelow"/>
+                    <field-ref name="view"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Supplier scorecards are not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+        <section name="ScorecardListSection" condition="reportFound">
+            <widgets>
+                <label text="No supplier has been evaluated yet. Evaluate suppliers scores them over a period." type="p"
+                        style="q-pa-md m-muted" condition="!scorecardRows.length"/>
+                <form-list name="ScorecardList" list="scorecardRows" skip-form="true" paginate="true" select-columns="true">
+                    <field name="supplierName">
+                        <default-field title="Supplier">
+                            <link url="${url}" text="${supplierName}" link-type="anchor" url-type="plain"/>
+                        </default-field>
+                    </field>
+                    <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                    <field name="scoreText">
+                        <default-field title="Score">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${
+                                    WebUtilities.encodeHtml(scoreText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: scoreText})}]]></text>
+                                <text type="html">${scoreText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="eligibleText"><default-field title="Eligible receipts"><display/></default-field></field>
+                    <field name="onTimeText"><default-field title="On time"><display/></default-field></field>
+                    <field name="qualityText"><default-field title="Quality"><display/></default-field></field>
+                    <field name="priceText"><default-field title="Price variance"><display/></default-field></field>
+                    <field name="responseText"><default-field title="RFQ response"><display/></default-field></field>
+                    <field name="effectText">
+                        <default-field title="Response">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${effectColor}">${
+                                    WebUtilities.encodeHtml(effectText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: effectText})}]]></text>
+                                <text type="html">${effectText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="evaluatedText"><default-field title="Evaluated"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="supplierName"/>
+                            <field-ref name="periodText"/>
+                        </column>
+                        <column>
+                            <field-ref name="scoreText"/>
+                            <field-ref name="onTimeText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

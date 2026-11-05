@@ -620,10 +620,10 @@ is unchanged.
 | FinancialInfo | PaymentList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerReceipts |
 | FinancialInfo | OrderList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Orders#CustomerOrders |
 | FinancialInfo | UnpaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills; Shared/Supplier360/Bills (SupplierBillRows; the unpaid summary for a finance reader) (Purchasing P6) |
-| FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierPayments; — Purchasing: the unpaid summary only (Shared/Supplier360/Bills); payments are Accounting's Supplier360 (Purchasing P6) |
+| FinancialInfo | OutgoingPaymentList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierPayments; — Purchasing: the unpaid summary only (Shared/Supplier360/Bills); payments are Accounting's Supplier360 (Purchasing P6); Purchasing/Performance/SupplierStatement#SupplierStatementRows, a finance reader's (Purchasing P15) |
 | FinancialInfo | PurchaseOrderList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | — (not built; Accounting/Payables/Supplier360 lists bills and payments, not purchase orders) |
 | FinancialInfo | PaidInvoiceList | Accounting/Receivables/Customer360; Shared/Customer360; Sales/Accounts/Customer360 | Accounting/Receivables/Customer360/Money#CustomerInvoices |
-| FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills; Shared/Supplier360/Bills (SupplierBillRows) (Purchasing P6) |
+| FinancialInfo | PaidPayablesList | Purchasing/Suppliers/Supplier360; Accounting/Payables/Supplier360; Shared/Supplier360 | Accounting/Payables/Supplier360/Bills#SupplierBills; Shared/Supplier360/Bills (SupplierBillRows) (Purchasing P6); Purchasing/Performance/SupplierStatement#SupplierStatementRows (Purchasing P15) |
 | FindParty | CreatePersonForm | Commons/QuickCreate | Commons/QuickCreate |
 | FindParty | CreatePersonCustForm |  |  |
 | FindParty | CreateEmployeeForm | People/Employees/HireEmployee |  |

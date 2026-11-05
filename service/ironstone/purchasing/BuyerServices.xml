@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     unavailable, never as zero. BuyerWork's sources come the same way. Each phase appends its block. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Home" allow-remote="false">
-        <description>The buyer's counters, each null where it is not counted yet: unsourced requests, RFQs due, quotes to
+        <description>The buyer's counters, each null for a user whose groups do not read it: unsourced requests, RFQs due, quotes to
             compare, quotes expiring, shortfall suggestions (with the plan's run date), approvals waiting, unacknowledged
             orders, late receipts and held bills. Refuses a user without Purchasing.</description>
         <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
@@ -71,12 +71,16 @@ along with this software (see the LICENSE.md file). If not, see
                 the buying policy's warning days, for the buying lists' groups -->
             <set field="counters" from="Object.assign({}, counters, ec.resource.script('component://mr-boss/service/ironstone/purchasing/Sourcing.js')
                     .homeCounts(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope()))"/>
+            <!-- P15: the open RFQs with a proposed quote to compare, for the buying lists' groups -->
+            <set field="counters" from="Object.assign({}, counters, ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .compareCount(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope()))"/>
         </actions>
     </service>
     <service verb="find" noun="BuyerWork" allow-remote="false">
         <description>The buyer's assigned demand and follow-ups, by due date: each row's document, supplier, owner, due
-            date, amount and next action, from the sources the phases add (none yet). Refuses a user without
-            Purchasing.</description>
+            date, amount and next action: the approved orders to send (P3), the approvals waiting for the user (P4), the
+            approved requests to source (P10), the RFQs whose responses are due (P11) and the acknowledgements overdue (P9),
+            due within a week (P15). Refuses a user without Purchasing.</description>
         <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="limit" type="Integer" default="20"/>
@@ -92,6 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
             <!-- P3: the approved purchase orders to send, for a buyer; later phases: P10 requests to source, P11 quotes due -->
             <set field="workRows" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Orders.js')
                     .workRows(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Purchasing.js').scope(), limit)"/>
+            <!-- P15: the approvals waiting, requests to source, RFQs due and acknowledgements overdue (each module's Today
+                source, due within a week), after the orders to send -->
+            <set field="workRows" from="workRows.concat(ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .buyerWork(limit)).slice(0, Math.max(1, Math.min(50, Number(limit) || 20)))"/>
         </actions>
     </service>
 </services>

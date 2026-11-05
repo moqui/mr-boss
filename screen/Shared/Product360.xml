@@ -101,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="History" menu-index="18" menu-include="true" location="component://mr-boss/screen/Shared/Product360/History.xml"/>
         <!-- Warehouse's tab (its get#SharedContext branch lists it): the facility levels -->
         <subscreens-item name="Replenishment" menu-index="19" menu-include="true" location="component://mr-boss/screen/Shared/Product360/Replenishment.xml"/>
+        <!-- Purchasing (impl-purchasing P15): the product's quotes and purchase order lines with their prices -->
+        <subscreens-item name="PurchaseHistory" menu-title="Purchase history" menu-index="20" menu-include="true" location="component://mr-boss/screen/Shared/Product360/PurchaseHistory.xml"/>
     </subscreens>
     <actions>
         <if condition="appRoot == 'Accounting'">

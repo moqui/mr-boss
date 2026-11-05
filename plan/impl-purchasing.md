@@ -265,7 +265,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Comparison and award | Mantle, BOSS | QuoteComparison, Award | built Nov 4, 2026 |
 | P13 Agreements | Mantle, BOSS | Agreements, AgreementDetail | built Nov 4, 2026 |
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026; P14b built Nov 4, 2026 |
-| P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | — |
+| P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | built Nov 4, 2026 |
 | P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | built Nov 4, 2026 |
 | P17 Finish | BOSS | — | — |
 
@@ -2898,6 +2898,116 @@ ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, Purchasi
   - ProcurementTracker follows P10's request through payment, and shows a buyer without finance read the payment rows
     as withheld.
 
+**Built Nov 4 (P15).**
+- Mantle (new files but three appended lines and one rule in the supplier check):
+  - `entity/SupplierScorecardEntities.xml` (`mantle.party.supplier`): `SupplierScorecardPolicy` (organization and fromDate;
+    period days, minimum sample, due-date basis `ScorecardDueDateBasis` SddbAcknowledged or SddbRequired; audit-logged),
+    `SupplierScorecardCriterion` (per `ScorecardMetric` SsmOnTime, SsmQuality, SsmPriceVariance, SsmResponse: weight,
+    target and floor, dated, audit-logged), `SupplierScorecardAction` (a score band and/or a risk severity drawing a
+    `ScorecardEffect` SseWarn, SseReview or SseBlock; dated, audit-logged), the evaluation `SupplierScorecard` (period,
+    policy row, due-date basis, minimum sample, eligible receipts, `ScorecardResult` SsrScored or SsrInsufficient, score,
+    missing data, the action and effect it drew, `previousScorecardId` of a recalculation, operation key),
+    `SupplierScorecardMeasure` (numerator, denominator, eligible and excluded evidence, value, score, weight, target, floor,
+    criterion row) and `SupplierScorecardEvidence` (each receipt, billed line or invitation with its due date and basis,
+    latest promise, event, quantity, counted share, exception or why it was left out), and `SupplierRisk` (severity
+    `SupplierRiskSeverity`, category `SupplierRiskCategory`, owner, from/thru, evidence, response, evaluation; audit-logged).
+  - `service/mantle/party/SupplierScorecardServices.xml`, included in `mantle.party.SupplierServices` by name (seven
+    service-include lines appended), over `SupplierScorecards.js`: `get#ScorecardPolicy`, `store#ScorecardPolicy`,
+    `store#ScorecardCriterion`, `store#ScorecardAction` (PURCHASE_POLICY_EDIT; POLICY_INVALID, POLICY_CHANGED,
+    CRITERION_INVALID, ACTION_INVALID, ACTION_UNAVAILABLE), `evaluate#SupplierScorecard` (SUPPLIER_SCORECARD_EDIT; the named
+    suppliers or every supplier with a receipt in the period, each through `evaluate#OneSupplierScorecard` in its own
+    transaction with a result row; operation key replay; PERIOD_INVALID, SUPPLIER_UNAVAILABLE named per supplier) and
+    `store#SupplierRisk` (SUPPLIER_PROFILE_EDIT; RISK_INVALID, RISK_UNAVAILABLE). Each checks the organization by
+    FacilityScope as the buying policy does. `responseOf()` (for the supplier check) and `onTimeOf()` (for the comparison)
+    check no permission.
+  - The measures (§4): on-time delivery per receipt of a placed order line against the line's first acknowledged date (the
+    first value of the audit-logged `OrderItem.promisedDate`), else its required date, by received quantity, day against
+    day in the user's zone; quality per receipt as received less the dock rejection and the defective dispositions of its
+    inspections (scrap, rework, return to supplier; a rejected result not yet disposed counts as rejected), an undecided
+    inspection leaving the receipt out; price variance per billed line as the absolute billed-to-ordered difference over the
+    ordered amount, in the order's currency; RFQ response per invitation first sent (its first sent email) in the period,
+    answered (OrderProposed) by the RFQ's response date. Each measure scores 100 at its target and 0 at its floor, straight
+    between; the score is the weighted mean of the measures with evidence (built-in weights 40, 30, 20, 10; targets 95%,
+    99%, 0%, 100%; floors 70%, 90%, 10%, 50%). Fewer eligible receipts (on-time evidence) than the minimum sample is
+    Insufficient data, which draws no response.
+  - `PurchasePolicy.js supplierUsable` (check#SupplierUsable and every RFQ, quote, award, PO, agreement and request check
+    built on it): where the organization has a response rule, the latest scored evaluation's effect and each active risk at
+    or above a rule's severity warn (SUPPLIER_SCORE_WARNING, or the message added to an unapproved supplier's warning) or
+    stop (SUPPLIER_SCORE_BLOCKED). With no rule it reads one query and changes nothing (the default, tested).
+  - `Awards.js compare#SupplierQuotes`: each offer's `onTimeText` (the latest evaluation's on-time rate with its sample, or
+    "Not evaluated"), in the CSV too (R-PUR-39; F161 answered).
+  - Spec `test/party/SupplierScorecards.spec.js` (4 features, about 0.5 s).
+- BOSS:
+  - `ironstone.purchasing.ReportServices` (`ReportServices.xml`, `define#ReportAnswer`) over `Reports.js`:
+    `find#SupplierScorecards`, `get#SupplierScorecard`, `get#SupplierPerformance` (Supplier360's tab), `get#PurchaseSpend`,
+    `get#SpendSummary` (Home), `get#PurchaseCommitments`, `get#ProcurementTracker`, `get#PurchaseHistory` and
+    `get#SupplierStatement`. Each needs the buying lists and checks the organization, supplier, product, request or order by
+    Purchasing.js, answers `asOf`/`asOfText`, `filtersText`, `omittedText` and `complete`, and with `output` csv its
+    `csvText` (title, filters, as-of and left-out lines, then the rows; text starting `=`, `+`, `-`, `@`, a tab or CR behind
+    an apostrophe, number columns plain) and `fileName`. Withheld (never zero): ordered and received amounts without supplier
+    price read (Orders.js's rule), bill amounts without it or payables read (Bills.js's rule), payments without finance read
+    (ACCOUNTING_VIEW or PAYABLE_VIEW), commitment amounts without ACCOUNTING_VIEW or ACCOUNTING_ADMIN; the statement is a
+    finance reader's only (PERMISSION_DENIED). Commitments counts each BudgetCommitment at its stage: a reservation's open part
+    (amount less what its children converted), an order's open part and the actuals, so a reservation, its order and its
+    actual count once. Reports.js also gives Home `compareCount` (open RFQs with a proposed quote not expired) and
+    `buyerWork` (the approvals, requests to source, RFQs due and acknowledgements overdue of the modules' Today sources,
+    due within a week), and the tracker's request choice.
+  - Screens: `Performance.xml` (placeholder replaced: tab panel) with `Performance/Scorecards` (ScorecardFind,
+    ScorecardList, Evaluate suppliers), `ScorecardDetail` (record header, Recalculate, Record risk, measures, evidence with
+    its CSV, risks with End, other evaluations), `Spend`, `Commitments`, `ProcurementTracker`, `PurchaseHistory` and
+    `SupplierStatement`; `Settings/ScorecardPolicies` (basis, measures, response rules, history);
+    `template/PurchasingReportParts.xml` (ReportFrame: as of, filters, left out, Export CSV; PurchaseHistoryRows);
+    `Shared/Supplier360/PurchasingPerformance.xml` (Performance tab) and `Shared/Product360/PurchaseHistory.xml` (Purchase
+    history tab; Products' SharedContext.js lists it for Purchasing). QuoteComparison's offers show "On time". Home:
+    SpendSummary (committed and billed of the last three months by month and currency, drilling to Spend), the quotes to
+    compare counted and BuyerWork's sources; every counter of design §3 is counted. Settings links ScorecardPolicies.
+    Purchasing.js: the report link paths, `buyerIds` exported, the `trackerRequests` choice.
+  - Specs: `PurchasingPerformance` (3: Commitments counted once and withheld; Spend's measures apart and withheld, the
+    tracker's payment withheld and shown; ScorecardDetail's qvt render and the scorecards' CSV guard); PurchasingAccess's P15
+    feature (evaluate for the buyer only, an evaluation in its organization only, the statement for a finance reader only)
+    and its Home feature (spend summary, every counter counted). Acceptance `acceptance/Purchasing/PurchasingPerformanceWalk`
+    (6, the usable-when) and AppStructure's route fixtures for the new screens (PurchasingSpecLib.routeFixtures).
+- Decisions:
+  - The plan's two evaluation records are three: SupplierScorecardEvidence keeps the evidence rows (design ScoreEvidence),
+    beside the measures.
+  - The criteria are bounded: a measure's score is linear between its floor and target, with no formula of its own (design
+    ScoreCriteria); an evaluation keeps the response its score drew when it was made, so a rule added later applies from the
+    next evaluation or a recalculation, while a risk rule applies to the active risks at the time of the check.
+  - Report reads are BOSS's (ironstone.purchasing.ReportServices, §2); each export is the report's own CSV transition
+    (`exportCsv`) over the same service, not the form-list's CSV button, so it carries the filters, snapshot time and
+    what was left out (F-P15-1).
+- Findings (provisional):
+  - **F-P15-1** The form-list CSV and XLSX export (ScreenCsv.js `$csv`) quotes but does not guard formula-like text, so a
+    list exported with show-csv-button can carry `=...` from a supplier's name or reference into a spreadsheet; the
+    Purchasing reports guard their own export (Reports.js `csvCell`, as moqui-report's dashboard export does). For the lead:
+    a framework guard in ScreenCsv.js (and the XLSX writer) would cover every list.
+  - **F-P15-2** A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending
+    the rule or the risk (PURCHASE_POLICY_EDIT, SUPPLIER_PROFILE_EDIT) or a newer evaluation: there is no per-document
+    override. ScoreActions has one effect for RFQs and orders alike, and no reviewer role or expiry; Warn and review warns
+    and marks the evaluation, and no follow-up work item is made (§7).
+  - **F-P15-3** RFQ response counts an invitation from its first sent email (EmailMessage ES_SENT): a quote entered on the
+    supplier's behalf with no email sent is not an invitation here. Price variance leaves out a bill in another currency
+    than its order (no conversion) and compares in the order line's unit.
+  - **F-P15-4** Evaluating every supplier (no supplier named) reads the period's receipts (at most 5,000 orders), so a
+    supplier with only RFQ invitations in the period is evaluated only when named.
+  - **F-P15-5** The supplier statement counts bills received for review and later (not Incoming), credits by invoice type
+    (InvoiceCreditMemo, InvoiceReturn) and Delivered or Confirmed payments by effective date, not their applications: a
+    payment not yet applied lowers the balance.
+  - **F-P15-6** The walk follows P10's request through its bill; paying the bill (AP's approval and a payment run) is not
+    driven, so the tracker's payment shows "Not paid" to a payables reader and the bill's actual is Accounting's conversion
+    called directly, as approve#Payable makes it.
+  - **F-P15-7** Spend's received measure is the receipts at the order's price, not landed cost (Accounting's allocation,
+    linked for its users); paid is by applied date and not by product. A withheld measure still lists its groups, so a
+    reader sees which suppliers had spend.
+  - **F-P15-8** Home's counters are all counted now; a Purchasing reader sees no "Unavailable" card (PurchasingAccess's Home
+    check changed with it).
+- Tests run: Mantle SupplierScorecards with PurchasePolicy, Sourcing, SourcingAwards, PurchaseOrders, SupplierPortal and
+  OrderProcureToPayBasicFlow (pass); BOSS PurchasingPerformance, PurchasingAccess, PurchasingSourcing, PurchasingSuppliers,
+  ProductsSharedContext (pass; P15's regression features about 0.9 s); acceptance PurchasingPerformanceWalk (6, pass) and
+  AppStructure. `moqui lint --screens`: no flagged site in the new or changed screens (informational anchors only).
+  `ss-inventory.md`'s FinancialInfo OutgoingPaymentList and PaidPayablesList rows name the statement; no `usl-inventory.md`
+  row is called (the report services are new).
+
 ### P16 — Supplier portal
 
 These are Purchasing's pages in the PASS Supplier app Accounting P18 started in mr-pass (§2, §4), on CX-PORTALS.
@@ -3365,6 +3475,9 @@ Designed, not in this build:
   - from the supplier pages (P16): a buying-policy flag refusing late quote responses (F171); file downloads on
     QuoteResponse and OrderAcknowledgement (F173); OrderDetail's Confirm delivery prefilled from a supplier's
     delivery report, and a subcontract order's dispatch and inspection evidence on its page (F174).
+  - from performance (P15): a response rule's separate RFQ and order effects, reviewer role, expiry and follow-up work
+    item, and a per-document override of a block (F-P15-2); a guard of formula-like text in the form-list CSV and XLSX
+    export (F-P15-1, framework).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse

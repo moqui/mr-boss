@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     display currency, the day of the exchange rates and the compared quantity of the demand line chosen. The split: the demand
     lines (the RFQ items, with what is left to award and the best comparable offer) at left, and the chosen line's offers at
     right (OfferComparison: the original basis beside the normalized price per demand unit, committed amount, freight and
-    estimated landed cost, lead time, validity and risk; Not comparable with its reason, never zero or cheapest; the ranking
+    estimated landed cost, lead time, the supplier's on-time rate from its latest evaluation (P15), validity and risk; Not comparable with its reason, never zero or cheapest; the ranking
     explains and chooses nothing). Phones and the terminal pick a demand line, then its offers. SelectOffer: Add allocation of
     the chosen line's quantities to its selectable offers (a substitute accepted explicitly); the award so far shows each
     line's demanded, selected and remaining quantity, and Review the award opens Award with the allocations. Print and CSV
@@ -307,6 +307,8 @@ along with this software (see the LICENSE.md file). If not, see
                                         </default-field>
                                     </field>
                                     <field name="leadText"><default-field title="Delivery"><display/></default-field></field>
+                                    <!-- P15 (R-PUR-39): the supplier's on-time rate from its latest evaluation, with its sample -->
+                                    <field name="onTimeText"><default-field title="On time"><display/></default-field></field>
                                     <field name="validityText"><default-field title="Valid"><display/></default-field></field>
                                     <field name="riskText">
                                         <default-field title="Risk">

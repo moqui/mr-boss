@@ -136,6 +136,19 @@ function settings(p) {
             owner: "Purchasing",
             url: "/qapps/Purchasing/Settings/ApprovalPolicies"
         },
+        // P15: the supplier scorecard basis, measures and response rules
+        {
+            area: "Scorecard policies",
+            description:
+                "How suppliers are evaluated: the period, minimum sample, measures and the response to a low score or a risk",
+            effectiveText:
+                String(
+                    rows("mantle.party.supplier.SupplierScorecardAction", {organizationPartyId}).filter(row => current(row, at))
+                        .length
+                ) + " response rules in effect",
+            owner: "Purchasing",
+            url: "/qapps/Purchasing/Settings/ScorecardPolicies"
+        },
         {
             area: "Request purposes",
             description: "The purposes a purchase request is filed under, with who handles them",

@@ -17,6 +17,8 @@
 // an RFQ (rfqCreate), an RFQ's scope, its writes for the buyer only, its record link to QuoteRequestDetail and the RFQ left out
 // of Commons and Projects; P12 an RFQ's comparison for its buyers and approvers, its award and close for the buyer only; P16
 // the supplier-response topic, and Supplier360's Invite to the Supplier app for the buyer only, on a supplier in scope.
+// P15: evaluating suppliers for the buyer only, an evaluation read in its organization only, and the supplier statement for a
+// finance reader only.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib
@@ -166,7 +168,7 @@ feature("the Purchasing menu and providers follow each group's areas; the launch
     }
 })
 
-feature("Home shows the reader's counters as unavailable, no work yet, spend unavailable and the lookup of their order", {
+feature("Home shows the reader's counters, no work yet, spend with supplier prices withheld and the lookup of their order", {
     when() {
         return asUser(users.read, () => lib.page("Home", {lookupType: "order", lookupId: ids.orderId}))
     },
@@ -174,12 +176,16 @@ feature("Home shows the reader's counters as unavailable, no work yet, spend una
         status == 200
         errors == []
         output.includes("Unacknowledged orders")
-        output.includes("Unavailable")
+        // P15: every counter is counted (quotes to compare the last)
+        output.includes("Quotes to compare")
+        !output.includes("Unavailable")
         // P3: the purchase order counts are the list groups'
         output.includes("Draft orders")
         output.includes("Approved, not sent")
         output.includes("Nothing is waiting for you.")
-        output.includes("Committed and billed spend is unavailable.")
+        // P15: the spend summary, its committed amounts (supplier prices) withheld from the reader
+        output.includes("Committed and billed, last three months")
+        output.includes("Committed and received amounts are withheld")
         output.includes("Purchase order " + ids.orderId)
         output.includes("Brightline restock")
         // the approver's card is not the reader's
@@ -1114,3 +1120,57 @@ feature("an RFQ's comparison is its buyers' and approvers'; its award and close 
         problems.join("\n") == ""
     }
 })
+
+feature(
+    "P15: evaluating suppliers is the buyer's, an evaluation is its organization's, and the supplier statement a finance reader's",
+    {
+        when() {
+            const S = "mantle.party.SupplierServices."
+            const R = "ironstone.purchasing.ReportServices."
+            const evaluate = user =>
+                asUser(
+                    user,
+                    () =>
+                        refusal(S + "evaluate#SupplierScorecard", {
+                            organizationPartyId: ids.organizationId,
+                            supplierPartyId: ids.supplierId
+                        }),
+                    false
+                )
+            const buyerEvaluate = evaluate(users.buyer)
+            const readerEvaluate = evaluate(users.read)
+            const scorecardId = system(
+                () =>
+                    Array.from(
+                        ec.entity
+                            .find("mantle.party.supplier.SupplierScorecard")
+                            .condition({organizationPartyId: ids.organizationId, supplierPartyId: ids.supplierId})
+                            .orderBy("-evaluatedDate")
+                            .list()
+                    )[0]?.supplierScorecardId
+            )
+            const read = user =>
+                asUser(user, () => refusal(R + "get#SupplierScorecard", {supplierScorecardId: scorecardId || "_NA_"}))
+            const statement = user =>
+                asUser(user, () => refusal(R + "get#SupplierStatement", {supplierPartyId: ids.sharedSupplierId}))
+            return {
+                buyerEvaluate,
+                readerEvaluate,
+                scorecardId,
+                readerRead: read(users.read),
+                otherRead: read(users.services),
+                matchStatement: statement(users.buyMatch),
+                buyerStatement: statement(users.buyer)
+            }
+        },
+        then({buyerEvaluate, readerEvaluate, scorecardId, readerRead, otherRead, matchStatement, buyerStatement}) {
+            buyerEvaluate == ""
+            readerEvaluate.includes("PERMISSION_DENIED")
+            scorecardId != null
+            readerRead == ""
+            otherRead.includes("RECORD_UNAVAILABLE")
+            matchStatement == ""
+            buyerStatement.includes("PERMISSION_DENIED")
+        }
+    }
+)

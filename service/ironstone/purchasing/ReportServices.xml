@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Purchasing's performance reports (design-purchasing §11; impl-purchasing P15; Reports.js): the supplier scorecards and an
+    evaluation's detail (Mantle's SupplierScorecard records), spend, budget commitments, the procurement tracker, purchase
+    history and the supplier statement. Each refuses a user without the buying lists (PERMISSION_DENIED) and an
+    organization, supplier, product or record outside the user's scope (RECORD_UNAVAILABLE), and answers its snapshot time
+    (asOf, asOfText), its filters (filtersText) and what it left out (omittedText, complete). A value the user may not read
+    is left out and named as withheld, never zero. With output csv each answers csvText and fileName: the same rows with
+    the filters, snapshot time and omitted-data warning, formula-like text guarded. The evaluations and risks are written by
+    mantle.party.SupplierServices, which the screens call after AccessServices. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="ReportAnswer" type="interface">
+        <description>The parameters every Purchasing report takes: its organization (every one of the user's when empty), the
+            page, and output csv for the export.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="output"/>
+            <parameter name="pageIndex"/>
+            <parameter name="pageSize"/>
+            <parameter name="pageNoLimit"/>
+        </in-parameters>
+    </service>
+    <service verb="find" noun="SupplierScorecards" allow-remote="false">
+        <description>The evaluations of the user's organizations' suppliers in scope: the latest of each supplier by default
+            (view all for every one), by supplier, result (ScorecardResult) and a score below, newest first; each with its
+            period, result, score (Insufficient data never shown as a zero), the eligible receipts, each measure with its
+            numerator and denominator (price variance amounts withheld from a user who may not read supplier prices), the
+            response it drew and the evaluation time. canEvaluate for a SUPPLIER_SCORECARD_EDIT holder.</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierPartyId"/>
+            <parameter name="resultEnumId"/>
+            <parameter name="scoreBelow"/>
+            <parameter name="view"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('findScorecards', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierScorecard" allow-remote="false">
+        <description>One evaluation: its supplier, organization, period, policy row and due-date basis, result, score and
+            response; its measures with numerator, denominator, eligible and excluded evidence, value, score, weight, range and
+            criterion row; its evidence (a page, by measure) with each source, due date and basis, latest promise, event,
+            quantity, counted share and why it was left out; the supplier's risks with the organization; and its other
+            evaluations, newest first. Refuses an evaluation of another organization or a supplier outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierScorecardId" required="true"/>
+            <parameter name="metricEnumId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('getScorecard', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierPerformance" allow-remote="false">
+        <description>Supplier360's Performance tab: the supplier's latest evaluation with the user's organizations, its
+            measures and the supplier's active risks, and whether the user may evaluate or record a risk. Refuses a supplier
+            outside the scope (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierPartyId" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="latest" type="Map"/>
+            <parameter name="measureRows" type="List"/>
+            <parameter name="riskRows" type="List"/>
+            <parameter name="canEvaluate" type="Boolean"/>
+            <parameter name="canRecordRisk" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="read" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('supplierPerformance', context)"/>
+            <script>ec.context.putAll(read)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PurchaseSpend" allow-remote="false">
+        <description>Purchase spend over a period (90 days to now by default) by supplier, product or month (groupBy) and
+            currency, in four measures never added together: committed (placed purchase order lines less cancelled, by placed
+            date), received (receipts at the order's price), billed (supplier bills by bill date) and paid (payments applied by
+            applied date; not by product), with totals per currency. Committed and received need a supplier-price reader (a
+            buyer, approver, supplier-price or financial reader), billed also a payables reader, paid a finance reader; a
+            measure the user may not read is withheld and named. Landed costs are Accounting's allocation. Refuses a period
+            that ends before it starts or is over two years (PERIOD_INVALID).</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierPartyId"/>
+            <parameter name="productId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="groupBy"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('spend', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SpendSummary" allow-remote="false">
+        <description>Home's SpendSummary: committed and billed spend of the last three months by month and currency, as
+            get#PurchaseSpend, with its snapshot time and what it withheld.</description>
+        <implements service="ironstone.purchasing.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="asOfText"/>
+            <parameter name="omittedText"/>
+            <parameter name="summaryRows" type="List"/>
+            <parameter name="priceRead" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="read" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('spendSummary', context)"/>
+            <script>ec.context.putAll(read)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="PurchaseCommitments" allow-remote="false">
+        <description>The budget commitments (Accounting's BudgetCommitment) of the organizations' purchase requests,
+            purchase orders and bills, each stage once: a request reservation's open part (less what its order converted),
+            the order's open part (less what its bill's actual converted) and the actual, so a reservation, its order and its
+            actual count once; with totals per currency of reserved, ordered and actual. By supplier, stage, commitment
+            date and view (open, the default, or all). Amounts need a financial reader (ACCOUNTING_VIEW or ACCOUNTING_ADMIN);
+            others see the rows with their amounts withheld.</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierPartyId"/>
+            <parameter name="stageEnumId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="view"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('commitments', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ProcurementTracker" allow-remote="false">
+        <description>Each purchase request line through its requirement, RFQ, quotes and award to its purchase order lines,
+            and each order line through its receipts (partly received named), inspections, bills, match and payment; a row
+            per order line, so split suppliers, orders and bills stay apart. For a purchase request, a purchase order, or the
+            period's requests and orders (90 days by default, by supplier). A bill's payment shows to a finance reader only,
+            withheld (never unpaid) for anyone else. Refuses a request or order outside the scope
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="requestId"/>
+            <parameter name="orderId"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('tracker', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="PurchaseHistory" allow-remote="false">
+        <description>A product's buying history over a period (a year by default), by product, supplier and facility: the
+            quotes' lines and each placed purchase order line, the quoted, ordered and billed unit prices kept apart in the
+            document's currency and unit, with the lead time from placing to the first receipt. Prices need a supplier-price
+            reader; others see them withheld.</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="productId"/>
+            <parameter name="supplierPartyId"/>
+            <parameter name="facilityId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('history', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupplierStatement" allow-remote="false">
+        <description>A supplier's statement with the user's organizations over a period (90 days by default), per currency:
+            the opening balance, each bill, credit and payment in date order with the running balance, and the closing
+            balance; no bank details. For a finance reader only (ACCOUNTING_VIEW or PAYABLE_VIEW: PERMISSION_DENIED);
+            refuses no supplier (SUPPLIER_REQUIRED) and one outside the scope (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.purchasing.ReportServices.define#ReportAnswer"/>
+        <in-parameters>
+            <parameter name="supplierPartyId"/>
+            <parameter name="currencyUomId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="answer" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/Reports.js')
+                    .execute('statement', context)"/>
+        </actions>
+    </service>
+</services>

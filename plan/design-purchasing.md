@@ -981,6 +981,8 @@ recipient's authority and cannot expose finance data withheld by these source re
 
 **Actions and states.** Low volume or unavailable evidence is Insufficient data, never a zero score silently converted to a block. An evaluation is a record of its own, keeping the policy row it applied; recalculation creates a new evaluation and the earlier one stays, and previous approved decisions retain their evaluated basis (impl-purchasing §2). Risk actions link a follow-up and policy decision; no score alone cancels orders.
 
+As built (impl-purchasing P15): an evaluation is `mantle.party.supplier.SupplierScorecard` with a `SupplierScorecardMeasure` per measure and its `SupplierScorecardEvidence` rows; EvaluateSuppliers evaluates the suppliers chosen, or every supplier with a receipt in the period, each in its own transaction with a named result. An evaluation keeps the response its score drew when it was made; a response rule added later applies from the next evaluation or a recalculation (F-P15-2).
+
 
 
 **Source.** research §9; `frappe/erpnext/erpnext/buying/doctype/supplier_scorecard/supplier_scorecard.json` weights, criteria and warn/prevent flags.
@@ -1000,6 +1002,8 @@ recipient's authority and cannot expose finance data withheld by these source re
 | SupplierRisk | dialog | Record actionable risk and response | supplier, organization, severity, category, owner, effective/expiry, evidence, action/reason | existing work-item link | proposed `mantle.party.SupplierServices.store#SupplierRisk` | Carbon supplier risk evaluation |
 
 **Actions and states.** OTD measures against the committed delivery date, the first supplier-acknowledged line date when an acknowledgement exists, else the PO line `OrderItem.requiredByDate`, with the latest supplier promise shown separately; it counts receipt events per line, not shipments, by AssetReceipt.receivedDate, weighted by eligible ordered/received quantity; exclude cancelled remainder explicitly. Five eligible receipts is the ScorePolicy default minimum before a weighted score can drive a block, editable per policy (impl-purchasing §4). Quality score uses dispositions, including rejected quantity, not shipment delivered status. Price variance compares agreed price versus billed amount in a documented UOM/FX basis. Response time starts at successful invitation delivery. Each measure exposes missing/late evidence; corrections produce a new evaluation. Proposed procurement blocks are scoped, reasoned and overridable only by policy capability.
+
+As built (impl-purchasing P15): the first acknowledged date is the first audit-logged value of the line's promised date; quality is the received quantity less the dock rejection and the scrap, rework and return-to-supplier dispositions of its inspections (an undecided inspection leaves its receipt out, use as is counts good); price variance is the absolute billed-to-ordered difference over the ordered amount in the order's currency and line unit (a bill in another currency is left out, F-P15-3); response counts an invitation from its first sent email and answered by the RFQ's response date. A block's override is ending its rule or the risk, or a newer evaluation; there is no per-document override (F-P15-2).
 
 
 
@@ -1182,6 +1186,8 @@ later steps wait. Bands of one scope meet or are the same. A band applies in its
 | ScoreActions | list, editable rows | Configure warning/review/block response | score/risk band, RFQ/PO effect, reviewer role, expiry, override reason rule | preview against prior period | proposed `mantle.party.SupplierServices.store#ScorecardAction` | ERPNext warn_rfqs/warn_pos/prevent flags |
 
 **Actions and states.** Default response is warn and assign review; blocking needs explicit approved rule, adequate data and authorized override path. Unsupported arbitrary score formulas and external risk feeds are later integrations; initial criteria are OTD, acceptance rate, price variance and response time with documented denominators.
+
+As built (impl-purchasing P15): with no response rule an evaluation draws nothing (Mantle's default). A rule is a score band and/or a risk severity with one effect for RFQs and purchase orders alike (Warn, Warn and review, Block), applied by the buying policy's supplier check; no reviewer role, expiry or follow-up work item yet (F-P15-2, §18). A measure scores 100 at its target and 0 at its floor, straight between; built-in weights 40, 30, 20 and 10, targets 95%, 99%, 0% and 100%, floors 70%, 90%, 10% and 50%. The response measure is the RFQ response rate by the response date, not a time.
 
 
 
