@@ -24,7 +24,8 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}" out-map="checked"/>
-        <set field="returnFound" from="!ec.message.hasError()"/>
+        <!-- an ignored error leaves no message: the answer's record says whether the return is the user's (P16) -->
+        <set field="returnFound" from="!ec.message.hasError() &amp;&amp; !!checked?.recordId"/>
         <script>ec.message.clearErrors()</script>
         <if condition="returnFound">
             <service-call name="mantle.order.ReturnPolicyServices.get#ReturnAuthorizationPrint" out-map="printed"
