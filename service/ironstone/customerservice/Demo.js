@@ -1,7 +1,8 @@
 // The Customer Service demo orders for ORG_ZIZI_RETAIL (BossCustomerServiceDemoData.xml; impl-customer-service P1, F34),
 // made once by fixed ID through Mantle's order, shipment and payment services, as Accounting's Demo.js: Mantle seeds no
-// sales orders. Joe Q Public's order of the warranted, serialized demo thermostat and two filters, paid by check, shipped,
-// invoiced at ship and delivered (the thermostat's Asset is then the customer's, AstDelivered, with its AssetIssuance);
+// sales orders. Joe Q Public's order of the warranted, serialized demo thermostat and two filters, paid by check (held in
+// Undeposited Receipts), shipped, invoiced at ship and delivered (the thermostat's Asset is then the customer's,
+// AstDelivered, with its AssetIssuance);
 // Joe's Distributing's order of four filters, approved and reserved, awaiting pick; and its order of two filters, packed.
 // The products, their stock and the other organization's order are rows of the data file. Later phases add queues, teams,
 // cases, returns and contacts.
@@ -55,10 +56,13 @@ function salesOrder(orderId, customerPartyId, orderName, lines, payment) {
         : null
     call("mantle.order.OrderServices.place#Order", {orderId})
     call("mantle.order.OrderServices.approve#Order", {orderId})
-    // the check received: the payment is applied to the invoice made at ship
+    // the check received, not yet deposited: the payment is applied to the invoice made at ship and posts to Undeposited
+    // Receipts, not Retail's cash account, whose balances in the current fiscal month Mantle's ledger specs check
+    // (AccountingActivities' 111100000) when both components' data are in one database
     if (paid)
         call("update#mantle.account.payment.Payment", {
             paymentId: paid.paymentId,
+            overrideGlAccountId: "112000000",
             statusId: "PmntDelivered",
             effectiveDate: ec.user.nowTimestamp
         })

@@ -453,7 +453,8 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
   `BOSS_CS_WARRANTY_12` PftWarranty feature and serials CS-THERMO-1001/1002, the stocked filter `BOSS_CS_FILTER`, both
   Retail's at ZIRET_WH; Ziziwork Services' customer `BOSS_CS_CUST_OTHER` and open order `BOSS_CS_SO_OTHER`) and
   `BossZCustomerServiceDemoData.xml`, which runs `ironstone.customerservice.DemoServices.load#CustomerServiceDemo`
-  (`Demo.js`, each order in its own transaction, F76): `BOSS_CS_SO_DELIVERED` to CustJqp (paid by check, shipped,
+  (`Demo.js`, each order in its own transaction, F76): `BOSS_CS_SO_DELIVERED` to CustJqp (paid by check, the payment posted to Undeposited Receipts 112000000 so
+  Retail's cash account 111100000 keeps the balances Mantle's AccountingActivities checks; shipped,
   invoiced at ship and delivered; the thermostat's Asset is the customer's, AstDelivered, with its AssetIssuance),
   `BOSS_CS_SO_PICK` to JoeDist (approved and reserved, awaiting pick) and `BOSS_CS_SO_PACKED` to JoeDist (packed).
   BossUsersDemoData's `customerservice.*` users: agent, manager, orderdesk, returns, knowledge, admin (in

@@ -158,7 +158,8 @@ feature(
             delivered == "OrderCompleted"
             thermostatOwner == "CustJqp"
             issued == 1
-            warranty == (1)[("InvoicePmtRecvd", "InvoiceFinalized")].includes(invoiceStatus)
+            warranty == 1
+            invoiceStatus == "InvoicePmtRecvd"
             appliedCount >= 1
             pick == "OrderApproved"
             pickReservations >= 1
