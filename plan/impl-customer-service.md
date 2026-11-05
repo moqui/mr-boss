@@ -1902,8 +1902,8 @@ CustomerServiceReturnsWalk.
   per-item deferral). `authorize#Return` now refuses such a return (REPLACEMENT_AFTER_RECEIPT, naming the organization and the
   items) unless the line's policy allows an advance replacement, which is then the intended one; Mantle's own callers are
   unchanged. Spec: at flag N refused with no order, then authorized with the replacement order once the policy allows it.
-- For the lead: (b) Warehouse's addReturnItem still checks invoiced, not shipped, and no policy;
-  routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W lacks. (c) Merging master
+- For the lead: (a) Warehouse's addReturnItem still checks invoiced, not shipped, and no policy;
+  routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W lacks. (b) Merging master
   (P10) conflicts in append points: MantleSetupData.xml, CustomerService.js, CaseDetail, CustomerServiceAccess.spec.js,
   CustomerServiceSpecLib.js, this plan.
 
