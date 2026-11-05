@@ -3375,6 +3375,28 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
   - **F-P17-7** PurchasingAccessWalk takes about 60 s with its start (the route sweep 28 s); it is acceptance, so no budget
     applies, but it could split as Manufacturing's did if it grows.
 
+**Review Nov 4 (P17).** Checked the Mantle and BOSS diffs against this section, §2, design RequestDetail, §13 QuoteResponse
+and AGENTS.md. complete#PurchaseRequest: the requester or PURCHASE_ORDER_EDIT in the request's organization (as cancel);
+it releases only the request's commitments still BcReserved, whose open amount is what its purchase orders have not
+converted (a converted share stays with the order's commitment, a fully converted one is BcConverted and untouched), and
+ends only the request's RstPurchaseRequest supply; a retry answers REQUEST_CLOSED, as cancel does. F118's refusals are in
+Purchasing's own P9 services (no Mantle default changed). The four server-static marks pass PurchasingServerStatic.
+Ten inventory and design Impl entries spot-checked against the screens and services (one wording fix). Fixes:
+- R1 (medium, F176) SupplierPortal `quoteView`: a line the buyer added (or moved to another product) after the last send
+  still showed on a requested quote's page with its unsent content, and the lines kept their current description; such a
+  line is now left out and the others show as sent. The F176 spec now uses the still-requested quote B (a submitted
+  quote does not follow the RFQ's lines, so the earlier check could not see a line change).
+- R2 (low, F118) the Supplier app's order page offered Acknowledge while an applied revision waited for approval, and the
+  refusal reached the supplier as an Unprocessable with the buyer's wording; canAcknowledge is now false then, and
+  REVISION_PENDING is a Conflict in the supplier's terms (SupplierPortal spec, a held order).
+- R3 (medium, test) PurchasingAccessWalk's finance and stock refusals were partly vacuous: release#InvoiceHold and
+  post#AcctgTrans ran on records that did not exist, refused as "not available", which the walk counted as a refusal.
+  The hold is now a real one on Retail's bill (left unreleased), post#AcctgTrans is left out (its authority is the posting
+  guard's REVIEW_REQUIRED), and only a permission refusal counts. The universal search check (F-P17-3, no index) is removed.
+Left for the lead: a signed-in contact's order page (P16 `orderView`) shows the current lines of an applied revision that
+waits for its approval, before it is sent (a token link of the earlier revision answers SupersededRevision); the
+drop-down checks of the walk have no own-side control.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
