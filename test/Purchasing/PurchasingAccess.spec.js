@@ -19,6 +19,7 @@
 // the supplier-response topic, and Supplier360's Invite to the Supplier app for the buyer only, on a supplier in scope.
 // P15: evaluating suppliers for the buyer only, an evaluation read in its organization only, and the supplier statement for a
 // finance reader only.
+// P17: the acceptance PurchasingAccessWalk is the design §14.4 access, isolation and standalone walk.
 // Run: ./moq test mr-boss --spec PurchasingAccess
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, page, billFixture, returnFixture} = lib

@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     and invite suppliers. For the buyers and the administrator (BOSS_PUR_NEW_RFQ), at the root and out of the menu, as
     NewPurchaseOrder. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="New RFQ" default-menu-include="false">
+        default-menu-title="New RFQ" default-menu-include="false" server-static="qvt">
     <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
     <transition name="createRfq">
         <actions>

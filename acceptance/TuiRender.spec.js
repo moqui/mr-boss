@@ -5,7 +5,7 @@
 // Run: ./moq test mr-boss --spec TuiRender
 const base = "component://mr-boss/screen"
 const webroot = "component://webroot/screen/webroot.xml"
-let screens, accountingFixtures, warehouseFixtures, manufacturingFixtures
+let screens, accountingFixtures, warehouseFixtures, manufacturingFixtures, purchasingFixtures
 
 // [root screen location, path under it] of every screen file under the roots and in screen/Shared, as AppStructure finds them
 function findScreenFiles(appList) {
@@ -107,7 +107,7 @@ function tui(root, path, parameters) {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing"])
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing"])
         accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}
@@ -137,6 +137,12 @@ spec({
             demoParameters["Manufacturing/" + path] = fixture.parameters || {}
         for (const [path] of manufacturingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Manufacturing.xml"))) screens.push([`${base}/Manufacturing.xml`, path])
+        // Purchasing (P17): its routes on their demo records (PurchasingSpecLib) and the shared screens under its root
+        purchasingFixtures = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(purchasingFixtures.routes))
+            demoParameters["Purchasing/" + path] = fixture.parameters || {}
+        for (const [path] of purchasingFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/Purchasing.xml"))) screens.push([`${base}/Purchasing.xml`, path])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
@@ -162,7 +168,7 @@ spec({
     cleanup() { ec.artifactExecution.enableAuthz() },
 })
 
-feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing and Shared screen renders in tui as a model document with no error node", {
+feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing, Purchasing and Shared screen renders in tui as a model document with no error node", {
     when() {
         const failures = []
         for (const [root, path] of screens) {
@@ -184,6 +190,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
             const manufacturing = key.startsWith("Manufacturing/") ? manufacturingFixtures.routes[key.substring("Manufacturing/".length)] : null
             const manufacturingText = manufacturing ? manufacturing.tuiText || manufacturing.text : null
             if (manufacturingText && !got.output.includes(manufacturingText)) failures.push(`${key}: no ${JSON.stringify(manufacturingText)}`)
+            // a Purchasing twin shows its demo record's text too (P17)
+            const purchasing = key.startsWith("Purchasing/") ? purchasingFixtures.routes[key.substring("Purchasing/".length)] : null
+            const purchasingText = purchasing ? purchasing.tuiText || purchasing.text : null
+            if (purchasingText && !got.output.includes(purchasingText)) failures.push(`${key}: no ${JSON.stringify(purchasingText)}`)
         }
         // every Warehouse route fixture is a screen rendered here
         for (const path of Object.keys(warehouseFixtures.routes))
@@ -193,6 +203,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
         for (const path of Object.keys(manufacturingFixtures.routes))
             if (!screens.some(([root, found]) => root.endsWith("/Manufacturing.xml") && found === path))
                 failures.push(`Manufacturing/${path}: a route fixture with no screen rendered`)
+        // and every Purchasing route fixture (P17)
+        for (const path of Object.keys(purchasingFixtures.routes))
+            if (!screens.some(([root, found]) => root.endsWith("/Purchasing.xml") && found === path))
+                failures.push(`Purchasing/${path}: a route fixture with no screen rendered`)
         if (failures.length) log.warn(`TUI failures:\n${failures.join("\n")}`)
         return { failures }
     },
