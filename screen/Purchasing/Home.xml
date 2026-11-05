@@ -13,10 +13,11 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Purchasing Home (design-purchasing §3 Home; style-guide §3.1 Landing): BuyerCounters (a number card per count: unsourced
-    requests, RFQs due, quotes to compare, quotes expiring, shortfall suggestions, approvals, unacknowledged orders, late
-    receipts and held bills, each unavailable until its phase counts it; ironstone.purchasing.BuyerServices.get#Home),
-    BuyerWork (find#BuyerWork, no sources until the phases add them), SpendSummary (unavailable until P15's
-    ReportServices.get#PurchaseSpend), and the lookup of a record (lookupType and lookupId, through
+    requests, RFQs due, quotes to compare, quotes expiring, shortfall suggestions, approvals, draft and unsent orders,
+    unacknowledged orders, late receipts and held bills, each for the groups that read it; ironstone.purchasing.BuyerServices
+    .get#Home), BuyerWork (find#BuyerWork: orders to send, approvals waiting, requests to source, RFQs due and acknowledgements
+    overdue), SpendSummary (committed and billed of the last three months by month and currency, never added together, over
+    ironstone.purchasing.ReportServices.get#SpendSummary, drilling to Spend; impl-purchasing P15), and the lookup of a record (lookupType and lookupId, through
     ironstone.purchasing.AccessServices.check#Record): record links of kinds whose Purchasing screen is not built yet open
     it here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -32,6 +33,13 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="workRows" from="work.workRows || []"/>
         <set field="can" from="purchasing.capabilities"/>
         <set field="planRunText" from="home.planRunText || null"/>
+        <!-- P15: the spend summary, for the buying lists' groups -->
+        <if condition="can.listRead">
+            <service-call name="ironstone.purchasing.ReportServices.get#SpendSummary" in-map="{appRoot:appRoot}" out-map="spendSummary"
+                    transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="spendRows" from="spendSummary?.summaryRows || []"/>
         <if condition="lookupId">
             <service-call name="ironstone.purchasing.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
@@ -64,7 +72,7 @@ along with this software (see the LICENSE.md file). If not, see
             <number-card title="RFQs due" value="${counterText.quoteDueCount}" icon="sym_o_request_quote" size="sm"
                     link="/qapps/Purchasing/Sourcing/QuoteRequests?view=due" condition="can.listRead"/>
             <number-card title="Quotes to compare" value="${counterText.quoteCompareCount}" icon="sym_o_compare_arrows"
-                    size="sm" link="/qapps/Purchasing/Sourcing" condition="can.listRead"/>
+                    size="sm" link="/qapps/Purchasing/Sourcing/QuoteRequests" condition="can.listRead"/>
             <number-card title="Quotes expiring" value="${counterText.quoteExpiringCount}" icon="sym_o_timer" size="sm"
                     link="/qapps/Purchasing/Sourcing/Quotes?view=expiring" condition="can.listRead"/>
             <number-card title="Shortfalls" value="${counterText.shortfallCount}" icon="sym_o_production_quantity_limits"
@@ -144,8 +152,38 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container-box>
                     <box-header title="Spend"/>
+                    <box-toolbar>
+                        <link url="/qapps/Purchasing/Performance/Spend" url-type="plain" text="Spend report" link-type="anchor"
+                                parameter-map="{groupBy:'month'}"/>
+                    </box-toolbar>
                     <box-body>
-                        <label text="Committed and billed spend is unavailable." type="p"/>
+                        <label text="Spend is unavailable right now." type="p" condition="!spendSummary?.asOfText"/>
+                        <label text="Committed and billed, last three months, as of ${spendSummary.asOfText}. They are separate measures."
+                                type="p" style="text-caption m-muted" condition="spendSummary?.asOfText"/>
+                        <label text="Left out: ${spendSummary.omittedText}" type="p" style="text-caption text-warning"
+                                condition="spendSummary?.omittedText"/>
+                        <label text="No spend in the last three months." type="p"
+                                condition="spendSummary?.asOfText &amp;&amp; !spendRows.length"/>
+                        <section name="SpendRows" condition="spendRows.length">
+                            <widgets>
+                                <form-list name="SpendSummaryRows" list="spendRows" skip-form="true" paginate="false">
+                                    <field name="monthText"><default-field title="Month"><display/></default-field></field>
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="committedText" align="right"><default-field title="Committed"><display/></default-field></field>
+                                    <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="monthText"/>
+                                            <field-ref name="currencyUomId"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="committedText"/>
+                                            <field-ref name="billedText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </widgets>
+                        </section>
                     </box-body>
                 </container-box>
             </widgets>

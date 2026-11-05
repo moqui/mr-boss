@@ -155,14 +155,26 @@ function manufacturingContext() {
 // Dimensions & units, Packaging, Suppliers (supplier prices, for a supplier-price reader), Stock, Documents, and BOM for a
 // method reader. Prices are the purchase direction only (no sales price read); supplier-price edit, cost read and method read
 // stay their own permissions, checked again in Mantle.
-const purchasingTabs = ["Summary", "Identifiers", "Dimensions", "Packaging", "Suppliers", "Stock", "Documents", "BOM"]
+// P15: the Purchase history tab, the product's quotes and purchase order lines (Purchasing's ReportServices)
+const purchasingTabs = [
+    "Summary",
+    "Identifiers",
+    "Dimensions",
+    "Packaging",
+    "Suppliers",
+    "Stock",
+    "Documents",
+    "BOM",
+    "PurchaseHistory"
+]
 const purchasingPaths = {
     "": "Suppliers",
     "Products/Product360": "Products/Product360",
     "SupplierPrices/Supplier360": "Suppliers/Supplier360",
     "Suppliers/Supplier360": "Suppliers/Supplier360",
     "Suppliers/SupplierPrices": "Suppliers/SupplierPrices",
-    "Prices/PriceExplain": "Suppliers/PriceExplain"
+    "Prices/PriceExplain": "Suppliers/PriceExplain",
+    "Performance/PurchaseHistory": "Performance/PurchaseHistory"
 }
 function purchasingContext() {
     const purchasing = ec.resource.script("component://mr-boss/service/ironstone/purchasing/Purchasing.js")

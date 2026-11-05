@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Supplier360's Performance tab, in the Purchasing context (design-purchasing §3 Supplier360 Performance, §11; impl-purchasing
+    P15): the supplier's latest evaluation with the user's organizations (score or insufficient data, each measure, the
+    response it drew), linking to its ScorecardDetail and the supplier's scorecards, and the supplier's active risks
+    (ironstone.purchasing.ReportServices.get#SupplierPerformance). Evaluating and recording a risk are on ScorecardDetail and
+    Scorecards. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Performance" default-menu-index="13">
+    <condition>
+        <expression>appRoot == 'Purchasing'</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#SupplierPerformance" out-map="performance"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, supplierPartyId:vendorPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="latestScorecard" from="performance?.latest || null"/>
+        <set field="performanceMeasureRows" from="performance?.measureRows || []"/>
+        <set field="performanceRiskRows" from="performance?.riskRows || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Latest evaluation"/>
+            <box-body>
+                <label text="This supplier has not been evaluated yet." type="p" condition="!latestScorecard"/>
+                <section name="LatestScorecard" condition="latestScorecard">
+                    <widgets>
+                        <link url="${latestScorecard.url}" url-type="plain" text="${latestScorecard.scoreText} · ${latestScorecard.periodText}"
+                                link-type="anchor"/>
+                        <label text="${latestScorecard.organizationName} · ${latestScorecard.eligibleText} · response: ${latestScorecard.effectText} · evaluated ${latestScorecard.evaluatedText}"
+                                type="p" style="text-caption m-muted"/>
+                        <form-list name="SupplierPerformanceMeasures" list="performanceMeasureRows" skip-form="true" paginate="false">
+                            <field name="metricText"><default-field title="Measure"><display/></default-field></field>
+                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                            <field name="scoreText" align="right"><default-field title="Score"><display/></default-field></field>
+                            <field name="missingText"><default-field title="Missing"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="metricText"/></column>
+                                <column>
+                                    <field-ref name="valueText"/>
+                                    <field-ref name="scoreText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+                <link url="${sharedLinks['Performance/Scorecards']}" text="Every evaluation of this supplier" link-type="anchor"
+                        parameter-map="{supplierPartyId:vendorPartyId, view:'all'}"/>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Active risks"/>
+            <box-body-nopad>
+                <label text="No active risk is recorded for this supplier." type="p" style="q-pa-md m-muted"
+                        condition="!performanceRiskRows.length"/>
+                <form-list name="SupplierPerformanceRisks" list="performanceRiskRows" skip-form="true" paginate="false">
+                    <field name="severityText"><default-field title="Severity"><display/></default-field></field>
+                    <field name="categoryText"><default-field title="Category"><display/></default-field></field>
+                    <field name="description"><default-field title="Risk and evidence"><display/></default-field></field>
+                    <field name="responseText"><default-field title="Response"><display/></default-field></field>
+                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="severityText"/>
+                            <field-ref name="categoryText"/>
+                        </column>
+                        <column><field-ref name="fromText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ScorecardDetail (design-purchasing §11 ScorecardDetail; impl-purchasing P15): one supplier evaluation over
+    ironstone.purchasing.ReportServices.get#SupplierScorecard: the record header (supplier, period, result, score, the
+    response it drew, the policy row it applied) with Recalculate (a new evaluation of the same period through
+    mantle.party.SupplierServices.evaluate#SupplierScorecard; this one stays) and Record risk; ScoreMeasures (each measure's
+    numerator, denominator, eligible and left-out evidence, value, score, weight, range and criterion row); ScoreEvidence (each
+    receipt, bill line or RFQ invitation with its due date and basis, latest promise, event, quantity and counted share, or
+    why it was left out), with its CSV export; the supplier's risks (SupplierRisk, store#SupplierRisk: record, end) and its
+    other evaluations. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Evaluation" default-menu-include="false">
+    <parameter name="supplierScorecardId" required="true"/>
+    <parameter name="metricEnumId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="recalculate">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#SupplierScorecard" out-map="current"
+                    in-map="{appRoot:appRoot, supplierScorecardId:supplierScorecardId, pageSize:1}"/>
+            <set field="evaluation" from="ec.entity.find('mantle.party.supplier.SupplierScorecard')
+                    .condition('supplierScorecardId', supplierScorecardId).disableAuthz().one()"/>
+            <service-call name="mantle.party.SupplierServices.evaluate#SupplierScorecard" out-map="evaluated"
+                    in-map="{organizationPartyId:evaluation.organizationPartyId, supplierPartyId:evaluation.supplierPartyId,
+                        periodFromDate:evaluation.periodFromDate, periodThruDate:evaluation.periodThruDate}"/>
+            <set field="supplierScorecardId" from="evaluated.resultRows[0]?.supplierScorecardId || supplierScorecardId"/>
+            <if condition="evaluated.resultRows[0]?.errorText">
+                <then><message type="warning">Not recalculated: ${evaluated.resultRows[0].errorText}</message></then>
+                <else><message type="success">Recalculated as a new evaluation; the earlier one stays</message></else>
+            </if>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierScorecardId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeRisk">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#SupplierScorecard" out-map="current"
+                    in-map="{appRoot:appRoot, supplierScorecardId:supplierScorecardId, pageSize:1}"/>
+            <set field="evaluation" from="ec.entity.find('mantle.party.supplier.SupplierScorecard')
+                    .condition('supplierScorecardId', supplierScorecardId).disableAuthz().one()"/>
+            <service-call name="mantle.party.SupplierServices.store#SupplierRisk"
+                    in-map="{organizationPartyId:evaluation.organizationPartyId, supplierPartyId:evaluation.supplierPartyId,
+                        supplierRiskId:supplierRiskId || null, severityEnumId:severityEnumId, categoryEnumId:categoryEnumId,
+                        description:description, responseText:responseText, end:end || null, changeReason:changeReason || null,
+                        supplierScorecardId:supplierRiskId ? null : supplierScorecardId}"/>
+            <message type="success">Supplier risk saved</message>
+        </actions>
+        <default-response url=".">
+            <parameter name="supplierScorecardId"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#SupplierScorecard" out-map="exported"
+                    in-map="{appRoot:appRoot, supplierScorecardId:supplierScorecardId, metricEnumId:metricEnumId || null, output:'csv'}"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#SupplierScorecard" out-map="found"
+                in-map="{appRoot:appRoot, supplierScorecardId:supplierScorecardId, metricEnumId:metricEnumId || null,
+                    pageIndex:pageIndex, pageSize:pageSize || 50}" transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="recordFound" from="!!answer?.scorecard"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="scorecard" from="answer?.scorecard || {}"/>
+        <set field="measureRows" from="answer?.measureRows || []"/>
+        <set field="evidenceRows" from="answer?.evidenceRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['evidenceRows' + key] = answer['evidenceRows' + key]</script>
+        <set field="riskRows" from="answer?.riskRows || []"/>
+        <set field="historyRows" from="answer?.historyRows || []"/>
+        <set field="exportParameters" from="{supplierScorecardId:supplierScorecardId, metricEnumId:metricEnumId || null}"/>
+        <set field="metricOptions" from="[{value:'SsmOnTime', label:'On-time delivery'}, {value:'SsmQuality', label:'Quality acceptance'},
+                {value:'SsmPriceVariance', label:'Price variance'}, {value:'SsmResponse', label:'RFQ response'}]"/>
+    </actions>
+    <widgets>
+        <section name="NotAvailable" condition="!recordFound">
+            <widgets>
+                <label text="Evaluation ${supplierScorecardId} is not available: it does not exist or it is not of your organizations' suppliers."
+                        type="p"/>
+                <link url="${sharedLinks['Performance/Scorecards']}" text="Back to the scorecards" link-type="anchor"/>
+            </widgets>
+        </section>
+        <section name="Evaluation" condition="recordFound">
+            <widgets>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${scorecard.supplierName}" type="h5"/>
+                                <label text="Evaluation ${scorecard.supplierScorecardId}" type="span" style="text-subtitle1 m-muted"/>
+                            </container>
+                            <label text="${[scorecard.organizationName, scorecard.periodText, scorecard.eligibleText, scorecard.policyText,
+                                    'due dates: ' + scorecard.dueDateBasisText, 'evaluated ' + scorecard.evaluatedText].join(' · ')}"
+                                    type="div" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${scorecard.resultColor}">${
+                                    WebUtilities.encodeHtml(scorecard.scoreText)}</q-chip> <q-chip dense square class="q-ma-none m-tonal text-${
+                                    scorecard.effectColor}">${WebUtilities.encodeHtml('Response: ' + scorecard.effectText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: scorecard.scoreText + " · Response: " + scorecard.effectText})}]]></text>
+                                <text type="html">${scorecard.scoreText} · Response: ${scorecard.effectText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                        <label text="Missing data: ${scorecard.missingDataText}" type="div" style="col-12 text-caption text-warning"
+                                condition="scorecard.missingDataText"/>
+                        <link url="${scorecard.previousUrl}" url-type="plain" text="Recalculates evaluation ${scorecard.previousScorecardId}"
+                                link-type="anchor" condition="scorecard.previousUrl"/>
+                    <container style="col-12 row items-center q-gutter-x-xs q-gutter-y-xs m-record-actions">
+                        <link url="recalculate" link-type="hidden-form" text="Recalculate" icon="sym_o_refresh" btn-type="primary"
+                                condition="answer.canEvaluate"
+                                parameter-map="{supplierScorecardId:supplierScorecardId}"
+                                confirmation="Recalculate evaluation ${scorecard.supplierScorecardId} of ${scorecard.supplierName}? A new evaluation is made and this one stays."/>
+                        <container-dialog id="RecordRiskDialog" button-text="Record risk" icon="sym_o_report" width="640"
+                                title="Record a risk of ${scorecard.supplierName}" condition="answer.canRecordRisk">
+                            <form-single name="SupplierRisk" transition="storeRisk" map="{supplierScorecardId:supplierScorecardId}">
+                                <field name="supplierScorecardId"><default-field><hidden/></default-field></field>
+                                <field name="severityEnumId">
+                                    <default-field title="Severity">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="SupplierRiskSeverity"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="categoryEnumId">
+                                    <default-field title="Category">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="SupplierRiskCategory"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description">
+                                    <default-field title="Risk and evidence"><text-area rows="3"/></default-field>
+                                </field>
+                                <field name="responseText">
+                                    <default-field title="Response"><text-area rows="2"/></default-field>
+                                </field>
+                                <field name="submit"><default-field title=""><submit text="Record risk" type="primary"/></default-field></field>
+                                <field-layout>
+                                    <field-row>
+                                        <field-ref name="severityEnumId"/>
+                                        <field-ref name="categoryEnumId"/>
+                                    </field-row>
+                                    <field-ref name="description"/>
+                                    <field-ref name="responseText"/>
+                                    <field-ref name="submit"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Measures"/>
+                    <box-body-nopad>
+                        <form-list name="ScoreMeasures" list="measureRows" skip-form="true" paginate="false">
+                            <field name="metricText"><default-field title="Measure"><display/></default-field></field>
+                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                            <field name="countText"><default-field title="Counted"><display/></default-field></field>
+                            <field name="eligibleCount" align="right"><default-field title="Eligible"><display/></default-field></field>
+                            <field name="excludedCount" align="right"><default-field title="Left out"><display/></default-field></field>
+                            <field name="scoreText" align="right"><default-field title="Score"><display/></default-field></field>
+                            <field name="weightText" align="right"><default-field title="Weight"><display/></default-field></field>
+                            <field name="rangeText"><default-field title="Range"><display/></default-field></field>
+                            <field name="criterionText"><default-field title="Criterion"><display/></default-field></field>
+                            <field name="missingText"><default-field title="Missing"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="metricText"/>
+                                    <field-ref name="countText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="valueText"/>
+                                    <field-ref name="scoreText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Evidence"/>
+                    <box-body>
+                        <form-single name="EvidenceFind" transition="." map="{supplierScorecardId:supplierScorecardId, metricEnumId:metricEnumId}">
+                            <field name="supplierScorecardId"><default-field><hidden/></default-field></field>
+                            <field name="metricEnumId">
+                                <default-field title="Measure">
+                                    <drop-down allow-empty="true">
+                                        <list-options list="metricOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submit"><default-field title=""><submit text="Show evidence"/></default-field></field>
+                            <field-layout>
+                                <field-row>
+                                    <field-ref name="metricEnumId"/>
+                                    <field-ref name="submit"/>
+                                </field-row>
+                            </field-layout>
+                        </form-single>
+                        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+                        <label text="No evidence for this measure." type="p" style="m-muted" condition="!evidenceRows.length"/>
+                        <form-list name="ScoreEvidence" list="evidenceRows" skip-form="true" paginate="true">
+                            <field name="metricText"><default-field title="Measure"><display/></default-field></field>
+                            <field name="sourceText">
+                                <default-field title="Source">
+                                    <link url="${orderUrl}" url-type="plain" text="${sourceText}" link-type="anchor" condition="orderUrl"/>
+                                </default-field>
+                            </field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="dueBasisText"><default-field title="Due basis"><display/></default-field></field>
+                            <field name="promisedText"><default-field title="Latest promise"><display/></default-field></field>
+                            <field name="eventText"><default-field title="Received or answered"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display format="#,##0.###"/></default-field></field>
+                            <field name="numerator" align="right"><default-field title="Counted"><display/></default-field></field>
+                            <field name="denominator" align="right"><default-field title="Of"><display/></default-field></field>
+                            <field name="exceptionText"><default-field title="Exception"><display/></default-field></field>
+                            <field name="excludedReason"><default-field title="Left out because"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="sourceText"/>
+                                    <field-ref name="metricText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="dueText"/>
+                                    <field-ref name="exceptionText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Risks"/>
+                    <box-body-nopad>
+                        <label text="No risk of this supplier is recorded." type="p" style="q-pa-md m-muted" condition="!riskRows.length"/>
+                        <form-list name="SupplierRisks" list="riskRows" skip-form="true" paginate="false">
+                            <field name="severityText">
+                                <default-field title="Severity">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${severityColor}">${
+                                            WebUtilities.encodeHtml(severityText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: severityText})}]]></text>
+                                        <text type="html">${severityText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="categoryText"><default-field title="Category"><display/></default-field></field>
+                            <field name="description"><default-field title="Risk and evidence"><display/></default-field></field>
+                            <field name="responseText"><default-field title="Response"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EndRisk_${supplierRiskId}" button-text="End" icon="sym_o_block"
+                                            title="End the risk of ${scorecard.supplierName}" condition="active &amp;&amp; answer.canRecordRisk">
+                                        <form-single name="EndRisk" transition="storeRisk"
+                                                map="{supplierScorecardId:supplierScorecardId, supplierRiskId:supplierRiskId, end:'Y'}">
+                                            <field name="supplierScorecardId"><default-field><hidden/></default-field></field>
+                                            <field name="supplierRiskId"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="changeReason">
+                                                <default-field title="Why it ends"><text-line size="40"/></default-field>
+                                            </field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="End risk" btn-type="danger"
+                                                            confirmation="End this risk of ${scorecard.supplierName}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="severityText"/>
+                                    <field-ref name="categoryText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="stateText"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Other evaluations"/>
+                    <box-body-nopad>
+                        <label text="This is the supplier's only evaluation." type="p" style="q-pa-md m-muted"
+                                condition="!historyRows.length"/>
+                        <form-list name="ScorecardHistory" list="historyRows" skip-form="true" paginate="false">
+                            <field name="evaluatedText">
+                                <default-field title="Evaluated">
+                                    <link url="${url}" url-type="plain" text="${evaluatedText}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                            <field name="scoreText"><default-field title="Score"><display/></default-field></field>
+                            <field name="onTimeText"><default-field title="On time"><display/></default-field></field>
+                            <field name="effectText"><default-field title="Response"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="evaluatedText"/>
+                                    <field-ref name="periodText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="scoreText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

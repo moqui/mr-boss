@@ -12,12 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Performance area of IronStone Purchasing (design-purchasing §1, §11): Scorecards (the default), ScorecardDetail,
-    Spend, Commitments, ProcurementTracker, PurchaseHistory and SupplierStatement (impl-purchasing P15), for the buying
-    lists' groups (BOSS_PUR_LISTS). -->
+<!-- The Performance area of IronStone Purchasing (design-purchasing §1, §11; impl-purchasing P15), for the buying lists'
+    groups (BOSS_PUR_LISTS): Scorecards (the default: the supplier evaluations and Evaluate suppliers), ScorecardDetail (an
+    evaluation, out of the menu), Spend, Commitments, ProcurementTracker, PurchaseHistory and SupplierStatement (a finance
+    reader's), each over its ironstone.purchasing.ReportServices read, which decides what the user may see; the evaluations
+    and risks are written by mantle.party.SupplierServices. The scorecard policies are under Settings. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Performance" default-menu-index="12" menu-image="sym_o_trending_up" menu-image-type="icon">
+    <subscreens default-item="Scorecards" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Supplier scorecards, spend and commitments." type="p"/>
+        <subscreens-panel id="PerformancePanel" type="tab"/>
     </widgets>
 </screen>

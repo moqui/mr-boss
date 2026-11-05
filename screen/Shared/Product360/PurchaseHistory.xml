@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Product360's Purchase history tab, in the Purchasing context (crosscut §3.5 Purchasing row, design-purchasing §3
+    Product360 and §11 PurchaseHistory; impl-purchasing P15): the product's quotes and purchase order lines of the user's
+    organizations over the last year, the quoted, ordered and billed prices apart in each document's currency and unit, with
+    the supplier, facility and lead time (ironstone.purchasing.ReportServices.get#PurchaseHistory; prices withheld from a user
+    who may not read supplier prices), and a link to the full report. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Purchase history" default-menu-index="20">
+    <condition>
+        <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('PurchaseHistory')</expression>
+    </condition>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#PurchaseHistory" out-map="found"
+                in-map="{appRoot:appRoot, productId:productId, pageIndex:pageIndex, pageSize:pageSize}"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="historyRows" from="answer?.historyRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['historyRows' + key] = answer['historyRows' + key]</script>
+    </actions>
+    <widgets>
+        <label text="The purchase history is not available." type="p" condition="!answer?.asOf"/>
+        <label text="As of ${answer.asOfText} · the last year${answer.omittedText ? ' · ' + answer.omittedText : ''}" type="p"
+                style="text-caption m-muted" condition="answer?.asOf"/>
+        <link url="${sharedLinks['Performance/PurchaseHistory']}" text="Open the purchase history report" link-type="anchor"
+                parameter-map="{productId:productId}" condition="sharedLinks &amp;&amp; sharedLinks['Performance/PurchaseHistory']"/>
+        <section-include name="PurchaseHistoryRows" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+    </widgets>
+</screen>

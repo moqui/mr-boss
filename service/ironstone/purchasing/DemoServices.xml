@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="SupplierPortalDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent Supplier app demo for ORG_ZIZI_RETAIL (impl-purchasing P16): an RFQ quote of ZiddlemanInc
+            with its QuoteResponse link, and the portal demo order's OrderAcknowledgement link, with fixed tokens, on
+            Accounting's ZIZI_PORTAL site. Only data loading or a system administrator may run it.</description>
+        <out-parameters><parameter name="complete" type="Boolean"/></out-parameters>
+        <actions>
+            <set field="complete" from="ec.resource.script('component://mr-boss/service/ironstone/purchasing/SupplierPortalDemo.js')
+                .execute('load').complete"/>
+        </actions>
+    </service>
+</services>

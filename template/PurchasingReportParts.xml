@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Purchasing report screens (design-purchasing §11; impl-purchasing P15), included by
+    section-include. ReportFrame: what a report read (answer is the ironstone.purchasing.ReportServices answer): its snapshot
+    time and filters, what it left out (the withheld measures and the partitions it could not read, in the warning colour
+    when the report is incomplete), and its export, the screen's exportCsv transition with the same parameters (the screen
+    sets exportParameters), and (P17) Print, the screen as html-print with the same parameters. PurchaseHistoryRows: the rows of get#PurchaseHistory (historyRows), the quoted, ordered and billed
+    prices in their own columns, shared by PurchaseHistory and Product360's Purchase history tab. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ReportFrame" condition="answer?.asOf">
+            <widgets>
+                <label text="As of ${answer.asOfText} · ${answer.filtersText}" type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="Left out: ${answer.omittedText}" type="p" style="text-caption text-warning q-mb-none"
+                        condition="answer.omittedText"/>
+                <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" target-window="_blank"
+                        parameter-map="exportParameters"/>
+                <!-- P17 (design §15): the report as a print with the same filters, its snapshot and what it left out -->
+                <link url="." text="Print" icon="sym_o_print" link-type="anchor" target-window="_blank"
+                        parameter-map="Object.assign({}, exportParameters || {}, {renderMode:'html-print', lastStandalone:'true',
+                            pageNoLimit:'true'})"/>
+            </widgets>
+        </section>
+        <section name="PurchaseHistoryRows" condition="answer?.asOf">
+            <widgets>
+                <label text="No quote or purchase order of this product in the period." type="p" style="q-pa-md m-muted"
+                        condition="!historyRows.length"/>
+                <form-list name="PurchaseHistoryRows" list="historyRows" skip-form="true" paginate="true" select-columns="true">
+                    <field name="documentText">
+                        <default-field title="Document">
+                            <link url="${documentUrl}" url-type="plain" text="${documentText}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Price"><display/></default-field></field>
+                    <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                    <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                    <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
+                    <field name="quantity" align="right"><default-field title="Quantity"><display format="#,##0.###"/></default-field></field>
+                    <field name="uomText"><default-field title="Unit"><display/></default-field></field>
+                    <field name="quotedText" align="right"><default-field title="Quoted"><display/></default-field></field>
+                    <field name="orderedText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                    <field name="invoicedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                    <field name="leadText"><default-field title="Lead time"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="documentText"/>
+                            <field-ref name="supplierName"/>
+                        </column>
+                        <column>
+                            <field-ref name="orderedText"/>
+                            <field-ref name="quotedText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

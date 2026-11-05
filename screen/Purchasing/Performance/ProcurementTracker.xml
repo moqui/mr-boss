@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ProcurementTracker (design-purchasing §11 ProcurementTracker; style-guide §3.12 Report; impl-purchasing P15):
+    ProcurementTrackerOptions (a purchase request, a purchase order, or the organization's requests and orders of a period, by
+    supplier) and ProcurementTrackerRows (ironstone.purchasing.ReportServices.get#ProcurementTracker): each request line
+    through its requirement, RFQ, quotes and award to its purchase order lines, and each order line through receipts,
+    inspections, bills, match and payment, a row per order line so split suppliers, orders and bills stay apart. Payments are
+    a finance reader's, withheld (never unpaid) for anyone else. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Procurement tracker" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="requestId"/>
+    <parameter name="orderId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#ProcurementTracker" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, requestId:requestId || null, orderId:orderId || null,
+                supplierPartyId:supplierPartyId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#ProcurementTracker" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="trackerRows" from="answer?.trackerRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['trackerRows' + key] = answer['trackerRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Procurement tracker" type="h5"/>
+                <label text="Each request line to its orders, and each order line through receipt, inspection, bill, match and payment."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="ProcurementTrackerOptions" transition="." map="options">
+            <field name="orderId"><default-field><hidden/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requestId">
+                <default-field title="Purchase request" tooltip="Empty: the requests and orders of the period">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'trackerRequests', selected:requestId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="supplierPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="90 days before the end when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="thruDate"><default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="requestId"/>
+                    <field-ref name="supplierPartyId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Purchase order ${orderId} only." type="p" style="text-caption" condition="orderId"/>
+        <label text="The procurement tracker is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+        <section name="TrackerRowsSection" condition="reportFound">
+            <widgets>
+                <label text="No purchase request or order for these choices." type="p" style="q-pa-md m-muted"
+                        condition="!trackerRows.length"/>
+                <form-list name="ProcurementTrackerRows" list="trackerRows" skip-form="true" paginate="true" select-columns="true">
+                    <field name="requestText">
+                        <default-field title="Request">
+                            <link url="${requestUrl}" url-type="plain" text="${requestText}" link-type="anchor" condition="requestUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="rfqText"><default-field title="RFQ"><display/></default-field></field>
+                    <field name="quoteText"><default-field title="Quotes"><display/></default-field></field>
+                    <field name="awardText"><default-field title="Award"><display/></default-field></field>
+                    <field name="orderText">
+                        <default-field title="Purchase order">
+                            <link url="${orderUrl}" url-type="plain" text="${orderText}" link-type="anchor" condition="orderUrl"/>
+                            <label text="${orderText}" condition="!orderUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="supplierName"><default-field title="Supplier"><display/></default-field></field>
+                    <field name="orderedText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                    <field name="receiptText"><default-field title="Received"><display/></default-field></field>
+                    <field name="inspectionText"><default-field title="Inspection"><display/></default-field></field>
+                    <field name="billText"><default-field title="Bills"><display/></default-field></field>
+                    <field name="matchText"><default-field title="Match"><display/></default-field></field>
+                    <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column>
+                            <field-ref name="orderText"/>
+                            <field-ref name="requestText"/>
+                        </column>
+                        <column>
+                            <field-ref name="receiptText"/>
+                            <field-ref name="paymentText"/>
+                        </column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

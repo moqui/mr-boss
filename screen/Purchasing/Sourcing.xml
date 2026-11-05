@@ -15,7 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Sourcing area of IronStone Purchasing (design-purchasing §1, §5; impl-purchasing P11), titled RFQs in the menu, for the
     buying lists' groups (BOSS_PUR_LISTS): QuoteRequests (the default: the RFQs with their views and New RFQ), Quotes (the
     supplier quotes, requested, proposed or unsolicited, and New supplier quote), and QuoteRequestDetail and QuoteDetail
-    (hidden from the menu, opened from the lists, the palette and record links). QuoteComparison and Award are P12's. The shell's
+    (hidden from the menu, opened from the lists, the palette and record links). QuoteComparison and Award (P12: an RFQ's quotes compared per
+    demand line, allocated, placed as purchase orders and the RFQ closed; hidden, opened from QuoteRequestDetail). The shell's
     quick create of an RFQ is the root's NewQuoteRequest. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="RFQs" default-menu-index="4" menu-image="sym_o_request_quote" menu-image-type="icon">

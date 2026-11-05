@@ -15,8 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Settings area of IronStone Purchasing (design-purchasing §1, §12), for the purchasing administrator only
     (BOSS_PUR_SETTINGS): SettingsHome (the default: SettingsLinks, RequestPurposes and SupplierClassifications over
     ironstone.purchasing.SettingsServices) and PurchasePolicy (the buying policy, mantle.order.PurchaseServices, with the
-    policies it depends on read only), built in impl-purchasing P2; ApprovalPolicies (P4), ScorecardPolicies (P15) and
-    InspectionTemplates' menu entry join them in their phases. -->
+    policies it depends on read only), built in impl-purchasing P2; ApprovalPolicies (P4) and ScorecardPolicies (P15, the
+    supplier scorecard basis, measures and response rules) join them, and InspectionTemplates' menu entry in its phase. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="13" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true"/>

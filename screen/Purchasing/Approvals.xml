@@ -23,7 +23,8 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="6" menu-image="sym_o_approval" menu-image-type="icon">
     <always-actions>
-        <set field="notificationTopics" from="['PurchaseOrderApproval', 'PurchaseSupplierApproval', 'PurchaseRequestApproval']"/>
+        <set field="notificationTopics" from="['PurchaseOrderApproval', 'PurchaseSupplierApproval', 'PurchaseRequestApproval',
+                'PurchaseAwardApproval']"/>
         <set field="notificationsTitle" value="Approvals"/>
     </always-actions>
     <subscreens default-item="Notifications" always-use-full-path="true">

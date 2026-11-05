@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ScorecardPolicies (design-purchasing §12 ScorecardPolicies; impl-purchasing P15): an organization's supplier scorecard
+    basis over mantle.party.SupplierServices.get#ScorecardPolicy: ScorePolicy (the evaluation period, the minimum sample, five
+    eligible receipts by default, and the due-date basis, the first acknowledged date else the required date by default),
+    ScoreCriteria (the four supported measures' weight, target and floor; no formula of its own) and ScoreActions (a score band
+    or a risk severity drawing a warning, a warning with review or a block of new RFQs and purchase orders; no rule responds by
+    default), each change a dated row with its reason through store#ScorecardPolicy, store#ScorecardCriterion and
+    store#ScorecardAction (PURCHASE_POLICY_EDIT), the earlier rows kept. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Scorecard policies" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="storePolicy">
+        <actions>
+            <service-call name="mantle.party.SupplierServices.store#ScorecardPolicy"
+                    in-map="{organizationPartyId:organizationPartyId || null, periodDays:periodDays, minimumSample:minimumSample,
+                        dueDateBasisEnumId:dueDateBasisEnumId, expectedFromDate:expectedFromDate || null, changeReason:changeReason}"/>
+            <message type="success">Scorecard policy saved</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeCriterion">
+        <actions>
+            <service-call name="mantle.party.SupplierServices.store#ScorecardCriterion"
+                    in-map="{organizationPartyId:organizationPartyId || null, metricEnumId:metricEnumId, weight:weight,
+                        targetValue:targetValue, floorValue:floorValue, changeReason:changeReason}"/>
+            <message type="success">Measure saved</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeAction">
+        <actions>
+            <service-call name="mantle.party.SupplierServices.store#ScorecardAction"
+                    in-map="{organizationPartyId:organizationPartyId || null, scorecardActionId:scorecardActionId || null,
+                        scoreBelow:scoreBelow, riskSeverityEnumId:riskSeverityEnumId, effectEnumId:effectEnumId,
+                        description:description, end:end || null, changeReason:changeReason}"/>
+            <message type="success">Response rule saved</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.party.SupplierServices.get#ScorecardPolicy" out-map="policy" transaction="force-new"
+                ignore-error="true" in-map="{organizationPartyId:organizationPartyId || null}"/>
+        <set field="policyAvailable" from="!!policy?.organizationPartyId"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="criterionRows" from="policy?.criterionRows || []"/>
+        <set field="actionRows" from="policy?.actionRows || []"/>
+        <set field="historyRows" from="policy?.history || []"/>
+        <set field="policyValue" from="Object.assign({}, policy?.policy || {}, {organizationPartyId:policy?.organizationPartyId,
+                expectedFromDate:policy?.expectedFromDate})"/>
+        <set field="newActionValue" from="{organizationPartyId:policy?.organizationPartyId, effectEnumId:'SseWarn'}"/>
+    </actions>
+    <widgets>
+        <form-single name="PolicyScope" transition="." map="{organizationPartyId:organizationPartyId || policy?.organizationPartyId}">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show policy"/></default-field></field>
+            <field-layout>
+                <field-row>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="submit"/>
+                </field-row>
+            </field-layout>
+        </form-single>
+        <label text="The scorecard policy is not available to you." type="p" condition="!policyAvailable"/>
+        <section name="Policy" condition="policyAvailable">
+            <widgets>
+                <label text="Scorecard policy of ${policy.organizationName}: each change starts a dated row and ends the one before it; an evaluation keeps the row it applied."
+                        type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Evaluation basis"/>
+                    <box-toolbar>
+                        <container-dialog id="ScorePolicyDialog" condition="policy.canEdit" button-text="Change basis" icon="sym_o_edit"
+                                width="640" title="Change the scorecard basis of ${policy.organizationName}">
+                            <form-single name="ScorePolicy" transition="storePolicy" map="policyValue">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="expectedFromDate"><default-field><hidden/></default-field></field>
+                                <field name="periodDays">
+                                    <default-field title="Period (days)"><text-line size="5"/></default-field>
+                                </field>
+                                <field name="minimumSample">
+                                    <default-field title="Minimum eligible receipts"><text-line size="5"/></default-field>
+                                </field>
+                                <field name="dueDateBasisEnumId">
+                                    <default-field title="On time against">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="ScorecardDueDateBasis"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Save basis"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="Period: ${policy.policy.periodDays} days · minimum sample: ${policy.policy.minimumSample} eligible receipts · on time against: ${policy.policy.dueDateBasisText}"
+                                type="p"/>
+                        <label text="${policy.policyFromDateText ? 'In effect since ' + policy.policyFromDateText : 'Built-in defaults'}"
+                                type="p" style="text-caption m-muted"/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Measures"/>
+                    <box-body-nopad>
+                        <form-list name="ScoreCriteria" list="criterionRows" skip-form="true" paginate="false">
+                            <field name="metricText"><default-field title="Measure"><display/></default-field></field>
+                            <field name="weight" align="right"><default-field title="Weight"><display/></default-field></field>
+                            <field name="targetValue" align="right"><default-field title="Target (score 100)"><display/></default-field></field>
+                            <field name="floorValue" align="right"><default-field title="Floor (score 0)"><display/></default-field></field>
+                            <field name="directionText"><default-field title="Direction"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="ChangeCriterion_${metricEnumId}" button-text="Change" icon="sym_o_edit"
+                                            title="Change ${metricText}" condition="policy.canEdit">
+                                        <form-single name="ScoreCriterion" transition="storeCriterion"
+                                                map="{organizationPartyId:policy.organizationPartyId, metricEnumId:metricEnumId, weight:weight,
+                                                    targetValue:targetValue, floorValue:floorValue}">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="metricEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="weight"><default-field title="Weight (0 leaves it out)"><text-line size="5"/></default-field></field>
+                                            <field name="targetValue"><default-field title="Target"><text-line size="6"/></default-field></field>
+                                            <field name="floorValue"><default-field title="Floor"><text-line size="6"/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submit"><default-field title=""><submit text="Save measure"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="metricText"/>
+                                    <field-ref name="sourceText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="weight"/>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Response rules · ${actionRows.length}"/>
+                    <box-toolbar>
+                        <container-dialog id="NewScoreAction" condition="policy.canEdit" button-text="New rule" icon="sym_o_add"
+                                type="primary" width="640" title="New response rule of ${policy.organizationName}">
+                            <form-single name="ScoreAction" transition="storeAction" map="newActionValue">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="scoreBelow">
+                                    <default-field title="When the score is below" tooltip="Empty: by risk only"><text-line size="5"/></default-field>
+                                </field>
+                                <field name="riskSeverityEnumId">
+                                    <default-field title="Or a risk at least">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="SupplierRiskSeverity"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="effectEnumId">
+                                    <default-field title="New RFQs and orders get">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration">
+                                                    <econdition field-name="enumTypeId" value="ScorecardEffect"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Description"><text-line size="50"/></default-field></field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Save rule"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label text="No response rule: an evaluation warns and blocks nothing. A rule draws a warning, a review or a block from a low score or a risk."
+                                type="p" style="q-pa-md m-muted" condition="!actionRows.length"/>
+                        <form-list name="ScoreActions" list="actionRows" skip-form="true" paginate="false">
+                            <field name="ruleText"><default-field title="Rule"><display/></default-field></field>
+                            <field name="description"><default-field title="Description"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EndScoreAction_${scorecardActionId}" button-text="End" icon="sym_o_block"
+                                            title="End the rule ${ruleText}" condition="policy.canEdit">
+                                        <form-single name="EndScoreAction" transition="storeAction"
+                                                map="{organizationPartyId:policy.organizationPartyId, scorecardActionId:scorecardActionId, end:'Y'}">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="scorecardActionId"><default-field><hidden/></default-field></field>
+                                            <field name="end"><default-field><hidden/></default-field></field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submit">
+                                                <default-field title="">
+                                                    <submit text="End rule" btn-type="danger" confirmation="End the rule ${ruleText}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="ruleText"/>
+                                    <field-ref name="fromDateText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="actions"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Basis history"/>
+                    <box-body-nopad>
+                        <label text="No change yet: the built-in basis applies." type="p" style="q-pa-md m-muted"
+                                condition="!historyRows.length"/>
+                        <form-list name="ScorePolicyHistory" list="historyRows" skip-form="true" paginate="false">
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="periodDays" align="right"><default-field title="Period"><display/></default-field></field>
+                            <field name="minimumSample" align="right"><default-field title="Minimum sample"><display/></default-field></field>
+                            <field name="dueDateBasisText"><default-field title="On time against"><display/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="fromDateText"/>
+                                    <field-ref name="changeReason"/>
+                                </column>
+                                <column>
+                                    <field-ref name="minimumSample"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

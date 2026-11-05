@@ -1513,6 +1513,10 @@ along with this software (see the LICENSE.md file). If not, see
         sent to the buyers of the bill's organization) -->
     <moqui.security.user.NotificationTopic topic="PurchaseMatchException"
             linkTemplate="/qapps/Purchasing/Bills/InvoiceDetail?invoiceId=${invoiceId}"/>
+    <!-- impl-purchasing P16: a supplier's response from the Supplier app (Mantle's PurchaseSupplierResponse) opens its quote in
+        QuoteDetail, or its purchase order in OrderDetail -->
+    <moqui.security.user.NotificationTopic topic="PurchaseSupplierResponse"
+            linkTemplate="/qapps/Purchasing/${responseKind == 'QuoteResponse' ? 'Sourcing/QuoteDetail' : 'Orders/OrderDetail'}?orderId=${orderId}"/>
     <!-- Purchasing P10: the shell's quick create of a purchase request (NewPurchaseRequest, at the root as NewPurchaseOrder) for
         the groups that file requests: the requester, the buyer and the administrator (Requests' New purchase request follows
         the same grant, Purchasing.js requestCreate); create#PurchaseRequest checks the user's organization -->
@@ -1555,4 +1559,8 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Purchasing P12: an award of an RFQ's quotes waiting for its approval (Mantle's PurchaseAwardApproval topic,
+        SourcingAwardSetupData.xml) opens the RFQ under Purchasing, decided from Approvals or the Commons inbox -->
+    <moqui.security.user.NotificationTopic topic="PurchaseAwardApproval"
+            linkTemplate="/qapps/Purchasing/Sourcing/QuoteRequestDetail?requestId=${requestId}"/>
 </entity-facade-xml>

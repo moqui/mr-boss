@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SupplierStatement (design-purchasing §11 SupplierStatement; style-guide §3.12 Report; impl-purchasing P15): for a finance
+    reader (ACCOUNTING_VIEW or PAYABLE_VIEW): SupplierStatementOptions (supplier, organization, currency, period) and
+    SupplierStatementRows (ironstone.purchasing.ReportServices.get#SupplierStatement): each currency's opening balance, the
+    bills, credits and payments in date order with the running balance, and the closing balance; no bank details and no
+    payment action. Anyone else is told the statement needs finance read. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Supplier statement" default-menu-index="6">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="currencyUomId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#SupplierStatement" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, supplierPartyId:supplierPartyId || null,
+                currencyUomId:currencyUomId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+    </always-actions>
+    <actions>
+        <set field="financeRead" from="!!(purchasing.capabilities.financialRead || purchasing.capabilities.payableRead)"/>
+        <if condition="financeRead &amp;&amp; supplierPartyId">
+            <service-call name="ironstone.purchasing.ReportServices.get#SupplierStatement" out-map="found"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                    transaction="force-new" ignore-error="true"/>
+        </if>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="statementRows" from="answer?.statementRows || []"/>
+        <set field="balanceRows" from="answer?.balanceRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['statementRows' + key] = answer['statementRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Supplier statement" type="h5"/>
+                <label text="Bills, credits and payments with a supplier, with the opening and closing balance in each currency."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <label text="The supplier statement needs finance read (Accounting's reader or payables group)." type="p"
+                condition="!financeRead"/>
+        <section name="StatementSection" condition="financeRead">
+            <widgets>
+                <form-single name="SupplierStatementOptions" transition="." map="options">
+                    <field name="supplierPartyId">
+                        <default-field title="Supplier">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="organizationPartyId">
+                        <default-field title="Organization" tooltip="Every organization of yours when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="currencyUomId">
+                        <default-field title="Currency" tooltip="Every currency when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'currencies', selected:currencyUomId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <default-field title="From" tooltip="90 days before the end when empty"><date-time type="date"/></default-field>
+                    </field>
+                    <field name="thruDate"><default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+                    <field name="submit"><default-field title=""><submit text="Show statement" type="primary"/></default-field></field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="supplierPartyId"/>
+                            <field-ref name="organizationPartyId"/>
+                            <field-ref name="currencyUomId"/>
+                        </field-row-big>
+                        <field-row-big>
+                            <field-ref name="fromDate"/>
+                            <field-ref name="thruDate"/>
+                        </field-row-big>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+                <label text="Choose a supplier to see its statement." type="p" condition="!supplierPartyId"/>
+                <label text="The statement is not available for these choices." type="p" condition="supplierPartyId &amp;&amp; !reportFound"/>
+                <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+                <section name="StatementRowsSection" condition="reportFound">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Balances of ${answer.supplierName}"/>
+                            <box-body-nopad>
+                                <label text="Nothing billed or paid." type="p" style="q-pa-md m-muted" condition="!balanceRows.length"/>
+                                <form-list name="StatementBalances" list="balanceRows" skip-form="true" paginate="false">
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="openingText" align="right"><default-field title="Opening"><display/></default-field></field>
+                                    <field name="closingText" align="right"><default-field title="Closing"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="currencyUomId"/></column>
+                                        <column>
+                                            <field-ref name="openingText"/>
+                                            <field-ref name="closingText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Activity"/>
+                            <box-body-nopad>
+                                <label text="No bill, credit or payment in this period." type="p" style="q-pa-md m-muted"
+                                        condition="!statementRows.length"/>
+                                <form-list name="SupplierStatementRows" list="statementRows" skip-form="true" paginate="true">
+                                    <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                                    <field name="documentText">
+                                        <default-field title="Document">
+                                            <link url="${documentUrl}" url-type="plain" text="${documentText}" link-type="anchor"
+                                                    condition="documentUrl"/>
+                                            <label text="${documentText}" condition="!documentUrl"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="referenceNumber"><default-field title="Reference"><display/></default-field></field>
+                                    <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                                    <field name="billedText" align="right"><default-field title="Bills and credits"><display/></default-field></field>
+                                    <field name="paidText" align="right"><default-field title="Payments"><display/></default-field></field>
+                                    <field name="balanceText" align="right"><default-field title="Balance"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column>
+                                            <field-ref name="documentText"/>
+                                            <field-ref name="dateText"/>
+                                        </column>
+                                        <column>
+                                            <field-ref name="billedText"/>
+                                            <field-ref name="balanceText"/>
+                                        </column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

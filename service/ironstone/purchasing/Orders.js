@@ -65,10 +65,25 @@ function buyerIdsOf(userScope) {
 const internalIds = () => rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(row => row.partyId)
 // A find of the purchase parts of the buyers: an internal customer, a vendor that is not internal, no quote.
 function purchaseFind(buyers) {
-    return find("mantle.order.OrderHeaderAndPart")
-        .condition("customerPartyId", "in", buyers.length ? buyers : ["_NA_"])
-        .condition("vendorPartyId", "not-in", internalIds())
-        .condition("statusId", "not-in", quoteStatuses)
+    const factory = ec.entity.conditionFactory
+    return (
+        find("mantle.order.OrderHeaderAndPart")
+            .condition("customerPartyId", "in", buyers.length ? buyers : ["_NA_"])
+            .condition("vendorPartyId", "not-in", internalIds())
+            .condition("statusId", "not-in", quoteStatuses)
+            // P12 (F-P11-8): a supplier quote never placed (declined, not awarded) is a quote, not a purchase order; an awarded
+            // quote is placed, a purchase order like any other
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("supplierQuote", "is-null", null),
+                        factory.makeCondition("supplierQuote", "not-equals", "Y"),
+                        factory.makeCondition("placedDate", "is-not-null", null)
+                    ],
+                    "or"
+                )
+            )
+    )
 }
 
 // ===== the list =====

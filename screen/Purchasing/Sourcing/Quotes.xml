@@ -40,6 +40,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.order.SourcingServices.store#SupplierQuote" out-map="stored"
                     in-map="{requestId:(requestId || null), organizationPartyId:organizationPartyId, vendorPartyId:vendorPartyId,
                         otherPartyOrderId:(otherPartyOrderId || null), validThruDate:(validThruDate || null),
+                        currencyUomId:(currencyUomId || null),
                         salesChannelEnumId:(salesChannelEnumId || null), evidenceText:(evidenceText || null),
                         contentFile:(contentFile || null)}"/>
             <set field="orderId" from="stored.orderId"/>
@@ -107,6 +108,14 @@ along with this software (see the LICENSE.md file). If not, see
                         </field>
                         <field name="otherPartyOrderId"><default-field title="Their reference"><text-line/></default-field></field>
                         <field name="validThruDate"><default-field title="Valid through"><date-time type="date"/></default-field></field>
+                        <!-- P12: a quote in another currency than the RFQ's or the buying policy's (the comparison converts it) -->
+                        <field name="currencyUomId">
+                            <default-field title="Currency" tooltip="Empty: the RFQ's, else the buying policy's">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" min-length="0" parameter-map="{choice:'currencies'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
                         <field name="salesChannelEnumId">
                             <default-field title="Received by">
                                 <drop-down allow-empty="false">
@@ -124,6 +133,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-row><field-ref name="requestId"/><field-ref name="otherPartyOrderId"/></field-row>
                             <field-row><field-ref name="validThruDate"/><field-ref name="salesChannelEnumId"/></field-row>
                             <field-row><field-ref name="evidenceText"/><field-ref name="contentFile"/></field-row>
+                            <field-ref name="currencyUomId"/>
                             <field-ref name="submitButton"/>
                         </field-layout>
                     </form-single>

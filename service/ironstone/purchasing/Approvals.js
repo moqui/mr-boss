@@ -8,7 +8,7 @@ const {find, one, rows, denied, ms} = lib
 
 const POLICY = "mantle.order.purchase.PurchaseApprovalPolicy"
 // the approval topics Purchasing lists (Approvals.xml); P10 adds the purchase request's and P12 the award's
-const topics = ["PurchaseOrderApproval", "PurchaseSupplierApproval", "PurchaseRequestApproval"]
+const topics = ["PurchaseOrderApproval", "PurchaseSupplierApproval", "PurchaseRequestApproval", "PurchaseAwardApproval"]
 const blank = value => value == null || String(value).trim() === ""
 const enumText = enumId => (enumId ? one("moqui.basic.Enumeration", {enumId})?.description || enumId : "")
 const userName = userId => (userId ? one("moqui.security.UserAccount", {userId})?.userFullName || userId : "")
