@@ -286,7 +286,7 @@ function routeFixtures() {
         // P12: Knowledge (Commons Knowledge mounted, its qvue component), the feedback queue, an article from Joe's case and
         // the knowledge sources
         Knowledge: {fullPathOnly: true},
-        "Knowledge/Knowledge": {parameters: {}, text: "BossKnowledge"},
+        "Knowledge/Knowledge": {parameters: {}, text: "BossKnowledge", tuiText: "KnowledgeTui"},
         "Knowledge/ArticleFeedback": {parameters: {}, text: "Article feedback"},
         "Knowledge/CaseToArticle": {parameters: {requestId: ids.thermostatCaseId}, text: "Article from case"},
         "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"},

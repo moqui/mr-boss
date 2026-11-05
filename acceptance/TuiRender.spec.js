@@ -5,7 +5,7 @@
 // Run: ./moq test mr-boss --spec TuiRender
 const base = "component://mr-boss/screen"
 const webroot = "component://webroot/screen/webroot.xml"
-let screens, accountingFixtures, warehouseFixtures, manufacturingFixtures, purchasingFixtures
+let screens, accountingFixtures, warehouseFixtures, manufacturingFixtures, purchasingFixtures, customerServiceFixtures
 
 // [root screen location, path under it] of every screen file under the roots and in screen/Shared, as AppStructure finds them
 function findScreenFiles(appList) {
@@ -107,7 +107,7 @@ function tui(root, path, parameters) {
 spec({
     setupSpec() {
         login("john.doe")
-        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing"])
+        screens = findScreenFiles(["Commons", "Comms", "Insights", "Products", "Accounting", "Warehouse", "Manufacturing", "Purchasing", "CustomerService"])
         accountingFixtures = ec.resource.script("component://mr-boss/test/Accounting/AccountingSpecLib.js").routeFixtures()
         for (const [root, path] of screens)
             if (root.endsWith("/Accounting.xml")) demoParameters["Accounting/" + path] = {organizationPartyId: "BOSS_ACCT_ORG"}
@@ -143,6 +143,17 @@ spec({
             demoParameters["Purchasing/" + path] = fixture.parameters || {}
         for (const [path] of purchasingFixtures.mounts)
             if (!screens.some(([root, found]) => found === path && root.endsWith("/Purchasing.xml"))) screens.push([`${base}/Purchasing.xml`, path])
+        // Customer Service (P16): its routes on their demo records (CustomerServiceSpecLib) and the shared screens under its root
+        customerServiceFixtures = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js").routeFixtures()
+        for (const [path, fixture] of Object.entries(customerServiceFixtures.routes))
+            demoParameters["CustomerService/" + path] = fixture.parameters || {}
+        for (const [path] of customerServiceFixtures.mounts)
+            if (!screens.some(([root, found]) => found === path && root.endsWith("/CustomerService.xml"))) screens.push([`${base}/CustomerService.xml`, path])
+        // Customer360's service tabs (the shared screen's subscreens) and Knowledge's terminal twin, which the qvue screen's tui
+        // names as a dynamic container (KnowledgeTui, Commons')
+        for (const path of Object.keys(customerServiceFixtures.routes))
+            if (path.startsWith("Customers/Customer360/")) screens.push([`${base}/CustomerService.xml`, path])
+        screens.push([`${base}/CustomerService.xml`, "Knowledge/KnowledgeTui"])
         for (const tab of ["Summary", "Features", "Categories", "Identifiers", "Dimensions", "Documents", "Associations", "Parties", "Connections", "History", "KitComponents", "Equipment"]) {
             const path = 'Products/Product360/' + tab
             screens.push([`${base}/Products.xml`, path])
@@ -168,7 +179,7 @@ spec({
     cleanup() { ec.artifactExecution.enableAuthz() },
 })
 
-feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing, Purchasing and Shared screen renders in tui as a model document with no error node", {
+feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufacturing, Purchasing, Customer Service and Shared screen renders in tui as a model document with no error node", {
     when() {
         const failures = []
         for (const [root, path] of screens) {
@@ -194,6 +205,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
             const purchasing = key.startsWith("Purchasing/") ? purchasingFixtures.routes[key.substring("Purchasing/".length)] : null
             const purchasingText = purchasing ? purchasing.tuiText || purchasing.text : null
             if (purchasingText && !got.output.includes(purchasingText)) failures.push(`${key}: no ${JSON.stringify(purchasingText)}`)
+            // a Customer Service twin shows its demo record's text too (P16)
+            const customerService = key.startsWith("CustomerService/") ? customerServiceFixtures.routes[key.substring("CustomerService/".length)] : null
+            const customerServiceText = customerService && !customerService.fullPathOnly ? customerService.tuiText || customerService.text : null
+            if (customerServiceText && !got.output.includes(customerServiceText)) failures.push(`${key}: no ${JSON.stringify(customerServiceText)}`)
         }
         // every Warehouse route fixture is a screen rendered here
         for (const path of Object.keys(warehouseFixtures.routes))
@@ -207,6 +222,10 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
         for (const path of Object.keys(purchasingFixtures.routes))
             if (!screens.some(([root, found]) => root.endsWith("/Purchasing.xml") && found === path))
                 failures.push(`Purchasing/${path}: a route fixture with no screen rendered`)
+        // and every Customer Service route fixture (P16)
+        for (const [path, fixture] of Object.entries(customerServiceFixtures.routes))
+            if (!fixture.fullPathOnly && !screens.some(([root, found]) => root.endsWith("/CustomerService.xml") && found === path))
+                failures.push(`CustomerService/${path}: a route fixture with no screen rendered`)
         if (failures.length) log.warn(`TUI failures:\n${failures.join("\n")}`)
         return { failures }
     },

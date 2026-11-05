@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     preview#SplitCase and split#Case; the split opens the new case, assigned by the queue's rules unless an assignee is
     chosen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Split case" default-menu-include="false">
+        default-menu-title="Split case" default-menu-include="false" server-static="qvt">
     <parameter name="requestId" required="true"/>
     <parameter name="communicationEventIds"/>
     <parameter name="recordKeys"/>
