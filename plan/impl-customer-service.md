@@ -1337,7 +1337,7 @@ hooks).
   - A held request is a plain Submitted request in the queue with no Customer party (the case rule leaves it), listed in
     ChannelRouting for the manager and the administrator; Accept makes the sender (or a chosen customer) the customer.
   - A forum route's poster becomes the case's customer (the Customer role added): escalation is a moderator's deliberate act,
-    not an unverified message.
+    not an unverified message. (Replaced in review, R2: only a served customer's poster; anyone else is held.)
   - An acknowledgement goes only for a new case, never for a held request, a reply or an automatic message; with no route a
     queue's mail makes cases unacknowledged and attaches automatic mail.
   - ChannelSessions is every Customer Service user's (the Cases area); Log a call needs SUPPORT_CASE_EDIT.
@@ -1360,6 +1360,46 @@ hooks).
 - Left undone: the route's notification recipients (a held request waits in ChannelRouting and tells no one; a case is told
   through its own topics); chat bridges and CTI (ChannelAutomation, §7); a per-language acknowledgement; the public form page
   itself (P15); an Inbox message-actions slot (F-P6-2).
+
+**Review Nov 5 (P6).** Checked both diffs against this section, §2, §4's Nov 5 rows, F10–F12, F61, F62, F79, F84 and the
+lead's list: mail threading and spoofed senders, automatic-mail detection and acknowledgement loops, the party-less
+RequestCategory kind, the forum poster under the case rule, the Comms hooks' visibility (F-P6-3), held requests' reach and
+Accept, and leanness. Kept as built: the token join (the sender must be the case's customer side, and only the queue
+organization's cases); the party-less kind (`check` refuses it to a signed-in contact, a token reaches only scope
+CaseIntake and the form, which reads nothing back; a new token and Turn off revoke the earlier ones; Projects' `/r/<token>`
+unchanged); detection (Auto-Submitted other than no, Precedence bulk/junk/list/auto_reply, X-Autoreply, a system sender);
+the acknowledgement only for a new case (never a join, a held or an automatic message) and itself Auto-Submitted;
+`publish#CaseReply` (posting rights through the forum's `caseStaff` and `canReply`, the preview hash, only the reply body
+posted, no private comment). A forged From of a real customer makes a case of that customer whose acknowledgement goes only
+to the customer's own address (`emailContactMechId` is the matched party's), echoing the subject; nothing is sent to the
+forger. Fixes:
+- R1 (high, Mantle) Threading by references trusted any sender: a Message-ID is known to every recipient, so a stranger's
+  forged In-Reply-To or References joined their mail to another customer's case (and its customer-visible conversation).
+  A reference join now needs the sender to be an address the referenced message was from or to (To, Cc), the request's
+  customer side, or staff of the queue's organization; otherwise the message goes on as its own sender's (SupportChannels).
+- R2 (high, Mantle) The forum route gave any poster the Customer role, so every escalated public topic became a case, against
+  the Nov 5 rule and F79. The poster's served customer side (itself, or the customer it is a contact of) is the customer;
+  any other poster (a public member, staff) leaves a request held for review in the queue, the poster its Customer party as
+  with no route; Accept (`review#HeldRequest`) gives the poster the Customer role by the agent's decision, taking a held
+  request's Customer party as its sender and keeping one Customer party. ChannelRouting's held list names the poster. The
+  Built decision "a forum route's poster becomes the case's customer" is replaced by this.
+- R3 (medium, Mantle and BOSS) A request in a service queue (held, or a case) with no project and a type an organization
+  triages in Projects was visible to all its users through RecordVisibility's ProjIntake rule, told to every intake
+  organization's triage assignee, and listed in Projects' requests; all three now leave out a request in a current service
+  queue. A request held in a restricted queue is its team's only, as its cases are. Commons Today lists only assigned
+  requests, so a held one (no assignee) is in no one's.
+- R4 (medium, Mantle) Acknowledgement loops: an autoresponder that marks nothing and starts a new thread made a case and an
+  acknowledgement per message; a queue's mail now acknowledges one address at most three times an hour (logged).
+- Specs: Mantle SupportChannels (10 features, 3.2 s: forged references, the held forum poster accepted, the limit),
+  SupportCases, WorkProjectRequests, RecordVisibility, CommonsToday, InboxThreads; BOSS CustomerServiceChannels,
+  CustomerServiceAccess, ProjectRequests, Requests; mr-pass Forum, Integrations (as master's runtime links it); acceptance
+  CustomerServiceChannelsWalk (5 features, the forum feature now holds and accepts). All pass.
+- Left for the lead: F-P6-3 stays: an `ext-action`'s `condition` tests only the item's fields and `hook` only whether some
+  app answers it, so hiding Chat's and Voicemail's Create a case from users without Customer Service needs framework support
+  (a permission or app-root test on an ext-action, or a `screen` target the user may not view); the server refusal is the
+  guard meanwhile. A case from a forged customer From is unavoidable without sender authentication (DKIM/DMARC results are
+  not stored on EmailMessage); worth a later flag to hold mail failing DMARC. Cases with no project and a triaged type
+  were in Projects' lists since P2 (R3 fixes them too).
 
 ### P7 — Case templates
 
