@@ -15,13 +15,14 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer Service's order, shipment and invoice detail reads (impl-customer-service P3; crosscut §3.6, §3.8, §3.16;
     Orders.js), each the Customer Service branch of a shared screen: scoped by AccessServices (the user's organizations'
     sales records of customers they serve), a missing record and another organization's refused alike
-    (RECORD_UNAVAILABLE); invoice amounts and payments only for ACCOUNTING_VIEW
-    or RECEIVABLE_VIEW, a credit hold's reason only for
+    (RECORD_UNAVAILABLE); an order's prices and totals only for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW,
+    invoice amounts and payments only for ACCOUNTING_VIEW or RECEIVABLE_VIEW, a credit hold's type and reason only for
     CUSTOMER_CREDIT_VIEW, never a payment's details. The actions are Mantle's, called by the screens after check#Record. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="OrderDetail" allow-remote="false">
         <description>Shared/OrderDetail's Customer Service branch: the header (customer, seller, states, total), the open
-            holds read only, the items with what shipped, the shipments with tracking, the invoices (amounts withheld without
+            holds read only, the items with what shipped (prices and the total withheld without PRICE_VIEW, ACCOUNTING_VIEW or
+            RECEIVABLE_VIEW: amountRead), the shipments with tracking, the invoices (amounts withheld without
             ACCOUNTING_VIEW
             or RECEIVABLE_VIEW), the status history, the linked cases the user sees, the stored confirmation and its sends, the
             recipients a resend may go to (Mantle's check), the accounts the user sends from, and whether the user may resend

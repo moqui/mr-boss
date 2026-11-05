@@ -328,16 +328,19 @@ feature(
                 // a purchase order stays Purchasing's
                 purchase: link("purchasing.read", order, ids.purchaseOrderId),
                 // P3: a customer the reader serves opens Customer360 here (F77)
-                customer: link(users.read, "mantle.party.Party", ids.customerId)
+                customer: link(users.read, "mantle.party.Party", ids.customerId),
+                // another app's user keeps the customer's Commons contact
+                commonsCustomer: link("warehouse.read", "mantle.party.Party", ids.customerId, false)
             }
         },
-        then({own, other, services, warehouse, purchase, customer}) {
+        then({own, other, services, warehouse, purchase, customer, commonsCustomer}) {
             own == "/qapps/CustomerService/Orders/OrderDetail?orderId=" + ids.deliveredOrderId
             other == null
             services == "/qapps/CustomerService/Orders/OrderDetail?orderId=" + ids.otherOrderId
             warehouse == null
             String(purchase).startsWith("/qapps/Purchasing/")
             customer == "/qapps/CustomerService/Customers/Customer360?customerPartyId=" + ids.customerId
+            commonsCustomer == "/qapps/Commons/Contacts/ContactDetail?partyId=" + ids.customerId
         }
     }
 )

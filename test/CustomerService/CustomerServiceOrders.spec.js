@@ -1,8 +1,8 @@
 // Customer Service customers and orders (impl-customer-service P3; CaseServices.find#ServiceOrders, CustomerServices,
 // OrderServices, Orders.js, Customers.js; the confirmation's rules are Mantle's, tested in mr-mantle test/order/
 // OrderConfirmations): the order lookup's exact id first and a missing and another organization's id answered alike (F30);
-// Customer360 of a shared customer listing only the user's organizations' orders (F74); the audience of §2 (invoice amounts
-// withheld without receivables read, the credit status only for a credit reader, no payment details); a case's linked
+// Customer360 of a shared customer listing only the user's organizations' orders (F74); the audience of §2 (order amounts
+// withheld without price read, invoice amounts without receivables read, the credit status only for a credit reader, no payment details); a case's linked
 // records opening Customer Service; Products' Customer Service context (no cost or supplier price, price read by permission,
 // the customer-serving facilities, F52); and the one render of OrderDetail's and Customer360's Customer Service branches
 // (qvt). Run: ./moq test mr-boss --spec CustomerService/CustomerServiceOrders
@@ -119,7 +119,7 @@ feature(
 )
 
 feature(
-    "invoice amounts show to a receivables reader only, the credit status to a credit reader only, and no payment details to anyone",
+    "order amounts show to a price reader, invoice amounts to a receivables reader, the credit status to a credit reader, and no payment details to anyone",
     {
         when() {
             const invoice = user => asUser(user, () => invoke(orders + "get#InvoiceDetail", {invoiceId: state.invoiceId}).detail)
@@ -129,10 +129,11 @@ feature(
                 agentInvoice: invoice(users.agent),
                 arInvoice: invoice(users.returnsReceivables),
                 agentCustomer: customer(users.agent),
-                readerCustomer: customer(users.read)
+                readerCustomer: customer(users.read),
+                readerOrder: asUser(users.read, () => invoke(orders + "get#OrderDetail", {orderId: ids.deliveredOrderId}).detail)
             }
         },
-        then({agentInvoice, arInvoice, agentCustomer, readerCustomer}) {
+        then({agentInvoice, arInvoice, agentCustomer, readerCustomer, readerOrder}) {
             agentInvoice.moneyRead == false
             agentInvoice.invoice.totalText == "Withheld"
             agentInvoice.lineRows.every(row => row.amountText == "Withheld")
@@ -145,6 +146,11 @@ feature(
             readerCustomer.credit.read == false
             readerCustomer.credit.rows == []
             agentCustomer.invoiceRows.every(row => row.totalText == "Withheld")
+            agentCustomer.orderRows.every(row => row.totalText != "Withheld")
+            readerCustomer.orderRows.every(row => row.totalText == "Withheld")
+            readerOrder.amountRead == false
+            readerOrder.order.totalText == "Withheld"
+            readerOrder.itemRows.every(row => row.priceText == "Withheld" && row.amountText == "Withheld")
             !JSON.stringify(agentCustomer).includes("4111111111111111")
             !JSON.stringify(agentCustomer).includes("CustJqpCc")
         }

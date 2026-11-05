@@ -19,9 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     (one of the customer's open cases: mantle.request.RequestServices.link#RequestRecord after both records' checks) and
     Resend confirmation (mantle.order.OrderConfirmationServices.resend#OrderConfirmation: the confirmation stored as placed,
     to a recipient of the customer's, from a mail account the user sends from); its holds and their reasons read only (a
-    credit hold's reason for a credit reader only; only Accounting releases it); the items with what shipped, the shipments
-    with tracking, the invoices (amounts for a finance reader), the linked cases, the confirmation and its sends, and the
-    status history. Returns (P9) and order changes (P10) come with their phases; no commercial edit here. -->
+    credit hold's type and reason for a credit reader only; only Accounting releases it); the items with what shipped (prices,
+    the total and the stored PDF for a price or finance reader), the shipments with tracking, the invoices (amounts for a
+    finance reader), the linked cases, the confirmation and its sends, and the status history. Returns (P9) and order changes (P10) come with their phases; no commercial edit here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="serviceChoices" read-only="true">
         <actions>
@@ -61,6 +61,9 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <!-- the stored PDF carries the order's prices and total: a price or finance reader's only (§2) -->
+            <if condition="!ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').amountRead()">
+                <return error="true" message="You do not read order prices, so the stored confirmation is not shown"/></if>
             <entity-find entity-name="mantle.order.OrderContent" list="storedList" disable-authz="true" limit="1">
                 <econdition field-name="orderId"/>
                 <econdition field-name="orderContentTypeEnumId" value="OctOrderConfirmation"/>
@@ -162,7 +165,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </container-dialog>
                                 <button-menu text="More" icon="more_horiz">
                                     <link url="confirmationFile" text="Stored confirmation (PDF)" target-window="_blank"
-                                            parameter-map="{orderId:orderId}" condition="serviceOrder.confirmation.stored"/>
+                                            parameter-map="{orderId:orderId}" condition="serviceOrder.confirmation.stored &amp;&amp; serviceOrder.amountRead"/>
                                     <link url="${so.customerUrl}" url-type="plain" text="Customer" condition="so.customerUrl"/>
                                 </button-menu>
                             </container>

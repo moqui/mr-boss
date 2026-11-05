@@ -899,7 +899,8 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
     the organization's shared service mailbox (the demo's `BOSS_CS_SERVICE_MAIL`), chosen in the dialog.
   - Money (§2): invoice amounts, balances and payments for ACCOUNTING_VIEW or RECEIVABLE_VIEW (Accounting's AR group holds the
     second); an order's line prices and total for every Customer Service user (they are on the customer's own confirmation);
-    payment details never. A credit hold's reason, and the credit status, for CUSTOMER_CREDIT_VIEW only.
+    payment details never. (Review R2: an order's prices, total and stored confirmation for PRICE_VIEW, ACCOUNTING_VIEW or
+    RECEIVABLE_VIEW, so the service reader, who holds no price read, sees them withheld.) A credit hold's reason, and the credit status, for CUSTOMER_CREDIT_VIEW only.
   - Customer360 in Customer Service has its own tabs (Overview and contacts, Cases, Orders and shipments, Billing, Files):
     Accounting's tabs read Accounting's context and are kept to it; PaymentDetails (Finance details) never shows here; the
     identifications and tax registrations are read only on Overview. Returns (P9), Delivered items (P11) and Service (P14)

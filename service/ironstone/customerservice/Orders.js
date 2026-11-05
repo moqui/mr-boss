@@ -3,8 +3,9 @@
 // OrderServices.xml): every read is limited by CustomerService.js's scope (the selling organizations the user works in and
 // the customers they serve) in the query, and each record is checked again by recordOf, so a missing record and another
 // organization's give the same answer (F30). The audience rule of §2 holds in each answer: a payment's details are never in
-// it, and invoice amounts, balances and payments only for a holder of ACCOUNTING_VIEW or RECEIVABLE_VIEW (withheld, never
-// zero); a credit hold's reason only for a holder of CUSTOMER_CREDIT_VIEW. The writes are Mantle's: the confirmation resend
+// it; an order's line prices and totals (and its stored confirmation) only for a holder of PRICE_VIEW, ACCOUNTING_VIEW or
+// RECEIVABLE_VIEW, and invoice amounts, balances and payments only for a holder of ACCOUNTING_VIEW or RECEIVABLE_VIEW
+// (withheld, never zero); a credit hold, its type and reason, only for a holder of CUSTOMER_CREDIT_VIEW. The writes are Mantle's: the confirmation resend
 // (mantle.order.OrderConfirmationServices), a case link (link#RequestRecord), an invoice copy (send#Invoice), called by the
 // screens after check#Record.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
@@ -28,8 +29,10 @@ const productName = productId => {
     const product = productId ? one("mantle.product.Product", {productId}) : null
     return product ? product.productName || product.pseudoId || productId : ""
 }
-// the §2 audience: who reads invoice amounts and payments, and credit facts
+// the §2 audience: who reads invoice amounts and payments, who reads an order's prices and totals (a price reader or a
+// finance reader; the service reader is neither), and credit facts
 const moneyRead = () => lib.access.has("ACCOUNTING_VIEW") || lib.access.has("RECEIVABLE_VIEW")
+const amountRead = () => lib.access.has("PRICE_VIEW") || moneyRead()
 const creditRead = userScope => !!userScope.capabilities.creditRead
 // a record's Customer Service link for the user, or null
 function linkOf(userScope, kind, recordId) {
@@ -143,7 +146,7 @@ function orderRow(orderId) {
         placedText: dayText(order.placedDate),
         grandTotal: order.grandTotal,
         currencyUomId: order.currencyUomId,
-        totalText: money(order.grandTotal ?? 0, order.currencyUomId),
+        totalText: amountRead() ? money(order.grandTotal ?? 0, order.currencyUomId) : withheld(),
         statusId: order.statusId,
         statusText: cs.statusText(order.statusId),
         statusColor: order.statusId === "OrderHold" ? "warning" : order.statusId === "OrderCancelled" ? "grey-7" : "primary",
@@ -204,6 +207,7 @@ function orderDetail(p) {
     const parts = rows("mantle.order.OrderPart", {orderId})
     const customerIds = Array.from(new Set(parts.map(part => part.customerPartyId).filter(Boolean)))
     const currencyUomId = order.currencyUomId
+    const amounts = amountRead()
     const shipments = shipmentsOf(orderId)
     const sources = rows("mantle.shipment.ShipmentItemSource", {orderId})
     const issued = rows("mantle.product.issuance.AssetIssuance", {orderId})
@@ -224,8 +228,8 @@ function orderDetail(p) {
                 quantityText: quantityText(item.quantity),
                 cancelledText: cancelled.isZero() ? "" : quantityText(cancelled),
                 shippedText: item.productId ? quantityText(shippedQuantity) : "",
-                priceText: money(item.unitAmount ?? 0, currencyUomId),
-                amountText: money(amount, currencyUomId),
+                priceText: amounts ? money(item.unitAmount ?? 0, currencyUomId) : withheld(),
+                amountText: amounts ? money(amount, currencyUomId) : withheld(),
                 productUrl: item.productId
                     ? "/qapps/CustomerService/Availability/Product360?productId=" + encodeURIComponent(item.productId)
                     : null
@@ -259,7 +263,7 @@ function orderDetail(p) {
                 .map(part => part.otherPartyOrderId)
                 .filter(Boolean)
                 .join(", "),
-            totalText: money(order.grandTotal ?? 0, currencyUomId),
+            totalText: amounts ? money(order.grandTotal ?? 0, currencyUomId) : withheld(),
             currencyUomId,
             fulfillmentText: fulfillmentText(order, shipments),
             paymentText: paymentText(orderId)
@@ -269,6 +273,7 @@ function orderDetail(p) {
         shipmentRows,
         invoiceRows,
         moneyRead: moneyRead(),
+        amountRead: amounts,
         historyRows: statusHistory(orderId),
         caseRows: casesOf(userScope, "mantle.order.OrderHeader", orderId),
         confirmation,
@@ -284,16 +289,16 @@ function orderDetail(p) {
             : null
     }
 }
-// An order's open holds, the reason of a credit hold only for a credit reader.
+// An order's open holds; a credit hold's type and reason only for a credit reader (that it is a credit hold is a credit
+// fact), as find#Customers says "On hold".
 function holdRows(userScope, orderId) {
     return rows("mantle.order.OrderHoldReason", {orderId})
         .filter(row => !row.releasedDate)
         .map(row => {
-            const credit = row.holdTypeEnumId === "OhtCredit"
-            const reasonShown = !credit || creditRead(userScope)
+            const shown = row.holdTypeEnumId !== "OhtCredit" || creditRead(userScope)
             return {
-                typeText: cs.enumText(row.holdTypeEnumId),
-                reasonText: reasonShown ? row.holdComment || "" : L("Withheld: you do not read credit"),
+                typeText: shown ? cs.enumText(row.holdTypeEnumId) : L("On hold"),
+                reasonText: shown ? row.holdComment || "" : withheld(),
                 placedText: textOf(row.placedDate)
             }
         })
@@ -565,6 +570,7 @@ const operations = {serviceOrders, orderDetail, shipmentDetail, invoiceDetail}
     casesOf,
     linkOf,
     moneyRead,
+    amountRead,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service order operation " + op)
         return operations[op](parameters || {})
