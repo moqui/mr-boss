@@ -1869,7 +1869,7 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
     return shipment; the compatibility specs pass.
 
 **Review Nov 5 (P9).** Checked against the phase, §2 and the brief's points: eligibility and its locks, `authorize#Return`
-and F25, F22, F-P9-3, audience, F-P9-2's walk cleanup, merge-friendliness, tests. Specs run (all pass): Mantle ReturnPolicies,
+and F25, F22, F-P9-3, audience, F-P9-2's walk cleanup, merge-friendliness, tests. Specs run (all pass): Mantle ReturnPolicies (9 features),
 ReturnToResponseBasicFlow, WarehouseReturns, ShipmentReturnMisc, AccountingReturns, PurchaseReturns, OrderToCashBasicFlow;
 BOSS CustomerServiceReturns, WarehouseInspections, WarehouseReturns, AccountingReceivables; acceptance
 CustomerServiceReturnsWalk.
@@ -1897,9 +1897,12 @@ CustomerServiceReturnsWalk.
   and `canVerify` is false. Audience: credited amounts for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW (the agent reads
   credit, the usable-when), the settlement preview only for F; the RMA print carries no amount, cost or note; the ReturnHeader
   link kind resolves the customer and refuses a cancelled return.
-- For the lead: (a) F25 under Retail's default flag: Mantle's `respond#ReturnItems` places (does not approve) a replacement
-  order at approval for an RrspReplace item whatever responseImmediate says; only `returnSettlementRequired` Y stops it, and
-  Retail's reason rows suggest RrspReplace. (b) Warehouse's addReturnItem still checks invoiced, not shipped, and no policy;
+- R6 (high, F25) Where the organization does not settle returns separately (Retail's default), Mantle's approval places a
+  replacement order for every RrspReplace item whatever responseImmediate says (`respond#ReturnItems`; Mantle offers no
+  per-item deferral). `authorize#Return` now refuses such a return (REPLACEMENT_AFTER_RECEIPT, naming the organization and the
+  items) unless the line's policy allows an advance replacement, which is then the intended one; Mantle's own callers are
+  unchanged. Spec: at flag N refused with no order, then authorized with the replacement order once the policy allows it.
+- For the lead: (b) Warehouse's addReturnItem still checks invoiced, not shipped, and no policy;
   routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W lacks. (c) Merging master
   (P10) conflicts in append points: MantleSetupData.xml, CustomerService.js, CaseDetail, CustomerServiceAccess.spec.js,
   CustomerServiceSpecLib.js, this plan.
