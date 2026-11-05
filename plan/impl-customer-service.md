@@ -1153,6 +1153,13 @@ seven features, not rerun as it is unchanged).
   CustomerServiceAccess, CustomerServiceCases, CalendarSettings, ManufacturingWorkCenters, ManufacturingSchedule. `moqui
   lint --screens`: 136 flagged sites, as master.
 
+- **Wave 3 suites (Nov 5, on master after P3, P4 and P12 merged, nothing else running):** standalone mr-mantle 1,688
+  passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 2,981 server features passed and 1 failed
+  (CustomerServiceOrders' email lookup paged past the demo orders behind other specs' orders for Joe Q Public; the
+  lookups are narrowed to the demo's products, passing with the order flow specs run first), 14 client features passed;
+  within every budget (server: mr-mantle 300.9 of 335 s, mr-boss 218.2 of 245 s, mr-pass 12.4 of 15 s; client: mr-boss
+  41.7 of 44 s); `moqui lint --screens` clean.
+
 ### P5 — Assignment and saved replies
 
 Design §9 AgentTeams, AssignmentRules and SavedReplies; Cases' bulk reply; CS-ASSIGNMENT, CS-REPLIES,
