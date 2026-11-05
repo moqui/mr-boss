@@ -1,0 +1,524 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderChangeDetail, the canonical shared screen of an order change (design-customer-service §4 OrderChangeDetail, crosscut
+    §2; impl-customer-service §4, P10), mounted by Customer Service at CustomerService/Orders/OrderChangeDetail and by Sales
+    when Sales is built; only the Customer Service context exists now (appRoot CustomerService), every other app root is
+    "not available". Every read and write goes through ironstone.customerservice.AccessServices.check#Record first (the
+    orderChange or order kind and its capability), then mantle.order.OrderChangeServices, which checks the permission of the
+    change's kind and the order's organization again:
+    - a new proposal (orderId, from OrderDetail's Propose change, CaseDetail's Request order change with caseRequestId, or a
+      short pick's substitute with pickExceptionId): ChangeProposal, through save#OrderChange;
+    - a proposal (requestId): the record header with its state and the one primary action its state allows (Decide, Apply,
+      Send confirmation); ChangeProposal (the kind, reason, consent, who asked and when, the revisions; Edit while open);
+      ChangeImpact (preview#OrderChange: each line before and after with its reserved, picked, packed, shipped and billed
+      quantities, a substitute's evidence and price, and the conflicts apply would refuse); ChangeDecision (the decisions,
+      decide#OrderChange at the proposal's revision); ApplyChange (apply#OrderChange with the revisions, the preview's
+      version and an operation key, once confirmed); the applied change's stored PDF (its OrderContent) and the confirmation
+      email (send#OrderChangeConfirmation). Withdraw is in More. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Order change" default-menu-include="false">
+    <parameter name="requestId"/>
+    <parameter name="orderId"/>
+    <parameter name="caseRequestId"/>
+    <parameter name="orderItemSeqId"/>
+    <parameter name="pickExceptionId"/>
+
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="saveChange">
+        <actions>
+            <if condition="requestId"><then>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId, capability:'orderChangeRequest'}"/>
+            </then><else>
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'orderChangeRequest'}"/>
+                <if condition="caseRequestId">
+                    <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                            in-map="{appRoot:appRoot, recordType:'case', recordId:caseRequestId}"/>
+                </if>
+            </else></if>
+            <set field="lines" from="orderItemSeqId ? [{orderItemSeqId:orderItemSeqId, productId:(productId || null),
+                    quantity:(quantity || null), proposedUnitAmount:(proposedUnitAmount || null),
+                    requiredByDate:(requiredByDate || null), pickExceptionId:(pickExceptionId || null)}] : []"/>
+            <service-call name="mantle.order.OrderChangeServices.save#OrderChange" out-map="saved"
+                    in-map="{requestId:(requestId || null), orderId:(orderId || null), orderChangeKindEnumId:orderChangeKindEnumId,
+                        reason:(reason || null), customerConsentRef:(customerConsentRef || null),
+                        cancellationReason:(cancellationReason || null), caseRequestId:(caseRequestId || null), lines:lines,
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Order change ${saved.requestId} is filed for approval</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId" from="saved?.requestId || requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideChange">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <service-call name="mantle.order.OrderChangeServices.decide#OrderChange" out-map="decided"
+                    in-map="{requestId:requestId, sourceRevision:(sourceRevision || null), decision:decision, reason:(reason || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Order change ${requestId} is ${decision == 'refuse' ? 'refused' : 'approved'}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="applyChange">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId, capability:'orderChangeApply'}"/>
+            <service-call name="mantle.order.OrderChangeServices.apply#OrderChange" out-map="applied"
+                    in-map="{requestId:requestId, sourceRevision:(sourceRevision || null),
+                        expectedOrderRevision:(expectedOrderRevision || null), previewVersion:(previewVersion || null),
+                        confirmed:confirmed, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage('Order change ' + requestId + ' is applied to order ' + applied.result.orderId
+                        + (applied.result.stillHeld ? '; the order stays held for its other hold' : ''), 'success')</script></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="withdrawChange">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <service-call name="mantle.order.OrderChangeServices.withdraw#OrderChange" in-map="{requestId:requestId, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order change ${requestId} is withdrawn</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="sendChangeConfirmation">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <service-call name="mantle.order.OrderChangeServices.send#OrderChangeConfirmation" out-map="sent"
+                    in-map="{requestId:requestId, toAddress:toAddress, emailAccountId:(emailAccountId || null), note:(note || null),
+                        operationKey:operationKey}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('The change to order ' + sent.result.orderId + ' is '
+                    + (sent.result.status === 'sent' ? 'sent' : sent.result.status === 'failed' ? 'not sent yet' : 'on its way')
+                    + ' to ' + sent.result.recipient, sent.result.status === 'failed' ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="appliedFile" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <service-call name="mantle.order.OrderChangeServices.get#OrderChange" out-map="fileOut" in-map="{requestId:requestId}"/>
+            <if condition="!fileOut?.change?.orderContentId">
+                <return error="true" message="Order change ${requestId} has no stored PDF"/></if>
+            <entity-find-one entity-name="mantle.order.OrderContent" value-field="stored" disable-authz="true">
+                <field-map field-name="orderContentId" from="fileOut.change.orderContentId"/></entity-find-one>
+            <script>ec.web.sendResourceResponse(stored.contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions>
+        <set field="change" from="null"/>
+        <set field="impact" from="null"/>
+        <set field="newOrder" from="null"/>
+        <if condition="appRoot == 'CustomerService' &amp;&amp; requestId"><then>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="checked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'orderChange', recordId:requestId}"/>
+            <if condition="checked?.recordId">
+                <service-call name="mantle.order.OrderChangeServices.get#OrderChange" out-map="changeOut" transaction="force-new"
+                        ignore-error="true" in-map="{requestId:requestId}"/>
+                <set field="change" from="changeOut?.change || null"/>
+            </if>
+            <if condition="change">
+                <service-call name="mantle.order.OrderChangeServices.preview#OrderChange" out-map="previewOut"
+                        transaction="force-new" ignore-error="true" in-map="{requestId:requestId}"/>
+                <set field="impact" from="previewOut?.preview || null"/>
+            </if>
+        </then><else-if condition="appRoot == 'CustomerService' &amp;&amp; orderId">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="checked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'orderChangeRequest'}"/>
+            <set field="newOrder" from="checked?.recordId ? checked : null"/>
+        </else-if></if>
+        <script>ec.message.clearErrors()</script>
+        <set field="impactLines" from="impact?.lines || change?.lines || []"/>
+        <set field="conflictList" from="impact?.conflicts || []"/>
+        <set field="stateColors" from="{requested: 'info', needsInfo: 'warning', approved: 'positive', applied: 'positive',
+                rejected: 'negative', cancelled: 'grey-7', stale: 'warning'}"/>
+        <set field="orderLink" from="sharedLinks?.['Orders/OrderDetail']"/>
+        <set field="changesLink" from="sharedLinks?.['Orders/OrderChanges']"/>
+        <set field="caseLink" from="sharedLinks?.['Cases/CaseDetail']"/>
+        <set field="proposeValue" from="newOrder ? {orderId:orderId, caseRequestId:caseRequestId || '', orderItemSeqId:orderItemSeqId || '',
+                pickExceptionId:pickExceptionId || '', orderChangeKindEnumId:(pickExceptionId ? 'OckSubstitute' : 'OckCancel'),
+                quantity:'', productId:'', proposedUnitAmount:'', requiredByDate:'', customerConsentRef:'', reason:'',
+                operationKey:'change-' + ec.user.randomString(24)} : null"/>
+        <set field="firstLine" from="change?.lines?.[0] || {}"/>
+        <set field="editValue" from="change ? {requestId:requestId, orderId:change.orderId, orderChangeKindEnumId:change.kindEnumId,
+                orderItemSeqId:firstLine.orderItemSeqId || '', quantity:firstLine.proposedQuantityText || '',
+                productId:firstLine.substituteProductId || '', pickExceptionId:firstLine.pickExceptionId || '',
+                customerConsentRef:change.customerConsentRef, reason:change.reason} : null"/>
+        <set field="decideValue" from="change ? {requestId:requestId, sourceRevision:change.sourceRevision, decision:'approve',
+                reason:'', operationKey:'decide-' + ec.user.randomString(24)} : null"/>
+        <set field="applyValue" from="change ? {requestId:requestId, sourceRevision:change.sourceRevision,
+                expectedOrderRevision:change.expectedOrderRevision, previewVersion:impact?.previewVersion || '', confirmed:'Y',
+                operationKey:'apply-' + ec.user.randomString(24)} : null"/>
+        <set field="withdrawValue" from="change ? {requestId:requestId, reason:''} : null"/>
+        <!-- the confirmation's recipients and the mailboxes the user sends from, once the change is applied -->
+        <set field="confirmOptions" from="{recipients: [], senders: []}"/>
+        <if condition="change?.actions?.confirm?.allowed">
+            <service-call name="ironstone.customerservice.OrderServices.get#OrderDetail" out-map="orderOut" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, orderId:change.orderId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="confirmOptions" from="{recipients: orderOut?.detail?.recipientOptions || [],
+                    senders: orderOut?.detail?.senderOptions || []}"/>
+        </if>
+        <set field="confirmValue" from="change ? {requestId:requestId, toAddress:confirmOptions.recipients[0]?.value || '',
+                emailAccountId:confirmOptions.senders[0]?.value || '', note:'', operationKey:'confirm-' + ec.user.randomString(24)} : null"/>
+    </actions>
+    <widgets>
+        <section name="OrderChangeUnavailable" condition="!change &amp;&amp; !newOrder">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Order change not available"/>
+                    <box-body>
+                        <label type="p" text="This order change is not available: it does not exist, or it is not a change of an
+                                order you may work with."/>
+                        <link url="${changesLink}" text="Back to order changes" link-type="anchor"
+                                condition="changesLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- ===== a new proposal ===== -->
+        <section name="NewOrderChange" condition="newOrder &amp;&amp; !change">
+            <widgets>
+                <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Propose a change to order ${orderId}"/>
+                <container style="m-record-header">
+                    <container style="m-record-title">
+                        <label text="Propose a change to order ${orderId}" type="h5"/>
+                        <label text="${newOrder.detail}" type="p" style="text-caption m-muted"/>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Change proposal"/>
+                    <box-body>
+                        <form-single name="ChangeProposal" transition="saveChange" map="proposeValue">
+                            <field name="orderId"><default-field><hidden/></default-field></field>
+                            <field name="caseRequestId"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="orderChangeKindEnumId">
+                                <default-field title="Change" tooltip="Cancel and substitute are applied here; the other kinds go
+                                        to the order's owner">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="OrderChangeKind"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="orderItemSeqId">
+                                <default-field title="Order line">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'orderLines', orderId:orderId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="quantity">
+                                <default-field title="Quantity" tooltip="To cancel, to substitute, or the new quantity">
+                                    <text-line size="8"/></default-field>
+                            </field>
+                            <field name="pickExceptionId">
+                                <default-field title="Short pick" tooltip="A substitute answers a short pick Warehouse recorded">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'shortPicks', orderId:orderId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Substitute" tooltip="An equivalent or replacement of the line's product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'substitutes', orderId:orderId}">
+                                            <depends-on field="orderItemSeqId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="proposedUnitAmount">
+                                <default-field title="New unit price"><text-line size="10"/></default-field>
+                            </field>
+                            <field name="requiredByDate">
+                                <default-field title="New ship date"><date-time type="date"/></default-field>
+                            </field>
+                            <field name="customerConsentRef">
+                                <default-field title="Customer's consent" tooltip="Required for a substitute: the call, message or
+                                        reference where the customer agreed">
+                                    <text-line size="40"/></default-field>
+                            </field>
+                            <field name="reason"><default-field title="Reason"><text-area rows="3" cols="50"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="File for approval"><submit confirmation="File this change of order ${orderId} for approval?"/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="orderChangeKindEnumId"/><field-ref name="orderItemSeqId"/></field-row>
+                                <field-row><field-ref name="quantity"/><field-ref name="pickExceptionId"/></field-row>
+                                <field-row><field-ref name="productId"/><field-ref name="customerConsentRef"/></field-row>
+                                <field-row><field-ref name="proposedUnitAmount"/><field-ref name="requiredByDate"/></field-row>
+                                <field-ref name="reason"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <link url="${orderLink}" text="Back to order ${orderId}" link-type="anchor"
+                                parameter-map="{orderId:orderId}" condition="orderLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <!-- ===== a proposal ===== -->
+        <section name="OrderChangeFound" condition="change">
+            <widgets>
+                <context record-entity="mantle.request.Request" record-id="${requestId}"
+                        title="Order change ${requestId} · order ${change.orderId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="Order change ${requestId}" type="h5"/>
+                                <link url="${orderLink}" text="Order ${change.orderId}" link-type="anchor"
+                                        parameter-map="{orderId:change.orderId}" condition="orderLink"/>
+                            </container>
+                            <label text="${[change.kindText, change.customerName, change.organizationName, 'asked ' +
+                                    change.requestedText + ' by ' + change.requestedByName].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[change.state] || 'grey-7'}">${
+                                    WebUtilities.encodeHtml(change.stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: change.stateText})}]]></text>
+                                <text type="html">${change.stateText}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="OrderChangeDecide" button-text="Decide" icon="sym_o_approval" type="primary"
+                                title="Decide order change ${requestId}" width="560"
+                                condition="change.state == 'requested' &amp;&amp; change.actions.decide.allowed">
+                            <form-single name="ChangeDecision" transition="decideChange" map="decideValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="decision">
+                                    <default-field title="Decision">
+                                        <radio><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="reason">
+                                    <default-field title="Reason" tooltip="Required to refuse"><text-area rows="3" cols="50"/></default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Decide"><submit confirmation="Decide order change ${requestId} as of its revision ${change.revisionText}?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="OrderChangeApply" button-text="Apply" icon="sym_o_published_with_changes" type="primary"
+                                title="Apply order change ${requestId}" width="560"
+                                condition="change.state == 'approved' &amp;&amp; change.actions.apply.allowed">
+                            <form-single name="ApplyChange" transition="applyChange" map="applyValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                <field name="expectedOrderRevision"><default-field><hidden/></default-field></field>
+                                <field name="previewVersion"><default-field><hidden/></default-field></field>
+                                <field name="confirmed"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Apply"><submit confirmation="Apply order change ${requestId} to order ${change.orderId}? The order is held while it changes."/></default-field>
+                                </field>
+                            </form-single>
+                            <label type="p" style="text-caption m-muted" text="The order is checked again as it is now; a pick, pack
+                                    or ship since the preview stops the change and leaves the order as it was."/>
+                        </container-dialog>
+                        <container-dialog id="OrderChangeConfirm" button-text="Send confirmation" icon="sym_o_forward_to_inbox"
+                                type="primary" title="Send the change to order ${change.orderId}" width="600"
+                                condition="change.actions.confirm.allowed &amp;&amp; change.orderContentId">
+                            <form-single name="ChangeConfirmation" transition="sendChangeConfirmation" map="confirmValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="toAddress">
+                                    <default-field title="To" tooltip="An address of the customer or one of its contacts">
+                                        <drop-down><list-options list="confirmOptions.recipients" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="emailAccountId">
+                                    <default-field title="From">
+                                        <drop-down><list-options list="confirmOptions.senders" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="note"><default-field title="Message"><text-area rows="3" cols="50"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Send"><submit confirmation="Send the applied change of order ${change.orderId}?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="OrderChangeEdit" button-text="Edit" icon="sym_o_edit" width="640"
+                                    title="Edit order change ${requestId}" condition="change.actions.save.allowed">
+                                <form-single name="ChangeProposalEdit" transition="saveChange" map="editValue">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="orderChangeKindEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="orderItemSeqId">
+                                        <default-field title="Order line">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'orderLines', orderId:change.orderId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantity"><default-field title="Quantity"><text-line size="8"/></default-field></field>
+                                    <field name="pickExceptionId">
+                                        <default-field title="Short pick">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'shortPicks', orderId:change.orderId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="productId">
+                                        <default-field title="Substitute">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'substitutes', orderId:change.orderId}">
+                                                    <depends-on field="orderItemSeqId"/>
+                                                </dynamic-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerConsentRef">
+                                        <default-field title="Customer's consent"><text-line size="40"/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><text-area rows="3" cols="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Save"><submit confirmation="Save order change ${requestId}? An earlier approval no longer counts."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="appliedFile" text="Applied change (PDF)" target-window="_blank"
+                                    parameter-map="{requestId:requestId}" condition="change.orderContentId"/>
+                            <link url="${caseLink}" text="Case ${change.caseRequestId}"
+                                    parameter-map="{requestId:change.caseRequestId}" condition="change.caseRequestId &amp;&amp; caseLink"/>
+                            <container-dialog id="OrderChangeWithdraw" button-text="Withdraw" icon="sym_o_cancel" btn-type="danger"
+                                    title="Withdraw order change ${requestId}" width="480" condition="change.actions.withdraw.allowed">
+                                <form-single name="ChangeWithdraw" transition="withdrawChange" map="withdrawValue">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-area rows="2" cols="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="Withdraw"><submit type="danger" confirmation="Withdraw order change ${requestId}? It stays in the history."/></default-field>
+                                    </field>
+                                </form-single>
+                            </container-dialog>
+                        </button-menu>
+                    </container>
+                </container>
+
+                <container-row>
+                    <row-col md="5">
+                        <container-box>
+                            <box-header title="Proposal"/>
+                            <box-body>
+                                <label type="p" text="${change.reason || 'No reason was given.'}"/>
+                                <label type="p" style="text-caption m-muted" text="${['Revision of ' + change.revisionText,
+                                        'made against order revision ' + change.expectedOrderRevision + (change.orderRevision != change.expectedOrderRevision
+                                            ? ' (the order is at ' + change.orderRevision + ' now)' : ''),
+                                        change.customerConsentRef ? 'customer consent: ' + change.customerConsentRef : '',
+                                        change.appliedText ? 'applied ' + change.appliedText : ''].filter(Boolean).join(' · ')}"/>
+                                <label type="p" style="text-warning" condition="!change.appliedHere"
+                                        text="The order's owner (Sales) decides and applies this kind of change; Customer Service files it."/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Decisions · ${change.decisions.length}"/>
+                            <box-body-nopad>
+                                <form-list name="ChangeDecisions" list="change.decisions" skip-form="true" paginate="false">
+                                    <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                    <field name="decidedByName"><default-field title="By"><display/></default-field></field>
+                                    <field name="decidedText"><default-field title="When"><display/></default-field></field>
+                                    <field name="revisionText"><default-field title="Revision"><display/></default-field></field>
+                                    <field name="expireText"><default-field title="Holds until"><display/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="decidedText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not decided yet."
+                                        condition="!change.decisions.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="7">
+                        <container-box>
+                            <box-header title="Impact"/>
+                            <box-body-nopad>
+                                <form-list name="ChangeImpact" list="impactLines" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="Line"><display/></default-field></field>
+                                    <field name="actionText"><default-field title="Change"><display/></default-field></field>
+                                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Before"><display/></default-field></field>
+                                    <field name="afterText"><default-field title="After"><display/></default-field></field>
+                                    <field name="reservedText" align="right"><default-field title="Reserved"><display/></default-field></field>
+                                    <field name="pickedText" align="right"><default-field title="Picked"><display/></default-field></field>
+                                    <field name="packedText" align="right"><default-field title="Packed"><display/></default-field></field>
+                                    <field name="shippedText" align="right"><default-field title="Shipped"><display/></default-field></field>
+                                    <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                                    <field name="substituteText">
+                                        <default-field title="Substitute">
+                                            <display text="${substituteText ? [substituteText, substituteAssocText, substitutePriceText,
+                                                    'available ' + substituteAvailableText].filter(Boolean).join(' · ') : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="reopenText"><default-field title="Off the package"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="actionText"/></column>
+                                        <column><field-ref name="afterText"/><field-ref name="shippedText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section-iterate name="ChangeConflicts" list="conflictList" entry="conflict">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-body><label type="p" style="q-mb-none" text="${conflict.message}"/></box-body>
+                                </container-box>
+                            </widgets>
+                        </section-iterate>
+                        <label type="p" style="text-caption m-muted" condition="impact?.heldText"
+                                text="The order is held: ${impact.heldText}."/>
+                        <label type="p" style="text-caption m-muted" condition="impact?.paidText"
+                                text="Paid on the order: ${impact.paidText}. A refund of a captured payment is Accounting's."/>
+                        <label type="p" style="text-caption m-muted" condition="change.amountsWithheld"
+                                text="Prices are withheld: you do not read order prices."/>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -290,7 +290,10 @@ const linkPaths = [
     "Cases/ChannelSessions",
     "Settings/ChannelRouting",
     // P5: the saved replies (CaseDetail's Saved reply links them)
-    "Settings/SavedReplies"
+    "Settings/SavedReplies",
+    // P10: the order changes and the shared change detail
+    "Orders/OrderChanges",
+    "Orders/OrderChangeDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -384,6 +387,25 @@ function readCase(requestId) {
     }
 }
 
+// P10: an order change, the RqtOrderChange Request of a sales order: its organization the OrgInternal party, its customers
+// the Customer parties (mantle.order.OrderChangeServices checks the order and the permission of the change's kind again).
+function readOrderChange(requestId) {
+    const request = one("mantle.request.Request", {requestId})
+    if (!request || request.requestTypeEnumId !== "RqtOrderChange" || !request.orderId) return null
+    const parties = rows("mantle.request.RequestParty", {requestId}).filter(row => lib.active(row))
+    const order = readOrder(request.orderId)
+    if (!order) return null
+    return {
+        owners: parties
+            .filter(row => row.roleTypeId === "OrgInternal")
+            .map(row => row.partyId)
+            .concat(order.owners),
+        customers: order.customers,
+        label: request.requestName || requestId,
+        detail: [order.customers.map(partyName).join(", "), statusText(request.statusId)].filter(Boolean).join(" · ")
+    }
+}
+
 // Each kind a Customer Service screen, mount, palette or record link may be given: its name, icon, the screen that opens it
 // (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup) and its read (a record answers its owners (service organizations) and customers, a label and a detail, or null
@@ -399,7 +421,14 @@ const recordKinds = {
         destination: "Orders/ShipmentDetail?shipmentId=",
         read: readShipment
     },
-    invoice: {name: "Invoice", icon: "sym_o_request_quote", destination: "Orders/InvoiceDetail?invoiceId=", read: readInvoice}
+    invoice: {name: "Invoice", icon: "sym_o_request_quote", destination: "Orders/InvoiceDetail?invoiceId=", read: readInvoice},
+    // P10: a proposed change of an order (Shared/OrderChangeDetail)
+    orderChange: {
+        name: "Order change",
+        icon: "sym_o_edit_note",
+        destination: "Orders/OrderChangeDetail?requestId=",
+        read: readOrderChange
+    }
 }
 // The record kind of an entity a case or another record links (CaseDetail's linked records, P3).
 const entityKinds = {
@@ -564,6 +593,17 @@ const searchFinds = [
                 .selectField("requestId")
                 .orderBy("-requestDate")
         },
+        idField: "requestId"
+    },
+    // P10: order changes by id, subject or order
+    {
+        kind: "orderChange",
+        query: (userScope, condition) =>
+            find("mantle.request.Request")
+                .condition("requestTypeEnumId", "RqtOrderChange")
+                .condition(condition(["requestId", "requestName", "orderId"]))
+                .selectField("requestId")
+                .orderBy("-requestDate"),
         idField: "requestId"
     }
 ]
@@ -786,6 +826,79 @@ const choiceSources = {
             options.push({value: selected, label: partyName(selected)})
         return options
     }
+}
+// P10: a customer's sales orders the user may work with, newest first, for a change asked from a case
+choiceSources.customerOrders = (userScope, term, selected, p) => {
+    if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+    const options = []
+    for (const row of find("mantle.order.OrderHeaderAndPart")
+        .condition("customerPartyId", p.customerPartyId)
+        .condition("vendorPartyId", "in", vendorIds(userScope))
+        .selectField("orderId,orderName")
+        .distinct(true)
+        .orderBy("-orderId")
+        .limit(choiceLimit)
+        .list()) {
+        const label = row.orderId + (row.orderName ? " · " + row.orderName : "")
+        if (!term || label.toLowerCase().includes(term.toLowerCase())) options.push({value: row.orderId, label})
+    }
+    return options
+}
+// P10: an order's lines for a proposed change, after the order's check: each with its product and quantities in words
+choiceSources.orderLines = (userScope, term, selected, p) => {
+    if (!p.orderId) return []
+    recordOf(userScope, "order", p.orderId)
+    return rows("mantle.order.OrderItem", {orderId: p.orderId})
+        .filter(row => row.productId && Number(String(row.quantity ?? 0)) > 0)
+        .sort((a, b) => String(a.orderItemSeqId).localeCompare(String(b.orderItemSeqId)))
+        .map(row => {
+            const product = one("mantle.product.Product", {productId: row.productId})
+            return {
+                value: row.orderItemSeqId,
+                label: row.orderItemSeqId + " · " + (product?.productName || row.productId) + " · " + String(row.quantity)
+            }
+        })
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+}
+// P10: the short picks of an order's open shipments, for a substitute
+choiceSources.shortPicks = (userScope, term, selected, p) => {
+    if (!p.orderId) return []
+    recordOf(userScope, "order", p.orderId)
+    const sources = rows("mantle.shipment.ShipmentItemSource", {orderId: p.orderId})
+    const options = []
+    for (const source of sources)
+        for (const exception of rows("mantle.shipment.ShipmentPickException", {
+            shipmentItemSourceId: source.shipmentItemSourceId
+        }))
+            options.push({
+                value: exception.exceptionId,
+                label:
+                    "Line " +
+                    source.orderItemSeqId +
+                    " · " +
+                    String(exception.quantityShort) +
+                    " short on shipment " +
+                    exception.shipmentId +
+                    (exception.resolutionEnumId ? " · " + enumText(exception.resolutionEnumId) : "")
+            })
+    return options.filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+}
+// P10: the substitutes of an order line's product (current PatEquivalent and PatReplacement associations, Product360's)
+choiceSources.substitutes = (userScope, term, selected, p) => {
+    if (!p.orderId || !p.orderItemSeqId) return []
+    recordOf(userScope, "order", p.orderId)
+    const item = one("mantle.order.OrderItem", {orderId: p.orderId, orderItemSeqId: p.orderItemSeqId})
+    if (!item?.productId) return []
+    return rows("mantle.product.ProductAssoc", {productId: item.productId})
+        .filter(row => ["PatEquivalent", "PatReplacement"].includes(row.productAssocTypeEnumId) && lib.active(row))
+        .map(row => {
+            const product = one("mantle.product.Product", {productId: row.toProductId})
+            return {
+                value: row.toProductId,
+                label: (product?.productName || row.toProductId) + " · " + enumText(row.productAssocTypeEnumId)
+            }
+        })
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
 }
 // P6: the cases the user sees (their queues', and those assigned to them), open ones, by id or subject, for LogCall
 choiceSources.cases = (userScope, term, selected) => {

@@ -84,7 +84,10 @@ feature("the Customer Service menu and providers follow each group's areas; the 
             if (JSON.stringify(quickKinds) !== JSON.stringify(quick))
                 problems.push(`${user} is offered quick create ${quickKinds}, not ${quick}`)
             const topics = (found.providers?.notificationTopics || []).map(item => item.topic || item)
-            if (quick.length && !["SupportCaseAssigned", "SupportCaseCustomerReply"].every(topic => topics.includes(topic)))
+            if (
+                quick.length &&
+                !["SupportCaseAssigned", "SupportCaseCustomerReply", "OrderChangeApproval"].every(topic => topics.includes(topic))
+            )
                 problems.push(`${user} lacks the case topics: ${JSON.stringify(topics)}`)
             if (!(found.providers?.paletteSources || []).some(source => source.group === "CustomerService"))
                 problems.push(`${user} has no Customer Service palette source`)
@@ -751,6 +754,57 @@ feature("assignment rules are the administrator's, saved replies on a case a cas
             const message = asUser(user, () => refusal(save, Object.assign({appRoot: "CustomerService"}, parameters)))
             if (expected === "" ? message !== "" : !message.includes(expected))
                 problems.push(`${user} save#SavedReplyAction: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+// P10: an order change is its order's organization's: the order desk applies (ORDER_CHANGE_APPLY), an agent does not, and
+// Ziziwork Services' agent reaches neither the record nor Mantle's read of it; the line choices are the order's
+feature("order changes: the order desk may apply one, an agent may not; another organization's is refused", {
+    when() {
+        const problems = []
+        const saved = lib.orderChange(users.agent, {
+            orderId: ids.pickOrderId,
+            orderChangeKindEnumId: "OckCancel",
+            reason: "Access spec",
+            lines: [{orderItemSeqId: "01", quantity: 1}]
+        })
+        try {
+            if (saved.error) problems.push("the agent's proposal: " + saved.error)
+            const record = {
+                appRoot: "CustomerService",
+                recordType: "orderChange",
+                recordId: saved.requestId,
+                capability: "orderChangeApply"
+            }
+            // Services' agent asks for the record alone: another organization's is refused whatever the capability
+            for (const [user, expected, capability] of [
+                [users.orderDesk, "", "orderChangeApply"],
+                [users.agent, "PERMISSION_DENIED", "orderChangeApply"],
+                [users.services, "RECORD_UNAVAILABLE", null]
+            ]) {
+                const message = asUser(user, () => refusal(access + "check#Record", Object.assign({}, record, {capability})))
+                if (expected === "" ? message !== "" : !message.includes(expected))
+                    problems.push(`${user} check#Record: ${message || "accepted"}, not ${expected || "accepted"}`)
+            }
+            const read = {requestId: saved.requestId}
+            const desk = asUser(users.orderDesk, () => refusal("mantle.order.OrderChangeServices.get#OrderChange", read), false)
+            const other = asUser(users.services, () => refusal("mantle.order.OrderChangeServices.get#OrderChange", read), false)
+            if (desk !== "") problems.push("the order desk's read: " + desk)
+            if (!other.includes("RECORD_UNAVAILABLE")) problems.push("Services' read: " + (other || "accepted"))
+            const lines = choice =>
+                asUser(users.agent, () => invoke(access + "get#Choices", Object.assign({appRoot: "CustomerService"}, choice)))
+            if (!values(lines({choice: "orderLines", orderId: ids.pickOrderId})).includes("01"))
+                problems.push("the agent's order lines lack line 01")
+            const otherLines = asUser(users.services, () =>
+                refusal(access + "get#Choices", {appRoot: "CustomerService", choice: "orderLines", orderId: ids.pickOrderId})
+            )
+            if (!otherLines.includes("RECORD_UNAVAILABLE")) problems.push("Services' order lines: " + (otherLines || "accepted"))
+        } finally {
+            lib.removeOrderChange(saved.requestId)
         }
         return {problems}
     },

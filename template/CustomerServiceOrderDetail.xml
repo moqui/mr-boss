@@ -164,6 +164,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <button-menu text="More" icon="more_horiz">
+                                    <!-- P10: propose a change (Shared/OrderChangeDetail), and the order's changes -->
+                                    <link url="${sharedLinks['Orders/OrderChangeDetail']}" text="Propose change"
+                                            icon="sym_o_edit_note" parameter-map="{orderId:orderId}"
+                                            condition="customerService?.capabilities?.orderChangeRequest"/>
+                                    <link url="${sharedLinks['Orders/OrderChanges']}" text="Order changes"
+                                            parameter-map="{orderId:orderId}"
+                                            condition="customerService?.capabilities?.orderChangeRequest || customerService?.capabilities?.orderChangeApprove || customerService?.capabilities?.orderChangeApply"/>
                                     <link url="confirmationFile" text="Stored confirmation (PDF)" target-window="_blank"
                                             parameter-map="{orderId:orderId}" condition="serviceOrder.confirmation.stored &amp;&amp; serviceOrder.amountRead"/>
                                     <link url="${so.customerUrl}" url-type="plain" text="Customer" condition="so.customerUrl"/>

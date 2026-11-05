@@ -50,7 +50,57 @@ const ids = {
     templateFormId: "BOSS_CS_TPL_DEFECTIVE",
     // P6: Retail's mail and public form routes into the Support queue
     mailRouteId: "BOSS_CS_ROUTE_MAIL",
-    formRouteId: "BOSS_CS_ROUTE_FORM"
+    formRouteId: "BOSS_CS_ROUTE_FORM",
+    // P10: the filter's equivalent (a substitute for a short pick of the filter)
+    substituteProductId: "BOSS_CS_FILTER_PLUS"
+}
+// P10: a proposed change of an order, made by a spec as the user and removed with its lines, parties, decisions and notices
+// (no other spec's lists show it): {requestId, sourceRevision} or {error}.
+function orderChange(user, parameters) {
+    return asUser(
+        user,
+        () => {
+            ec.message.pushErrors()
+            try {
+                const out =
+                    ec.service
+                        .sync()
+                        .name("mantle.order.OrderChangeServices.save#OrderChange")
+                        .parameters(parameters)
+                        .requireNewTransaction(true)
+                        .call() || {}
+                return Object.assign({}, out, {error: ec.message.hasError() ? ec.message.getErrorsString() : ""})
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+        },
+        false
+    )
+}
+function removeOrderChange(requestId) {
+    if (!requestId) return
+    system(() => {
+        const remove = (entity, conditions) => ec.entity.find(entity).condition(conditions).deleteAll()
+        for (const message of Array.from(
+            ec.entity
+                .find("moqui.security.user.NotificationMessage")
+                .condition({topic: "OrderChangeApproval", recordId: requestId})
+                .list()
+        )) {
+            remove("moqui.security.user.NotificationMessageUser", {notificationMessageId: message.notificationMessageId})
+            message.delete()
+        }
+        for (const entity of [
+            "mantle.request.support.OrderChangeDecision",
+            "mantle.request.RequestItemOrder",
+            "mantle.request.RequestNote",
+            "mantle.request.RequestItem",
+            "mantle.request.RequestParty"
+        ])
+            remove(entity, {requestId})
+        remove("mantle.request.Request", {requestId})
+    })
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -192,7 +242,10 @@ function routeFixtures() {
         "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"},
         // P6: the channel sessions and the channel routing
         "Cases/ChannelSessions": {parameters: {}, text: "Channel sessions"},
-        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"}
+        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"},
+        // P10: the order changes and the shared change detail
+        "Orders/OrderChanges": {parameters: {}, text: "Order changes"},
+        "Orders/OrderChangeDetail": {parameters: {requestId: "BOSS_CS_NO_CHANGE"}, text: "Order change not available"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
@@ -204,9 +257,10 @@ function routeFixtures() {
         ["Orders/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
         ["Availability/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"],
         ["Availability/StockAtDate", "component://mr-boss/screen/Shared/StockAtDate.xml"],
-        ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"]
+        ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
+        ["Orders/OrderChangeDetail", "component://mr-boss/screen/Shared/OrderChangeDetail.xml"]
     ]
     return {routes, mounts}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures})
+;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, orderChange, removeOrderChange})

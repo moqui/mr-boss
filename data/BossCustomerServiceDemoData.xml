@@ -167,4 +167,23 @@ along with this software (see the LICENSE.md file). If not, see
             organizationPartyId="ORG_ZIZI_RETAIL" requestCategoryId="BOSS_CS_Q_SUPPORT" ruleName="Support: agents take cases" sequenceNum="10"
             distributionEnumId="AdManual" respectSchedule="Y" fromDate="0"/>
     <mantle.request.support.ServiceAssignmentCursor rootRuleId="BOSS_CS_RULE_SUPPORT" assignedCount="0"/>
+    <!-- Customer Service P10 (F33): the filter's equivalent, stocked and priced, the substitute a short pick of the filter takes -->
+    <mantle.product.Product productId="BOSS_CS_FILTER_PLUS" pseudoId="CS-FILTER-PLUS" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" assetClassEnumId="AsClsInventoryFin" productName="Service demo air filter plus"
+            ownerPartyId="ORG_ZIZI_RETAIL">
+        <prices productPriceId="BOSS_CS_FILTER_PLUS_LIST" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptList"
+                fromDate="2026-01-01 00:00:00" minQuantity="1" price="16.00" priceUomId="USD" vendorPartyId="ORG_ZIZI_RETAIL"/>
+    </mantle.product.Product>
+    <mantle.product.ProductAssoc productId="BOSS_CS_FILTER" toProductId="BOSS_CS_FILTER_PLUS"
+            productAssocTypeEnumId="PatEquivalent" fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_CS_FILTER_PLUS_A" productId="BOSS_CS_FILTER_PLUS" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" statusId="AstAvailable" facilityId="ZIRET_WH" ownerPartyId="ORG_ZIZI_RETAIL"
+            acquireCost="6.50" acquireCostUomId="USD" receivedDate="2026-09-01 00:00:00">
+        <mantle.product.asset.AssetDetail assetDetailId="BOSS_CS_FILTER_PLUS_A" effectiveDate="2026-09-01 00:00:00"
+                quantityOnHandDiff="20" availableToPromiseDiff="20"/>
+    </mantle.product.asset.Asset>
+    <!-- Customer Service P10 (F55): Ziziwork's sales orders (Retail's among them, which inherit the company's preference) count
+        commercial changes only in their revision, so an order change proposal stays bound to the order it saw while a
+        confirmation is stored or the order is held -->
+    <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_CORP" salesCommercialRevisionOnly="Y"/>
 </entity-facade-xml>

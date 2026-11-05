@@ -112,6 +112,10 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="queueId"/>
             <parameter name="customerPartyId"/>
             <parameter name="organizationPartyId"/>
+            <!-- P10: an order's lines, short picks and a line's substitutes (customerOrders, orderLines, shortPicks,
+                substitutes) -->
+            <parameter name="orderId"/>
+            <parameter name="orderItemSeqId"/>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

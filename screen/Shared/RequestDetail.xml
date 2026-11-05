@@ -345,10 +345,21 @@ along with this software (see the LICENSE.md file). If not, see
             }
             // a purchase request's Items tab in every context (impl-purchasing P10, crosscut §3.11): its lines with what is
             // left to source, and "Create purchase order" (Purchasing's RequestSourcing) for a buyer only
-            purchaseRequestShown = recordFound && detail.request?.requestTypeEnumId === 'RqtPurchase'
-            const purchasingRequests = purchaseRequestShown ? ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js') : null
-            const purchaseItemRows = purchaseRequestShown ? purchasingRequests.itemRows(requestId) : []
-            purchaseSourcingUrl = purchaseRequestShown && !clientView ? purchasingRequests.sourcingUrl(requestId) : null
+            // impl-customer-service P10 (F49): an order change's lines too, read only, with a link to its OrderChangeDetail
+            const purchaseRequest = recordFound && detail.request?.requestTypeEnumId === 'RqtPurchase'
+            const orderChangeRequest = recordFound && detail.request?.requestTypeEnumId === 'RqtOrderChange'
+            purchaseRequestShown = purchaseRequest || orderChangeRequest
+            const purchasingRequests = purchaseRequest ? ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js') : null
+            const purchaseItemRows = purchaseRequest ? purchasingRequests.itemRows(requestId) : orderChangeRequest
+                ? Array.from(ec.entity.find('mantle.request.RequestItem').condition('requestId', requestId).disableAuthz().list())
+                    .filter((item) => item.statusId !== 'ReqCancelled').map((item) => ({requestItemSeqId: item.requestItemSeqId,
+                        productText: item.productId || '', quantityText: item.quantity == null ? '' : String(item.quantity),
+                        description: [ec.entity.find('moqui.basic.Enumeration').condition('enumId', item.changeActionEnumId || '_NA_').disableAuthz().one()?.description,
+                            item.description].filter(Boolean).join(' · '),
+                        requiredByText: item.requiredByDate ? ec.l10n.format(item.requiredByDate, 'yyyy-MM-dd') : ''}))
+                : []
+            purchaseSourcingUrl = purchaseRequest && !clientView ? purchasingRequests.sourcingUrl(requestId) : null
+            orderChangeUrl = orderChangeRequest ? '/qapps/CustomerService/Orders/OrderChangeDetail?requestId=' + encodeURIComponent(requestId) : null
             const tabKeys = projects ? ['overview', 'conversation', 'work'].concat(pd.itemsShown ? ['items'] : []).concat(['files'])
                     : ['overview', 'conversation', 'tasks'].concat(purchaseRequestShown ? ['items'] : []).concat(['files'])
             tab = tabKeys.includes(tab) ? tab : 'overview'
@@ -956,6 +967,8 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-toolbar>
                         <link url="${purchaseSourcingUrl}" url-type="plain" text="Create purchase order" link-type="anchor-button"
                                 icon="sym_o_receipt_long" condition="purchaseSourcingUrl"/>
+                        <link url="${orderChangeUrl}" url-type="plain" text="Open the order change" link-type="anchor-button"
+                                icon="sym_o_edit_note" condition="orderChangeUrl"/>
                     </box-toolbar>
                     <box-body-nopad>
                     <form-list name="PurchaseRequestItems" list="itemList" skip-form="true" paginate="false">
