@@ -1841,12 +1841,14 @@ spec depends on it. Fixes:
   of 5x the limit is read). It takes `requestIds`, and the acceptance walk and SupportRelations close only their own cases (the
   walk had closed every resolved Retail case in the shared acceptance database). The stamp pre-filter skips no case for good: a
   resolved case's stamp is at or after its resolution and ages past the cutoff.
-- Left for the lead: (1) `scan#CaseSla`'s `mark` locks an episode, then inserts a CaseSlaEvent (a key share on the request),
-  while update#Case, transition#Case and now merge#Cases lock the request FOR UPDATE, then update its episodes: a deadlock
-  PostgreSQL breaks by aborting one (the scan retries in 5 minutes); since P4, and the merge adds a path of that shape. (2) P14's
-  reports must read only met, missed, running, paused and unmet clocks, never SlsMerged (F-P8-3).
-- Specs run: Mantle SupportRelations (5), RecordNotes (7), CrmMiscServices (7); acceptance CustomerServiceRelationsWalk (4); all
-  pass.
+- **R3 (medium)** `scan#CaseSla`'s `mark` locked an episode, then inserted a CaseSlaEvent (a key share on the request), while
+  update#Case, transition#Case and merge#Cases lock the request FOR UPDATE, then write its episodes: a deadlock on PostgreSQL
+  (since P4; the merge added a path of that shape). `mark`, `correct#CaseSla` and record#CaseEvent's message rule (Sla.js
+  `lockRequest`) now lock the request FOR UPDATE first, then the episode. The status rule runs after its request's update
+  (request first already); the work rule writes no episode.
+- Left for the lead: P14's reports must read only met, missed, running, paused and unmet clocks, never SlsMerged (F-P8-3).
+- Specs run: Mantle SupportRelations (5), SupportSla (8), SupportCases (11), SupportChannels (10), RecordNotes (7),
+  CrmMiscServices (7); acceptance CustomerServiceRelationsWalk (4); all pass.
 
 
 ### P9 — Returns
