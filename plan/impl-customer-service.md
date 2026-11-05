@@ -3030,10 +3030,61 @@ Design §8; CS-PORTAL.
     request#CustomerCancel; the store's queue and the SalesOrder OrderView token (impl-shop F27) are not built.
   - **F-P15-11** Admin's privacy provider contract (`org.moqui.admin.PrivacyServices`) does not exist, so CS-PRIVACY's provider
     and F187's `redact#FormResponse` wait for it; P2's interim privacy cases take the requests (§7).
-- Not done: notices: an agent's case reply mail does not yet carry the case's Support link (`get#CaseCustomerLink` is built for
-  BOSS's reply compose, not wired), and P9 sends customers no decision notice, so only the RMA mail links its page; MyCases and
-  MyReturns show the newest 100 with no opaque cursor; the label download and the immediate cancel are not exercised by a spec
-  (P9's label fixture and P10's spec cover their rules); F181's readiness stays in CaseFeedbackServices.
+- Not done: F181's readiness stays in CaseFeedbackServices. (The notices, the cursors and the label and immediate cancel
+  specs were finished in the review.)
+
+**Review Nov 5 (P15).** Checked against design §8, design-forum §4.3 and §5, AGENTS.md and the Practices: isolation
+(ExternalAccess `check`/`actingParties`: a contact's own cases unless a customer administrator, the customer's returns and
+orders only, another customer's record and an uninvited same-domain account NotFound, forged, expired and revoked tokens
+NotFound with nothing of the record, an anonymous reader public help sources only), audience (outward messages only, staff
+as the organization, RqCntCustomerShared files only, P7's customer projection, no internal template field accepted, the
+cancel read without decision reasons or approvers), the PASS contract (allow-listed projections with capabilities and
+revisions, operation IDs on creates, error kinds, no `ironstone.*` from mr-pass or Mantle, files through staging and the
+scanner with type, signature and size), BOSS's Invite to support and ServiceDefaults. Fixes:
+- **R1 (high)** A case file or return label in the database resource store (the default content root) never downloaded:
+  `Facade.downloadFile` and `PassApi`'s download read the location as the public account after writing the headers, the
+  read was refused, and the page answered a 302 carrying the PDF's headers. Both now read the file with authorization off
+  (the authority checked the asker) before writing anything.
+- **R2 (medium)** The self relationship held for any verified address of the account: after an email change to an
+  unverified address the account still reached its party's cases and returns. `selfOf` now needs the account's current
+  address verified (as Forum and Account.js read it).
+- **R3 (medium)** A retried `request#CustomerReturn` re-checked eligibility before reaching submit's operation record, so
+  a retry of a request for everything left was refused instead of answering the first; a retry now passes its lines
+  through to the first result (a different payload is a Conflict).
+- **R4 (medium)** `cancel#CustomerCase`, `withdraw#CustomerReturn` and `withdraw#CustomerCancel` took a change with no
+  `expectedRevision`; each now requires it and a stale one is a Conflict naming the revision seen and the current one
+  (`SupportPortal.requireRevision`); the cancel request's read carries its revision (`withdrawOrderCancel` takes
+  `expectedRevision`). An operation ID reused for another payload is a Conflict (409), not Unprocessable. Replies,
+  reopen requests and evidence are appends keyed by their operation ID, not edits, so they take no revision.
+- **R5 (low)** `get#CaseCustomerLink` made a capability even when the organization has no Support site; now none.
+- Gaps finished: **notices** (F60): `service/mantle/request/SupportNotices.js`. An agent's mail on a case through
+  `send#EmailDraft` (P5's apply#SavedReply, CaseDetail's Chatter through Comms Compose) gains the case's CustomerCase link
+  (`caseLink`: ExternalAccess.create on `PublicApps.sitesFor`/`pageUrl`) when every recipient is an address of the case's
+  customer side and the sender holds SUPPORT_CASE_EDIT; with no Support site it goes without and the omission is logged;
+  never thrown. `authorize#Return` and `decide#ReturnException` queue `send#ReturnDecisionNotice` for their commit: the
+  customer's mail (MANTLE_RETURN_DECISION_EMAIL) with the return's ReturnRma link, never the reason, only where Customer
+  Service is set up (a service policy) and for a return the customer sees; without a site it goes without the link,
+  logged. **Cursors**: MyCases and MyReturns (find#CustomerCases, find#CustomerReturns) page 30 rows (at most 100) newest
+  first with the ID as tie-breaker after an opaque cursor (`SupportPortal.listPage`: the last row's time and ID, signed
+  with the list, its filters, the site and the account; another list's, account's or an altered cursor Unprocessable),
+  with Older and Newest links; `cursor` and `limit` in Schema.js and its Mantle mirror.
+- Specs: Mantle `SupportPortal` (+2 features, 2.9 s: the cursor and its refusals, a changed email ending the self
+  relationship, the stale cancel naming the current revision, a retried return request answering the first and a
+  different payload conflicting, the withdrawals' required revision, the authorization's notice with the return's
+  link); `SupportReplies` (the reply's Support link with a site, none without). Acceptance: mr-mantle
+  `acceptance/order/SupportImmediateCancelWalk` (customerImmediateCancel on, a placed order with nothing reserved
+  cancelled at once through the Support app, an approved one requested; the flag put back off in cleanup); mr-pass
+  `SupportFixtures.contacts` gains an authorized return with its label and RMA link, `SupportPagesHttp` and `RemoteHttp`
+  download the label through the facade (a forged link gets no file).
+- Run (all pass): Mantle SupportPortal, ReturnPolicies, OrderChanges, SupportReplies; mr-pass SupportAccess, Forum,
+  Portals, Media, Transport (server feature time well under 15 s; client unchanged); BOSS CustomerServiceAccess,
+  CustomerServiceReturns, CustomerServiceAssignment; acceptance SupportImmediateCancelWalk, SupportPagesHttp and RemoteHttp
+  against the local authority, and the remote pair (authority serving the fixtures on 18091, a frontend runtime of
+  framework, webroot, tools and mr-pass only on 18092 over REST; RemoteFixtures passes): RemoteHttp 9 and SupportPagesHttp
+  2 through the frontend. `lint --screens`: nothing in the Support screens.
+- Left: the saved reply preview does not yet say the mail will carry the Support link (BOSS's ReplyPreview template);
+  the label is served as a PDF whatever the carrier's labelFileType; MyCases reads all of a customer's case ids before
+  paging (fine at portal sizes; a join with the cursor in the query if customers get large).
 
 ### P16 — Finish
 
