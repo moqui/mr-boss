@@ -2638,6 +2638,43 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   - **F-P13-12** In a client acceptance spec an array answered by `when()` reached `then()` without its array methods, and a
     session's `get` called from an array's `map` callback failed ("not a function"), so the walks answer objects and counts.
 
+**Review Nov 5 (P13).** Checked the three repos' diffs against this section, §2, design §7–§9, crosscut X16 and
+design-forum §4.1/§4.3: the token (`ExternalAccess.check` with the FormInvitation kind's scope, the capability's thruDate at the
+invitation's expiry, revocation, an invitation no longer reachable, the mount's target as the organization), a GET that only
+reads, the bad links' guidance with nothing of the customer, get#Invitation's projection (the form as of now, the organization's
+and customer's names, the receipt), the post's limit per requester (a registered deployment's browser address, F-P13-8),
+submit's checkValues with the customer audience and evaluate#DbFormDependencies (a value for a name not on the form dropped,
+an internal field refused), one response under the invitation's row lock (a concurrent second post waits, then answers the
+first); PASS's operations (allow-listed fields, HTTP kinds NotFound, Unprocessable, Tarpit; the invitation is the operation's
+identity, so `operationId` is carried but a repeat with another payload answers the first rather than conflicting, as this
+section asks); no `ironstone.*` in mr-pass or in Mantle's new code; the guard EECAs on FormResponse and FormResponseAnswer (every
+write path, the bulk ones row by row; the framework DbForms spec passes with them loaded); the Request EECA (a transition into
+ReqCompleted only, queued after the commit, the unique invitationKey); the job (bounded, a new transaction each, locked and
+re-checked so a rerun or a second run sends nothing twice, three tries, reminders capped by the policy row and the expiry);
+comments (SatisfactionResults' list for service management only, ResponseDetail's text answers for the follow-up team only with
+consent, the notice naming no comment); no per-agent ranking; leanness.
+- R1 (low) `CaseTemplates.templateOf` now takes feedback forms, so `save#CaseTemplate` could make one a queue's case template,
+  which create#Case then ignored: `useForQueue` refuses it (TEMPLATE_UNAVAILABLE); CaseFeedback checks it.
+- R2 (low, test) A good link on another organization's Support site was not checked: CaseFeedback reads and answers it there
+  (NotFound, both).
+- R3 (trivial) Reports.xml named an artifact group BOSS_CS_SATISFACTION that does not exist.
+- Ran: Mantle CaseFeedback, SupportTemplates, SupportCases, SupportSla, SupportRelations, WorkProjectRequests, CommonsToday (with
+  BOSS's demo loaded, its Retail policy active) and the framework DbForms spec; mr-pass SupportAccess, Portals; BOSS
+  CustomerServiceFeedback, CustomerServiceTemplates; all pass. The true remote pair of docs/Deployment.md "Reproducing the
+  remote check": the authority (this runtime, `--acceptance --spec ClientFixtures,PortalFixtures,SupplierPortalFixtures,
+  SupportFixtures --serve`), a scratch frontend runtime of framework, webroot, tools and mr-pass only (RemoteFixtures passes: no
+  Mantle catalog) with `pass_backend_url` over REST, and RemoteHttp through it: 8 features pass, the Support feature's rating 2,
+  its receipt, and a repeat's 5 answering "2 of 5".
+- Left for the lead: (1) the CSAT results tab shows to an agent, who is then told it is not available (F-P13-11); a menu item is
+  hidden only by artifact authorization, which the shared file cannot carry, so hiding it needs P14's catalogue (the tab
+  `menu-include="false"`, a link for managers) or a framework `hide-when`. (2) P15's privacy anonymization needs a way past
+  the guard: a Mantle service `FormPublicationServices.redact#FormResponse` (a privacy permission and the organization, blanking
+  text answers and logging who and why), with `guardResponse` letting a write through only while that service is on the
+  artifact execution stack, never by a context flag a caller could set. (3) The guard keys on FormInvitation.formResponseId, so
+  an entity-level write that unlinks it (an administrator's entity-auto) defeats it; a run-before EECA on FormInvitation refusing
+  a change of a set formResponseId would close that. (4) send#Invitations' expiry sweep updates its rows without a per-row
+  catch, and a link that cannot be made (no Support site) is Not delivered at once rather than retried.
+
 ### P14 — Reports
 
 Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases before recorded.
