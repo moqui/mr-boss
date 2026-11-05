@@ -76,12 +76,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="reply" from="(found?.replies || []).find((row) =&gt; row.emailTextBlockId == emailTextBlockId) || null"/>
         <if condition="reply &amp;&amp; previewRequestId">
             <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
-                    in-map="{appRoot:appRoot, recordType:'case', recordId:previewRequestId}"/>
-            <if condition="!ec.message.hasError()">
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:previewRequestId}" out-map="previewChecked"/>
+            <!-- an ignored error leaves no message (F-P16-3): the answer's record says whether the case is the user's -->
+            <if condition="previewChecked?.recordId">
                 <service-call name="mantle.request.SupportCaseServices.preview#SavedReply" out-map="previewed" transaction="force-new"
                         ignore-error="true" in-map="{requestId:previewRequestId, emailTextBlockId:emailTextBlockId}"/>
             </if>
-            <set field="previewProblem" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/\n[\s\S]*$/, '') : ''"/>
+            <set field="previewProblem" from="!previewChecked?.recordId ? 'Case ' + previewRequestId + ' is not available'
+                    : (!previewed?.preview ? 'The reply cannot be previewed on case ' + previewRequestId : '')"/>
         </if>
         <script>ec.message.clearErrors()</script>
         <set field="can" from="customerService.capabilities"/>
