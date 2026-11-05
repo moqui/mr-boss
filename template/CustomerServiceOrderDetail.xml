@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Customer Service branch (crosscut §3.6 Customer Service row; design-customer-service §4 OrderDetail;
+    impl-customer-service P3): the section Shared/OrderDetail includes when appRoot is CustomerService, over
+    ironstone.customerservice.OrderServices.get#OrderDetail. A missing order and another organization's are "not available"
+    alike. The header (customer, states, total) with New case on the order (NewCase, linked by create#Case), Link to case
+    (one of the customer's open cases: mantle.request.RequestServices.link#RequestRecord after both records' checks) and
+    Resend confirmation (mantle.order.OrderConfirmationServices.resend#OrderConfirmation: the confirmation stored as placed,
+    to a recipient of the customer's, from a mail account the user sends from); its holds and their reasons read only (a
+    credit hold's type and reason for a credit reader only; only Accounting releases it); the items with what shipped (prices,
+    the total and the stored PDF for a price or finance reader), the shipments with tracking, the invoices (amounts for a
+    finance reader), the linked cases, the confirmation and its sends, and the status history. Returns (P9) and order changes (P10) come with their phases; no commercial edit here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="serviceChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="resendConfirmation">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId, capability:'caseEdit'}"/>
+            <service-call name="mantle.order.OrderConfirmationServices.resend#OrderConfirmation" out-map="resent"
+                    in-map="{orderId:orderId, toAddress:toAddress, emailAccountId:(emailAccountId || null), note:(note || null),
+                        operationKey:operationKey}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('The confirmation of order ' + orderId + ' as placed is '
+                    + (resent.status === 'sent' ? 'sent' : resent.status === 'failed' ? 'not sent' : 'on its way') + ' to '
+                    + resent.recipient, resent.status === 'failed' ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="linkOrderCase">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <service-call name="mantle.request.RequestServices.link#RequestRecord"
+                    in-map="{requestId:requestId, recordEntityName:'mantle.order.OrderHeader', recordId:orderId}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Order ${orderId} is on case ${requestId}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="confirmationFile" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <!-- the stored PDF carries the order's prices and total: a price or finance reader's only (§2) -->
+            <if condition="!ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').amountRead()">
+                <return error="true" message="You do not read order prices, so the stored confirmation is not shown"/></if>
+            <entity-find entity-name="mantle.order.OrderContent" list="storedList" disable-authz="true" limit="1">
+                <econdition field-name="orderId"/>
+                <econdition field-name="orderContentTypeEnumId" value="OctOrderConfirmation"/>
+                <order-by field-name="contentDate"/>
+            </entity-find>
+            <if condition="!storedList">
+                <return error="true" message="Order ${orderId} has no stored confirmation yet"/></if>
+            <script>ec.web.sendResourceResponse(storedList[0].contentLocation, true)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceOrder" condition="appRoot == 'CustomerService'">
+            <widgets>
+                <section name="ServiceOrderMissing" condition="!serviceOrder">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Order not available"/>
+                            <box-body>
+                                <label type="p" text="Order ${orderId} is not available: it does not exist, or it is not a
+                                        sales order of a customer you serve."/>
+                                <link url="${sharedLinks['Orders/Orders']}" text="Back to orders" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ServiceOrderFound" condition="serviceOrder">
+                    <actions>
+                        <set field="so" from="serviceOrder.order"/>
+                        <set field="resendValue" from="{orderId:orderId, toAddress:serviceOrder.recipientOptions[0]?.value || '',
+                                emailAccountId:serviceOrder.senderOptions[0]?.value || '', note:'',
+                                operationKey:'resend-' + ec.user.randomString(24)}"/>
+                        <set field="linkValue" from="{orderId:orderId}"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}"
+                                title="Order ${orderId} · ${so.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Order ${orderId}" type="h5"/>
+                                        <link url="${so.customerUrl}" url-type="plain" text="${so.customerName}" link-type="anchor"
+                                                condition="so.customerUrl"/>
+                                    </container>
+                                    <label text="${[so.orderName, so.organizationName, so.placedText ? 'placed ' + so.placedText
+                                            : 'entered ' + so.entryText, so.customerReference ? 'reference ' + so.customerReference
+                                            : ''].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${so.statusText}" type="span" style="text-weight-medium ${so.held ? 'text-warning' : ''}"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <link url="${serviceOrder.newCaseUrl}" url-type="plain" text="New case" icon="sym_o_add"
+                                        link-type="anchor-button" btn-type="primary"
+                                        condition="serviceOrder.canLinkCase &amp;&amp; serviceOrder.newCaseUrl"/>
+                                <container-dialog id="ServiceResendConfirmation" button-text="Resend confirmation" icon="sym_o_forward_to_inbox"
+                                        title="Resend the confirmation of order ${orderId} as placed" width="600"
+                                        condition="serviceOrder.canResend">
+                                    <form-single name="ServiceResendForm" transition="resendConfirmation" map="resendValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="toAddress">
+                                            <default-field title="To" tooltip="An address of the customer or one of its contacts">
+                                                <drop-down><list-options list="serviceOrder.recipientOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="emailAccountId">
+                                            <default-field title="From">
+                                                <drop-down><list-options list="serviceOrder.senderOptions" key="${value}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="note"><default-field title="Message"><text-area rows="3" cols="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Send"><submit confirmation="Send the stored confirmation of order ${orderId}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted" text="${serviceOrder.confirmation.stored
+                                            ? 'The confirmation stored ' + serviceOrder.confirmation.storedText + ' is sent again, not a new print.'
+                                            : 'The order as placed is printed once, stored and sent; later sends attach the same file.'}"/>
+                                    <label type="p" style="text-warning" condition="!serviceOrder.senderOptions.length"
+                                            text="You have no mail account to send from: ask your administrator for the service mailbox."/>
+                                </container-dialog>
+                                <container-dialog id="ServiceLinkCase" button-text="Link to case" icon="sym_o_link"
+                                        title="Put order ${orderId} on a case" width="560" condition="serviceOrder.canLinkCase">
+                                    <form-single name="ServiceLinkCaseForm" transition="linkOrderCase" map="linkValue">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="requestId">
+                                            <default-field title="Case" tooltip="The customer's open cases you see">
+                                                <drop-down>
+                                                    <dynamic-options transition="serviceChoices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'customerCases', customerPartyId:so.customerPartyId}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Link"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <button-menu text="More" icon="more_horiz">
+                                    <link url="confirmationFile" text="Stored confirmation (PDF)" target-window="_blank"
+                                            parameter-map="{orderId:orderId}" condition="serviceOrder.confirmation.stored &amp;&amp; serviceOrder.amountRead"/>
+                                    <link url="${so.customerUrl}" url-type="plain" text="Customer" condition="so.customerUrl"/>
+                                </button-menu>
+                            </container>
+                        </container>
+                        <section-iterate name="ServiceOrderHolds" list="serviceOrder.holds" entry="hold">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="On hold · ${hold.typeText}"/>
+                                    <box-body>
+                                        <label type="p" text="${hold.reasonText || 'No reason was given.'}"/>
+                                        <label type="p" style="text-caption m-muted q-mb-none"
+                                                text="Held ${hold.placedText}. Read only: the order's owner releases the hold (a credit hold in Accounting)."/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section-iterate>
+                        <dashboard min-width="150" style="q-mb-sm">
+                            <number-card title="Total" value="${so.totalText}" icon="sym_o_shopping_cart" size="sm"/>
+                            <number-card title="Fulfillment" value="${so.fulfillmentText || '—'}" icon="sym_o_local_shipping" size="sm"/>
+                            <number-card title="Payment" value="${so.paymentText}" icon="sym_o_payments" size="sm"/>
+                            <number-card title="Cases" value="${serviceOrder.caseRows.length}" icon="sym_o_support_agent" size="sm"/>
+                        </dashboard>
+                        <container-box>
+                            <box-header title="Items · ${serviceOrder.itemRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="ServiceOrderItems" list="serviceOrder.itemRows" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description">
+                                        <default-field title="Item">
+                                            <link url="${productUrl}" url-type="plain" text="${description}" link-type="anchor"
+                                                    condition="productUrl"/>
+                                            <label text="${description}" type="span" condition="!productUrl"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="cancelledText" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                                    <field name="shippedText" align="right"><default-field title="Shipped"><display/></default-field></field>
+                                    <field name="priceText" align="right"><default-field title="Price"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="shippedText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Shipments and tracking · ${serviceOrder.shipmentRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="ServiceOrderShipments" list="serviceOrder.shipmentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="shipmentId">
+                                                <default-field title="Shipment">
+                                                    <link url="${url}" url-type="plain" text="${shipmentId}" link-type="anchor"
+                                                            condition="url"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="trackingText">
+                                                <default-field title="Tracking">
+                                                    <link url="${trackingUrl}" url-type="plain" text="${trackingText}" link-type="anchor"
+                                                            target-window="_blank" condition="trackingUrl"/>
+                                                    <label text="${trackingText}" type="span" condition="!trackingUrl"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="arrivalText"><default-field title="Expected"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="shipmentId"/></column>
+                                                <column><field-ref name="statusText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="Nothing shipped yet."
+                                                condition="!serviceOrder.shipmentRows.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Invoices · ${serviceOrder.invoiceRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="ServiceOrderInvoices" list="serviceOrder.invoiceRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="invoiceId">
+                                                <default-field title="Invoice">
+                                                    <link url="${url}" url-type="plain" text="${invoiceId}" link-type="anchor"
+                                                            condition="url"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="invoiceId"/></column>
+                                                <column><field-ref name="statusText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not invoiced yet."
+                                                condition="!serviceOrder.invoiceRows.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Cases · ${serviceOrder.caseRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="ServiceOrderCases" list="serviceOrder.caseRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="requestId">
+                                                <default-field title="Case">
+                                                    <link url="${url}" url-type="plain" text="${requestId} · ${requestName}"
+                                                            link-type="anchor"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="requestId"/></column>
+                                                <column><field-ref name="statusText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not on a case you see."
+                                                condition="!serviceOrder.caseRows.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Confirmation"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="${serviceOrder.confirmation.stored
+                                                ? serviceOrder.confirmation.description + ', stored ' + serviceOrder.confirmation.storedText
+                                                : 'Not stored yet: the first resend prints the order as placed and keeps it.'}"/>
+                                        <form-list name="ServiceOrderConfirmationSends" list="serviceOrder.confirmation.sends"
+                                                skip-form="true" paginate="false">
+                                            <field name="recipient"><default-field title="To"><display/></default-field></field>
+                                            <field name="sentText"><default-field title="When"><display/></default-field></field>
+                                            <field name="versionText"><default-field title="Version"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Result"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="recipient"/><field-ref name="sentText"/></column>
+                                                <column><field-ref name="statusText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="History"/>
+                                    <box-body-nopad>
+                                        <form-list name="ServiceOrderHistory" list="serviceOrder.historyRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="dateText"/></column>
+                                                <column><field-ref name="toText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

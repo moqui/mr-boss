@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Cases tab, in the Customer Service context (crosscut §3.2 CustomerCasesReturns; impl-customer-service P3):
+    the customer's cases the user sees (CaseServices.find#Cases), open first by date, each opening CaseDetail; returns come
+    with P9. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cases" default-menu-index="2">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <widgets>
+        <section name="ServiceCasesTab" condition="customerFound">
+            <widgets>
+                <form-list name="ServiceCustomerCases" list="customerDetail.caseRows" skip-form="true" paginate="false">
+                    <field name="requestId">
+                        <default-field title="Case">
+                            <link url="${url}" url-type="plain" text="${requestId}" link-type="anchor" style="text-mono"/>
+                        </default-field>
+                    </field>
+                    <field name="requestName"><default-field title="Subject"><display/></default-field></field>
+                    <field name="statusLabel">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusLabel)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusLabel})}]]></text>
+                                <text type="html">${statusLabel}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="assigneeName"><default-field title="Assignee"><display/></default-field></field>
+                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                    <field name="updatedText"><default-field title="Updated"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="requestId"/><field-ref name="requestName"/></column>
+                        <column><field-ref name="statusLabel"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No case of this customer that you see."
+                        condition="!customerDetail.caseRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

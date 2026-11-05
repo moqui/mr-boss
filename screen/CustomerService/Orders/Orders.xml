@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Orders (design-customer-service §4 Orders; style-guide §3.2 List; impl-customer-service P3): OrderLookup, the quick lookup
+    by order id, external id, customer reference, customer, email or phone, with the customer, product, status and the
+    ordered period in the advanced find, and OrderResults (ironstone.customerservice.CaseServices.find#ServiceOrders): an
+    exact id first, a missing and another organization's id answered alike (F30); each row with its customer, date, total,
+    the order, fulfillment and payment states and the next delivery, opening OrderDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders" default-menu-index="1">
+    <parameter name="term"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="statusId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <actions>
+        <service-call name="ironstone.customerservice.CaseServices.find#ServiceOrders" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, term:term, customerPartyId:customerPartyId, productId:productId, statusId:statusId,
+                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="orders" from="found?.orders || []"/>
+        <set field="ordersCount" from="found?.ordersCount"/>
+        <set field="ordersPageIndex" from="found?.ordersPageIndex"/>
+        <set field="ordersPageSize" from="found?.ordersPageSize"/>
+        <set field="ordersPageMaxIndex" from="found?.ordersPageMaxIndex"/>
+        <set field="ordersPageRangeLow" from="found?.ordersPageRangeLow"/>
+        <set field="ordersPageRangeHigh" from="found?.ordersPageRangeHigh"/>
+        <set field="emptyText" from="found?.message || 'Enter an order id, customer, email or phone.'"/>
+        <set field="findValues" from="{term:term || '', customerPartyId:customerPartyId || '', productId:productId || '',
+                statusId:statusId || '', fromDate:fromDate || '', thruDate:thruDate || ''}"/>
+    </actions>
+    <widgets>
+        <context title="Orders"/>
+        <label text="Orders" type="h5"/>
+        <container-box>
+            <box-body>
+                <form-single name="OrderLookup" transition="." map="findValues" focus-field="term">
+                    <field name="term">
+                        <default-field title="Order or customer" tooltip="An order id, external id or customer reference finds
+                                that order; a name, email or phone finds the customer's orders">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="customerPartyId">
+                        <default-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                        parameter-map="{selected:customerPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="1"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="statusId">
+                        <default-field title="Status">
+                            <drop-down allow-empty="true">
+                                <entity-options key="${statusId}" text="${description}">
+                                    <entity-find entity-name="moqui.basic.StatusItem" cache="true">
+                                        <econdition field-name="statusTypeId" value="OrderHeader"/>
+                                        <order-by field-name="sequenceNum"/>
+                                    </entity-find>
+                                </entity-options>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="Ordered from"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="Ordered before"><date-time type="date"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="term"/><field-ref name="submitButton"/></field-row>
+                        <field-accordion>
+                            <field-group title="More filters">
+                                <field-row-big>
+                                    <field-ref name="customerPartyId"/>
+                                    <field-ref name="productId"/>
+                                    <field-ref name="statusId"/>
+                                </field-row-big>
+                                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            </field-group>
+                        </field-accordion>
+                    </field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="OrderResults" list="orders" skip-form="true" paginate="true" select-columns="true">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <link url="${url}" url-type="plain" text="${orderId}" link-type="anchor" style="text-mono"/>
+                        </default-field>
+                    </field>
+                    <field name="orderName"><default-field title="Name"><display/></default-field></field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="entryText"><default-field title="Ordered"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="fulfillmentText"><default-field title="Fulfillment"><display/></default-field></field>
+                    <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                    <field name="nextDeliveryText"><default-field title="Next delivery"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted q-pa-sm q-mb-none" text="${emptyText}" condition="!orders.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

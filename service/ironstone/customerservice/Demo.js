@@ -3,7 +3,8 @@
 // sales orders. Joe Q Public's order of the warranted, serialized demo thermostat and two filters, paid by check (held in
 // Undeposited Receipts), shipped, invoiced at ship and delivered (the thermostat's Asset is then the customer's,
 // AstDelivered, with its AssetIssuance);
-// Joe's Distributing's order of four filters, approved and reserved, awaiting pick; and its order of two filters, packed.
+// Joe's Distributing's order of four filters, approved and reserved, awaiting pick; and its order of two filters, packed;
+// P3: Joe Q Public's order of a filter, held (a manual hold with its reason).
 // The products, their stock and the other organization's order are rows of the data file. Later phases add queues, teams,
 // cases (P2: loadCases), returns and contacts.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
@@ -102,6 +103,42 @@ function packedOrder() {
     call("mantle.shipment.ShipmentServices.pack#Shipment", {shipmentId: shipment.shipmentId})
 }
 
+// P3: Joe Q Public's order of one filter, placed and held for a reason the agent reads on Customer360 and OrderDetail (a
+// manual hold: a credit hold is placed only by the credit policy)
+function heldOrder() {
+    const orderId = "BOSS_CS_SO_HELD"
+    createOnce(
+        "mantle.order.OrderHeader",
+        {orderId},
+        {
+            orderName: "Replacement filter",
+            statusId: "OrderOpen",
+            productStoreId,
+            currencyUomId: one("mantle.product.store.ProductStore", {productStoreId}).defaultCurrencyUomId,
+            entryDate: ec.user.nowTimestamp
+        }
+    )
+    createOnce(
+        "mantle.order.OrderPart",
+        {orderId, orderPartSeqId: "01"},
+        {vendorPartyId: organizationPartyId, customerPartyId: "CustJqp", statusId: "OrderOpen", facilityId}
+    )
+    if (rows("mantle.order.OrderItem", {orderId}).length) return
+    call("mantle.order.OrderServices.add#OrderProductQuantity", {
+        orderId,
+        orderPartSeqId: "01",
+        productId: filter,
+        quantity: 1,
+        unitAmount: 15
+    })
+    call("mantle.order.OrderServices.place#Order", {orderId})
+    call("mantle.order.OrderServices.hold#Order", {
+        orderId,
+        holdTypeEnumId: "OhtManual",
+        holdComment: "Waiting for the customer to confirm the delivery address"
+    })
+}
+
 // Run as a system administrator during data loading (john.doe, artifact authorization off), refusing any other user.
 function asDemoAdministrator(operation) {
     if (ec.user.userId && !lib.access.systemAdmin()) throw new Error("Demo loading requires system administration")
@@ -116,7 +153,7 @@ function asDemoAdministrator(operation) {
     }
 }
 
-const orders = {delivered: deliveredOrder, awaitingPick: awaitingPickOrder, packed: packedOrder}
+const orders = {delivered: deliveredOrder, awaitingPick: awaitingPickOrder, packed: packedOrder, held: heldOrder}
 // Each order on its own transaction (DemoServices.load#DemoOrder): one that fails is logged by name and the others are still
 // made (AGENTS.md failure tolerance).
 function load() {

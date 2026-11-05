@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     BOSS_CUSTOMER_SERVICE and the administrator group BOSS_CUSTOMER_SERVICE_ADMIN open it (data/BossSetupData.xml); its areas
     are the files of screen/CustomerService/, in the menu order of design §1 by their default-menu-index:
     1 Home; 2 Cases; 3 Customers; 4 Orders; 5 Returns; 6 Approvals; 7 Availability; 8 Knowledge; 9 Reports; 10 Settings.
-    Cases, Orders, Returns and Availability become menu groups holding their lists as their phases build them (P2, P3, P9).
+    Cases, Orders, Returns and Availability become menu groups holding their lists as their phases build them (P2, P3, P9);
+    P3 makes Customers, Orders and Availability groups.
     Home, Cases, Customers, Orders, Availability and Knowledge are every Customer Service user's; Returns, Approvals, Reports
     and Settings their groups' (BOSS_CS_<Area>). ironstone.customerservice.AccessServices.get#SharedContext checks the user
     and resolves their organizations, capabilities, queues and teams for every subscreen; each service checks again. -->
@@ -46,7 +47,8 @@ along with this software (see the LICENSE.md file). If not, see
         own due and overdue cases (P4); the assignment, SLA warning and breach, customer reply, return decision and feedback
         topics -->
     <shell-providers>
-        <!-- P1: sales orders and customers in the palette (search#Records); P2 adds cases, P9 RMAs -->
+        <!-- P1: sales orders and customers in the palette (search#Records); P2 adds cases, P3 customers by email and phone
+            (each opening Customer360) and orders opening OrderDetail, P9 RMAs -->
         <palette-source group="CustomerService" label="Customer Service records" icon="sym_o_support_agent"
                 service="ironstone.customerservice.AccessServices.search#Records" sequence="49"/>
         <!-- P2: cases in the palette (search#Records above), a new case for the groups that enter cases (NewCase checks
@@ -63,6 +65,9 @@ along with this software (see the LICENSE.md file). If not, see
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
             <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>
+            <!-- P3: the customer and order lookups -->
+            <key keys="g u" label="Customers" screen="CustomerService/Customers/Customers"/>
+            <key keys="g o" label="Orders" screen="CustomerService/Orders/Orders"/>
         </keymap>
     </shell-providers>
 

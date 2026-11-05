@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Customer Service branch (crosscut §3.2 Customer Service row; impl-customer-service P3): the section
+    Shared/Customer360 includes when appRoot is CustomerService, over ironstone.customerservice.CustomerServices
+    get#Customer360 (read in its always-actions): "not available" for a customer the user does not serve; else the header
+    with the customer's name, kind and owner (a shared customer says so: only the user's organizations' records show, F74),
+    the key numbers (open cases, open orders, open invoices, held orders, each linking to its tab), New case for a case
+    editor, the contact record and the order lookup, then the tabs. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="CustomerServiceCustomer" condition="appRoot == 'CustomerService'">
+            <widgets>
+                <section name="ServiceCustomerMissing" condition="!customerFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Customer not available"/>
+                            <box-body>
+                                <label type="p" text="The customer does not exist, or you do not serve it."/>
+                                <link url="${sharedLinks['Customers/Customers']}" text="Back to customers" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ServiceCustomerRecord" condition="customerFound">
+                    <widgets>
+                        <context record-entity="mantle.party.Party" record-id="${customerPartyId}"
+                                title="${customerDetail.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="${customerDetail.customerName}" type="h5"/>
+                                    <label text="${[customerDetail.kindText, customerDetail.pseudoId, customerDetail.ownerText]
+                                            .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                    <label text="A shared customer: only your organizations' orders, cases and invoices show."
+                                            type="p" style="text-caption m-muted q-mb-none" condition="customerDetail.shared"/>
+                                </container>
+                                <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                                    <link url="${customerDetail.newCaseUrl}" url-type="plain" text="New case" icon="sym_o_add"
+                                            link-type="anchor-button" btn-type="primary" condition="customerDetail.canNewCase"/>
+                                    <button-menu text="More" icon="more_horiz">
+                                        <link url="${customerDetail.contactUrl}" url-type="plain" text="Contact record"/>
+                                        <link url="${sharedLinks['Orders/Orders']}" text="Find orders"
+                                                parameter-map="{customerPartyId:customerPartyId}"/>
+                                    </button-menu>
+                                </container>
+                            </container>
+                        </container>
+                        <dashboard min-width="160">
+                            <number-card title="Open cases" value="${customerDetail.openCaseCount}" size="sm"
+                                    icon="sym_o_support_agent" link="${sharedLinks['Customers/Customer360']}/ServiceCases?customerPartyId=${customerPartyId}"/>
+                            <number-card title="Open orders" value="${customerDetail.openOrderCount}" size="sm"
+                                    icon="sym_o_receipt_long" link="${sharedLinks['Customers/Customer360']}/ServiceOrders?customerPartyId=${customerPartyId}"/>
+                            <number-card title="Open invoices" value="${customerDetail.openInvoiceCount}" size="sm"
+                                    icon="sym_o_request_quote" link="${sharedLinks['Customers/Customer360']}/ServiceBilling?customerPartyId=${customerPartyId}"/>
+                            <number-card title="Held orders" value="${customerDetail.heldOrders.length}" size="sm"
+                                    icon="sym_o_pause_circle" link="${sharedLinks['Customers/Customer360']}/ServiceOrders?customerPartyId=${customerPartyId}"/>
+                        </dashboard>
+                        <subscreens-panel id="CustomerServiceCustomerTabs" type="tab"/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

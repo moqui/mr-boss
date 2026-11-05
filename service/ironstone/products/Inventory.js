@@ -26,10 +26,12 @@ function run(op, parameters) {
         if (!product) throw new Error("Product is not available")
         const internal = new Set(rows("mantle.party.PartyRole", {roleTypeId: "OrgInternal"}).map(role => role.partyId)),
             owners = capabilities.systemAdmin ? [...internal] : shared.ownerPartyIds.filter(id => internal.has(id))
-        // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one)
+        // Warehouse's mount: the user's Warehouse facilities (facilityIds of its get#SharedContext branch, null for every one);
+        // Customer Service's: the customer-serving facilities (impl-customer-service P3)
         const warehouseRoot = shared.appRoot === "Warehouse"
+        const scopedRoot = warehouseRoot || shared.appRoot === "CustomerService"
         let facilities =
-            warehouseRoot && shared.facilityIds != null
+            scopedRoot && shared.facilityIds != null
                 ? rowsIn(F + "Facility", "facilityId", shared.facilityIds)
                 : rowsIn(F + "Facility", "ownerPartyId", owners)
         if (p.organizationPartyId && !p.facilityId)

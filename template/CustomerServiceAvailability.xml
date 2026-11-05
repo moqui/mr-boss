@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of Customer Service's Availability area (impl-customer-service P3; design-customer-service §6):
+    - serviceAvailabilityChoices: the product and facility drop-downs (AccessServices.get#Choices: products, facilities).
+    - CustomerServiceStockAtDate: StockAtDate's find in the Customer Service context (crosscut §3.26 Customer Service row):
+      product, customer-serving facility, from and as of; no location, lot or owner; then the Places and History tabs. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="serviceAvailabilityChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceStockAtDate" condition="appRoot == 'CustomerService'">
+            <widgets>
+                <form-single name="ServiceStockDateFind" transition="." map="options">
+                    <field name="productId">
+                        <default-field title="Product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="serviceAvailabilityChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'products', selected:productId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="facilityId">
+                        <default-field title="Facility" tooltip="Every facility serving your customers when empty">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="serviceAvailabilityChoices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'facilities', selected:facilityId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate">
+                        <default-field title="From" tooltip="The first of the cut-off's month when empty">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="asOfDate">
+                        <default-field title="As of" tooltip="The end of this day; today when empty">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="submit">
+                        <default-field title=""><submit text="Show stock" type="primary"/></default-field>
+                    </field>
+                    <field-layout>
+                        <field-row-big>
+                            <field-ref name="productId"/>
+                            <field-ref name="facilityId"/>
+                            <field-ref name="fromDate"/>
+                            <field-ref name="asOfDate"/>
+                        </field-row-big>
+                        <field-ref name="submit"/>
+                    </field-layout>
+                </form-single>
+                <subscreens-panel id="ServiceStockAtDatePanel" type="tab"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

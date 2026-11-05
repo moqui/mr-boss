@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InvoiceDetail's Customer Service branch (crosscut §3.16 Customer Service row; design-customer-service §4 InvoiceDetail;
+    impl-customer-service P3, F53): the section and transition Shared/InvoiceDetail includes when appRoot is CustomerService,
+    over ironstone.customerservice.OrderServices.get#InvoiceDetail: a sales invoice of the user's organization to a customer
+    they serve ("not available" otherwise, a missing one alike). The customer-safe header and lines, its payment status, the
+    orders it bills and the linked cases; amounts, balance and payments only for a finance reader (ACCOUNTING_VIEW
+    or RECEIVABLE_VIEW; withheld,
+    never zero); Send a copy for a receivables editor (RECEIVABLE_EDIT, Accounting's mantle.account.InvoiceServices
+    send#Invoice, which carries the pay link when the organization has a Billing site), a finalized, sent or paid invoice
+    only. No correction: that is Accounting's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="serviceInvoiceCopy">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'invoice', recordId:invoiceId, capability:'invoiceCredit'}"/>
+            <service-call name="mantle.account.InvoiceServices.send#Invoice" out-map="sent"
+                    in-map="{invoiceId:invoiceId, operationKey:operationKey, toAddresses:(toAddresses || null), note:(note || null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('A copy of invoice ' + invoiceId + ' went to '
+                    + (sent.successCount || 0) + ' of ' + Array.from(sent.recipientResults || []).length + ' recipients',
+                    sent.failureCount ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="invoiceId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceInvoice" condition="appRoot == 'CustomerService'">
+            <widgets>
+                <section name="ServiceInvoiceMissing" condition="!serviceInvoice">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Invoice not available"/>
+                            <box-body>
+                                <label type="p" text="Invoice ${invoiceId} is not available: it does not exist, or it is not an
+                                        invoice of a customer you serve."/>
+                                <link url="${sharedLinks['Orders/Orders']}" text="Back to orders" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ServiceInvoiceFound" condition="serviceInvoice">
+                    <actions>
+                        <set field="si" from="serviceInvoice.invoice"/>
+                        <set field="copyValue" from="{invoiceId:invoiceId, toAddresses:'', note:'',
+                                operationKey:'invoice-copy-' + ec.user.randomString(24)}"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.account.invoice.Invoice" record-id="${invoiceId}"
+                                title="Invoice ${invoiceId} · ${si.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Invoice ${invoiceId}" type="h5"/>
+                                        <link url="${si.customerUrl}" url-type="plain" text="${si.customerName}" link-type="anchor"
+                                                condition="si.customerUrl"/>
+                                    </container>
+                                    <label text="${[si.organizationName, si.dateText ? 'dated ' + si.dateText : '',
+                                            si.dueText ? 'due ' + si.dueText : '', si.referenceNumber].filter(Boolean).join(' · ')}"
+                                            type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${si.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <container-dialog id="ServiceInvoiceCopy" button-text="Send a copy" icon="sym_o_send" type="primary"
+                                        title="Send a copy of invoice ${invoiceId}" width="560" condition="serviceInvoice.canSendCopy">
+                                    <form-single name="ServiceInvoiceCopyForm" transition="serviceInvoiceCopy" map="copyValue">
+                                        <field name="invoiceId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="toAddresses">
+                                            <default-field title="To" tooltip="The customer's billing addresses when empty">
+                                                <text-line size="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="note"><default-field title="Message"><text-area rows="3" cols="50"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Send"><submit confirmation="Send a copy of invoice ${invoiceId}?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </container>
+                        </container>
+                        <dashboard min-width="150" style="q-mb-sm">
+                            <number-card title="Total" value="${si.totalText}" icon="sym_o_request_quote" size="sm"/>
+                            <number-card title="Unpaid" value="${si.unpaidText}" icon="sym_o_payments" size="sm"/>
+                            <number-card title="Payment" value="${si.paid ? 'Paid' : 'Not paid'}" icon="sym_o_check_circle" size="sm"/>
+                        </dashboard>
+                        <label type="p" style="text-caption m-muted" condition="!serviceInvoice.moneyRead"
+                                text="Amounts are withheld: they show to finance readers."/>
+                        <container-box>
+                            <box-header title="Lines · ${serviceInvoice.lineRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="ServiceInvoiceLines" list="serviceInvoice.lineRows" skip-form="true" paginate="false">
+                                    <field name="description"><default-field title="Item"><display/></default-field></field>
+                                    <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Price"><display/></default-field></field>
+                                    <field name="lineTotalText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="lineTotalText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="ServiceInvoicePayments" condition="serviceInvoice.moneyRead">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Payments applied · ${serviceInvoice.paymentRows.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="ServiceInvoicePaymentList" list="serviceInvoice.paymentRows" skip-form="true"
+                                                paginate="false">
+                                            <field name="dateText"><default-field title="Applied"><display/></default-field></field>
+                                            <field name="appliedText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="dateText"/></column>
+                                                <column><field-ref name="appliedText"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-header title="Orders and cases"/>
+                            <box-body>
+                                <section-iterate name="ServiceInvoiceOrders" list="serviceInvoice.orderRows" entry="orderRow">
+                                    <widgets>
+                                        <link url="${orderRow.url}" url-type="plain" text="Order ${orderRow.orderId}"
+                                                link-type="anchor" condition="orderRow.url"/>
+                                    </widgets>
+                                </section-iterate>
+                                <section-iterate name="ServiceInvoiceCases" list="serviceInvoice.caseRows" entry="caseRow">
+                                    <widgets>
+                                        <link url="${caseRow.url}" url-type="plain"
+                                                text="Case ${caseRow.requestId} · ${caseRow.requestName}" link-type="anchor"/>
+                                    </widgets>
+                                </section-iterate>
+                                <label type="p" style="m-muted q-mb-none" text="Not on an order or case you see."
+                                        condition="!serviceInvoice.orderRows.length &amp;&amp; !serviceInvoice.caseRows.length"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

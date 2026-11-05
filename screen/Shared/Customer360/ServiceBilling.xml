@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Billing tab, in the Customer Service context (crosscut §3.2 permitted billing summary, CustomerCredit read
+    only; impl-customer-service P3): the customer's invoices from the user's organizations with their states, the amounts only
+    for a finance reader (ACCOUNTING_VIEW
+    or RECEIVABLE_VIEW; withheld, never zero), each opening InvoiceDetail; and for a credit reader
+    (CUSTOMER_CREDIT_VIEW) its credit with each organization from Mantle's get#CustomerCreditStatus, read only (a credit
+    decision is Accounting's). No payment details. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Billing" default-menu-index="4">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <widgets>
+        <section name="ServiceBillingTab" condition="customerFound">
+            <widgets>
+                <label type="p" style="text-caption m-muted" condition="!customerDetail.moneyRead"
+                        text="Amounts are withheld: they show to finance readers. The states are the invoices' own."/>
+                <form-list name="ServiceCustomerInvoices" list="customerDetail.invoiceRows" skip-form="true" paginate="false">
+                    <field name="invoiceId">
+                        <default-field title="Invoice">
+                            <link url="${url}" url-type="plain" text="${invoiceId}" link-type="anchor" style="text-mono"
+                                    condition="url"/>
+                        </default-field>
+                    </field>
+                    <field name="dateText"><default-field title="Date"><display/></default-field></field>
+                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <field name="unpaidText" align="right"><default-field title="Unpaid"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="invoiceId"/><field-ref name="dateText"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No invoice of this customer from your organizations."
+                        condition="!customerDetail.invoiceRows.length"/>
+                <section name="ServiceCredit" condition="customerDetail.credit.read">
+                    <widgets>
+                        <label text="Credit" type="h6"/>
+                        <form-list name="ServiceCustomerCredit" list="customerDetail.credit.rows" skip-form="true"
+                                paginate="false">
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="limitText" align="right"><default-field title="Limit"><display/></default-field></field>
+                            <field name="availableText" align="right"><default-field title="Available"><display/></default-field></field>
+                            <field name="holdText"><default-field title="Credit holds"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="organizationName"/></column>
+                                <column><field-ref name="availableText"/><field-ref name="holdText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="text-caption m-muted"
+                                text="Read only: the credit policy and its holds are Accounting's."/>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Overview and contacts tab, in the Customer Service context (crosscut §3.2 Customer Service row; design
+    Customer360; impl-customer-service P3): the customer's contact mechanisms and the people who are its contacts (each
+    opening Customer Service's ContactDetail), its identifications and tax registrations read only, and its held orders.
+    Payment details never show here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Overview" default-menu-index="1">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <widgets>
+        <section name="ServiceOverviewTab" condition="customerFound">
+            <widgets>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Contact information"/>
+                            <box-body-nopad>
+                                <form-list name="ServiceCustomerContacts" list="customerDetail.contacts" skip-form="true"
+                                        paginate="false">
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="value"><default-field title="Value"><display/></default-field></field>
+                                    <field name="purposeText"><default-field title="Purpose"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="value"/></column>
+                                        <column><field-ref name="kindText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No contact information."
+                                        condition="!customerDetail.contacts.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Contacts · ${customerDetail.people.length}"/>
+                            <box-body-nopad>
+                                <form-list name="ServiceCustomerPeople" list="customerDetail.people" skip-form="true"
+                                        paginate="false">
+                                    <field name="name">
+                                        <default-field title="Name">
+                                            <link url="${url}" url-type="plain" text="${name}" link-type="anchor"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                                    <field name="email"><default-field title="Email"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/></column>
+                                        <column><field-ref name="email"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No contact people."
+                                        condition="!customerDetail.people.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+                <section name="ServiceCustomerHeld" condition="customerDetail.heldOrders.length">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Orders on hold"/>
+                            <box-body>
+                                <section-iterate name="ServiceHeldOrders" list="customerDetail.heldOrders" entry="heldOrder">
+                                    <widgets>
+                                        <link url="${heldOrder.url}" url-type="plain" text="Order ${heldOrder.orderId}"
+                                                link-type="anchor"/>
+                                    </widgets>
+                                </section-iterate>
+                                <label type="p" style="text-caption m-muted q-mb-none"
+                                        text="The hold and its reason show on the order; a credit hold is released in Accounting."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ServiceCustomerIdentity"
+                        condition="customerDetail.identifications.length || customerDetail.taxRows.length">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Identifications and tax registrations"/>
+                            <box-body-nopad>
+                                <form-list name="ServiceCustomerIdentifications" list="customerDetail.identifications"
+                                        skip-form="true" paginate="false">
+                                    <field name="typeText"><default-field title="Type"><display/></default-field></field>
+                                    <field name="value"><default-field title="Number"><display/></default-field></field>
+                                    <field name="expireText"><default-field title="Expires"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="typeText"/></column>
+                                        <column><field-ref name="value"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-list name="ServiceCustomerTax" list="customerDetail.taxRows" skip-form="true"
+                                        paginate="false">
+                                    <field name="authorityText"><default-field title="Tax authority"><display/></default-field></field>
+                                    <field name="partyTaxId"><default-field title="Tax id"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="authorityText"/></column>
+                                        <column><field-ref name="partyTaxId"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

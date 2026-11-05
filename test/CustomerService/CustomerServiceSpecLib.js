@@ -41,7 +41,11 @@ const ids = {
         spanish: ["ZZW_RETAIL", "help/es/Thermostat temperatura incorrecta"],
         draft: ["ZZW_RETAIL", "help/Thermostat battery replacement"],
         internal: ["ZZW_SVC", "Thermostat calibration offset"]
-    }
+    },
+    // P3: Joe Q Public's held order (load#CustomerServiceDemo), the stocked filter and Retail's service mailbox
+    heldOrderId: "BOSS_CS_SO_HELD",
+    filterProductId: "BOSS_CS_FILTER",
+    serviceMailAccountId: "BOSS_CS_SERVICE_MAIL"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -155,12 +159,35 @@ function routeFixtures() {
         "Knowledge/Knowledge": {parameters: {}, text: "BossKnowledge"},
         "Knowledge/ArticleFeedback": {parameters: {}, text: "Article feedback"},
         "Knowledge/CaseToArticle": {parameters: {requestId: ids.thermostatCaseId}, text: "Article from case"},
-        "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"}
+        "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"},
+        // P3: the customer, order and availability screens and the shared mounts under them
+        "Customers/Customers": {parameters: {term: "joe@public.com"}, text: "Joe Public"},
+        "Customers/Customer360": {parameters: {customerPartyId: ids.customerId}, text: "Joe Public"},
+        "Customers/Customer360/ServiceOverview": {parameters: {customerPartyId: ids.customerId}, text: "joe@public.com"},
+        "Customers/Customer360/ServiceCases": {parameters: {customerPartyId: ids.customerId}, text: ids.thermostatCaseId},
+        "Customers/Customer360/ServiceOrders": {parameters: {customerPartyId: ids.customerId}, text: ids.deliveredOrderId},
+        "Customers/Customer360/ServiceBilling": {parameters: {customerPartyId: ids.customerId}, text: "Invoice"},
+        "Customers/ContactDetail": {parameters: {partyId: ids.customerId}, text: "Joe"},
+        "Orders/Orders": {parameters: {term: ids.deliveredOrderId}, text: ids.deliveredOrderId},
+        "Orders/OrderDetail": {parameters: {orderId: ids.heldOrderId}, text: "Waiting for the customer to confirm"},
+        "Orders/ShipmentDetail": {parameters: {shipmentId: "BOSS_CS_NO_SHIPMENT"}, text: "Shipment not available"},
+        "Orders/InvoiceDetail": {parameters: {invoiceId: "BOSS_CS_NO_INVOICE"}, text: "Invoice not available"},
+        "Availability/Products": {parameters: {productId: ids.serializedProductId}, text: "Service demo smart thermostat"},
+        "Availability/Product360": {parameters: {productId: ids.serializedProductId}, text: "Service demo smart thermostat"},
+        "Availability/InventoryAvailability": {parameters: {productId: ids.filterProductId}, text: "Stock"},
+        "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
         ["Cases/WorkItemDetail", "component://mr-boss/screen/Shared/WorkItemDetail.xml"],
-        ["Knowledge/Knowledge", "component://mr-boss/screen/Commons/Knowledge.xml"]
+        ["Knowledge/Knowledge", "component://mr-boss/screen/Commons/Knowledge.xml"],
+        ["Customers/Customer360", "component://mr-boss/screen/Shared/Customer360.xml"],
+        ["Orders/OrderDetail", "component://mr-boss/screen/Shared/OrderDetail.xml"],
+        ["Orders/ShipmentDetail", "component://mr-boss/screen/Shared/ShipmentDetail.xml"],
+        ["Orders/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
+        ["Availability/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"],
+        ["Availability/StockAtDate", "component://mr-boss/screen/Shared/StockAtDate.xml"],
+        ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"]
     ]
     return {routes, mounts}
 }

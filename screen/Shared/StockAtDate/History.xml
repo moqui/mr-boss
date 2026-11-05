@@ -27,6 +27,13 @@ along with this software (see the LICENSE.md file). If not, see
                         historyPageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
                     transaction="force-new" ignore-error="true"/>
         </if>
+        <!-- Customer Service (impl-customer-service P3): the customer-serving facilities, product and days only -->
+        <if condition="appRoot == 'CustomerService'">
+            <service-call name="ironstone.customerservice.AvailabilityServices.get#StockAtDate" out-map="report"
+                    in-map="{appRoot:appRoot, asOfDate:asOfDate || null, fromDate:fromDate || null, productId:productId,
+                        facilityId:facilityId || null, historyPageIndex:pageIndex, pageSize:pageSize, pageNoLimit:pageNoLimit}"
+                    transaction="force-new" ignore-error="true"/>
+        </if>
         <set field="reportFound" from="!!report?.asOfDay"/>
         <set field="context.historyRows" from="report?.historyRows || []"/>
         <script>if (report) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow',

@@ -16,7 +16,13 @@ along with this software (see the LICENSE.md file). If not, see
     the customer's name, Customer statement and the More menu, its key numbers in each currency (open receivable, overdue,
     billed this year, last payment), each linking to the invoices, and the tabs, each of which reads the customer itself
     when the client loads it alone (ironstone.accounting.ReceivableServices.get#CustomerContext). A customer the user may not
-    see is "not available". -->
+    see is "not available".
+    Customer Service (appRoot CustomerService, mounted at CustomerService/Customers/Customer360; crosscut §3.2 Customer
+    Service row, impl-customer-service P3): a customer the user serves, read in always-actions so a tab rendered alone has it
+    (ironstone.customerservice.CustomerServices.get#Customer360; a shared customer's records only of the user's
+    organizations, F74); its header and key numbers (template/CustomerServiceCustomer360.xml) and its own tabs, Overview and
+    contacts, Cases, Orders and shipments, Billing (amounts for a finance reader, the credit status for a credit reader, read
+    only) and Files; the Accounting tabs are Accounting's alone, and payment details never show here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Customer"
@@ -24,11 +30,23 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="organizationPartyId"/>
     <parameter name="customerPartyId"/>
     <parameter name="appRoot"/>
+    <always-actions>
+        <!-- Customer Service (impl-customer-service P3): its read of the customer, which its tabs use -->
+        <if condition="appRoot == 'CustomerService'">
+            <service-call name="ironstone.customerservice.CustomerServices.get#Customer360" out-map="serviceCustomer"
+                    in-map="{appRoot:appRoot, customerPartyId:customerPartyId}" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="customerFound" from="!!serviceCustomer?.customerFound"/>
+            <set field="customerDetail" from="serviceCustomer?.customerDetail || {}"/>
+        </if>
+    </always-actions>
     <transition-include name="choices" location="component://mr-boss/template/AccountingParts.xml"/>
     <transition-include name="selectOrganization" location="component://mr-boss/template/AccountingParts.xml"/>
-    <subscreens default-item="Contact" always-use-full-path="true"/>
+    <subscreens default-item="Contact" always-use-full-path="true">
+        <conditional-default condition="appRoot == 'CustomerService'" item="ServiceOverview"/>
+    </subscreens>
     <actions>
-        <if condition="organizationPartyId">
+        <if condition="organizationPartyId &amp;&amp; appRoot != 'CustomerService'">
             <service-call name="ironstone.accounting.ReceivableServices.get#CustomerContext"
                     in-map="context"
                     out-map="context"
@@ -41,13 +59,14 @@ along with this software (see the LICENSE.md file). If not, see
                     + encodeURIComponent(organizationPartyId || '')"/>
     </actions>
     <widgets>
-        <section name="CustomerOrganizationPrompt" condition="!organizationPartyId">
+        <section-include name="CustomerServiceCustomer" location="component://mr-boss/template/CustomerServiceCustomer360.xml"/>
+        <section name="CustomerOrganizationPrompt" condition="!organizationPartyId &amp;&amp; appRoot != 'CustomerService'">
             <widgets>
                 <section-include name="OrganizationPicker" location="component://mr-boss/template/AccountingParts.xml"/>
                 <label text="Choose an organization to see this customer." type="p"/>
             </widgets>
         </section>
-        <section name="CustomerMissing" condition="organizationPartyId &amp;&amp; !customerFound">
+        <section name="CustomerMissing" condition="organizationPartyId &amp;&amp; !customerFound &amp;&amp; appRoot != 'CustomerService'">
             <widgets>
                 <container-box type="warning">
                     <box-header title="Customer not available"/>
@@ -61,7 +80,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </container-box>
             </widgets>
         </section>
-        <section name="CustomerRecord" condition="customerFound">
+        <section name="CustomerRecord" condition="customerFound &amp;&amp; appRoot != 'CustomerService'">
             <widgets>
                 <context record-entity="mantle.party.Party"
                         record-id="${customerPartyId}"

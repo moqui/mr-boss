@@ -27,6 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="customerPartyId"/>
     <parameter name="requestTypeEnumId"/>
     <parameter name="subject"/>
+    <!-- P3: the order a new case is on (OrderDetail's New case), linked by create#Case -->
+    <parameter name="orderId"/>
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <!-- CaseIdentity: the screen again with the customer, organization and type chosen (a link form) -->
@@ -36,18 +38,25 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="customerPartyId"/>
             <parameter name="requestTypeEnumId"/>
             <parameter name="subject"/>
+            <parameter name="orderId"/>
         </default-response>
     </transition>
     <transition name="createCase">
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.check#Record"
                     in-map="{appRoot:appRoot, recordType:'customer', recordId:customerPartyId, capability:'caseEdit'}"/>
+            <!-- P3: an order the case is on, checked as the user's -->
+            <if condition="orderId">
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            </if>
             <service-call name="mantle.request.SupportCaseServices.create#Case" out-map="created"
                     in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
                         contactPartyId:(contactPartyId || null), requestTypeEnumId:(requestTypeEnumId || null),
                         requestCategoryId:(requestCategoryId || null), requestName:requestName, description:(description || null),
                         priority:(priority || null), salesChannelEnumId:(salesChannelEnumId || null),
-                        assigneePartyId:(assigneePartyId || null)}"/>
+                        assigneePartyId:(assigneePartyId || null),
+                        records:(orderId ? [{recordEntityName:'mantle.order.OrderHeader', recordId:orderId}] : null)}"/>
             <set field="requestId" from="created.requestId"/>
             <message type="success">Created case ${requestId}</message>
         </actions>
@@ -64,10 +73,10 @@ along with this software (see the LICENSE.md file). If not, see
                 bandOptions: [], configured: false}"/>
         <set field="can" from="customerService.capabilities"/>
         <set field="identity" from="{organizationPartyId:prepared.organizationPartyId || '', customerPartyId:customerPartyId || '',
-                requestTypeEnumId:prepared.requestTypeEnumId || ''}"/>
+                requestTypeEnumId:prepared.requestTypeEnumId || '', orderId:orderId || ''}"/>
         <set field="caseValues" from="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId,
                 requestTypeEnumId:prepared.requestTypeEnumId, requestCategoryId:prepared.requestCategoryId,
-                priority:prepared.priority, salesChannelEnumId:'ScPhone'}"/>
+                priority:prepared.priority, salesChannelEnumId:'ScPhone', orderId:orderId || ''}"/>
         <!-- P12: the subject asked in the first step is the case's subject -->
         <script>identity.subject = subject || ''; caseValues.requestName = subject || null</script>
         <set field="describe" from="!!(prepared.customerFound &amp;&amp; prepared.requestTypeEnumId &amp;&amp; prepared.queueOptions.length)"/>
@@ -117,6 +126,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <text-line size="60"/>
                                 </default-field>
                             </field>
+                            <field name="orderId"><default-field><hidden/></default-field></field>
                             <field name="submitButton"><default-field title="Continue"><submit/></default-field></field>
                             <field-layout>
                                 <field-row><field-ref name="customerPartyId"/><field-ref name="requestTypeEnumId"/></field-row>
@@ -206,6 +216,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                                     <field name="customerPartyId"><default-field><hidden/></default-field></field>
                                     <field name="requestTypeEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
                                     <field name="requestName">
                                         <default-field title="Subject"><text-line size="60"/></default-field>
                                     </field>

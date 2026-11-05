@@ -393,11 +393,17 @@ along with this software (see the LICENSE.md file). If not, see
                                             <box-header title="Linked records"/>
                                             <box-body-nopad>
                                                 <form-list name="CaseLinks" list="cd.links" skip-form="true" paginate="false">
-                                                    <field name="recordEntityName"><default-field title="Record"><display/></default-field></field>
-                                                    <field name="recordId"><default-field title="Id"><display/></default-field></field>
+                                                    <!-- P3: each record opens its Customer Service screen when the user may work with it -->
+                                                    <field name="recordText">
+                                                        <default-field title="Record">
+                                                            <link url="${url}" url-type="plain" text="${recordText}" link-type="anchor"
+                                                                    condition="url"/>
+                                                            <label text="${recordText}" type="span" condition="!url"/>
+                                                        </default-field>
+                                                    </field>
                                                     <field name="linkedText"><default-field title="Linked"><display/></default-field></field>
                                                     <columns type="mobile">
-                                                        <column><field-ref name="recordId"/></column>
+                                                        <column><field-ref name="recordText"/></column>
                                                         <column><field-ref name="linkedText"/></column>
                                                     </columns>
                                                 </form-list>

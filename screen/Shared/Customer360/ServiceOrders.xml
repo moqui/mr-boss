@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Orders and shipments tab, in the Customer Service context (crosscut §3.2 CustomerOrders; impl-customer-
+    service P3): the customer's orders with the user's organizations (a shared customer's other organizations' are left out,
+    F74), each with its states and opening OrderDetail, and their shipments, each opening ShipmentDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders and shipments" default-menu-index="3">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <widgets>
+        <section name="ServiceOrdersTab" condition="customerFound">
+            <widgets>
+                <form-list name="ServiceCustomerOrders" list="customerDetail.orderRows" skip-form="true" paginate="false">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <link url="${url}" url-type="plain" text="${orderId}" link-type="anchor" style="text-mono"/>
+                        </default-field>
+                    </field>
+                    <field name="orderName"><default-field title="Name"><display/></default-field></field>
+                    <field name="entryText"><default-field title="Ordered"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                    WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                <text type="html">${statusText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="fulfillmentText"><default-field title="Fulfillment"><display/></default-field></field>
+                    <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderId"/><field-ref name="orderName"/></column>
+                        <column><field-ref name="totalText"/><field-ref name="statusText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No order of this customer with your organizations."
+                        condition="!customerDetail.orderRows.length"/>
+                <section name="ServiceShipments" condition="customerDetail.shipmentRows.length">
+                    <widgets>
+                        <label text="Shipments" type="h6"/>
+                        <form-list name="ServiceCustomerShipments" list="customerDetail.shipmentRows" skip-form="true"
+                                paginate="false">
+                            <field name="shipmentId">
+                                <default-field title="Shipment">
+                                    <link url="${url}" url-type="plain" text="${shipmentId}" link-type="anchor" style="text-mono"
+                                            condition="url"/>
+                                </default-field>
+                            </field>
+                            <field name="orderId"><default-field title="Order"><display/></default-field></field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="arrivalText"><default-field title="Expected"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="shipmentId"/></column>
+                                <column><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
