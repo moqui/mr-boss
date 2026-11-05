@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- BulkReply (design-customer-service §3 Cases BulkCaseAction's reply; impl-customer-service P5, CS-REPLIES): a saved reply
+    on the cases selected on Cases, previewed per case before anything goes (ironstone.customerservice.ReplyServices
+    preview#BulkReply: each case's own recipient, subject and actions, a case not available or one the reply cannot apply to
+    named), then sent on confirmation (CaseServices.apply#CaseBatch's reply: mantle.request.SupportCaseServices.apply#SavedReply
+    on each case in a transaction of its own, by the case's own operation key, each reply on its customer's own thread, no
+    address list across cases). The page then shows each reply's state by its message (sent, on its way, or not delivered);
+    Retry sends a reply that was not delivered again by its message ID, never a second reply. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Bulk reply" default-menu-include="false">
+    <parameter name="requestIds"/>
+    <parameter name="emailTextBlockId"/>
+    <parameter name="operationKey"/>
+    <transition name="applyBulkReply">
+        <actions>
+            <service-call name="ironstone.customerservice.CaseServices.apply#CaseBatch" out-map="applied"
+                    in-map="{appRoot:appRoot, requestIds:String(requestIds || '').split(',').filter((id) =&gt; id), operation:'reply',
+                        emailTextBlockId:emailTextBlockId, operationKey:operationKey,
+                        revisions:(revisionsJson ? JSON.parse(revisionsJson) : null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(applied.message, applied.failedCount ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url=".">
+            <parameter name="requestIds"/><parameter name="emailTextBlockId"/><parameter name="operationKey"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="replyKey" from="operationKey || ('br' + Date.now().toString(36))"/>
+        <if condition="String(requestIds || '') != '' &amp;&amp; emailTextBlockId">
+            <service-call name="ironstone.customerservice.ReplyServices.preview#BulkReply" out-map="bulk" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, requestIds:requestIds, emailTextBlockId:emailTextBlockId,
+                        operationKey:(operationKey || null)}"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="bulkCases" from="(bulk?.cases || []).map((row) =&gt; Object.assign({}, row, {
+                outcomeText: ({Ready: 'Ready to send', Refused: 'Not sent', Forbidden: 'Not available to you', Sent: 'Sent',
+                    ReplyDeliveryPending: 'On its way', ReplyDeliveryFailed: 'Not delivered'})[row.outcome] || row.outcome,
+                outcomeColor: ({Ready: 'primary', Sent: 'positive', ReplyDeliveryPending: 'info', ReplyDeliveryFailed: 'negative'})[row.outcome]
+                    || 'warning'}))"/>
+        <set field="applied" from="bulkCases.some((row) =&gt; row.applied)"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-xs">
+            <link url="../Cases" link-type="anchor" text="Cases" icon="arrow_back"/>
+        </container>
+        <label text="Reply to ${bulkCases.length} cases with ${bulk?.title || 'a saved reply'}" type="h5"/>
+        <label type="p" condition="!bulk" text="Choose cases and a saved reply on Cases first."/>
+        <section name="BulkReplyCases" condition="bulk">
+            <widgets>
+                <label type="p" style="text-caption m-muted" text="Each case gets its own message to its own contact, on its own thread; no case sees another's address."/>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="BulkReplyList" list="bulkCases" skip-form="true" paginate="false">
+                            <field name="requestId">
+                                <default-field title="Case">
+                                    <link url="../CaseDetail" text="${requestId}" link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                    <label text="${requestName || ''}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="recipientsText"><default-field title="To"><display/></default-field></field>
+                            <field name="actionsText"><default-field title="Then"><display/></default-field></field>
+                            <field name="outcomeText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${outcomeColor}">${
+                                            WebUtilities.encodeHtml(outcomeText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: outcomeText})}]]></text>
+                                        <text type="html">${outcomeText}</text>
+                                    </render-mode>
+                                    <label text="${message || ''}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestId"/><field-ref name="recipientsText"/></column>
+                                <column><field-ref name="outcomeText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <form-single name="BulkReplyConfirm" transition="applyBulkReply"
+                        map="{requestIds:requestIds, emailTextBlockId:emailTextBlockId, operationKey:replyKey,
+                            revisionsJson:JSON.stringify(bulk.revisions || {})}">
+                    <field name="requestIds"><default-field><hidden/></default-field></field>
+                    <field name="emailTextBlockId"><default-field><hidden/></default-field></field>
+                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                    <field name="revisionsJson"><default-field><hidden/></default-field></field>
+                    <field name="submitButton">
+                        <conditional-field title="Send ${bulk.readyCount} replies" condition="!applied &amp;&amp; bulk.readyCount">
+                            <submit confirmation="Send this saved reply on ${bulk.readyCount} cases?"/>
+                        </conditional-field>
+                        <conditional-field title="Retry the ${bulk.failedCount} not delivered" condition="applied &amp;&amp; bulk.failedCount">
+                            <submit confirmation="Send the ${bulk.failedCount} replies that were not delivered again?"/>
+                        </conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

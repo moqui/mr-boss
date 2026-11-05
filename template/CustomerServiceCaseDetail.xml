@@ -22,7 +22,7 @@ along with this software (see the LICENSE.md file). If not, see
     Work (the linked work items, each opening WorkItemDetail here, and Add task) and Files; and the Recent cases pane (the
     customer's other open or recent cases). The clocks (P4) beside the header and the Service level tab, over Mantle's
     mantle.request.SlaServices.get#CaseSlaHistory, with a manager's Correct (correct#CaseSla). Later phases add saved
-    replies (P5), merge and split (P8), the RMA, order-change and warranty actions (P9-P11) and Knowledge (P12:
+    replies (P5: the Saved reply tab, template/CustomerServiceReplies.xml), merge and split (P8), the RMA, order-change and warranty actions (P9-P11) and Knowledge (P12:
     template/CustomerServiceKnowledge.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -115,6 +115,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <!-- P12: the Knowledge tab (template/CustomerServiceKnowledge.xml), after the others -->
                 <set field="csTab" from="tab == 'knowledge' ? 'knowledge' : csTab"/>
                 <script>csTabs.push({key: 'knowledge', label: 'Knowledge'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
+                <!-- P5: the Saved reply tab (template/CustomerServiceReplies.xml), for a user who works the case -->
+                <set field="csTab" from="tab == 'reply' &amp;&amp; cd?.canEdit ? 'reply' : csTab"/>
+                <script>if (cd?.canEdit) csTabs.splice(1, 0, {key: 'reply', label: 'Saved reply'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
                 <set field="csValues" from="Object.assign({}, csValues, {tab: csTab})"/>
             </actions>
             <widgets>
@@ -539,6 +542,12 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </form-list>
                                             </box-body-nopad>
                                         </container-box>
+                                    </widgets>
+                                </section>
+                                <!-- P5: a saved reply previewed and applied on confirmation (template/CustomerServiceReplies.xml) -->
+                                <section name="CaseReplyTab" condition="csTab == 'reply'">
+                                    <widgets>
+                                        <section-include name="CaseReplyAction" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
                                     </widgets>
                                 </section>
                                 <!-- P12: linked and suggested articles (template/CustomerServiceKnowledge.xml) -->

@@ -400,13 +400,17 @@ feature("the areas a group guards refuse a Customer Service user without it; no 
         for (const [user, path] of [
             [users.read, "Returns"],
             [users.agent, "Approvals"],
-            [users.agent, "Settings"]
+            [users.agent, "Settings"],
+            [users.agent, "Settings/AssignmentRules"]
         ]) {
             const got = screenRefusal(user, path)
             if (!unauthorized(got) || !got.includes("AT_XML_SCREEN [")) problems.push(`${user} ${path}: ${got || "opened"}`)
         }
         const opened = screenRefusal(users.read, "Customers")
         if (opened !== "") problems.push(`the reader is refused Customers: ${opened}`)
+        // P5: SavedReplies, the one Settings page an agent opens (their own replies, F-P5-2)
+        const replies = screenRefusal(users.agent, "Settings/SavedReplies")
+        if (replies !== "") problems.push(`the agent is refused SavedReplies: ${replies}`)
         for (const user of [users.agent, users.orderDesk, users.returns, users.admin])
             asUser(user, () => {
                 for (const [path, method] of [
@@ -684,3 +688,69 @@ feature(
         }
     }
 )
+
+// P5: an assignment rule is the administrator's to save (SUPPORT_POLICY_EDIT), not the manager's, and never on another
+// organization's queue; a saved reply on a case is a case editor's (SUPPORT_CASE_EDIT), not the reader's, and another
+// organization's agent is refused the case; a saved reply's change is its owner's only, and an agent shares none
+feature("assignment rules are the administrator's, saved replies on a case a case editor's of its organization", {
+    when() {
+        const problems = []
+        const S = "mantle.request.SupportCaseServices."
+        const draft = {
+            organizationPartyId: ids.organizationId,
+            requestCategoryId: ids.supportQueueId,
+            ruleName: "Access spec draft rule",
+            distributionEnumId: "AdManual",
+            draft: true
+        }
+        for (const [user, service, parameters, expected] of [
+            [users.admin, "save#AssignmentRule", draft, ""],
+            [users.manager, "save#AssignmentRule", draft, "PERMISSION_DENIED"],
+            [
+                users.admin,
+                "save#AssignmentRule",
+                Object.assign({}, draft, {requestCategoryId: ids.otherQueueId}),
+                "QUEUE_UNAVAILABLE"
+            ],
+            [users.manager, "preview#Assignment", {requestId: ids.filtersCaseId}, ""],
+            [users.services, "preview#Assignment", {requestId: ids.filtersCaseId}, "RECORD_UNAVAILABLE"],
+            [users.agent, "preview#SavedReply", {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_DETAILS"}, ""],
+            [
+                users.read,
+                "preview#SavedReply",
+                {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_DETAILS"},
+                "PERMISSION_DENIED"
+            ],
+            [
+                users.services,
+                "preview#SavedReply",
+                {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_FILTERS"},
+                "RECORD_UNAVAILABLE"
+            ]
+        ]) {
+            const message = asUser(user, () => refusal(S + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const save = "ironstone.customerservice.ReplyServices.save#SavedReplyAction"
+        for (const [user, parameters, expected] of [
+            [users.agent, {emailTextBlockId: "BOSS_CS_REPLY_PATIENCE", disabled: "N"}, ""],
+            [users.manager, {emailTextBlockId: "BOSS_CS_REPLY_PATIENCE", disabled: "N"}, "REPLY_UNAVAILABLE"],
+            [users.read, {title: "Reader reply", bodyHtml: "<p>Hi</p>"}, "PERMISSION_DENIED"],
+            // an agent's replies are their own: sharing with their team is its manager's
+            [
+                users.agent,
+                {title: "Agent team reply", bodyHtml: "<p>Hi</p>", userGroupId: "SVT_BOSS_CS_TEAM_SUPPORT"},
+                "GROUP_UNAVAILABLE"
+            ]
+        ]) {
+            const message = asUser(user, () => refusal(save, Object.assign({appRoot: "CustomerService"}, parameters)))
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} save#SavedReplyAction: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

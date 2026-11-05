@@ -28,6 +28,10 @@ along with this software (see the LICENSE.md file). If not, see
     <ironstone.customerservice.DemoServices.load-CustomerServiceDemo/>
     <!-- P2: the demo requests made cases by the case rule (Mantle's ensure#CaseProfile) -->
     <ironstone.customerservice.DemoServices.load-CaseDemo/>
+    <!-- P5: the demo teams' user groups (their saved replies' audience) in step with their members -->
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_SUPPORT"/>
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_PRIVACY"/>
+    <mantle.request.SupportCaseServices.sync-ServiceTeamGroup teamPartyId="BOSS_CS_TEAM_SERVICES"/>
     <!-- P12: the service articles, knowledge sources and feedback (wiki and Mantle services), after the cases -->
     <ironstone.customerservice.DemoServices.load-KnowledgeDemo/>
 </entity-facade-xml>

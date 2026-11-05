@@ -167,6 +167,13 @@ function routeFixtures() {
         "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"},
         // P7: the case templates
         "Settings/CaseTemplates": {parameters: {}, text: "Case templates"},
+        // P5: the assignment rules, the saved replies and a bulk reply's preview
+        "Settings/AssignmentRules": {parameters: {}, text: "Assignment rules"},
+        "Settings/SavedReplies": {parameters: {}, text: "Saved replies"},
+        "Cases/BulkReply": {
+            parameters: {requestIds: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_PATIENCE"},
+            text: "Reply to"
+        },
         // P3: the customer, order and availability screens and the shared mounts under them
         "Customers/Customers": {parameters: {term: "joe@public.com"}, text: "Joe Public"},
         "Customers/Customer360": {parameters: {customerPartyId: ids.customerId}, text: "Joe Public"},

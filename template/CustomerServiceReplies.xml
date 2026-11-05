@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Saved replies on a case (design-customer-service §3 CaseDetail CaseReplyAction, §9 SavedReplies ReplyPreview;
+    impl-customer-service P5, CS-REPLIES): the section template/CustomerServiceCaseDetail.xml includes for tab reply, with its
+    transitions, which Shared/RequestDetail includes for Customer Service. The agent picks a saved reply of the case's
+    organization they may use (ironstone.customerservice.ReplyServices.find#SavedReplies, the same text blocks Comms'
+    composer offers), sees its text with the case's values and may change it, the recipient, and each action with whether the
+    case allows it (Mantle's mantle.request.SupportCaseServices.preview#SavedReply), and applies it on confirmation
+    (apply#SavedReply after the case's check: the actions and the reply in one transaction, the reply sent through the mail
+    client and filed on the case once sent; its operation key makes a second click the first one's result). The preview's
+    display is template/CustomerServiceReplyPreview.xml's ReplyPreviewBody, which SavedReplies' ReplyPreview shows too. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- the saved replies the user may use on the case -->
+    <transition name="caseReplyChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.ReplyServices.find#SavedReplies" out-map="found"
+                    in-map="{appRoot:appRoot, text:(term || null), organizationPartyId:(organizationPartyId || null), forCase:true}"/>
+            <script>ec.web.sendJsonResponse(Array.from(found.replies || []).map((row) =&gt; ({value: row.emailTextBlockId,
+                    label: row.title + (row.shortcutText ? ' ' + row.shortcutText : '') + ' · ' + row.scopeText})))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the reply chosen, or the agent's change of its text, previewed again (a link form: the tab with its values) -->
+    <transition name="previewCaseReply">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="tab" value="reply"/>
+            <parameter name="replyBlockId"/>
+            <parameter name="replyBody"/>
+            <parameter name="replySubject"/>
+        </default-response>
+    </transition>
+    <transition name="applyCaseReply">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.SupportCaseServices.apply#SavedReply" out-map="applied"
+                    in-map="{requestId:requestId, emailTextBlockId:replyBlockId, bodyHtml:(replyBody || null), subject:(replySubject || null),
+                        send:(send != 'N'), caseRevision:(caseRevision || null), operationKey:operationKey}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const status = applied.deliveryStatus
+                    ec.message.addMessage(status === 'failed' ? 'The reply was not delivered; it waits in the Outbox, and applying again sends it'
+                            : status === 'pending' ? 'Applied the saved reply; the message is on its way' : 'Applied the saved reply',
+                            status === 'failed' ? 'warning' : 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="conversation"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <!-- CaseDetail's Saved reply tab (csTab reply): the picker, then the preview and its confirmation -->
+        <section name="CaseReplyAction">
+            <actions>
+                <set field="replyBlockId" from="replyBlockId || null"/>
+                <if condition="replyBlockId">
+                    <service-call name="mantle.request.SupportCaseServices.preview#SavedReply" out-map="replyOut" transaction="force-new"
+                            ignore-error="true" in-map="{requestId:requestId, emailTextBlockId:replyBlockId, bodyHtml:(replyBody || null),
+                                subject:(replySubject || null)}"/>
+                    <set field="replyProblem" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/\n[\s\S]*$/, '') : ''"/>
+                    <script>ec.message.clearErrors()</script>
+                </if>
+                <set field="pv" from="replyOut?.preview || null"/>
+                <set field="replyKey" from="'cr' + Date.now().toString(36) + '-' + requestId"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Reply with a saved reply"/>
+                    <!-- the agent's own replies are kept on SavedReplies, the one Settings page they open (F-P5-2) -->
+                    <box-toolbar>
+                        <link url="${sharedLinks['Settings/SavedReplies']}" text="Saved replies" icon="sym_o_text_snippet"
+                                link-type="anchor"/>
+                    </box-toolbar>
+                    <box-body>
+                        <form-single name="CaseReplyPick" transition="previewCaseReply" map="{requestId:requestId, tab:'reply', replyBlockId:replyBlockId}">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="tab"><default-field><hidden/></default-field></field>
+                            <field name="replyBlockId">
+                                <default-field title="Saved reply" tooltip="Your replies, your team's and every service agent's">
+                                    <drop-down allow-empty="true" current-description="${pv?.title || ''}">
+                                        <dynamic-options transition="caseReplyChoices" server-search="true" min-length="0"
+                                                parameter-map="{organizationPartyId:sc.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout><field-row><field-ref name="replyBlockId"/><field-ref name="submitButton"/></field-row></field-layout>
+                        </form-single>
+                        <label type="p" style="text-negative" condition="replyProblem" text="${replyProblem}"/>
+                        <section name="CaseReplyPreview" condition="pv">
+                            <widgets>
+                                <section-include name="ReplyPreviewBody" location="component://mr-boss/template/CustomerServiceReplyPreview.xml"/>
+                                <form-single name="CaseReplyConfirm" transition="applyCaseReply"
+                                        map="{requestId:requestId, replyBlockId:replyBlockId, replyBody:pv.bodyHtml, replySubject:pv.subject,
+                                            caseRevision:pv.caseRevision, operationKey:replyKey, send:'Y'}">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="replyBlockId"><default-field><hidden/></default-field></field>
+                                    <field name="caseRevision"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="replySubject"><default-field title="Subject"><text-line size="60"/></default-field></field>
+                                    <field name="replyBody">
+                                        <default-field title="Text" tooltip="Change it here if you like; Preview again to check it">
+                                            <text-area rows="6" editor-type="rich-light"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="send">
+                                        <default-field title="">
+                                            <radio><option key="Y" text="Send the reply and apply the actions"/><option key="N" text="Apply the actions only"/></radio>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <conditional-field title="Apply" condition="pv.canApply || pv.canApplyActions">
+                                            <submit confirmation="Apply this saved reply to case ${requestId}?"/>
+                                        </conditional-field>
+                                        <default-field title=""><display text="Fix what is named above to apply it"/></default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

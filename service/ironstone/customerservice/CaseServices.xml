@@ -139,7 +139,11 @@ along with this software (see the LICENSE.md file). If not, see
             (with resolutionEnumId and reason), priority, queue or tags (tagMode add, remove or replace), each case checked and
             changed through mantle.request.SupportCaseServices in a transaction of its own; the outcome of each is Done,
             StaleCase (revisions names the revision each was read at), AssigneeUnavailable, Forbidden or Failed, and the
-            others go on. An operation key answers a retry with the first result.</description>
+            others go on. An operation key answers a retry with the first result. P5: reply (emailTextBlockId) applies a saved
+            reply on each case (mantle.request.SupportCaseServices.apply#SavedReply: its actions and its own message to the
+            case's contact, one transaction per case) by the case's own operation key (operationKey and the case id, required),
+            so a retry answers each case's first result and sends a failed message again by its ID; the outcome is Done,
+            ReplyDeliveryPending (going after the commit) or ReplyDeliveryFailed besides the others.</description>
         <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
         <in-parameters>
             <parameter name="requestIds" required="true"/>
@@ -152,6 +156,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="requestCategoryId"/>
             <parameter name="tagEnumIds"/>
             <parameter name="tagMode"/>
+            <!-- P5: the saved reply of operation reply -->
+            <parameter name="emailTextBlockId"/>
             <parameter name="revisions" type="Map"/>
             <parameter name="operationKey"/>
         </in-parameters>

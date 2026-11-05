@@ -288,7 +288,9 @@ const linkPaths = [
     "Availability/PriceExplain",
     // P6: the channel sessions and the channel routing
     "Cases/ChannelSessions",
-    "Settings/ChannelRouting"
+    "Settings/ChannelRouting",
+    // P5: the saved replies (CaseDetail's Saved reply links them)
+    "Settings/SavedReplies"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

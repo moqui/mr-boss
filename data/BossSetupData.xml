@@ -1682,6 +1682,18 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- P5 (design §9 SavedReplies, capabilities A and S; impl-customer-service F-P5-2): SavedReplies for the agent too, a
+        child of the Settings area the root group is denied: the agent manages their own replies there (save#SavedReplyAction
+        lets only a reply's owner change it, and only a team's manager share with the team), the manager and administrator
+        reach it through Settings -->
+    <artifactGroups artifactGroupId="BOSS_CS_SAVED_REPLIES">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Settings/SavedReplies.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_SAVED_REPLIES_AGENT" userGroupId="BOSS_CUSTOMER_SERVICE_AGENT"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
     <!-- P2: NewCase (and so quick create's Case) for the groups that enter cases: the agent, the manager and the
         administrator (SUPPORT_CASE_EDIT); create#Case checks the permission again -->
     <artifactGroups artifactGroupId="BOSS_CS_NEW_CASE">
@@ -1821,6 +1833,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="SupportCaseSlaBreach" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WORKING_HOURS_EDIT"
             fromDate="0"/>
+    <!-- Customer Service P5: a case no eligible agent could take (Mantle's assign#Case, SupportCaseUnassigned) opens the case
+        for its queue team's managers -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseUnassigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
     <!-- Customer Service P3 (impl-customer-service P3, F52): the product master read only for every Customer Service user
         (Availability's Product360, InventoryAvailability and StockAtDate; Products' SharedContext.js turns cost, supplier
         price and policy off in this context), and price read (Product360's Prices and PriceExplain) for the agent, manager,
