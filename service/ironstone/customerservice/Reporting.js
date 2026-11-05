@@ -24,7 +24,7 @@ const CLOCK = "mantle.request.support.CaseClockRequest",
     CASE = "mantle.request.support.CaseRequest",
     CASE_PARTY = "mantle.request.support.CaseRequestParty",
     RELATION = "mantle.request.support.CaseRelation",
-    AUDIT = "moqui.entity.EntityAuditLog",
+    STATUS_CHANGE = "mantle.request.support.CaseStatusChange",
     REQUEST = "mantle.request.Request",
     HEADER = "mantle.order.return.ReturnHeader",
     ITEM = "mantle.order.return.ReturnItem",
@@ -615,7 +615,8 @@ function caseVolumes(p) {
     )
     const audit = capped(
         Array.from(
-            find(AUDIT, {changedEntityName: REQUEST, changedFieldName: "statusId"})
+            // the status changes of the scope's queues' requests (Mantle's CaseStatusChange), never every request's
+            filtered(find(STATUS_CHANGE, {changedEntityName: REQUEST, changedFieldName: "statusId"}))
                 .condition("changedDate", "greater-equals", new Date(period.from))
                 .condition("changedDate", "less", new Date(period.thru))
                 .condition(
