@@ -34,18 +34,28 @@ const quoteOf = supplierPartyId =>
     )
 const lineOf = orderId => rows("mantle.order.OrderItem", {orderId}).find(row => row.productId == "DEMO_1_1")
 const allocation = (orderId, quantity) => [orderId, lineOf(orderId).orderItemSeqId, state.itemSeqId, quantity].join(":")
-// a block of Brightline's purchases from now, or its end
+// a block of Brightline's purchases from now, or its end; the block's row carries the fields of the row in effect (its
+// approval status, currency and Incoterm), so the specs after this one in a shared database find Brightline as it was
 function block(on) {
     system(() => {
-        if (on)
+        if (on) {
+            const inEffect = rows("mantle.party.supplier.SupplierProfile", {
+                organizationPartyId: ids.organizationId,
+                supplierPartyId: ids.supplierId,
+                thruDate: null
+            }).sort((a, b) => Number(b.fromDate) - Number(a.fromDate))[0]
             state.blockId = invoke("create#mantle.party.supplier.SupplierProfile", {
                 organizationPartyId: ids.organizationId,
                 supplierPartyId: ids.supplierId,
+                approvalStatusId: inEffect?.approvalStatusId ?? null,
+                currencyUomId: inEffect?.currencyUomId ?? null,
+                incotermEnumId: inEffect?.incotermEnumId ?? null,
+                selfBillingIndicator: inEffect?.selfBillingIndicator ?? "N",
                 fromDate: new Date(Number(ec.user.nowTimestamp) - 1000),
                 purchaseBlockFromDate: new Date(Number(ec.user.nowTimestamp) - 1000),
                 purchaseBlockReason: "Walk quality hold"
             }).supplierProfileId
-        else
+        } else
             invoke("update#mantle.party.supplier.SupplierProfile", {
                 supplierProfileId: state.blockId,
                 purchaseBlockThruDate: ec.user.nowTimestamp
