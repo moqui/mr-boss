@@ -62,14 +62,24 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P4: the service level warning and breach of a case (Mantle's scan#CaseSla) -->
         <notification-topic topic="SupportCaseSlaWarning"/>
         <notification-topic topic="SupportCaseSlaBreach"/>
+        <!-- P10: an order change to decide (Mantle's OrderChangeApproval, opening OrderChangeDetail) -->
+        <notification-topic topic="OrderChangeApproval"/>
         <!-- P6: the caller's open cases in Comms' ring bar and call (Comms' own provider answers the contacts) -->
         <call-context name="boss.cases" service="ironstone.customerservice.ChannelServices.get#CallContext"/>
+        <!-- P9: RMAs in the palette (search#Records), quick create's Request return for the Returns area's groups (NewReturn
+            checks the entry permission), and the return topics Mantle sends (BossSetupData.xml links them to ReturnDetail) -->
+        <quick-create kind="customerServiceReturn" label="Return" screen="CustomerService/Returns/NewReturn"
+                icon="sym_o_assignment_return" sequence="75"/>
+        <notification-topic topic="ReturnExceptionApproval"/>
+        <notification-topic topic="ReturnDecision"/>
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
             <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>
             <!-- P3: the customer and order lookups -->
             <key keys="g u" label="Customers" screen="CustomerService/Customers/Customers"/>
             <key keys="g o" label="Orders" screen="CustomerService/Orders/Orders"/>
+            <!-- P9: the returns -->
+            <key keys="g r" label="Returns" screen="CustomerService/Returns/Returns"/>
         </keymap>
     </shell-providers>
 

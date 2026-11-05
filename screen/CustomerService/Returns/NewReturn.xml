@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- NewReturn (design-customer-service §5 NewReturn; style-guide §3.9 Wizard; impl-customer-service P9): ReturnSource (the
+    customer the user serves and the sale the goods came from; from a case, CaseDetail's Request RMA, or an order, OrderDetail's
+    Create return), ReturnableLines (each product line of the sale with what was shipped, invoiced and is on other returns, what
+    is left, and the quantity, reason and remedy asked; server ceilings, F21) and ReturnRequest (the customer's reference and
+    the policy preview: the policy row, the expiry an authorization now would have, the fee, the exceptions and who decides),
+    then mantle.order.ReturnPolicyServices.submit#CustomerReturn, which opens the return in ReturnDetail. The return is
+    requested here, not authorized; Save as draft keeps it created. The quick create's Request return. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="New return" default-menu-index="2">
+    <parameter name="customerPartyId"/>
+    <parameter name="orderId"/>
+    <parameter name="requestId"/>
+    <!-- the lines asked for, as JSON ([{orderItemSeqId, quantity, returnReasonEnumId, returnResponseEnumId}]) -->
+    <parameter name="linesText"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- ReturnSource: the screen again with the customer and the sale -->
+    <transition name="identify">
+        <default-response url=".">
+            <parameter name="customerPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="requestId"/>
+        </default-response>
+    </transition>
+    <!-- ReturnableLines: the quantities asked for, kept as linesText for the preview -->
+    <transition name="previewLines">
+        <actions>
+            <script><![CDATA[
+                const params = ec.web.parameters
+                const given = value => value != null && String(value).trim() !== ''
+                const lines = []
+                for (const key of Object.keys(params).filter(key => /^orderItemSeqId_\d+$/.test(key))) {
+                    const suffix = key.slice(key.lastIndexOf('_'))
+                    if (!given(params['quantity' + suffix]) || Number(params['quantity' + suffix]) === 0) continue
+                    lines.push({orderItemSeqId: String(params[key]), quantity: String(params['quantity' + suffix]).trim(),
+                        returnReasonEnumId: given(params['returnReasonEnumId' + suffix]) ? String(params['returnReasonEnumId' + suffix]) : 'RrsnDefective',
+                        returnResponseEnumId: given(params['returnResponseEnumId' + suffix]) ? String(params['returnResponseEnumId' + suffix]) : 'RrspCredit'})
+                }
+                linesText = JSON.stringify(lines)
+            ]]></script>
+        </actions>
+        <default-response url=".">
+            <parameter name="customerPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="requestId"/>
+            <parameter name="linesText"/>
+        </default-response>
+    </transition>
+    <transition name="submitReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
+            <if condition="requestId">
+                <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'case', recordId:requestId}"/>
+            </if>
+            <service-call name="mantle.order.ReturnPolicyServices.submit#CustomerReturn" out-map="submitted"
+                    in-map="{operationKey:operationKey, orderId:orderId, lineList:(linesText ? JSON.parse(linesText) : []),
+                        customerReference:(customerReference || null), requestId:(requestId || null),
+                        exceptionReason:(exceptionReason || null), draft:(draft == 'Y'),
+                        carrierPartyId:(carrierPartyId || null), shipmentMethodEnumId:(shipmentMethodEnumId || null)}"/>
+            <set field="returnId" from="submitted.returnId"/>
+            <message type="success">Return ${returnId}: ${submitted.outcomeText}</message>
+        </actions>
+        <default-response url="../ReturnDetail"><parameter name="returnId"/></default-response>
+        <error-response url=".">
+            <parameter name="customerPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="requestId"/>
+            <parameter name="linesText"/>
+        </error-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ReturnServices.prepare#Return" out-map="prepareOut" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, customerPartyId:customerPartyId, orderId:orderId, requestId:requestId}"/>
+        <set field="prepareError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="prepared" from="prepareOut?.prepared || {orderOptions: [], lineRows: []}"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="source" from="{customerPartyId:prepared.customerPartyId || customerPartyId || '', orderId:orderId || '',
+                requestId:requestId || ''}"/>
+        <set field="asked" from="linesText ? JSON.parse(linesText) : []"/>
+        <!-- each returnable line with what was asked of it -->
+        <set field="lineValues" from="(prepared.lineRows || []).filter((row) =&gt; row.returnable).map((row) =&gt; {
+                const line = asked.find((entry) =&gt; entry.orderItemSeqId == row.orderItemSeqId) || {};
+                return Object.assign({}, row, {quantity: line.quantity || '', returnReasonEnumId: line.returnReasonEnumId || 'RrsnDefective',
+                    returnResponseEnumId: line.returnResponseEnumId || 'RrspCredit'}) })"/>
+        <set field="closedLines" from="(prepared.lineRows || []).filter((row) =&gt; !row.returnable)"/>
+        <!-- ReturnRequest's policy preview of the lines asked for -->
+        <if condition="asked.length &amp;&amp; orderId">
+            <service-call name="mantle.order.ReturnPolicyServices.evaluate#ReturnPolicy" out-map="preview" transaction="force-new"
+                    ignore-error="true" in-map="{orderId:orderId, lineList:asked}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="previewRows" from="preview?.lineRows || []"/>
+        <set field="requestValues" from="{customerPartyId:source.customerPartyId, orderId:orderId, requestId:requestId || '',
+                linesText:linesText || '', operationKey:'return-' + ec.user.randomString(20)}"/>
+    </actions>
+    <widgets>
+        <label text="New return" type="h5"/>
+        <section name="NewReturnUnavailable" condition="!(can.caseEdit || can.returnAuthorize)">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="You do not enter returns here."/>
+                        <link url="${sharedLinks['Returns/Returns']}" text="Back to Returns" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="NewReturnSteps" condition="can.caseEdit || can.returnAuthorize">
+            <widgets>
+                <label type="p" style="m-negative" text="${prepareError}" condition="prepareError"/>
+                <container-box>
+                    <box-header title="1. The customer and the sale"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" condition="prepared.caseRow"
+                                text="From case ${prepared.caseRow?.requestId}: ${prepared.caseRow?.label}"/>
+                        <form-single name="ReturnSource" transition="identify" map="source">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="customerPartyId">
+                                <default-field title="Customer">
+                                    <drop-down>
+                                        <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                                parameter-map="{selected:customerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="orderId">
+                                <default-field title="Sale" tooltip="The customer's approved, sent or completed orders">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                depends-optional="true"
+                                                parameter-map="{choice:'returnOrders', selected:orderId}">
+                                            <depends-on field="customerPartyId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Show the returnable lines"><submit/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <section name="ReturnableLinesStep" condition="orderId &amp;&amp; prepared.lineRows?.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="2. What comes back"/>
+                            <box-body-nopad>
+                                <label type="p" style="q-pa-sm m-muted" condition="!lineValues.length"
+                                        text="Nothing on order ${orderId} is left to return: what was shipped and invoiced is on other returns already."/>
+                                <form-list name="ReturnableLines" list="lineValues" transition="previewLines" multi="true"
+                                        condition="lineValues.length">
+                                    <hidden-parameters parameter-map="{customerPartyId:source.customerPartyId, orderId:orderId,
+                                            requestId:requestId || ''}"/>
+                                    <field name="orderItemSeqId"><default-field title="#"><display also-hidden="true"/></default-field></field>
+                                    <field name="productText">
+                                        <default-field title="Product">
+                                            <label text="${productText}" type="div"/>
+                                            <label text="Shipped ${shippedQuantity} · invoiced ${invoicedQuantity} · on other returns ${returnedQuantity}"
+                                                    type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="eligibleQuantity" align="right">
+                                        <default-field title="Left to return"><display/></default-field>
+                                    </field>
+                                    <field name="quantity"><default-field title="Returning"><text-line size="6"/></default-field></field>
+                                    <field name="returnReasonEnumId">
+                                        <default-field title="Reason">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="false" min-length="0"
+                                                        parameter-map="{choice:'returnReasons'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="returnResponseEnumId">
+                                        <default-field title="Asked for">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="false" min-length="0"
+                                                        parameter-map="{choice:'returnResponses'}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title=""><submit text="Preview the return"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/><field-ref name="eligibleQuantity"/></column>
+                                        <column><field-ref name="quantity"/><field-ref name="returnReasonEnumId"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm text-caption m-muted" condition="closedLines.length"
+                                        text="${closedLines.length} more line(s) of the order have nothing left to return."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="ReturnRequestStep" condition="orderId &amp;&amp; asked.length &amp;&amp; preview">
+                    <widgets>
+                        <container-box>
+                            <box-header title="3. The request and its policy"/>
+                            <box-body>
+                                <label type="strong" text="${preview.outcomeText}"/>
+                                <label type="p" text="${[preview.policyName ? 'Policy ' + preview.policyName : 'No policy',
+                                        'authorization valid until ' + preview.expireText, preview.feeText, preview.approvalText]
+                                        .filter(Boolean).join(' · ')}" style="text-caption m-muted"/>
+                                <label type="p" text="${preview.instructions}" condition="preview.instructions"/>
+                                <form-list name="ReturnPreviewLines" list="previewRows" skip-form="true" paginate="false">
+                                    <field name="productText"><default-field title="Product"><display/></default-field></field>
+                                    <field name="requestedQuantity" align="right">
+                                        <default-field title="Returning"><display/></default-field>
+                                    </field>
+                                    <field name="eligibleQuantity" align="right">
+                                        <default-field title="Left"><display/></default-field>
+                                    </field>
+                                    <field name="windowEndText"><default-field title="Window ends"><display/></default-field></field>
+                                    <field name="exceptionText"><default-field title="Exception"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productText"/></column>
+                                        <column><field-ref name="requestedQuantity"/><field-ref name="exceptionText"/></column>
+                                    </columns>
+                                </form-list>
+                                <form-single name="ReturnRequest" transition="submitReturn" map="requestValues"
+                                        condition="preview.outcome != 'NotEligible'">
+                                    <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="linesText"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="customerReference">
+                                        <default-field title="Customer's reference" tooltip="Their own number for this return, if any">
+                                            <text-line size="30"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="carrierPartyId">
+                                        <default-field title="Return label carrier" tooltip="Empty: the order's carrier">
+                                            <drop-down allow-empty="true">
+                                                <entity-options key="${partyId}" text="${organizationName || partyId}">
+                                                    <entity-find entity-name="mantle.party.PartyDetailAndRole">
+                                                        <econdition field-name="roleTypeId" value="Carrier"/>
+                                                        <order-by field-name="organizationName"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="shipmentMethodEnumId">
+                                        <default-field title="Service">
+                                            <drop-down allow-empty="true">
+                                                <entity-options key="${enumId}" text="${description}">
+                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                        <econdition field-name="enumTypeId" value="ShipmentMethod"/>
+                                                        <order-by field-name="description"/>
+                                                    </entity-find>
+                                                </entity-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="exceptionReason" hide="preview.outcome != 'ExceptionRequired'">
+                                        <default-field title="Why an exception" tooltip="Sent to the return exception approvers">
+                                            <text-line size="50"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="draft">
+                                        <default-field title="">
+                                            <check><option key="Y" text="Save as draft (not requested yet)"/></check>
+                                        </default-field>
+                                    </field>
+                                    <field name="submitButton">
+                                        <default-field title=""><submit text="Request the return"/></default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -121,6 +121,12 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="${serviceOrder.newCaseUrl}" url-type="plain" text="New case" icon="sym_o_add"
                                         link-type="anchor-button" btn-type="primary"
                                         condition="serviceOrder.canLinkCase &amp;&amp; serviceOrder.newCaseUrl"/>
+                                <!-- P9: a return of this order (NewReturn with the order; its lines' ceilings are Mantle's) -->
+                                <link url="${sharedLinks['Returns/NewReturn']}" text="Create return" icon="sym_o_assignment_return"
+                                        link-type="anchor-button" parameter-map="{orderId:orderId}"
+                                        condition="customerService.capabilities.returns &amp;&amp; (customerService.capabilities.caseEdit
+                                            || customerService.capabilities.returnAuthorize) &amp;&amp; ['OrderApproved', 'OrderSent',
+                                            'OrderCompleted'].includes(so.statusId)"/>
                                 <container-dialog id="ServiceResendConfirmation" button-text="Resend confirmation" icon="sym_o_forward_to_inbox"
                                         title="Resend the confirmation of order ${orderId} as placed" width="600"
                                         condition="serviceOrder.canResend">
@@ -164,6 +170,13 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <button-menu text="More" icon="more_horiz">
+                                    <!-- P10: propose a change (Shared/OrderChangeDetail), and the order's changes -->
+                                    <link url="${sharedLinks['Orders/OrderChangeDetail']}" text="Propose change"
+                                            icon="sym_o_edit_note" parameter-map="{orderId:orderId}"
+                                            condition="customerService?.capabilities?.orderChangeRequest"/>
+                                    <link url="${sharedLinks['Orders/OrderChanges']}" text="Order changes"
+                                            parameter-map="{orderId:orderId}"
+                                            condition="customerService?.capabilities?.orderChangeRequest || customerService?.capabilities?.orderChangeApprove || customerService?.capabilities?.orderChangeApply"/>
                                     <link url="confirmationFile" text="Stored confirmation (PDF)" target-window="_blank"
                                             parameter-map="{orderId:orderId}" condition="serviceOrder.confirmation.stored &amp;&amp; serviceOrder.amountRead"/>
                                     <link url="${so.customerUrl}" url-type="plain" text="Customer" condition="so.customerUrl"/>

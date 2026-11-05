@@ -23,7 +23,18 @@ feature("the menu renders for each group, its areas open, the others are refused
                 .filter(item => String(item.kind || "").startsWith("customerService"))
                 .map(item => item.kind)
             const mayCreate = [users.agent, users.manager, users.admin, users.agentWarehouse, users.services].includes(user)
-            if (JSON.stringify(offered) !== JSON.stringify(mayCreate ? ["customerServiceCase"] : []))
+            // P9: a return for the Returns area's groups (the agent, manager, return authorizer and administrator)
+            const mayReturn = [
+                users.agent,
+                users.manager,
+                users.admin,
+                users.agentWarehouse,
+                users.services,
+                users.returns,
+                users.returnsReceivables
+            ].includes(user)
+            const expectedKinds = (mayCreate ? ["customerServiceCase"] : []).concat(mayReturn ? ["customerServiceReturn"] : [])
+            if (JSON.stringify(offered) !== JSON.stringify(expectedKinds))
                 problems.push(`${user} is offered the Customer Service quick create ${offered}`)
             for (const area of areas) {
                 const expected = found.names.includes(area)
@@ -131,7 +142,13 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         shipmentId: "BOSS_CS_NO_SHIPMENT",
                         invoiceId: "BOSS_CS_NO_INVOICE",
                         // P6: a case from a message's kind
-                        kind: "email"
+                        kind: "email",
+                        // P9: the returns' required parameters
+                        action: "authorize",
+                        returnIds: [ids.warehouseReturnId],
+                        returnId: ids.warehouseReturnId,
+                        qualityInspectionId: "BOSS_CS_NO_INSPECTION",
+                        capability: "inspect"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))

@@ -127,6 +127,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
                 </then>
+                <!-- Customer Service's customer return inspections (impl-customer-service P9, F38): the borrowed W capability
+                    on an inspection of a return the user works with, without the Warehouse root -->
+                <else-if condition="appRoot == 'CustomerService'">
+                    <service-call name="ironstone.customerservice.ReturnServices.check#ReturnInspection"
+                            in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId, capability:'inspect'}"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.AccessServices.check#Record"
                             in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
@@ -149,6 +155,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
                 </then>
+                <!-- Customer Service's customer return inspections (impl-customer-service P9, F38): the borrowed W capability
+                    on an inspection of a return the user works with, without the Warehouse root -->
+                <else-if condition="appRoot == 'CustomerService'">
+                    <service-call name="ironstone.customerservice.ReturnServices.check#ReturnInspection"
+                            in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId, capability:'inspect'}"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.AccessServices.check#Record"
                             in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
@@ -192,6 +204,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'qualityDispose'}"/>
                 </then>
+                <!-- Customer Service's customer return inspections (impl-customer-service P9, F38): the borrowed W capability
+                    on an inspection of a return the user works with, without the Warehouse root -->
+                <else-if condition="appRoot == 'CustomerService'">
+                    <service-call name="ironstone.customerservice.ReturnServices.check#ReturnInspection"
+                            in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId, capability:'dispose'}"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.AccessServices.check#Record"
                             in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'qualityDispose'}"/>
@@ -218,6 +236,12 @@ along with this software (see the LICENSE.md file). If not, see
                     <service-call name="ironstone.manufacturing.AccessServices.check#Record"
                             in-map="{appRoot:appRoot, recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
                 </then>
+                <!-- Customer Service's customer return inspections (impl-customer-service P9, F38): the borrowed W capability
+                    on an inspection of a return the user works with, without the Warehouse root -->
+                <else-if condition="appRoot == 'CustomerService'">
+                    <service-call name="ironstone.customerservice.ReturnServices.check#ReturnInspection"
+                            in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId, capability:'inspect'}"/>
+                </else-if>
                 <else>
                     <service-call name="ironstone.warehouse.AccessServices.check#Record"
                             in-map="{recordType:'inspection', recordId:qualityInspectionId, capability:'inspect'}"/>
