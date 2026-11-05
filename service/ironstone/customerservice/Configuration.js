@@ -310,6 +310,9 @@ function serviceLevelSettings(p) {
 
 const operations = {serviceQueues, serviceTeam, serviceSettings, serviceLevelSettings}
 ;({
+    // P7: the settings organization of TemplateServices (Templates.js)
+    organizationOf,
+    organizationOptions,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service settings operation " + op)
         return operations[op](parameters || {})

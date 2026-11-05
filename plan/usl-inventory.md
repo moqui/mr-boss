@@ -1918,6 +1918,24 @@ app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleS
 | request/KnowledgeServices | create#ArticleFromCase | CustomerService/Knowledge/CaseToArticle | CustomerService/Knowledge/CaseToArticle (ArticleDraft; AnswerSelection's preview through prepare#ArticleFromCase) |
 | request/KnowledgeServices | make#ArticleTask |  | for review#ArticleFeedback and suggest#ArticleEdit |
 
+## Customer Service P7 — Case templates (Nov 5, 2026)
+
+Added in `request/SupportCaseServices.xml` (impl-customer-service P7, CS-TEMPLATES; `CaseTemplates.js`), over the framework's
+dated DbForm services (`org.moqui.impl.ScreenServices`), called by built screens; the Support app's NewCustomerCase (P15) is to
+call `get#CaseTemplate` and `validate#TemplateValues` with the customer's audience.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/SupportCaseServices | save#CaseTemplate | CustomerService/Settings/CaseTemplates | CustomerService/Settings/CaseTemplates (New template, Rename, Publish, Use for a queue) |
+| request/SupportCaseServices | save#CaseTemplateField |  | CustomerService/Settings/CaseTemplates (Add field, Edit) |
+| request/SupportCaseServices | save#CaseTemplateCondition |  | CustomerService/Settings/CaseTemplates (the condition rows) |
+| request/SupportCaseServices | end#CaseTemplatePart |  | CustomerService/Settings/CaseTemplates (End a field or condition) |
+| request/SupportCaseServices | validate#CaseTemplate | CustomerService/Settings/CaseTemplates | CustomerService/Settings/CaseTemplates (TemplatePreview's check; the problems) |
+| request/SupportCaseServices | validate#TemplateValues | CustomerService/Cases/NewCase; PASS:Support/NewCustomerCase | CustomerService/Cases/NewCase (through create#Case) |
+| request/SupportCaseServices | get#CaseTemplate | PASS:Support/NewCustomerCase | CustomerService/Settings/CaseTemplates (TemplateEdit, with its drafts); the customer's projection for P15 |
+| request/SupportCaseServices | get#CaseTemplateValues | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Overview, template/CustomerServiceTemplates.xml) |
+| ScreenServices (framework) | publish#DbForm, create#DbFormFieldSuccessor, store#DbFormFieldDependency, end#DbFormField, end#DbFormFieldOption, end#DbFormFieldDependency, evaluate#DbFormDependencies, create#FormResponse, get#FormResponse |  | through the services above (Customer Service P7) |
+
 ## Customer Service P3 — customers and orders (Nov 5, 2026)
 
 Mantle services Customer Service P3 added or calls that had no row.

@@ -1,0 +1,604 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseTemplates (design-customer-service §9 CaseTemplates; impl-customer-service P7, CS-TEMPLATES, CS-FORM-ELEMENTS,
+    F69-F71): TemplateList, the organization's case templates (ironstone.customerservice.TemplateServices.find#Templates) with
+    New template; with formId, TemplateEdit (mantle.request.SupportCaseServices.get#CaseTemplate with its drafts): the fields
+    with their audience (customer-visible or internal), Add field, Edit and End (save#CaseTemplateField,
+    end#CaseTemplatePart), the conditions as a non-multi editable form-list whose value options follow the source field (F71:
+    show or require a field by another's value; save#CaseTemplateCondition, which refuses a cycle and a customer field on an
+    internal one), Publish from a date and the queue that uses it (save#CaseTemplate); and TemplatePreview: the agent's form
+    with its drafts as NewCase renders it (desktop and phone in qvt, the terminal in tui), the customer's fields, and a check of
+    sample values for both audiences (validate#CaseTemplate). Every save checks SUPPORT_POLICY_EDIT in Mantle; its forms show
+    only to a user who may save. A template changes by dated rows, so a case keeps its values with the form as it was. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Case templates" default-menu-index="8">
+    <parameter name="organizationPartyId"/>
+    <parameter name="formId"/>
+    <parameter name="preview"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <!-- a condition row's values: the options of its source field -->
+    <transition name="conditionValues" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.TemplateServices.get#ConditionValues" out-map="found"
+                    in-map="{appRoot:appRoot, formId:formId, sourceFieldName:sourceFieldName}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="createTemplate">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplate" out-map="saved"
+                    in-map="{organizationPartyId:organizationPartyId, description:description, comments:(comments || null)}"/>
+            <set field="formId" from="saved.formId"/>
+            <message type="success">Made the template ${description}: add its fields, then publish it</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveTemplate">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplate"
+                    in-map="{formId:formId, description:description, comments:(comments ?? '')}"/>
+            <message type="success">Saved the template</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishTemplate">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplate" out-map="published"
+                    in-map="{formId:formId, publish:true, fromDate:(fromDate || null)}"/>
+            <message type="success">Published ${published.publishedFieldNames?.length || 0} new field(s) and the template's other changes</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="useForQueue">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplate"
+                    in-map="{formId:formId, requestCategoryId:requestCategoryId, useForQueue:(useForQueue != 'N')}"/>
+            <message type="success">${useForQueue == 'N' ? 'The queue no longer uses the template' : 'New cases of the queue use the template from now'}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveField">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplateField" out-map="savedField"
+                    in-map="{formId:formId, fieldName:(fieldName || null), title:title, tooltip:(tooltip || null),
+                        fieldTypeEnumId:fieldTypeEnumId, isRequired:(isRequired || 'N'), audienceEnumId:audienceEnumId,
+                        layoutSequenceNum:(layoutSequenceNum || null), optionText:(optionText || null), fromDate:(fromDate || null)}"/>
+            <message type="success">${savedField.successor ? 'Saved as a new field that replaces the old one when it starts; publish it if it has no date' : 'Saved the field'}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endField">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.end#CaseTemplatePart"
+                    in-map="{formId:formId, part:'field', fieldName:fieldName, thruDate:(thruDate || null)}"/>
+            <message type="success">Ended the field; earlier cases keep its value</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveCondition">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseTemplateCondition"
+                    in-map="{formId:formId, dependencySeqId:(dependencySeqId || null), sourceFieldName:sourceFieldName,
+                        operator:operator, value:(value || null), targetFieldName:targetFieldName, effect:effect}"/>
+            <message type="success">Saved the condition</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endCondition">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.end#CaseTemplatePart"
+                    in-map="{formId:formId, part:'condition', dependencySeqId:dependencySeqId}"/>
+            <message type="success">Ended the condition</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="formId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- TemplatePreview's check: the sample values back on the page, which checks them for both audiences -->
+    <transition name="checkPreview">
+        <actions>
+            <set field="previewParameters" from="Object.fromEntries(Object.entries(Object.assign({}, ec.web.parameters))
+                    .filter(([name]) =&gt; !['moquiSessionToken', 'lastStandalone', 'moquiFormName'].includes(name)))"/>
+        </actions>
+        <default-response url="." parameter-map="Object.assign({}, previewParameters, {organizationPartyId:organizationPartyId,
+                formId:formId, preview:'Y'})"/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.TemplateServices.find#Templates" out-map="found"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="templatesFound" from="!!found?.templates"/>
+        <set field="templates" from="found?.templates || []"/>
+        <set field="orgOptions" from="found?.organizations || []"/>
+        <set field="orgId" from="found?.organizationPartyId"/>
+        <set field="queueOptions" from="found?.queueOptions || []"/>
+        <set field="can" from="customerService.capabilities"/>
+        <!-- TemplateEdit: the template of the organization with its drafts (Mantle refuses another organization's) -->
+        <if condition="formId &amp;&amp; templatesFound">
+            <service-call name="mantle.request.SupportCaseServices.get#CaseTemplate" out-map="templateOut" transaction="force-new"
+                    ignore-error="true" in-map="{formId:formId, includeDrafts:true}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="tpl" from="templateOut?.template || null"/>
+        <set field="editing" from="!!(formId &amp;&amp; tpl &amp;&amp; tpl.organizationPartyId == orgId)"/>
+        <set field="tplFields" from="editing ? tpl.editFields || [] : []"/>
+        <set field="tplConditions" from="editing ? tpl.conditions || [] : []"/>
+        <set field="tplProblems" from="editing ? tpl.problems || [] : []"/>
+        <set field="fieldOptions" from="tplFields.map((row) =&gt; ({value: row.fieldName, label: row.title + (row.draft ? ' (draft)' : '')}))"/>
+        <set field="customerFields" from="tplFields.filter((row) =&gt; row.audienceEnumId == 'CfaCustomer')"/>
+        <set field="internalCount" from="tplFields.length - customerFields.length"/>
+        <!-- the condition rows (F71): each condition, then a blank one to add -->
+        <set field="conditionRows" from="tplConditions.map((row) =&gt; Object.assign({}, row, {formId: formId, saveLabel: 'Save'}))
+                .concat(editing &amp;&amp; can.policyEdit &amp;&amp; tplFields.length &gt; 1 ? [{formId: formId, dependencySeqId: '', effect: 'show',
+                    operator: 'equals', sourceFieldName: '', targetFieldName: '', value: '', conditionText: 'New condition', stateText: '',
+                    saveLabel: 'Add'}] : [])"/>
+        <set field="newField" from="{formId: formId, fieldTypeEnumId: 'DBFFT_text-line', audienceEnumId: 'CfaCustomer', isRequired: 'N'}"/>
+        <!-- TemplatePreview: the agent's form with its drafts, the sample values and their check for both audiences -->
+        <set field="dbFormIncludeDrafts" from="editing"/>
+        <set field="previewValues" from="editing &amp;&amp; preview == 'Y' ? Object.fromEntries(tplFields.filter((row) =&gt;
+                ec.web.parameters[row.fieldName] != null).map((row) =&gt; [row.fieldName, ec.web.parameters[row.fieldName]])) : {}"/>
+        <if condition="editing &amp;&amp; preview == 'Y'">
+            <service-call name="mantle.request.SupportCaseServices.validate#CaseTemplate" out-map="checked" transaction="force-new"
+                    ignore-error="true" in-map="{formId:formId, values:previewValues}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="titleOf" from="Object.fromEntries(tplFields.map((row) =&gt; [row.fieldName, row.title]))"/>
+        <set field="checkRows" from="checked ? [['Agents', checked.agent], ['Customers', checked.customer]].map(([who, result]) =&gt; ({who,
+                shownText: (result.visibleFieldNames || []).map((name) =&gt; titleOf[name] || name).join(', ') || 'None',
+                requiredText: (result.requiredFieldNames || []).map((name) =&gt; titleOf[name] || name).join(', ') || 'None',
+                messageText: (result.errors || []).map((error) =&gt; error.message).join('; ') || 'Can submit',
+                messageColor: result.valid ? 'positive' : 'negative'})) : []"/>
+        <set field="previewFormId" from="editing ? formId : ''"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!templatesFound"/>
+        <section name="TemplateSettings" condition="templatesFound">
+            <widgets>
+                <!-- TemplateList -->
+                <section name="TemplateList" condition="!formId">
+                    <widgets>
+                        <container style="row items-center q-col-gutter-sm q-mb-sm">
+                            <container style="col">
+                                <label text="Case templates" type="h5"/>
+                                <label type="p" style="text-caption m-muted q-mb-none"
+                                        text="The fields a case of a queue asks for, each customer-visible or internal, and the conditions that show or require them."/>
+                            </container>
+                            <container style="col-auto">
+                                <container-dialog id="NewTemplate" button-text="New template" icon="sym_o_add" type="primary" width="560"
+                                        title="New case template" condition="can.policyEdit">
+                                    <form-single name="NewTemplateForm" transition="createTemplate" map="{organizationPartyId:orgId}">
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="description">
+                                            <default-field title="Name"><text-line size="40"/></default-field>
+                                        </field>
+                                        <field name="comments">
+                                            <default-field title="What it is for"><text-area rows="2" cols="40"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Make template"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </container>
+                        </container>
+                        <section name="OrganizationPicker" condition="orgOptions.length &gt; 1">
+                            <widgets>
+                                <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:orgId}">
+                                    <field name="organizationPartyId">
+                                        <default-field title="Organization">
+                                            <drop-down submit-on-select="true"><list-options list="orgOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                </form-single>
+                            </widgets>
+                        </section>
+                        <container-box>
+                            <box-body-nopad>
+                                <form-list name="Templates" list="templates" skip-form="true" paginate="false">
+                                    <field name="description">
+                                        <default-field title="Template">
+                                            <link url="." text="${description}" link-type="anchor"
+                                                    parameter-map="{organizationPartyId:orgId, formId:formId}"/>
+                                            <label text="${comments}" type="div" style="text-caption m-muted" condition="comments"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText">
+                                        <default-field title="State">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                                <text type="html">${stateText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="queueText"><default-field title="Used by"><display/></default-field></field>
+                                    <field name="fieldText"><default-field title="Fields"><display/></default-field></field>
+                                    <field name="publishedFromText"><default-field title="Published"><display/></default-field></field>
+                                    <field name="lastChangeText"><default-field title="Changed"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/><field-ref name="queueText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!templates.length"
+                                        text="No case template yet: a case asks only for its subject and description. Make one with New template."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="TemplateMissing" condition="formId &amp;&amp; !editing">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Not available"/>
+                            <box-body>
+                                <label type="p" text="Template ${formId} is not available: it does not exist or is not one of your organization's."/>
+                                <link url="." text="Back to Case templates" link-type="anchor" parameter-map="{organizationPartyId:orgId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <!-- TemplateEdit -->
+                <section name="TemplateEdit" condition="editing">
+                    <widgets>
+                        <container style="m-record-header">
+                            <container style="m-record-title">
+                                <label text="Case template" type="span" style="text-caption m-muted"/>
+                                <label text="${tpl.description}" type="h5"/>
+                                <label text="${tpl.queues.length ? 'Used by ' + tpl.queues.map((queue) =&gt; queue.queueName).join(', ') : 'No queue uses it yet'}${tpl.publishedFromText ? ' · published ' + tpl.publishedFromText : ''}"
+                                        type="div" style="text-caption m-muted"/>
+                            </container>
+                            <container style="m-record-status">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${tpl.stateColor}">${
+                                        WebUtilities.encodeHtml(tpl.stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: tpl.stateText})}]]></text>
+                                    <text type="html">${tpl.stateText}</text>
+                                </render-mode>
+                            </container>
+                            <container style="m-record-actions">
+                                <container-dialog id="PublishTemplate" button-text="Publish" icon="sym_o_publish" type="primary" width="520"
+                                        title="Publish ${tpl.description}" condition="can.policyEdit &amp;&amp; tpl.hasDrafts">
+                                    <form-single name="PublishTemplateForm" transition="publishTemplate" map="{formId:formId, organizationPartyId:orgId}">
+                                        <field name="formId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="fromDate">
+                                            <default-field title="From" tooltip="Empty: from now. New cases take the drafts from then; earlier cases keep the form they were made with">
+                                                <date-time/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Publish">
+                                                <submit confirmation="Publish the drafts of ${tpl.description}?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                                <button-menu text="More" icon="more_horiz">
+                                    <container-dialog id="UseForQueue" button-text="Use for a queue" icon="sym_o_inbox" width="520"
+                                            title="The queue that uses ${tpl.description}" condition="can.policyEdit">
+                                        <form-single name="UseForQueueForm" transition="useForQueue" map="{formId:formId, organizationPartyId:orgId, useForQueue:'Y'}">
+                                            <field name="formId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="requestCategoryId">
+                                                <default-field title="Queue">
+                                                    <drop-down><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="useForQueue">
+                                                <default-field title="New cases">
+                                                    <radio><option key="Y" text="Use this template"/><option key="N" text="Stop using it"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="RenameTemplate" button-text="Rename" icon="sym_o_edit" width="520"
+                                            title="Rename ${tpl.description}" condition="can.policyEdit">
+                                        <form-single name="RenameTemplateForm" transition="saveTemplate"
+                                                map="{formId:formId, organizationPartyId:orgId, description:tpl.description, comments:tpl.comments}">
+                                            <field name="formId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="comments"><default-field title="What it is for"><text-area rows="2" cols="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </button-menu>
+                            </container>
+                        </container>
+                        <link url="." text="All case templates" link-type="anchor" parameter-map="{organizationPartyId:orgId}"/>
+                        <section name="TemplateProblems" condition="tplProblems.length">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="To fix before publishing"/>
+                                    <box-body-nopad>
+                                        <form-list name="Problems" list="tplProblems" skip-form="true" paginate="false" skip-header="true">
+                                            <field name="message"><default-field title="Problem"><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="message"/></column></columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <!-- the fields, with their audience -->
+                        <container-box>
+                            <box-header title="Fields"/>
+                            <box-toolbar>
+                                <container-dialog id="AddField" button-text="Add field" icon="sym_o_add" width="640" title="Add a field"
+                                        condition="can.policyEdit">
+                                    <form-single name="AddFieldForm" transition="saveField" map="newField">
+                                        <field name="formId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId" from="orgId"><default-field><hidden/></default-field></field>
+                                        <field name="fieldName"><default-field><hidden/></default-field></field>
+                                        <field name="title"><default-field title="Label"><text-line size="40"/></default-field></field>
+                                        <field name="tooltip"><default-field title="Help"><text-line size="40"/></default-field></field>
+                                        <field name="fieldTypeEnumId">
+                                            <default-field title="Kind">
+                                                <drop-down>
+                                                    <option key="DBFFT_text-line" text="Short text"/>
+                                                    <option key="DBFFT_text-area" text="Long text"/>
+                                                    <option key="DBFFT_drop-down" text="Choice list"/>
+                                                    <option key="DBFFT_radio" text="Choice buttons"/>
+                                                    <option key="DBFFT_check" text="Checkboxes"/>
+                                                    <option key="DBFFT_date-time" text="Date"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="audienceEnumId">
+                                            <default-field title="Who sees it" tooltip="An internal field is never shown or sent to the customer">
+                                                <radio><option key="CfaCustomer" text="Customer-visible"/><option key="CfaInternal" text="Internal"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="isRequired">
+                                            <default-field title="Required">
+                                                <radio><option key="Y" text="Always"/><option key="N" text="Only by a condition"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="layoutSequenceNum">
+                                            <default-field title="Order" tooltip="Lower comes first; empty: last"><text-line size="4" input-type="number"/></default-field>
+                                        </field>
+                                        <field name="optionText">
+                                            <default-field title="Options" tooltip="For a choice: one a line, as value | label (the value is what a condition compares)">
+                                                <text-area rows="4" cols="40"/>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Add as a draft"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="title"/><field-ref name="fieldTypeEnumId"/></field-row>
+                                            <field-ref name="tooltip"/>
+                                            <field-row><field-ref name="audienceEnumId"/><field-ref name="isRequired"/></field-row>
+                                            <field-ref name="optionText"/>
+                                            <field-ref name="layoutSequenceNum"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="TemplateFields" list="tplFields" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Field">
+                                            <label text="${title}" type="span"/>
+                                            <label text="${[typeText, requiredText, replacesText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="audienceText">
+                                        <default-field title="Who sees it">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${audienceColor}">${
+                                                    WebUtilities.encodeHtml(audienceText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: audienceText})}]]></text>
+                                                <text type="html">${audienceText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="optionSummary"><default-field title="Options"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="EditField_${fieldName}" button-text="Edit" icon="sym_o_edit" width="640"
+                                                    title="Edit the field ${title}" condition="can.policyEdit">
+                                                <form-single name="EditFieldForm" transition="saveField" extends="AddFieldForm"
+                                                        map="{formId:formId, organizationPartyId:orgId, fieldName:fieldName, title:title, tooltip:tooltip,
+                                                            fieldTypeEnumId:fieldTypeEnumId, audienceEnumId:audienceEnumId, isRequired:isRequired,
+                                                            layoutSequenceNum:layoutSequenceNum, optionText:optionText}">
+                                                    <field name="fromDate">
+                                                        <conditional-field title="Change from" condition="!draft"
+                                                                tooltip="Empty: from now. A later date, or a new kind or audience, makes a new field that replaces this one">
+                                                            <date-time/>
+                                                        </conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                    <field-layout>
+                                                        <field-row><field-ref name="title"/><field-ref name="fieldTypeEnumId"/></field-row>
+                                                        <field-ref name="tooltip"/>
+                                                        <field-row><field-ref name="audienceEnumId"/><field-ref name="isRequired"/></field-row>
+                                                        <field-ref name="optionText"/>
+                                                        <field-row><field-ref name="layoutSequenceNum"/><field-ref name="fromDate"/></field-row>
+                                                        <field-ref name="submitButton"/>
+                                                    </field-layout>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="EndField_${fieldName}" button-text="End" icon="sym_o_block" width="480"
+                                                    title="End the field ${title}" condition="can.policyEdit">
+                                                <form-single name="EndFieldForm" transition="endField" map="{formId:formId, organizationPartyId:orgId, fieldName:fieldName}">
+                                                    <field name="formId"><default-field><hidden/></default-field></field>
+                                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                                    <field name="fieldName"><default-field><hidden/></default-field></field>
+                                                    <field name="thruDate">
+                                                        <conditional-field title="Until" condition="!draft" tooltip="Empty: now"><date-time/></conditional-field>
+                                                        <default-field><ignored/></default-field>
+                                                    </field>
+                                                    <field name="submitButton">
+                                                        <default-field title="${draft ? 'Delete' : 'End'}">
+                                                            <submit type="danger" confirmation="${draft ? 'Delete the draft field ' + title + '?' : 'End the field ' + title + '? Cases made before keep its value.'}"/>
+                                                        </default-field>
+                                                    </field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="stateText"/></column>
+                                        <column><field-ref name="audienceText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!tplFields.length"
+                                        text="No field yet. Add the first with Add field: it stays a draft until you publish."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <!-- the conditions (F71): a non-multi editable form-list, a row per condition and a blank one to add; the
+                            values follow the source field's options -->
+                        <container-box>
+                            <box-header title="Conditions"/>
+                            <box-body-nopad>
+                                <form-list name="TemplateConditions" list="conditionRows" transition="saveCondition" paginate="false">
+                                    <field name="formId"><default-field><hidden/></default-field></field>
+                                    <field name="organizationPartyId" from="orgId"><default-field><hidden/></default-field></field>
+                                    <field name="dependencySeqId"><default-field><hidden/></default-field></field>
+                                    <field name="effect">
+                                        <default-field title="">
+                                            <drop-down><option key="show" text="Show"/><option key="require" text="Require"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="targetFieldName">
+                                        <default-field title="Field">
+                                            <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="sourceFieldName">
+                                        <default-field title="When">
+                                            <drop-down><list-options list="fieldOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="operator">
+                                        <default-field title="">
+                                            <drop-down>
+                                                <option key="equals" text="is"/><option key="not-equals" text="is not"/>
+                                                <option key="empty" text="is empty"/><option key="not-empty" text="is filled in"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="value">
+                                        <default-field title="Value" tooltip="For is and is not: one of the field's options">
+                                            <drop-down allow-empty="true">
+                                                <dynamic-options transition="conditionValues" parameter-map="{formId:formId}">
+                                                    <depends-on field="sourceFieldName"/>
+                                                </dynamic-options>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="submitButton">
+                                        <conditional-field title="" condition="can.policyEdit"><submit text="${saveLabel}" type="default"/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <field name="endLink">
+                                        <conditional-field title="" condition="can.policyEdit &amp;&amp; dependencySeqId">
+                                            <link url="endCondition" text="End" icon="sym_o_block" btn-type="danger"
+                                                    confirmation="End the condition: ${conditionText}?"
+                                                    parameter-map="{formId:formId, organizationPartyId:orgId, dependencySeqId:dependencySeqId}"/>
+                                        </conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="effect"/><field-ref name="targetFieldName"/><field-ref name="sourceFieldName"/></column>
+                                        <column><field-ref name="operator"/><field-ref name="value"/><field-ref name="submitButton"/><field-ref name="endLink"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!conditionRows.length"
+                                        text="Add two fields first: a condition shows or requires one field by the value of another."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <!-- TemplatePreview: the agent's form as NewCase renders it (drafts included), the customer's fields, and the
+                            check of sample values -->
+                        <container-row>
+                            <row-col lg="7">
+                                <container-box>
+                                    <box-header title="Preview: the agent's form"/>
+                                    <box-body>
+                                        <form-single name="TemplatePreview" transition="checkPreview" dynamic="true"
+                                                extends="${previewFormId ? 'DbForm#' + previewFormId : 'TemplatePreviewNone'}" map="previewValues">
+                                            <field name="formId" from="formId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId" from="orgId"><default-field><hidden/></default-field></field>
+                                            <field name="checkButton"><default-field title="Check these values"><submit type="default"/></default-field></field>
+                                        </form-single>
+                                    </box-body>
+                                </container-box>
+                            </row-col>
+                            <row-col lg="5">
+                                <container-box>
+                                    <box-header title="Preview: the customer's form"/>
+                                    <box-body-nopad>
+                                        <form-list name="CustomerFields" list="customerFields" skip-form="true" paginate="false">
+                                            <field name="title"><default-field title="Customer-visible field"><display/></default-field></field>
+                                            <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/></column>
+                                                <column><field-ref name="typeText"/></column>
+                                            </columns>
+                                        </form-list>
+                                        <label type="p" style="q-pa-sm m-muted q-mb-none"
+                                                text="${customerFields.length ? '' : 'No customer-visible field: customers see only the subject and description. '}${internalCount} internal field(s) are never shown or sent to the customer."/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <section name="PreviewCheck" condition="checkRows.length">
+                                    <widgets>
+                                        <container-box>
+                                            <box-header title="Check of these values"/>
+                                            <box-body-nopad>
+                                                <form-list name="PreviewResults" list="checkRows" skip-form="true" paginate="false">
+                                                    <field name="who"><default-field title="For"><display/></default-field></field>
+                                                    <field name="shownText"><default-field title="Shown"><display/></default-field></field>
+                                                    <field name="requiredText"><default-field title="Required"><display/></default-field></field>
+                                                    <field name="messageText">
+                                                        <default-field title="Result">
+                                                            <render-mode>
+                                                                <text type="qvt"><![CDATA[<span class="text-${messageColor}">${WebUtilities.encodeHtml(messageText)}</span>]]></text>
+                                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: messageText})}]]></text>
+                                                                <text type="html">${messageText}</text>
+                                                            </render-mode>
+                                                        </default-field>
+                                                    </field>
+                                                    <columns type="mobile">
+                                                        <column><field-ref name="who"/><field-ref name="shownText"/></column>
+                                                        <column><field-ref name="messageText"/></column>
+                                                    </columns>
+                                                </form-list>
+                                            </box-body-nopad>
+                                        </container-box>
+                                    </widgets>
+                                </section>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+                <!-- the form a preview extends when there is no template: no fields -->
+                <section name="TemplatePreviewNoneHolder" condition="false">
+                    <widgets><form-single name="TemplatePreviewNone"/></widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -294,7 +294,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | built Nov 5, 2026 |
 | P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | — |
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | — |
-| P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | — |
+| P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | built Nov 5, 2026 |
 | P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | — |
 | P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | — |
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | — |
@@ -1298,6 +1298,119 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
   `./moq test-framework`'s failures were the load (three moqui-host tests pass by name) and two ConfReload features that
   need mr-mantle's demo user in an empty worktree runtime. Left: qvt `require-when` covers text-line, password and
   date-time only (§7).
+
+**Built Nov 5 (P7, Mantle and BOSS).**
+- Mantle entities (`entity/SupportTemplateEntities.xml`, new): `DbForm.ownerPartyId` (the organization whose template it is,
+  audit-logged; purpose `DbfpCaseTemplate`) and `DbFormField.audienceEnumId` (`CaseFieldAudience`: `CfaCustomer`,
+  `CfaInternal`; empty is internal; audit-logged), both on the framework's rows (F-P7-1); `CaseProfile.formResponseId` (the
+  case's values) beside the existing `templateFormId`.
+- Mantle services (`service/mantle/request/SupportCaseServices.xml`, appended; `CaseTemplates.js`, new): `save#CaseTemplate`
+  (a new dated DbForm of the organization, its name and notes; Publish from a date, refused while `validate#CaseTemplate` finds a
+  problem, TEMPLATE_INVALID; a queue's use of it from now, a new ServiceQueue row, TEMPLATE_NOT_PUBLISHED before it is published),
+  `save#CaseTemplateField` (a draft; a draft changed in place; a published field's label, help, required flag, order and options
+  in place from now; a new type or audience, or a change from a later date, a successor field through
+  `create#DbFormFieldSuccessor`), `save#CaseTemplateCondition` (a condition row over `store#DbFormFieldDependency`: equals and
+  not-equals only on a choice field and one of its options, empty or not-empty on any, CONDITION_AUDIENCE for a customer field
+  on an internal one, CONDITION_CYCLE and CONDITION_DUPLICATE from the framework), `end#CaseTemplatePart` (a field, option or
+  condition ended at a date, a draft deleted), all SUPPORT_POLICY_EDIT and the template's organization; `validate#CaseTemplate`
+  (the problems, and sample values checked for both audiences; SUPPORT_POLICY_EDIT or SUPPORT_CASE_EDIT), `validate#TemplateValues`
+  (`evaluate#DbFormDependencies` re-evaluating shown and required fields, a hidden field's value dropped, each value of its type, a
+  customer's value for an internal field refused, FIELD_NOT_OFFERED; with refuse, TEMPLATE_VALUES_INVALID), `get#CaseTemplate`
+  (the agent's form, with its drafts the editor's rows; the customer's projection: customer-visible fields and the rules among
+  them only, never a draft, needing no permission) and `get#CaseTemplateValues` (a case's values with the form as of the
+  response date, the customer's audience leaving out every internal field). The typed allowlist: short and long text, choice list,
+  choice buttons, checkboxes and a date; no `${` in a label, help, option or value (NO_EXPRESSIONS); a field name never one of the
+  case's own fields (FIELD_NAME_INVALID, F-P7-5). `create#Case` takes `templateFormId` (one of the organization's, else the queue's)
+  and `templateValues`, checks them before anything is made and keeps them as a FormResponse linked from the profile;
+  `save#ServiceQueue` keeps the row's template (F-P7-3).
+- BOSS (`service/ironstone/customerservice/TemplateServices.xml` and `Templates.js`, new): `find#Templates` (TemplateList),
+  `get#CaseTemplateChoice` (NewCase's step) and `get#ConditionValues` (a condition row's values); `Configuration.js` exports its
+  settings organization. Screens: `Settings/CaseTemplates.xml` (new): TemplateList with New template; with formId TemplateEdit
+  (the record header with Publish and More: Use for a queue, Rename; the problems; Fields with Add field, Edit and End, each with
+  its audience chip; Conditions as a non-multi editable form-list, a row per condition and a blank one to add, the value options
+  following the source field by `depends-on`, F71) and TemplatePreview (the agent's form with its drafts, `dbFormIncludeDrafts`,
+  as NewCase renders it, in qvt for desktop and phone and tui for the terminal; the customer's fields; a check of sample values
+  for both audiences); `Cases/NewCase.xml` the template step (a Template choice in the first step, the queue's by default; SubmitCase
+  `dynamic="true"` extending the DbForm, its fields with `fields-not-referenced`; createCase passes the values to create#Case);
+  `template/CustomerServiceTemplates.xml` (new) CaseDetail's Overview values (as submitted, each with its audience) included by
+  `template/CustomerServiceCaseDetail.xml`; SettingsHome's Case templates link.
+- Demo (`BossCustomerServiceDemoData.xml`): Retail's "Defective product" template `BOSS_CS_TPL_DEFECTIVE` (what kind of product,
+  customer-visible; the serial number, shown and required when the product is equipment; when the problem started, a date; the
+  agent's first assessment, internal), published from the start and used by the Support queue. Nothing is required by default,
+  so a case of the queue with no values (the earlier walks', P5's and P6's) is made as before.
+- Specs: Mantle `test/request/SupportTemplates` (4 features, 1.5 s: the fields, options and conditions with the allowlist's
+  refusals, Publish and the queue's use kept by save#ServiceQueue; validate#TemplateValues' hidden, required, choice and audience
+  checks; create#Case's refusal without the serial, the values kept and the customer's projection, a queue with no template
+  unchanged; a change from a date leaving an earlier case's values as submitted). BOSS `CustomerServiceTemplates` (2 features,
+  0.3 s: find#Templates and NewCase's choice; TemplateEdit's one qvt render with the preview's check), `CustomerServiceAccess`
+  (+1 feature: the administrator saves a template and the manager may not; another organization's template and case values
+  refused; NewCase offers another organization's template to no one) and `CustomerServiceCases` (NewCase's one render shows the
+  template step). Acceptance `acceptance/CustomerService/CustomerServiceTemplatesWalk` (the usable-when, 5 features: the
+  serial refused and the values kept and shown on CaseDetail's Overview; no internal field in the customer's projections; a
+  template built in CaseTemplates with its cycle refused; a change from a date leaving the earlier case's values with the old
+  label and options; TemplatePreview in qvt and tui), all pass, and `AppStructure` (the CaseTemplates route), passing.
+- Tests run (all pass): Mantle SupportTemplates, SupportCases, SupportSla, SupportKnowledge, WorkProjectRequests,
+  RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow, ReturnToResponseBasicFlow,
+  ShipmentReturnMisc, WorkPlanToCashBasicFlow (173 features); BOSS CustomerServiceTemplates, CustomerServiceAccess,
+  CustomerServiceCases, CustomerServiceOrders, CustomerServiceKnowledge; acceptance CustomerServiceTemplatesWalk and AppStructure.
+  `moqui lint --screens`: 136 flagged sites, as master; none in the Customer Service screens.
+- Inventories: usl-inventory's P7 table (the Mantle template services and the framework DbForm services they call);
+  ss-inventory's NewRequestForm row (NewCase's template step). CaseTemplates is new (design §2): no baseline form maps to it.
+- Decisions:
+  - The audience lives on the field's own row (`DbFormField.audienceEnumId`, a Mantle extension), not in a DbFormFieldAttribute
+    or a Mantle record by formId and fieldName (F-P7-1).
+  - A case takes the template chosen in NewCase's first step, else its queue's; `ServiceRequestType.templateFormId` is not read
+    (a type's template waits for a type that needs one, P11's warranty claim).
+  - Published changes of label, help, required, order and options apply from now, in place and audit-logged; Publish starts the
+    drafts; a later date or a new kind or audience is a successor field.
+  - The customer's projection of a template, and of a case's values, checks the user's organization until P15 adds the
+    contact's path (ExternalAccessContact) (Review R5).
+- Findings (provisional):
+  - **F-P7-1** The audience: a DbFormFieldAttribute is neither dated nor audit-logged and goes onto the rendered widget as an XML
+    attribute, and a Mantle record by formId and fieldName would be a second dated row to keep in step with every successor.
+    `DbFormField.audienceEnumId`, extended by Mantle as F6 gave RequestCategory its owner, is dated and audit-logged with the
+    field, so a response reads the audience it was submitted under; a published field's audience changes only by a successor, so
+    an internal answer never becomes customer-visible. The template's organization is `DbForm.ownerPartyId` the same way.
+  - **F-P7-2** `create#DbFormFieldSuccessor` copies a fixed list of DbFormField fields, so an extension field (the audience) is not
+    copied; `save#CaseTemplateField` sets it on the successor. The suspicion that the framework's `update#DbFormField` (or the
+    entity-auto `update#DbForm`) clears the non-key fields it is not given is false (Review: checked by a call with the title
+    only, the audience, required flag, help, type, order and `ownerPartyId` kept).
+  - **F-P7-3** `save#ServiceQueue` (P2) made each row from its parameters, so any queue save dropped the row's `templateFormId`
+    (and would drop P5's `assignmentRuleId`); it now keeps the template unless one is given. P5 must carry its rule the same way.
+  - **F-P7-4** qvt's browser `require-when` covers text-line, password and date-time only (§7): the demo's serial (a text line)
+    gets the browser's hint; a required choice or checkbox is the server's check alone, which NewCase reports on submit.
+  - **F-P7-5** NewCase's SubmitCase extends the template's DbForm, so one submit carries the case's fields and the template's: a
+    template field never takes the name of a create#Case parameter or Request field (reserved in Mantle), and createCase passes
+    the request's parameters, of which Mantle keeps the template's fields only.
+  - **F-P7-6** A condition on a text or date field by value (equals) is refused (a typed allowlist: values compare only against a
+    choice's options), so a condition's value is always one the source offers and can be checked when the source's options
+    change.
+- **Review (P7), Nov 5:** checked the audience on every read (the customer's projection and case values at any date, drafts
+  and successors), validate#TemplateValues against evaluate#DbFormDependencies, create#Case's check before any write,
+  NewCase's and CaseDetail's forms as of now and of the response date, the organization on every read, and F-P7-2 (false, see
+  there). Fixes:
+  - R1 (high) A published change could leave the form breaking its own rules with no check: `create#DbFormFieldSuccessor`
+    copies the old field's conditions, so a field made internal from a date kept a customer field depending on it (the server
+    then hid the customer's answer by an internal value), a new kind kept a by-value condition on a field no longer a choice,
+    and ending an option (in place or by End) left a condition comparing it. Now `keepValid`: a successor from a date, an
+    in-place change and an ended option are refused, nothing changed, when they add a problem as of then (TEMPLATE_INVALID),
+    and `validate#CaseTemplate` names a by-value condition on a field that is not a choice (CONDITION_OPERATOR).
+  - R2 (medium) A text value holding `${` was taken, though the allowlist refuses it: now NO_EXPRESSIONS.
+  - R3 (low) A multiple choice submitted as a list (a host List) was read as one text: values are read as lists.
+  - R4 (low) NewCase sets `dbFormAsOfDate` and `dbFormIncludeDrafts` itself: db_form reads them from the context, which holds
+    the request's parameters, so `?dbFormIncludeDrafts=true` rendered a template's drafts.
+  - Left for the lead: (a) framework: any screen extending a DbForm takes `dbFormIncludeDrafts`/`dbFormAsOfDate` from request
+    parameters (a PASS customer page would show drafts and internal drafts); db_form should read them only from actions or an
+    attribute. (b) Marble's Survey screens (`SimpleScreens/Survey/Fields.xml`, `EditSurvey.xml`) edit any DbForm by formId,
+    a case template among them, past Mantle's allowlist (`${` in a label, the audience); they should refuse a form with a
+    purpose other than a survey's. (c) The customer projection (`get#CaseTemplate`, `validate#TemplateValues` customer)
+    checked no organization (fixed, R5). (d) A queue whose template requires a field refuses a create#Case with no values:
+    P6's channel intake must not go through create#Case's template check, or pass `templateValues`. (e) fixed, R6.
+  - R5 (medium) `get#CaseTemplate` and `validate#TemplateValues` with the customer audience now need the template's
+    organization, as the agent's reads (RECORD_UNAVAILABLE); P15 adds the contact's path.
+  - R6 (medium) NewCase built its template step for the type's queue, so a queue changed in step two to one with another
+    template had that template's required fields demanded unseen: createCase now refuses a queue whose template is not the one
+    shown (the step's queue in a hidden `templateQueueId`), naming the template to choose in step one.
 
 ### P8 — Merge, split and closing
 
