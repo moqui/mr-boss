@@ -254,7 +254,7 @@ feature("with a Supplier site for the organization, AP gets an approved order's 
     }
 })
 
-feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links and two invited contacts with no user group", {
+feature("the portal demo: ORG_ZIZI_RETAIL's Billing, Supplier and Support site, its links and two invited contacts with no user group", {
     when() {
         login("john.doe")
         const list = (entity, fields) => Array.from(ec.entity.find(entity).condition(fields).disableAuthz().list())
@@ -274,11 +274,13 @@ feature("the portal demo: ORG_ZIZI_RETAIL's Billing and Supplier site, its links
         }
     },
     then({mounts, invoice, gateway, links, payer, supplier, groups}) {
-        mounts.sort().join() == "account:,billing:ORG_ZIZI_RETAIL,supplier:ORG_ZIZI_RETAIL"
+        // with Customer Service's Support app demo (P13) on the same site
+        mounts.sort().join() == "account:,billing:ORG_ZIZI_RETAIL,supplier:ORG_ZIZI_RETAIL,support:ORG_ZIZI_RETAIL"
         invoice.statusId == "InvoiceFinalized"
         gateway.invoicePayGatewayConfigId == "ZIZI_PORTAL_HOSTED"
-        // with Purchasing's Supplier app demo (P16): Ziddleman's quote link and the order's acknowledgement link
-        links.sort().join() == "BillUpload,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
+        // with Purchasing's Supplier app demo (P16): Ziddleman's quote link and the order's acknowledgement link; with
+        // Customer Service's feedback demo (P13): the answered invitation's link
+        links.sort().join() == "BillUpload,CaseFeedback,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
         payer.join() == "billing:JoeDist"
         supplier.join() == "supplier:ZiddlemanInc"
         groups.length == 0
