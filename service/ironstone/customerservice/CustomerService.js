@@ -290,7 +290,10 @@ const linkPaths = [
     "Cases/ChannelSessions",
     "Settings/ChannelRouting",
     // P5: the saved replies (CaseDetail's Saved reply links them)
-    "Settings/SavedReplies"
+    "Settings/SavedReplies",
+    // P8: merge and split, from CaseDetail
+    "Cases/MergeCases",
+    "Cases/SplitCase"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

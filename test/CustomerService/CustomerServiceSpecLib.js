@@ -192,7 +192,10 @@ function routeFixtures() {
         "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"},
         // P6: the channel sessions and the channel routing
         "Cases/ChannelSessions": {parameters: {}, text: "Channel sessions"},
-        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"}
+        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"},
+        // P8: merge and split, opened from a case
+        "Cases/MergeCases": {parameters: {requestId: ids.thermostatCaseId}, text: "Merge cases"},
+        "Cases/SplitCase": {parameters: {requestId: ids.thermostatCaseId}, text: "Split case"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],

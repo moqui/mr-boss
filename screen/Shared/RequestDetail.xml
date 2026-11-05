@@ -101,6 +101,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="caseReplyChoices" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
     <transition-include name="previewCaseReply" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
     <transition-include name="applyCaseReply" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
+    <!-- Customer Service P8: a closed case's follow-up on CaseDetail (template/CustomerServiceLineage.xml) -->
+    <transition-include name="followUpCase" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->

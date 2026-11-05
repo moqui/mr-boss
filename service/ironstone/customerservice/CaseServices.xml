@@ -125,7 +125,9 @@ along with this software (see the LICENSE.md file). If not, see
             organization, queue, priority band, assignee, the agent and customer status labels, due, channel, intake, the
             resolution), the moves its workflow allows from its status (a manager's only for a manager), its work, linked
             records, tags, revision and the customer's recent cases; and whether the user may change it (SUPPORT_CASE_EDIT,
-            and SUPPORT_CASE_MANAGE for another agent's). Refuses a case the user does not see
+            and SUPPORT_CASE_MANAGE for another agent's). P8: its lineage (mantle.request.SupportCaseServices.get#CaseLineage),
+            no moves or changes for a merged or closed case, and whether the user may merge (SUPPORT_CASE_MANAGE), split or
+            follow it up. Refuses a case the user does not see
             (RECORD_UNAVAILABLE).</description>
         <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
         <in-parameters><parameter name="requestId" required="true"/></in-parameters>
