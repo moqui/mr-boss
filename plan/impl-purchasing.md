@@ -2862,6 +2862,10 @@ requirements before filtering to outside processing, so P10's approved request r
 low). Specs run: Mantle ReplenishmentRoutes (6), Replenishment, SupplyPlanning, ProductionSubcontract, PurchaseRequests,
 PurchasePolicy, DropShip, WarehouseReceiving (60, pass); BOSS PurchasingReplenishment, PurchasingReceiving,
 ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, PurchasingAccess (41, pass).
+- **Wave 8 suites (Nov 4, on master after P12 and P16 merged, run alone):** standalone mr-mantle 1,649 passed, 2 failed
+  (the baseline), 11 skipped; `./moq test-apps` 2,922 server and 14 client features passed, none failed; feature time
+  mr-mantle 324 of 300 s in the apps run (239 s standalone), mr-boss 232 of 220 s server and 41 of 36 s client, mr-pass
+  16 of 15 s: warnings, for the end's measured budget; no spec over 15 s; `moqui lint --screens` clean.
 
 ### P15 — Performance
 
