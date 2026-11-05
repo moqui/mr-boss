@@ -154,8 +154,8 @@ along with this software (see the LICENSE.md file). If not, see
                     operator: 'equals', sourceFieldName: '', targetFieldName: '', value: '', conditionText: 'New condition', stateText: '',
                     saveLabel: 'Add'}] : [])"/>
         <set field="newField" from="{formId: formId, fieldTypeEnumId: 'DBFFT_text-line', audienceEnumId: 'CfaCustomer', isRequired: 'N'}"/>
-        <!-- TemplatePreview: the agent's form with its drafts, the sample values and their check for both audiences -->
-        <set field="dbFormIncludeDrafts" from="editing"/>
+        <!-- TemplatePreview: the agent's form with its drafts (its db-form-include-drafts), the sample values and their check for
+            both audiences -->
         <set field="previewValues" from="editing &amp;&amp; preview == 'Y' ? Object.fromEntries(tplFields.filter((row) =&gt;
                 ec.web.parameters[row.fieldName] != null).map((row) =&gt; [row.fieldName, ec.web.parameters[row.fieldName]])) : {}"/>
         <if condition="editing &amp;&amp; preview == 'Y'">
@@ -538,7 +538,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <container-box>
                                     <box-header title="Preview: the agent's form"/>
                                     <box-body>
-                                        <form-single name="TemplatePreview" transition="checkPreview" dynamic="true"
+                                        <form-single name="TemplatePreview" transition="checkPreview" dynamic="true" db-form-include-drafts="editing"
                                                 extends="${previewFormId ? 'DbForm#' + previewFormId : 'TemplatePreviewNone'}" map="previewValues">
                                             <field name="formId" from="formId"><default-field><hidden/></default-field></field>
                                             <field name="organizationPartyId" from="orgId"><default-field><hidden/></default-field></field>

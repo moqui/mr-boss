@@ -105,10 +105,6 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="caseTemplateOptions" from="templateChoice?.templateOptions || []"/>
         <script>identity.templateFormId = caseTemplateFormId; caseValues.templateFormId = caseTemplateFormId
             caseValues.templateQueueId = prepared.requestCategoryId || ''</script>
-        <!-- the template's form as of now without its drafts, whatever the request's parameters say (db_form reads both from the
-            context: dbFormAsOfDate, dbFormIncludeDrafts) -->
-        <set field="dbFormAsOfDate" from="null"/>
-        <set field="dbFormIncludeDrafts" from="false"/>
     </actions>
     <widgets>
         <label text="New case" type="h5"/>
@@ -252,7 +248,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-body>
                                 <label text="${templateChoice.templateName}: its fields below; an internal one is never shown to the customer"
                                         type="p" style="text-caption m-muted" condition="templateChoice?.templateName"/>
-                                <!-- P7: the template's fields as of now (DbForm#...), else none -->
+                                <!-- P7: the template's fields as of now without its drafts (DbForm#..., no db-form-as-of or
+                                    db-form-include-drafts), else none -->
                                 <form-single name="SubmitCase" transition="createCase" map="caseValues" focus-field="requestName"
                                         dynamic="true" extends="${caseTemplateFormId ? 'DbForm#' + caseTemplateFormId : 'CaseNoTemplate'}">
                                     <field name="templateFormId"><default-field><hidden/></default-field></field>
