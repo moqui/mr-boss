@@ -75,13 +75,15 @@ feature(
         when() {
             return asUser(users.agent, () => ({
                 exact: invoke(cases + "find#ServiceOrders", {term: ids.deliveredOrderId}),
-                byEmail: invoke(cases + "find#ServiceOrders", {term: "joe@public.com"}),
+                // narrowed to the demo's own products: in a full run other specs' orders for Joe page past them
+                byEmail: invoke(cases + "find#ServiceOrders", {term: "joe@public.com", productId: ids.serializedProductId}),
+                heldByEmail: invoke(cases + "find#ServiceOrders", {term: "joe@public.com", productId: ids.filterProductId}),
                 other: invoke(cases + "find#ServiceOrders", {term: ids.otherOrderId}),
                 missing: invoke(cases + "find#ServiceOrders", {term: "BOSS_CS_NO_SUCH_ORDER"}),
                 empty: invoke(cases + "find#ServiceOrders", {})
             }))
         },
-        then({exact, byEmail, other, missing, empty}) {
+        then({exact, byEmail, heldByEmail, other, missing, empty}) {
             exact.exact == true
             orderIds(exact) == [ids.deliveredOrderId]
             exact.orders[0].customerName == "Joe Public"
@@ -89,7 +91,7 @@ feature(
             exact.orders[0].url == "/qapps/CustomerService/Orders/OrderDetail?orderId=" + ids.deliveredOrderId
             byEmail.exact == false
             orderIds(byEmail).includes(ids.deliveredOrderId)
-            orderIds(byEmail).includes("BOSS_CS_SO_HELD")
+            orderIds(heldByEmail).includes("BOSS_CS_SO_HELD")
             orderIds(other) == []
             orderIds(missing) == []
             other.message == missing.message
