@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- IronStone's voicemail action in the BasicComms Calls (Customer Service P6, CS-STACK L8; design-customer-service §1 Stack
+    contributions): Create a case from a voicemail, for the customer whose number it came from
+    (ironstone.customerservice.ChannelServices.create#CaseFromMessage: the voicemail as an inbound call on the case with its
+    transcript, never its audio); refused for a user without Customer Service and for a caller who is no customer the user
+    serves. -->
+<screen-extend xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="createCase">
+        <actions><script><![CDATA[
+            const made = ec.service.sync().name('ironstone.customerservice.ChannelServices.create#CaseFromMessage').parameters({appRoot: 'CustomerService',
+                kind: 'voicemail', voicemailId: voicemailId || ''}).call() || {}
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {recordEntityName: made.recordEntityName, recordId: made.recordId, url: made.url,
+                messageInfos: [{type: 'success', message: made.message, link: made.url, linkText: ec.l10n.localize('Open')}]})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <ext-action name="boss.createCase" slot="voicemail-actions" sequence="20" label="Create a case" icon="sym_o_support_agent" transition="createCase">
+        <parameter name="voicemailId"/>
+    </ext-action>
+</screen-extend>

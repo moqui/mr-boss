@@ -310,7 +310,7 @@ function serviceLevelSettings(p) {
 
 const operations = {serviceQueues, serviceTeam, serviceSettings, serviceLevelSettings}
 ;({
-    // P7: the settings organization of TemplateServices (Templates.js)
+    // the settings organization of TemplateServices (Templates.js, P7) and ChannelRouting (Channels.js, P6)
     organizationOf,
     organizationOptions,
     execute: (op, parameters) => {

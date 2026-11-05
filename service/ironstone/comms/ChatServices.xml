@@ -117,7 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
         <in-parameters>
             <parameter name="chatRoomId" required="true"/>
             <parameter name="eventSeq" type="Integer" required="true"/>
-            <parameter name="kind" required="true"><description>task, request or event</description></parameter>
+            <parameter name="kind" required="true"><description>task, request, event or case (Customer Service P6: a case for
+                the customer who sent it, ironstone.customerservice.ChannelServices.create#CaseFromMessage)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="recordEntityName"/>
@@ -127,7 +128,18 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="roomRecordLinked" type="Boolean"/>
         </out-parameters>
         <actions><script><![CDATA[
-            if (!['task', 'request', 'event'].includes(kind)) { ec.message.addError(`Create a task, request or event, not ${kind}`); return }
+            if (kind === 'case') {
+                const made = ec.service.sync().name('ironstone.customerservice.ChannelServices.create#CaseFromMessage').parameters({appRoot: 'CustomerService',
+                    kind: 'chat', chatRoomId: chatRoomId, eventSeq: eventSeq}).call()
+                if (ec.message.hasError()) return
+                recordEntityName = made.recordEntityName
+                recordId = made.recordId
+                url = made.url
+                message = made.message
+                roomRecordLinked = false
+                return
+            }
+            if (!['task', 'request', 'event'].includes(kind)) { ec.message.addError(`Create a task, request or event (or a case), not ${kind}`); return }
             const out = ec.service.sync().name('mantle.party.CommunicationServices.create#RecordFromChatMessage').parameters({chatRoomId: chatRoomId,
                 eventSeq: eventSeq, recordKind: kind}).call()
             if (ec.message.hasError()) return

@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ChannelSessions (design-customer-service §3 ChannelSessions; impl-customer-service P6, CS-CHANNELS): a service-filtered view
+    of Comms history, not a mail client or a phone system. SessionFind (customer, channel, agent, period, on a case or not) and
+    SessionList (time, direction, who, channel, duration and outcome, who sees it, the case) over
+    ironstone.customerservice.ChannelServices.find#ChannelSessions: a customer's calls, chats and mail through Mantle's
+    find#PartyCommunicationEvents with the customer audience, else those on the cases the user sees. LogCall
+    (template/CustomerServiceCallLog.xml, mantle.request.SupportCaseServices.log#CaseCall after the case's check). A
+    recording plays only through Comms, for its owner; linking a case makes none public. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Channel sessions" default-menu-index="3">
+    <parameter name="customerPartyId"/>
+    <parameter name="channel"/>
+    <parameter name="agentPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="linked"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="caseChoices" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+    <transition-include name="logCaseCall" location="component://mr-boss/template/CustomerServiceCallLog.xml"/>
+    <transition name="findSessions">
+        <default-response url=".">
+            <parameter name="customerPartyId"/>
+            <parameter name="channel"/>
+            <parameter name="agentPartyId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="linked"/>
+        </default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ChannelServices.find#ChannelSessions" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, customerPartyId:(customerPartyId || null), channel:(channel || null), agentPartyId:(agentPartyId || null),
+                    fromDate:(fromDate || null), thruDate:(thruDate || null), linked:(linked || null)}"/>
+        <set field="findError" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="sessions" from="found?.sessions || []"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="logRequestId" from="''"/>
+        <set field="logCustomerPartyId" from="customerPartyId"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Channel sessions" type="h5"/>
+                <label type="p" style="text-caption m-muted q-mb-none" text="Calls, chats and mail with customers and on your cases."/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="LogCall" button-text="Log a call" icon="sym_o_call" type="primary" width="640" title="Log a call"
+                        condition="can.caseEdit">
+                    <section-include name="LogCallForm" location="component://mr-boss/template/CustomerServiceCallLog.xml"/>
+                </container-dialog>
+            </container>
+        </container>
+        <container-box>
+            <box-body>
+                <form-single name="SessionFind" transition="findSessions"
+                        map="{customerPartyId:customerPartyId, channel:channel, agentPartyId:agentPartyId, fromDate:fromDate, thruDate:thruDate,
+                            linked:linked}">
+                    <field name="customerPartyId">
+                        <default-field title="Customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="customerSearch" server-search="true" min-length="2"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="channel">
+                        <default-field title="Channel">
+                            <drop-down allow-empty="true">
+                                <option key="phone" text="Phone"/><option key="chat" text="Chat"/><option key="email" text="Mail"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="agentPartyId">
+                        <default-field title="Agent">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'agents'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                    <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
+                    <field name="linked">
+                        <default-field title="On a case">
+                            <drop-down allow-empty="true"><option key="Y" text="On a case"/><option key="N" text="Not on a case"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="customerPartyId"/><field-ref name="channel"/><field-ref name="agentPartyId"/></field-row>
+                        <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="linked"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+        <label type="p" style="text-negative" text="${findError}" condition="findError"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SessionList" list="sessions" skip-form="true" paginate="false">
+                    <field name="timeText">
+                        <default-field title="When">
+                            <label text="${timeText}" type="span"/>
+                            <label text="${subject}" type="div" style="text-caption m-muted" condition="subject"/>
+                        </default-field>
+                    </field>
+                    <field name="directionText"><default-field title="Direction"><display/></default-field></field>
+                    <field name="participantName"><default-field title="With"><display/></default-field></field>
+                    <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                    <field name="durationText">
+                        <default-field title="Duration">
+                            <label text="${durationText}" type="span"/>
+                            <label text="${outcomeText}" type="div" style="text-caption m-muted" condition="outcomeText"/>
+                        </default-field>
+                    </field>
+                    <field name="audienceText">
+                        <default-field title="Who sees it">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${audienceColor}">${
+                                    WebUtilities.encodeHtml(audienceText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: audienceText})}]]></text>
+                                <text type="html">${audienceText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="caseText">
+                        <default-field title="Case">
+                            <link url="${caseUrl}" url-type="plain" text="${caseText}" link-type="anchor" condition="caseUrl"/>
+                            <label text="${caseText}" type="span" style="m-muted" condition="!caseUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="recordingText"><default-field title="Recording"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="timeText"/><field-ref name="participantName"/></column>
+                        <column><field-ref name="channelText"/><field-ref name="caseText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!sessions.length"
+                        text="No call, chat or mail found. Choose a customer to see theirs, or log a call on a case."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

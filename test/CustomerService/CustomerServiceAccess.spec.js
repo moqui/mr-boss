@@ -615,3 +615,72 @@ feature("case templates: the administrator saves one and the manager may not; an
         problems.join("\n") == ""
     }
 })
+// P6: channel routing is the administrator's to save and the manager's to read; an agent reads neither, a manager no other
+// organization's, and a case from a message is a case editor's for a customer of their organization
+feature(
+    "channel routes: the administrator saves one and the manager reads them; the agent may not; another organization's refused",
+    {
+        when() {
+            const problems = []
+            const route = {requestCategoryId: ids.supportQueueId, channelEnumId: "SrcChat", acknowledge: "N"}
+            for (const [user, service, parameters, expected, authz] of [
+                [users.admin, "mantle.request.SupportCaseServices.save#ServiceRoute", route, "", false],
+                [users.manager, "mantle.request.SupportCaseServices.save#ServiceRoute", route, "PERMISSION_DENIED", false],
+                [
+                    users.services,
+                    "mantle.request.SupportCaseServices.save#ServiceRoute",
+                    Object.assign({}, route, {channelEnumId: "SrcWebForm"}),
+                    "PERMISSION_DENIED",
+                    false
+                ],
+                [
+                    users.manager,
+                    "ironstone.customerservice.ChannelServices.find#ServiceRoutes",
+                    {organizationPartyId: ids.organizationId},
+                    "",
+                    true
+                ],
+                [
+                    users.agent,
+                    "ironstone.customerservice.ChannelServices.find#ServiceRoutes",
+                    {organizationPartyId: ids.organizationId},
+                    "PERMISSION_DENIED",
+                    true
+                ],
+                [
+                    users.manager,
+                    "ironstone.customerservice.ChannelServices.find#ServiceRoutes",
+                    {organizationPartyId: ids.otherOrganizationId},
+                    "RECORD_UNAVAILABLE",
+                    true
+                ],
+                [
+                    users.read,
+                    "ironstone.customerservice.ChannelServices.create#CaseFromMessage",
+                    {kind: "email", emailMessageId: "NO_SUCH_MESSAGE"},
+                    "PERMISSION_DENIED",
+                    true
+                ]
+            ]) {
+                const message = asUser(
+                    user,
+                    () => refusal(service, Object.assign({appRoot: "CustomerService"}, parameters)),
+                    authz
+                )
+                if (expected === "" ? message !== "" : !message.includes(expected))
+                    problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+            }
+            const page = asUser(users.admin, () => lib.page("Settings/ChannelRouting", {organizationPartyId: ids.organizationId}))
+            return {problems, page}
+        },
+        then({problems, page}) {
+            problems.join("\n") == ""
+            page.status == 200
+            page.errors == []
+            page.output.includes("Channel routing")
+            page.output.includes("Support")
+            page.output.includes("Add route")
+            page.output.includes("Held for review")
+        }
+    }
+)

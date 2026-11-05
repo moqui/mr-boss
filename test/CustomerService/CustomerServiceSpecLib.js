@@ -47,7 +47,10 @@ const ids = {
     filterProductId: "BOSS_CS_FILTER",
     serviceMailAccountId: "BOSS_CS_SERVICE_MAIL",
     // P7: Retail's "Defective product" case template, which the Support queue uses
-    templateFormId: "BOSS_CS_TPL_DEFECTIVE"
+    templateFormId: "BOSS_CS_TPL_DEFECTIVE",
+    // P6: Retail's mail and public form routes into the Support queue
+    mailRouteId: "BOSS_CS_ROUTE_MAIL",
+    formRouteId: "BOSS_CS_ROUTE_FORM"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -179,7 +182,10 @@ function routeFixtures() {
         "Availability/Products": {parameters: {productId: ids.serializedProductId}, text: "Service demo smart thermostat"},
         "Availability/Product360": {parameters: {productId: ids.serializedProductId}, text: "Service demo smart thermostat"},
         "Availability/InventoryAvailability": {parameters: {productId: ids.filterProductId}, text: "Stock"},
-        "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"}
+        "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"},
+        // P6: the channel sessions and the channel routing
+        "Cases/ChannelSessions": {parameters: {}, text: "Channel sessions"},
+        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],

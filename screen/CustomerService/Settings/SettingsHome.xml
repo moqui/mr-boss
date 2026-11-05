@@ -98,6 +98,16 @@ along with this software (see the LICENSE.md file). If not, see
                         <label type="div" style="text-caption m-muted" text="The wiki spaces whose articles agents are offered and send to customers."/>
                     </box-body>
                 </container-box>
+                <!-- P6: the channels (design Settings), how mail, the public form, the forum and chat reach the queues -->
+                <container-box>
+                    <box-header title="Channels"/>
+                    <box-body>
+                        <link url="/qapps/CustomerService/Settings/ChannelRouting?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
+                                text="Channel routing" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted"
+                                text="Which queue mail, the public form, the forum and chat file into, the acknowledgement, and what is held for review."/>
+                    </box-body>
+                </container-box>
                 <label type="p" style="text-caption m-muted" text="Account, profile, branding, working hours and mail accounts are set in Commons."/>
             </widgets>
         </section>

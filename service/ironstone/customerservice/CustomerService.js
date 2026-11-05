@@ -285,7 +285,10 @@ const linkPaths = [
     "Availability/InventoryAvailability",
     "Availability/StockAtDate",
     "Availability/Product360",
-    "Availability/PriceExplain"
+    "Availability/PriceExplain",
+    // P6: the channel sessions and the channel routing
+    "Cases/ChannelSessions",
+    "Settings/ChannelRouting"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -782,6 +785,50 @@ const choiceSources = {
         return options
     }
 }
+// P6: the cases the user sees (their queues', and those assigned to them), open ones, by id or subject, for LogCall
+choiceSources.cases = (userScope, term, selected) => {
+    const factory = ec.entity.conditionFactory
+    const seen = factory.makeCondition(
+        [
+            factory.makeCondition("requestCategoryId", "in", userScope.queueIds.length ? userScope.queueIds : ["_NONE_"]),
+            factory.makeCondition("requestId", "in", assignedCaseIds(userScope))
+        ],
+        "or"
+    )
+    let query = find("mantle.request.Request")
+        .condition(seen)
+        .condition("statusId", "not-in", ["ReqCompleted", "ReqCancelled", "ReqDraft"])
+        .orderBy("-requestDate")
+        .limit(choiceLimit)
+    if (term)
+        query = query.condition(
+            factory.makeCondition(
+                ["requestId", "requestName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    const options = Array.from(query.list())
+        .filter(row => !!one("mantle.request.support.CaseProfile", {requestId: row.requestId}))
+        .map(row => ({value: row.requestId, label: row.requestId + " · " + (row.requestName || "")}))
+    if (selected && !options.some(option => option.value === selected))
+        try {
+            recordOf(userScope, "case", selected)
+            options.push({
+                value: selected,
+                label: selected + " · " + (one("mantle.request.Request", {requestId: selected})?.requestName || "")
+            })
+        } catch (error) {
+            // a case the user does not see is not offered
+        }
+    return options
+}
+const assignedCaseIds = userScope =>
+    userScope.partyId
+        ? rows("mantle.request.RequestParty", {partyId: userScope.partyId, roleTypeId: "Assignee"})
+              .filter(row => lib.active(row))
+              .map(row => row.requestId)
+              .concat(["_NONE_"])
+        : ["_NONE_"]
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Customer Service choice " + p.choice)

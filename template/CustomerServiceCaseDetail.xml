@@ -362,6 +362,9 @@ along with this software (see the LICENSE.md file). If not, see
                             <row-col lg="8">
                                 <section name="CaseConversation" condition="csTab == 'conversation'">
                                     <widgets>
+                                        <!-- P6: Log a call, and Reply publicly in forum for a case from a forum topic
+                                            (template/CustomerServiceChannels.xml) -->
+                                        <section-include name="CaseChannelActions" location="component://mr-boss/template/CustomerServiceChannels.xml"/>
                                         <chatter id="CaseChatter" record-entity="mantle.request.Request" record-id="${requestId}"
                                                 default-tab="message"/>
                                     </widgets>
