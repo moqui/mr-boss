@@ -345,6 +345,11 @@ along with this software (see the LICENSE.md file). If not, see
                                         <link url="${sharedLinks['Returns/NewReturn']}" text="Request RMA" link-type="anchor"
                                                 icon="sym_o_assignment_return" parameter-map="{requestId:requestId}"
                                                 condition="cd.canEdit &amp;&amp; customerService.capabilities.returns"/>
+                                        <!-- P11: the case's warranty assessment (a case of another type becomes a claim when its
+                                            evidence is recorded there) -->
+                                        <link url="${sharedLinks['Returns/WarrantyAssessment']}" text="Warranty assessment" link-type="anchor"
+                                                icon="sym_o_verified" parameter-map="{requestId:requestId}"
+                                                condition="cd.canEdit &amp;&amp; customerService.capabilities.returns"/>
                                     </button-menu>
                                 </container>
                             </container>

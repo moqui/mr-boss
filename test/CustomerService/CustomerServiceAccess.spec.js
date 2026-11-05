@@ -91,8 +91,8 @@ feature("the Customer Service menu and providers follow each group's areas; the 
             const topics = (found.providers?.notificationTopics || []).map(item => item.topic || item)
             if (
                 quick.length &&
-                !["SupportCaseAssigned", "SupportCaseCustomerReply", "OrderChangeApproval", "ReturnExceptionApproval"].every(topic =>
-                    topics.includes(topic)
+                !["SupportCaseAssigned", "SupportCaseCustomerReply", "OrderChangeApproval", "ReturnExceptionApproval"].every(
+                    topic => topics.includes(topic)
                 )
             )
                 problems.push(`${user} lacks the case topics: ${JSON.stringify(topics)}`)
@@ -917,3 +917,63 @@ feature("returns: the authorizer's to authorize and the agent's to enter; anothe
         problems.join("\n") == ""
     }
 })
+
+// P11: a warranty claim is its case's: a case editor of its organization works it, the service reader may not, another
+// organization's agent is refused the claim, its reads and the customer's delivered serials
+feature(
+    "warranty claims: a case editor's of the claim's organization; another organization's agent is refused it and its serials",
+    {
+        when() {
+            const problems = []
+            const thermostat = lib.deliveredThermostat()
+            const made = lib.warrantyClaim(users.agent, {requestName: "Access spec warranty claim", assetId: thermostat.assetId})
+            try {
+                if (made.error) problems.push("the agent's claim: " + made.error)
+                for (const [user, capability, expected] of [
+                    [users.agent, "caseEdit", ""],
+                    [users.read, "caseEdit", "PERMISSION_DENIED"],
+                    [users.services, null, "RECORD_UNAVAILABLE"]
+                ]) {
+                    const message = asUser(user, () =>
+                        refusal(access + "check#Record", {
+                            appRoot: "CustomerService",
+                            recordType: "case",
+                            recordId: made.requestId,
+                            capability
+                        })
+                    )
+                    if (expected === "" ? message !== "" : !message.includes(expected))
+                        problems.push(`${user} check#Record: ${message || "accepted"}, not ${expected || "accepted"}`)
+                }
+                const W = "mantle.request.WarrantyServices."
+                for (const [user, expected] of [
+                    [users.agent, ""],
+                    [users.read, "PERMISSION_DENIED"],
+                    [users.services, "RECORD_UNAVAILABLE"]
+                ]) {
+                    const message = asUser(user, () => refusal(W + "get#WarrantyClaim", {requestId: made.requestId}), false)
+                    if (expected === "" ? message !== "" : !message.includes(expected))
+                        problems.push(`${user} get#WarrantyClaim: ${message || "accepted"}, not ${expected || "accepted"}`)
+                }
+                const serials = user =>
+                    values(
+                        asUser(user, () =>
+                            invoke(access + "get#Choices", {
+                                appRoot: "CustomerService",
+                                choice: "customerAssets",
+                                customerPartyId: ids.customerId
+                            })
+                        )
+                    )
+                if (!serials(users.agent).includes(thermostat.assetId)) problems.push("the agent's serials lack the thermostat")
+                if (serials(users.services).length) problems.push("Services' agent sees Retail's customer's serials")
+            } finally {
+                lib.closeWarrantyClaim(made.requestId)
+            }
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)

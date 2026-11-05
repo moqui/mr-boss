@@ -72,6 +72,8 @@ along with this software (see the LICENSE.md file). If not, see
                 icon="sym_o_assignment_return" sequence="75"/>
         <notification-topic topic="ReturnExceptionApproval"/>
         <notification-topic topic="ReturnDecision"/>
+        <!-- P11: a warranty claim's repair finished (Mantle's WarrantyRepairFinished, opening WarrantyAssessment) -->
+        <notification-topic topic="WarrantyRepairFinished"/>
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
             <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>

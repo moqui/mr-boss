@@ -298,7 +298,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | built Nov 5, 2026 |
 | P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | built Nov 5, 2026 |
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | built Nov 5, 2026 |
-| P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
+| P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | built Nov 5, 2026 |
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
 | P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | — |
 | P14 Reports | BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis | — |
@@ -2300,6 +2300,111 @@ Design §5 WarrantyClaims and WarrantyAssessment, crosscut §3.2 DeliveredItems;
   - an expired claim is rejected, or approved as goodwill with the approver;
   - the repair work finishing notifies the agent and leaves the claim's case open; a replacement goes through a return
     (P9).
+
+**Built Nov 5 (P11).**
+- Mantle entities (`entity/SupportWarrantyEntities.xml`, new, named to load after the entity files whose enumeration types its
+  seeds use, F150): `Request.claimRevision` (audit-logged: the claim's evidence revision, counted once by each change of its
+  product, asset, order, invoice or agreement); `mantle.request.support.WarrantyDecision` (PurchaseApprovalDecision's fields,
+  F45: the request and its revision, the organization, decision, date, user and party, reason, `operationKey`,
+  `supersededDate`; and the coverage decided on: basis, terms and their source, agreement, coverage end and its source, the
+  override's reason, the approver of a goodwill or override, the charge estimate and its currency, the customer's consent,
+  the next due date). Seeds: `RqtWarranty`, `WarrantyDecision` (WdCovered, WdPartial, WdRejected, WdGoodwill),
+  `WarrantyCoverageBasis` (WcbAgreement, WcbProductWarranty, WcbNone), the term type `TtWarranty` and the maintenance type
+  `MntTpWarranty`; `MantleSetupData.xml` the topic `WarrantyRepairFinished`. `entity/SupportWarranty.eecas.xml` (new): the rule
+  `WarrantyWorkFinished` on AssetMaintenance's status to AsMntCompleted, by any path.
+- Mantle services (`service/mantle/request/WarrantyServices.xml` over `Warranty.js`, new): `find#WarrantyClaims` (the user's
+  organizations' claims by customer, product, serial, order, agreement, state, assignee and date, and with `queueIds` an app's
+  own case scope; states read: Needs evidence, Assessment, Approved repair or replacement, Rejected, Customer follow-up,
+  Closed), `get#WarrantyClaim` (WarrantyAssessment's read: evidence, prior claims on the serial, coverage, decisions, repairs
+  with their tasks, returns, and what the user may do), `save#WarrantyClaim` (SUPPORT_CASE_EDIT: a new RqtWarranty case through
+  `create#Case`, or a case of another type made a claim; the product a RequestItem, the serial by id or serial number, the
+  order (the serial's sale when not given), the invoice (the sale line's billing) and the agreement as RequestRecord links;
+  ASSET_UNAVAILABLE, ASSET_PRODUCT_MISMATCH, ORDER_UNAVAILABLE, INVOICE_UNAVAILABLE, AGREEMENT_UNAVAILABLE, STALE_REVISION; a
+  change counts the revision and supersedes the decisions), `get#WarrantyCoverage` (§4's hierarchy: a current AgrService
+  agreement with a TtWarranty term for the product, then the product's warranty at sale, the serial or lot traced through
+  AssetIssuance to its sales order, customer and ship date, the PftWarranty feature's number and time unit, the end and its
+  source, else WcbNone; each step in the trace), `decide#WarrantyClaim` (SUPPORT_CASE_EDIT at the claim's revision,
+  REVISION_REQUIRED, STALE_REVISION; NOT_COVERED, OVERRIDE_REASON_REQUIRED, goodwill and a rejection override with
+  WARRANTY_APPROVE, REASON_REQUIRED, CHARGE_NOT_ALLOWED, CHARGE_INVALID, CURRENCY_REQUIRED; the case is not resolved),
+  `link#WarrantyWork` (F67: an AssetMaintenance on the sold serial through `EquipmentServices.create#AssetMaintenance`, its
+  WepMaintenance task in `taskWorkEffortId`, or an open one of the serial, linked to the case; the organization (the facility's
+  owner or the sale's vendor) and the customer (the asset's owner or the sale's customer) checked here, F51; NOT_DECIDED,
+  NOT_APPROVED, CONSENT_REQUIRED, ASSET_REQUIRED, WORK_REQUIRED, ASSIGNEE_UNAVAILABLE, MAINTENANCE_UNAVAILABLE),
+  `update#WarrantyWork` (in process, finished with its result, cancelled before it starts, the task following; STATUS_INVALID),
+  `notify#WarrantyWorkFinished` (the rule's: the claim's assignee, else the agent who linked it; resolves nothing),
+  `store#ServiceAgreement` (SUPPORT_POLICY_EDIT: the customer's AgrService agreement with its TtWarranty term and the product's
+  item, F50, F101) and `find#DeliveredItems` (crosscut §3.2: the serials and lots the user's organizations delivered to a
+  customer, with their coverage and open claim). Mantle changes: `create#Case` takes the type's template before the queue's
+  (`CaseTemplates.forCase`, ServiceRequestType.templateFormId, which P7 left unread), and `save#ServiceRequestType` keeps the
+  row's template (as F127 for queues).
+- BOSS: `CustomerService.js` the links `Returns/WarrantyClaims` and `Returns/WarrantyAssessment` and the choices
+  `customerAssets` (a customer's delivered serials and lots), `serviceAgreements` and `customerInvoices`; `Templates.js`
+  NewCase's choice takes the type's template; screens `Returns/WarrantyClaims.xml` (the Warranty tab: WarrantyFind and
+  WarrantyList over find#WarrantyClaims, the user's queues and assigned claims, New claim to NewCase with the type) and
+  `Returns/WarrantyAssessment.xml` (the record header with one primary by state, Record evidence, Decide, Add repair, More's
+  Record consent, Request return and Open the case; Evidence with the coverage and its trace; Decisions; Repairs and returns
+  with Update repair; every transition after `check#Record`); `Shared/Customer360/ServiceDeliveredItems.xml` (the Delivered
+  items tab, New claim from a row or its open claim); NewCase's warranty claim path (`assetId`, the type's template, then
+  `save#WarrantyClaim` with the serial or the template's serial number, the sale and the fault, opening WarrantyAssessment);
+  CaseDetail's More gains Warranty assessment; Shared/RequestDetail's Items tab covers RqtWarranty with a link to the
+  assessment (F49); the root's `WarrantyRepairFinished` topic and BossSetupData's link. Demo (`BossCustomerServiceDemoData.xml`):
+  Retail's "Warranty claim" template `BOSS_CS_TPL_WARRANTY` (serial number, fault and use for the customer, the condition on
+  inspection internal) and the RqtWarranty type service-enabled into the Support queue with it; no demo claim (the walks make
+  their own).
+- Specs: Mantle `test/request/SupportWarranty` (3 features, about 1.6 s: the delivered serial covered from its ship date plus
+  the 12-month term with its source, the type's template and its resave, the checks, an agreement covering first, the
+  delivered items and the list; an expired claim refused as covered, rejected, goodwill by the WARRANTY_APPROVE holder and its
+  approver, the revisions, the override's reason, a change superseding the decision, the charge needing consent; the repair
+  with its task, its completion telling the agent and leaving the case open, a maintenance no claim links telling no one).
+  BOSS `CustomerServiceWarranty` (1 feature, about 0.9 s: WarrantyAssessment's and WarrantyClaims' one qvt render,
+  Delivered items' one html render (a tab alone), NewCase's template choice by type) and `CustomerServiceAccess` (+1 feature:
+  the claim's check for the agent and the reader, another organization's agent refused it, its read and the customer's
+  serials). Acceptance `acceptance/CustomerService/CustomerServiceWarrantyWalk` (the usable-when, 3 features, through
+  Customer360, NewCase and WarrantyAssessment's transitions) and AppStructure's fixtures (WarrantyClaims, WarrantyAssessment,
+  Delivered items), both passing.
+- Tests run (all pass): Mantle SupportWarranty, SupportCases, SupportTemplates, SupportRelations, SupportChannels,
+  WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow,
+  ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow (176 features); BOSS CustomerServiceWarranty,
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceTemplates, CustomerServiceOrders, CustomerServiceReturns,
+  CustomerServiceOrderChanges, Requests, ProjectRequests, PurchasingRequests, ProjectsAccess (76 features); acceptance
+  CustomerServiceWarrantyWalk (3) and AppStructure (18). `moqui lint --screens`: 136 flagged sites, as master; none in the new or
+  changed screens.
+- Inventories: usl-inventory's P11 table (the WarrantyServices and create#AssetMaintenance). No ss-inventory row is designed
+  into WarrantyClaims, WarrantyAssessment or Delivered items (they have no mr-marble form).
+- Decisions:
+  - Agreement first (F50, F101): a store, `store#ServiceAgreement`, of the customer's AgrService agreement with a warranty term
+    (TtWarranty; its text the terms, an item for the product it covers, none for every product), on P13's agreement statuses;
+    no expiry job, as the lookup reads the agreement's and term's dates and an Active status. Its screen is Customer360's
+    ServiceAgreements form (P14); P4's service level condition reads the same agreements.
+  - A rejection override is covering (covered or partly) a claim the lookup found expired, through a coverage end set with its
+    reason, by a WARRANTY_APPROVE holder recorded as the approver; goodwill needs the same holder and a reason; rejecting needs
+    a reason only.
+  - A chargeable repair is a partly covered or rejected decision with a charge estimate; its consent is recorded by deciding
+    again (More's Record consent), a new decision at the same revision; the repair is linked only with it.
+  - A claim is a case: its record link and the palette open CaseDetail, which links the assessment (More); WarrantyClaims
+    and the topic open WarrantyAssessment. Product360's warranty editing is Products' (F-P11-1).
+- Findings (provisional):
+  - **F-P11-1** Products already edits a warranty: a PftWarranty feature's number and time unit on Products/Features
+    (NewFeature, FeatureDetail Summary) and its application to a product on Product360's Features tab, so Products' contract
+    needed nothing here; Customer Service's Product360 context does not show the term (its tabs are P3's), a P16 polish.
+  - **F-P11-2** P4 built no store for service agreements (F101); P11 adds `store#ServiceAgreement` with the TtWarranty term
+    and reads Agreement rows by type, organization, customer, dates and status.
+  - **F-P11-3** `link#RequestRecord` asks the user's record visibility (get#RecordLinkInfo), which refuses an invoice to an
+    agent who reads no finance records, though the invoice is evidence of the sale: WarrantyServices writes the claim's
+    RequestRecord rows itself after its own organization and customer checks.
+  - **F-P11-4** Nothing in BOSS finished an AssetMaintenance (Manufacturing's EquipmentDetail only requests one), so
+    `update#WarrantyWork` moves a claim's repair through the AssetMaintenance status flow (its task following), and the
+    completion notice is a rule on AssetMaintenance's status, so a Maintenance app's own path tells the agent too.
+  - **F-P11-5** Shipment has no shipped date; the ship date is the AssetIssuance's issue date (a sales order's stock is issued
+    when it ships), as crosscut DeliveredItems reads.
+  - **F-P11-6** "WARRANTY_APPROVE for a rejection override" is read as covering a claim the lookup found expired (a coverage
+    end set with its reason); design WarrantyAssessment says so.
+  - **F-P11-7** ServiceRequestType.templateFormId was not read (P7) and `save#ServiceRequestType` dropped it on a resave (as
+    F127 for queues): `create#Case` and NewCase take the type's template before the queue's, and the save keeps it.
+  - **F-P11-8** A case's revision moves with every update of the request (status, due date), so a claim's revision is its own
+    counter (`Request.claimRevision`), moved only by its evidence; a status change does not stale a decision.
+  - **F-P11-9** Delivered items lists serials and lots only: an issued asset with neither (the demo's filters) is stock, not a
+    delivered item, and a claim on it names its product and sale.
 
 ### P12 — Knowledge
 

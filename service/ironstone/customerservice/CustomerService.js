@@ -309,7 +309,10 @@ const linkPaths = [
     "Returns/QualityInspection",
     "Returns/ReturnAuthorization",
     "Settings/ReturnPolicies",
-    "Approvals/Notifications"
+    "Approvals/Notifications",
+    // P11: the warranty claims and one claim's assessment
+    "Returns/WarrantyClaims",
+    "Returns/WarrantyAssessment"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -1038,6 +1041,72 @@ choiceSources.returnFacilities = (userScope, term, selected, p) =>
     rows("mantle.facility.Facility", {ownerPartyId: p.organizationPartyId || "_NA_"})
         .filter(row => vendorIds(userScope).includes(row.ownerPartyId))
         .map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
+// P11: a customer's delivered serials and lots (issued on the user's organizations' sales orders to them), newest first; the
+// customer's service agreements with the user's organizations; and their invoices, for a warranty claim's evidence
+choiceSources.customerAssets = (userScope, term, selected, p) => {
+    if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+    const orderIds = Array.from(
+        find("mantle.order.OrderHeaderAndPart")
+            .condition("customerPartyId", p.customerPartyId)
+            .condition("vendorPartyId", "in", vendorIds(userScope))
+            .selectField("orderId")
+            .distinct(true)
+            .limit(500)
+            .list()
+    ).map(row => row.orderId)
+    if (!orderIds.length) return []
+    const issued = Array.from(
+        find("mantle.product.issuance.AssetIssuance")
+            .condition("orderId", "in", orderIds)
+            .condition("assetId", "is-not-null", null)
+            .orderBy("-issuedDate")
+            .limit(200)
+            .list()
+    )
+    const options = []
+    for (const issuance of issued) {
+        if (options.some(option => option.value === issuance.assetId)) continue
+        const asset = one("mantle.product.asset.Asset", {assetId: issuance.assetId})
+        if (!asset || (!asset.serialNumber && !asset.lotId)) continue
+        const product = asset.productId ? one("mantle.product.Product", {productId: asset.productId}) : null
+        const label =
+            (asset.serialNumber ? "Serial " + asset.serialNumber : "Lot " + asset.lotId) +
+            " · " +
+            (product?.productName || asset.productId || "") +
+            " · order " +
+            issuance.orderId
+        if (!term || label.toLowerCase().includes(term.toLowerCase())) options.push({value: asset.assetId, label})
+        if (options.length >= choiceLimit) break
+    }
+    return options
+}
+choiceSources.serviceAgreements = (userScope, term, selected, p) => {
+    if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+    return Array.from(
+        find("mantle.party.agreement.Agreement", {agreementTypeEnumId: "AgrService", otherPartyId: p.customerPartyId})
+            .condition("organizationPartyId", "in", vendorIds(userScope))
+            .orderBy("-fromDate")
+            .limit(choiceLimit)
+            .list()
+    )
+        .map(row => ({
+            value: row.agreementId,
+            label: row.agreementId + (row.description ? " · " + row.description : "") + " · " + statusText(row.statusId)
+        }))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+}
+choiceSources.customerInvoices = (userScope, term, selected, p) => {
+    if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+    return Array.from(
+        find("mantle.account.invoice.Invoice", {toPartyId: p.customerPartyId})
+            .condition("fromPartyId", "in", vendorIds(userScope))
+            .orderBy("-invoiceDate")
+            .limit(choiceLimit)
+            .list()
+    )
+        .map(row => ({value: row.invoiceId, label: "Invoice " + row.invoiceId + " · " + statusText(row.statusId)}))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+}
 const assignedCaseIds = userScope =>
     userScope.partyId
         ? rows("mantle.request.RequestParty", {partyId: userScope.partyId, roleTypeId: "Assignee"})

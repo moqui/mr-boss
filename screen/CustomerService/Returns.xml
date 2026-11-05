@@ -15,8 +15,8 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The Returns area of IronStone Customer Service (design-customer-service §1, §5; impl-customer-service P9): a menu group
     holding Returns (the default: ReturnFind and ReturnList with the views of design Returns and the batch) and NewReturn,
     with ReturnDetail (Shared/ReturnDetail in the Customer Service context, crosscut §3.18), QualityInspection
-    (Shared/QualityInspection, crosscut §3.19, F38) and ReturnAuthorization (the RMA to print) hidden from the menu; warranty
-    claims follow (P11). For the agent, manager and return authorizer (BOSS_CS_RETURNS); each list and record limited by
+    (Shared/QualityInspection, crosscut §3.19, F38) and ReturnAuthorization (the RMA to print) hidden from the menu; P11: Warranty
+    (WarrantyClaims) and WarrantyAssessment, one claim, hidden from the menu. For the agent, manager and return authorizer (BOSS_CS_RETURNS); each list and record limited by
     AccessServices and each action by Mantle's own permission. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Returns" default-menu-index="5" menu-image="sym_o_replay" menu-image-type="icon">
