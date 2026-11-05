@@ -430,7 +430,7 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
 - BOSS access (`data/BossSetupData.xml`): the groups `BOSS_CUSTOMER_SERVICE` (root user group), `_AGENT`, `_MANAGER`,
   `_ORDER_DESK`, `_RETURN_AUTHORIZER` and `_KNOWLEDGE`; the root authz `BOSS_CUSTOMER_SERVICE_ROOT` (`MANTLE_USER_ORG`,
   `MANTLE_PRIVATE_CONTACT`) and the `ironstone\.customerservice\..*` service pattern on the `BOSS_CUSTOMER_SERVICE`
-  artifact group; `customerservice` in the client deny pattern (its fourth row split in two, F-P1-2); the area groups
+  artifact group; `customerservice` in the client deny pattern (its fourth row split in two, F75); the area groups
   `BOSS_CS_RETURNS` and `BOSS_CS_REPORTS` (agent, manager, return authorizer, admin), `BOSS_CS_APPROVALS` (manager,
   return authorizer, admin) and `BOSS_CS_SETTINGS` (admin), each denying the root user group; the record link group
   `BOSS_CS_RECORD_LINK`; the `UserGroupPermission` grants of the list above. No authz for the raw Mantle request, return
@@ -448,12 +448,12 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
   comment naming its phase and groups), `<shell-providers>` with the palette source and the `customerservice` keymap;
   Home (`CustomerService/Home.xml`: the KPI strip, each "Not configured", with its period and time, and the record
   lookup); `PaletteServices.get#RecordLink` opens a sales order under Customer Service (Home's lookup until P3 sets
-  OrderDetail) and a customer once Customer360 is built (F-P1-4).
+  OrderDetail) and a customer once Customer360 is built (F77).
 - Demo: `BossCustomerServiceDemoData.xml` (the warranted, serialized thermostat `BOSS_CS_THERMOSTAT` with its
   `BOSS_CS_WARRANTY_12` PftWarranty feature and serials CS-THERMO-1001/1002, the stocked filter `BOSS_CS_FILTER`, both
   Retail's at ZIRET_WH; Ziziwork Services' customer `BOSS_CS_CUST_OTHER` and open order `BOSS_CS_SO_OTHER`) and
   `BossZCustomerServiceDemoData.xml`, which runs `ironstone.customerservice.DemoServices.load#CustomerServiceDemo`
-  (`Demo.js`, each order in its own transaction, F-P1-3): `BOSS_CS_SO_DELIVERED` to CustJqp (paid by check, shipped,
+  (`Demo.js`, each order in its own transaction, F76): `BOSS_CS_SO_DELIVERED` to CustJqp (paid by check, shipped,
   invoiced at ship and delivered; the thermostat's Asset is the customer's, AstDelivered, with its AssetIssuance),
   `BOSS_CS_SO_PICK` to JoeDist (approved and reserved, awaiting pick) and `BOSS_CS_SO_PACKED` to JoeDist (packed).
   BossUsersDemoData's `customerservice.*` users: agent, manager, orderdesk, returns, knowledge, admin (in
@@ -489,19 +489,19 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     availability; POPC_DEFAULT is the orders' store.
   - No quick create, Today source or notification topic in P1: the phases that build their records add them.
 - Findings (provisional):
-  - **F-P1-1** `mantle.party.Party.ownerPartyId` defaults to `_NA_`, so Mantle's ORG_ACME and ORG_BLUTH, which the data
+  - **F74** `mantle.party.Party.ownerPartyId` defaults to `_NA_`, so Mantle's ORG_ACME and ORG_BLUTH, which the data
     gives no owner, are shared parties (P0's F73 reads them as unowned): ORG_ACME is a shared customer in every
     organization's Customer Service scope, as ZiddlemanInc is a shared supplier in Purchasing's. The demo leaves it so;
     CustomerServiceAccess checks that both organizations serve it.
-  - **F-P1-2** Adding `customerservice` to the client deny pattern took its fourth row (post … reply) past the 255
+  - **F75** Adding `customerservice` to the client deny pattern took its fourth row (post … reply) past the 255
     characters of `artifactName`; it is split into two rows. The next app package will need the same check.
-  - **F-P1-3** A data file loads in one transaction, so a demo service that makes each record in a transaction of its own
+  - **F76** A data file loads in one transaction, so a demo service that makes each record in a transaction of its own
     (for failure tolerance) cannot see the rows of its own file: the products and stock are in
     `BossCustomerServiceDemoData.xml` and the service call in `BossZCustomerServiceDemoData.xml`, loaded after.
-  - **F-P1-4** A customer's record link stays the Commons contact until P3 builds Customer360 under Customer Service
+  - **F77** A customer's record link stays the Commons contact until P3 builds Customer360 under Customer Service
     (`hasScreen('customer')`), as Purchasing left requests to their other apps until its screens were built; a sales order,
     which had no link (impl-purchasing F46), opens Customer Service's Home lookup now.
-  - **F-P1-5** Crosscut X4's table also names `BOSS_PURCHASING_BUYER` (a PO revision) and `BOSS_SALES_CHANGE` for
+  - **F78** Crosscut X4's table also names `BOSS_PURCHASING_BUYER` (a PO revision) and `BOSS_SALES_CHANGE` for
     `ORDER_CHANGE_HOLD_RELEASE`. P1 grants neither: a purchase revision's Change hold is released by its approval or
     cancel (`PurchaseRevisions.releaseRevisionHold`), not by `release#OrderHold`, and no Purchasing group held
     `ORDER_APPROVE`, so nothing it did is refused; Sales has no group yet. For the lead to decide with X4.
@@ -1307,6 +1307,11 @@ is written there too.
 | F71 | P0: `dynamic-options depends-on` works in qvt, html and tui, and per row in a non-multi editable form-list, whose tui row forms are the twin; in a qvt `multi="true"` list `dependsOn` is not suffixed `_N` (ScreenQvt.js:272 vs :322), not verified | P5 and P7: no new framework element; the condition rows are a non-multi editable form-list with dependent operator and value options, typed values checked on the server. CS-FORM-ELEMENTS reduces to F69 |
 | F72 | P0: Dev AIDE presence (dev-component/dev-aide/src/notify.rs:114-170) is an in-memory per-node map broadcast to fixed groups and not cleared on close, so it does not generalize; the notification WebSocket's `notws/collab.rs` has per-document members tied to the socket (join with an access check, leave on close, cluster topic), bound to Yjs and wiki pages (crates/moqui-collab/src/lib.rs:445) | Who is viewing costs about 200-300 lines of Rust on collab's pattern plus a qvt component: decided in §4 (Nov 5) |
 | F73 | P0: ORG_ACME and ORG_BLUTH have no owner; CustJqp and JoeDist are owned by ORG_ZIZI_RETAIL. BossWarehouseDemoData.xml has entity rows to CustJqp that Warehouse's walks rely on (BOSS_WH_SO*, BOSS_WH_RETURN, BOSS_WH_RMA, serials SCN-1001 to 1003); Accounting's Demo.js makes returns and invoices for BOSS_ACCT_ORG. Nothing makes a delivered serialized sale, a PftWarranty feature or a paid Ziziwork sales order | P1: a demo loader on Demo.js's pattern with its own IDs, the Warehouse rows untouched: a serialized product with PftWarranty sold, delivered, invoiced and paid; an order awaiting pick; a packed order; for CustJqp and JoeDist |
+| F74 | P1: `Party.ownerPartyId` defaults to `_NA_`, so ORG_ACME and ORG_BLUTH are shared parties, not unowned as F73 read them; ORG_ACME is a shared customer in every organization's scope, as ZiddlemanInc is Purchasing's shared supplier | Kept; CustomerServiceAccess checks both organizations serve it. P3: Customer360 of a shared customer lists only the user's organizations' orders, cases, returns and invoices |
+| F75 | P1: adding `customerservice` took a row of the client deny pattern past `artifactName`'s 255 characters | Split into two rows; the next package added there needs the same check |
+| F76 | P1: a data file loads in one transaction, so a demo service that commits each record on its own cannot see its own file's rows | The service call is in a later-loading `BossZCustomerServiceDemoData.xml` |
+| F77 | P1: a customer's record link stays Commons' until Customer360 is under Customer Service; a sales order, which had no link, opens Customer Service's Home lookup | P3 moves both to Customer360 and OrderDetail |
+| F78 | P1: crosscut X4 also names `BOSS_PURCHASING_BUYER` and `BOSS_SALES_CHANGE` for `ORDER_CHANGE_HOLD_RELEASE`; neither is granted, since a purchase revision's Change hold is released by its approval or cancel and Sales has no group. `hold#Order` and `release#OrderHold` check neither the organization nor the order's direction, so the holder may release any order's Change hold | P10's release checks the order through AccessServices `check#Record` first, as Purchasing's `releaseHold` does; the Sales grant comes with Sales |
 
 ## 7. Later
 
