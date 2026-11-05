@@ -909,32 +909,32 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
     StockAtDate is in its menu.
   - ShipmentDetail's "send update" is the delivery text copied into the case's reply (a shipment has no channel of its own).
 - Findings (provisional):
-  - **F-P3-1** `org.moqui.impl.EmailClientServices.save#Draft` refuses an attachment outside the account's own mail files
+  - **F85** `org.moqui.impl.EmailClientServices.save#Draft` refuses an attachment outside the account's own mail files
     unless authorization is disabled; Mantle's resend attaches the stored OrderContent PDF that way, after its own checks.
-  - **F-P3-2** Accounting's receivables groups hold RECEIVABLE_VIEW, not ACCOUNTING_VIEW, so §2's "financial amount by
+  - **F86** Accounting's receivables groups hold RECEIVABLE_VIEW, not ACCOUNTING_VIEW, so §2's "financial amount by
     ACCOUNTING_VIEW" would withhold invoice amounts from an AR user; Customer Service reads either (§2 should say so).
-  - **F-P3-3** Customer Service users held no catalog read: Products' shared screens refuse without PRODUCT_CATALOG_VIEW. P3
+  - **F87** Customer Service users held no catalog read: Products' shared screens refuse without PRODUCT_CATALOG_VIEW. P3
     grants it to the root group and PRICE_VIEW to the agent, manager, order desk and administrator; the service reader has no
     price read, so Product360 has no Prices tab for it and PriceExplain, which checked catalog read only, is refused it here.
-  - **F-P3-4** Shared/Customer360 is Accounting's: its header and every tab read `get#CustomerContext` and its capabilities;
+  - **F88** Shared/Customer360 is Accounting's: its header and every tab read `get#CustomerContext` and its capabilities;
     the Customer Service branch reads in always-actions (a tab renders alone), adds its own tabs and a conditional default,
     and keeps Accounting's tabs to Accounting by a condition on each.
-  - **F-P3-5** find#ServiceCustomers' phone search (P2) matched the digits alone, which miss a number kept with its separators
+  - **F89** find#ServiceCustomers' phone search (P2) matched the digits alone, which miss a number kept with its separators
     ("234-5678"); it and the palette now match the number as typed too.
-  - **F-P3-6** A credit hold is placed only by the credit policy (`hold#Order`), so the demo's held order is a manual hold
+  - **F90** A credit hold is placed only by the credit policy (`hold#Order`), so the demo's held order is a manual hold
     with its reason; a credit hold's reason is withheld from a user without CUSTOMER_CREDIT_VIEW (checked on Customers and
     OrderDetail by the code path, not by demo data).
-  - **F-P3-7** Customer creation (FindCustomer's create forms) is not in Customer Service: the Commons contact record and
+  - **F91** Customer creation (FindCustomer's create forms) is not in Customer Service: the Commons contact record and
     Sales create parties; ss-inventory marks them so.
-  - **F-P3-8** CustomerService.js's `partyName` leaves out a middle name ("Joe Public") where Mantle's `partyNames` keeps it
+  - **F92** CustomerService.js's `partyName` leaves out a middle name ("Joe Public") where Mantle's `partyNames` keeps it
     ("Joe Q Public", CaseDetail); P16 may align them.
-  - **F-P3-9** A shared screen's service (`CatalogServices.get#SharedContext`) is authorized through the mounting root's
+  - **F93** A shared screen's service (`CatalogServices.get#SharedContext`) is authorized through the mounting root's
     inherited authorization, so a spec calls it as a Customer Service user with authorization off, as Warehouse's do.
 
 **Review Nov 5 (P3).** Checked against §2, design §4 and crosscut §3.2, §3.5–§3.8, §3.16, §3.26: the scoped reads and
 AccessServices on every mount, F30, F74 (orders, invoices and cases of a shared customer by the user's organizations), the
 resend's recipient check (the customer's or a current contact's address only), its operation key, the save#Draft bypass of
-F-P3-1 (the attachment is only the order's own OctOrderConfirmation OrderContent, outside the mailbox's files, so a mailbox
+F85 (the attachment is only the order's own OctOrderConfirmation OrderContent, outside the mailbox's files, so a mailbox
 delete leaves it), F31 and the Customer360 tab conditions in other apps (AccountingReceivables, AccountingCollections,
 ProductsInventory, ProductsSharedContext, WarehouseReports, WarehouseInventory, PurchasingReplenishment,
 ManufacturingMaterials pass), F77 (another app's user keeps a customer's Commons link) and the acceptance walk (the six
@@ -1086,35 +1086,35 @@ Design §3 CaseDetail's clocks, §7 CaseAnalytics, §9 ServiceLevelPolicies; CS-
 - Decisions:
   - The business-time services read only working times and take no permission; the SLA reads and saves check theirs.
   - A policy's precedence is its rank, computed from its conditions (agreement 8, customer 4, queue 2, type 1), not a stored
-    number (F-P4-1); the list shows it.
+    number (F94); the list shows it.
   - The scan runs every five minutes over at most 200 clocks.
   - A first response clock still running when the case resolves closes as unmet, never met; a breach it had stays.
   - While resolution is paused the case's due date is empty (no current due date); after a resolve it keeps the last one.
 - Findings (provisional):
-  - **F-P4-1** Design ServiceLevelPolicies' "precedence" is not a field: the most specific condition ranks the policy, and
+  - **F94** Design ServiceLevelPolicies' "precedence" is not a field: the most specific condition ranks the policy, and
     two rows of one rank can both hold for a case only when their conditions are equal, so the refused overlap is two
     published rows with the same conditions over overlapping dates (EQUAL_RANK_OVERLAP); a replacement names its row and
     ends it.
-  - **F-P4-2** The case rule makes the profile after the commit (F84), so loaded data gets its clocks then: the demo team's
+  - **F95** The case rule makes the profile after the commit (F84), so loaded data gets its clocks then: the demo team's
     hours are stored by a demo file that loads before the requests (BossX before BossY). A request made before any policy
     started (a backfill) takes the row in effect now.
-  - **F-P4-3** A declared in-parameter not passed arrives as null, so save#Policy reads null as "unchanged" and an empty
+  - **F96** A declared in-parameter not passed arrives as null, so save#Policy reads null as "unchanged" and an empty
     string (a form's cleared field) as "none".
-  - **F-P4-4** Ending a weekly working-hours series from a date needs no new field: its RRULE's `UNTIL` (RFC 5545) ends it
+  - **F97** Ending a weekly working-hours series from a date needs no new field: its RRULE's `UNTIL` (RFC 5545) ends it
     for get#EventInstances, get#FreeBusy and business time alike.
-  - **F-P4-5** A sent mail is filed on its case (RequestCommEvent) only once it is ES_SENT (file#SentEmail), so the
+  - **F98** A sent mail is filed on its case (RequestCommEvent) only once it is ES_SENT (file#SentEmail), so the
     RequestCommEvent rule sees a send the channel accepted; a failed send waits in the Outbox unfiled. Projects' intake
     confirmation is a RequestEmailMessage with no CommunicationEvent and never reaches the rule; `CpAcknowledgement` marks
     any other automatic message.
-  - **F-P4-6** BOSS's settings organization choice (every internal organization for the administrator) can be one Mantle's
+  - **F99** BOSS's settings organization choice (every internal organization for the administrator) can be one Mantle's
     scope refuses (`get#PartyOrganizationInfo`; the administrator's first option ORG_ZIZI_CORP): ServiceLevelPolicies then
     says the organization's levels are not available. P2's settings saves have the same mismatch. Fixed in review (R3).
-  - **F-P4-7** CaseAnalytics (design §2: `CustomerService/Reports/CaseAnalytics`) made Reports a menu group before P14:
+  - **F100** CaseAnalytics (design §2: `CustomerService/Reports/CaseAnalytics`) made Reports a menu group before P14:
     Reports' placeholder is now `Reports/ReportsHome`.
-  - **F-P4-8** F50: P4 seeds `AgrService` and builds no store or expiry for service agreements; a policy's agreement
+  - **F101** F50: P4 seeds `AgrService` and builds no store or expiry for service agreements; a policy's agreement
     condition reads an Agreement of that type between the organization and the customer, active by its dates and, when it
     has a status, AgmStActive. The purchase agreement services still refuse it. P11 builds the store.
-  - **F-P4-9** A customer's reply while the case waits for them is recorded (`SetCustomerReply`) but does not resume the
+  - **F102** A customer's reply while the case waits for them is recorded (`SetCustomerReply`) but does not resume the
     clock: design ServiceDefaults' "customer reply before close reopens via policy" is P8's. Review: the wait is P4's
     (a resolved case's reopen stays P8's), fixed (R2).
 
@@ -1136,12 +1136,12 @@ seven features, not rerun as it is unchanged).
   longest pause, or already recorded) could fill the batch of 200 on every run and the due and warned clocks were never
   reached. The due and warned clocks come first; the rest of the batch takes paused clocks whose policy has a longest pause,
   paused that long by the wall clock and not yet recorded for this pause.
-- **R2 (medium, Mantle; F-P4-9)** A customer's reply left a case waiting for the customer paused for good. The reply now
+- **R2 (medium, Mantle; F102)** A customer's reply left a case waiting for the customer paused for good. The reply now
   ends the wait: the case moves back by its workflow (a move needing no resolution or reason) to the open status it waited
   from, else In progress, and the status rule resumes the clock, the status event's reason "The customer replied".
   SupportSla resumes by the reply, and gained the default (a plain request's status, due date and sent mail record
   nothing) and an acknowledgement that is no response.
-- **R3 (low, BOSS; F-P4-6)** The settings' organization choice and default are the service organizations Mantle's saves
+- **R3 (low, BOSS; F99)** The settings' organization choice and default are the service organizations Mantle's saves
   take (FacilityScope), so the administrator is no longer offered ORG_ZIZI_CORP; CustomerServiceAccess checks every one
   offered against find#Policies (it fails without the fix).
 - Left for the lead: Cases' Needs response and SLA risk views read the clock table's request IDs (up to 5000) into an
@@ -1503,21 +1503,21 @@ CS-KNOWLEDGE.
 
 **Built Nov 5 (P12).**
 - Mantle entities (`entity/SupportKnowledgeEntities.xml`): `mantle.request.support.ServiceKnowledgeSource` (effective-dated,
-  key fields audit-logged: organization, space and the part of it by `pagePathPrefix` (F-P12-1), audience `SkaInternal`,
+  key fields audit-logged: organization, space and the part of it by `pagePathPrefix` (F103), audience `SkaInternal`,
   `SkaCustomer`, `SkaPublic`, language, the queue and product category it is first for, priority, allow suggestions, review
   team, draft space and parent path) and `ArticleFeedback` (page and version, helpful, plain-text comment, case,
   organization and source, agent or customer, `AfbSubmitted`/`AfbReviewed` with `AfdImprove`, `AfdNoChange`, `AfdDismissed`,
   note, reviewer, task).
 - Mantle services (`service/mantle/request/KnowledgeServices.xml`, `Knowledge.js`): `save#ServiceKnowledgeSource`
   (SUPPORT_POLICY_EDIT and the organization; a space the user may read, never an internal source in a space with a public
-  address, F-P12-2; dated by SupportCases.js's `startRow`, now exported), `find#ArticleSuggestions` (the subject's words in the
-  pages' paths, F-P12-5; the requester's language first, then the case's queue or product category, words matched and the
+  address, F104; dated by SupportCases.js's `startRow`, now exported), `find#ArticleSuggestions` (the subject's words in the
+  pages' paths, F107; the requester's language first, then the case's queue or product category, words matched and the
   source's priority; an agent's surface needs the organization and offers only pages the wiki lets the user view, drafts and
   internal articles flagged; `customerVisible` only published, unrestricted pages of customer and public sources), F59's
   `get#PublishedArticle` (the exact published version through `get#PublishedWikiPageText` with no version asked, checked
   against the page's, cleaned with `StringUtilities.cleanHtml`, as Forum.js's site pages; for P15), `get#ArticlePublicLink`
   (Send to customer: refuses a draft, ARTICLE_NOT_PUBLISHED, and an internal or unsourced article, ARTICLE_INTERNAL; the
-  space's `publicPageUrl`, made absolute on the server, F-P12-3), `record#ArticleFeedback` (SUPPORT_CASE_EDIT, F-P12-7),
+  space's `publicPageUrl`, made absolute on the server, F105), `record#ArticleFeedback` (SUPPORT_CASE_EDIT, F109),
   `review#ArticleFeedback` (SUPPORT_KNOWLEDGE_EDIT; each feedback in its own transaction, Done, Forbidden, AlreadyReviewed or
   Failed named per id; one task per article made by `make#ArticleTask`, a WikiPageWorkEffort for the source's review team, or
   the task given linked; the article never changed; an operation key answers a retry), `suggest#ArticleEdit` (F15: a task on
@@ -1551,7 +1551,7 @@ CS-KNOWLEDGE.
   replacement` and the Spanish `help/es/Thermostat temperatura incorrecta`; the new internal space ZZW_SVC with the published
   `Thermostat calibration offset` and `drafts/`; Retail's sources (help/ customers en, help/es/ customers es, both reviewed by
   the Support team with drafts in ZZW_SVC; ZZW_SVC agents en); two agents' feedback on the thermostat article from Joe's case.
-  BossYCustomerServiceCasesDemoData: the knowledge author in the Support team (F-P12-8), and on Joe's thermostat case the
+  BossYCustomerServiceCasesDemoData: the knowledge author in the Support team (F110), and on Joe's thermostat case the
   agent's outward email (his name and the order to take out) and an internal note.
 - Specs: Mantle `test/request/SupportKnowledge` (6 features, about 1.5 s: the sources' save and refusals, suggestions in the
   requester's language first and on both surfaces, the exact published version and the public link's refusals, the feedback
@@ -1560,7 +1560,7 @@ CS-KNOWLEDGE.
   refusals, ArticleFeedback's one qvt render, CaseToArticle's one qvt render) and `CustomerServiceAccess` (+1 feature: the
   feedback for the author and manager and not an agent, CaseToArticle for the author on their organization's case, both
   screens refused the agent). Acceptance `acceptance/CustomerService/CustomerServiceKnowledgeWalk` (the usable-when, 4
-  features); `AppStructure` (the four routes, `fullPathOnly` for the Knowledge group, F-P12-4; the placeholder floor 51) and
+  features); `AppStructure` (the four routes, `fullPathOnly` for the Knowledge group, F106; the placeholder floor 51) and
   `CustomerServiceFoundationWalk` (Knowledge opens in tui; Send to customer's parameter for the client sweep).
 - Tests run (all pass): Mantle SupportKnowledge, SupportCases; BOSS CustomerServiceKnowledge, CustomerServiceAccess,
   CustomerServiceCases, Knowledge, KnowledgeReview, Notes, ProjectsAccess; acceptance CustomerServiceKnowledgeWalk,
@@ -1576,30 +1576,30 @@ CS-KNOWLEDGE.
   - The knowledge author drafts from a case of a team they belong to; the manager reads the feedback queue, only the author
     reviews it.
 - Findings (provisional):
-  - **F-P12-1** WikiPage has no language and the demo keeps English and Spanish customer articles in the one space ZZW_RETAIL,
+  - **F103** WikiPage has no language and the demo keeps English and Spanish customer articles in the one space ZZW_RETAIL,
     so a source is a space or the part of it under a page path; a page belongs to its space's source with the longest
     matching prefix. Design KnowledgeSources changed.
-  - **F-P12-2** ZZW_RETAIL is the POPC store's public content space (`publicPageUrl` /popc/content/…, restrictView N): a
+  - **F104** ZZW_RETAIL is the POPC store's public content space (`publicPageUrl` /popc/content/…, restrictView N): a
     published page there is public, so an internal article cannot be one of its pages. Internal articles are in ZZW_SVC, and
     save#ServiceKnowledgeSource refuses an internal source in a space with a public address (INTERNAL_PUBLIC_SPACE). Design
     changed.
-  - **F-P12-3** ZZW_RETAIL's `publicPageUrl` is relative; get#ArticlePublicLink makes it absolute on the webroot's URL when
+  - **F105** ZZW_RETAIL's `publicPageUrl` is relative; get#ArticlePublicLink makes it absolute on the webroot's URL when
     there is a web request (a send from a job would keep it relative). P15's CustomerArticle builds the link with
     `PublicApps.pageUrl` instead.
-  - **F-P12-4** Commons Knowledge renders in vue, qvue and tui only, so the Customer Service Knowledge group, whose default it
+  - **F106** Commons Knowledge renders in vue, qvue and tui only, so the Customer Service Knowledge group, whose default it
     is, opens at its full path; AppStructure skips the group path (`fullPathOnly`) and renders the mount, and
     FoundationWalk opens the area in tui. Knowledge.qvue finds its own level by the last `Knowledge` of the path.
-  - **F-P12-5** Without a search index `search#WikiPages` matches only a page path containing the whole text, so suggestions
+  - **F107** Without a search index `search#WikiPages` matches only a page path containing the whole text, so suggestions
     match each word of the subject (three letters or more, common words left out) in the page paths, ignoring case, in the
     query; ranking by the text through the index is later.
-  - **F-P12-6** An agent who files a case is its Reporter (P2's thermostat demo case), so the customer's side of a case's
+  - **F108** An agent who files a case is its Reporter (P2's thermostat demo case), so the customer's side of a case's
     messages and personal data is its Customer and Reporter parties that are not staff (an internal organization or someone
     who works for one).
-  - **F-P12-7** The plan names four Mantle services; Send to customer, the agents' feedback, Suggest edit and F59's read need
+  - **F109** The plan names four Mantle services; Send to customer, the agents' feedback, Suggest edit and F59's read need
     `get#ArticlePublicLink`, `record#ArticleFeedback`, `suggest#ArticleEdit` (with the internal `make#ArticleTask`) and
     `get#PublishedArticle`, which P15's CustomerArticle and its rating call. Design CaseDetail's Knowledge tab changed
     (Helpful?).
-  - **F-P12-8** A knowledge author sees no case unless in a team of its queue (the Support queue is SqvTeam); the demo
+  - **F110** A knowledge author sees no case unless in a team of its queue (the Support queue is SqvTeam); the demo
     author joined the Support team.
 
 **Review Nov 5 (P12).** Checked both repos' diffs against this section, §2, design §3, §6 and §9, AGENTS.md and
@@ -1623,7 +1623,7 @@ the usable-when (it covers all four).
   parties of the case's emails, emails by shape first. Mantle spec cases.
 - R4 (medium) review#ArticleFeedback made the task and reviewed the feedback in two transactions, so a failed review left a
   task behind; each feedback is one transaction (the internal review#ArticleFeedbackItem, as PurchaseRequests' groups).
-- R5 (low) Send to customer addressed the case's Reporter even when an agent filed the case (F-P12-6); a staff party is
+- R5 (low) Send to customer addressed the case's Reporter even when an agent filed the case (F108); a staff party is
   skipped for the customer.
 - R6 (low) get#PublishedArticle accepted an answer with no version; the version read must be the page's published one.
 - Checked and kept: get#PublishedArticle refuses a page of an internal source, of no source, a draft or a restricted page
@@ -1922,6 +1922,35 @@ is written there too.
 | F82 | P2: Mantle's specs run with BOSS's demo data loaded, so a demo ServicePolicy that service-enables a type for an organization a Mantle flow uses turns its requests into cases (WorkPlanToCashBasicFlow with ORG_ZIZI_SERVICES) | The Services demo enables no type; no later phase service-enables a type for ORG_ZIZI_SERVICES |
 | F83 | P2: F64's "not from SlaServices or SupportCaseServices" is not done as a caller check (Practices-App-Dev §4) | The case services write the Request entity themselves, and `update#Request` refuses a due date, resolution or close on a case (CASE_MANAGED); P4's SlaServices writes the same way |
 | F84 | P2: the case rule runs after commit on the service pool, so a request's CaseProfile appears a moment after `create#Request` returns | Specs wait for it; NewCase and the Support app call `create#Case`, and `get#CaseState`'s `wouldBeCase` answers before the profile exists |
+| F85 | P3: `org.moqui.impl.EmailClientServices.save#Draft` refuses an attachment outside the account's own mail files unless authorization is disabled; Mantle's resend attaches the stored OrderContent PDF that way, after its own checks. | See P3 |
+| F86 | P3: Accounting's receivables groups hold RECEIVABLE_VIEW, not ACCOUNTING_VIEW, so §2's "financial amount by ACCOUNTING_VIEW" would withhold invoice amounts from an AR user; Customer Service reads either (§2 should say so). | See P3 |
+| F87 | P3: Customer Service users held no catalog read: Products' shared screens refuse without PRODUCT_CATALOG_VIEW. P3 grants it to the root group and PRICE_VIEW to the agent, manager, order desk and administrator; the service reader has no price read, so Product360 has no Prices tab for it and PriceExplain, which checked catalog read only, is refused it here. | See P3 |
+| F88 | P3: Shared/Customer360 is Accounting's: its header and every tab read `get#CustomerContext` and its capabilities; the Customer Service branch reads in always-actions (a tab renders alone), adds its own tabs and a conditional default, and keeps Accounting's tabs to Accounting by a condition on each. | See P3 |
+| F89 | P3: find#ServiceCustomers' phone search (P2) matched the digits alone, which miss a number kept with its separators ("234-5678"); it and the palette now match the number as typed too. | See P3 |
+| F90 | P3: A credit hold is placed only by the credit policy (`hold#Order`), so the demo's held order is a manual hold with its reason; a credit hold's reason is withheld from a user without CUSTOMER_CREDIT_VIEW (checked on Customers and OrderDetail by the code path, not by demo data). | See P3 |
+| F91 | P3: Customer creation (FindCustomer's create forms) is not in Customer Service: the Commons contact record and Sales create parties; ss-inventory marks them so. | See P3 |
+| F92 | P3: CustomerService.js's `partyName` leaves out a middle name ("Joe Public") where Mantle's `partyNames` keeps it ("Joe Q Public", CaseDetail); P16 may align them. | See P3 |
+| F93 | P3: A shared screen's service (`CatalogServices.get#SharedContext`) is authorized through the mounting root's inherited authorization, so a spec calls it as a Customer Service user with authorization off, as Warehouse's do. | See P3 |
+| F94 | P4: Design ServiceLevelPolicies' "precedence" is not a field: the most specific condition ranks the policy, and two rows of one rank can both hold for a case only when their conditions are equal, so the refused overlap is two published rows with the same conditions over overlapping dates (EQUAL_RANK_OVERLAP); a replacement names its row and ends it. | See P4 |
+| F95 | P4: The case rule makes the profile after the commit (F84), so loaded data gets its clocks then: the demo team's hours are stored by a demo file that loads before the requests (BossX before BossY). A request made before any policy started (a backfill) takes the row in effect now. | See P4 |
+| F96 | P4: A declared in-parameter not passed arrives as null, so save#Policy reads null as "unchanged" and an empty string (a form's cleared field) as "none". | See P4 |
+| F97 | P4: Ending a weekly working-hours series from a date needs no new field: its RRULE's `UNTIL` (RFC 5545) ends it for get#EventInstances, get#FreeBusy and business time alike. | See P4 |
+| F98 | P4: A sent mail is filed on its case (RequestCommEvent) only once it is ES_SENT (file#SentEmail), so the RequestCommEvent rule sees a send the channel accepted; a failed send waits in the Outbox unfiled. Projects' intake confirmation is a RequestEmailMessage with no CommunicationEvent and never reaches the rule; `CpAcknowledgement` marks any other automatic message. | See P4 |
+| F99 | P4: BOSS's settings organization choice (every internal organization for the administrator) can be one Mantle's scope refuses (`get#PartyOrganizationInfo`; the administrator's first option ORG_ZIZI_CORP): ServiceLevelPolicies then says the organization's levels are not available. P2's settings saves have the same mismatch. Fixed in review (R3). | See P4 |
+| F100 | P4: CaseAnalytics (design §2: `CustomerService/Reports/CaseAnalytics`) made Reports a menu group before P14: Reports' placeholder is now `Reports/ReportsHome`. | See P4 |
+| F101 | P4: F50: P4 seeds `AgrService` and builds no store or expiry for service agreements; a policy's agreement condition reads an Agreement of that type between the organization and the customer, active by its dates and, when it has a status, AgmStActive. The purchase agreement services still refuse it. P11 builds the store. | See P4 |
+| F102 | P4: A customer's reply while the case waits for them is recorded (`SetCustomerReply`) but does not resume the clock: design ServiceDefaults' "customer reply before close reopens via policy" is P8's. Review: the wait is P4's (a resolved case's reopen stays P8's), fixed (R2). | See P4 |
+| F103 | P12: WikiPage has no language and the demo keeps English and Spanish customer articles in the one space ZZW_RETAIL, so a source is a space or the part of it under a page path; a page belongs to its space's source with the longest matching prefix. Design KnowledgeSources changed. | See P12 |
+| F104 | P12: ZZW_RETAIL is the POPC store's public content space (`publicPageUrl` /popc/content/…, restrictView N): a published page there is public, so an internal article cannot be one of its pages. Internal articles are in ZZW_SVC, and save#ServiceKnowledgeSource refuses an internal source in a space with a public address (INTERNAL_PUBLIC_SPACE). Design changed. | See P12 |
+| F105 | P12: ZZW_RETAIL's `publicPageUrl` is relative; get#ArticlePublicLink makes it absolute on the webroot's URL when there is a web request (a send from a job would keep it relative). P15's CustomerArticle builds the link with `PublicApps.pageUrl` instead. | See P12 |
+| F106 | P12: Commons Knowledge renders in vue, qvue and tui only, so the Customer Service Knowledge group, whose default it is, opens at its full path; AppStructure skips the group path (`fullPathOnly`) and renders the mount, and FoundationWalk opens the area in tui. Knowledge.qvue finds its own level by the last `Knowledge` of the path. | See P12 |
+| F107 | P12: Without a search index `search#WikiPages` matches only a page path containing the whole text, so suggestions match each word of the subject (three letters or more, common words left out) in the page paths, ignoring case, in the query; ranking by the text through the index is later. | See P12 |
+| F108 | P12: An agent who files a case is its Reporter (P2's thermostat demo case), so the customer's side of a case's messages and personal data is its Customer and Reporter parties that are not staff (an internal organization or someone who works for one). | See P12 |
+| F109 | P12: The plan names four Mantle services; Send to customer, the agents' feedback, Suggest edit and F59's read need `get#ArticlePublicLink`, `record#ArticleFeedback`, `suggest#ArticleEdit` (with the internal `make#ArticleTask`) and `get#PublishedArticle`, which P15's CustomerArticle and its rating call. Design CaseDetail's Knowledge tab changed (Helpful?). | See P12 |
+| F110 | P12: A knowledge author sees no case unless in a team of its queue (the Support queue is SqvTeam); the demo author joined the Support team. | See P12 |
+| F111 | P3 review: an organization's `orderConfirmationOnPlace` flag (PartyAcctgPreference) has no field on Accounting's organization settings; with it on for the Retail demo, the demo load met statement timeouts against the Accounting demo's background loader, so the demo leaves it off | P16, or Accounting's settings when next touched: the field in SetupServices.xml's flag list; the demo contention looked at before a demo turns it on |
+| F112 | P4 review: Cases' Needs response and SLA risk views pass up to 5000 request IDs from the clock table as an `in` list; a clock that keeps failing in the scan is named on every run and keeps a slot in each batch; working hours stored for another person go on that person's schedule calendar, not the personal series free/busy reads | P14 (a join or subquery for the views when reports are built); §7 for the others |
+| F113 | P12 review: an operation key reused after a feedback batch committed but before the key was recorded answers AlreadyReviewed per item, not the first result; redaction from up to 200 orders, returns and invoices can over-redact a short numeric ID, which the author sees in the preview; the ArticleFeedback list shows page titles to authors and managers without the per-page wiki check | Kept: the same window as the other batches; the preview; the organization's own articles |
 
 ## 7. Later
 
