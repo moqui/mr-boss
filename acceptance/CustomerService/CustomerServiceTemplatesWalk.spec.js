@@ -65,6 +65,10 @@ feature(
     {
         when() {
             const step = asUser(users.agent, () => lib.page("Cases/NewCase", {customerPartyId: ids.customerId}))
+            // the step made for a queue with no template, the queue changed to Support in step 2: refused, not asked for
+            // fields never shown
+            const switched = newCase("Queue switched in step two", {templateQueueId: ids.privacyQueueId, templateFormId: ""})
+            const switchedRequest = one("mantle.request.Request", {requestName: "Queue switched in step two"})
             const refused = newCase("Thermostat dead after a week", {productKind: "equipment", problemStarted: "2026-11-01"})
             const refusedRequest = one("mantle.request.Request", {requestName: "Thermostat dead after a week"})
             const made = newCase("Thermostat dead after a week", {
@@ -87,9 +91,11 @@ feature(
                 () => invoke(S + "get#CaseTemplateValues", {requestId: supplyCase?.requestId}),
                 false
             )
-            return {step, refused, refusedRequest, made, profile, overview, supply, supplyValues}
+            return {step, switched, switchedRequest, refused, refusedRequest, made, profile, overview, supply, supplyValues}
         },
-        then({step, refused, refusedRequest, made, profile, overview, supply, supplyValues}) {
+        then({step, switched, switchedRequest, refused, refusedRequest, made, profile, overview, supply, supplyValues}) {
+            switched.errors.includes("asks for the fields of its template Defective product")
+            switchedRequest == null
             step.errors == []
             step.output.includes("What kind of product is it?")
             step.output.includes("Serial number")

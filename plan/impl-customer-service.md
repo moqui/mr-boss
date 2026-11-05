@@ -1363,8 +1363,8 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
     (a type's template waits for a type that needs one, P11's warranty claim).
   - Published changes of label, help, required, order and options apply from now, in place and audit-logged; Publish starts the
     drafts; a later date or a new kind or audience is a successor field.
-  - The customer's projection of a template needs no permission (a published form's customer fields name no customer or case);
-    the case values' customer projection checks the user's organization until P15 adds the contact's path.
+  - The customer's projection of a template, and of a case's values, checks the user's organization until P15 adds the
+    contact's path (ExternalAccessContact) (Review R5).
 - Findings (provisional):
   - **F-P7-1** The audience: a DbFormFieldAttribute is neither dated nor audit-logged and goes onto the rendered widget as an XML
     attribute, and a Mantle record by formId and fieldName would be a second dated row to keep in step with every successor.
@@ -1404,10 +1404,13 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
     attribute. (b) Marble's Survey screens (`SimpleScreens/Survey/Fields.xml`, `EditSurvey.xml`) edit any DbForm by formId,
     a case template among them, past Mantle's allowlist (`${` in a label, the audience); they should refuse a form with a
     purpose other than a survey's. (c) The customer projection (`get#CaseTemplate`, `validate#TemplateValues` customer)
-    checks no organization until P15 adds the contact's path, so any user reads another organization's customer-visible
-    fields. (d) A queue whose template requires a field refuses a create#Case with no values: P6's channel intake must not go
-    through create#Case's template check, or pass `templateValues`. (e) NewCase takes the template of the queue chosen in step
-    one; a different queue chosen in step two with its own template gets that template's required fields refused unasked.
+    checked no organization (fixed, R5). (d) A queue whose template requires a field refuses a create#Case with no values:
+    P6's channel intake must not go through create#Case's template check, or pass `templateValues`. (e) fixed, R6.
+  - R5 (medium) `get#CaseTemplate` and `validate#TemplateValues` with the customer audience now need the template's
+    organization, as the agent's reads (RECORD_UNAVAILABLE); P15 adds the contact's path.
+  - R6 (medium) NewCase built its template step for the type's queue, so a queue changed in step two to one with another
+    template had that template's required fields demanded unseen: createCase now refuses a queue whose template is not the one
+    shown (the step's queue in a hidden `templateQueueId`), naming the template to choose in step one.
 
 ### P8 — Merge, split and closing
 

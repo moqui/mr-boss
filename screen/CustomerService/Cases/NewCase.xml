@@ -56,6 +56,14 @@ along with this software (see the LICENSE.md file). If not, see
                 <service-call name="ironstone.customerservice.AccessServices.check#Record"
                         in-map="{appRoot:appRoot, recordType:'order', recordId:orderId}"/>
             </if>
+            <!-- P7: a queue changed in this step to one whose template was not the one shown is refused, so a field never shown
+                is never demanded; the template chosen in step one is the way to it -->
+            <if condition="templateQueueId &amp;&amp; requestCategoryId &amp;&amp; requestCategoryId != templateQueueId">
+                <service-call name="ironstone.customerservice.TemplateServices.get#CaseTemplateChoice" out-map="queueChoice"
+                        in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, requestCategoryId:requestCategoryId}"/>
+                <if condition="queueChoice.queueTemplateFormId &amp;&amp; queueChoice.queueTemplateFormId != (templateFormId || '')">
+                    <return error="true" message="This queue asks for the fields of its template ${queueChoice.templateName}: choose it as the Template in step 1, then fill it in"/></if>
+            </if>
             <service-call name="mantle.request.SupportCaseServices.create#Case" out-map="created"
                     in-map="{organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
                         contactPartyId:(contactPartyId || null), requestTypeEnumId:(requestTypeEnumId || null),
@@ -95,7 +103,8 @@ along with this software (see the LICENSE.md file). If not, see
         <script>ec.message.clearErrors()</script>
         <set field="caseTemplateFormId" from="templateChoice?.templateFormId || ''"/>
         <set field="caseTemplateOptions" from="templateChoice?.templateOptions || []"/>
-        <script>identity.templateFormId = caseTemplateFormId; caseValues.templateFormId = caseTemplateFormId</script>
+        <script>identity.templateFormId = caseTemplateFormId; caseValues.templateFormId = caseTemplateFormId
+            caseValues.templateQueueId = prepared.requestCategoryId || ''</script>
         <!-- the template's form as of now without its drafts, whatever the request's parameters say (db_form reads both from the
             context: dbFormAsOfDate, dbFormIncludeDrafts) -->
         <set field="dbFormAsOfDate" from="null"/>
@@ -247,6 +256,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-single name="SubmitCase" transition="createCase" map="caseValues" focus-field="requestName"
                                         dynamic="true" extends="${caseTemplateFormId ? 'DbForm#' + caseTemplateFormId : 'CaseNoTemplate'}">
                                     <field name="templateFormId"><default-field><hidden/></default-field></field>
+                                    <!-- the queue the template step was made for (createCase refuses another queue's unseen template) -->
+                                    <field name="templateQueueId"><default-field><hidden/></default-field></field>
                                     <field name="organizationPartyId"><default-field><hidden/></default-field></field>
                                     <field name="customerPartyId"><default-field><hidden/></default-field></field>
                                     <field name="requestTypeEnumId"><default-field><hidden/></default-field></field>
