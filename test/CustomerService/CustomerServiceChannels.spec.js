@@ -104,7 +104,9 @@ feature("ChannelRouting reads the demo routes, a mail rule naming the queue and 
         routing.routes.some(row => row.serviceRouteId == ids.mailRouteId && row.acknowledge == "Y" && row.queueText == "Support")
         routing.routes.some(row => row.serviceRouteId == ids.formRouteId && row.rateLimitPerHour == "20")
         routing.rules.some(row => row.emailRuleId == "CSCH_RULE" && row.queueText == "Support")
-        routing.tokens.some(row => row.requestCategoryId == ids.supportQueueId && row.active == false)
+        // the Support queue's public form token is P15's demo (the Support app's NewCustomerCase); Privacy has none
+        routing.tokens.some(row => row.requestCategoryId == ids.supportQueueId && row.active == true)
+        routing.tokens.some(row => row.requestCategoryId == ids.privacyQueueId && row.active == false)
         routing.held.some(row => row.requestName == "CSCH who handles returns" && row.reasonText.includes("unknown sender"))
         !routing.routes.some(row => row.requestCategoryId == ids.otherQueueId)
     }

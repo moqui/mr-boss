@@ -279,8 +279,9 @@ feature("the portal demo: ORG_ZIZI_RETAIL's Billing, Supplier and Support site, 
         invoice.statusId == "InvoiceFinalized"
         gateway.invoicePayGatewayConfigId == "ZIZI_PORTAL_HOSTED"
         // with Purchasing's Supplier app demo (P16): Ziddleman's quote link and the order's acknowledgement link; with
-        // Customer Service's feedback demo (P13): the answered invitation's link
-        links.sort().join() == "BillUpload,CaseFeedback,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
+        // Customer Service's feedback demo (P13): the answered invitation's link; with its Support app demo (P15): the
+        // Support queue's public form token
+        links.sort().join() == "BillUpload,CaseFeedback,CaseIntake,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
         payer.join() == "billing:JoeDist"
         supplier.join() == "supplier:ZiddlemanInc"
         groups.length == 0
