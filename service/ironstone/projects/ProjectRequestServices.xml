@@ -132,7 +132,12 @@ along with this software (see the LICENSE.md file). If not, see
                     .condition(vis.allProjects ? cf.makeCondition('partyId', 'is-not-null', null) : cf.makeCondition('partyId', 'in', orgIds.length ? orgIds : ['_NA_'])).list())
                 for (const id of Array.from(ec.service.sync().name('mantle.request.RequestServices.get#IntakeSettings').parameters({organizationPartyId: setting.partyId})
                         .call()?.settings?.triagedTypes || [])) triaged.add(id)
-            if (triaged.size) reach.push(cf.makeCondition([cf.makeCondition('rootWorkEffortId', 'equals', null), cf.makeCondition('requestTypeEnumId', 'in', Array.from(triaged))], 'and'))
+            // a request in a service queue (a case, or one held for review there) is Customer Service's, not Projects' triage (impl-customer-service P6)
+            const serviceQueueIds = triaged.size ? Array.from(new Set(Array.from(ec.entity.find('mantle.request.support.ServiceQueue')
+                    .condition(cf.makeCondition('fromDate', 'is-not-null', null)).conditionDate('fromDate', 'thruDate', ec.user.nowTimestamp)
+                    .selectField('requestCategoryId').disableAuthz().list()).map((row) => row.requestCategoryId))) : []
+            if (triaged.size) reach.push(cf.makeCondition([cf.makeCondition('rootWorkEffortId', 'equals', null), cf.makeCondition('requestTypeEnumId', 'in', Array.from(triaged)),
+                cf.makeCondition([cf.makeCondition('requestCategoryId', 'equals', null), cf.makeCondition('requestCategoryId', 'not-in', serviceQueueIds.length ? serviceQueueIds : ['_NONE_'])], 'or')], 'and'))
             if (!reach.length) return
             let find = ec.entity.find('mantle.request.Request').condition(cf.makeCondition(reach, 'or'))
             // a purchase RFQ is in no Projects list (impl-purchasing P11, R-PUR-13)
