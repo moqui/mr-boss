@@ -2017,6 +2017,6 @@ Mantle services Customer Service P11 added or calls that had no row.
 | request/WarrantyServices | link#WarrantyWork | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Add repair: an AssetMaintenance with its WepMaintenance task) (Customer Service P11) |
 | request/WarrantyServices | update#WarrantyWork |  | CustomerService/Returns/WarrantyAssessment (Update repair: in process, finished, cancelled) (Customer Service P11) |
 | request/WarrantyServices | notify#WarrantyWorkFinished |  | (internal: the WarrantyWorkFinished rule on AssetMaintenance; the WarrantyRepairFinished topic; Customer Service P11) |
-| request/WarrantyServices | store#ServiceAgreement |  | (no screen yet: Customer360's ServiceAgreements form is P14's; the demo and Mantle's spec call it; Customer Service P11) |
+| request/WarrantyServices | store#ServiceAgreement | Shared/Customer360 | Shared/Customer360/ServiceStatistics (ServiceAgreements: New agreement and Change, SUPPORT_POLICY_EDIT, after check#Record; Customer Service P14); the demo and Mantle's spec call it (Customer Service P11) |
 | request/WarrantyServices | find#DeliveredItems | Shared/Customer360 | Shared/Customer360/ServiceDeliveredItems (DeliveredItems, crosscut §3.2) (Customer Service P11) |
 | product/EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | CustomerService/Returns/WarrantyAssessment (through link#WarrantyWork: AsMntCreated, MntTpWarranty, the sold serial's Asset; Customer Service P11) |

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Service tab, in the Customer Service context (crosscut §3.2 CustomerServiceStatistics and ServiceAgreements;
+    impl-customer-service P14): CustomerServiceStatistics, the customer's service measures over a period of 30, 90 or 365 days
+    (ironstone.customerservice.ReportingServices.get#CustomerServiceStatistics: open cases, failed service levels, mean first
+    response and resolution in business time, satisfaction's mean score, each with its denominator; the user's organizations'
+    cases only), drilling into the customer's cases; and ServiceAgreements, the customer's service agreements
+    (get#ServiceAgreements: period, status, whether it covers now, the products covered and the warranty terms), with New
+    agreement and Change for a holder of SUPPORT_POLICY_EDIT through Mantle's mantle.request.WarrantyServices
+    store#ServiceAgreement after the customer's check (P11 built the store, F165). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Service" default-menu-index="5">
+    <parameter name="customerPartyId"/>
+    <parameter name="periodDays"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="storeAgreement">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'customer', recordId:customerPartyId}"/>
+            <service-call name="mantle.request.WarrantyServices.store#ServiceAgreement"
+                    in-map="{agreementId:agreementId || null, organizationPartyId:organizationPartyId, customerPartyId:customerPartyId,
+                        description:description || null, fromDate:fromDate || null, thruDate:thruDate || null,
+                        statusId:statusId || null, warrantyTermsText:warrantyTermsText || null, productId:productId || null}"/>
+        </actions>
+        <default-response url="."><parameter name="customerPartyId"/></default-response>
+        <error-response url="."><parameter name="customerPartyId"/></error-response>
+    </transition>
+    <actions>
+        <set field="statistics" from="null"/>
+        <set field="agreementRows" from="[]"/>
+        <if condition="customerFound">
+            <service-call name="ironstone.customerservice.ReportingServices.get#CustomerServiceStatistics" out-map="statistics"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, customerPartyId:customerPartyId, periodDays:(periodDays ? Number(periodDays) : 90)}"/>
+            <service-call name="ironstone.customerservice.ReportingServices.get#ServiceAgreements" out-map="agreementsOut"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, customerPartyId:customerPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="agreementRows" from="agreementsOut?.agreementRows || []"/>
+            <set field="canStore" from="!!agreementsOut?.canStore"/>
+        </if>
+        <set field="statisticsRows" from="statistics?.measures || []"/>
+        <set field="measureText" from="Object.fromEntries((statistics?.measures || []).map((measure) =&gt; [measure.key, measure]))"/>
+        <set field="periodOptions" from="[{value:'30', label:'Last 30 days'}, {value:'90', label:'Last 90 days'}, {value:'365', label:'Last year'}]"/>
+        <set field="statusOptions" from="[{value:'AgmStActive', label:'Active'}, {value:'AgmStDraft', label:'Draft'},
+                {value:'AgmStClosed', label:'Closed'}, {value:'AgmStCancelled', label:'Cancelled'}]"/>
+    </actions>
+    <widgets>
+        <section name="ServiceStatisticsTab" condition="customerFound &amp;&amp; statistics?.measures">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm">
+                    <container style="col">
+                        <label text="Service measures, ${statistics.periodText}, as of ${statistics.asOfText}" type="p"
+                                style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-auto">
+                        <form-single name="ServicePeriod" transition="." map="{periodDays:String(statistics.periodDays), customerPartyId:customerPartyId}">
+                            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+                            <field name="periodDays">
+                                <default-field title="Period">
+                                    <drop-down submit-on-select="true">
+                                        <list-options list="periodOptions" key="${value}" text="${label}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </container>
+                </container>
+                <dashboard min-width="170">
+                    <number-card title="${measureText.open.label}" value="${measureText.open.valueText}" icon="sym_o_inbox" size="sm"
+                            link="${statistics.casesUrl}"/>
+                    <number-card title="${measureText.failed.label}" value="${measureText.failed.valueText}" icon="sym_o_timer_off" size="sm"/>
+                    <number-card title="${measureText.firstResponse.label}" value="${measureText.firstResponse.valueText}" icon="sym_o_reply" size="sm"/>
+                    <number-card title="${measureText.resolution.label}" value="${measureText.resolution.valueText}" icon="sym_o_task_alt" size="sm"/>
+                    <number-card title="${measureText.satisfaction.label}" value="${measureText.satisfaction.valueText}" icon="sym_o_sentiment_satisfied" size="sm"/>
+                </dashboard>
+                <form-list name="CustomerServiceStatistics" list="statisticsRows" skip-form="true" paginate="false">
+                    <field name="label"><default-field title="Measure"><display/></default-field></field>
+                    <field name="valueText" align="right"><default-field title="Value"><display/></default-field></field>
+                    <field name="denominatorText"><default-field title="Of"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="label"/></column>
+                        <column><field-ref name="valueText"/><field-ref name="denominatorText"/></column>
+                    </columns>
+                </form-list>
+            </widgets>
+        </section>
+        <section name="ServiceAgreementsTab" condition="customerFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Service agreements"/>
+                    <box-toolbar>
+                        <container-dialog id="NewServiceAgreement" button-text="New agreement" condition="canStore">
+                            <form-single name="NewServiceAgreementForm" transition="storeAgreement">
+                                <field name="customerPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Organization">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'organizations'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="description"><default-field title="Description"><text-line/></default-field></field>
+                                <field name="productId">
+                                    <default-field title="Product covered" tooltip="Every product when empty">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'products'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="warrantyTermsText"><default-field title="Warranty terms"><text-area rows="3"/></default-field></field>
+                                <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                <field name="submit"><default-field title=""><submit text="Save agreement" type="primary"/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!agreementRows.length"
+                                text="No service agreement with this customer: its warranty comes from the product's warranty."/>
+                        <form-list name="ServiceAgreements" list="agreementRows" skip-form="true" paginate="false">
+                            <field name="agreementId">
+                                <default-field title="Agreement">
+                                    <display text="${agreementId}"/>
+                                    <label text="${description}" type="div" style="text-caption m-muted" condition="description"/>
+                                </default-field>
+                            </field>
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="periodText"><default-field title="Period"><display/></default-field></field>
+                            <field name="productsText"><default-field title="Covers"><display/></default-field></field>
+                            <field name="termsText"><default-field title="Warranty terms"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="Status">
+                                    <display text="${statusText}"/>
+                                    <label text="${coverageText}" type="div" style="text-caption text-${coverageColor}"/>
+                                </default-field>
+                            </field>
+                            <field name="change">
+                                <conditional-field title="" condition="canStore">
+                                    <container-dialog id="ChangeAgreement_${agreementId}" button-text="Change" title="Change ${agreementId}">
+                                        <form-single name="ChangeAgreementForm" transition="storeAgreement">
+                                            <field name="agreementId" from="agreementId"><default-field><hidden/></default-field></field>
+                                            <field name="customerPartyId" from="customerPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId" from="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="description" from="description"><default-field title="Description"><text-line/></default-field></field>
+                                            <field name="productId" from="productId"><default-field><hidden/></default-field></field>
+                                            <field name="warrantyTermsText" from="termsText"><default-field title="Warranty terms"><text-area rows="3"/></default-field></field>
+                                            <field name="fromDate" from="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                                            <field name="thruDate" from="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                                            <field name="statusId" from="statusId">
+                                                <default-field title="Status">
+                                                    <drop-down><list-options list="statusOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submit"><default-field title=""><submit text="Save" type="primary"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </conditional-field>
+                                <default-field title=""><display text=" "/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="agreementId"/><field-ref name="productsText"/></column>
+                                <column><field-ref name="periodText"/><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

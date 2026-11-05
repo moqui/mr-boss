@@ -301,7 +301,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | built Nov 5, 2026 |
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
 | P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | built Nov 5, 2026 |
-| P14 Reports | BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis | — |
+| P14 Reports | Mantle (views), BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis, Customer360's Service tab | built Nov 5, 2026 |
 | P15 Support app | Mantle, mr-pass, BOSS | Support's SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle; ContactDetail's invitation | — |
 | P16 Finish | BOSS | — | — |
 
@@ -2845,6 +2845,109 @@ Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases befor
   - a merged case counts once in the backlog;
   - ReturnAnalysis shows amounts per currency and counts an open return as requested;
   - a manager of one team sees only its queues, and the CSV has the same rows.
+
+**Built Nov 5 (P14).**
+- Mantle (views only, `entity/SupportReportEntities.xml`, new): `mantle.request.support.CaseClockRequest` (a clock with its
+  case's queue, type, channel, priority and status) and `CaseRequestClock` (a case with each of its clocks, join-optional, so a
+  case with none is one row with no clock). No Mantle service or rule changed.
+- BOSS `service/ironstone/customerservice/Reporting.js` (new) and `ReportingServices.xml` (appended): the reports' scope (the
+  Reports area's grant; the user's organizations, one asked for refused when not theirs; the queues of the teams they report
+  on: an administrator every queue they see, a manager the queues of the teams they manage, anyone else their own teams'
+  queues; a queue or team asked for outside it refused RECORD_UNAVAILABLE), the period (days in the user's zone, at most two
+  years) with an as-of time (now, or earlier: the facts recorded by then by their dates), the frame every answer carries (as
+  of, period and time zone, filters and queues, what was left out), bounded reads (5,000 rows, 2,000 timed clocks, 200
+  groups, each named when reached) and the export (output csv: the frame then the same rows, formula-like text guarded, audited
+  through `org.moqui.report.ReportServices.audit#Export` as `CustomerService.<report>`). Services: `define#ReportParameters`,
+  `get#ReportCatalogue`, `get#SlaCompliance` (clocks started in the period as they stood at the as-of time: met, missed, closed
+  without it, open past due, open within target; the rate met over the decided and the open past due; cancelled apart, never
+  in the rate; never an SlsMerged clock, its carried copy on the kept case counted; by queue, team, band, policy row and
+  calendar, channel or clock; paused business time), `get#ResponseTimes` (first response or each resolution episode done in
+  the period: count, median, p90 and mean in business time on the clock's calendar less its pauses, BusinessTime.js
+  `elapsedMinutes`, and in elapsed time; the open clocks and their median age), `get#CaseVolumes` (received, of which split
+  off, resolved, reopened and cancelled from the status audit log, merged apart from the cancellations, assignments, and the
+  backlog open at the as-of time; by queue, team, type, channel, day, week or month), `get#ReturnAnalysis` (the organizations'
+  customer returns of served customers entered in the period, cancelled ones apart: returns, open returns, items, requested
+  (an open return counted as requested), received, accepted, rejected (receipts by then), replaced, credited (billing links
+  settled by then), and the requested, credited and open amounts per currency, withheld without PRICE_VIEW, ACCOUNTING_VIEW
+  or RECEIVABLE_VIEW; by reason, product, response, customer, received status or month), `get#CustomerServiceStatistics`
+  (crosscut §3.2: open cases, failed service levels, mean first response and resolution in business time, the answers' mean
+  score and count, no comment, each with its denominator) and `get#ServiceAgreements` (the customer's AgrService agreements
+  with the user's organizations: period, status, covers now, products, warranty terms; whether the user may store one).
+  `get#ServiceDashboard` is complete: the My and Team split (`splitRows`: the user's own cases' open, overdue and service
+  levels beside their queues' for a case editor in queues) beside each rate's change against the previous period.
+- `Cases.js` (F112): Needs response and SLA risk read `CaseRequestClock` with the case fields distinct (no id list read
+  first); `get#QueueCounts` counts open, assigned, overdue and breached per queue in the query (no case list read);
+  `slaMeasures` counts over `CaseClockRequest` (no 20,000-id list), and with `myOnly` the user's own; `myCounts` (new).
+  `CustomerService.js`: the choices `reportQueues` and `reportTeams` (Reporting.js `reportQueues`), and the link paths.
+- Screens: `Reports/ReportsHome.xml` (ReportCatalogue, replacing the placeholder: each report the user may read with what it
+  shows, its filters and its export, CSAT results for service management only), `Reports/ServiceLevelCompliance.xml` (SlaFind,
+  SlaResults with a queue's row opening its cases), `Reports/ResponseTimes.xml` (ResponseFind, ResponseResults),
+  `Reports/CaseVolumes.xml` (VolumeFind, VolumeResults), `Reports/ReturnAnalysis.xml` (ReturnAnalysisFind,
+  ReturnAnalysisResults, the amounts per currency), each with its totals and an exportCsv transition;
+  `template/CustomerServiceReportParts.xml` (ReportFrame, ReportMissing); `Reports.xml` takes SatisfactionResults out of the
+  menu (`menu-include="false"`, F186); `Shared/Customer360/ServiceStatistics.xml` (the Service tab: CustomerServiceStatistics
+  with its period and ServiceAgreements with New agreement and Change over `mantle.request.WarrantyServices.store#ServiceAgreement`
+  after `check#Record`, for SUPPORT_POLICY_EDIT); `Home.xml` each rate's change (`delta`) and the My and Team split.
+- Shipped reports (CS-STACK, L6): `data/BossCustomerServiceReportData.xml` (the DataDocument `BossServiceClock` over
+  CaseSlaEpisode with its case's queue, type, channel and status, the push feed `BossServiceClocks`, granted to ADMIN),
+  `report/boss-service-clocks.json` and `report/boss-service-breaches.json` (datasets by start and by breach) and
+  `report/boss-service-sla-breach.json` (the alert template: cases breached in the last hour by queue, above 0, to the
+  service managers on ReportAlert; it runs once saved as a copy).
+- Specs: regression `test/CustomerService/CustomerServiceReports` (2 features, 1.4 s: compliance with a merged, a cancelled,
+  an open past-due and a met clock; the export's rows; response times; return amounts for the manager and withheld from the
+  return authorizer; the catalogue's CSAT entry for the manager only; the shipped definitions; the views by clock and the
+  queue counts; one qvt render of ReportsHome, the four reports and Customer360's Service tab) and `CustomerServiceAccess`
+  (+1 feature, 0.2 s: the manager reads the Support queue and is refused Privacy's; the reader refused; Services' agent refused
+  Retail and Retail's customer). Acceptance `acceptance/CustomerService/CustomerServiceReportsWalk` (4 features, the
+  usable-when: a cancelled case's clocks apart, the kept case's open past-due clocks counted, the merged source's never, three
+  received, one merged, one cancelled, the backlog once; a resolution timed in business and elapsed time; an open return
+  requested with amounts per currency; the manager's queues against the administrator's, and the CSV's rows), `AppStructure`
+  (the five report routes; the placeholder floor 45).
+- Tests run (all pass): BOSS CustomerServiceReports, CustomerServiceAccess, CustomerServiceCases, CustomerServiceFeedback,
+  CustomerServiceRelations, CustomerServiceWarranty; acceptance CustomerServiceReportsWalk, AppStructure. `moqui lint
+  --screens`: 136 flagged sites, as master; none in the new or changed screens. No Mantle service or rule changed, so the
+  Mantle compatibility specs were not rerun.
+- Inventories: usl-inventory's store#ServiceAgreement row (Customer360's ServiceAgreements). No ss-inventory row is designed
+  into the reports (they have no mr-marble form).
+- Decisions:
+  - The reports' queues are the teams the user reports on (above), not every queue they may list: a queue shown to the whole
+    organization (SqvOrganization) is in Cases for every agent but in the reports of its team, its managers and the
+    administrator only.
+  - The compliance cohort is the clocks started in the period (a case's receipt, a reopen's clock), each read at the as-of
+    time; closed without it (unmet) counts as missed in the rate.
+  - The customer's satisfaction on Customer360 is the answers' mean score with its count for every Customer Service user; the
+    comments stay service management's (P13).
+- Findings (provisional):
+  - **F-P14-1** Insights' catalog (`ironstone.insights.ReportCatalogEntry`, INS-02) is not built and no app registers with it
+    yet (Purchasing P15 built none; Manufacturing F143 waits): Customer Service's entries are `Reporting.js`
+    `catalogueEntries` in design-insights §6.1's contract (entry id, the one owner, title, description, route, parameters,
+    the read capability, export), served by `get#ReportCatalogue` for ReportsHome, for Insights' registry to read when built.
+  - **F-P14-2** A dataset has one time field, so the shipped service data is two datasets over one DataDocument (by the clock's
+    start and by its breach); the breach alert reads the second. Insights' admission (design-insights §5) is not built: the
+    framework loads `report/*.json` read-only, and the alert template runs only as a saved copy, as Mantle's sales one.
+  - **F-P14-3** A report dataset is not filtered by the viewer's organizations at query time, so `BossServiceClock` is granted
+    to ADMIN only, as Mantle's sales datasets are, until Insights' admission applies the organization filter.
+  - **F-P14-4** Home's open, overdue and unassigned are counts now: their previous period needs the statuses at its start
+    (the audit log), which nothing keeps as a measure; the change shows on the rates (SLA compliance, first response,
+    resolution, CSAT).
+  - **F-P14-5** Design ResponseTimes' "next response" has no record: P4 keeps one first-response clock per case, never
+    restarted, and no clock per later reply, so ResponseTimes measures first response and each resolution episode. Design
+    ResponseTimes changed; a next-response clock is §7's.
+  - **F-P14-6** Design ReportCatalogue's "last run" and "favorite saved find" have no source (a report is a read, not a stored
+    run); the catalogue shows what each report shows, its filters and its export. Design Reports changed.
+  - **F-P14-7** ReturnAnalysis' return rate against the quantity shipped and the refunded amounts (ReturnItem's refund
+    payment) are not read: the rate needs the organizations' shipped quantity per product in the period, and a refund is a
+    payment, not a ReturnItemBilling link; the credited amount is the billing links'. Left for P16 or §7.
+  - **F-P14-8** The as-of time reads each fact by its own date (a clock's actual, due and breach; a receipt's received date; a
+    billing link's settled date; the audit log's change date); a clock's cancellation has no date of its own, so a cancelled
+    clock counts cancelled at any as-of time.
+  - **F-P14-9** F112 answered: the views by clock and Home's counts read the case with its clocks in one query; Mantle's
+    `Sla.js` `riskRequestIds` and `awaitingResponseIds` (2,000 ids) are no longer used by BOSS and stay for Mantle callers.
+  - **F-P14-10** F186 answered: SatisfactionResults is out of the Reports menu, and the catalogue offers it to
+    SUPPORT_CASE_MANAGE holders, who alone may read it.
+  - **F-P14-11** The export audit is a log line on `moqui.report.audit` (`audit#Export`: user, kind, definition, rows), not a
+    record; a report export appears there as `CustomerService.<report>`.
+  - **F-P14-12** AppStructure's placeholder floor is now 45 (ReportsHome built); P15 may lower it too.
 
 ### P15 — Support app
 

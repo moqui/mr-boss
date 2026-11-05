@@ -12,10 +12,38 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The report catalogue of IronStone Customer Service (design-customer-service §7 Reports; impl-customer-service P14). -->
+<!-- The report catalogue of IronStone Customer Service (design-customer-service §7 Reports ReportCatalogue; impl-customer-service
+    P14): the reports Customer Service owns that the user may read (ironstone.customerservice.ReportingServices
+    get#ReportCatalogue, the entries it registers for Insights' catalog): each with what it shows, the filters it takes and
+    whether it exports, opening the report; CSAT results for service management only (F186), and Case analytics opened from
+    a case. Nothing is run or exported from here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="1">
+    <actions>
+        <service-call name="ironstone.customerservice.ReportingServices.get#ReportCatalogue" out-map="catalogue"
+                in-map="{appRoot:appRoot}" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="reportRows" from="catalogue?.reports || []"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: Service reports." type="p"/>
+        <label text="Service reports" type="h5"/>
+        <label text="Each report reads your organizations and the queues of the teams you report on, as of the time it is run; its export holds the same rows."
+                type="p" style="m-muted"/>
+        <label text="No reports are available to you." type="p" condition="!reportRows.length"/>
+        <form-list name="ReportCatalogue" list="reportRows" skip-form="true" paginate="false">
+            <field name="title">
+                <default-field title="Report">
+                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                    <label text="${title}" type="strong" condition="!url"/>
+                </default-field>
+            </field>
+            <field name="description"><default-field title="What it shows"><display/></default-field></field>
+            <field name="parameters"><default-field title="Filters"><display/></default-field></field>
+            <field name="exportText"><default-field title="Export"><display/></default-field></field>
+            <columns type="mobile">
+                <column><field-ref name="title"/></column>
+                <column><field-ref name="description"/></column>
+            </columns>
+        </form-list>
     </widgets>
 </screen>

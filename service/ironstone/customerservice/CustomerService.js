@@ -317,7 +317,13 @@ const linkPaths = [
     "Settings/FeedbackForms",
     "Settings/FeedbackFormDetail",
     "Reports/SatisfactionResults",
-    "Reports/ResponseDetail"
+    "Reports/ResponseDetail",
+    // P14: the report catalogue and the reports
+    "Reports/ReportsHome",
+    "Reports/ServiceLevelCompliance",
+    "Reports/ResponseTimes",
+    "Reports/CaseVolumes",
+    "Reports/ReturnAnalysis"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -1112,6 +1118,34 @@ choiceSources.customerInvoices = (userScope, term, selected, p) => {
         .map(row => ({value: row.invoiceId, label: "Invoice " + row.invoiceId + " · " + statusText(row.statusId)}))
         .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
 }
+// P14: the queues and teams a report may be filtered by: those the user reports on (Reporting.js reportQueues; a manager's,
+// the queues of the teams they manage), of the organization chosen
+const reporting = () => ec.resource.script("component://mr-boss/service/ironstone/customerservice/Reporting.js")
+const reportQueueRows = (userScope, p) =>
+    reporting().reportQueues(
+        userScope,
+        p.organizationPartyId && vendorIds(userScope).includes(p.organizationPartyId)
+            ? [p.organizationPartyId]
+            : vendorIds(userScope)
+    )
+choiceSources.reportQueues = (userScope, term, selected, p) =>
+    reportQueueRows(userScope, p)
+        .map(queue => ({value: queue.requestCategoryId, label: queueName(queue.requestCategoryId)}))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .slice(0, choiceLimit)
+choiceSources.reportTeams = (userScope, term, selected, p) =>
+    Array.from(
+        new Set(
+            reportQueueRows(userScope, p)
+                .map(queue => queue.responsibleTeamPartyId)
+                .filter(Boolean)
+        )
+    )
+        .map(partyId => ({value: partyId, label: partyName(partyId)}))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .slice(0, choiceLimit)
 const assignedCaseIds = userScope =>
     userScope.partyId
         ? rows("mantle.request.RequestParty", {partyId: userScope.partyId, roleTypeId: "Assignee"})

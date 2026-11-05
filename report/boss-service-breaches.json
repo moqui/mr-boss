@@ -1,0 +1,48 @@
+{
+  "id": "boss-service-breaches",
+  "type": "dataset",
+  "title": "Service level breaches",
+  "body": {
+    "documentType": "BossServiceClock",
+    "timeField": "breachedDate",
+    "signal": "business",
+    "fieldDefaults": {
+      "clockEnumId": {
+        "enumTypeId": "SlaClock"
+      },
+      "stateEnumId": {
+        "enumTypeId": "CaseSlaState"
+      },
+      "priorityBandEnumId": {
+        "enumTypeId": "CasePriorityBand"
+      },
+      "requestTypeEnumId": {
+        "enumTypeId": "RequestType"
+      },
+      "salesChannelEnumId": {
+        "enumTypeId": "SalesChannel"
+      },
+      "requestCategoryId": {
+        "lookup": {
+          "entityName": "mantle.request.RequestCategory",
+          "keyField": "requestCategoryId",
+          "displayField": "description"
+        }
+      },
+      "organizationPartyId": {
+        "lookup": {
+          "entityName": "mantle.party.Organization",
+          "keyField": "partyId",
+          "displayField": "organizationName"
+        }
+      },
+      "serviceLevelPolicyId": {
+        "lookup": {
+          "entityName": "mantle.request.support.ServiceLevelPolicy",
+          "keyField": "serviceLevelPolicyId",
+          "displayField": "policyName"
+        }
+      }
+    }
+  }
+}

@@ -91,29 +91,78 @@ const withParty = (roleTypeId, partyIds) =>
             .list()
     ).map(row => row.requestId)
 const inIds = (field, ids) => factory().makeCondition(field, "in", ids.length ? ids : ["_NA_"])
-// P4: the cases' clocks (mantle.request.support.CaseSlaEpisode, written by Mantle's SlaServices): those at risk (a running
-// clock past its warning or due time, or breached), those whose first response still runs, and those with any clock.
+// P4: the cases' clocks (mantle.request.support.CaseSlaEpisode, written by Mantle's SlaServices). P14 (F112): the views by
+// clock read the case with its clocks in one query (Mantle's CaseRequestClock view, a case with each clock or with none),
+// not a list of request ids read first: at risk (a running clock past its warning or due time, or breached), first response
+// still running, or new with no clock at all.
 const EPISODE = "mantle.request.support.CaseSlaEpisode"
-function clockCaseIds(kind) {
+const CASE_CLOCK = "mantle.request.support.CaseRequestClock"
+const CLOCK_CASE = "mantle.request.support.CaseClockRequest"
+// the case fields a list reads (decorate), selected distinct from the case-and-clock view
+const caseFields = [
+    "requestId",
+    "requestName",
+    "requestCategoryId",
+    "requestTypeEnumId",
+    "statusId",
+    "priority",
+    "salesChannelEnumId",
+    "responseRequiredDate",
+    "requestDate",
+    "lastUpdatedStamp",
+    "caseWorkflowId"
+]
+const clockViews = ["needsResponse", "slaRisk"]
+function clockCondition(kind) {
     const cf = factory()
     const now = ec.user.nowTimestamp
-    let query = find(EPISODE)
     if (kind === "risk")
-        query = query
-            .condition("stateEnumId", "SlsRunning")
-            .condition(
+        return cf.makeCondition(
+            [
+                cf.makeCondition("clockStateEnumId", "equals", "SlsRunning"),
                 cf.makeCondition(
                     [
-                        cf.makeCondition("warningDate", "less-equals", now),
-                        cf.makeCondition("dueDate", "less-equals", now),
-                        cf.makeCondition("breachedDate", "is-not-null", null)
+                        cf.makeCondition("clockWarningDate", "less-equals", now),
+                        cf.makeCondition("clockDueDate", "less-equals", now),
+                        cf.makeCondition("clockBreachedDate", "is-not-null", null)
                     ],
                     "or"
                 )
+            ],
+            "and"
+        )
+    if (kind === "breached")
+        return cf.makeCondition(
+            [
+                cf.makeCondition("clockStateEnumId", "equals", "SlsRunning"),
+                cf.makeCondition(
+                    [
+                        cf.makeCondition("clockDueDate", "less-equals", now),
+                        cf.makeCondition("clockBreachedDate", "is-not-null", null)
+                    ],
+                    "or"
+                )
+            ],
+            "and"
+        )
+    // awaiting a first response: its clock running or paused, or a new case with no clock at all (the view's one row with
+    // no clock)
+    return cf.makeCondition(
+        [
+            cf.makeCondition(
+                [
+                    cf.makeCondition("clockEnumId", "equals", "SlcFirstResponse"),
+                    cf.makeCondition("clockStateEnumId", "in", ["SlsRunning", "SlsPaused"])
+                ],
+                "and"
+            ),
+            cf.makeCondition(
+                [cf.makeCondition("statusId", "equals", "ReqSubmitted"), cf.makeCondition("caseSlaEpisodeId", "is-null", null)],
+                "and"
             )
-    else if (kind === "awaiting")
-        query = query.condition("clockEnumId", "SlcFirstResponse").condition("stateEnumId", "in", ["SlsRunning", "SlsPaused"])
-    return Array.from(query.selectField("requestId").distinct(true).limit(5000).list()).map(row => row.requestId)
+        ],
+        "or"
+    )
 }
 
 // The saved views of design Cases: Assigned to me (the default), New/unassigned, Waiting for customer, Needs response (its
@@ -148,22 +197,11 @@ function viewCondition(view, userScope) {
         }
         case "waiting":
             return factory().makeCondition("statusId", "equals", "ReqWaitingCustomer")
-        case "needsResponse": {
-            const timed = clockCaseIds("any")
-            const untimed = factory().makeCondition("statusId", "equals", "ReqSubmitted")
-            return factory().makeCondition(
-                [
-                    inIds("requestId", clockCaseIds("awaiting")),
-                    timed.length
-                        ? factory().makeCondition([untimed, factory().makeCondition("requestId", "not-in", timed)], "and")
-                        : untimed
-                ],
-                "or"
-            )
-        }
+        case "needsResponse":
+            return clockCondition("awaiting")
         case "slaRisk":
             return factory().makeCondition(
-                [inIds("requestId", clockCaseIds("risk")), factory().makeCondition("statusId", "in", openStatuses)],
+                [clockCondition("risk"), factory().makeCondition("statusId", "in", openStatuses)],
                 "and"
             )
         case "resolved":
@@ -274,8 +312,15 @@ function decorate(list) {
 
 // ===== find#Cases =====
 function casesQuery(userScope, p) {
-    let query = find(CASE).condition(scopeCondition(userScope))
     const view = Object.hasOwn(views, p.view || "") ? p.view : p.recentFor ? "all" : "mine"
+    // a view by clock reads the case-and-clock view, each case once (its fields distinct)
+    let query = clockViews.includes(view) ? find(CASE_CLOCK).distinct(true) : find(CASE)
+    if (clockViews.includes(view)) {
+        const orderField = String(p.orderByField || "").replace(/^[-+]/, "")
+        for (const field of caseFields.concat(caseFields.includes(orderField) || !orderField ? [] : [orderField]))
+            query = query.selectField(field)
+    }
+    query = query.condition(scopeCondition(userScope))
     const byView = viewCondition(view, userScope)
     if (byView) query = query.condition(byView)
     const term = String(p.text || "").trim()
@@ -400,65 +445,42 @@ const emptyPage = () => ({
 })
 
 // ===== get#QueueCounts =====
-// Per queue the user works: open and unassigned cases, and breached (P4, not configured until then); with the totals and
-// the overdue count (Home's KPI strip).
+// Per queue the user works: open and unassigned cases, overdue, and breached (an open case with a running clock past its due
+// time or breached; P4); with the totals (Home's KPI strip). P14: each a count in the query (Home reads no unbounded scan).
 function queueCounts() {
     const userScope = cs.required()
     const now = new Date(Number(ms(ec.user.nowTimestamp)))
     const queues = cs.currentQueues().filter(row => userScope.queueIds.includes(row.requestCategoryId))
-    const assigned = new Set(
-        userScope.queueIds.length
-            ? Array.from(
-                  find(CASE_PARTY, {roleTypeId: "Assignee"})
-                      .condition("thruDate", null)
-                      .condition("statusId", "in", openStatuses)
-                      .condition("requestCategoryId", "in", userScope.queueIds)
-                      .selectField("requestId")
-                      .list()
-              ).map(row => row.requestId)
-            : []
-    )
-    // P4: the open cases with a breached running clock
-    const breached = new Set(
-        Array.from(
-            find(EPISODE)
-                .condition("stateEnumId", "SlsRunning")
-                .condition(
-                    factory().makeCondition(
-                        [
-                            factory().makeCondition("breachedDate", "is-not-null", null),
-                            factory().makeCondition("dueDate", "less-equals", now)
-                        ],
-                        "or"
-                    )
-                )
-                .selectField("requestId")
-                .distinct(true)
-                .limit(5000)
-                .list()
-        ).map(row => row.requestId)
-    )
     const queueRows = queues
         .map(queue => {
-            const open = Array.from(
-                find(CASE, {requestCategoryId: queue.requestCategoryId})
-                    .condition("statusId", "in", openStatuses)
-                    .selectField("requestId")
-                    .selectField("responseRequiredDate")
-                    .list()
-            )
+            const requestCategoryId = queue.requestCategoryId
+            const openCount = find(CASE, {requestCategoryId}).condition("statusId", "in", openStatuses).count()
+            const assignedCount = find(CASE_PARTY, {roleTypeId: "Assignee", requestCategoryId})
+                .condition("thruDate", null)
+                .condition("statusId", "in", openStatuses)
+                .selectField("requestId")
+                .distinct(true)
+                .count()
+            const overdueCount = find(CASE, {requestCategoryId})
+                .condition("statusId", "in", openStatuses)
+                .condition("responseRequiredDate", "less", now)
+                .count()
+            const breachedCount = find(CASE_CLOCK, {requestCategoryId})
+                .condition("statusId", "in", openStatuses)
+                .condition(clockCondition("breached"))
+                .selectField("requestId")
+                .distinct(true)
+                .count()
             return {
-                requestCategoryId: queue.requestCategoryId,
-                queueName: cs.queueName(queue.requestCategoryId),
+                requestCategoryId,
+                queueName: cs.queueName(requestCategoryId),
                 teamName: queue.responsibleTeamPartyId ? cs.partyName(queue.responsibleTeamPartyId) : "",
-                openCount: open.length,
-                unassignedCount: open.filter(row => !assigned.has(row.requestId)).length,
-                overdueCount: open.filter(row => row.responseRequiredDate && Number(ms(row.responseRequiredDate)) < Number(now))
-                    .length,
-                breachedCount: open.filter(row => breached.has(row.requestId)).length,
-                breachedText: String(open.filter(row => breached.has(row.requestId)).length),
-                url:
-                    "/qapps/CustomerService/Cases/Cases?view=all&requestCategoryId=" + encodeURIComponent(queue.requestCategoryId)
+                openCount,
+                unassignedCount: Math.max(0, openCount - assignedCount),
+                overdueCount,
+                breachedCount,
+                breachedText: String(breachedCount),
+                url: "/qapps/CustomerService/Cases/Cases?view=all&requestCategoryId=" + encodeURIComponent(requestCategoryId)
             }
         })
         .sort((a, b) => a.queueName.localeCompare(b.queueName))
@@ -469,6 +491,19 @@ function queueCounts() {
         unassignedCount: sum("unassignedCount"),
         overdueCount: sum("overdueCount"),
         breachedCount: sum("breachedCount")
+    }
+}
+// P14: the user's own open and overdue cases (Home's My figures), counted in the query.
+function myCounts() {
+    const userScope = cs.required()
+    const mine = assignedTo(userScope.partyId)
+    if (!mine.length) return {openCount: 0, overdueCount: 0}
+    const open = () => find(CASE).condition("requestId", "in", mine).condition("statusId", "in", openStatuses)
+    return {
+        openCount: open().count(),
+        overdueCount: open()
+            .condition("responseRequiredDate", "less", new Date(Number(ms(ec.user.nowTimestamp))))
+            .count()
     }
 }
 
@@ -922,7 +957,9 @@ function today(p) {
 // Over the user's cases, the clocks decided in the period: met on time, missed (done late), and breached without being done
 // (a running clock past due, or one the case closed without), each clock once; SLA compliance over every clock, first response
 // and resolution apart, with the denominator and the change against the previous period of the same length. Cancelled cases'
-// clocks are left out. Not configured when none of the user's organizations has a policy.
+// clocks and a clock a merge ended (SlsMerged, F137: its copy on the kept case counts) are left out. Not configured when none
+// of the user's organizations has a policy. P14: counted in the query over Mantle's CaseClockRequest view (no list of the
+// user's cases read first), for the user's scope (Team: their queues and their cases) and, with myOnly, their own cases (My).
 function slaMeasures(p) {
     const userScope = cs.required()
     const days = Math.max(1, Math.min(366, Number(p.periodDays) || 30))
@@ -932,9 +969,11 @@ function slaMeasures(p) {
         .condition("fromDate", "is-not-null", null)
         .count()
     if (!policies) return {configured: false}
-    const caseIds = Array.from(find(CASE).condition(scopeCondition(userScope)).selectField("requestId").limit(20000).list()).map(
-        row => row.requestId
-    )
+    const mine = p.myOnly ? assignedTo(userScope.partyId) : null
+    const scoped = () => {
+        const query = find(CLOCK_CASE)
+        return mine ? query.condition(inIds("requestId", mine)) : query.condition(scopeCondition(userScope))
+    }
     const tally = (fromMs, thruMs) => {
         const inPeriod = field =>
             factory().makeCondition(
@@ -944,31 +983,14 @@ function slaMeasures(p) {
                 ],
                 "and"
             )
-        const done = caseIds.length
-            ? Array.from(
-                  find(EPISODE)
-                      .condition("requestId", "in", caseIds)
-                      .condition("stateEnumId", "in", ["SlsMet", "SlsMissed"])
-                      .condition(inPeriod("actualDate"))
-                      .list()
-              )
-            : []
-        const breached = caseIds.length
-            ? Array.from(
-                  find(EPISODE)
-                      .condition("requestId", "in", caseIds)
-                      .condition("stateEnumId", "in", ["SlsRunning", "SlsPaused", "SlsUnmet"])
-                      .condition(inPeriod("breachedDate"))
-                      .list()
-              )
-            : []
         const of = clockEnumId => {
-            const met = done.filter(
-                row => row.stateEnumId === "SlsMet" && (!clockEnumId || row.clockEnumId === clockEnumId)
-            ).length
-            const late =
-                done.filter(row => row.stateEnumId === "SlsMissed" && (!clockEnumId || row.clockEnumId === clockEnumId)).length +
-                breached.filter(row => !clockEnumId || row.clockEnumId === clockEnumId).length
+            const counted = (states, field) => {
+                let query = scoped().condition("stateEnumId", "in", states).condition(inPeriod(field))
+                if (clockEnumId) query = query.condition("clockEnumId", clockEnumId)
+                return query.count()
+            }
+            const met = counted(["SlsMet"], "actualDate")
+            const late = counted(["SlsMissed"], "actualDate") + counted(["SlsRunning", "SlsPaused", "SlsUnmet"], "breachedDate")
             return {met, total: met + late, percent: met + late ? Math.round((100 * met) / (met + late)) : null}
         }
         return {all: of(null), first: of("SlcFirstResponse"), resolution: of("SlcResolution")}
@@ -991,11 +1013,24 @@ function slaMeasures(p) {
     return {configured: true, slaCompliance: measure("all"), firstResponse: measure("first"), resolution: measure("resolution")}
 }
 
-const operations = {findCases, queueCounts, serviceCustomers, prepareCase, caseDetail, applyBatch, today, slaMeasures}
+const operations = {
+    findCases,
+    queueCounts,
+    myCounts,
+    serviceCustomers,
+    prepareCase,
+    caseDetail,
+    applyBatch,
+    today,
+    slaMeasures
+}
 ;({
     openStatuses,
     bandRows,
     mappingsOf,
+    scopeCondition,
+    assignedTo,
+    statusFacts,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service case operation " + op)
         return operations[op](parameters || {})

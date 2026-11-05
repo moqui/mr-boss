@@ -12,19 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Customer Service (design-customer-service §7): ReportsHome (the report catalogue, SLA
-    compliance, response times, case volumes, CSAT results and return analysis: impl-customer-service P14) and CaseAnalytics
-    (P4: one case's measurements, opened from CaseDetail's Service level tab, hidden from the menu); for the agent, manager and
-    return authorizer (BOSS_CS_REPORTS). -->
+<!-- The Reports area of IronStone Customer Service (design-customer-service §7): ReportsHome (P14: the report catalogue, each
+    report the user may read), ServiceLevelCompliance, ResponseTimes, CaseVolumes and ReturnAnalysis (P14, CS-REPORTING),
+    CaseAnalytics (P4: one case's measurements, opened from CaseDetail's Service level tab, hidden from the menu), and the CSAT
+    results and one answer (P13), out of the menu: the catalogue offers CSAT results to service management only, who alone may
+    read it (F186); for the agent, manager and return authorizer (BOSS_CS_REPORTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_monitoring" menu-image-type="icon">
     <subscreens default-item="ReportsHome" always-use-full-path="true">
         <subscreens-item name="CaseAnalytics" location="component://mr-boss/screen/CustomerService/Reports/CaseAnalytics.xml"
                 menu-include="false"/>
         <!-- P13: CSAT results and one answer, the survey builder's answers in the Customer Service context (Shared/SurveyResponses,
-            SurveyResponseDetail; crosscut §2), for service management: find#CaseResponses and get#CaseResponse check it (F-P13-11) -->
+            SurveyResponseDetail; crosscut §2), for service management: find#CaseResponses and get#CaseResponse check it (F186);
+            P14: out of the menu, which an artifact authorization alone could hide on the shared file; ReportsHome's catalogue
+            offers it to those who may read it -->
         <subscreens-item name="SatisfactionResults" location="component://mr-boss/screen/Shared/SurveyResponses.xml"
-                menu-title="CSAT results" menu-index="3"/>
+                menu-title="CSAT results" menu-include="false"/>
         <subscreens-item name="ResponseDetail" location="component://mr-boss/screen/Shared/SurveyResponseDetail.xml"
                 menu-include="false"/>
     </subscreens>

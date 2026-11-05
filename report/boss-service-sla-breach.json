@@ -1,0 +1,63 @@
+{
+  "id": "boss-service-sla-breach",
+  "type": "alert",
+  "title": "Service level breaches",
+  "body": {
+    "description": "Fires when cases breached their service level in the last hour, by queue. Save a copy, then set the threshold and contact points.",
+    "query": {
+      "datasetId": "boss-service-breaches",
+      "from": "now-1h",
+      "thru": "now",
+      "aggregations": [
+        {
+          "id": "queue",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "requestCategoryId",
+            "size": 50
+          }
+        },
+        {
+          "id": "cases",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "requestId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "cases",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 300,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "customer-service",
+      "severity": "warning"
+    },
+    "contactPoints": [
+      {
+        "id": "service-managers",
+        "type": "notification",
+        "topic": "ReportAlert",
+        "userGroupId": "BOSS_CUSTOMER_SERVICE_MANAGER",
+        "groupWaitSeconds": 0,
+        "repeatSeconds": 3600
+      }
+    ]
+  }
+}

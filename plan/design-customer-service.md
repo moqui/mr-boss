@@ -513,7 +513,7 @@ app's authorization and adds no second calculation.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ReportCatalogue | list, read | Choose an allowed report | name, description, scope, last run | links; favorite saved find | static screen metadata filtered by authz | research §10 operational report inventory |
+| ReportCatalogue | list, read | Choose an allowed report | name, description, filters, export | links | `ReportingServices.get#ReportCatalogue`: the entries Customer Service registers for Insights, filtered by the services' capabilities (impl-customer-service F-P14-1, F-P14-6: a report is a read, with no stored last run) | research §10 operational report inventory |
 
 **Layout/actions.** Cards or table; open the report, no background data export from the landing. **Source.** Research §10. **Needs.** CS-REPORTING.
 
@@ -530,7 +530,7 @@ app's authorization and adds no second calculation.
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
 | --- | --- | --- | --- | --- | --- | --- |
-| ResponseFind | find | Select metric/cohort | period, team, priority, channel, first/next response/resolution, business/elapsed | explicit time basis | proposed `ReportingServices.get#ResponseTimes` | Frappe dashboard; ERPNext Issue Analytics |
+| ResponseFind | find | Select metric/cohort | period, team, priority, channel, first response or resolution (each episode), business and elapsed side by side | explicit time basis | `ReportingServices.get#ResponseTimes` (no next-response clock is recorded: impl-customer-service F-P14-5) | Frappe dashboard; ERPNext Issue Analytics |
 | ResponseResults | list, read | Show distribution | count, median, p90, mean, open age, first-response and episode-resolution times | distribution plus same data table | same proposed service | same reference |
 
 **States.** First response is an actual outward agent response accepted by channel; acknowledgement and notes excluded. Later delivery failure is visible on the event and auditable. **Source.** Research §10; [R8](#reference-files). **Needs.** CS-SLA, CS-REPORTING.
