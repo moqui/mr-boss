@@ -772,6 +772,11 @@ CaseDetail and NewCase render once, in qvt; the settings and case route fixtures
   carries the due date given at create (only Commons' raise#Request refuses it, by wouldBeCase); P4's service level
   replaces it. The acceptance walk CustomerServiceCasesWalk was not rerun (no acceptance spec changed).
 
+- **Wave 2 suites (Nov 5, on master after P2 and the framework part of P7 merged, the binary rebuilt, nothing else
+  running):** standalone mr-mantle 1,666 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 2,947 server and
+  14 client features passed, none failed, within every budget (server: mr-mantle 293.9 of 335 s, mr-boss 214.7 of 245 s,
+  mr-pass 12.6 of 15 s; client: mr-boss 41.7 of 44 s); `moqui lint --screens` clean.
+
 ### P3 — Customers and orders
 
 Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context on screens other apps built.
