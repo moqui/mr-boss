@@ -18,7 +18,10 @@ along with this software (see the LICENSE.md file). If not, see
     dated PartyRelationship; a manager of the team or the administrator). Working hours (P4): each team's weekly hours on its
     schedule calendar, which its queues' case clocks count on, kept from a date through Commons'
     ironstone.commons.CalendarServices.store#WorkingHours (Mantle's mantle.work.CalendarServices.store#WorkingHours checks the
-    team's manager or WORKING_HOURS_EDIT). Participation (eligibility, maximum cases, substitute) comes in P5. -->
+    team's manager or WORKING_HOURS_EDIT). P5, TeamParticipation: each member's participation (whether assignment rules give
+    them cases, the most open cases, a substitute, the calendar of their hours), effective-dated beside the membership, over
+    ironstone.customerservice.AssignmentServices.get#TeamParticipation and kept through save#ServiceTeamMember (participation),
+    which also keeps the team's user group (its saved replies' audience) in step with its members. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Agent teams" default-menu-index="3">
     <parameter name="organizationPartyId"/>
@@ -52,6 +55,27 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- P5: a member's participation from a date, and the substitute and calendar choices -->
+    <transition name="teamChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AssignmentServices.get#RuleChoices" out-map="found"
+                    in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, choice:choice, term:term, selected:selected,
+                        teamPartyId:teamPartyId, partyId:partyId}"/>
+            <script>ec.web.sendJsonResponse(found.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveParticipation">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceTeamMember"
+                    in-map="{teamPartyId:teamPartyId, partyId:partyId, participation:true, assignmentEligible:(assignmentEligible == 'Y' ? 'Y' : 'N'),
+                        maxActiveCases:(maxActiveCases ?? ''), substitutePartyId:(substitutePartyId ?? ''), calendarId:(calendarId ?? ''),
+                        participationFromDate:(participationFromDate || null)}"/>
+            <message type="success">Saved how ${partyName || 'the member'} takes cases</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <transition name="saveMember">
         <actions>
             <service-call name="mantle.request.SupportCaseServices.save#ServiceTeamMember"
@@ -66,6 +90,17 @@ along with this software (see the LICENSE.md file). If not, see
                 transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
         <script>ec.message.clearErrors()</script>
         <set field="teams" from="teamsOut?.teams || []"/>
+        <!-- P5: each member's participation beside the membership -->
+        <if condition="teamsOut?.organizationPartyId">
+            <service-call name="ironstone.customerservice.AssignmentServices.get#TeamParticipation" out-map="participationOut"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:teamsOut.organizationPartyId}"/>
+        </if>
+        <script>
+            const participation = participationOut?.participation || {}
+            for (const team of teams) for (const member of team.members)
+                Object.assign(member, participation[team.teamPartyId + '|' + member.partyId] || {participationText: 'Takes cases'},
+                    {organizationPartyId: teamsOut?.organizationPartyId, canChange: team.canChange})
+        </script>
         <set field="cfgOrganizations" from="teamsOut?.organizations || []"/>
         <set field="cfgOrganizationPartyId" from="teamsOut?.organizationPartyId"/>
         <set field="can" from="customerService.capabilities"/>
@@ -162,8 +197,48 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="roleText"><default-field title="Role"><display/></default-field></field>
                                     <field name="fromText"><default-field title="Since"><display/></default-field></field>
                                     <field name="openCaseCount" align="right"><default-field title="Open cases"><display/></default-field></field>
+                                    <field name="participationText"><default-field title="Takes cases"><display/></default-field></field>
                                     <field name="actions">
                                         <default-field title="">
+                                            <!-- P5: TeamParticipation -->
+                                            <container-dialog id="Participation_${teamPartyId}_${partyId}" button-text="Participation" icon="sym_o_tune"
+                                                    width="560" title="How ${name} takes cases" condition="canChange">
+                                                <form-single name="ParticipationForm" transition="saveParticipation"
+                                                        map="{teamPartyId:teamPartyId, partyId:partyId, partyName:name, organizationPartyId:organizationPartyId,
+                                                            assignmentEligible:(assignmentEligible || 'Y'), maxActiveCases:(maxActiveCases || ''),
+                                                            substitutePartyId:(substitutePartyId || ''), calendarId:(calendarId || '')}">
+                                                    <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyId"><default-field><hidden/></default-field></field>
+                                                    <field name="partyName"><default-field><hidden/></default-field></field>
+                                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                                    <field name="assignmentEligible">
+                                                        <default-field title="Assignment rules may give them cases"><check><option key="Y" text=" "/></check></default-field>
+                                                    </field>
+                                                    <field name="maxActiveCases">
+                                                        <default-field title="Most open cases" tooltip="Empty: the rule's limit, if any"><text-line size="4"/></default-field>
+                                                    </field>
+                                                    <field name="substitutePartyId">
+                                                        <default-field title="Substitute" tooltip="Takes their turn while they are outside their hours">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="teamChoices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'members', organizationPartyId:organizationPartyId, teamPartyId:teamPartyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="calendarId">
+                                                        <default-field title="Working hours" tooltip="Empty: their own hours, else the team's">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="teamChoices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'calendars', organizationPartyId:organizationPartyId, partyId:partyId}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="participationFromDate">
+                                                        <default-field title="From" tooltip="Empty: now; the row in effect ends then"><date-time type="timestamp"/></default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
                                             <link url="saveMember" text="Remove" icon="sym_o_person_remove" link-type="hidden-form-link"
                                                     btn-type="danger" condition="team.canChange"
                                                     parameter-map="{teamPartyId:teamPartyId, partyId:partyId, end:'Y', organizationPartyId:cfgOrganizationPartyId}"
@@ -172,7 +247,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <columns type="mobile">
                                         <column><field-ref name="name"/><field-ref name="roleText"/></column>
-                                        <column><field-ref name="openCaseCount"/><field-ref name="actions"/></column>
+                                        <column><field-ref name="participationText"/><field-ref name="openCaseCount"/><field-ref name="actions"/></column>
                                     </columns>
                                 </form-list>
                                 <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!team.members.length" text="No member yet."/>

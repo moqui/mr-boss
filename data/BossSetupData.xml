@@ -1821,6 +1821,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="SupportCaseSlaBreach" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WORKING_HOURS_EDIT"
             fromDate="0"/>
+    <!-- Customer Service P5: a case no eligible agent could take (Mantle's assign#Case, SupportCaseUnassigned) opens the case
+        for its queue team's managers -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseUnassigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
     <!-- Customer Service P3 (impl-customer-service P3, F52): the product master read only for every Customer Service user
         (Availability's Product360, InventoryAvailability and StockAtDate; Products' SharedContext.js turns cost, supplier
         price and policy off in this context), and price read (Product360's Prices and PriceExplain) for the agent, manager,

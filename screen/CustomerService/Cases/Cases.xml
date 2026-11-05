@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     each row with its clock due first, saved finds and select-columns; the
     board, a view of the same rows by status in the workflow's order, whose move and the row's Change status both run
     mantle.request.SupportCaseServices.transition#Case after the case's check; and BulkCaseAction, row-selection actions to
-    assign, set the status of and tag the selected cases (apply#CaseBatch, a result per case). -->
+    assign, set the status of and tag the selected cases (apply#CaseBatch, a result per case), and P5's Reply, a saved reply
+    previewed per case on BulkReply. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cases" default-menu-index="1">
     <parameter name="view"/>
@@ -36,6 +37,24 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition-include name="bulkCases" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- P5: BulkCaseAction's reply: the saved reply chosen for the selected cases, previewed per case on BulkReply (a transition
+        with actions, so the row selection posts its ids) -->
+    <transition name="bulkReply">
+        <actions>
+            <set field="requestIds" from="(Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(','))
+                    .filter((id) =&gt; id).join(',')"/>
+        </actions>
+        <default-response url="../BulkReply"><parameter name="requestIds"/><parameter name="emailTextBlockId"/></default-response>
+    </transition>
+    <transition name="bulkReplyChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.ReplyServices.find#SavedReplies" out-map="found"
+                    in-map="{appRoot:appRoot, text:(term || null), forCase:true}"/>
+            <script>ec.web.sendJsonResponse(Array.from(found.replies || []).map((row) =&gt; ({value: row.emailTextBlockId,
+                    label: row.title + ' · ' + row.scopeText})))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <!-- a board move (the new status as statusId) and the row's Change status (toStatusId): the case's workflow decides -->
     <transition name="changeCaseStatus">
         <actions>
@@ -172,6 +191,22 @@ along with this software (see the LICENSE.md file). If not, see
                                 </field>
                                 <field name="submitButton">
                                     <default-field title="Tag"><submit/></default-field>
+                                </field>
+                            </form-single>
+                        </action>
+                        <!-- P5: a saved reply on each selected case, previewed per case before it goes (BulkReply) -->
+                        <action>
+                            <dialog button-text="Reply" button-icon="sym_o_reply_all" title="Reply to the selected cases"/>
+                            <form-single name="BulkReplyPick" transition="bulkReply">
+                                <field name="emailTextBlockId">
+                                    <default-field title="Saved reply">
+                                        <drop-down>
+                                            <dynamic-options transition="bulkReplyChoices" server-search="true" min-length="0"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Preview each case's reply"><submit/></default-field>
                                 </field>
                             </form-single>
                         </action>

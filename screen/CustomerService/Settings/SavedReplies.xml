@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SavedReplies (design-customer-service §9 SavedReplies; impl-customer-service P5, CS-REPLIES, D24, F3): the service's saved
+    replies, which are Comms text blocks (ReplyList over ironstone.customerservice.ReplyServices.find#SavedReplies: the
+    user's own and those shared with a team's group or every service agent), each with its scope, language, variables and
+    case actions; New reply and the chosen reply (ReplyEdit: its text through Comms' store#TextBlock, its language, subject,
+    sharing and offered state, and its ordered actions, each row its own form, through
+    ReplyServices.save#SavedReplyAction; only its owner changes it); and ReplyPreview, the reply on a case as it would go
+    (Mantle's mantle.request.SupportCaseServices.preview#SavedReply: the case's values put in, an unsupported or unresolved
+    variable named as an error, the recipient and each action's check), applied from the case (CaseDetail's Saved reply).
+    Comms' TextBlocks keeps listing the same blocks with the user's other ones. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Saved replies" default-menu-index="9">
+    <parameter name="emailTextBlockId"/>
+    <parameter name="text"/>
+    <parameter name="previewRequestId"/>
+    <transition name="findReplies">
+        <default-response url="."><parameter name="text"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- the cases the user sees, by id or subject, for the preview -->
+    <transition name="caseSearch" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.CaseServices.find#Cases" out-map="found"
+                    in-map="{appRoot:appRoot, view:'all', text:(term || null), pageSize:20}"/>
+            <script>ec.web.sendJsonResponse(Array.from(found.cases || []).map((row) =&gt; ({value: row.requestId,
+                    label: row.requestId + ' · ' + (row.requestName || '') + (row.customerName ? ' (' + row.customerName + ')' : '')})))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveReply">
+        <actions>
+            <service-call name="ironstone.customerservice.ReplyServices.save#SavedReplyAction" out-map="saved"
+                    in-map="{appRoot:appRoot, emailTextBlockId:(emailTextBlockId || null), title:title, shortcut:(shortcut ?? ''),
+                        bodyHtml:(bodyHtml ?? ''), userGroupId:(userGroupId ?? ''), organizationPartyId:(organizationPartyId ?? ''),
+                        localeId:(localeId ?? ''), subject:(subject ?? ''), disabled:(disabled == 'Y' ? 'Y' : 'N')}"/>
+            <set field="emailTextBlockId" from="saved?.emailTextBlockId || emailTextBlockId"/>
+            <message type="success">Saved the reply ${title}</message>
+        </actions>
+        <default-response url="."><parameter name="emailTextBlockId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- an action row added, changed or removed -->
+    <transition name="saveAction">
+        <actions>
+            <service-call name="ironstone.customerservice.ReplyServices.save#SavedReplyAction"
+                    in-map="{appRoot:appRoot, emailTextBlockId:emailTextBlockId, actionAction:(actionAction || 'update'),
+                        savedReplyActionId:(savedReplyActionId || null), sequenceNum:(sequenceNum || null), actionEnumId:(actionEnumId || null),
+                        statusId:(statusId || null), resolutionEnumId:(resolutionEnumId || null), tagEnumId:(tagEnumId || null),
+                        assigneePartyId:(assigneePartyId || null), priority:(priority || null), noteText:(noteText || null)}"/>
+            <message type="success">Saved the reply's actions</message>
+        </actions>
+        <default-response url="."><parameter name="emailTextBlockId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="previewReply">
+        <default-response url="."><parameter name="emailTextBlockId"/><parameter name="previewRequestId"/></default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ReplyServices.find#SavedReplies" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, text:(text || null)}"/>
+        <set field="reply" from="(found?.replies || []).find((row) =&gt; row.emailTextBlockId == emailTextBlockId) || null"/>
+        <if condition="reply &amp;&amp; previewRequestId">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:previewRequestId}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.request.SupportCaseServices.preview#SavedReply" out-map="previewed" transaction="force-new"
+                        ignore-error="true" in-map="{requestId:previewRequestId, emailTextBlockId:emailTextBlockId}"/>
+            </if>
+            <set field="previewProblem" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/\n[\s\S]*$/, '') : ''"/>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="replies" from="found?.replies || []"/>
+        <set field="shareOptions" from="found?.shareOptions || []"/>
+        <set field="organizationOptions" from="found?.organizationOptions || []"/>
+        <set field="variablesText" from="(found?.variableNames || []).map((name) =&gt; '{{' + name + '}}').join(' ')"/>
+        <set field="pv" from="previewed?.preview || null"/>
+        <set field="replyValues" from="reply ? {emailTextBlockId:reply.emailTextBlockId, title:reply.title, shortcut:reply.shortcut,
+                bodyHtml:reply.bodyHtml, userGroupId:reply.userGroupId, organizationPartyId:reply.organizationPartyId, localeId:reply.localeId,
+                subject:reply.subject, disabled:reply.disabled} : {}"/>
+        <set field="newValues" from="{userGroupId:'', organizationPartyId:(organizationOptions[0]?.value || '')}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Saved replies" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewReply" button-text="New reply" icon="sym_o_add_comment" type="primary" width="760"
+                        title="New saved reply" condition="can.caseEdit">
+                    <form-single name="NewReplyForm" transition="saveReply" map="newValues">
+                        <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                        <field name="shortcut"><default-field title="Shortcut" tooltip="One word: type /word in the composer"><text-line size="16"/></default-field></field>
+                        <field name="userGroupId">
+                            <default-field title="Shared with">
+                                <drop-down><list-options list="shareOptions" key="${value}" text="${label}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="organizationPartyId">
+                            <default-field title="For">
+                                <drop-down allow-empty="true"><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="localeId"><default-field title="Language" tooltip="A language code such as en or es"><text-line size="6"/></default-field></field>
+                        <field name="subject"><default-field title="Subject" tooltip="When the reply starts a thread; empty: the case's subject"><text-line size="50"/></default-field></field>
+                        <field name="bodyHtml">
+                            <default-field title="Text" tooltip="Variables: {{customerName}}, {{contactFirstName}}, {{caseId}} and the others below">
+                                <text-area rows="6"/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create reply"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="title"/><field-ref name="shortcut"/></field-row>
+                            <field-row><field-ref name="userGroupId"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="localeId"/><field-ref name="subject"/></field-row>
+                            <field-ref name="bodyHtml"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <label type="p" style="text-caption m-muted" text="The variables a reply may use: ${variablesText}. Any other is refused, and so is one the case has no value for."/>
+        <!-- ===== ReplyList ===== -->
+        <container-box>
+            <box-header title="Replies you may use"/>
+            <box-toolbar>
+                <form-single name="FindReplies" transition="findReplies" map="{text:text}">
+                    <field name="text"><default-field title="Find"><text-line size="24"/></default-field></field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="text"/><field-ref name="submitButton"/></field-row></field-layout>
+                </form-single>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="ReplyList" list="replies" skip-form="true" paginate="false">
+                    <field name="title">
+                        <default-field title="Reply">
+                            <link url="." text="${title}" link-type="anchor" parameter-map="{emailTextBlockId:emailTextBlockId}"/>
+                            <label text="${bodyText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="shortcutText"><default-field title="Shortcut"><display/></default-field></field>
+                    <field name="scopeText"><default-field title="Shared with"><display/></default-field></field>
+                    <field name="localeId"><default-field title="Language"><display/></default-field></field>
+                    <field name="actionsText"><default-field title="Actions"><display/></default-field></field>
+                    <field name="activeText">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${disabled == 'Y' ? 'grey' : 'positive'}">${
+                                    WebUtilities.encodeHtml(activeText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: activeText})}]]></text>
+                                <text type="html">${activeText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="scopeText"/></column>
+                        <column><field-ref name="activeText"/><field-ref name="actionsText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!replies.length"
+                        text="No saved reply yet. Make one with New reply; share it with your team or every service agent."/>
+            </box-body-nopad>
+        </container-box>
+        <!-- ===== ReplyEdit: the chosen reply ===== -->
+        <section name="ReplyEdit" condition="reply">
+            <widgets>
+                <container-box>
+                    <box-header title="${reply.title} · ${reply.scopeText}${reply.isOwner ? '' : ' · from ' + reply.ownerName}"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" condition="!reply.isOwner"
+                                text="Only its owner changes this reply; you may use it on your cases."/>
+                        <form-single name="ReplyEditForm" transition="saveReply" map="replyValues">
+                            <field name="emailTextBlockId"><default-field><hidden/></default-field></field>
+                            <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                            <field name="shortcut"><default-field title="Shortcut"><text-line size="16"/></default-field></field>
+                            <field name="userGroupId">
+                                <default-field title="Shared with">
+                                    <drop-down><list-options list="shareOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="organizationPartyId">
+                                <default-field title="For">
+                                    <drop-down allow-empty="true"><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="localeId"><default-field title="Language"><text-line size="6"/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><text-line size="50"/></default-field></field>
+                            <field name="bodyHtml"><default-field title="Text"><text-area rows="6"/></default-field></field>
+                            <field name="disabled">
+                                <default-field title="Not offered on cases"><check><option key="Y" text=" "/></check></default-field>
+                            </field>
+                            <field name="submitButton">
+                                <conditional-field title="Save reply" condition="reply.isOwner"><submit/></conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                            <field-layout>
+                                <field-row><field-ref name="title"/><field-ref name="shortcut"/></field-row>
+                                <field-row><field-ref name="userGroupId"/><field-ref name="organizationPartyId"/></field-row>
+                                <field-row><field-ref name="localeId"/><field-ref name="subject"/></field-row>
+                                <field-ref name="bodyHtml"/>
+                                <field-ref name="disabled"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Case actions, in order"/>
+                    <box-toolbar>
+                        <container-dialog id="AddAction" button-text="Add action" icon="sym_o_add" width="560"
+                                title="Add an action to ${reply.title}" condition="reply.isOwner">
+                            <form-single name="AddActionForm" transition="saveAction"
+                                    map="{emailTextBlockId:reply.emailTextBlockId, actionAction:'add', actionEnumId:'SraAddTag'}">
+                                <field name="emailTextBlockId"><default-field><hidden/></default-field></field>
+                                <field name="actionAction"><default-field><hidden/></default-field></field>
+                                <field name="actionEnumId">
+                                    <default-field title="Action">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="SavedReplyAction"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="statusId">
+                                    <default-field title="Status" tooltip="For Set the status">
+                                        <drop-down allow-empty="true">
+                                            <entity-options key="${statusId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.StatusItem" cache="true">
+                                                    <econdition field-name="statusTypeId" value="Request"/>
+                                                    <econdition field-name="statusId" operator="not-equals" value="ReqDraft"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="tagEnumId">
+                                    <default-field title="Tag" tooltip="For Add a tag">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'tags'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="assigneePartyId">
+                                    <default-field title="Agent" tooltip="For Assign to">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'agents'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="priority">
+                                    <default-field title="Priority" tooltip="For Set the priority">
+                                        <drop-down allow-empty="true">
+                                            <option key="1" text="1 (urgent)"/><option key="3" text="3 (high)"/>
+                                            <option key="5" text="5 (normal)"/><option key="7" text="7 (low)"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="noteText">
+                                    <default-field title="Note or reason" tooltip="An internal note, or the reason a status needs">
+                                        <text-area rows="2"/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add action"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="ReplyActions" list="reply.actions" skip-form="true" paginate="false">
+                            <field name="sequenceNum" align="right"><default-field title="#"><display/></default-field></field>
+                            <field name="text"><default-field title="Action"><display/></default-field></field>
+                            <field name="removeLink">
+                                <conditional-field title="" condition="reply.isOwner">
+                                    <link url="saveAction" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger"
+                                            parameter-map="{emailTextBlockId:emailTextBlockId, savedReplyActionId:savedReplyActionId, actionAction:'remove'}"
+                                            confirmation="Remove the action ${text}?"/>
+                                </conditional-field>
+                                <default-field title=""><display text=" "/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="text"/></column>
+                                <column><field-ref name="removeLink"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!reply.actions.length"
+                                text="No action: the reply only sends its text."/>
+                    </box-body-nopad>
+                </container-box>
+                <!-- ===== ReplyPreview: the reply on a case, as it would go ===== -->
+                <container-box>
+                    <box-header title="Preview on a case"/>
+                    <box-body>
+                        <form-single name="ReplyPreviewForm" transition="previewReply"
+                                map="{emailTextBlockId:reply.emailTextBlockId, previewRequestId:previewRequestId}">
+                            <field name="emailTextBlockId"><default-field><hidden/></default-field></field>
+                            <field name="previewRequestId">
+                                <default-field title="Case">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="caseSearch" server-search="true" min-length="0"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                            <field-layout><field-row><field-ref name="previewRequestId"/><field-ref name="submitButton"/></field-row></field-layout>
+                        </form-single>
+                        <label type="p" style="text-negative" condition="previewProblem" text="${previewProblem}"/>
+                        <section name="ReplyPreviewShown" condition="pv">
+                            <widgets>
+                                <section-include name="ReplyPreviewBody" location="component://mr-boss/template/CustomerServiceReplyPreview.xml"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

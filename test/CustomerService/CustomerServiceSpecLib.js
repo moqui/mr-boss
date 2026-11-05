@@ -160,6 +160,13 @@ function routeFixtures() {
         "Knowledge/ArticleFeedback": {parameters: {}, text: "Article feedback"},
         "Knowledge/CaseToArticle": {parameters: {requestId: ids.thermostatCaseId}, text: "Article from case"},
         "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"},
+        // P5: the assignment rules, the saved replies and a bulk reply's preview
+        "Settings/AssignmentRules": {parameters: {}, text: "Assignment rules"},
+        "Settings/SavedReplies": {parameters: {}, text: "Saved replies"},
+        "Cases/BulkReply": {
+            parameters: {requestIds: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_PATIENCE"},
+            text: "Reply to"
+        },
         // P3: the customer, order and availability screens and the shared mounts under them
         "Customers/Customers": {parameters: {term: "joe@public.com"}, text: "Joe Public"},
         "Customers/Customer360": {parameters: {customerPartyId: ids.customerId}, text: "Joe Public"},

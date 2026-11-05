@@ -292,7 +292,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | built Nov 5, 2026 |
 | P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | built Nov 5, 2026 |
 | P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | built Nov 5, 2026 |
-| P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | — |
+| P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | built Nov 5, 2026 |
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | — |
 | P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | — |
 | P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | — |
@@ -1203,6 +1203,94 @@ CS-FORM-ELEMENTS (the condition rows).
     by its owner only; Comms TextBlocks still lists the user's own and shared blocks;
   - a bulk reply to three customers' cases mails each customer on their own thread, and a failed delivery retries by its
     message ID without a second reply.
+
+**Built Nov 5 (P5).** No framework change (F71: the condition rows are a non-multi editable form-list; who is viewing stays
+later, §4 Nov 5).
+- Mantle entities (`entity/SupportAssignmentEntities.xml`): `ServiceTeamParticipation` (eligible, most open cases, substitute,
+  calendar; dated, key fields audit-logged), `ServiceAssignmentRule` (queue, name, order, distribution `AdManual`,
+  `AdRoundRobin`, `AdLeastOpen`, team and named agents, working hours, most open cases, fallback; dated with `previousRuleId` and
+  `rootRuleId`, key fields audit-logged), its typed `ServiceAssignmentCondition` rows (fields `AcfType`, `AcfBand`, `AcfPriority`,
+  `AcfChannel`, `AcfTag`, `AcfCustomer`; operators `AcoIs`, `AcoIsNot`, `AcoAtMost`, `AcoAtLeast`, `AcoHas`, `AcoHasNot`),
+  `ServiceAssignmentCursor` (by the rule's first row: round robin's last agent, the last result), `SavedReply` (by
+  `emailTextBlockId`: organization, language, subject, variables, offered) and `SavedReplyAction` (`SraSetStatus`, `SraAddTag`,
+  `SraAssign`, `SraAssignSelf`, `SraSetPriority`, `SraAddNote`); CaseProfile gains the rule, outcome (`AssignmentOutcome`) and
+  reason, audit-logged; `UgtServiceTeam`. `MantleSetupData.xml`: the topic `SupportCaseUnassigned`.
+- Mantle services (`SupportCaseServices.xml`, appended; `Assignment.js`, `SavedReplies.js`): `assign#Case` (from
+  `ensure#CaseProfile` for a new unassigned case, skipped when `create#Case` names an assignee, and from `update#Case` on a queue
+  move with no assignee given; the queue's rules in order, the first whose conditions all hold; its team's agents (managers only
+  when named) eligible by participation, load and, when the rule respects hours, P4's business time now on the participation's
+  calendar, else the agent's schedule calendar, else the team's; an agent out of hours gives the round robin turn to an
+  eligible substitute; the rule's, then the queue's fallback; else unassigned and the queue team's managers told; every rule
+  cursor of the queue locked before the evaluation; no clock touched), `preview#Assignment` (the same evaluator, nothing written),
+  `save#AssignmentRule` (SUPPORT_POLICY_EDIT; a draft in place, a published change a new row ending the old; conditions as a list
+  or one row added, changed or removed, each typed value checked), `sync#ServiceTeamGroup` (the team's group `SVT_<team>` in step
+  with its members; `save#ServiceTeam` and `save#ServiceTeamMember` run it), `save#ServiceTeamMember`'s participation
+  (`participation` true and its fields from `participationFromDate`), `preview#SavedReply` and `apply#SavedReply`
+  (SUPPORT_CASE_EDIT; `{{name}}` variables from an allowlist, an unknown one UNSUPPORTED_VARIABLE and one with no value
+  UNRESOLVED_VARIABLE; the recipient the case's non-staff contact, else its customer; the actions checked by the case services'
+  rules, one refused refusing all; the actions and the draft in one transaction, the reply sent by `send#EmailDraft` on the case's
+  latest readable mail thread and filed once ES_SENT; required operation key, a retry answering the first result and sending a
+  failed message again by its ID).
+- BOSS (`service/ironstone/customerservice/`): `AssignmentServices.xml` over `Assignment.js` (`find#Rules`, `get#TeamParticipation`,
+  `get#RuleChoices`: a field's operators and values, a team's members, calendars), `ReplyServices.xml` over `Replies.js`
+  (`find#SavedReplies` on Comms' rule kept to service replies of the user's organizations, `save#SavedReplyAction` through Comms'
+  `store#TextBlock` then the facts and actions, the owner only, `preview#BulkReply` per case with each applied case's message
+  state); `apply#CaseBatch` operation `reply` (per case `apply#SavedReply` by the batch key plus the case id; Done,
+  ReplyDeliveryPending, ReplyDeliveryFailed besides the others; no batch record, so a retry re-runs each case's key).
+- Screens: `Settings/AssignmentRules.xml` (AssignmentRuleList, AssignmentRuleEdit with the ConditionList form-list whose operator
+  and value options depend on the row's field, an add-row form, End; AssignmentPreview), `Settings/SavedReplies.xml` (ReplyList,
+  ReplyEdit with its ordered actions, ReplyPreview on a chosen case), `Settings/AgentTeams.xml`'s Participation dialog and column,
+  SettingsHome's Assignment and replies links, `Cases/BulkReply.xml` (each case's recipient and actions, Send, then each
+  reply's state and Retry of the ones not delivered) with Cases' Reply row-selection action, CaseDetail's Saved reply tab
+  (`template/CustomerServiceReplies.xml`: pick, preview, edit the text, apply on confirmation; RequestDetail includes its three
+  transitions) and the shared preview display `template/CustomerServiceReplyPreview.xml`; BossSetupData links
+  `SupportCaseUnassigned` to CaseDetail.
+- Demo: the Support queue's manual rule `BOSS_CS_RULE_SUPPORT` (demo and other specs' cases keep their assignees); the team group
+  `SVT_BOSS_CS_TEAM_SUPPORT` with the manager's team reply "Need more details" (tag Follow up, wait for the customer), the manager's
+  service-wide "Filters ship soon" (assign to me) and the agent's personal "Thanks for your patience"; BossZ syncs the three demo
+  teams' groups.
+- Specs: Mantle `test/request/SupportAssignment` (7 features, 1.7 s: no rule assigns nothing; the saves and typed refusals, draft
+  and replacement; round robin skipping the agent outside their hours, no eligible agent telling the manager; a condition and a
+  fallback; two parallel intakes taking two slots; a move reassigning and keeping the clocks; participation refusals and the team
+  group) and `test/request/SupportReplies` (5 features, 0.9 s: the preview's values, recipient, action checks and variable errors;
+  personal and team replies and Comms' list; apply, filing and retry; a failed delivery retried by its message ID; refusals).
+  BOSS `CustomerServiceAccess` (+1: rules the administrator's, previews and replies a case editor's of the organization, a reply's
+  change its owner's) and `CustomerServiceAssignment` (4 features, 1.2 s: the reads and each user's replies, the save through
+  Comms, the bulk preview, and the one qvt render of AssignmentRules, SavedReplies, AgentTeams and BulkReply). Acceptance
+  `acceptance/CustomerService/CustomerServiceAssignmentWalk` (the usable-when, 4 features, pass) and AppStructure's fixtures for the
+  three new screens.
+- Tests run (all pass): Mantle SupportAssignment, SupportReplies, SupportCases, SupportSla, SupportKnowledge, BusinessTime,
+  OrderConfirmations, WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow,
+  ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow (188 features); BOSS CustomerServiceAssignment,
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceKnowledge, CustomerServiceOrders, MailSettings and Compose (Comms'
+  text blocks), Requests, ProjectRequests, Chat, QuickCreate (114 features); acceptance CustomerServiceAssignmentWalk, AppStructure,
+  CustomerServiceFoundationWalk, CustomerServiceCasesWalk, CustomerServiceSlaWalk. `moqui lint --screens`: 136 flagged sites, as
+  master; none in the Customer Service screens.
+- Inventories: no ss-inventory or usl-inventory row is designed for P5's screens (saved replies are framework text blocks).
+- Decisions:
+  - A rule belongs to its queue by `requestCategoryId` and order; ServiceQueue's `assignmentRuleId` (P2) stays unused and
+    save#ServiceQueue is unchanged (no field added: F-P7-3 does not meet P5).
+  - A rule distributes among the team's agents; a Manager-role member only when the rule names them.
+  - The case changes of a saved reply run through the case services (transition, tags, update), so a reply never does what the
+    agent could not do by hand; one refused action refuses the reply, named in the preview.
+- Findings (provisional):
+  - **F-P5-1** Compose's text-block picker inserts text in the browser and cannot preview or run a reply's case actions, so
+    CaseReplyAction is CaseDetail's Saved reply tab, offering the same text blocks by Comms' rule, the text editable before the
+    apply. Design CaseDetail and SavedReplies changed.
+  - **F-P5-2** SavedReplies sits under Settings, whose area denies the agent (BOSS_CS_SETTINGS), so it is the manager's and
+    administrator's; an agent makes personal replies in Comms TextBlocks (one library, D24) and uses them on CaseDetail. Opening
+    the page to agents needs an ALWAYS authz on a child of a denied area, for the lead.
+  - **F-P5-3** The service-wide group is the root user group, which spans organizations (Ziziwork Services' agent is in it); a
+    global reply keeps to its organization by SavedReply's organization in Customer Service, while Comms TextBlocks lists it to
+    every member. The administrator, in BOSS_CUSTOMER_SERVICE_ADMIN alone, cannot share a reply with the root group (Comms requires
+    the author to be a member).
+  - **F-P5-4** An agent's own Preferences hours are a personal series on no calendar, which business time does not read, and
+    store#WorkingHours does not let an administrator keep a person's schedule calendar (WORKING_HOURS_EDIT checks the party's
+    owner, `_NA_` for a person): a participation names an organization's or team's calendar for the agent's hours (F112).
+  - **F-P5-5** BusinessTime's `calendarOf` says `configured` only when its window holds working time, so "in hours now" reads the
+    week ahead to tell a schedule with hours on other days from one with none.
+  - **F-P5-6** A team's group is `SVT_<team>` of type `UgtServiceTeam`, found by the team's id with no new record; the demo's
+    data names it and BossZ fills it.
 
 ### P6 — Channels
 

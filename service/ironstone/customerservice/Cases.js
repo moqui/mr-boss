@@ -732,7 +732,8 @@ const outcomeOf = {
     STALE_CASE: "StaleCase",
     ASSIGNEE_UNAVAILABLE: "AssigneeUnavailable",
     RECORD_UNAVAILABLE: "Forbidden",
-    PERMISSION_DENIED: "Forbidden"
+    PERMISSION_DENIED: "Forbidden",
+    REPLY_UNAVAILABLE: "Forbidden"
 }
 function applyBatch(p) {
     const userScope = cs.required()
@@ -744,7 +745,9 @@ function applyBatch(p) {
         priority: "update#Case",
         queue: "update#Case",
         status: "transition#Case",
-        tags: "set#CaseTags"
+        tags: "set#CaseTags",
+        // P5: a saved reply on each case (its own recipient and thread), its actions and send in one transaction per case
+        reply: "apply#SavedReply"
     }
     if (!services[operation]) denied("OPERATION_UNKNOWN", "Unknown case change " + operation)
     const request = {
@@ -757,7 +760,11 @@ function applyBatch(p) {
         tagEnumIds: listOf(p.tagEnumIds)
     }
     const organizationPartyId = userScope.activeOrganizationPartyId || userScope.organizationPartyIds[0] || "_NA_"
-    const op = p.operationKey ? lib.operation(p, "CaseBatch", organizationPartyId, request) : null
+    // P5: a bulk reply's retry runs each case again by its own operation key (the case's first result, a failed send sent
+    // again by its message ID), so it keeps no batch record
+    if (operation === "reply" && (!p.operationKey || String(p.operationKey).length > 24))
+        denied("OPERATION_KEY_REQUIRED", "A bulk reply needs an operation key of at most 24 characters")
+    const op = p.operationKey && operation !== "reply" ? lib.operation(p, "CaseBatch", organizationPartyId, request) : null
     const earlier = op ? lib.previous(op) : null
     if (earlier) return earlier
     const revisions = p.revisions && typeof p.revisions === "object" ? p.revisions : {}
@@ -780,16 +787,27 @@ function applyBatch(p) {
                 reason: p.reason || null
             })
         if (operation === "tags") Object.assign(parameters, {tagEnumIds: listOf(p.tagEnumIds), mode: p.tagMode || "add"})
+        if (operation === "reply")
+            Object.assign(parameters, {emailTextBlockId: p.emailTextBlockId, operationKey: p.operationKey + "-" + requestId})
         ec.message.pushErrors()
         try {
-            ec.service
+            const out = ec.service
                 .sync()
                 .name("mantle.request.SupportCaseServices." + services[operation])
                 .parameters(parameters)
                 .requireNewTransaction(true)
                 .call()
             if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
-            results.push({requestId, outcome: "Done", message: ""})
+            if (operation === "reply") {
+                // the message's own state: sent, still pending (it goes after the commit) or failed (retried by its message ID)
+                const status = out?.deliveryStatus
+                results.push({
+                    requestId,
+                    outcome: status === "failed" ? "ReplyDeliveryFailed" : status === "sent" ? "Done" : "ReplyDeliveryPending",
+                    emailMessageId: out?.emailMessageId || null,
+                    message: status === "failed" ? L("Not delivered: retry sends the same reply") : ""
+                })
+            } else results.push({requestId, outcome: "Done", message: ""})
         } catch (error) {
             const code = lib.reasonCode(error) || (/([A-Z][A-Z0-9_]+):/.exec(String(error.message || "")) || [])[1]
             results.push({
@@ -802,8 +820,8 @@ function applyBatch(p) {
             ec.message.popErrors()
         }
     }
-    const done = results.filter(row => row.outcome === "Done").length
-    const failed = results.filter(row => row.outcome !== "Done")
+    const done = results.filter(row => row.outcome === "Done" || row.outcome === "ReplyDeliveryPending").length
+    const failed = results.filter(row => row.outcome !== "Done" && row.outcome !== "ReplyDeliveryPending")
     const result = {
         results,
         doneCount: done,

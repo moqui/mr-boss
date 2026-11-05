@@ -84,4 +84,30 @@ along with this software (see the LICENSE.md file). If not, see
             fromPartyId="BOSS_CS_AGENT" entryDate="2026-11-02 10:20:00" contentType="text/html"
             body="&lt;p&gt;Internal: this is the October batch; if calibrating does not help, replace it.&lt;/p&gt;"/>
     <mantle.request.RequestCommEvent requestId="BOSS_CS_CASE_THERMO" communicationEventId="BOSS_CS_CE_THERMO_NOTE"/>
+    <!-- P5 (CS-REPLIES, D24, F3): the Support team's user group (Mantle's sync#ServiceTeamGroup, from
+        BossZCustomerServiceDemoData.xml, puts its members in it) and Retail's saved replies, Comms text blocks: the team's "Need
+        more details" (tag Follow up, then wait for the customer), the service-wide "Filters ship soon" (assign it to me), both
+        the manager's, and the agent's personal "Thanks for your patience". -->
+    <moqui.security.UserGroup userGroupId="SVT_BOSS_CS_TEAM_SUPPORT" description="Service team Retail support team" groupTypeEnumId="UgtServiceTeam"/>
+    <moqui.basic.email.EmailTextBlock emailTextBlockId="BOSS_CS_REPLY_DETAILS" ownerUserId="BOSS_CS_MANAGER" userGroupId="SVT_BOSS_CS_TEAM_SUPPORT"
+            title="Need more details" shortcut="details"
+            bodyHtml="&lt;p&gt;Hello {{contactName}},&lt;/p&gt;&lt;p&gt;Thank you for contacting {{organizationName}} about case {{caseId}}. So we can help, please send us a photo of the display and what a room thermometer reads.&lt;/p&gt;&lt;p&gt;{{agentName}}&lt;/p&gt;"/>
+    <mantle.request.support.SavedReply emailTextBlockId="BOSS_CS_REPLY_DETAILS" organizationPartyId="ORG_ZIZI_RETAIL" localeId="en"
+            variableNames="contactName,organizationName,caseId,agentName" disabled="N"/>
+    <mantle.request.support.SavedReplyAction savedReplyActionId="BOSS_CS_RA_DETAILS_1" emailTextBlockId="BOSS_CS_REPLY_DETAILS" sequenceNum="1"
+            actionEnumId="SraAddTag" tagEnumId="RtgFollowUp"/>
+    <mantle.request.support.SavedReplyAction savedReplyActionId="BOSS_CS_RA_DETAILS_2" emailTextBlockId="BOSS_CS_REPLY_DETAILS" sequenceNum="2"
+            actionEnumId="SraSetStatus" statusId="ReqWaitingCustomer"/>
+    <moqui.basic.email.EmailTextBlock emailTextBlockId="BOSS_CS_REPLY_FILTERS" ownerUserId="BOSS_CS_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE"
+            title="Filters ship soon" shortcut="filters"
+            bodyHtml="&lt;p&gt;Hello {{contactName}},&lt;/p&gt;&lt;p&gt;Replacement filters ship within two working days when they are in stock; we will write again when yours ship.&lt;/p&gt;&lt;p&gt;{{agentName}}, {{organizationName}}&lt;/p&gt;"/>
+    <mantle.request.support.SavedReply emailTextBlockId="BOSS_CS_REPLY_FILTERS" organizationPartyId="ORG_ZIZI_RETAIL" localeId="en"
+            variableNames="contactName,agentName,organizationName" disabled="N"/>
+    <mantle.request.support.SavedReplyAction savedReplyActionId="BOSS_CS_RA_FILTERS_1" emailTextBlockId="BOSS_CS_REPLY_FILTERS" sequenceNum="1"
+            actionEnumId="SraAssignSelf"/>
+    <moqui.basic.email.EmailTextBlock emailTextBlockId="BOSS_CS_REPLY_PATIENCE" ownerUserId="BOSS_CS_AGENT"
+            title="Thanks for your patience" shortcut="patience"
+            bodyHtml="&lt;p&gt;Hello {{contactName}},&lt;/p&gt;&lt;p&gt;Thanks for your patience while we look into case {{caseId}}.&lt;/p&gt;"/>
+    <mantle.request.support.SavedReply emailTextBlockId="BOSS_CS_REPLY_PATIENCE" organizationPartyId="ORG_ZIZI_RETAIL" localeId="en"
+            variableNames="contactName,caseId" disabled="N"/>
 </entity-facade-xml>

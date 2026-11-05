@@ -80,6 +80,17 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- P5: who gets a case and what agents reply with (design Settings: Work routing) -->
+                <container-box>
+                    <box-header title="Assignment and replies"/>
+                    <box-body>
+                        <link url="/qapps/CustomerService/Settings/AssignmentRules?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
+                                text="Assignment rules" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted q-mb-sm" text="Which agent of a queue's team a new case goes to, and when no one can take it."/>
+                        <link url="/qapps/CustomerService/Settings/SavedReplies" url-type="plain" text="Saved replies" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted" text="Reply texts with their case actions, personal, for a team or for every agent."/>
+                    </box-body>
+                </container-box>
                 <!-- P12: Knowledge and feedback (design Settings), the knowledge sources -->
                 <container-box>
                     <box-header title="Knowledge and feedback"/>

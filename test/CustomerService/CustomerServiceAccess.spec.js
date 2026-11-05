@@ -576,3 +576,63 @@ feature(
         }
     }
 )
+
+// P5: an assignment rule is the administrator's to save (SUPPORT_POLICY_EDIT), not the manager's, and never on another
+// organization's queue; a saved reply on a case is a case editor's (SUPPORT_CASE_EDIT), not the reader's, and another
+// organization's agent is refused the case; a saved reply's change is its owner's only
+feature("assignment rules are the administrator's, saved replies on a case a case editor's of its organization", {
+    when() {
+        const problems = []
+        const S = "mantle.request.SupportCaseServices."
+        const draft = {
+            organizationPartyId: ids.organizationId,
+            requestCategoryId: ids.supportQueueId,
+            ruleName: "Access spec draft rule",
+            distributionEnumId: "AdManual",
+            draft: true
+        }
+        for (const [user, service, parameters, expected] of [
+            [users.admin, "save#AssignmentRule", draft, ""],
+            [users.manager, "save#AssignmentRule", draft, "PERMISSION_DENIED"],
+            [
+                users.admin,
+                "save#AssignmentRule",
+                Object.assign({}, draft, {requestCategoryId: ids.otherQueueId}),
+                "QUEUE_UNAVAILABLE"
+            ],
+            [users.manager, "preview#Assignment", {requestId: ids.filtersCaseId}, ""],
+            [users.services, "preview#Assignment", {requestId: ids.filtersCaseId}, "RECORD_UNAVAILABLE"],
+            [users.agent, "preview#SavedReply", {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_DETAILS"}, ""],
+            [
+                users.read,
+                "preview#SavedReply",
+                {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_DETAILS"},
+                "PERMISSION_DENIED"
+            ],
+            [
+                users.services,
+                "preview#SavedReply",
+                {requestId: ids.filtersCaseId, emailTextBlockId: "BOSS_CS_REPLY_FILTERS"},
+                "RECORD_UNAVAILABLE"
+            ]
+        ]) {
+            const message = asUser(user, () => refusal(S + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const save = "ironstone.customerservice.ReplyServices.save#SavedReplyAction"
+        for (const [user, parameters, expected] of [
+            [users.agent, {emailTextBlockId: "BOSS_CS_REPLY_PATIENCE", disabled: "N"}, ""],
+            [users.manager, {emailTextBlockId: "BOSS_CS_REPLY_PATIENCE", disabled: "N"}, "REPLY_UNAVAILABLE"],
+            [users.read, {title: "Reader reply", bodyHtml: "<p>Hi</p>"}, "PERMISSION_DENIED"]
+        ]) {
+            const message = asUser(user, () => refusal(save, Object.assign({appRoot: "CustomerService"}, parameters)))
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} save#SavedReplyAction: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
