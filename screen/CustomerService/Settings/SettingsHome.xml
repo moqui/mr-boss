@@ -80,6 +80,15 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- P7: the case templates of the organization's queues -->
+                <container-box>
+                    <box-header title="Case templates"/>
+                    <box-body>
+                        <link url="/qapps/CustomerService/Settings/CaseTemplates?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
+                                text="Case templates" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted" text="The fields a case of a queue asks for, customer-visible or internal, and when each shows or is required."/>
+                    </box-body>
+                </container-box>
                 <!-- P12: Knowledge and feedback (design Settings), the knowledge sources -->
                 <container-box>
                     <box-header title="Knowledge and feedback"/>

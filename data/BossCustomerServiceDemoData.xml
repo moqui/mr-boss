@@ -131,4 +131,32 @@ along with this software (see the LICENSE.md file). If not, see
             priorityBandEnumId="CpbHigh" firstResponseMinutes="1440" resolutionMinutes="43200" warningMinutes="240" fromDate="0"/>
     <mantle.request.support.ServiceLevelTarget serviceLevelTargetId="BOSS_CS_SLT_PRIVACY_N" serviceLevelPolicyId="BOSS_CS_SLA_PRIVACY"
             priorityBandEnumId="CpbNormal" firstResponseMinutes="1440" resolutionMinutes="43200" warningMinutes="240" fromDate="0"/>
+
+    <!-- P7: Ziziwork Retail's "Defective product" case template on the Support queue (impl-customer-service P7, CS-TEMPLATES): a
+        dated DbForm whose serial number shows and is required when the product is equipment (the demo thermostat), with the
+        agent's internal assessment, which the customer never sees. Published from the start; the queue row takes it. -->
+    <moqui.screen.form.DbForm formId="BOSS_CS_TPL_DEFECTIVE" purposeEnumId="DbfpCaseTemplate" isDated="Y" ownerPartyId="ORG_ZIZI_RETAIL"
+            description="Defective product" comments="A product that does not work: what it is, its serial and when it started."/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_DEFECTIVE" fieldName="productKind" title="What kind of product is it?"
+            fieldTypeEnumId="DBFFT_radio" layoutSequenceNum="10" audienceEnumId="CfaCustomer" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_DEFECTIVE" fieldName="productKind" sequenceNum="1" keyValue="equipment"
+            text="Equipment (a thermostat or controller)" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_DEFECTIVE" fieldName="productKind" sequenceNum="2" keyValue="supply"
+            text="A filter or supply" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_DEFECTIVE" fieldName="productKind" sequenceNum="3" keyValue="other"
+            text="Something else" fromDate="0"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_DEFECTIVE" fieldName="serialNumber" title="Serial number"
+            tooltip="On the label under the device" fieldTypeEnumId="DBFFT_text-line" layoutSequenceNum="20" audienceEnumId="CfaCustomer"
+            fromDate="0"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_DEFECTIVE" fieldName="problemStarted" title="When did the problem start?"
+            fieldTypeEnumId="DBFFT_date-time" layoutSequenceNum="30" audienceEnumId="CfaCustomer" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldAttribute formId="BOSS_CS_TPL_DEFECTIVE" fieldName="problemStarted" attributeName="type" value="date"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_DEFECTIVE" fieldName="agentAssessment" title="First assessment"
+            tooltip="For the service team only" fieldTypeEnumId="DBFFT_text-area" layoutSequenceNum="40" audienceEnumId="CfaInternal"
+            fromDate="0"/>
+    <moqui.screen.form.DbFormFieldDependency formId="BOSS_CS_TPL_DEFECTIVE" dependencySeqId="00001" sourceFieldName="productKind"
+            operator="equals" value="equipment" targetFieldName="serialNumber" effect="show" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldDependency formId="BOSS_CS_TPL_DEFECTIVE" dependencySeqId="00002" sourceFieldName="productKind"
+            operator="equals" value="equipment" targetFieldName="serialNumber" effect="require" fromDate="0"/>
+    <mantle.request.support.ServiceQueue serviceQueueId="BOSS_CS_SQ_SUPPORT" templateFormId="BOSS_CS_TPL_DEFECTIVE"/>
 </entity-facade-xml>

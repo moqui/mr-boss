@@ -291,5 +291,8 @@ feature("CaseDetail's Customer Service section and NewCase's duplicate warning r
         newCase.output.includes("open case(s)")
         newCase.output.includes(ids.filtersCaseId)
         newCase.output.includes("Create case")
+        // P7: the Support queue's template step, its fields in SubmitCase
+        newCase.output.includes("Defective product: its fields below")
+        newCase.output.includes("What kind of product is it?")
     }
 })

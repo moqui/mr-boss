@@ -389,6 +389,8 @@ along with this software (see the LICENSE.md file). If not, see
                                                 </form-single>
                                             </box-body>
                                         </container-box>
+                                        <!-- P7: the case's template values as submitted (template/CustomerServiceTemplates.xml) -->
+                                        <section-include name="CaseTemplateValues" location="component://mr-boss/template/CustomerServiceTemplates.xml"/>
                                         <container-box>
                                             <box-header title="Linked records"/>
                                             <box-body-nopad>

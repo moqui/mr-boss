@@ -576,3 +576,42 @@ feature(
         }
     }
 )
+// P7: case templates are the administrator's to change (SUPPORT_POLICY_EDIT), not the manager's; another organization's
+// template, and its case values, are refused like a missing one
+feature("case templates: the administrator saves one and the manager may not; another organization's is refused", {
+    when() {
+        const problems = []
+        const S = "mantle.request.SupportCaseServices."
+        const draft = {organizationPartyId: ids.organizationId, description: "Access spec template"}
+        for (const [user, service, parameters, expected] of [
+            [users.admin, "save#CaseTemplate", draft, ""],
+            [users.manager, "save#CaseTemplate", draft, "PERMISSION_DENIED"],
+            [users.agent, "get#CaseTemplate", {formId: ids.templateFormId}, ""],
+            [users.services, "get#CaseTemplate", {formId: ids.templateFormId}, "RECORD_UNAVAILABLE"],
+            [users.services, "get#CaseTemplateValues", {requestId: ids.thermostatCaseId}, "RECORD_UNAVAILABLE"]
+        ]) {
+            const message = asUser(user, () => refusal(S + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const templates = "ironstone.customerservice.TemplateServices."
+        const theirs = asUser(users.services, () =>
+            refusal(templates + "find#Templates", {appRoot: "CustomerService", organizationPartyId: ids.organizationId})
+        )
+        if (!theirs.includes("RECORD_UNAVAILABLE"))
+            problems.push(`find#Templates of Retail for Services: ${theirs || "accepted"}`)
+        const otherChoice = asUser(users.services, () =>
+            invoke(templates + "get#CaseTemplateChoice", {
+                appRoot: "CustomerService",
+                organizationPartyId: ids.organizationId,
+                requestCategoryId: ids.supportQueueId
+            })
+        )
+        if (otherChoice.templateFormId || otherChoice.templateOptions.length)
+            problems.push("NewCase offers Retail's template to Services' agent")
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

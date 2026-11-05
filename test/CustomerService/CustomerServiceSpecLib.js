@@ -45,7 +45,9 @@ const ids = {
     // P3: Joe Q Public's held order (load#CustomerServiceDemo), the stocked filter and Retail's service mailbox
     heldOrderId: "BOSS_CS_SO_HELD",
     filterProductId: "BOSS_CS_FILTER",
-    serviceMailAccountId: "BOSS_CS_SERVICE_MAIL"
+    serviceMailAccountId: "BOSS_CS_SERVICE_MAIL",
+    // P7: Retail's "Defective product" case template, which the Support queue uses
+    templateFormId: "BOSS_CS_TPL_DEFECTIVE"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -160,6 +162,8 @@ function routeFixtures() {
         "Knowledge/ArticleFeedback": {parameters: {}, text: "Article feedback"},
         "Knowledge/CaseToArticle": {parameters: {requestId: ids.thermostatCaseId}, text: "Article from case"},
         "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"},
+        // P7: the case templates
+        "Settings/CaseTemplates": {parameters: {}, text: "Case templates"},
         // P3: the customer, order and availability screens and the shared mounts under them
         "Customers/Customers": {parameters: {term: "joe@public.com"}, text: "Joe Public"},
         "Customers/Customer360": {parameters: {customerPartyId: ids.customerId}, text: "Joe Public"},
