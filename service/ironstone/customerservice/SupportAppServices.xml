@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Support app's internal side (impl-customer-service P15; design-customer-service §4 ContactDetail, §9 ServiceDefaults;
+    SupportApp.js): ContactDetail's Invite to support and ServiceDefaults' Support mount settings, scoped by Customer
+    Service's access here; Mantle's mantle.party.ExternalAccessServices.invite#Contact and
+    mantle.request.SupportCaseServices.save#SupportAppSetting do the work and check their permissions. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="SupportInvite" allow-remote="false">
+        <description>What ContactDetail's Invite to support offers for a contact of a customer the user serves: whether the user
+            may invite (SUPPORT_CONTACT_INVITE, an organization of theirs with a published Support site, an address of the
+            contact), the customer, the organizations and the contact's own addresses, and why not.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="partyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="canInvite" type="Boolean"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="customerName"/>
+            <parameter name="organizationOptions" type="List"/>
+            <parameter name="emailOptions" type="List"/>
+            <parameter name="reason"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/SupportApp.js').execute('supportInvite', context)"/>
+            <script>for (const name of ['canInvite', 'customerPartyId', 'customerName', 'organizationOptions', 'emailOptions', 'reason'])
+                context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="create" noun="SupportInvitation" allow-remote="false">
+        <description>Invite to support: a PASS invitation bound to the Support app and the contact's customer for one of the
+            contact's own addresses (EMAIL_INVALID), on an organization of the user's with a published Support site
+            (SITE_UNAVAILABLE), through invite#Contact (SUPPORT_CONTACT_INVITE in the organization); administrator Y makes the
+            contact a customer administrator. The link is shown once, for the agent to send.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="partyId" required="true"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="emailAddress" required="true"/>
+            <parameter name="administrator"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="invitationId"/>
+            <parameter name="invitationUrl"/>
+            <parameter name="expiresAt" type="Timestamp"/>
+        </out-parameters>
+        <actions>
+            <set field="invited" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/SupportApp.js').execute('inviteContact', context)"/>
+            <set field="invitationId" from="invited.invitationId"/>
+            <set field="invitationUrl" from="invited.invitationUrl"/>
+            <set field="expiresAt" from="invited.expiresAt"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SupportMountSettings" allow-remote="false">
+        <description>ServiceDefaults' Support mount settings of one of the user's settings organizations: the current setting
+            (queues, case types, knowledge spaces, since when), the queues, service-enabled types and the spaces of its customer
+            and public knowledge sources to choose from, and its published sites with the Support app.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="setting" type="Map"/>
+            <parameter name="queueOptions" type="List"/>
+            <parameter name="typeOptions" type="List"/>
+            <parameter name="spaceOptions" type="List"/>
+            <parameter name="sites" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/SupportApp.js').execute('supportMountSettings', context)"/>
+            <script>for (const name of ['organizationPartyId', 'setting', 'queueOptions', 'typeOptions', 'spaceOptions', 'sites'])
+                context[name] = found[name]</script>
+        </actions>
+    </service>
+</services>

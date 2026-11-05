@@ -118,4 +118,29 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/FeedbackDemo.js').execute('runStep', context)</script>
         </actions>
     </service>
+    <service verb="load" noun="SupportDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>P15: ORG_ZIZI_RETAIL's Support app demo on ZIZI_PORTAL: the Support mount's settings, Joe's
+            Distributing's contact and customer administrator as invited PASS accounts, Joe Q Public's own verified account
+            (the self relationship), a case the contact filed through the app, and the Support queue's public form token; each
+            step in its own transaction, one that fails named in errors. Idempotent. Only data loading or a system
+            administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/SupportDemo.js')
+                .execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+    <service verb="run" noun="SupportDemoStep" authenticate="anonymous-all" allow-remote="false">
+        <description>One step of load#SupportDemo, made once, in a transaction of its own. Only data loading or a system
+            administrator may run it.</description>
+        <in-parameters><parameter name="step"/></in-parameters>
+        <actions>
+            <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/SupportDemo.js').execute('runStep', context)</script>
+        </actions>
+    </service>
 </services>

@@ -62,6 +62,18 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="organizationPartyId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- P15: the Support mount's settings (its queues, case types and knowledge spaces) from a date -->
+    <transition name="saveSupportMount">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#SupportAppSetting"
+                    in-map="{organizationPartyId:organizationPartyId, queueIds:(supportQueueIds || null),
+                        typeEnumIds:(supportTypeEnumIds || null), wikiSpaceIds:(supportSpaceIds || null),
+                        fromDate:(fromDate || null), changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the Support app's settings</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
                 transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
@@ -96,6 +108,15 @@ along with this software (see the LICENSE.md file). If not, see
                 tokenDays:feedbackPolicy.tokenDays, reminderCount:feedbackPolicy.reminderCount, reminderDays:feedbackPolicy.reminderDays,
                 lowScoreThreshold:feedbackPolicy.lowScoreThreshold, followUpTeamPartyId:feedbackPolicy.followUpTeamPartyId,
                 followUpDays:feedbackPolicy.followUpDays} : {})"/>
+        <!-- P15: the Support mount's settings -->
+        <if condition="cfg">
+            <service-call name="ironstone.customerservice.SupportAppServices.get#SupportMountSettings" out-map="supportMount"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:cfgOrganizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="supportMountValues" from="{organizationPartyId:cfgOrganizationPartyId,
+                supportQueueIds:supportMount?.setting?.queueIds || [], supportTypeEnumIds:supportMount?.setting?.typeEnumIds || [],
+                supportSpaceIds:supportMount?.setting?.wikiSpaceIds || []}"/>
     </actions>
     <widgets>
         <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
@@ -265,6 +286,44 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-single>
                     </box-body>
                 </container-box>
+                <section name="SupportMountSettings" condition="!!supportMount">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Support app"/>
+                            <box-body>
+                                <label type="p" text="${supportMount.sites.length ? 'Customers reach the Support app at ' + supportMount.sites.map(site => site.url || site.siteId).join(', ') + '.' : 'No published site has the Support app for this organization yet (PASS site mounts).'}"/>
+                                <label type="p" text="${supportMount.setting ? 'In effect since ' + supportMount.setting.fromText + '.' : 'Not set: customers file into the default queue, and the help reads every customer and public knowledge source.'}"/>
+                                <form-single name="SupportMount" transition="saveSupportMount" map="supportMountValues">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="supportQueueIds">
+                                        <default-field title="Queues customers file into" tooltip="Empty: the default queue">
+                                            <drop-down allow-multiple="true" allow-empty="true">
+                                                <list-options list="supportMount.queueOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="supportTypeEnumIds">
+                                        <default-field title="Case types offered" tooltip="Empty: each queue's own">
+                                            <drop-down allow-multiple="true" allow-empty="true">
+                                                <list-options list="supportMount.typeOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="supportSpaceIds">
+                                        <default-field title="Help from" tooltip="Empty: every customer and public knowledge source">
+                                            <drop-down allow-multiple="true" allow-empty="true">
+                                                <list-options list="supportMount.spaceOptions" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time/></default-field></field>
+                                    <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                    <field name="submitButton">
+                                        <conditional-field title="Save from that date" condition="can.policyEdit"><submit/></conditional-field>
+                                        <default-field><ignored/></default-field>
+                                    </field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
                 <section name="FeedbackPolicyHistory" condition="feedbackHistory.length">
                     <widgets>
                         <container-box>

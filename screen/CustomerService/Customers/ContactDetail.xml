@@ -17,8 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     transitions, as Commons/Contacts/ContactDetail shows it) for a contact of a customer the user serves: the customer
     itself or a current contact, employee or representative of one (ironstone.customerservice.CustomerServices
     check#ServiceContact); anyone else is "not available". Channels are maintained under the record's own party checks
-    (ContactServices.check#ContactAccess: party write); consent is read there. Invite to support comes with the Support app
-    (P15), for SUPPORT_CONTACT_INVITE only. -->
+    (ContactServices.check#ContactAccess: party write); consent is read there. Invite to support (P15), for
+    SUPPORT_CONTACT_INVITE only (template/CustomerServiceSupportInvite.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Contact" default-menu-include="false">
     <parameter name="partyId" required="true"/>
@@ -43,6 +43,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="contactBookGroups" location="component://mr-boss/template/ContactRecord.xml"/>
     <transition-include name="consentRecord" location="component://mr-boss/template/ConsentRecord.xml"/>
     <transition-include name="consentListSet" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <!-- P15: Invite to support (template/CustomerServiceSupportInvite.xml), SUPPORT_CONTACT_INVITE holders only -->
+    <transition-include name="inviteSupportContact" location="component://mr-boss/template/CustomerServiceSupportInvite.xml"/>
     <actions>
         <service-call name="ironstone.customerservice.CustomerServices.check#ServiceContact" out-map="serviceContact"
                 transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, partyId:partyId}"/>
@@ -72,6 +74,7 @@ along with this software (see the LICENSE.md file). If not, see
                     <link url="${customerUrl}" link-type="anchor" text="${serviceContact.customerName}" icon="arrow_back"
                             parameter-map="{customerPartyId:serviceContact.customerPartyId}"/>
                 </container>
+                <section-include name="CustomerServiceSupportInvite" location="component://mr-boss/template/CustomerServiceSupportInvite.xml"/>
                 <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>
             </widgets>
         </section>
