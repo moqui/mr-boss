@@ -405,11 +405,24 @@ along with this software (see the LICENSE.md file). If not, see
             describe, list, lookup, match, parse, suggest), which test/Projects/ProjectsAccess.spec.js checks against every service file. The
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
-            not in this pattern: each checks the client's access itself -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare|confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish|follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place|post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|reevaluate|refuse|release|remove|rename|reopen|replace|reply|request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start|stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+            not in this pattern: each checks the client's access itself. The verbs are split over several rows, as an
+            artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to -->
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut|clone|close|comment|complete|compare)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign|record|reevaluate|refuse|release|remove|rename|reopen|replace|reply)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run|save|schedule|select|send|set|setup|share|staff|start)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage|turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
-        <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees|projects\.ProjectRequestServices\.search#WorkItemOptions|projects\.WorkItemServices\.search#ParentOptions|projects\.PlanningServices\.search#PlanItemCandidates)"
+        <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(projects\.ProjectRequestServices\.search#WorkItemOptions|projects\.WorkItemServices\.search#ParentOptions|projects\.PlanningServices\.search#PlanItemCandidates)"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_PROJECTS_INTERNAL_CLIENT" userGroupId="BOSS_PROJECT_CLIENT" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
