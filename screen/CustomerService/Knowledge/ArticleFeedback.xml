@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ArticleFeedback (design-customer-service §6 ArticleFeedback; style-guide §3.2 list; impl-customer-service P12): the review
+    queue of helpful and not-helpful reports on the organization's articles. FeedbackFind (space, helpful, review state,
+    period) and FeedbackList (the article and version, helpful, comment, the case when the user sees it and the article's
+    case count, who gave it, the review) over ironstone.customerservice.KnowledgeServices.find#ArticleFeedback; FeedbackReview,
+    a row-selection action, decides the selected feedback through mantle.request.KnowledgeServices.review#ArticleFeedback: an
+    improvement makes one task per article (or links the task given) for the assignee or the source's review team, and the
+    article itself never changes; each failure is named. For the knowledge author and the service manager
+    (BOSS_CS_ARTICLE_FEEDBACK); the manager reads, the author reviews (SUPPORT_KNOWLEDGE_EDIT). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Article feedback" default-menu-index="2">
+    <parameter name="wikiSpaceId"/>
+    <parameter name="wikiPageId"/>
+    <parameter name="helpful"/>
+    <parameter name="statusId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <!-- FeedbackFind: the list again with the filters (a link form) -->
+    <transition name="findFeedback">
+        <default-response url="."/>
+    </transition>
+    <!-- FeedbackReview: the selected feedback reviewed (a transition with actions, so the row selection posts its ids), the
+        result of each named -->
+    <transition name="reviewFeedback">
+        <actions>
+            <set field="articleFeedbackIds" from="(Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(','))
+                    .filter((id) =&gt; id)"/>
+            <service-call name="mantle.request.KnowledgeServices.review#ArticleFeedback" out-map="reviewed"
+                    in-map="{articleFeedbackIds:articleFeedbackIds, decisionEnumId:(decisionEnumId || 'AfdImprove'),
+                        reviewNote:(reviewNote || null), assigneePartyId:(assigneePartyId || null), dueDate:(dueDate || null)}"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const failed = Array.from(reviewed.results || []).filter((row) => row.outcome !== 'Done')
+                    const text = ec.resource.expand('Reviewed ${done}', '', {done: reviewed.doneCount}) + (failed.length ? '; ' +
+                        ec.resource.expand('not reviewed: ${list}', '', {list: failed.map((row) => row.articleFeedbackId + ' (' + row.outcome + ')').join(', ')}) : '')
+                    ec.message.addMessage(text, failed.length ? 'warning' : 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.KnowledgeServices.find#ArticleFeedback" out-map="found" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, wikiSpaceId:wikiSpaceId, wikiPageId:wikiPageId, helpful:helpful,
+                    statusId:(statusId ?? 'AfbSubmitted'), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="feedbackFound" from="!!found?.feedbackList"/>
+        <set field="feedbackList" from="found?.feedbackList || []"/>
+        <set field="feedbackListCount" from="found?.feedbackListCount"/>
+        <set field="feedbackListPageIndex" from="found?.feedbackListPageIndex"/>
+        <set field="feedbackListPageSize" from="found?.feedbackListPageSize"/>
+        <set field="feedbackListPageMaxIndex" from="found?.feedbackListPageMaxIndex"/>
+        <set field="feedbackListPageRangeLow" from="found?.feedbackListPageRangeLow"/>
+        <set field="feedbackListPageRangeHigh" from="found?.feedbackListPageRangeHigh"/>
+        <set field="spaceOptions" from="found?.spaceOptions || []"/>
+        <set field="canReview" from="!!found?.canReview"/>
+        <set field="findValues" from="{wikiSpaceId:wikiSpaceId || '', helpful:helpful || '', statusId:statusId ?? 'AfbSubmitted',
+                fromDate:fromDate || '', thruDate:thruDate || ''}"/>
+    </actions>
+    <widgets>
+        <context title="Article feedback" selection-form="FeedbackList"/>
+        <label text="Article feedback" type="h5"/>
+        <section name="FeedbackUnavailable" condition="!feedbackFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Article feedback is reviewed by the knowledge authors and the service managers."/>
+                        <link url="${sharedLinks['Knowledge']}" text="Back to Knowledge" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="FeedbackQueue" condition="feedbackFound">
+            <widgets>
+                <label type="p" style="text-caption m-muted"
+                        text="What readers said of the articles. Reviewing a report makes or links a task; the article changes only when its authors edit and publish it."/>
+                <container-box>
+                    <box-body>
+                        <form-single name="FeedbackFind" transition="findFeedback" map="findValues">
+                            <field name="wikiSpaceId">
+                                <default-field title="Space">
+                                    <drop-down allow-empty="true"><list-options list="spaceOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="helpful">
+                                <default-field title="Helpful">
+                                    <drop-down allow-empty="true"><option key="N" text="Not helpful"/><option key="Y" text="Helpful"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="statusId">
+                                <default-field title="Review">
+                                    <drop-down allow-empty="true">
+                                        <option key="AfbSubmitted" text="To review"/><option key="AfbReviewed" text="Reviewed"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From"><date-time type="date"/></default-field></field>
+                            <field name="thruDate"><default-field title="Through"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="wikiSpaceId"/><field-ref name="helpful"/><field-ref name="statusId"/></field-row>
+                                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="submitButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="FeedbackList" list="feedbackList" skip-form="true" paginate="true">
+                            <row-selection id-field="articleFeedbackId" parameter="selectedIds" list-mode="true" condition="canReview">
+                                <action>
+                                    <dialog button-text="Review" button-icon="sym_o_rate_review" title="Review the selected feedback"/>
+                                    <form-single name="FeedbackReview" transition="reviewFeedback">
+                                        <field name="decisionEnumId">
+                                            <default-field title="Decision">
+                                                <drop-down>
+                                                    <entity-options key="${enumId}" text="${description}">
+                                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                            <econdition field-name="enumTypeId" value="ArticleFeedbackDecision"/>
+                                                            <order-by field-name="sequenceNum"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="reviewNote">
+                                            <default-field title="Note" tooltip="With an improvement, what the task is to do"><text-area rows="3"/></default-field>
+                                        </field>
+                                        <field name="assigneePartyId">
+                                            <default-field title="Assignee" tooltip="Empty: the source's review team">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'agents'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                        <field name="submitButton">
+                                            <default-field title="Review"><submit confirmation="Review the selected feedback?"/></default-field>
+                                        </field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="title">
+                                <default-field title="Article">
+                                    <link url="${articleUrl}" url-type="plain" text="${title}" link-type="anchor"/>
+                                    <label text="${[spaceName, versionText ? 'version ' + versionText : ''].filter(Boolean).join(' · ')}" type="div"
+                                            style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="helpfulText">
+                                <default-field title="Helpful">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${helpfulColor}">${
+                                            WebUtilities.encodeHtml(helpfulText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: helpfulText})}]]></text>
+                                        <text type="html">${helpfulText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="comment"><default-field title="Comment"><display/></default-field></field>
+                            <field name="caseText">
+                                <default-field title="Case">
+                                    <link url="${caseUrl}" url-type="plain" text="${caseText}" link-type="anchor" condition="caseUrl"/>
+                                    <label text="${caseText}" type="span" condition="!caseUrl"/>
+                                    <label text="${caseCount} case(s) on the article" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="submittedText"><default-field title="Given"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="Review">
+                                    <label text="${statusText}" type="span"/>
+                                    <label text="${[decisionText, reviewerName].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"
+                                            condition="reviewed"/>
+                                    <link url="${taskUrl}" url-type="plain" text="Task ${workEffortId}" link-type="anchor" condition="taskUrl"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="comment"/></column>
+                                <column><field-ref name="helpfulText"/><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!feedbackList.length"
+                                text="No feedback here. Agents give it from a case's Knowledge tab; customers from the help pages."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

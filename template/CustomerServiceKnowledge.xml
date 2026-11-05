@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseDetail's Knowledge tab (design-customer-service §3 CaseDetail Knowledge; impl-customer-service P12, CS-KNOWLEDGE):
+    the section template/CustomerServiceCaseDetail.xml includes for tab knowledge, with its transitions, which
+    Shared/RequestDetail includes. The articles linked to the case (WikiPageRequest) and the suggestions for its subject or a
+    search (ironstone.customerservice.KnowledgeServices.get#CaseKnowledge over Mantle's find#ArticleSuggestions, the
+    requester's language first); each read in Knowledge with the case (Link to case, Send to customer, Suggest edit there
+    too). Link and unlink (mantle.request.RequestServices.link#RequestRecord, unlink#RequestRecord), Send to customer (Comms
+    Compose with the published address: prepare#ArticleSend, a draft or an internal article refused), Suggest edit
+    (mantle.request.KnowledgeServices.suggest#ArticleEdit, a task for the review team) and Helpful? (record#ArticleFeedback),
+    each after the case's check (caseEdit); Make an article opens CaseToArticle for a knowledge author. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <!-- the suggestions for other words (a link form: the tab again with articleText) -->
+    <transition name="searchArticles">
+        <default-response url=".">
+            <parameter name="requestId"/>
+            <parameter name="tab" value="knowledge"/>
+            <parameter name="articleText"/>
+        </default-response>
+    </transition>
+    <transition name="linkArticle">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.RequestServices.link#RequestRecord"
+                    in-map="{requestId:requestId, recordEntityName:'moqui.resource.wiki.WikiPage', recordId:wikiPageId}"/>
+            <message type="success">Linked the article to case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="knowledge"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="unlinkArticle">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.RequestServices.unlink#RequestRecord"
+                    in-map="{requestId:requestId, recordEntityName:'moqui.resource.wiki.WikiPage', recordId:wikiPageId}"/>
+            <message type="success">Unlinked the article from case ${requestId}</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="knowledge"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Send to customer: Compose for the case's contact with the published address (the case is its record) -->
+    <transition name="sendArticle">
+        <actions>
+            <service-call name="ironstone.customerservice.KnowledgeServices.prepare#ArticleSend" out-map="sendOut"
+                    in-map="{appRoot:appRoot, requestId:requestId, wikiPageId:wikiPageId}"/>
+            <set field="composeUrl" from="sendOut?.send?.composeUrl || '.'"/>
+        </actions>
+        <default-response url="${composeUrl}" url-type="plain"/>
+        <error-response url="."/>
+    </transition>
+    <transition name="suggestArticleEdit">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.KnowledgeServices.suggest#ArticleEdit"
+                    in-map="{wikiPageId:wikiPageId, note:(note || null), requestId:requestId}"/>
+            <message type="success">Your suggestion is with the review team</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="knowledge"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="rateArticle">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.KnowledgeServices.record#ArticleFeedback"
+                    in-map="{wikiPageId:wikiPageId, helpful:(helpful || null), comment:(comment || null), requestId:requestId}"/>
+            <message type="success">Thank you: the feedback goes to the article's authors</message>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="tab" value="knowledge"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CaseKnowledge">
+            <actions>
+                <service-call name="ironstone.customerservice.KnowledgeServices.get#CaseKnowledge" out-map="knowledgeOut"
+                        in-map="{appRoot:appRoot, requestId:requestId, text:(articleText || null)}" transaction="force-new" ignore-error="true"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="ck" from="knowledgeOut?.knowledge || {linked: [], suggestions: [], configured: false}"/>
+            </actions>
+            <widgets>
+                <container-box>
+                    <box-header title="Linked articles"/>
+                    <box-toolbar>
+                        <link url="${ck.knowledgeUrl}" url-type="plain" text="Open knowledge" icon="sym_o_menu_book" link-type="anchor-button"
+                                condition="ck.knowledgeUrl"/>
+                        <link url="${ck.caseToArticleUrl}" url-type="plain" text="Make an article" icon="sym_o_post_add" link-type="anchor-button"
+                                condition="ck.caseToArticleUrl"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="LinkedArticles" list="ck.linked" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Article">
+                                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor"/>
+                                    <label text="${[spaceName, audienceText, languageText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="SendArticle_${wikiPageId}" button-text="Send to customer" icon="sym_o_forward_to_inbox" width="480"
+                                            title="Send ${title} to the customer" condition="ck.canSend &amp;&amp; published &amp;&amp; !internal">
+                                        <form-single name="SendLinkedArticle" transition="sendArticle" map="{requestId:requestId, wikiPageId:wikiPageId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="wikiPageId"><default-field><hidden/></default-field></field>
+                                            <field name="explain"><default-field title=""><label text="Opens an email to the customer with the article's published address; nothing is sent until you send it."/></default-field></field>
+                                            <field name="submitButton"><default-field title="Write the email"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <button-menu text="More" icon="more_horiz" condition="ck.canLink">
+                                        <container-dialog id="RateArticle_${wikiPageId}" button-text="Helpful?" icon="sym_o_thumbs_up_down" width="480"
+                                                title="Did ${title} help with this case?">
+                                            <form-single name="RateLinkedArticle" transition="rateArticle" map="{requestId:requestId, wikiPageId:wikiPageId}">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="wikiPageId"><default-field><hidden/></default-field></field>
+                                                <field name="helpful">
+                                                    <default-field title="Did it help?">
+                                                        <radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio>
+                                                    </default-field>
+                                                </field>
+                                                <field name="comment"><default-field title="What was missing or wrong"><text-area rows="3"/></default-field></field>
+                                                <field name="submitButton"><default-field title="Send feedback"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="SuggestEdit_${wikiPageId}" button-text="Suggest edit" icon="sym_o_rate_review" width="520"
+                                                title="Suggest an edit to ${title}">
+                                            <form-single name="SuggestArticleEdit" transition="suggestArticleEdit" map="{requestId:requestId, wikiPageId:wikiPageId}">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="wikiPageId"><default-field><hidden/></default-field></field>
+                                                <field name="note">
+                                                    <default-field title="What should change" tooltip="A task for the article's review team; an editor edits it in Knowledge and asks for a review">
+                                                        <text-area rows="4"/>
+                                                    </default-field>
+                                                </field>
+                                                <field name="submitButton"><default-field title="Send suggestion"><submit/></default-field></field>
+                                            </form-single>
+                                        </container-dialog>
+                                        <container-dialog id="UnlinkArticle_${wikiPageId}" button-text="Unlink" icon="sym_o_link_off" width="420"
+                                                title="Unlink ${title} from case ${requestId}">
+                                            <form-single name="UnlinkLinkedArticle" transition="unlinkArticle" map="{requestId:requestId, wikiPageId:wikiPageId}">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="wikiPageId"><default-field><hidden/></default-field></field>
+                                                <field name="submitButton">
+                                                    <default-field title="Unlink"><submit type="danger" confirmation="Unlink ${title} from case ${requestId}?"/></default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </button-menu>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!ck.linked.length"
+                                text="No article is linked to this case yet. Link one of the suggestions below, or find one in Knowledge."/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Suggested articles${ck.requesterLanguage ? ' (' + String(ck.requesterLanguage).toUpperCase() + ' first)' : ''}"/>
+                    <box-body>
+                        <form-single name="ArticleSearch" transition="searchArticles" map="{requestId:requestId, tab:'knowledge', articleText:ck.text}">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="tab"><default-field><hidden/></default-field></field>
+                            <field name="articleText"><default-field title="Search articles"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Search"><submit/></default-field></field>
+                            <field-layout><field-row><field-ref name="articleText"/><field-ref name="submitButton"/></field-row></field-layout>
+                        </form-single>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="SuggestedArticles" list="ck.suggestions" skip-form="true" paginate="false">
+                            <field name="title">
+                                <default-field title="Article">
+                                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor"/>
+                                    <label text="${[spaceName, audienceText, languageText].filter(Boolean).join(' · ')}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>${internal ? '<q-chip dense square class="q-ma-none q-ml-xs m-tonal text-warning">' + WebUtilities.encodeHtml(ec.l10n.localize('Internal')) + '</q-chip>' : ''}]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText + (internal ? ' · ' + ec.l10n.localize('Internal') : '')})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="LinkSuggested_${wikiPageId}" button-text="Link" icon="sym_o_add_link" width="420"
+                                            title="Link ${title} to case ${requestId}" condition="ck.canLink &amp;&amp; !linked">
+                                        <form-single name="LinkSuggestedArticle" transition="linkArticle" map="{requestId:requestId, wikiPageId:wikiPageId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="wikiPageId"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title="Link to the case"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <label text="Linked" type="span" style="text-caption m-muted" condition="linked"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!ck.suggestions.length &amp;&amp; ck.configured"
+                                text="No article matches. Search with other words, or open Knowledge."/>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!ck.configured"
+                                text="No knowledge source is set up for this organization: the service administrator adds them in Settings."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

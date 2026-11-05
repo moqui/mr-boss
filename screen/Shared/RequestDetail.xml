@@ -86,6 +86,13 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="updateCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
     <transition-include name="transitionCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
     <transition-include name="setCaseTags" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+    <!-- Customer Service P12: the case's Knowledge tab (template/CustomerServiceKnowledge.xml) -->
+    <transition-include name="searchArticles" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <transition-include name="linkArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <transition-include name="unlinkArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <transition-include name="sendArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <transition-include name="suggestArticleEdit" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
+    <transition-include name="rateArticle" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->

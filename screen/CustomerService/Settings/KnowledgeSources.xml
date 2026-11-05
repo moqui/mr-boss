@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- KnowledgeSources (design-customer-service §9 KnowledgeSources ServiceKnowledgeSources; impl-customer-service P12,
+    CS-KNOWLEDGE): the wiki spaces, or parts of a space by page path, the organization's service desk suggests and sends
+    (ironstone.customerservice.KnowledgeServices.find#KnowledgeSources), each with its audience (internal: agents only;
+    customers; public), language, the queue it is first for, its priority, whether it is suggested, its review team and the
+    draft space for articles from cases; Add source, Edit (a new row from now, the old one ended) and End through
+    mantle.request.KnowledgeServices.save#ServiceKnowledgeSource (SUPPORT_POLICY_EDIT). Wiki spaces only: a source never
+    widens who may read a page; publishing and the pages themselves are Commons Knowledge's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Knowledge sources" default-menu-index="7">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition name="saveSource">
+        <actions>
+            <service-call name="mantle.request.KnowledgeServices.save#ServiceKnowledgeSource"
+                    in-map="{serviceKnowledgeSourceId:(serviceKnowledgeSourceId || null), organizationPartyId:organizationPartyId,
+                        wikiSpaceId:(wikiSpaceId || null), pagePathPrefix:(pagePathPrefix ?? ''), audienceEnumId:(audienceEnumId || null),
+                        localeLanguage:(localeLanguage || null), requestCategoryId:(requestCategoryId ?? ''), sequenceNum:(sequenceNum ?? ''),
+                        allowSuggestions:(allowSuggestions || 'Y'), reviewTeamPartyId:(reviewTeamPartyId ?? ''),
+                        draftWikiSpaceId:(draftWikiSpaceId ?? ''), draftParentPath:(draftParentPath ?? ''), changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the knowledge source</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endSource">
+        <actions>
+            <service-call name="mantle.request.KnowledgeServices.save#ServiceKnowledgeSource"
+                    in-map="{serviceKnowledgeSourceId:serviceKnowledgeSourceId, end:true, changeReason:(changeReason || null)}"/>
+            <message type="success">Ended the knowledge source</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.KnowledgeServices.find#KnowledgeSources" out-map="found"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="sourcesFound" from="!!found?.sources"/>
+        <set field="sources" from="found?.sources || []"/>
+        <set field="orgOptions" from="found?.organizations || []"/>
+        <set field="orgId" from="found?.organizationPartyId"/>
+        <set field="spaceOptions" from="found?.spaceOptions || []"/>
+        <set field="teamOptions" from="found?.teamOptions || []"/>
+        <set field="queueOptions" from="found?.queueOptions || []"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="newSource" from="{organizationPartyId:orgId, audienceEnumId:'SkaCustomer', allowSuggestions:'Y', sequenceNum:'10'}"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!sourcesFound"/>
+        <section name="SourceSettings" condition="sourcesFound">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <label text="Knowledge sources" type="h5"/>
+                        <label type="p" style="text-caption m-muted q-mb-none"
+                                text="The wiki spaces whose articles agents are offered and send. Who may read a page is still the wiki's; an internal source is never offered to customers."/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="AddSource" button-text="Add source" icon="sym_o_add" type="primary" width="640"
+                                title="Add a knowledge source" condition="can.policyEdit">
+                            <form-single name="AddSourceForm" transition="saveSource" map="newSource">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="wikiSpaceId">
+                                    <default-field title="Space">
+                                        <drop-down><list-options list="spaceOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="pagePathPrefix">
+                                    <default-field title="Pages under" tooltip="A page path of the space; empty for the whole space"><text-line size="30"/></default-field>
+                                </field>
+                                <field name="audienceEnumId">
+                                    <default-field title="Audience">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="ServiceKnowledgeAudience"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="localeLanguage">
+                                    <default-field title="Language" tooltip="The language of its pages, as a code: en, es, de">
+                                        <text-line size="4"/>
+                                    </default-field>
+                                </field>
+                                <field name="requestCategoryId">
+                                    <default-field title="First for the queue">
+                                        <drop-down allow-empty="true"><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="sequenceNum">
+                                    <default-field title="Priority" tooltip="Lower comes first"><text-line size="4" input-type="number"/></default-field>
+                                </field>
+                                <field name="allowSuggestions">
+                                    <default-field title="Suggested">
+                                        <radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="reviewTeamPartyId">
+                                    <default-field title="Review team" tooltip="Gets the tasks of its feedback and suggested edits">
+                                        <drop-down allow-empty="true"><list-options list="teamOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="draftWikiSpaceId">
+                                    <default-field title="Draft space" tooltip="Where an article drafted from a case goes">
+                                        <drop-down allow-empty="true"><list-options list="spaceOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="draftParentPath">
+                                    <default-field title="Drafts under"><text-line size="30"/></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Add from now"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="wikiSpaceId"/><field-ref name="pagePathPrefix"/></field-row>
+                                    <field-row><field-ref name="audienceEnumId"/><field-ref name="localeLanguage"/></field-row>
+                                    <field-row><field-ref name="requestCategoryId"/><field-ref name="sequenceNum"/></field-row>
+                                    <field-row><field-ref name="allowSuggestions"/><field-ref name="reviewTeamPartyId"/></field-row>
+                                    <field-row><field-ref name="draftWikiSpaceId"/><field-ref name="draftParentPath"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="OrganizationPicker" condition="orgOptions.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:orgId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="orgOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ServiceKnowledgeSources" list="sources" skip-form="true" paginate="false">
+                            <field name="spaceName">
+                                <default-field title="Space">
+                                    <label text="${spaceName}" type="span"/>
+                                    <label text="${partText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="audienceText">
+                                <default-field title="Audience">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${audienceColor}">${
+                                            WebUtilities.encodeHtml(audienceText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: audienceText})}]]></text>
+                                        <text type="html">${audienceText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="languageText"><default-field title="Language"><display/></default-field></field>
+                            <field name="queueText"><default-field title="First for"><display/></default-field></field>
+                            <field name="sequenceNum"><default-field title="Priority"><display/></default-field></field>
+                            <field name="reviewTeamText"><default-field title="Review team"><display/></default-field></field>
+                            <field name="draftText"><default-field title="Drafts go to"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditSource_${serviceKnowledgeSourceId}" button-text="Edit" icon="sym_o_edit" width="640"
+                                            title="Edit the source ${spaceName}" condition="can.policyEdit">
+                                        <form-single name="EditSourceForm" transition="saveSource" extends="AddSourceForm"
+                                                map="{serviceKnowledgeSourceId:serviceKnowledgeSourceId, organizationPartyId:orgId}">
+                                            <field name="serviceKnowledgeSourceId"><default-field><hidden/></default-field></field>
+                                            <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="wikiSpaceId"/><field-ref name="pagePathPrefix"/></field-row>
+                                                <field-row><field-ref name="audienceEnumId"/><field-ref name="localeLanguage"/></field-row>
+                                                <field-row><field-ref name="requestCategoryId"/><field-ref name="sequenceNum"/></field-row>
+                                                <field-row><field-ref name="allowSuggestions"/><field-ref name="reviewTeamPartyId"/></field-row>
+                                                <field-row><field-ref name="draftWikiSpaceId"/><field-ref name="draftParentPath"/></field-row>
+                                                <field-ref name="changeReason"/>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="EndSource_${serviceKnowledgeSourceId}" button-text="End" icon="sym_o_block" width="480"
+                                            title="End the source ${spaceName}" condition="can.policyEdit &amp;&amp; !draft">
+                                        <form-single name="EndSourceForm" transition="endSource">
+                                            <field name="serviceKnowledgeSourceId"><default-field><hidden/></default-field></field>
+                                            <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="End">
+                                                    <submit type="danger" confirmation="End the knowledge source ${spaceName}? Its articles are no longer suggested."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="spaceName"/><field-ref name="languageText"/></column>
+                                <column><field-ref name="audienceText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!sources.length"
+                                text="No knowledge source yet: agents are offered no articles. Add the space of your help center first."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

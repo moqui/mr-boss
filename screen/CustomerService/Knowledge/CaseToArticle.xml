@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseToArticle (design-customer-service §6 CaseToArticle; style-guide §3.9 Wizard; impl-customer-service P12): an article
+    drafted from a case, from its Knowledge tab. AnswerSelection: the case's outward and customer emails with their audience
+    (its internal notes are never offered, only counted), the personal data found for the author to check, over
+    ironstone.customerservice.KnowledgeServices.prepare#ArticleFromCase; ArticleDraft: the draft space, title and text, the
+    chosen answers' text with the case's personal data already taken out, saved through
+    mantle.request.KnowledgeServices.create#ArticleFromCase, which redacts again, writes a new unpublished page in the
+    source's draft space, links it to the case (WikiPageRequest) and opens it in Knowledge, where Commons' review publishes
+    it. For the knowledge author (BOSS_CS_CASE_TO_ARTICLE, SUPPORT_KNOWLEDGE_EDIT) on a case they see. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Article from a case" default-menu-index="3" default-menu-include="false">
+    <parameter name="requestId" required="true"/>
+    <parameter name="communicationEventIds"/>
+    <!-- AnswerSelection: the step again with the answers chosen (a transition with actions, so the checks post their ids) -->
+    <transition name="chooseAnswers">
+        <actions>
+            <set field="communicationEventIds" from="(Array.isArray(communicationEventIds) ? communicationEventIds
+                    : String(communicationEventIds || '').split(',')).filter((id) =&gt; id)"/>
+        </actions>
+        <default-response url="."><parameter name="requestId"/><parameter name="communicationEventIds"/></default-response>
+    </transition>
+    <transition name="createArticle">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'knowledgeEdit'}"/>
+            <service-call name="mantle.request.KnowledgeServices.create#ArticleFromCase" out-map="created"
+                    in-map="{requestId:requestId, wikiSpaceId:(wikiSpaceId || null), title:(title || null), body:(body || null)}"/>
+            <set field="wikiPageId" from="created?.wikiPageId"/>
+            <script><![CDATA[
+                if (!ec.message.hasError()) {
+                    const removed = Array.from(created.removedList || []).map((row) => row.kind + ' (' + row.count + ')').join(', ')
+                    ec.message.addMessage(ec.resource.expand('Draft ${path} saved, not published', '', {path: created.pagePath}) +
+                        (removed ? '; ' + ec.resource.expand('taken out: ${list}', '', {list: removed}) : ''), 'success')
+                }
+            ]]></script>
+        </actions>
+        <default-response url="../Knowledge"><parameter name="wikiPageId"/><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.KnowledgeServices.prepare#ArticleFromCase" out-map="prepareOut"
+                transaction="force-new" ignore-error="true"
+                in-map="{appRoot:appRoot, requestId:requestId, communicationEventIds:(communicationEventIds
+                    ? (Array.isArray(communicationEventIds) ? communicationEventIds : String(communicationEventIds).split(',')) : null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="prepared" from="prepareOut?.prepared || null"/>
+        <set field="answerValues" from="{requestId:requestId, communicationEventIds:prepared?.selectedIds || []}"/>
+        <set field="draftValues" from="{requestId:requestId, wikiSpaceId:prepared?.wikiSpaceId, title:prepared?.title, body:prepared?.body}"/>
+    </actions>
+    <widgets>
+        <label text="Article from case ${requestId}" type="h5"/>
+        <section name="ArticleUnavailable" condition="!prepared">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="Case ${requestId} is not available to you here: articles from cases are drafted by the knowledge authors, on a case they see."/>
+                        <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ArticleSteps" condition="prepared">
+            <widgets>
+                <container style="q-mb-xs">
+                    <link url="${sharedLinks['Cases/CaseDetail']}" link-type="anchor" text="Case ${requestId}: ${prepared.caseName}" icon="arrow_back"
+                            parameter-map="{requestId:requestId, tab:'knowledge'}"/>
+                </container>
+                <!-- step 1: the answers it is made from -->
+                <container-box>
+                    <box-header title="1. The answers it is made from"/>
+                    <box-body>
+                        <label type="p" style="text-caption m-muted" condition="prepared.internalCount"
+                                text="${prepared.internalCount} internal note(s) or message(s) of the case are left out: they are never put in an article."/>
+                        <form-single name="AnswerSelection" transition="chooseAnswers" map="answerValues">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="communicationEventIds">
+                                <default-field title="Answers">
+                                    <check>
+                                        <list-options list="prepared.answers" key="${communicationEventId}" text="${kindText} · ${fromName} · ${dateText}: ${text}"/>
+                                    </check>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Use these"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="m-muted" condition="!prepared.answers.length"
+                                text="The case has no reply or customer email yet: write the article's text below."/>
+                        <section name="PersonalData" condition="prepared.personalData.length">
+                            <widgets>
+                                <label type="p" style="text-body2 q-mb-xs" text="Personal data of this case, taken out of the text below; check for any other:"/>
+                                <label type="p" style="text-caption m-muted"
+                                        text="${prepared.personalData.map((row) =&gt; row.kindText + ': ' + row.term).join(' · ')}"/>
+                            </widgets>
+                        </section>
+                    </box-body>
+                </container-box>
+                <!-- step 2: the draft -->
+                <container-box>
+                    <box-header title="2. The draft"/>
+                    <box-body>
+                        <label type="p" style="m-muted" condition="!prepared.spaceOptions.length"
+                                text="None of the organization's knowledge sources has a draft space: the service administrator sets one in Settings, Knowledge sources."/>
+                        <label type="p" style="text-caption m-muted" condition="prepared.removedText"
+                                text="Taken out: ${prepared.removedText}."/>
+                        <form-single name="ArticleDraft" transition="createArticle" map="draftValues" focus-field="title">
+                            <field name="requestId"><default-field><hidden/></default-field></field>
+                            <field name="wikiSpaceId">
+                                <default-field title="Draft space">
+                                    <drop-down><list-options list="prepared.spaceOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
+                            <field name="body">
+                                <default-field title="Text" tooltip="For any customer to read: no names, contacts, addresses or orders">
+                                    <text-area rows="12" cols="80"/>
+                                </default-field>
+                            </field>
+                            <field name="submitButton">
+                                <conditional-field title="Save the draft" condition="prepared.spaceOptions.length">
+                                    <submit confirmation="Save the draft? It is not published; Knowledge's review publishes it."/>
+                                </conditional-field>
+                                <default-field><ignored/></default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

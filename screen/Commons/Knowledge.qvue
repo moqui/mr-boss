@@ -32,7 +32,13 @@ along with this software (see the LICENSE.md file). If not, see
     pane names the space and its storage instead of the space choice, has Linked pages (pages of other spaces linked to the
     project, Link page and Unlink for the project's team) in place of the recent pages and the Commons links, and a project with
     no space yet shows Set up documentation (in a repository of the project at docs/, or on database files) to those who manage
-    it. A page of another space opens in Commons Knowledge. -->
+    it. A page of another space opens in Commons Knowledge.
+
+    In Customer Service (CustomerService/Knowledge mounts this screen; impl-customer-service P12) setup answers service
+    (ironstone.customerservice.KnowledgeServices.get#KnowledgeContext): the spaces are those of the organization's knowledge
+    sources, and with the case the mount was opened for (requestId, named on every request) a banner leads back to it and a
+    page has Send to customer (Compose with its published address; a draft or an internal article is refused), Link to case,
+    and Suggest edit for one who may not edit it (a task for the review team; an editor saves a draft and asks for its review). -->
 <template><div class="boss-knowledge">
     <m-screen-context record-entity="moqui.resource.wiki.WikiPage" :record-id="contextRecordId" :title="contextTitle"></m-screen-context>
 
@@ -202,6 +208,14 @@ along with this software (see the LICENSE.md file). If not, see
             </div>
 
             <template v-else-if="page">
+                <!-- in Customer Service, the case the articles are for -->
+                <q-banner v-if="service && service.requestId" dense rounded class="q-mb-sm" :class="dark ? 'bg-grey-9' : 'bg-blue-1'">
+                    <template v-slot:avatar><q-icon name="sym_o_support_agent" color="primary"></q-icon></template>
+                    {{t('For case')}} {{service.requestId}}: {{service.caseName}}
+                    <template v-slot:action>
+                        <q-btn flat dense no-caps color="primary" :label="t('Back to the case')" @click="go(service.caseUrl)"></q-btn>
+                    </template>
+                </q-banner>
                 <!-- the title row -->
                 <div class="row items-start q-mb-xs" :class="phone ? 'q-col-gutter-y-xs' : 'no-wrap'">
                     <div class="row no-wrap items-start" :class="phone ? 'col-12' : 'col'" style="min-width:0">
@@ -248,9 +262,16 @@ along with this software (see the LICENSE.md file). If not, see
                                 <q-tooltip>{{t('Publish this version')}}</q-tooltip></q-btn>
                             <q-btn v-if="canRequestReview && wide" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_rate_review" :label="t('Request review')"
                                     @click="openRequestReview"></q-btn>
+                            <q-btn v-if="serviceActions && service.canSend" unelevated dense no-caps class="m-btn-tonal q-px-sm" icon="sym_o_forward_to_inbox"
+                                    :label="t('Send to customer')" @click="sendToCustomer"><q-tooltip>{{t('Email the customer its published address')}}</q-tooltip></q-btn>
                             <q-btn flat dense round icon="more_vert">
                                 <q-menu auto-close>
                                     <q-list dense style="min-width:220px">
+                                        <template v-if="serviceActions">
+                                            <q-item v-if="service.canLink" clickable @click="linkToCase"><q-item-section avatar><q-icon name="sym_o_link"></q-icon></q-item-section><q-item-section>{{t('Link to case')}} {{service.requestId}}</q-item-section></q-item>
+                                            <q-item v-if="service.canSuggest && !page.canUpdate" clickable @click="openSuggest"><q-item-section avatar><q-icon name="sym_o_rate_review"></q-icon></q-item-section><q-item-section>{{t('Suggest edit')}}</q-item-section></q-item>
+                                            <q-separator></q-separator>
+                                        </template>
                                         <q-item v-if="phone" clickable @click="openHistory()"><q-item-section avatar><q-icon name="sym_o_history"></q-icon></q-item-section><q-item-section>{{t('History')}}</q-item-section></q-item>
                                         <q-item v-if="canPublish && !wide" clickable @click="publishCurrent"><q-item-section avatar><q-icon name="sym_o_public"></q-icon></q-item-section><q-item-section>{{t('Publish this version')}}</q-item-section></q-item>
                                         <q-item v-if="canRequestReview && !wide" clickable @click="openRequestReview"><q-item-section avatar><q-icon name="sym_o_rate_review"></q-icon></q-item-section><q-item-section>{{t('Request review')}}</q-item-section></q-item>
@@ -594,6 +615,17 @@ along with this software (see the LICENSE.md file). If not, see
     </m-dialog>
 
 
+    <!-- Customer Service: what should change, a task for the space's review team -->
+    <m-dialog v-model="suggest.open" :title="t('Suggest an edit')" width="520">
+        <div class="q-gutter-y-sm">
+            <m-text-area id="boss-knowledge-suggest" name="suggestNote" v-model="suggest.note" rows="4" :label="t('What should change')"></m-text-area>
+            <div class="row justify-end q-gutter-sm">
+                <q-btn flat no-caps :label="t('Cancel')" v-close-popup></q-btn>
+                <q-btn unelevated no-caps color="primary" :label="t('Send')" :disable="!String(suggest.note || '').trim()" :loading="suggest.busy" @click="submitSuggest"></q-btn>
+            </div>
+        </div>
+    </m-dialog>
+
     <m-dialog v-model="preview.open" :title="preview.name" width="900">
         <div class="text-center"><img v-if="preview.src" :src="preview.src" :alt="preview.name" style="max-width:100%;max-height:70vh"></div>
     </m-dialog>
@@ -633,7 +665,8 @@ module.exports = {
             confirmOpen: false,
             preview: { open: false, src: '', name: '' },
             handledReviewKey: '', handledEditKey: '',
-            project: null, linkPageValue: null, setup: { storage: 'repository', repositoryId: null, busy: false }
+            project: null, linkPageValue: null, setup: { storage: 'repository', repositoryId: null, busy: false },
+            service: null, suggest: { open: false, note: '', busy: false }
         };
     },
     computed: {
@@ -645,8 +678,11 @@ module.exports = {
         pathList() { return this.$root.currentPathList || []; },
         // Commons Knowledge, or a project's Docs tab (ProjectDetail mounts this screen there)
         inProject() { return this.pathList.indexOf('Knowledge') < 0 && this.pathList.indexOf('ProjectDetail') >= 0 && this.pathList.indexOf('Docs') >= 0; },
-        kIndex() { const index = this.pathList.indexOf('Knowledge'); return index >= 0 || !this.inProject ? index : this.pathList.indexOf('Docs'); },
+        kIndex() { const index = this.pathList.lastIndexOf('Knowledge'); return index >= 0 || !this.inProject ? index : this.pathList.indexOf('Docs'); },
         projectLinked() { return this.project && this.project.linkedList ? this.project.linkedList : []; },
+        // in Customer Service (CustomerService/Knowledge mounts this screen), with the case it was opened for
+        inService() { return this.pathList.indexOf('CustomerService') >= 0; },
+        serviceActions() { return !!(this.service && this.service.requestId && this.page && this.page.exists && this.page.wikiPageId && !this.page.isNotes && !this.editing); },
         setupOptions() {
             const list = [];
             if (this.project && this.project.repositoryOptions && this.project.repositoryOptions.length) list.push({ value: 'repository', label: this.t('In a repository of the project, beside the code (docs/)') });
@@ -733,6 +769,10 @@ module.exports = {
         url(name) { return this.screenPath + '/' + name; },
         // in a project's Docs tab every request names the project (ProjectDetail's parameter, which fixes the space)
         withProject(params) {
+            if (this.inService) {
+                if (typeof FormData !== 'undefined' && params instanceof FormData) { params.append('requestId', this.params.requestId || ''); return params; }
+                return Object.assign({ requestId: this.params.requestId || '' }, params || {});
+            }
             if (!this.inProject) return params || {};
             if (typeof FormData !== 'undefined' && params instanceof FormData) { params.append('workEffortId', this.params.workEffortId || ''); return params; }
             return Object.assign({ workEffortId: this.params.workEffortId || '' }, params || {});
@@ -762,6 +802,7 @@ module.exports = {
                 if (this.project && spaceId && spaceId !== this.project.wikiSpaceId) return this.$root.linkBasePath + '/Commons/Knowledge?' + moqui.objToSearch(query);
                 return this.linkPath + '?' + moqui.objToSearch(Object.assign({ workEffortId: this.params.workEffortId || '' }, query));
             }
+            if (this.inService && this.params.requestId) query.requestId = this.params.requestId;
             return this.linkPath + '?' + moqui.objToSearch(query);
         },
         openPage(spaceId, path, extra) { this.go(this.pageUrl(spaceId, path, extra)); },
@@ -789,6 +830,7 @@ module.exports = {
                 this.reviewCount = json.reviewCount || 0;
                 this.me = json.me || {};
                 this.project = json.project || null;
+                this.service = json.service || null;
                 if (this.project && this.project.repositoryOptions && !this.project.repositoryOptions.length) this.setup.storage = 'db';
                 else if (this.project && this.project.repositoryOptions && !this.setup.repositoryId) this.setup.repositoryId = this.project.repositoryOptions[0].key;
                 if (this.inProject) this.spaceId = this.project && this.project.canView ? this.project.wikiSpaceId : null;
@@ -1350,12 +1392,24 @@ module.exports = {
                 this.reloadPage();
             }, () => { this.changes.busy = false; });
         },
+        // ===== Customer Service: the case's article actions =====
+        sendToCustomer() {
+            this.post('sendArticle', { wikiPageId: this.page.wikiPageId }).then((json) => { if (json.composeUrl) this.go(json.composeUrl); }, () => {});
+        },
+        linkToCase() { this.post('linkCaseArticle', { wikiPageId: this.page.wikiPageId }).then(() => {}, () => {}); },
+        openSuggest() { this.suggest = { open: true, note: '', busy: false }; },
+        submitSuggest() {
+            const note = String(this.suggest.note || '').trim();
+            if (!note || this.suggest.busy) return;
+            this.suggest.busy = true;
+            this.post('suggestArticleEdit', { wikiPageId: this.page.wikiPageId, note }).then(() => { this.suggest.open = false; }, () => { this.suggest.busy = false; });
+        },
         cancelReview(review) {
             this.ask(this.t('Cancel the review request'), this.t('Withdraw the request for a review of version') + ' ' + (review.shortVersionName || review.versionName) + '?',
                 this.t('Cancel request'), false, () => this.post('cancelReview', { wikiPageReviewId: review.wikiPageReviewId }).then(() => { this.history.open = false; this.reloadPage(); }));
         },
         // ===== keys =====
-        anyDialog() { return this.history.open || this.newPage.open || this.rename.open || this.move.open || this.duplicate.open || this.reviewRequest.open || this.changes.open || this.confirmOpen; },
+        anyDialog() { return this.history.open || this.newPage.open || this.rename.open || this.move.open || this.duplicate.open || this.reviewRequest.open || this.changes.open || this.suggest.open || this.confirmOpen; },
         keyBindings() {
             const when = () => !this.subActive && !this.anyDialog();
             return [

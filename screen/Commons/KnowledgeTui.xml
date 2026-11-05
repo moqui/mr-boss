@@ -21,7 +21,8 @@ along with this software (see the LICENSE.md file). If not, see
     (Knowledge.xml), so its always-actions put the project in projectTabId and inProjectDetail. Then the space is the project's
     documentation space only (ironstone.projects.ProjectServices.get#ProjectDocs), with the pages of other spaces linked to the project;
     the links stay in the tab (../Docs); a project without a space says so, and its managers get Set up documentation (in the
-    database; in a repository is the browser's). -->
+    database; in a repository is the browser's). In Customer Service (CustomerService/Knowledge mounts it beside Knowledge) the
+    spaces listed are those of the organization's knowledge sources (impl-customer-service P12). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Knowledge" default-menu-include="false">
 
@@ -66,7 +67,11 @@ along with this software (see the LICENSE.md file). If not, see
                 : ec.service.sync().name('ironstone.commons.KnowledgeServices.get#KnowledgeSetup').parameter('wikiSpaceId', projectMode ? projectSpaceId : (wikiSpaceId || null)).call()
         // in the project mode a page of a linked space opens too (wikiSpaceId given), else the project's space
         const openSpaceId = projectMode ? (wikiSpaceId || projectSpaceId) : (wikiSpaceId || setup.defaultWikiSpaceId || null)
+        // in Customer Service (impl-customer-service P12) the spaces of the organization's knowledge sources only, as Knowledge.qvue's
+        const serviceSpaceIds = ec.context.get('inCustomerService') ? Array.from(ec.service.sync().name('ironstone.customerservice.KnowledgeServices.get#KnowledgeContext')
+                .parameters({appRoot: 'CustomerService'}).call()?.knowledgeContext?.spaceIds || []) : null
         spaceList = Array.from(setup.spaceList || []).filter((space) => !projectMode || space.wikiSpaceId === projectSpaceId)
+                .filter((space) => !serviceSpaceIds || serviceSpaceIds.includes(space.wikiSpaceId))
                 .map((space) => ({spaceId: space.wikiSpaceId, description: space.description || space.wikiSpaceId,
                     storageText: space.storageText || '', openText: !wikiPageId && space.wikiSpaceId === openSpaceId ? ec.l10n.localize('Open') : ''}))
         page = null
