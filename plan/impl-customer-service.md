@@ -1269,27 +1269,27 @@ later, §4 Nov 5).
 - Inventories: no ss-inventory or usl-inventory row is designed for P5's screens (saved replies are framework text blocks).
 - Decisions:
   - A rule belongs to its queue by `requestCategoryId` and order; ServiceQueue's `assignmentRuleId` (P2) stays unused and
-    save#ServiceQueue is unchanged (no field added: F-P7-3 does not meet P5).
+    save#ServiceQueue is unchanged (no field added: F127 does not meet P5).
   - A rule distributes among the team's agents; a Manager-role member only when the rule names them.
   - The case changes of a saved reply run through the case services (transition, tags, update), so a reply never does what the
     agent could not do by hand; one refused action refuses the reply, named in the preview.
 - Findings (provisional):
-  - **F-P5-1** Compose's text-block picker inserts text in the browser and cannot preview or run a reply's case actions, so
+  - **F114** Compose's text-block picker inserts text in the browser and cannot preview or run a reply's case actions, so
     CaseReplyAction is CaseDetail's Saved reply tab, offering the same text blocks by Comms' rule, the text editable before the
     apply. Design CaseDetail and SavedReplies changed.
-  - **F-P5-2** SavedReplies sits under Settings, whose area denies the agent (BOSS_CS_SETTINGS), so it is the manager's and
+  - **F115** SavedReplies sits under Settings, whose area denies the agent (BOSS_CS_SETTINGS), so it is the manager's and
     administrator's; an agent makes personal replies in Comms TextBlocks (one library, D24) and uses them on CaseDetail. Opening
     the page to agents needs an ALWAYS authz on a child of a denied area, for the lead.
-  - **F-P5-3** The service-wide group is the root user group, which spans organizations (Ziziwork Services' agent is in it); a
+  - **F116** The service-wide group is the root user group, which spans organizations (Ziziwork Services' agent is in it); a
     global reply keeps to its organization by SavedReply's organization in Customer Service, while Comms TextBlocks lists it to
     every member. The administrator, in BOSS_CUSTOMER_SERVICE_ADMIN alone, cannot share a reply with the root group (Comms requires
     the author to be a member).
-  - **F-P5-4** An agent's own Preferences hours are a personal series on no calendar, which business time does not read, and
+  - **F117** An agent's own Preferences hours are a personal series on no calendar, which business time does not read, and
     store#WorkingHours does not let an administrator keep a person's schedule calendar (WORKING_HOURS_EDIT checks the party's
     owner, `_NA_` for a person): a participation names an organization's or team's calendar for the agent's hours (F112).
-  - **F-P5-5** BusinessTime's `calendarOf` says `configured` only when its window holds working time, so "in hours now" reads the
+  - **F118** BusinessTime's `calendarOf` says `configured` only when its window holds working time, so "in hours now" reads the
     week ahead to tell a schedule with hours on other days from one with none.
-  - **F-P5-6** A team's group is `SVT_<team>` of type `UgtServiceTeam`, found by the team's id with no new record; the demo's
+  - **F119** A team's group is `SVT_<team>` of type `UgtServiceTeam`, found by the team's id with no new record; the demo's
     data names it and BossZ fills it.
 
 **Review Nov 5 (P5).** Checked the Mantle and BOSS diffs against CS-ASSIGNMENT and CS-REPLIES: the cursor lock (a mutation
@@ -1299,25 +1299,25 @@ recipients, the variable allowlist (the case's own customer, contact, subject, q
 of its status; nothing internal or of another customer), the bulk reply's per-case key, thread and named outcomes, access, Comms'
 visibility of shared blocks, and the acceptance walk (its four features are the usable-when).
 - R1 (medium) An agent whose hours start later (more than a week on) or a two-weekly series in its off week read as around the
-  clock (F-P5-5): `inHours` now takes hours as set when get#WorkingHours finds a series in effect or to come, and then needs an
+  clock (F118): `inHours` now takes hours as set when get#WorkingHours finds a series in effect or to come, and then needs an
   occurrence at the instant; SupportAssignment checks hours that start in two weeks.
 - R2 (low) assign#Case locks a queue's cursors in the order of their ids, not the rules' order, which a concurrent save can change.
 - R3 (high) apply#SavedReply's retry held the case's lock and locked the message while the sent message's filing held the
   message and wrote the case's RequestCommEvent: the two waited until the statement timeout (SupportReplies failed about one run in
   three after 60 s). The retry reads the message; the case's lock serializes retries.
-- R4 (medium, F-P5-3) A service-wide reply shared with BOSS_CUSTOMER_SERVICE was listed by Comms TextBlocks and Compose to every
+- R4 (medium, F116) A service-wide reply shared with BOSS_CUSTOMER_SERVICE was listed by Comms TextBlocks and Compose to every
   organization's Customer Service users (Retail's "Filters ship soon" to Ziziwork Services' agent). It is now shared with the
   organization's group `SVO_<organization>` (`UgtServiceOrganization`), which sync#ServiceTeamGroup keeps with the members of all
   the organization's teams, and is that organization's (save#SavedReplyAction sets and checks it). A Customer Service user on no
   team (order desk, returns, knowledge, the administrator) no longer sees service-wide replies.
-- R5 (medium, F-P5-2) The agent opens SavedReplies (design §9: A and S): BossSetupData `BOSS_CS_SAVED_REPLIES` grants
+- R5 (medium, F115) The agent opens SavedReplies (design §9: A and S): BossSetupData `BOSS_CS_SAVED_REPLIES` grants
   BOSS_CUSTOMER_SERVICE_AGENT the one Settings child always (the framework checks a screen path's parents without requiring
   them, so the root group's Settings deny stays for the other pages), and CaseDetail's Saved reply links it. Sharing narrowed with
   it: a team's group only for the team's manager or a service manager, an organization's only for a service manager.
 - Specs run (pass): Mantle SupportAssignment, SupportReplies (four runs), SupportCases; BOSS CustomerServiceAccess,
   CustomerServiceAssignment, CustomerServiceCases, MailSettings, Compose. `lint --screens`: nothing new. Acceptance not run (none
   changed).
-- For the lead: the administrator still cannot share a service-wide reply (not a team member; F-P5-3); Comms TextBlocks lets any
+- For the lead: the administrator still cannot share a service-wide reply (not a team member; F116); Comms TextBlocks lets any
   group member share a block with a team's group, which Customer Service then lists as a team reply without actions.
 
 ### P6 — Channels
@@ -1458,28 +1458,28 @@ hooks).
     queue's mail makes cases unacknowledged and attaches automatic mail.
   - ChannelSessions is every Customer Service user's (the Cases area); Log a call needs SUPPORT_CASE_EDIT.
 - Findings (provisional):
-  - **F-P6-1** Design ChannelRouting said it "extends what exists instead of adding a route table", but RouteEdit's fields
+  - **F120** Design ChannelRouting said it "extends what exists instead of adding a route table", but RouteEdit's fields
     (sender and automatic-mail rules, the acknowledgement and its text, reply identity, the form's limit, the token's days, a
     forum site and category) have no holder in EmailRule, PartySetting or ServiceQueue: P6 adds the dated `ServiceRoute`; the
     mail itself stays the Comms rule and the token an ExternalAccessCapability. Design ChannelRouting changed.
-  - **F-P6-2** BasicComms' Inbox renders no `message-actions` slot (only Chat's `chat-message-actions`, `voicemail-actions` and
+  - **F121** BasicComms' Inbox renders no `message-actions` slot (only Chat's `chat-message-actions`, `voicemail-actions` and
     `call-actions`), so Create a case from a mail is a `widgets-extend` on MessageDetail; an Inbox slot is framework work (§7).
-  - **F-P6-3** An `ext-action` with a transition target shows to every user of the screen (only a `screen` target is left out
+  - **F122** An `ext-action` with a transition target shows to every user of the screen (only a `screen` target is left out
     for a user who may not view it): Chat's and Voicemail's Create a case show to users without Customer Service and are
     refused by `create#CaseFromMessage`. Chat's `createFrom` calls every `create-from` provider and takes the first answer, so
     a second provider would break it: the case kind is in BOSS's one provider.
-  - **F-P6-4** (F76 again) Rows in a demo file that the same file's demo service then locks against (a text block's group, a
+  - **F123** (F76 again) Rows in a demo file that the same file's demo service then locks against (a text block's group, a
     route's queue and organization, by foreign key) made that file's own-transaction order loads time out: the channel demo
     is a file of its own after BossZ.
-  - **F-P6-5** §2 and design §8 say a bearer link is checked by `check#AccessToken`; per F61 the queue's token is checked by
+  - **F124** §2 and design §8 say a bearer link is checked by `check#AccessToken`; per F61 the queue's token is checked by
     `ExternalAccess.check` (`formTarget`); design §8 NewCustomerCase changed.
 - Left undone: the route's notification recipients (a held request waits in ChannelRouting and tells no one; a case is told
   through its own topics); chat bridges and CTI (ChannelAutomation, §7); a per-language acknowledgement; the public form page
-  itself (P15); an Inbox message-actions slot (F-P6-2).
+  itself (P15); an Inbox message-actions slot (F121).
 
 **Review Nov 5 (P6).** Checked both diffs against this section, §2, §4's Nov 5 rows, F10–F12, F61, F62, F79, F84 and the
 lead's list: mail threading and spoofed senders, automatic-mail detection and acknowledgement loops, the party-less
-RequestCategory kind, the forum poster under the case rule, the Comms hooks' visibility (F-P6-3), held requests' reach and
+RequestCategory kind, the forum poster under the case rule, the Comms hooks' visibility (F122), held requests' reach and
 Accept, and leanness. Kept as built: the token join (the sender must be the case's customer side, and only the queue
 organization's cases); the party-less kind (`check` refuses it to a signed-in contact, a token reaches only scope
 CaseIntake and the form, which reads nothing back; a new token and Turn off revoke the earlier ones; Projects' `/r/<token>`
@@ -1510,7 +1510,7 @@ forger. Fixes:
   SupportCases, WorkProjectRequests, RecordVisibility, CommonsToday, InboxThreads; BOSS CustomerServiceChannels,
   CustomerServiceAccess, ProjectRequests, Requests; mr-pass Forum, Integrations (as master's runtime links it); acceptance
   CustomerServiceChannelsWalk (5 features, the forum feature now holds and accepts). All pass.
-- Left for the lead: F-P6-3 stays: an `ext-action`'s `condition` tests only the item's fields and `hook` only whether some
+- Left for the lead: F122 stays: an `ext-action`'s `condition` tests only the item's fields and `hook` only whether some
   app answers it, so hiding Chat's and Voicemail's Create a case from users without Customer Service needs framework support
   (a permission or app-root test on an ext-action, or a `screen` target the user may not view); the server refusal is the
   guard meanwhile. A case from a forged customer From is unavoidable without sender authentication (DKIM/DMARC results are
@@ -1571,7 +1571,7 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
 **Built Nov 5 (P7, Mantle and BOSS).**
 - Mantle entities (`entity/SupportTemplateEntities.xml`, new): `DbForm.ownerPartyId` (the organization whose template it is,
   audit-logged; purpose `DbfpCaseTemplate`) and `DbFormField.audienceEnumId` (`CaseFieldAudience`: `CfaCustomer`,
-  `CfaInternal`; empty is internal; audit-logged), both on the framework's rows (F-P7-1); `CaseProfile.formResponseId` (the
+  `CfaInternal`; empty is internal; audit-logged), both on the framework's rows (F125); `CaseProfile.formResponseId` (the
   case's values) beside the existing `templateFormId`.
 - Mantle services (`service/mantle/request/SupportCaseServices.xml`, appended; `CaseTemplates.js`, new): `save#CaseTemplate`
   (a new dated DbForm of the organization, its name and notes; Publish from a date, refused while `validate#CaseTemplate` finds a
@@ -1589,9 +1589,9 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
   them only, never a draft, needing no permission) and `get#CaseTemplateValues` (a case's values with the form as of the
   response date, the customer's audience leaving out every internal field). The typed allowlist: short and long text, choice list,
   choice buttons, checkboxes and a date; no `${` in a label, help, option or value (NO_EXPRESSIONS); a field name never one of the
-  case's own fields (FIELD_NAME_INVALID, F-P7-5). `create#Case` takes `templateFormId` (one of the organization's, else the queue's)
+  case's own fields (FIELD_NAME_INVALID, F129). `create#Case` takes `templateFormId` (one of the organization's, else the queue's)
   and `templateValues`, checks them before anything is made and keeps them as a FormResponse linked from the profile;
-  `save#ServiceQueue` keeps the row's template (F-P7-3).
+  `save#ServiceQueue` keeps the row's template (F127).
 - BOSS (`service/ironstone/customerservice/TemplateServices.xml` and `Templates.js`, new): `find#Templates` (TemplateList),
   `get#CaseTemplateChoice` (NewCase's step) and `get#ConditionValues` (a condition row's values); `Configuration.js` exports its
   settings organization. Screens: `Settings/CaseTemplates.xml` (new): TemplateList with New template; with formId TemplateEdit
@@ -1627,7 +1627,7 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
   ss-inventory's NewRequestForm row (NewCase's template step). CaseTemplates is new (design §2): no baseline form maps to it.
 - Decisions:
   - The audience lives on the field's own row (`DbFormField.audienceEnumId`, a Mantle extension), not in a DbFormFieldAttribute
-    or a Mantle record by formId and fieldName (F-P7-1).
+    or a Mantle record by formId and fieldName (F125).
   - A case takes the template chosen in NewCase's first step, else its queue's; `ServiceRequestType.templateFormId` is not read
     (a type's template waits for a type that needs one, P11's warranty claim).
   - Published changes of label, help, required, order and options apply from now, in place and audit-logged; Publish starts the
@@ -1635,28 +1635,28 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
   - The customer's projection of a template, and of a case's values, checks the user's organization until P15 adds the
     contact's path (ExternalAccessContact) (Review R5).
 - Findings (provisional):
-  - **F-P7-1** The audience: a DbFormFieldAttribute is neither dated nor audit-logged and goes onto the rendered widget as an XML
+  - **F125** The audience: a DbFormFieldAttribute is neither dated nor audit-logged and goes onto the rendered widget as an XML
     attribute, and a Mantle record by formId and fieldName would be a second dated row to keep in step with every successor.
     `DbFormField.audienceEnumId`, extended by Mantle as F6 gave RequestCategory its owner, is dated and audit-logged with the
     field, so a response reads the audience it was submitted under; a published field's audience changes only by a successor, so
     an internal answer never becomes customer-visible. The template's organization is `DbForm.ownerPartyId` the same way.
-  - **F-P7-2** `create#DbFormFieldSuccessor` copies a fixed list of DbFormField fields, so an extension field (the audience) is not
+  - **F126** `create#DbFormFieldSuccessor` copies a fixed list of DbFormField fields, so an extension field (the audience) is not
     copied; `save#CaseTemplateField` sets it on the successor. The suspicion that the framework's `update#DbFormField` (or the
     entity-auto `update#DbForm`) clears the non-key fields it is not given is false (Review: checked by a call with the title
     only, the audience, required flag, help, type, order and `ownerPartyId` kept).
-  - **F-P7-3** `save#ServiceQueue` (P2) made each row from its parameters, so any queue save dropped the row's `templateFormId`
+  - **F127** `save#ServiceQueue` (P2) made each row from its parameters, so any queue save dropped the row's `templateFormId`
     (and would drop P5's `assignmentRuleId`); it now keeps the template unless one is given. P5 must carry its rule the same way.
-  - **F-P7-4** qvt's browser `require-when` covers text-line, password and date-time only (§7): the demo's serial (a text line)
+  - **F128** qvt's browser `require-when` covers text-line, password and date-time only (§7): the demo's serial (a text line)
     gets the browser's hint; a required choice or checkbox is the server's check alone, which NewCase reports on submit.
-  - **F-P7-5** NewCase's SubmitCase extends the template's DbForm, so one submit carries the case's fields and the template's: a
+  - **F129** NewCase's SubmitCase extends the template's DbForm, so one submit carries the case's fields and the template's: a
     template field never takes the name of a create#Case parameter or Request field (reserved in Mantle), and createCase passes
     the request's parameters, of which Mantle keeps the template's fields only.
-  - **F-P7-6** A condition on a text or date field by value (equals) is refused (a typed allowlist: values compare only against a
+  - **F130** A condition on a text or date field by value (equals) is refused (a typed allowlist: values compare only against a
     choice's options), so a condition's value is always one the source offers and can be checked when the source's options
     change.
 - **Review (P7), Nov 5:** checked the audience on every read (the customer's projection and case values at any date, drafts
   and successors), validate#TemplateValues against evaluate#DbFormDependencies, create#Case's check before any write,
-  NewCase's and CaseDetail's forms as of now and of the response date, the organization on every read, and F-P7-2 (false, see
+  NewCase's and CaseDetail's forms as of now and of the response date, the organization on every read, and F126 (false, see
   there). Fixes:
   - R1 (high) A published change could leave the form breaking its own rules with no check: `create#DbFormFieldSuccessor`
     copies the old field's conditions, so a field made internal from a date kept a customer field depending on it (the server
@@ -2340,6 +2340,27 @@ is written there too.
 | F111 | P3 review: an organization's `orderConfirmationOnPlace` flag (PartyAcctgPreference) has no field on Accounting's organization settings; with it on for the Retail demo, the demo load met statement timeouts against the Accounting demo's background loader, so the demo leaves it off | P16, or Accounting's settings when next touched: the field in SetupServices.xml's flag list; the demo contention looked at before a demo turns it on |
 | F112 | P4 review: Cases' Needs response and SLA risk views pass up to 5000 request IDs from the clock table as an `in` list; a clock that keeps failing in the scan is named on every run and keeps a slot in each batch; working hours stored for another person go on that person's schedule calendar, not the personal series free/busy reads | P14 (a join or subquery for the views when reports are built); §7 for the others |
 | F113 | P12 review: an operation key reused after a feedback batch committed but before the key was recorded answers AlreadyReviewed per item, not the first result; redaction from up to 200 orders, returns and invoices can over-redact a short numeric ID, which the author sees in the preview; the ArticleFeedback list shows page titles to authors and managers without the per-page wiki check | Kept: the same window as the other batches; the preview; the organization's own articles |
+| F114 | P5: Compose's text-block picker inserts text in the browser and cannot preview or run a reply's case actions, so CaseReplyAction is CaseDetail's Saved reply tab, offering the same text blocks by Comms' rule, the text editable before the apply. Design CaseDetail and SavedReplies changed. | See P5 |
+| F115 | P5: SavedReplies sits under Settings, whose area denies the agent (BOSS_CS_SETTINGS), so it is the manager's and administrator's; an agent makes personal replies in Comms TextBlocks (one library, D24) and uses them on CaseDetail. Opening the page to agents needs an ALWAYS authz on a child of a denied area, for the lead. | See P5 |
+| F116 | P5: The service-wide group is the root user group, which spans organizations (Ziziwork Services' agent is in it); a global reply keeps to its organization by SavedReply's organization in Customer Service, while Comms TextBlocks lists it to every member. The administrator, in BOSS_CUSTOMER_SERVICE_ADMIN alone, cannot share a reply with the root group (Comms requires the author to be a member). | See P5 |
+| F117 | P5: An agent's own Preferences hours are a personal series on no calendar, which business time does not read, and store#WorkingHours does not let an administrator keep a person's schedule calendar (WORKING_HOURS_EDIT checks the party's owner, `_NA_` for a person): a participation names an organization's or team's calendar for the agent's hours (F112). | See P5 |
+| F118 | P5: BusinessTime's `calendarOf` says `configured` only when its window holds working time, so "in hours now" reads the week ahead to tell a schedule with hours on other days from one with none. | See P5 |
+| F119 | P5: A team's group is `SVT_<team>` of type `UgtServiceTeam`, found by the team's id with no new record; the demo's data names it and BossZ fills it. | See P5 |
+| F120 | P6: Design ChannelRouting said it "extends what exists instead of adding a route table", but RouteEdit's fields (sender and automatic-mail rules, the acknowledgement and its text, reply identity, the form's limit, the token's days, a forum site and category) have no holder in EmailRule, PartySetting or ServiceQueue: P6 adds the dated `ServiceRoute`; the mail itself stays the Comms rule and the token an ExternalAccessCapability. Design ChannelRouting changed. | See P6 |
+| F121 | P6: BasicComms' Inbox renders no `message-actions` slot (only Chat's `chat-message-actions`, `voicemail-actions` and `call-actions`), so Create a case from a mail is a `widgets-extend` on MessageDetail; an Inbox slot is framework work (§7). | See P6 |
+| F122 | P6: An `ext-action` with a transition target shows to every user of the screen (only a `screen` target is left out for a user who may not view it): Chat's and Voicemail's Create a case show to users without Customer Service and are refused by `create#CaseFromMessage`. Chat's `createFrom` calls every `create-from` provider and takes the first answer, so a second provider would break it: the case kind is in BOSS's one provider. | See P6 |
+| F123 | P6: (F76 again) Rows in a demo file that the same file's demo service then locks against (a text block's group, a route's queue and organization, by foreign key) made that file's own-transaction order loads time out: the channel demo is a file of its own after BossZ. | See P6 |
+| F124 | P6: §2 and design §8 say a bearer link is checked by `check#AccessToken`; per F61 the queue's token is checked by `ExternalAccess.check` (`formTarget`); design §8 NewCustomerCase changed. | See P6 |
+| F125 | P7: The audience: a DbFormFieldAttribute is neither dated nor audit-logged and goes onto the rendered widget as an XML attribute, and a Mantle record by formId and fieldName would be a second dated row to keep in step with every successor. `DbFormField.audienceEnumId`, extended by Mantle as F6 gave RequestCategory its owner, is dated and audit-logged with the field, so a response reads the audience it was submitted under; a published field's audience changes only by a successor, so an internal answer never becomes customer-visible. The template's organization is `DbForm.ownerPartyId` the same way. | See P7 |
+| F126 | P7: `create#DbFormFieldSuccessor` copies a fixed list of DbFormField fields, so an extension field (the audience) is not copied; `save#CaseTemplateField` sets it on the successor. The suspicion that the framework's `update#DbFormField` (or the entity-auto `update#DbForm`) clears the non-key fields it is not given is false (Review: checked by a call with the title only, the audience, required flag, help, type, order and `ownerPartyId` kept). | See P7 |
+| F127 | P7: `save#ServiceQueue` (P2) made each row from its parameters, so any queue save dropped the row's `templateFormId` (and would drop P5's `assignmentRuleId`); it now keeps the template unless one is given. P5 must carry its rule the same way. | See P7 |
+| F128 | P7: qvt's browser `require-when` covers text-line, password and date-time only (§7): the demo's serial (a text line) gets the browser's hint; a required choice or checkbox is the server's check alone, which NewCase reports on submit. | See P7 |
+| F129 | P7: NewCase's SubmitCase extends the template's DbForm, so one submit carries the case's fields and the template's: a template field never takes the name of a create#Case parameter or Request field (reserved in Mantle), and createCase passes the request's parameters, of which Mantle keeps the template's fields only. | See P7 |
+| F130 | P7: A condition on a text or date field by value (equals) is refused (a typed allowlist: values compare only against a choice's options), so a condition's value is always one the source offers and can be checked when the source's options change. | See P7 |
+| F131 | P5 review: the Customer Service administrator, on no team, cannot share a service-wide reply (Comms requires the author to be a member of the `SVO_<organization>` group); any Comms user can share a text block with a team's `SVT_` group from Comms TextBlocks, which Customer Service then lists as a team reply with no actions | P16: the administrator and service managers kept in the organization's group by `sync#ServiceTeamGroup`; the Comms path left as Comms' own sharing |
+| F132 | P6 review: Chat's and Voicemail's Create a case ext-actions show to every Comms user (an ext-action's condition tests only the item's fields); mail forging a real customer's From makes a case for that customer, the acknowledgement going only to the customer's stored address (EmailMessage keeps no DKIM or DMARC result) | The server refusal in `create#CaseFromMessage` guards the first; §7 for a permission test on ext-actions and a hold on mail failing DMARC |
+| F133 | P7 review: the framework read `dbFormIncludeDrafts` and `dbFormAsOfDate` from the render context, request parameters included, so a URL could show a dated DbForm's drafts on any screen extending it | Fixed in the framework at the W4 boundary (Customer Service W4 framework) |
+| F134 | P7 review: mr-marble's SimpleScreens Survey `Fields.xml` and `EditSurvey.xml` edit any DbForm by formId, case templates included, past Mantle's allowlist (a `${` label the renderer expands, the audience) | mr-marble is read only here and the screens are ADMIN's; §7: Marble's survey screens refuse a form whose purpose is not a survey |
 
 ## 7. Later
 
