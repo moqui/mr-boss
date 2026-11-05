@@ -1,7 +1,9 @@
 // Customer Service saved replies (impl-customer-service P5, CS-REPLIES, D24, F3; design-customer-service §9 SavedReplies
 // ReplyList, ReplyEdit, §3 CaseDetail CaseReplyAction, Cases BulkCaseAction; ReplyServices.xml). A saved reply is a Comms
 // text block (moqui.basic.email.EmailTextBlock): personal (its owner's only), a team's (shared with the team's user group
-// SVT_<team>, which Mantle keeps in step with the members) or global (shared with the root user group BOSS_CUSTOMER_SERVICE);
+// SVT_<team>, which Mantle keeps in step with the members) or service-wide (shared with its organization's group
+// SVO_<organization>, the members of all its teams, which Mantle keeps too: never a group spanning organizations, which
+// Comms would show to another organization's users);
 // Mantle's SavedReply and SavedReplyAction rows hold its organization, language, subject and case actions. find lists the
 // service replies the user may use (Comms' own rule: theirs and those shared with a group they are in), save stores the
 // text through Comms' org.moqui.comms.MailSettingsServices.store#TextBlock (which checks the owner and the group) and then the
@@ -14,8 +16,8 @@ const {find, one, rows, call, denied} = lib
 const BLOCK = "moqui.basic.email.EmailTextBlock",
     REPLY = "mantle.request.support.SavedReply",
     ACTION = "mantle.request.support.SavedReplyAction"
-const globalGroupId = "BOSS_CUSTOMER_SERVICE"
-const teamGroupPrefix = "SVT_"
+const teamGroupPrefix = "SVT_",
+    organizationGroupPrefix = "SVO_"
 const blank = value => value == null || String(value).trim() === ""
 const text = value => (blank(value) ? null : String(value).trim())
 const L = value => ec.l10n.localize(value)
@@ -42,10 +44,14 @@ const myGroupIds = () =>
             .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
             .list()
     ).map(row => row.userGroupId)
-const isServiceGroup = userGroupId => userGroupId === globalGroupId || String(userGroupId || "").startsWith(teamGroupPrefix)
+const isServiceGroup = userGroupId =>
+    String(userGroupId || "").startsWith(teamGroupPrefix) || String(userGroupId || "").startsWith(organizationGroupPrefix)
+const everyAgentOf = userGroupId =>
+    L("Every service agent of") + " " + cs.partyName(String(userGroupId).substring(organizationGroupPrefix.length))
 function scopeOf(block) {
     if (!block.userGroupId) return {scope: "personal", scopeText: L("Personal")}
-    if (block.userGroupId === globalGroupId) return {scope: "global", scopeText: L("Every service agent")}
+    if (String(block.userGroupId).startsWith(organizationGroupPrefix))
+        return {scope: "global", scopeText: everyAgentOf(block.userGroupId)}
     if (String(block.userGroupId).startsWith(teamGroupPrefix)) {
         const teamPartyId = String(block.userGroupId).substring(teamGroupPrefix.length)
         return {scope: "team", scopeText: cs.partyName(teamPartyId), teamPartyId}
@@ -55,13 +61,14 @@ function scopeOf(block) {
         scopeText: one("moqui.security.UserGroup", {userGroupId: block.userGroupId})?.description || block.userGroupId
     }
 }
-// The groups the user may share a reply with: their teams' groups (they are in them) and the root group when they are in it.
+// The groups the user may share a reply with: their teams' groups and their organizations' (they are in them).
 function shareOptions() {
     const groupIds = myGroupIds()
     const options = [{value: "", label: L("Just me")}]
     for (const userGroupId of groupIds.filter(id => String(id).startsWith(teamGroupPrefix)).sort())
         options.push({value: userGroupId, label: cs.partyName(userGroupId.substring(teamGroupPrefix.length))})
-    if (groupIds.includes(globalGroupId)) options.push({value: globalGroupId, label: L("Every service agent")})
+    for (const userGroupId of groupIds.filter(id => String(id).startsWith(organizationGroupPrefix)).sort())
+        options.push({value: userGroupId, label: everyAgentOf(userGroupId)})
     return options
 }
 
@@ -217,6 +224,13 @@ function saveReply(p) {
         disabled: p.disabled != null ? (p.disabled === "Y" || p.disabled === true ? "Y" : "N") : facts?.disabled || "N"
     }
     const block = one(BLOCK, {emailTextBlockId})
+    // a reply for every service agent of an organization is that organization's
+    if (String(block?.userGroupId || "").startsWith(organizationGroupPrefix)) {
+        const groupOrganizationId = block.userGroupId.substring(organizationGroupPrefix.length)
+        if (values.organizationPartyId && values.organizationPartyId !== groupOrganizationId)
+            denied("GROUP_UNAVAILABLE", "A reply for " + everyAgentOf(block.userGroupId) + " is that organization's")
+        values.organizationPartyId = groupOrganizationId
+    }
     values.variableNames =
         replies()
             .usedIn((block?.bodyHtml || "") + " " + (values.subject || ""))

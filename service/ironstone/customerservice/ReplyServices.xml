@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="find" noun="SavedReplies" allow-remote="false">
         <description>The saved replies the user may use (design SavedReplies ReplyList), as Comms' find#EmailTextBlocks
             reaches them (their own, and those shared with a group they are in now), kept to service replies: a personal
-            block with its service facts, a team's (its group SVT_ and the team), the service-wide one (BOSS_CUSTOMER_SERVICE);
+            block with its service facts, a team's (its group SVT_ and the team), the service-wide one (its organization's group SVO_);
             of the user's organizations (organizationPartyId: that one's and those of every organization); with text, those
             whose title, shortcut or body has it; forCase, only those offered. Each with its scope, language, subject,
             variables, actions and whether the user owns it; with the groups the user may share with and the

@@ -33,14 +33,18 @@ feature(
                 invoke(A + "get#RuleChoices", {appRoot: "CustomerService", choice: "values", fieldEnumId: "AcfBand"})
             )
             const mine = user => asUser(user, () => replyIds(invoke(R + "find#SavedReplies", {appRoot: "CustomerService"})))
-            const comms = asUser(
-                users.agent,
-                () =>
-                    Array.from(invoke("org.moqui.impl.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
-                        row => row.emailTextBlockId
-                    ),
-                false
-            )
+            const blocksOf = user =>
+                asUser(
+                    user,
+                    () =>
+                        Array.from(invoke("org.moqui.impl.EmailClientServices.find#EmailTextBlocks", {}).textBlockList || []).map(
+                            row => row.emailTextBlockId
+                        ),
+                    false
+                )
+            const comms = blocksOf(users.agent)
+            // Retail's service-wide reply is its organization's group's: another organization's agent never sees it in Comms
+            const otherComms = blocksOf(users.services)
             return {
                 rules,
                 participation,
@@ -49,7 +53,8 @@ feature(
                 agent: mine(users.agent),
                 manager: mine(users.manager),
                 services: mine(users.services),
-                comms
+                comms,
+                otherComms
             }
         },
         then(r) {
@@ -66,6 +71,8 @@ feature(
             !r.services.includes("BOSS_CS_REPLY_FILTERS")
             r.comms.includes("BOSS_CS_REPLY_PATIENCE")
             r.comms.includes("BOSS_CS_REPLY_DETAILS")
+            r.comms.includes("BOSS_CS_REPLY_FILTERS")
+            !r.otherComms.includes("BOSS_CS_REPLY_FILTERS")
         }
     }
 )
