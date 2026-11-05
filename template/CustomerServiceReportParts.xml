@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the Customer Service report screens (design-customer-service §7; impl-customer-service P14), included by
+    section-include. ReportFrame: what a report read (answer is the ironstone.customerservice.ReportingServices answer): its
+    as-of time, period and time zone, its filters and queues, what it left out (in the warning colour), and its export, the
+    screen's exportCsv transition with the same parameters (the screen sets exportParameters), which the service audits.
+    ReportOrganization and ReportPeriod: the find fields every report has (organization, queue, team; from, through, as of,
+    grouping), as form fields the screens' find forms include. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="ReportFrame" condition="answer?.asOfText">
+            <widgets>
+                <label text="As of ${answer.asOfText} · ${answer.periodText} (${answer.timeZoneText}) · ${answer.filtersText}"
+                        type="p" style="text-caption m-muted q-mb-none"/>
+                <label text="Left out: ${answer.omittedText}" type="p" style="text-caption text-warning q-mb-none"
+                        condition="answer.omittedText"/>
+                <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" target-window="_blank"
+                        parameter-map="exportParameters"/>
+            </widgets>
+        </section>
+        <section name="ReportMissing" condition="!answer?.asOfText">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label type="p" text="This report is not available for these choices: ${reportError || 'choose your organization, a queue or team you report on, and a period that ends after it starts.'}"/>
+                        <link url="${sharedLinks['Reports']}" text="Back to reports" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

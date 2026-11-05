@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a 
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's shipped service dataset (design-customer-service §1 Stack contributions, CS-STACK and CX-OPS-REPORTS,
+    review L6; impl-customer-service P14): the case clocks of Mantle's SlaServices (CaseSlaEpisode, P4) as the DataDocument
+    BossServiceClock, indexed by the BossServiceClocks feed as each clock is written, which report/boss-service-clocks.json
+    (by the clock's start) and report/boss-service-breaches.json (by its breach) read, and the SLA-breach alert template
+    report/boss-service-sla-breach.json over the breaches. The dataset reads every organization's clocks, so until Insights'
+    admission applies the organization filter it is granted to ADMIN only, as Mantle's sales datasets are (F-P14-3). -->
+<entity-facade-xml type="seed-initial">
+    <dataDocuments dataDocumentId="BossServiceClock" indexName="boss_service" documentName="Service Clock"
+            primaryEntityName="mantle.request.support.CaseSlaEpisode" documentTitle="${requestId}:${clockEnumId}">
+        <fields fieldSeqId="01" fieldPath="caseSlaEpisodeId"/>
+        <fields fieldSeqId="02" fieldPath="requestId"/>
+        <fields fieldSeqId="03" fieldPath="clockEnumId"/>
+        <fields fieldSeqId="04" fieldPath="sequenceNum"/>
+        <fields fieldSeqId="05" fieldPath="stateEnumId"/>
+        <fields fieldSeqId="06" fieldPath="organizationPartyId"/>
+        <fields fieldSeqId="07" fieldPath="priorityBandEnumId"/>
+        <fields fieldSeqId="08" fieldPath="serviceLevelPolicyId"/>
+        <fields fieldSeqId="09" fieldPath="calendarId"/>
+        <fields fieldSeqId="10" fieldPath="targetMinutes"/>
+        <fields fieldSeqId="11" fieldPath="pausedMinutes"/>
+        <fields fieldSeqId="12" fieldPath="startDate"/>
+        <fields fieldSeqId="13" fieldPath="dueDate"/>
+        <fields fieldSeqId="14" fieldPath="actualDate"/>
+        <fields fieldSeqId="15" fieldPath="breachedDate"/>
+        <fields fieldSeqId="16" fieldPath="carriedFromEpisodeId"/>
+        <fields fieldSeqId="21" fieldPath="request:requestCategoryId"/>
+        <fields fieldSeqId="22" fieldPath="request:requestTypeEnumId"/>
+        <fields fieldSeqId="23" fieldPath="request:salesChannelEnumId"/>
+        <fields fieldSeqId="24" fieldPath="request:statusId" fieldNameAlias="requestStatusId"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossServiceClocks" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Customer Service clocks" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossServiceClock"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossServiceClock" userGroupId="ADMIN"/>
+</entity-facade-xml>

@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseVolumes (design-customer-service §7 CaseVolumes; impl-customer-service P14, CS-REPORTING): VolumeFind (organization, queue,
+    team, type, channel, the period, an as-of time, the grouping by queue, team, type, channel, day, week or month) and
+    VolumeResults (ironstone.customerservice.ReportingServices.get#CaseVolumes): intake and backlog apart: received (a merged
+    case's intake kept), of which split off another case, resolved, reopened, cancelled, merged (apart from the cancellations),
+    assignments, and the cases open at the as-of time, where a merged case is not counted again. The export holds the same
+    rows -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Case volumes" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <parameter name="requestCategoryId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="asOf"/>
+    <parameter name="groupBy"/>
+    <parameter name="requestTypeEnumId"/>
+    <parameter name="salesChannelEnumId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.customerservice.ReportingServices.get#CaseVolumes" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, requestCategoryId:requestCategoryId || null, teamPartyId:teamPartyId || null, fromDate:fromDate || null, thruDate:thruDate || null, asOf:asOf || null, groupBy:groupBy || null, requestTypeEnumId:requestTypeEnumId || null, salesChannelEnumId:salesChannelEnumId || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.customerservice.ReportingServices.get#CaseVolumes" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot})" transaction="force-new" ignore-error="true"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOfText"/>
+        <set field="groupRows" from="answer?.groupRows || []"/>
+        <set field="totalRows" from="answer?.total ? [answer.total] : []"/>
+        <set field="groupOptions" from="answer?.groupOptions || []"/>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Case volumes" type="h5"/>
+                <label text="Intake (received, resolved, reopened, cancelled, merged) is counted in the period; the backlog is the cases open at the as-of time, a merged case once." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <link url="${sharedLinks['Reports']}" text="All reports" icon="arrow_back" link-type="anchor-button"/>
+            </container>
+        </container>
+        <form-single name="VolumeFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requestCategoryId">
+                <default-field title="Queue">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'reportQueues', selected:requestCategoryId, organizationPartyId:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="teamPartyId">
+                <default-field title="Team">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'reportTeams', selected:teamPartyId, organizationPartyId:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="30 days before the end when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="asOf">
+                <default-field title="As of" tooltip="Now when empty: an earlier time reads what was recorded by then"><date-time/></default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="By">
+                    <drop-down>
+                        <list-options list="groupOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requestTypeEnumId">
+                <default-field title="Type">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="RequestType"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="salesChannelEnumId">
+                <default-field title="Channel">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="organizationPartyId"/><field-ref name="requestCategoryId"/><field-ref name="teamPartyId"/></field-row-big>
+                <field-row-big><field-ref name="requestTypeEnumId"/><field-ref name="salesChannelEnumId"/></field-row-big>
+                <field-row-big><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="asOf"/><field-ref name="groupBy"/></field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <section-include name="ReportFrame" location="component://mr-boss/template/CustomerServiceReportParts.xml"/>
+        <section-include name="ReportMissing" location="component://mr-boss/template/CustomerServiceReportParts.xml"/>
+        <section name="VolumeTotalSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="All cases"/>
+                    <box-body-nopad>
+                        <label text="No case in this period." type="p" style="q-pa-md m-muted" condition="!totalRows.length"/>
+                        <form-list name="VolumeTotal" list="totalRows" skip-form="true" paginate="false">
+                        <field name="groupText"><default-field title="Scope"><display/></default-field></field>
+                        <field name="receivedCount" align="right"><default-field title="Received"><display/></default-field></field>
+                        <field name="splitCount" align="right"><default-field title="Of which split off"><display/></default-field></field>
+                        <field name="resolvedCount" align="right"><default-field title="Resolved"><display/></default-field></field>
+                        <field name="reopenedCount" align="right"><default-field title="Reopened"><display/></default-field></field>
+                        <field name="cancelledCount" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                        <field name="mergedCount" align="right"><default-field title="Merged"><display/></default-field></field>
+                        <field name="assignedCount" align="right"><default-field title="Assignments"><display/></default-field></field>
+                        <field name="backlogCount" align="right"><default-field title="Open at the as-of time"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="receivedCount"/><field-ref name="resolvedCount"/></column>
+                                <column><field-ref name="mergedCount"/><field-ref name="backlogCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="VolumeResultsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="By ${answer.groupLabel.toLowerCase()}"/>
+                    <box-body-nopad>
+                        <label text="No case in this period." type="p" style="q-pa-md m-muted" condition="!groupRows.length"/>
+                        <form-list name="VolumeResults" list="groupRows" skip-form="true" paginate="false">
+                        <field name="groupText"><default-field title="${answer.groupLabel}"><display/></default-field></field>
+                        <field name="receivedCount" align="right"><default-field title="Received"><display/></default-field></field>
+                        <field name="splitCount" align="right"><default-field title="Of which split off"><display/></default-field></field>
+                        <field name="resolvedCount" align="right"><default-field title="Resolved"><display/></default-field></field>
+                        <field name="reopenedCount" align="right"><default-field title="Reopened"><display/></default-field></field>
+                        <field name="cancelledCount" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                        <field name="mergedCount" align="right"><default-field title="Merged"><display/></default-field></field>
+                        <field name="assignedCount" align="right"><default-field title="Assignments"><display/></default-field></field>
+                        <field name="backlogCount" align="right"><default-field title="Open at the as-of time"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupText"/><field-ref name="receivedCount"/></column>
+                                <column><field-ref name="resolvedCount"/><field-ref name="backlogCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

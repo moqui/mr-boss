@@ -344,7 +344,13 @@ function routeFixtures() {
         "Settings/FeedbackForms": {parameters: {}, text: "Feedback forms"},
         "Settings/FeedbackFormDetail": {parameters: {formId: "BOSS_CS_NO_FORM"}, text: "is not available"},
         "Reports/SatisfactionResults": {parameters: {}, text: "Satisfaction results"},
-        "Reports/ResponseDetail": {parameters: {formResponseId: "BOSS_CS_NO_RESPONSE"}, text: "not available"}
+        "Reports/ResponseDetail": {parameters: {formResponseId: "BOSS_CS_NO_RESPONSE"}, text: "not available"},
+        // P14: the report catalogue and the reports
+        "Reports/ReportsHome": {parameters: {}, text: "Service reports"},
+        "Reports/ServiceLevelCompliance": {parameters: {}, text: "Service level compliance"},
+        "Reports/ResponseTimes": {parameters: {}, text: "Response times"},
+        "Reports/CaseVolumes": {parameters: {}, text: "Case volumes"},
+        "Reports/ReturnAnalysis": {parameters: {}, text: "Return analysis"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],

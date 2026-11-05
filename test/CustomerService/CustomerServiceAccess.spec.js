@@ -1023,3 +1023,50 @@ feature("feedback: the administrator keeps the forms, the manager reads the answ
         problems.join("\n") == ""
     }
 })
+
+// P14: the reports are the Reports area's (the agent, manager and return authorizer), over the user's organizations and the
+// queues of the teams they report on: the reader is refused, a manager of the Support team is refused the Privacy queue, and
+// Services' agent is refused Retail and Retail's customer
+feature("reports: the manager reads the Support team's queue, not Privacy's; the reader and another organization are refused", {
+    when() {
+        const problems = []
+        const R = "ironstone.customerservice.ReportingServices."
+        const app = {appRoot: "CustomerService"}
+        for (const [user, service, parameters, expected] of [
+            [users.manager, R + "get#SlaCompliance", Object.assign({requestCategoryId: ids.supportQueueId}, app), ""],
+            [
+                users.manager,
+                R + "get#SlaCompliance",
+                Object.assign({requestCategoryId: ids.privacyQueueId}, app),
+                "RECORD_UNAVAILABLE"
+            ],
+            [users.read, R + "get#CaseVolumes", app, "PERMISSION_DENIED"],
+            [
+                users.services,
+                R + "get#CaseVolumes",
+                Object.assign({organizationPartyId: ids.organizationId}, app),
+                "RECORD_UNAVAILABLE"
+            ],
+            [
+                users.services,
+                R + "get#ReturnAnalysis",
+                Object.assign({customerPartyId: ids.customerId}, app),
+                "CUSTOMER_UNAVAILABLE"
+            ],
+            [
+                users.services,
+                R + "get#CustomerServiceStatistics",
+                Object.assign({customerPartyId: ids.customerId}, app),
+                "CUSTOMER_UNAVAILABLE"
+            ]
+        ]) {
+            const message = asUser(user, () => refusal(service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})

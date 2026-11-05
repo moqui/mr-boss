@@ -15,7 +15,10 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- Customer Service reports (design-customer-service §3 Home, §7): get#ServiceDashboard, Home's ServiceMetrics. Each
     measure comes from the phase that builds its records (P2 open, overdue and unassigned cases; P4 SLA compliance, first
     response and resolution, the share of clocks met on time; P13 CSAT); until then it is not configured, which Home shows as "Not configured", never as zero.
-    Each phase appends its block; P14 adds the reports. -->
+    Each phase appends its block. P14 (CS-REPORTING, Reporting.js): the My and Team split, and the reports of design §7 with
+    Customer360's service statistics and agreements, each over the reports' scope (the Reports area, the user's organizations,
+    the queues of the teams they report on), with its as-of time, period and time zone, its filters and what it left out, and
+    with output csv the same rows, the export audited. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="ServiceDashboard" allow-remote="false">
         <description>Home's service measures for the user's scope over a period (the last 30 days by default): open,
@@ -35,6 +38,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="asOfText"/>
             <parameter name="panels" type="Map"><description>myCases, teamQueues, awaitingReturns and approvalsWaiting: whether
                 the user's role sees the panel (design §1).</description></parameter>
+            <parameter name="splitRows" type="List"><description>P14: for a user who works cases in queues, the measures with
+                their myText (the user's own cases) and teamText (their queues and cases).</description></parameter>
         </out-parameters>
         <actions>
             <service-call name="ironstone.customerservice.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
@@ -80,7 +85,164 @@ along with this software (see the LICENSE.md file). If not, see
                 if (satisfaction.configured) for (const measure of measures) if (measure.key === 'csat')
                     Object.assign(measure, satisfaction.csat)
             ]]></script>
+            <!-- P14: the My and Team split (design Home, Frappe's "My Stats"): for a user who works cases in queues, their own
+                cases' open and overdue counts and service levels beside the team's (their queues and cases, the figures above),
+                each a count in the query (Home reads no unbounded scan); the counts now have no previous period (F-P14-4) -->
+            <set field="split" from="!!(can.caseEdit &amp;&amp; shared.queueIds?.length &amp;&amp; ec.user.userAccount?.partyId)"/>
+            <script><![CDATA[
+                if (split) {
+                    const casesJs = ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js')
+                    const mine = casesJs.execute('myCounts', {})
+                    const myLevels = casesJs.execute('slaMeasures', {periodDays: days, myOnly: true})
+                    const myOf = {open: String(mine.openCount), overdue: String(mine.overdueCount)}
+                    for (const key of ['slaCompliance', 'firstResponse', 'resolution'])
+                        if (myLevels.configured && myLevels[key]) myOf[key] = myLevels[key].valueText
+                    for (const measure of measures) {
+                        measure.myText = Object.hasOwn(myOf, measure.key) ? myOf[measure.key] : null
+                        measure.teamText = measure.configured ? measure.valueText : null
+                    }
+                }
+            ]]></script>
+            <set field="splitRows" from="split ? measures.filter((measure) =&gt; measure.myText != null) : []"/>
             <!-- later phases: each measures its records here, in the user's scope -->
+        </actions>
+    </service>
+    <!-- ===== P14: the reports (design §7, crosscut §3.2; Reporting.js) ===== -->
+    <service verb="define" noun="ReportParameters" type="interface">
+        <description>The filters the Customer Service reports share: the organization (one of the user's; empty, every one),
+            the queue and team (among those the user reports on), the period (from and through days in the user's zone; the
+            last 30 days, 90 for returns, by default), an as-of time (now by default; an earlier one reads the facts recorded
+            by then), the grouping, and output csv for the export.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="requestCategoryId"/>
+            <parameter name="teamPartyId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="asOf"/>
+            <parameter name="groupBy"/>
+            <parameter name="output"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="ReportCatalogue" allow-remote="false">
+        <description>The reports Customer Service owns that the user may read (design §7 ReportCatalogue), each in Insights'
+            catalog contract (entry id, the owner app, title, description, route, parameters, export): the Reports area's
+            grant, SatisfactionResults for service management (SUPPORT_CASE_MANAGE). Refuses a user without Customer
+            Service.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <out-parameters><parameter name="reports" type="List"/></out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('catalogue', context)"/>
+            <set field="reports" from="out.reports"/>
+        </actions>
+    </service>
+    <service verb="get" noun="SlaCompliance" allow-remote="false">
+        <description>Service level compliance (design §7 ServiceLevelCompliance) of the clocks started in the period, each as
+            it stood at the as-of time, by queue, team, priority band, policy row and calendar, channel or clock: counted, met,
+            missed, closed without it, open past due, open within target, the rate (met over the decided and the open past
+            due, so an open case past due counts against it) with its denominator, cancelled apart (never in the rate), and the
+            paused business time; never a clock a merge ended (its carried copy on the kept case counts, F137). Refuses
+            PERMISSION_DENIED (no Reports), RECORD_UNAVAILABLE (another's organization, queue or team) and
+            PERIOD_INVALID.</description>
+        <implements service="ironstone.customerservice.ReportingServices.define#ReportParameters"/>
+        <in-parameters>
+            <parameter name="bandEnumId"/>
+            <parameter name="serviceLevelPolicyId"/>
+            <parameter name="salesChannelEnumId"/>
+            <parameter name="clockEnumId"/>
+        </in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('slaCompliance', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ResponseTimes" allow-remote="false">
+        <description>Response times (design §7 ResponseTimes) of first response (an outward response the channel accepted) or
+            resolution (each episode, a reopen its own) done in the period: count, median, p90 and mean in business time (the
+            clock's calendar less its pauses) and elapsed time, with the clocks still open at the as-of time and their median
+            age, by queue, team, priority band or channel. Refuses as get#SlaCompliance.</description>
+        <implements service="ironstone.customerservice.ReportingServices.define#ReportParameters"/>
+        <in-parameters>
+            <parameter name="metric"><description>firstResponse (the default) or resolution</description></parameter>
+            <parameter name="bandEnumId"/>
+            <parameter name="salesChannelEnumId"/>
+        </in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('responseTimes', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseVolumes" allow-remote="false">
+        <description>Case volumes (design §7 CaseVolumes) in the period by queue, team, type, channel, day, week or month:
+            received (a merged case's intake kept), of which split off another case, resolved, reopened, cancelled and merged
+            (apart), assignments, and the backlog open at the as-of time, where a merged case is not counted again. Refuses as
+            get#SlaCompliance.</description>
+        <implements service="ironstone.customerservice.ReportingServices.define#ReportParameters"/>
+        <in-parameters>
+            <parameter name="requestTypeEnumId"/>
+            <parameter name="salesChannelEnumId"/>
+        </in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('caseVolumes', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnAnalysis" allow-remote="false">
+        <description>Return analysis (design §7 ReturnAnalysis) of the organizations' customer returns entered in the period
+            (cancelled ones counted apart), by reason, product, response, customer, received status or month: returns, open
+            returns, items, quantities requested (an open return counted as requested, never as credited), received, accepted,
+            rejected, replaced and credited at the as-of time, and the amounts requested and credited per currency, withheld
+            without PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW. Refuses as get#SlaCompliance, and CUSTOMER_UNAVAILABLE for
+            a customer the user does not serve.</description>
+        <implements service="ironstone.customerservice.ReportingServices.define#ReportParameters"/>
+        <in-parameters>
+            <parameter name="customerPartyId"/>
+            <parameter name="returnReasonEnumId"/>
+            <parameter name="returnResponseEnumId"/>
+            <parameter name="productId"/>
+        </in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('returnAnalysis', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CustomerServiceStatistics" allow-remote="false">
+        <description>One customer's service measures (crosscut §3.2 CustomerServiceStatistics) over the last periodDays (90
+            by default), of the user's organizations' cases: open cases, failed service levels, the mean first response and
+            resolution in business time, and the satisfaction answers' mean score, each with its denominator; no comment.
+            Refuses CUSTOMER_UNAVAILABLE for a customer the user does not serve.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="customerPartyId" required="true"/>
+            <parameter name="periodDays" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="measures" type="List"/>
+            <parameter name="periodDays" type="Integer"/>
+            <parameter name="periodText"/>
+            <parameter name="asOfText"/>
+            <parameter name="casesUrl"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('customerStatistics', context)"/>
+            <script>ec.context.putAll(out)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="ServiceAgreements" allow-remote="false">
+        <description>The customer's service agreements with the user's organizations (crosscut §3.2 ServiceAgreements; AgrService,
+            P11's store#ServiceAgreement): period, status, whether it covers now, the products covered and the warranty
+            terms; and whether the user may store one (SUPPORT_POLICY_EDIT). Refuses CUSTOMER_UNAVAILABLE.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="customerPartyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="agreementRows" type="List"/>
+            <parameter name="canStore" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Reporting.js').execute('serviceAgreements', context)"/>
+            <set field="agreementRows" from="out.agreementRows"/>
+            <set field="canStore" from="out.canStore"/>
         </actions>
     </service>
 </services>

@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReturnAnalysis (design-customer-service §7 ReturnAnalysis; impl-customer-service P14, CS-REPORTING): ReturnAnalysisFind
+    (organization, customer, reason, response, product, the period of the returns' entry, an as-of time, the grouping by reason,
+    product, response, customer, received status or month) and ReturnAnalysisResults
+    (ironstone.customerservice.ReportingServices.get#ReturnAnalysis): per group the returns, open returns and items, the
+    quantities requested (an open return counted as requested, never as credited), received, accepted, rejected, replaced and
+    credited at the as-of time (ReturnItem, its receipts and ReturnItemBilling), and the amounts requested and credited per
+    currency, never added across currencies, withheld without a price or accounting view; cancelled returns counted apart. The
+    export holds the same rows -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return analysis" default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="asOf"/>
+    <parameter name="groupBy"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="returnReasonEnumId"/>
+    <parameter name="returnResponseEnumId"/>
+    <parameter name="productId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.customerservice.ReportingServices.get#ReturnAnalysis" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, fromDate:fromDate || null, thruDate:thruDate || null, asOf:asOf || null, groupBy:groupBy || null, customerPartyId:customerPartyId || null, returnReasonEnumId:returnReasonEnumId || null, returnResponseEnumId:returnResponseEnumId || null, productId:productId || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.customerservice.ReportingServices.get#ReturnAnalysis" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot})" transaction="force-new" ignore-error="true"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOfText"/>
+        <set field="groupRows" from="answer?.groupRows || []"/>
+        <set field="totalRows" from="answer?.total ? [answer.total] : []"/>
+        <set field="amountRows" from="answer?.amountRows || []"/>
+        <set field="groupOptions" from="answer?.groupOptions || []"/>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Return analysis" type="h5"/>
+                <label text="An open return counts as requested, never as credited. Amounts are per currency and never added across currencies." type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <link url="${sharedLinks['Reports']}" text="All reports" icon="arrow_back" link-type="anchor-button"/>
+            </container>
+        </container>
+        <form-single name="ReturnAnalysisFind" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="90 days before the end when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="asOf">
+                <default-field title="As of" tooltip="Now when empty: an earlier time reads what was recorded by then"><date-time/></default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="By">
+                    <drop-down>
+                        <list-options list="groupOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="customerPartyId">
+                <default-field title="Customer">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'customers', selected:customerPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="returnReasonEnumId">
+                <default-field title="Reason">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="ReturnReason"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="returnResponseEnumId">
+                <default-field title="Response">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="ReturnResponse"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'products', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="organizationPartyId"/><field-ref name="customerPartyId"/><field-ref name="productId"/></field-row-big>
+                <field-row-big><field-ref name="returnReasonEnumId"/><field-ref name="returnResponseEnumId"/></field-row-big>
+                <field-row-big><field-ref name="fromDate"/><field-ref name="thruDate"/><field-ref name="asOf"/><field-ref name="groupBy"/></field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <section-include name="ReportFrame" location="component://mr-boss/template/CustomerServiceReportParts.xml"/>
+        <section-include name="ReportMissing" location="component://mr-boss/template/CustomerServiceReportParts.xml"/>
+        <section name="ReturnTotalSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="All returns"/>
+                    <box-body-nopad>
+                        <label text="No return in this period." type="p" style="q-pa-md m-muted" condition="!totalRows.length"/>
+                        <form-list name="ReturnTotal" list="totalRows" skip-form="true" paginate="false">
+                        <field name="groupText"><default-field title="Scope"><display/></default-field></field>
+                        <field name="returnCount" align="right"><default-field title="Returns"><display/></default-field></field>
+                        <field name="openReturnCount" align="right"><default-field title="Open returns"><display/></default-field></field>
+                        <field name="itemCount" align="right"><default-field title="Items"><display/></default-field></field>
+                        <field name="requestedQuantity" align="right"><default-field title="Requested"><display/></default-field></field>
+                        <field name="receivedQuantity" align="right"><default-field title="Received"><display/></default-field></field>
+                        <field name="acceptedQuantity" align="right"><default-field title="Accepted"><display/></default-field></field>
+                        <field name="rejectedQuantity" align="right"><default-field title="Rejected"><display/></default-field></field>
+                        <field name="replacedQuantity" align="right"><default-field title="Replaced"><display/></default-field></field>
+                        <field name="creditedQuantity" align="right"><default-field title="Credited"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="returnCount"/><field-ref name="requestedQuantity"/></column>
+                                <column><field-ref name="receivedQuantity"/><field-ref name="creditedQuantity"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReturnResultsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="By ${answer.groupLabel.toLowerCase()}"/>
+                    <box-body-nopad>
+                        <label text="No return in this period." type="p" style="q-pa-md m-muted" condition="!groupRows.length"/>
+                        <form-list name="ReturnAnalysisResults" list="groupRows" skip-form="true" paginate="false">
+                        <field name="groupText"><default-field title="${answer.groupLabel}"><display/></default-field></field>
+                        <field name="returnCount" align="right"><default-field title="Returns"><display/></default-field></field>
+                        <field name="openReturnCount" align="right"><default-field title="Open returns"><display/></default-field></field>
+                        <field name="itemCount" align="right"><default-field title="Items"><display/></default-field></field>
+                        <field name="requestedQuantity" align="right"><default-field title="Requested"><display/></default-field></field>
+                        <field name="receivedQuantity" align="right"><default-field title="Received"><display/></default-field></field>
+                        <field name="acceptedQuantity" align="right"><default-field title="Accepted"><display/></default-field></field>
+                        <field name="rejectedQuantity" align="right"><default-field title="Rejected"><display/></default-field></field>
+                        <field name="replacedQuantity" align="right"><default-field title="Replaced"><display/></default-field></field>
+                        <field name="creditedQuantity" align="right"><default-field title="Credited"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupText"/><field-ref name="returnCount"/></column>
+                                <column><field-ref name="requestedQuantity"/><field-ref name="creditedQuantity"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReturnAmountSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Amounts per currency"/>
+                    <box-body-nopad>
+                        <label text="No amount in this period." type="p" style="q-pa-md m-muted" condition="!amountRows.length"/>
+                        <form-list name="ReturnAmounts" list="amountRows" skip-form="true" paginate="false">
+                        <field name="groupText"><default-field title="${answer.groupLabel}"><display/></default-field></field>
+                        <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                        <field name="requestedText" align="right"><default-field title="Requested amount"><display/></default-field></field>
+                        <field name="creditedText" align="right"><default-field title="Credited amount"><display/></default-field></field>
+                        <field name="openText" align="right"><default-field title="Of which open returns"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="groupText"/><field-ref name="currencyUomId"/></column>
+                                <column><field-ref name="requestedText"/><field-ref name="creditedText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
