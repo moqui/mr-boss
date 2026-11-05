@@ -634,7 +634,7 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
   `RequestTag` enumerations and `PrtServiceTeam`; `MantleSetupData.xml` seeds the default workflow's mappings (agent and
   customer labels, categories) and moves, and the topics `SupportCaseAssigned` and `SupportCaseCustomerReply`.
 - Mantle services (`service/mantle/request/SupportCaseServices.xml`, `SupportCases.js`): the case rule `ensure#CaseProfile`
-  (F62: submitted and not closed; a served Customer party, or the filer when it is a customer or its contact, F-P2-1; an
+  (F62: submitted and not closed; a served Customer party, or the filer when it is a customer or its contact, F79; an
   organization with a current ServicePolicy, found as the OrgInternal party, the queue's owner, the customer's owner, the
   filer's organization or the project's owner; in one of its service queues, or of a service-enabled type with no
   category, moved into the type's queue; a project's request too), run after the commit by `queue#CaseProfile` from the
@@ -646,9 +646,9 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
   `save#ServiceTeam` (SUPPORT_POLICY_EDIT) and `save#ServiceTeamMember` (SUPPORT_CASE_MANAGE and the team's manager, or
   SUPPORT_POLICY_EDIT); `notify#CaseCustomerReply` from the rule `SupportCaseCustomerReply` (RequestCommEvent made).
 - Mantle changes for CX-REQUEST: `update#Request` refuses on a case a due date, resolution or close (CASE_MANAGED, F64,
-  F-P2-5); `complete#RequestFromWork` never moves a case (a project's too) and tells only its assignee when a linked item
+  F83); `complete#RequestFromWork` never moves a case (a project's too) and tells only its assignee when a linked item
   is done or cancelled (F48; the RequestUpdate message carries `isCase`); `get#UserTodayRequests` leaves cases out (F63);
-  `get#ClientRecordVisibility` leaves out cases with no project (F68, F-P2-3); record visibility shows a restricted
+  `get#ClientRecordVisibility` leaves out cases with no project (F68, F81); record visibility shows a restricted
   queue's case only to its team (and its filer).
 - BOSS reads (`service/ironstone/customerservice/`): `CaseServices.xml` over `Cases.js` (`find#Cases` with the saved
   views and the Recent cases read, `get#QueueCounts`, `find#ServiceCustomers` by name, id, email and phone, `prepare#Case`,
@@ -681,7 +681,7 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
 - Assist: `skill/case-reply.md`, `skill/case-summary.md`, `skill/aliases.json` and `test/skill-retrieval.json`.
 - Demo: `BossCustomerServiceDemoData.xml` (Retail's Support team, Privacy team and Services' team; the Support (team),
   Privacy (restricted, RqtPrivacy only) and Services support queues; Retail's and Services' service policies; RqtSupport
-  service-enabled into Support and RqtPrivacy into Privacy for Retail only, F-P2-4); `BossYCustomerServiceCasesDemoData.xml`
+  service-enabled into Support and RqtPrivacy into Privacy for Retail only, F82); `BossYCustomerServiceCasesDemoData.xml`
   (new, after the users: the team members and the requests `BOSS_CS_CASE_THERMO`, `_FILTERS`, `_PICK`, `_PRIVACY` and
   `_OTHER`); `BossZCustomerServiceDemoData.xml` runs `DemoServices.load#CaseDemo` (`Demo.js loadCases`: ensure#CaseProfile
   for each, each on its own, F76). The demo payment stays on Undeposited Receipts (W1).
@@ -717,26 +717,26 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
   - A case's revision is the later of the request's last update and its assignee rows' (STALE_CASE).
   - "Needs response" lists the new (Submitted) cases until P4 and P5 record replies; "SLA risk" is empty until P4.
 - Findings (provisional):
-  - **F-P2-1** A customer contact's own request (Chat's, Commons' `raise#Request`, the forum's) has no Customer
+  - **F79** A customer contact's own request (Chat's, Commons' `raise#Request`, the forum's) has no Customer
     RequestParty, so F62's rule made none a case, while the usable-when needs Chat's to be one. The rule takes the filer
     when it is a Customer-role party, else the customer parties the filer is a current contact of, and ensure adds the
     Customer party (design §3 NewCase changed).
-  - **F-P2-2** `BOSS_ADMIN_PRIVACY` does not exist (Admin is not built). The Privacy queue is restricted
+  - **F80** `BOSS_ADMIN_PRIVACY` does not exist (Admin is not built). The Privacy queue is restricted
     (`SqvRestricted`): its cases are seen only by its team, in Customer Service's scope and in Mantle's record visibility
     (Commons, Chatter, record links). The demo's Privacy team is customerservice.admin; Admin's privacy group joins it
     when it ships (§7).
-  - **F-P2-3** F68's exclusion hid a project's case from its own Projects client (ProjectsAccess's client upload on its
+  - **F81** F68's exclusion hid a project's case from its own Projects client (ProjectsAccess's client upload on its
     request on project ACME, whose customer is shared, failed), against §4's Nov 5 row that a project's case stays visible
     in Projects. `get#ClientRecordVisibility` leaves out only cases with no project.
-  - **F-P2-4** The test runtime loads BOSS's demo data under Mantle's specs, which file RqtSupport requests as john.doe
+  - **F82** The test runtime loads BOSS's demo data under Mantle's specs, which file RqtSupport requests as john.doe
     (an agent of ORG_ZIZI_SERVICES) for shared customers: a Services policy service-enabling RqtSupport made
     WorkPlanToCashBasicFlow's request a case (its close refused, CASE_MANAGED). The Services demo policy enables no type;
     a later phase's demo must not service-enable a type for ORG_ZIZI_SERVICES.
-  - **F-P2-5** F64's "not from SlaServices/SupportCaseServices" is not a caller check (Practices-App-Dev §4: no
+  - **F83** F64's "not from SlaServices/SupportCaseServices" is not a caller check (Practices-App-Dev §4: no
     authorization by caller): the case services write the Request entity (`update#mantle.request.Request`), as
     `complete#RequestFromWork` does, and `update#Request` refuses on a case; P4's SlaServices writes the due date the
     same way.
-  - **F-P2-6** The rule runs after the commit on the service pool (`registerOnCommit` is asynchronous), so a request's
+  - **F84** The rule runs after the commit on the service pool (`registerOnCommit` is asynchronous), so a request's
     profile is there a moment after its create returns; a spec of the rule waits for it, and a screen that makes a case
     calls `create#Case`, which makes the profile in its own transaction.
 
@@ -749,7 +749,7 @@ passed is not in the context, so a case with a due date takes other changes; mr-
 due date or resolution passes; make#RequestWorkItem, convert#RequestToProject, create#RequestFromEmail, InventoryRequests
 and the forum's create#CaseFromTopic set no due date, resolution or close of a case); access (find#Cases, get#CaseDetail,
 apply#CaseBatch's Forbidden, the palette and get#RecordLink through recordOf; the restricted queue out of the scope's
-queueIds and so out of get#QueueCounts and the dashboard); the Settings narrowing; F-P2-4 (no other demo policy
+queueIds and so out of get#QueueCounts and the dashboard); the Settings narrowing; F82 (no other demo policy
 service-enables a type for ORG_ZIZI_SERVICES); regression leanness (SupportCases 3.5 s, CustomerServiceCases about 1 s;
 CaseDetail and NewCase render once, in qvt; the settings and case route fixtures are acceptance-only).
 - **R1 (medium, Mantle)** The rule inferred a filer's customer from any relationship to a Customer-role party and took a
@@ -1471,6 +1471,12 @@ is written there too.
 | F76 | P1: a data file loads in one transaction, so a demo service that commits each record on its own cannot see its own file's rows | The service call is in a later-loading `BossZCustomerServiceDemoData.xml` |
 | F77 | P1: a customer's record link stays Commons' until Customer360 is under Customer Service; a sales order, which had no link, opens Customer Service's Home lookup | P3 moves both to Customer360 and OrderDetail |
 | F78 | P1: crosscut X4 also names `BOSS_PURCHASING_BUYER` and `BOSS_SALES_CHANGE` for `ORDER_CHANGE_HOLD_RELEASE`; neither is granted, since a purchase revision's Change hold is released by its approval or cancel and Sales has no group. `hold#Order` and `release#OrderHold` check neither the organization nor the order's direction, so the holder may release any order's Change hold | P10's release checks the order through AccessServices `check#Record` first, as Purchasing's `releaseHold` does; the Sales grant comes with Sales |
+| F79 | P2: a customer contact's own request (Chat, Commons `raise#Request`, the forum) has no Customer RequestParty, so the Nov 5 rule made none a case | The rule takes the filer as the customer when the filer is a served customer, or the customer the filer is a contact of (PrtContact or PrtEmployee); never a filer working for an internal organization (P2 review R1) |
+| F80 | P2: `BOSS_ADMIN_PRIVACY` does not exist (Admin is not built) | The Privacy queue is restricted to its team, whose members must work for the team's organization (P2 review R2); the demo team is the Customer Service admin; Admin's group joins when Admin is built |
+| F81 | P2: leaving every case out of `get#ClientRecordVisibility` (F68) hid a project's case from its own Projects client, against the Nov 5 decision that project cases stay in Projects | Only cases with no project are left out; a project's client still sees its internal files through Projects' bug (impl-projects F159) |
+| F82 | P2: Mantle's specs run with BOSS's demo data loaded, so a demo ServicePolicy that service-enables a type for an organization a Mantle flow uses turns its requests into cases (WorkPlanToCashBasicFlow with ORG_ZIZI_SERVICES) | The Services demo enables no type; no later phase service-enables a type for ORG_ZIZI_SERVICES |
+| F83 | P2: F64's "not from SlaServices or SupportCaseServices" is not done as a caller check (Practices-App-Dev §4) | The case services write the Request entity themselves, and `update#Request` refuses a due date, resolution or close on a case (CASE_MANAGED); P4's SlaServices writes the same way |
+| F84 | P2: the case rule runs after commit on the service pool, so a request's CaseProfile appears a moment after `create#Request` returns | Specs wait for it; NewCase and the Support app call `create#Case`, and `get#CaseState`'s `wouldBeCase` answers before the profile exists |
 
 ## 7. Later
 
