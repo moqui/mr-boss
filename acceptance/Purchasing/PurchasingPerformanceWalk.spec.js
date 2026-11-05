@@ -6,7 +6,8 @@
 // a purchase request followed through its approval, sourcing, purchase order, receipt and bill shows in the procurement
 // tracker with the bill's payment withheld from the buyer and shown to a payables reader; Commitments counts the request's
 // reservation, its order and its actual once; Spend shows committed and billed as separate measures, withheld from a reader;
-// and Supplier360's Performance tab, Product360's Purchase history tab and the supplier statement render.
+// and Supplier360's Performance tab, Product360's Purchase history tab and the supplier statement render. (P17) Each report prints
+// as html-print.
 // Run: ./moq accept mr-boss --spec PurchasingPerformanceWalk
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
@@ -481,5 +482,34 @@ feature("Supplier360's Performance tab, Product360's Purchase history tab, the s
         r.history.output.includes("Withheld")
         r.policies.errors == []
         r.policies.output.includes("Response rules")
+    }
+})
+
+// P17 (design §15): each report has a Print link, and prints as html-print with its snapshot and filters
+feature("each report prints as html-print with its snapshot and filters", {
+    when() {
+        const reports = [
+            ["Performance/Scorecards", {}],
+            ["Performance/Spend", {}],
+            ["Performance/Commitments", {}],
+            ["Performance/ProcurementTracker", {requestId: ids.requestId}],
+            ["Performance/PurchaseHistory", {productId: "DEMO_1_1"}],
+            ["Performance/SupplierStatement", {supplierPartyId: ids.supplierId}]
+        ]
+        const problems = []
+        for (const [path, parameters] of reports) {
+            const screen = asUser(users.buyMatch, () => page(path, parameters, "html"))
+            if (!screen.output.includes(">Print<") && !screen.output.includes("Print</")) problems.push(`${path}: no Print link`)
+            const printed = asUser(users.buyMatch, () =>
+                page(path, Object.assign({lastStandalone: "true", pageNoLimit: "true"}, parameters), "html-print")
+            )
+            if (printed.status != 200 || printed.errors.length || !printed.output.includes("As of "))
+                problems.push(`${path}: ${printed.status} ${printed.errors}`)
+        }
+        if (problems.length) log.warn("Report prints:\n" + problems.join("\n"))
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
     }
 })

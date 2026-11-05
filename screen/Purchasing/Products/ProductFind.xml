@@ -15,7 +15,7 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- The product lookup of Purchasing's Products mount (impl-purchasing P2): a product of the catalog the user reads
     (Products' catalog choices, in the owner scope), opened in Purchasing's Product360. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Find a product" default-menu-include="false">
+        default-menu-title="Find a product" default-menu-include="false" server-static="qvt">
     <transition-include name="choices" location="component://mr-boss/template/CatalogChoiceTransitions.xml"/>
     <transition name="open">
         <default-response url="../Product360">

@@ -1,6 +1,6 @@
 # IronStone BOSS — Purchasing implementation
 
-Nov 1, 2026 — plan; P0 partly done (F1–F23, found while writing it); the phase order and the open questions decided
+Nov 4, 2026 — built: P0–P17 done (§3), what is left is §7. Nov 1, 2026 — plan; P0 partly done (F1–F23, found while writing it); the phase order and the open questions decided
 (§4), on the shared party-role and effective-date rules (impl-drawers-commons §4); the supplier pages in a PASS app in
 mr-pass (§4); Purchasing's rules in Mantle, behind Moqui permissions (§4); consistency pass: brought in line with the
 Accounting, Warehouse and Products builds and the Nov 1 decisions
@@ -267,7 +267,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P14 Replenishment | Mantle, BOSS | SupplyPlanning, InventoryAvailability, ReorderRules | P14a built Nov 4, 2026; P14b built Nov 4, 2026 |
 | P15 Performance | Mantle, BOSS | Scorecards, ScorecardDetail, Spend, Commitments, ProcurementTracker, PurchaseHistory, SupplierStatement, ScorecardPolicies | built Nov 4, 2026 |
 | P16 Supplier portal | Mantle, mr-pass, BOSS | the PASS Supplier app's SupplierHome, QuoteResponse and OrderAcknowledgement | built Nov 4, 2026 |
-| P17 Finish | BOSS | — | — |
+| P17 Finish | Mantle, BOSS | — | built Nov 4, 2026 |
 
 ### P0 — Checks
 
@@ -3269,6 +3269,111 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
   Warehouse or Accounting root.
 - The §15 outputs not built earlier.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work.
+- The open items earlier phases left for P17 (§6): F127, F118 and F176.
+
+**Built Nov 4 (P17).**
+- **Terminal twins and server-static.** Purchasing has no `.qvue` screen, so its twins are its XML screens in tui, each
+  list's `render-mode` section included. `acceptance/TuiRender.spec.js` now renders every Purchasing screen and its shared
+  mounts on their route fixture (PurchasingSpecLib) and checks each fixture's text in the twin; it fails a Purchasing route
+  fixture that no screen renders, as for Warehouse and Manufacturing. No Purchasing screen lacked a usable twin (all pass,
+  with the fixtures' texts). `acceptance/Purchasing/PurchasingServerStatic.spec.js` (one per app per mode, on
+  ServerStaticLib): the full static report of the 53 Purchasing XML screens on their route fixtures, the marked ones clean
+  and rendering their static qvt page without an error (impl-manufacturing F147's check). Marked `server-static="qvt"`, the
+  screens the report found clean: the three quick creates (NewPurchaseOrder, NewPurchaseRequest, NewQuoteRequest) and
+  Products/ProductFind. The others keep a list's condition outside its form-list (the form-list-key rule) or request data
+  in a text, as most Warehouse and Manufacturing screens do; ReturnAuthorization (a print) and PlanSchedule (a tab) are
+  clean but left unmarked.
+- **Design §14.4 "unauthorized action and standalone use"**, `acceptance/Purchasing/PurchasingAccessWalk.spec.js` (7
+  features, about 60 s with its start), with artifact authorization on. Each side, Retail and Ziziwork Services, gets its
+  own records marked with a secret text and an odd amount: a placed order with its expected receipt, a purchase request, an
+  RFQ with a requested quote, an agreement, a bill, a supplier return and an organization-scoped supplier price, and Retail a
+  standard cost of DEMO_1_1. Then:
+  - every Retail demo Purchasing user, Services' reader and the walk's standalone buyer open Purchasing and none of eight
+    other roots (the demo's purchasing.buyreceive is in Warehouse's root group too, F-P17-2);
+  - 39 routes per side (each record's URL, the lists, the shared mounts, Chatter and RecordFiles, the authorization print,
+    the reports), html and for a reader also tui: the other side's users see none of a side's records, while its own reader
+    or john.doe sees them on the required eight (OrderDetail, PurchaseOrders, RequestDetail, QuoteRequestDetail,
+    QuoteDetail, AgreementDetail, InvoiceDetail, ReturnDetail);
+  - the reports' CSV exports (spend by supplier and product, commitments, history) and the Mantle prints (purchase order,
+    RFQ, agreement) hold only the user's side (john.doe's print of each side's order is the control);
+  - the palette (by ids and text), record links, the supplier, organization and bill-order drop-downs and universal search
+    keep each side to its records (each side's reader finds its own order and link);
+  - no Purchasing user sees the standard cost on Product360 (its Summary and Costs) under Purchasing (john.doe sees it under
+    Products), a buyer's bill shows no payments, the buyer's price of DEMO_1_1 from Services' supplier is none of Services',
+    and approve#Payable, release#InvoiceHold, receive#ShipmentStock and post#AcctgTrans refuse every Retail Purchasing
+    user without the group that grants them (nothing received);
+  - the Supplier app (the demo order link's home and page, the demo quote link, a signed-in Ziddleman contact's home, a
+    forged token) shows neither side's records nor the cost, and a record named beside a link is refused (NotFound);
+  - a buyer with Warehouse's receive group and Accounting's match group and neither root (the walk's
+    `purchasing.p17standalone`) receives 8 from Purchasing's Receiving/ShipmentDetail and applies the match from
+    Bills/InvoiceMatch, while the plain buyer is refused both (PERMISSION_DENIED) and asks for the price hold's release
+    instead (the handoff); neither releases the hold.
+  The purchasing administrator is left out of the isolation sweeps: its MANTLE_ACTIVE_ORG grant reaches every organization
+  with none active, by design (§4; F-P17-1). No access hole was found.
+- **§8's scenarios**: the table names the covering specs (§8), each scenario already covered by a phase walk or Mantle spec
+  but the standalone use, which is the walk above.
+- **§15 outputs.** Built earlier: the RFQ print as of a time, its stored PDF and email with the QuoteResponse link (P11,
+  P16); the comparison print and CSV (P12); the purchase order print as of a time, its stored PDF, email and acknowledgement
+  link (P3, P9, P16); the drop-ship order's print with the customer's ship-to (P7); the regret notice (P12); the agreement
+  print as of a time and its stored PDF (P13); the supplier return authorization (P8); the supplier statement and the
+  reports' CSVs (P15); the submission receipts (P16). Built here: a Print link on every report (PurchasingReportParts'
+  ReportFrame: the screen as html-print with the same filters, its snapshot and what it left out), checked in
+  PurchasingPerformanceWalk. Not built (§7, F-P17-6): a receiving checklist, a purchase inspection report and a bill or
+  match explanation print under Purchasing, and the supplier price and reorder import from Purchasing's screens.
+- **F127** (Mantle): `mantle.request.RequestServices.complete#PurchaseRequest` (PurchaseRequestServices.xml,
+  PurchaseRequests.js `complete`): an approved request with something sourced completes, with no reason once every line is
+  received in full (design RequestDetail: fulfilled, or explicitly closed with a reason), else with a reason kept on the
+  status change; a line sourced short gives up the rest (requirement cut to what is covered, or Rejected), the request's
+  reserved commitments (the unsourced remainder at BcsRequest) are released and its plan supply ends, as a cancel does;
+  refuses REQUEST_NOT_APPROVED, REQUEST_CLOSED, NOTHING_SOURCED (cancel it instead) and REASON_REQUIRED naming the lines.
+  `get#PurchaseRequestProgress` answers `canComplete`. BOSS: RequestDetail's Purchasing branch has Complete request in its
+  More menu (`completePurchaseRequest`, template/PurchasingRequestDetail.xml, one transition-include in
+  Shared/RequestDetail.xml). Regression: mr-mantle PurchaseRequests (a partly sourced request: NOTHING_SOURCED before
+  sourcing, REASON_REQUIRED naming line 01, the requirement cut to 3 and Ordered, the request commitment released, the order
+  kept, REQUEST_CLOSED again); acceptance: PurchasingRequestsWalk's last feature (from RequestDetail, with a reason).
+- **F118** (Mantle, PurchaseRevisions.js): a revision changing the currency together with a line's price or quantity is
+  refused (CURRENCY_CHANGE_WITH_AMOUNTS: the currency changes in a revision of its own); `record#Acknowledgement` and
+  `send#PurchaseReminder` refuse an order whose applied revision waits for its approval (REVISION_PENDING: it has not gone
+  to the supplier). Regression: mr-mantle PurchaseRevisions (the preview's refusal; the acknowledgement and the reminder
+  of the held revision). Not fixed: a reminder whose OrderEmailMessage write fails after the mail went can mail again on a
+  retry (§7).
+- **F176** (Mantle, SupplierPortal.js `quoteView`, Sourcing.js exports `rfqAt`): a quote sent its RFQ before the RFQ's last
+  change shows the RFQ as last sent to that supplier (specification, due date, lines and revision as of the send, from the
+  audit log as the as-of print reads them); the supplier answers that revision until the buyer sends again. Regression:
+  mr-mantle SupplierPortal (a buyer's edit after the send is not on the page). Design §13 QuoteResponse says so. Not
+  changed (§7): a price published from a quote line stays in effect when the award drops the line (it is the supplier's
+  offer for its validity; ending it is a design choice), and the comparison-to-award SOURCE_CHANGED check rarely fires
+  with default revision counting.
+- **Inventories and design.** ss-inventory: every form with a Purchasing Designed in path names the Purchasing screen that
+  carries it, or `—` with what Purchasing does instead (57 cells filled); usl-inventory: the same for services (28 cells,
+  and complete#PurchaseRequest's row); design-purchasing §2's Impl names the building phase (and the built path where it
+  differs) or §7.
+- Specs run (this runtime; no full suite): acceptance PurchasingAccessWalk (7), PurchasingServerStatic (1), TuiRender (3),
+  PurchasingRequestsWalk (8), PurchasingPerformanceWalk (7), all pass; regression mr-mantle PurchaseRequests (7),
+  PurchaseRevisions (9), SupplierPortal (7), with Sourcing, SourcingAwards, PurchaseOrders, OrderProcureToPayBasicFlow,
+  ReplenishmentRoutes and AccountingPortals (68 features), pass; BOSS PurchasingRequests, PurchasingRevisions,
+  PurchasingAccess and PurchasingSourcing (36), pass. `moqui lint --screens`: no parse failure, no Purchasing site
+  flagged, no Purchasing TUI worklist item.
+- Findings (provisional):
+  - **F-P17-1** The purchasing administrator (BOSS_PURCHASING_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's purchase
+    records, palette rows, links and choices when no organization is active (Purchasing.js `rootGrants`, by design, §4);
+    the isolation sweeps leave it out, as the other apps' walks leave out their administrators.
+  - **F-P17-2** The demo's purchasing.buyreceive is in Warehouse's root group (BOSS_WAREHOUSE) as well as its receive group,
+    so it opens Warehouse; the standalone case is the walk's own user, which holds BOSS_WAREHOUSE_RECEIVE and
+    BOSS_ACCOUNTING_MATCH without either root.
+  - **F-P17-3** Universal search answers nothing in a test runtime (no index), so its check is vacuous; the palette's
+    `search#Records` with its own-side control is the one that counts (impl-manufacturing's review found the same).
+  - **F-P17-4** F127 as the design reads it: a request completes by itself once received in full; sourced in full but not
+    received is still In Progress, so its Complete needs a reason ("RFQ/PO issuance alone is In Progress").
+  - **F-P17-5** F176's page change: the supplier answers the RFQ's sent revision, so after an edit not yet sent a submitted
+    quote answers an older revision than the RFQ's; QuoteComparison does not mark a quote of an earlier RFQ revision (the
+    receipt keeps the revision answered), so the buyer re-sends after a material edit, as P11's walk does (§7).
+  - **F-P17-6** §15 outputs not built: a receiving checklist and a purchase inspection report under Purchasing
+    (QualityInspection's Print certificate is Manufacturing's link), a bill print and a match explanation print under
+    Purchasing (Accounting's BillDetail has them for AP), and the supplier price and reorder import from SupplierPrices
+    and ReorderRules (Products' ProductImport takes reorder rows, P14, and has no Purchasing mount).
+  - **F-P17-7** PurchasingAccessWalk takes about 60 s with its start (the route sweep 28 s); it is acceptance, so no budget
+    applies, but it could split as Manufacturing's did if it grows.
 
 ## 4. Decisions
 
@@ -3438,7 +3543,7 @@ is written there too.
 | F115 | P9: RecordAcknowledgement takes one promised date for every line (a dialog form has no per-line grid); a line's own promise is its row's Promise on OrderDetail, which keeps the revision's recorded response. | See P9 |
 | F116 | P9: Not built: a ship-to address choice in OrderChanges (apply takes `postalContactMechId`; Purchasing has no address choice source) and adding a line by a revision (a new line is a new order or a later item). | See P9 |
 | F117 | P9: An order is overdue from its revision's first order email; an order marked Sent with no email (the demo's, or sent outside Mantle) is unacknowledged but never overdue. | See P9 |
-| F118 | P9 review: a revision that changes the currency with a price or quantity has `lower#SourceCommitments` compare commitments in the old currency with amounts in the new; `record#Acknowledgement` accepts a response while an applied revision awaits approval; a reminder whose record write fails after the send can mail again | Open, for P17 or later |
+| F118 | P9 review: a revision that changes the currency with a price or quantity has `lower#SourceCommitments` compare commitments in the old currency with amounts in the new; `record#Acknowledgement` accepts a response while an applied revision awaits approval; a reminder whose record write fails after the send can mail again | P17: the currency change with an amount is refused (CURRENCY_CHANGE_WITH_AMOUNTS) and an applied revision awaiting approval is neither acknowledged nor reminded (REVISION_PENDING); the reminder's resend after a failed record write is §7 |
 | F119 | P10: A request's revision is the time (epoch milliseconds) of the last audit row of its lines' six fields, kept in `PurchaseApprovalDecision.sourceRevision` (a long) and shown as a time; deleting a line writes no audit row, so a line is removed only from a draft, before any decision. | See P10 |
 | F120 | P10: RequestItem has no price; `maximumAmount` ("the maximum amount (price) to pay for the item") is taken as the line's not-to-exceed amount, so a line without one counts nothing toward the approval bands and reserves nothing. | See P10 |
 | F121 | P10: Sourcing prices a line at the supplier's price the buyer may read (`store#PurchaseOrderItem`); a supplier with none fails its group PRICE_UNAVAILABLE (retryable). RequestSourcing has no per-line price override yet (design SourceGroups' "price/override"). The demo's DEMO_1_1 has supplier prices from Ziddleman only, so the demo request names Ziddleman and the walk adds a Brightline price. | See P10 |
@@ -3447,7 +3552,7 @@ is written there too.
 | F124 | P10: A revision of a request-sourced order line after its approval holds the line again with `reserve#Commitment` (its earlier order commitment, converted from the request, already holds the request's share), not a second conversion. | See P10 |
 | F125 | P10: Customer demand on a request (for the drop-ship route) is a RequestItemOrder from the request line to a sales order line; nothing in BOSS writes one yet (P14b's conversion, or a later intake). `route#OrderItemToDropShip` buys only on an approved customer order, so the route fails DROP_SHIP_PENDING before it. The route has no regression spec (its drop-ship fixture is P7's); left for P14b's walk. | See P10 |
 | F126 | P10: `cancel#PurchaseRequest` keeps its reason as the status change's `changeReason` (Request has no note entity of its own besides comments); the purchase orders made from the request stay and are named for the buyer. | See P10 |
-| F127 | P10: Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user completes it (design RequestDetail: "fulfilled or explicitly closed with a reason"). Left for P17. | See P10 |
+| F127 | P10: Nothing completes a purchase request when its lines are received in full; it stays In Progress until a user completes it (design RequestDetail: "fulfilled or explicitly closed with a reason"). Left for P17. | P17: complete#PurchaseRequest (received in full, or closed with a reason), releasing a short line's rest and the request's reserved commitments; RequestDetail's Complete request |
 | F128 | P10: The demo request is in BossUsersDemoData, after the requester's party: `Request.filedByPartyId` has a foreign key, and BossPurchasingDemoData loads before the users. | See P10 |
 | F129 | P10: AppStructure's placeholder floor is now 56 (Requests built). | See P10 |
 | F130 | P13: PurchaseApprovalDecision's `sourceRevision` is an integer bound to a counter, and design §17 made an agreement's revision "the time of its last audit-logged change". Agreements get `agreementRevision` and its `revisionDate` (the release allocation keeps both); design §7 and §17 now say so. | See P13 |
@@ -3496,7 +3601,7 @@ is written there too.
 | F173 | P16: QuoteResponse offers no file downloads (the published RFQ PDF, permitted files): PASS has no supplier file operation yet, and the RFQ email carries the PDF (§7). | See P16 |
 | F174 | P16: A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery does not prefill from it yet, and a subcontract order shows the components held at the custody facility but not the dispatch and inspection evidence (§7). | See P16 |
 | F175 | P16: Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier mount; P16 adds the quote and acknowledgement links to it. The Supplier app's default page is now SupplierHome (was BillUpload). | See P16 |
-| F176 | W8 reviews: QuoteResponse shows the RFQ as it is now, so buyer edits not yet re-sent are visible to the supplier (the as-of print could show the last sent revision); a supplier price published from a quote line stays in effect when the award drops the line; with default settings a quote line price change does not move `orderRevision`, so the comparison-to-award SOURCE_CHANGED check rarely fires (the approval path's stamp covers it) | Open, for P17 or later |
+| F176 | W8 reviews: QuoteResponse shows the RFQ as it is now, so buyer edits not yet re-sent are visible to the supplier (the as-of print could show the last sent revision); a supplier price published from a quote line stays in effect when the award drops the line; with default settings a quote line price change does not move `orderRevision`, so the comparison-to-award SOURCE_CHANGED check rarely fires (the approval path's stamp covers it) | P17: QuoteResponse shows the RFQ as last sent to the supplier; the published price after the award drops a line and the SOURCE_CHANGED check are §7 |
 | F177 | P15: The form-list CSV export (ScreenCsv.js `$csv`; XLSX writes string cells and is safe) quotes but does not guard formula-like text, so a list exported with show-csv-button can carry `=...` from a supplier's name or reference into a spreadsheet; the Purchasing reports guard their own export (Reports.js `csvCell`, as moqui-report's dashboard export does). For the lead: a framework guard in ScreenCsv.js would cover every list (Review P15). | See P15 |
 | F178 | P15: A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending the rule or the risk (PURCHASE_POLICY_EDIT, SUPPLIER_PROFILE_EDIT) or a newer evaluation: there is no per-document override. ScoreActions has one effect for RFQs and orders alike, and no reviewer role or expiry; Warn and review warns and marks the evaluation, and no follow-up work item is made (§7). | See P15 |
 | F179 | P15: RFQ response counts an invitation from its first sent email (EmailMessage ES_SENT): a quote entered on the supplier's behalf with no email sent is not an invitation here. Price variance leaves out a bill in another currency than its order (no conversion) and compares in the order line's unit. | See P15 |
@@ -3529,6 +3634,12 @@ Designed, not in this build:
   - from performance (P15): a response rule's separate RFQ and order effects, reviewer role, expiry and follow-up work
     item, and a per-document override of a block (F178); a guard of formula-like text in the form-list CSV
     export (F177, framework).
+  - from the finish (P17): a receiving checklist and a purchase inspection report under Purchasing, a bill and match
+    explanation print under Purchasing, and the supplier price and reorder import from SupplierPrices and ReorderRules
+    (F-P17-6); a reminder that mailed and then failed its record write mails again on a retry (F118); a supplier price
+    published from a quote line staying in effect when the award drops the line, and the comparison-to-award
+    SOURCE_CHANGED check with default revision counting (F176); QuoteComparison marking a quote that answered an earlier
+    RFQ revision (F-P17-5).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
@@ -3539,21 +3650,24 @@ Designed, not in this build:
 - **Per phase,** the "Done" rule of §2.
 - **End to end,** run `./moq run`, sign in as `john.doe` and as each demo purchasing user, and walk each built phase's
   "usable when" in order.
-- **Design §14.4**, scenario by phase, each an acceptance test (`./moq accept mr-boss`, when asked):
+- **Design §14.4**, scenario by phase. The walks named are acceptance tests (`./moq accept mr-boss`, when asked), except
+  `PurchasingOrdersWalk` in `test/client/`, the app's one golden-path client walk in the regression suite; the Mantle and
+  PASS specs are their components' regression and acceptance specs:
 
-| Scenario | Phase |
-| --- | --- |
-| Variant to supplier pack price, request and RFQ, split award, PO, partial receipt and inspection, split bill, payment | P2 (the pack price), P10–P12 (request, RFQ, award), P3 (the PO), P5, P6; payment is Accounting's P8 |
-| Shortage, shared buy, make and transfer plan, partial production, stock and GL | P14 (the buy conversion); make is Manufacturing's P13, transfer Warehouse's §7 |
-| Sales reservation, pick shortfall, alternate buy, pack, ship and invoice | P14 (the customer demand and the reservation offer); P7 (a drop-ship alternative) |
-| Customer case, RMA, disposition, supplier return and credit or replacement | P8; the customer side is §7 |
-| Count with an intervening movement | Warehouse's P10; Purchasing reads posted availability (P14) |
-| Case intake to resolution | Customer Service's; supplier follow-ups link Requests and WorkItems (P15) |
-| Cancellation, failed inspection and substitution | P3 (cancel remainder), P5 (failed inspection), P11 and P16 (a cancelled RFQ revokes), P12 (substitutes) |
-| Closed period, unauthorized action and standalone use | P6 (a bill correction through Accounting); `PurchasingAccess` for each access rule a phase adds; P17 |
-| Named independent failures, atomic inner posting | Every phase: P4 (bulk approvals), P7 (drop-ship lines), P9 (reminders), P10 (supplier groups), P11 (invitations), P15 (evaluations) |
-| Drop-ship order to customer invoice and supplier bill (design §18) | P7 |
-| A revision and its as-of print (§2) | P9; P11 (the RFQ), P13 (the agreement) |
+| Scenario | Phase | Covered by (checked in P17) |
+| --- | --- | --- |
+| Variant to supplier pack price, request and RFQ, split award, PO, partial receipt and inspection, split bill, payment | P2 (the pack price), P10–P12 (request, RFQ, award), P3 (the PO), P5, P6; payment is Accounting's P8 | mr-mantle PurchaseRequests, Sourcing, SourcingAwards, PurchaseReceipts, PurchaseBills; BOSS PurchasingSuppliersWalk (the price), PurchasingRequestsWalk, PurchasingSourcingWalk, PurchasingAwardWalk (one group blocked by name, the other placed), PurchasingReceivingWalk (8 of 10 into quarantine, 7 accepted, 1 rejected), PurchasingBillsWalk (only the 7 eligible, the price hold, finance releases and approves) |
+| Shortage, shared buy, make and transfer plan, partial production, stock and GL | P14 (the buy conversion); make is Manufacturing's P13, transfer Warehouse's §7 | mr-mantle Replenishment, ReplenishmentRoutes, SupplyPlanning; BOSS PurchasingReplenishmentWalk (DEMAND_ALREADY_COVERED for a second converter); the make side Manufacturing's ManufacturingAccessWalk and ManufacturingPlanningWalk |
+| Sales reservation, pick shortfall, alternate buy, pack, ship and invoice | P14 (the customer demand and the reservation offer); P7 (a drop-ship alternative) | mr-mantle ReplenishmentRoutes, DropShip; BOSS PurchasingReplenishmentRoutesWalk (a customer-order shortage bought and reserved on receipt; the drop-ship route), PurchasingDropShipWalk |
+| Customer case, RMA, disposition, supplier return and credit or replacement | P8; the customer side is §7 | mr-mantle PurchaseReturns, WarehouseReturns; BOSS PurchasingReturnsWalk (the rejected unit returned, credited for the billed unit only, a replacement order with its expected receipt) |
+| Count with an intervening movement | Warehouse's P10; Purchasing reads posted availability (P14) | Warehouse's WarehouseCountsWalk and mr-mantle WarehouseCounts; BOSS PurchasingReplenishmentWalk reads InventoryAvailability's posted stock |
+| Case intake to resolution | Customer Service's; supplier follow-ups link Requests and WorkItems (P15) | Customer Service's (not built); BOSS PurchasingRequestsWalk (a linked work item completes, the request stays In Progress) |
+| Cancellation, failed inspection and substitution | P3 (cancel remainder), P5 (failed inspection), P11 and P16 (a cancelled RFQ revokes), P12 (substitutes) | mr-mantle PurchaseOrders (close remainder), PurchaseReceipts, SourcingAwards (substitutes), SupplierPortal (revoked links); BOSS PurchasingOrdersWalk (close remainder with its reason), PurchasingReceivingWalk (the rejected unit held), PurchasingAwardWalk |
+| Closed period, unauthorized action and standalone use | P6 (a bill correction through Accounting); `PurchasingAccess` for each access rule a phase adds; P17 | BOSS PurchasingAccess (regression), PurchasingFoundationWalk, PurchasingAccessWalk (P17: isolation by URL, shared mount, export, print, palette, link, choice, search and the Supplier app; cost, finance and stock refused; standalone receive and match without the Warehouse or Accounting root); the closed period is Accounting's AccountingCloseWalk |
+| Named independent failures, atomic inner posting | Every phase: P4 (bulk approvals), P7 (drop-ship lines), P9 (reminders), P10 (supplier groups), P11 (invitations), P15 (evaluations) | BOSS PurchasingApprovalsWalk (a stale order named, two approved), PurchasingRevisionsWalk (a bad address named, two sent), PurchasingRequestsWalk (MISSING_SUPPLIER named, the others made), PurchasingSourcingWalk (a bad address named), PurchasingAwardWalk; mr-mantle SupplierScorecards (evaluations) |
+| Drop-ship order to customer invoice and supplier bill (design §18) | P7 | mr-mantle DropShip; BOSS PurchasingDropShipWalk |
+| A revision and its as-of print (§2) | P9; P11 (the RFQ), P13 (the agreement) | mr-mantle PurchaseRevisions, Sourcing, PurchaseAgreements; BOSS PurchasingRevisionsWalk, PurchasingSourcingWalk, PurchasingAgreementsWalk |
+| The supplier pages (design §13) | P16 | mr-mantle SupplierPortal; mr-pass SupplierPages, acceptance client SupplierPortalHttp and RemoteHttp |
 
 - **Walks.** One golden-path client walk for the app in the regression suite; the others, and the Supplier app's
   pages at phone and desktop widths in mr-pass, are acceptance tests. No screenshots.

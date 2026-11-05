@@ -5,8 +5,9 @@
 // order for each supplier and names the line with no supplier (MISSING_SUPPLIER); once its supplier is chosen the retry
 // makes only that order; a second conversion of the same lines is refused as already sourced; approving a sourced order
 // converts the request's reservation, so the amount is not counted twice; a Projects work item linked to the request
-// completes and the request stays In Progress; and the Items tab shows in the Commons and Projects contexts, with Create
-// purchase order for a buyer only. Run: ./moq accept mr-boss --spec PurchasingRequestsWalk
+// completes and the request stays In Progress; the Items tab shows in the Commons and Projects contexts, with Create
+// purchase order for a buyer only; and (P17) the buyer completes the sourced request from RequestDetail with a reason.
+// Run: ./moq accept mr-boss --spec PurchasingRequestsWalk
 const lib = ec.resource.script("component://mr-boss/test/Purchasing/PurchasingSpecLib.js")
 const {ids, users, asUser, system, invoke, page} = lib
 const webroot = "component://webroot/screen/webroot.xml"
@@ -311,5 +312,28 @@ feature("the Items tab shows in the Commons and Projects contexts, with Create p
         r.projects.errors == ""
         r.projects.output.includes("Demo Product One-One")
         r.projects.output.includes("Create purchase order")
+    }
+})
+
+// P17 (F127): the request, its lines sourced in full and not yet received, is completed from RequestDetail by the buyer
+// with a reason (without one it is refused, naming the lines not received); a second complete is refused as closed
+feature("the buyer completes the sourced request from RequestDetail with a reason; a second complete is refused", {
+    when() {
+        const detail = render(users.buyer, "Purchasing/Requests/RequestDetail", {requestId: state.requestId})
+        const noReason = post(users.buyer, detailPath + "completePurchaseRequest", {requestId: state.requestId})
+        const completed = post(users.buyer, detailPath + "completePurchaseRequest", {
+            requestId: state.requestId,
+            reason: "Sourced in full; the purchase orders follow"
+        })
+        const again = post(users.buyer, detailPath + "completePurchaseRequest", {requestId: state.requestId, reason: "Again"})
+        return {detail, noReason, completed, again, status: statusOf(state.requestId)}
+    },
+    then(r) {
+        r.detail.errors == ""
+        r.detail.output.includes("Complete request")
+        r.noReason.errors.includes("REASON_REQUIRED")
+        r.completed.errors == ""
+        r.status == "ReqCompleted"
+        r.again.errors.includes("REQUEST_CLOSED")
     }
 })

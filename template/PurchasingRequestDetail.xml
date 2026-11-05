@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     get#RequestDetail (a requester's own and assigned requests only). The header (the request, its organization, requester,
     facility, due date and revision, the status) with the action its status gives: Submit a draft, Approve or Refuse the step
     waiting (a purchase approver, through mantle.request.RequestServices.decide#PurchaseRequestApproval), Create purchase order
-    (a buyer's RequestSourcing of the lines left to source), and Cancel (releasing the unsourced demand and its commitment);
+    (a buyer's RequestSourcing of the lines left to source), Complete (P17: an approved request received in full, or closed
+    with a reason, a short line's rest released) and Cancel (releasing the unsourced demand and its commitment);
     Lines with Add line, Edit and Remove while the request is a draft or submitted (a change of a submitted request is a new
     revision, sent to its approvers again), and a buyer's Choose supplier on an approved line; Sourcing progress (approved,
     sourced, ordered, received and remaining, with the purchase orders); Approval (the state and the decisions); History (the
@@ -91,6 +92,21 @@ along with this software (see the LICENSE.md file). If not, see
             <script>if (!ec.message.hasError()) ec.message.addMessage('Cancelled request ' + requestId
                 + (cancelled.orderIds?.length ? '; its purchase orders ' + cancelled.orderIds.join(', ')
                     + ' stay for you to decide on' : ''), cancelled.orderIds?.length ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- P17 (F127): Complete an approved request with something sourced: with no reason once received in full, else
+        closed with a reason; a line sourced short gives up the rest -->
+    <transition name="completePurchaseRequest">
+        <actions>
+            <service-call name="ironstone.purchasing.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'request', recordId:requestId}"/>
+            <service-call name="mantle.request.RequestServices.complete#PurchaseRequest" out-map="completed"
+                    in-map="{requestId:requestId, reason:reason || null}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage('Completed request ' + requestId
+                + (completed.shortItemSeqIds?.length ? '; the unsourced rest of line ' + completed.shortItemSeqIds.join(', ')
+                    + ' is released' : ''), 'success')</script>
         </actions>
         <default-response url="."><parameter name="requestId"/></default-response>
         <error-response url="."/>
@@ -182,7 +198,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <link url="${sharedLinks['Requests/RequestSourcing']}" text="Create purchase order"
                                         link-type="anchor-button" btn-type="primary" icon="sym_o_receipt_long"
                                         condition="prPrimary == 'source'" parameter-map="{requestId:requestId}"/>
-                                <button-menu text="More" icon="more_horiz" condition="pr.approval.canDecide || pr.canCancel">
+                                <button-menu text="More" icon="more_horiz" condition="pr.approval.canDecide || pr.canCancel || pr.canComplete">
                                     <container-dialog id="PurchaseRequestRefuse" button-text="Refuse" icon="sym_o_block"
                                             width="520" title="Refuse purchase request ${requestId}"
                                             condition="pr.approval.canDecide">
@@ -197,6 +213,24 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="submitButton">
                                                 <default-field title="Refuse">
                                                     <submit type="danger" confirmation="Refuse purchase request ${requestId}?"/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="PurchaseRequestComplete" button-text="Complete request"
+                                            icon="sym_o_task_alt" width="520" title="Complete purchase request ${requestId}"
+                                            condition="pr.canComplete">
+                                        <form-single name="CompletePurchaseRequest" transition="completePurchaseRequest"
+                                                map="{requestId:requestId}">
+                                            <field name="requestId"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason (unless every line is received in full)">
+                                                    <text-area rows="2"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Complete request">
+                                                    <submit confirmation="Complete purchase request ${requestId}? What is not
+                                                        sourced is released; its purchase orders stay."/>
                                                 </default-field>
                                             </field>
                                         </form-single>

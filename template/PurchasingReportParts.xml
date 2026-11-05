@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     section-include. ReportFrame: what a report read (answer is the ironstone.purchasing.ReportServices answer): its snapshot
     time and filters, what it left out (the withheld measures and the partitions it could not read, in the warning colour
     when the report is incomplete), and its export, the screen's exportCsv transition with the same parameters (the screen
-    sets exportParameters). PurchaseHistoryRows: the rows of get#PurchaseHistory (historyRows), the quoted, ordered and billed
+    sets exportParameters), and (P17) Print, the screen as html-print with the same parameters. PurchaseHistoryRows: the rows of get#PurchaseHistory (historyRows), the quoted, ordered and billed
     prices in their own columns, shared by PurchaseHistory and Product360's Purchase history tab. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
@@ -28,6 +28,10 @@ along with this software (see the LICENSE.md file). If not, see
                         condition="answer.omittedText"/>
                 <link url="exportCsv" text="Export CSV" icon="sym_o_download" link-type="anchor" target-window="_blank"
                         parameter-map="exportParameters"/>
+                <!-- P17 (design §15): the report as a print with the same filters, its snapshot and what it left out -->
+                <link url="." text="Print" icon="sym_o_print" link-type="anchor" target-window="_blank"
+                        parameter-map="Object.assign({}, exportParameters || {}, {renderMode:'html-print', lastStandalone:'true',
+                            pageNoLimit:'true'})"/>
             </widgets>
         </section>
         <section name="PurchaseHistoryRows" condition="answer?.asOf">
