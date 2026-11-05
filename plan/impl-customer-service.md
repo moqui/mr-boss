@@ -1681,6 +1681,16 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
     template had that template's required fields demanded unseen: createCase now refuses a queue whose template is not the one
     shown (the step's queue in a hidden `templateQueueId`), naming the template to choose in step one.
 
+- **Wave 4 suites (Nov 5, on master after P5, P6 and P7 merged and the framework's drafts fix, the binary rebuilt,
+  nothing else running):** standalone mr-mantle 1,714 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps`
+  3,020 server features passed and 1 failed (ProjectsSettings found "Support" in Projects' QuickCreate: the project
+  that Mantle's SupportCases spec makes and never removed, in the same worker; SupportCases now cleans it up, and
+  CustomerServiceAccess compares only the demo's queues, which SupportCases' team queues had also met), 14 client
+  features passed; within every budget (server: mr-mantle 309.4 of 335 s, mr-boss 221.6 of 245 s, mr-pass 11.9 of 15
+  s; client: mr-boss 41.5 of 44 s); `moqui lint --screens` clean. The framework suite met BasicComms' user search
+  failing on `_agent`: `search#Users` put the term into LIKE unescaped, so the `customerservice.agent*` demo users
+  matched; the term's `%`, `_` and `\` are escaped now (mr-moqui 1916b57f).
+
 ### P8 — Merge, split and closing
 
 Design §3 MergeCases and SplitCase, §9 StatusCategories' closing and ServiceDefaults' auto-close; CS-MERGE and
