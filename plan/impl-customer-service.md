@@ -3344,6 +3344,45 @@ scanner with type, signature and size), BOSS's Invite to support and ServiceDefa
   - **F-P16-5** The case summary's internal variant shows the template's customer-visible answers only; an internal field's
     answer stays on CaseDetail (CaseTemplates.js has no staff projection of a response to reuse).
 
+**Review Nov 5 (P16).** Checked the three repos' diffs against this section, §2, design §10 and §11, AGENTS.md and the
+Practices. The case summary: the customer copy is built only from SupportPortal.js' customer projections (outward messages,
+RqCntCustomerShared files, customer status labels, customer-visible template answers, the customer's own orders and
+returns; a staff sender shows as the organization, no assignee, queue, cost or amount); the internal copy needs
+SUPPORT_CASE_EDIT or SUPPORT_CASE_MANAGE and a case of the user's organization (caseOf), and the screen checks the case
+through AccessServices first; `.html.fancy` escapes every value; send#CaseSummary refuses an address outside the
+customer and its current contacts, keys the operation before it stores, and stores one RqCntCaseSummary PDF per send
+(a retry answers the first). F185's branch acts only on an RqtWarranty request's asset, order, invoice or agreement;
+every other request's link and unlink is unchanged. F131's managers are the holders of SUPPORT_CASE_MANAGE or
+SUPPORT_POLICY_EDIT whose party works for that organization (organizationsOf, employment-type relationships), never
+another organization's; they join at the next team sync. The regression additions are one feature each (SupportPortal,
+SupportWarranty, SupportAssignment, AccountingControls, CustomerServiceAssignment, CustomerServiceWarranty).
+- **R1** (minor, defensive) Settings/SavedReplies previewed a saved reply on the case named by `previewRequestId` when
+  `!ec.message.hasError()` after an ignored check#Record, which is always true (F-P16-3); Mantle's preview#SavedReply
+  refuses another organization's case itself, so nothing leaked, but the screen now previews only when the check answers
+  the case, and says "Case … is not available" or that the reply cannot be previewed instead of an empty problem text.
+  The other Customer Service screens that read hasError after an ignored call only lose the refusal's text (ReturnPolicies,
+  ChannelRouting, ChannelSessions, NewReturn, SplitCase, MergeCases, the four reports, CaseSummary's print error,
+  CustomerServiceReplies, CustomerServiceChannels): their data comes from the call's answer, so none can show a refused
+  record; their error labels stay blank (F-P16-3, §7).
+- **F-P16-2, for the lead.** BossSetupData grants BOSS_COMMONS and BOSS_COMMS to ALL_USERS (AUTHZT_ALLOW, MANTLE_USER_ORG
+  and MANTLE_PRIVATE_CONTACT filters). A public account is an ordinary UserAccount with no group: framework
+  `org/moqui/public/Account.js` beginRegistration creates it through create#UserAccount with no group; invitations
+  (ExternalAccess.js) bind a party, not a group; the demo's joe@public.com is a Mantle demo UserAccount. So nothing in data
+  tells it from staff today, and either fix is wider than this phase:
+  - (a) a deny group, as BOSS_PROJECT_CLIENT already denies Commons and Comms to project clients (BOSS_COMMONS_CLIENT,
+    BOSS_COMMS_CLIENT): a framework-seeded group (say PUBLIC_ACCOUNT) that Account.js adds an account it creates to (a
+    framework change), that Mantle's invitation acceptance adds a new account to, and that the demo gives Joe, Dana and
+    Morgan; BOSS adds AUTHZT_DENY on BOSS_COMMONS and BOSS_COMMS for it. Narrow, but a staff member who is also a customer
+    contact must never be put in the group (only an account born public), since a deny outranks ALLOW.
+  - (b) grant Commons and Comms to a staff group instead of ALL_USERS: about 90 demo accounts in BOSS and Mantle data, the
+    users specs make, and every provisioning path would need it; a much wider change and against design-drawers-commons
+    §2's "every user".
+  - (c) a root-screen check in Commons.xml and Comms.xml (the user's party works for an internal organization, as
+    Knowledge.js isStaff decides): no data change, but a heuristic that a contractor or a spec user without employment
+    fails.
+  Recommended: (a). Not changed here; the AccessWalk keeps asserting today's behaviour (Commons and Comms open, no case
+  record but Joe's own as one of its people).
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
