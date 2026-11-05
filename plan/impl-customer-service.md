@@ -2268,6 +2268,11 @@ reserved, picked, shipped or invoiced; the walk restores salesInvoiceFinalizedAt
   several OrderServices verbs) still take the header first. A customer filer's `get#OrderChange` is scoped to the user's
   organizations and shows the decisions' reasons and approvers; P15's Support app needs its own audience read.
 
+- **Wave 5 suites (Nov 5, on master after P8, P9 and P10 merged, nothing else running):** standalone mr-mantle 1,734
+  passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,052 server and 14 client features passed, none failed,
+  within every budget (server: mr-mantle 318.9 of 335 s, mr-boss 229.2 of 245 s, mr-pass 13.0 of 15 s; client: mr-boss
+  41.5 of 44 s); `moqui lint --screens` clean.
+
 ### P11 — Warranty
 
 Design §5 WarrantyClaims and WarrantyAssessment, crosscut §3.2 DeliveredItems; CS-WARRANTY.
