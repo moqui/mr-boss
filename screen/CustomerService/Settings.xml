@@ -12,10 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Customer Service settings (initial-design.md); design-customer-service.md decides
-    them. -->
+<!-- The Settings area of IronStone Customer Service (design-customer-service §9): the settings landing and its pages,
+    queues, teams, policies, templates and defaults (impl-customer-service P2 on); for the service administrator
+    (BOSS_CS_SETTINGS); later phases open their pages to the manager, authorizer or author. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="8" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
     <widgets>
         <label text="Placeholder: Customer Service settings." type="p"/>
     </widgets>

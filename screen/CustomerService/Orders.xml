@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Order lookup & changes section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Orders area of IronStone Customer Service (design-customer-service §4): order lookup, OrderDetail, ShipmentDetail,
+    InvoiceDetail and the change requests (impl-customer-service P3, P10); every Customer Service user, limited to their
+    organizations' sales orders. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Order lookup &amp; changes" default-menu-index="3" menu-image="sym_o_manage_search" menu-image-type="icon">
+        default-menu-title="Orders" default-menu-index="4" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Order lookup and changes." type="p"/>
+        <label text="Placeholder: Order lookup and change requests." type="p"/>
     </widgets>
 </screen>

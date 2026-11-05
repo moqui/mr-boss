@@ -12,9 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Customer Service: root of the app for support and the order desk (initial-design.md app table); its
-    sections follow design-customer-service.md when that file is written. Not yet implemented: its BOSS_CUSTOMER_SERVICE
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Customer Service (design-customer-service §1): the root of the app for service agents, service managers, the
+    order desk, return authorizers, knowledge authors and the service administrator. The root user group
+    BOSS_CUSTOMER_SERVICE and the administrator group BOSS_CUSTOMER_SERVICE_ADMIN open it (data/BossSetupData.xml); its areas
+    are the files of screen/CustomerService/, in the menu order of design §1 by their default-menu-index:
+    1 Home; 2 Cases; 3 Customers; 4 Orders; 5 Returns; 6 Approvals; 7 Availability; 8 Knowledge; 9 Reports; 10 Settings.
+    Cases, Orders, Returns and Availability become menu groups holding their lists as their phases build them (P2, P3, P9).
+    Home, Cases, Customers, Orders, Availability and Knowledge are every Customer Service user's; Returns, Approvals, Reports
+    and Settings their groups' (BOSS_CS_<Area>). ironstone.customerservice.AccessServices.get#SharedContext checks the user
+    and resolves their organizations, capabilities, queues and teams for every subscreen; each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Customer Service" menu-image="sym_o_support_agent" menu-image-type="icon">
 
@@ -22,6 +28,9 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="CustomerService"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.customerservice.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                out-map="customerService"/>
+        <set field="sharedLinks" from="customerService.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +38,21 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- later phases: the shared screens mounted at the root, hidden from the menu -->
     </subscreens>
+
+    <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
+        (CS-PROVIDERS): quick create of New case (P2) and Request return (P9), each for the groups that may create it; Today's
+        own due and overdue cases (P4); the assignment, SLA warning and breach, customer reply, return decision and feedback
+        topics -->
+    <shell-providers>
+        <!-- P1: sales orders and customers in the palette (search#Records); P2 adds cases, P9 RMAs -->
+        <palette-source group="CustomerService" label="Customer Service records" icon="sym_o_support_agent"
+                service="ironstone.customerservice.AccessServices.search#Records" sequence="49"/>
+        <keymap scope="customerservice">
+            <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="customer-service-panel" type="popup"/></widgets>
 </screen>

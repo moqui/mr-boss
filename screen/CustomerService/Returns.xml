@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Returns / RMA section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Returns area of IronStone Customer Service (design-customer-service §5): the RMA queue, NewReturn, ReturnDetail,
+    QualityInspection and warranty claims (impl-customer-service P9, P11); for the agent, manager and return authorizer
+    (BOSS_CS_RETURNS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Returns / RMA" default-menu-index="4" menu-image="sym_o_replay" menu-image-type="icon">
+        default-menu-title="Returns" default-menu-index="5" menu-image="sym_o_replay" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Returns and RMAs." type="p"/>
+        <label text="Placeholder: Customer returns and warranty claims." type="p"/>
     </widgets>
 </screen>
