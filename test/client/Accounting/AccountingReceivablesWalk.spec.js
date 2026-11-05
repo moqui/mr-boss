@@ -84,17 +84,19 @@ function deliveryRows(page, recipient) {
 // work, a bad recipient is reported beside the good one, and each send is a row of who it went to and when. Batches,
 // supporting files, currency refusal, billing from time and reader access are AccountingReceivables (mr-boss) and
 // mr-mantle's AccountingReceivables specs.
+// the in-app confirmation (moqui.confirmAction): only its Confirm button approves the action
+function confirmAction(page) {
+    page.locator(".q-dialog-plugin").getByRole("button", {name: "Confirm", exact: true}).click()
+}
+
 feature("an AR user creates, finalizes and sends an invoice without a store", {
     expect() {
         const page = arPage()
         createReceivable(page, "Browser customer services " + Date.now())
         addReceivableLine(page, "Browser invoice service")
         page.text().includes("49.00")
-        page.evaluate(() => {
-            window.confirm = () => true
-            return true
-        }) == true
         page.getByRole("button", {name: "Finalize invoice", exact: true}).click()
+        confirmAction(page)
         page.waitFor(() => document.querySelector(".m-record-status")?.innerText.includes("Finalized"))
         const recipient = "accounting.customer@example.test"
         sendInvoice(page, recipient + ",bad-address")

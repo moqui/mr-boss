@@ -18,11 +18,9 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
-function acceptConfirmations(page) {
-    page.evaluate(() => {
-        window.confirm = () => true
-        return true
-    })
+// the in-app confirmation (moqui.confirmAction): only its Confirm button approves the action
+function confirmAction(page) {
+    page.locator(".q-dialog-plugin").getByRole("button", {name: "Confirm", exact: true}).click()
 }
 // a drop-down of the open dialog or the page: open it, type, choose the option; the options stay open over the dialog's
 // button (with every open purchase order part listed) until the focus moves on
@@ -76,12 +74,12 @@ feature("they receive part of the sealant with one unit rejected and a lot, then
         // finish: close what did not arrive, with the reason, and the receipt is delivered
         page.goto("/qapps/Warehouse/Receiving/ReceiptDetail?shipmentId=" + shipmentId).status == 200
         waitForText(page, "SEAL-P7-WALK")
-        acceptConfirmations(page)
         page.getByRole("button", {name: "Finish receipt", exact: true}).first().click()
         const dialog = page.getByRole("dialog")
         dialog.getByText("Close it on the order").click()
         dialog.getByLabel("Reason", {exact: true}).fill("Supplier out of stock")
         dialog.getByRole("button", {name: "Finish receipt", exact: true}).click()
+        confirmAction(page)
         waitForText(page, "Delivered")
         page.text().includes("The remainder is closed")
         page.text().includes("Damaged")

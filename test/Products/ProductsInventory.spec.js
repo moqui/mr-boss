@@ -57,7 +57,9 @@ feature(
             summary.costRead == false
             !JSON.stringify(summary).includes("510.98")
             !JSON.stringify(summary).includes("888.77")
-            !JSON.stringify(summary).includes("991")
+            // the other owner's 991 units, as a whole number: a timestamp such as checkedAt can hold the digits
+            !/(?<![\d.])991(?![\d.])/.test(JSON.stringify(summary))
+            !JSON.stringify(summary).includes("BOSS_PRD_FOREIGN_STOCK")
             projection.projectionAvailable == true
             projection.projectionRows.length == 3
             projection.projectionRows.every(r => r.projected === 12)

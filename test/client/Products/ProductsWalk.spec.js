@@ -10,10 +10,6 @@ feature("a catalog editor creates and activates a draft, then assigns an identif
         page.getByRole("button", {name: "Create draft", exact: true}).click()
         page.waitForURL(/Product360/)
         page.text().includes("Browser catalog product")
-        page.evaluate(() => {
-            window.confirm = () => true
-            return true
-        }) == true
         page.getByRole("button", {name: "Activate", exact: true}).click()
         // an active product has no Activate action (Discontinue is in its More menu)
         page.waitFor(() => !Array.from(document.querySelectorAll("button")).some(button => button.innerText.trim() === "Activate"))

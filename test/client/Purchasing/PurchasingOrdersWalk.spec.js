@@ -17,11 +17,9 @@ spec({
 function waitForText(page, text) {
     page.waitFor(text => (document.querySelector(".q-page")?.innerText || "").includes(text), {arg: text})
 }
-function acceptConfirmations(page) {
-    page.evaluate(() => {
-        window.confirm = () => true
-        return true
-    })
+// the in-app confirmation (moqui.confirmAction): only its Confirm button approves the action
+function confirmAction(page) {
+    page.locator(".q-dialog-plugin").getByRole("button", {name: "Confirm", exact: true}).click()
 }
 // a drop-down of the open dialog: open it, type, choose the option
 function choose(page, scope, label, typed, option) {
@@ -53,8 +51,8 @@ feature("a buyer creates and places a purchase order, an approver approves it, a
         dialog.getByLabel("Quantity", {exact: true}).fill("2")
         dialog.getByRole("button", {name: "Add line", exact: true}).click()
         waitForText(buyer, "Lines · 1")
-        acceptConfirmations(buyer)
         buyer.getByRole("button", {name: "Place", exact: true}).first().click()
+        confirmAction(buyer)
         waitForText(buyer, "Placed 20")
 
         const approver = pages["purchasing.approve"]

@@ -92,7 +92,7 @@ feature("the wizard has five steps, Address first; the list and the account's pa
         wizard.status == 200
         wizard.errors == ""
         wizard.output.includes("m-subscreens-wizard")
-        wizard.output.includes('finish-text="Start syncing"')
+        wizard.output.includes('finish-text="Activate account"')
         address.errors == ""
         !address.broken
         address.output.includes("Whose mail is it?")
