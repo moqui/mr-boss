@@ -3289,7 +3289,7 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
   RFQ with a requested quote, an agreement, a bill, a supplier return and an organization-scoped supplier price, and Retail a
   standard cost of DEMO_1_1. Then:
   - every Retail demo Purchasing user, Services' reader and the walk's standalone buyer open Purchasing and none of eight
-    other roots (the demo's purchasing.buyreceive is in Warehouse's root group too, F-P17-2);
+    other roots (the demo's purchasing.buyreceive is in Warehouse's root group too, F186);
   - 39 routes per side (each record's URL, the lists, the shared mounts, Chatter and RecordFiles, the authorization print,
     the reports), html and for a reader also tui: the other side's users see none of a side's records, while its own reader
     or john.doe sees them on the required eight (OrderDetail, PurchaseOrders, RequestDetail, QuoteRequestDetail,
@@ -3309,7 +3309,7 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
     Bills/InvoiceMatch, while the plain buyer is refused both (PERMISSION_DENIED) and asks for the price hold's release
     instead (the handoff); neither releases the hold.
   The purchasing administrator is left out of the isolation sweeps: its MANTLE_ACTIVE_ORG grant reaches every organization
-  with none active, by design (§4; F-P17-1). No access hole was found.
+  with none active, by design (§4; F185). No access hole was found.
 - **§8's scenarios**: the table names the covering specs (§8), each scenario already covered by a phase walk or Mantle spec
   but the standalone use, which is the walk above.
 - **§15 outputs.** Built earlier: the RFQ print as of a time, its stored PDF and email with the QuoteResponse link (P11,
@@ -3318,7 +3318,7 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
   print as of a time and its stored PDF (P13); the supplier return authorization (P8); the supplier statement and the
   reports' CSVs (P15); the submission receipts (P16). Built here: a Print link on every report (PurchasingReportParts'
   ReportFrame: the screen as html-print with the same filters, its snapshot and what it left out), checked in
-  PurchasingPerformanceWalk. Not built (§7, F-P17-6): a receiving checklist, a purchase inspection report and a bill or
+  PurchasingPerformanceWalk. Not built (§7, F190): a receiving checklist, a purchase inspection report and a bill or
   match explanation print under Purchasing, and the supplier price and reorder import from Purchasing's screens.
 - **F127** (Mantle): `mantle.request.RequestServices.complete#PurchaseRequest` (PurchaseRequestServices.xml,
   PurchaseRequests.js `complete`): an approved request with something sourced completes, with no reason once every line is
@@ -3355,24 +3355,24 @@ AccountingPayables (8). `moqui lint --screens`: no parse failure, nothing flagge
   PurchasingAccess and PurchasingSourcing (36), pass. `moqui lint --screens`: no parse failure, no Purchasing site
   flagged, no Purchasing TUI worklist item.
 - Findings (provisional):
-  - **F-P17-1** The purchasing administrator (BOSS_PURCHASING_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's purchase
+  - **F185** The purchasing administrator (BOSS_PURCHASING_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's purchase
     records, palette rows, links and choices when no organization is active (Purchasing.js `rootGrants`, by design, §4);
     the isolation sweeps leave it out, as the other apps' walks leave out their administrators.
-  - **F-P17-2** The demo's purchasing.buyreceive is in Warehouse's root group (BOSS_WAREHOUSE) as well as its receive group,
+  - **F186** The demo's purchasing.buyreceive is in Warehouse's root group (BOSS_WAREHOUSE) as well as its receive group,
     so it opens Warehouse; the standalone case is the walk's own user, which holds BOSS_WAREHOUSE_RECEIVE and
     BOSS_ACCOUNTING_MATCH without either root.
-  - **F-P17-3** Universal search answers nothing in a test runtime (no index), so its check is vacuous; the palette's
+  - **F187** Universal search answers nothing in a test runtime (no index), so its check is vacuous; the palette's
     `search#Records` with its own-side control is the one that counts (impl-manufacturing's review found the same).
-  - **F-P17-4** F127 as the design reads it: a request completes by itself once received in full; sourced in full but not
+  - **F188** F127 as the design reads it: a request completes by itself once received in full; sourced in full but not
     received is still In Progress, so its Complete needs a reason ("RFQ/PO issuance alone is In Progress").
-  - **F-P17-5** F176's page change: the supplier answers the RFQ's sent revision, so after an edit not yet sent a submitted
+  - **F189** F176's page change: the supplier answers the RFQ's sent revision, so after an edit not yet sent a submitted
     quote answers an older revision than the RFQ's; QuoteComparison does not mark a quote of an earlier RFQ revision (the
     receipt keeps the revision answered), so the buyer re-sends after a material edit, as P11's walk does (§7).
-  - **F-P17-6** §15 outputs not built: a receiving checklist and a purchase inspection report under Purchasing
+  - **F190** §15 outputs not built: a receiving checklist and a purchase inspection report under Purchasing
     (QualityInspection's Print certificate is Manufacturing's link), a bill print and a match explanation print under
     Purchasing (Accounting's BillDetail has them for AP), and the supplier price and reorder import from SupplierPrices
     and ReorderRules (Products' ProductImport takes reorder rows, P14, and has no Purchasing mount).
-  - **F-P17-7** PurchasingAccessWalk takes about 60 s with its start (the route sweep 28 s); it is acceptance, so no budget
+  - **F191** PurchasingAccessWalk takes about 60 s with its start (the route sweep 28 s); it is acceptance, so no budget
     applies, but it could split as Manufacturing's did if it grows.
 
 **Review Nov 4 (P17).** Checked the Mantle and BOSS diffs against this section, §2, design RequestDetail, §13 QuoteResponse
@@ -3392,7 +3392,7 @@ Ten inventory and design Impl entries spot-checked against the screens and servi
 - R3 (medium, test) PurchasingAccessWalk's finance and stock refusals were partly vacuous: release#InvoiceHold and
   post#AcctgTrans ran on records that did not exist, refused as "not available", which the walk counted as a refusal.
   The hold is now a real one on Retail's bill (left unreleased), post#AcctgTrans is left out (its authority is the posting
-  guard's REVIEW_REQUIRED), and only a permission refusal counts. The universal search check (F-P17-3, no index) is removed.
+  guard's REVIEW_REQUIRED), and only a permission refusal counts. The universal search check (F187, no index) is removed.
 - R4 (medium, P16 leak, at the lead's request) a signed-in contact's order page (`orderView`) showed the current lines of
   a revision the buyer applied that still waited for its approval, before it was sent. While such a revision waits, the
   page reads the order as of its last send to the supplier before the Change hold (else just before the hold), through
@@ -3636,6 +3636,13 @@ is written there too.
 | F182 | P15: The walk follows P10's request through its bill; paying the bill (AP's approval and a payment run) is not driven, so the tracker's payment shows "Not paid" to a payables reader and the bill's actual is Accounting's conversion called directly, as approve#Payable makes it. | See P15 |
 | F183 | P15: Spend's received measure is the receipts at the order's price, not landed cost (Accounting's allocation, linked for its users); paid is by applied date and not by product. A withheld measure still lists its groups, so a reader sees which suppliers had spend. | See P15 |
 | F184 | P15: Home's counters are all counted now; a Purchasing reader sees no "Unavailable" card (PurchasingAccess's Home check changed with it). | See P15 |
+| F185 | P17: The purchasing administrator (BOSS_PURCHASING_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's purchase records, palette rows, links and choices when no organization is active (Purchasing.js `rootGrants`, by design, §4); the isolation sweeps leave it out, as the other apps' walks leave out their administrators. | See P17 |
+| F186 | P17: The demo's purchasing.buyreceive is in Warehouse's root group (BOSS_WAREHOUSE) as well as its receive group, so it opens Warehouse; the standalone case is the walk's own user, which holds BOSS_WAREHOUSE_RECEIVE and BOSS_ACCOUNTING_MATCH without either root. | See P17 |
+| F187 | P17: Universal search answers nothing in a test runtime (no index), so its check is vacuous; the palette's `search#Records` with its own-side control is the one that counts (impl-manufacturing's review found the same). | See P17 |
+| F188 | P17: F127 as the design reads it: a request completes by itself once received in full; sourced in full but not received is still In Progress, so its Complete needs a reason ("RFQ/PO issuance alone is In Progress"). | See P17 |
+| F189 | P17: F176's page change: the supplier answers the RFQ's sent revision, so after an edit not yet sent a submitted quote answers an older revision than the RFQ's; QuoteComparison does not mark a quote of an earlier RFQ revision (the receipt keeps the revision answered), so the buyer re-sends after a material edit, as P11's walk does (§7). | See P17 |
+| F190 | P17: §15 outputs not built: a receiving checklist and a purchase inspection report under Purchasing (QualityInspection's Print certificate is Manufacturing's link), a bill print and a match explanation print under Purchasing (Accounting's BillDetail has them for AP), and the supplier price and reorder import from SupplierPrices and ReorderRules (Products' ProductImport takes reorder rows, P14, and has no Purchasing mount). | See P17 |
+| F191 | P17: PurchasingAccessWalk takes about 60 s with its start (the route sweep 28 s); it is acceptance, so no budget applies, but it could split as Manufacturing's did if it grows. | See P17 |
 
 ## 7. Later
 
@@ -3662,10 +3669,10 @@ Designed, not in this build:
     export (F177, framework).
   - from the finish (P17): a receiving checklist and a purchase inspection report under Purchasing, a bill and match
     explanation print under Purchasing, and the supplier price and reorder import from SupplierPrices and ReorderRules
-    (F-P17-6); a reminder that mailed and then failed its record write mails again on a retry (F118); a supplier price
+    (F190); a reminder that mailed and then failed its record write mails again on a retry (F118); a supplier price
     published from a quote line staying in effect when the award drops the line, and the comparison-to-award
     SOURCE_CHANGED check with default revision counting (F176); QuoteComparison marking a quote that answered an earlier
-    RFQ revision (F-P17-5).
+    RFQ revision (F189).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
