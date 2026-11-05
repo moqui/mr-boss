@@ -2304,8 +2304,8 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
 **Built Nov 4 (P12).**
 - Mantle:
   - `entity/SourcingAwardEntities.xml`: OrderHeader's `supplierQuote` (Y on an order made as a supplier quote, set by
-    Sourcing.js `quoteOrder`, kept once placed; F-P12-1) and the Default flow's OrderRequested → OrderCancelled ("Cancel Quote
-    Request", F-P12-2). `data/SourcingAwardSetupData.xml`: the `PurchaseAwardApproval` topic, seeded as P4's and P10's
+    Sourcing.js `quoteOrder`, kept once placed; F156) and the Default flow's OrderRequested → OrderCancelled ("Cancel Quote
+    Request", F157). `data/SourcingAwardSetupData.xml`: the `PurchaseAwardApproval` topic, seeded as P4's and P10's
     (approve#/refuse#PurchaseSource, a refusal needs a reason), and the `MANTLE_RFQ_REGRET_EMAIL` template;
     `template/order/QuoteComparison.print.html.fancy` and `QuoteRegretEmail.html.fancy`.
   - `service/mantle/order/SourcingAwardServices.xml` over the new `Awards.js`, included by name in
@@ -2345,7 +2345,7 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
   - Existing Mantle, refusing nothing: `PurchaseApprovals.js` (`source.topic` for notify and clearNotices; the award branch
     of the topic handlers), `PurchaseRequests.js convertOrderCommitments` (an awarded line's RFQ link is passed over when the
     line has its request line's link, so the request's commitment converts once), `Sourcing.js` (the quote marker; a quote
-    line's quantity changed alone keeps its price, F-P12-4).
+    line's quantity changed alone keeps its price, F159).
   - Spec `test/order/SourcingAwards.spec.js` (5 features, about 1.1 s).
 - BOSS:
   - `ironstone.purchasing.AwardServices` (`Awards.js`): `get#QuoteAwards` (QuoteDetail's awards: each awarded line with its
@@ -2392,30 +2392,30 @@ acknowledgements out (each a whitelist of placed-to-completed statuses). Fixes:
     Order, Quote, SupplierQuote); P16's SupplierPortalRevoke EECA revokes them anyway when a quote leaves the quote statuses, so
     this is belt and braces (`isServiceDefined` is not reachable from a script to call P16's service conditionally).
 - Findings (provisional):
-  - **F-P12-1** (F145) A quote order had no marker: OrderHeader's `supplierQuote` is set when a quote order is made, and
+  - **F156** (F145) A quote order had no marker: OrderHeader's `supplierQuote` is set when a quote order is made, and
     Purchase orders' find leaves out a marked order with no `placedDate` (declined or not awarded); an awarded quote is placed
     and listed. Quotes made before P12 carry no marker and stay listed when closed.
-  - **F-P12-2** OrderRequested had no transition to OrderCancelled; a requested quote never answered is not declined
+  - **F157** OrderRequested had no transition to OrderCancelled; a requested quote never answered is not declined
     (OrderRejected is the supplier's "Reject Request"), so the Default flow gains "Cancel Quote Request" (a widening; no
     existing service moves a requested order there).
-  - **F-P12-3** (F35) Cancel Quote fires the EDI acknowledgement SECA on OrderCancelled; `record#OrderAcknowledgment` returns at
+  - **F158** (F35) Cancel Quote fires the EDI acknowledgement SECA on OrderCancelled; `record#OrderAcknowledgment` returns at
     once for an order not received in an 850, which no quote is. Accepted, no condition.
-  - **F-P12-4** Mantle's `update#OrderItem` prices a product line again by the resolver when no `unitAmount` is given, so
+  - **F159** Mantle's `update#OrderItem` prices a product line again by the resolver when no `unitAmount` is given, so
     P11's `store#SupplierQuoteItem` changing a quote line's quantity alone lost the quoted price (and placing an award lost
     the totals: a zero grand total auto-approved the placed order). Both now pass the price.
-  - **F-P12-5** QuoteTerms' freight estimate was not built (P11): `store#SupplierQuoteFreight` keeps it as the quote's one
+  - **F160** QuoteTerms' freight estimate was not built (P11): `store#SupplierQuoteFreight` keeps it as the quote's one
     ItemShipping line, so the landed cost has a source; tax inclusion, MOQ/increment and warranty are still not recorded.
-  - **F-P12-6** Lead time is the line's promise, else the quote's delivery date; the on-time rate from scorecard evidence is
+  - **F161** Lead time is the line's promise, else the quote's delivery date; the on-time rate from scorecard evidence is
     P15's and not shown. Risk is the buying policy's supplier check.
-  - **F-P12-7** The awarded-quote branch of `publish#SupplierQuotePrice` is now tested (SourcingAwards). An agreement price row
+  - **F162** The awarded-quote branch of `publish#SupplierQuotePrice` is now tested (SourcingAwards). An agreement price row
     exactly as specific as a published one still meets Products' overlap refusal with its own message; P13's rows name the
     agreement and item, so they are a narrower scope; the case is not exercised by P12's specs and is left as P11 noted it.
-  - **F-P12-8** Design SelectOffer's "requester acceptance where policy requires it" for a substitute is not built: a
+  - **F163** Design SelectOffer's "requester acceptance where policy requires it" for a substitute is not built: a
     substitute is accepted by the buyer's explicit choice (INVALID_SUBSTITUTE without it); the referral of released BOM
     material to Manufacturing change review is not built.
 
 **Review (P12, Nov 4).** Checked against §2, design §5 QuoteComparison/Award, D8, F19, F35: commit#Award's RFQ lock, operation
-key and per-group transactions; the PasAward path (PostingOperation, record/decide, separation through `refusalFor`); the F-P12-4
+key and per-group transactions; the PasAward path (PostingOperation, record/decide, separation through `refusalFor`); the F159
 price paths; the removed lines' record; compare's ranking, rates, units and packs; close#QuoteRequest; the F145 marker in
 `purchaseFind`; `convertOrderCommitments`; BOSS screens' check#Record before each Mantle call. Fixes (mr-mantle):
   - R1 (high) An approved award was placed by `decide#AwardApproval` without the RFQ's lock and against the quotes as they were
@@ -2427,7 +2427,7 @@ price paths; the removed lines' record; compare's ranking, rates, units and pack
     still goes). close#QuoteRequest also waits on an award approved but not yet placed (AWARD_PENDING).
   - R2 (medium) `placeAll` passed each quote's current revision to commit#AwardGroup, so commit#Award with `quoteRevisions`
     placed a quote preview had marked SOURCE_CHANGED; it now passes the revision the award was made against.
-  - R3 (medium, F-P12-4) store#SupplierQuoteItem kept the price only when the quantity changed: a change of the promised date,
+  - R3 (medium, F159) store#SupplierQuoteItem kept the price only when the quantity changed: a change of the promised date,
     description, unit or supplier code alone still repriced the line by the resolver, and Sourcing.js `followItem` (an RFQ item
     changed under a requested quote) did too. Both now pass the line's price on every update.
   - R4 (medium) commit#AwardGroup without an awardKey placed a quote where PasAward rows are in effect (any PURCHASE_ORDER_EDIT
@@ -2974,7 +2974,7 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
     `send#PurchaseOrder` the revision's OrderAcknowledgement link with BillUpload (PurchaseOrderDocuments.js), when the
     organization has a published Supplier site (`SupplierPortal.js quoteLink`, `orderLink`; a failure is logged and the
     mail goes without it); `PurchaseOrderEmail` and `QuoteRequestEmail` show `linkUrl`.
-  - The supplier's claim (F-P16-2): `PurchaseOrders.js asSupplier` and `portalClaim`; `requirePermission` and
+  - The supplier's claim (F165): `PurchaseOrders.js asSupplier` and `portalClaim`; `requirePermission` and
     `purchaseOrder` (and Sourcing.js `requirePermission`) take the claim for its one order only. `Portal.js` exports `stage`
     (a noun for its refusals); `PurchaseReceipts.js` exports `buyersOf`.
   - PASS's operations in Mantle's copies: `forum/ForumSchema.js`, `script/PassRoutes.js`, and `TOKEN_WRITES` in
@@ -2985,7 +2985,7 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
   - The seven operations in `service/pass/Schema.js` and `Routes.js` (`supplier/home`, `supplier/quote`,
     `supplier/quote/draft`, `supplier/quote/response`, `supplier/purchase-order`, `.../acknowledgement`, `.../delivery`),
     the four writes in `Transport.js` `TOKEN_WRITES`; an operation with an optional file goes as an ordinary call without
-    one (F-P16-6).
+    one (F169).
   - Screens (server HTML, phone and desktop): `Supplier/SupplierHome` (SupplierDocuments, SupplierContact; the app's
     default page), `Supplier/QuoteResponse` (PublishedQuoteRequest; SupplierOffer with Save draft and Send quote, one block
     per line; SubmitResponse, the receipt) and `Supplier/OrderAcknowledgement` (PublishedPurchaseOrder with the bill link;
@@ -3024,43 +3024,43 @@ These are Purchasing's pages in the PASS Supplier app Accounting P18 started in 
   - A purchase order's link names its revision. A new revision supersedes the link's acknowledgement (SupersededRevision,
     and nothing of the new revision), while its BillUpload still takes a bill, as bills belong to the order; the send of
     the new revision mails a new link. A cancel or decline, and a quote leaving the quote statuses (an award, P12's Not
-    awarded), revoke the links (the EECA), besides ExternalAccess already refusing those records (F-P16-1).
-  - A supplier's answer runs Mantle's own verbs on its claim of the one order (F-P16-2); nothing in PASS or BOSS writes the
+    awarded), revoke the links (the EECA), besides ExternalAccess already refusing those records (F164).
+  - A supplier's answer runs Mantle's own verbs on its claim of the one order (F165); nothing in PASS or BOSS writes the
     order. Quote tiers stay prices only when a buyer publishes them (P11).
   - A draft is the supplier's own SupplierPortalResponse row, never a write to the quote, so the buyer sees nothing before
     the submit; a submit of the request's revision is final for that revision, and a later revision of the RFQ may be
     answered again.
-  - A late quote is accepted and marked late for the buyer (no policy flag yet, F-P16-8).
-  - SupersededRevision on the page is a result, not an error, so a remote frontend shows it (F-P16-7).
+  - A late quote is accepted and marked late for the buyer (no policy flag yet, F171).
+  - SupersededRevision on the page is a result, not an error, so a remote frontend shows it (F170).
 - Findings (provisional):
-  - **F-P16-1** ExternalAccessCapability had no revision (design §13 names one); added as `recordRevision`. The plan's "a new
+  - **F164** ExternalAccessCapability had no revision (design §13 names one); added as `recordRevision`. The plan's "a new
     revision revokes it" is built as the acknowledgement superseded on the older link, its bill upload kept.
-  - **F-P16-2** store#SupplierQuote, store#SupplierQuoteItem and record#Acknowledgement check PURCHASE_ORDER_EDIT and the
+  - **F165** store#SupplierQuote, store#SupplierQuoteItem and record#Acknowledgement check PURCHASE_ORDER_EDIT and the
     user's organizations, which a public supplier has neither of. A supplier's claim (`ec.context.sharedMap`, set only by
     SupplierPortal.js after the capability check) stands in for both on that one order, and every other order stays
     unavailable; the check is in PurchaseOrders.js and one line of Sourcing.js `requirePermission` (P12's file).
-  - **F-P16-3** Mantle's store verbs set a field that is passed, even as null; the portal passes only what the supplier gave.
-  - **F-P16-4** OrderContent counts a revision on an order without `commercialRevisionOnly` (Order.eecas.xml), so a
+  - **F166** Mantle's store verbs set a field that is passed, even as null; the portal passes only what the supplier gave.
+  - **F167** OrderContent counts a revision on an order without `commercialRevisionOnly` (Order.eecas.xml), so a
     supplier's file or delivery report would supersede its own link; they are written uncounted (PurchaseRevisions.js
     `uncounted`).
-  - **F-P16-5** Without a draft record, Save draft would write the quote's lines, which the buyer reads; drafts and receipts
+  - **F168** Without a draft record, Save draft would write the quote's lines, which the buyer reads; drafts and receipts
     are `SupplierPortalResponse`.
-  - **F-P16-6** PASS's REST and gRPC transports sent every operation with a `file` field as multipart and required the
+  - **F169** PASS's REST and gRPC transports sent every operation with a `file` field as multipart and required the
     file; the quote's and acknowledgement's file is optional, so without one it is an ordinary call. Lines cross a
     multipart form as JSON text.
-  - **F-P16-7** A remote frontend shows only the envelope's generic message for an Unprocessable or Conflict (PassAuthority
+  - **F170** A remote frontend shows only the envelope's generic message for an Unprocessable or Conflict (PassAuthority
     MESSAGES), so a supplier's validation message ("Give the reason") reads "The authority could not complete this
     request" remotely, as BillUpload's do. For the lead: pass the refusal's own text for those kinds.
-  - **F-P16-8** Design QuoteResponse accepts a late response "only if policy permits", and PurchasePolicy has no such flag;
+  - **F171** Design QuoteResponse accepts a late response "only if policy permits", and PurchasePolicy has no such flag;
     late responses are accepted and marked (§7).
-  - **F-P16-9** invite#Contact makes the PASS invitation but mails nothing (as Accounting P18); Supplier360 shows its link
+  - **F172** invite#Contact makes the PASS invitation but mails nothing (as Accounting P18); Supplier360 shows its link
     once for the buyer to send.
-  - **F-P16-10** QuoteResponse offers no file downloads (the published RFQ PDF, permitted files): PASS has no supplier file
+  - **F173** QuoteResponse offers no file downloads (the published RFQ PDF, permitted files): PASS has no supplier file
     operation yet, and the RFQ email carries the PDF (§7).
-  - **F-P16-11** A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery
+  - **F174** A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery
     does not prefill from it yet, and a subcontract order shows the components held at the custody facility but not the
     dispatch and inspection evidence (§7).
-  - **F-P16-12** Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier
+  - **F175** Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier
     mount; P16 adds the quote and acknowledgement links to it. The Supplier app's default page is now SupplierHome (was
     BillUpload).
 - For P12: `mantle.order.SupplierPortalServices.revoke#QuoteCapabilities` (`requestId`, or `orderId`/`orderIds`) ends an RFQ's
@@ -3074,7 +3074,7 @@ party) before it reads anything; scopes do not cross (a BillUpload-only link can
 link cannot open a quote, a quote link no order); every refusal is the same NotFound text; issue needs PURCHASE_ORDER_EDIT
 (or PAYABLE_EDIT for Order) in the record's organization. get#QuoteInvitation and get#PublishedPurchaseOrder read field by
 field: no other supplier, RFQ item or source request, maximum price, cost, internal note or private file (a PO's own price,
-terms and a drop-ship ship-to are the supplier's). The claim (F-P16-2) is set only by SupplierPortal.js after the check,
+terms and a drop-ship ship-to are the supplier's). The claim (F165) is set only by SupplierPortal.js after the check,
 lives in `ec.context.sharedMap` (never filled from request parameters), is removed in a finally, and `purchaseOrder` refuses
 any other order or a part of another buyer or supplier; the services are allow-remote false. submit#QuoteResponse writes
 only price, promised date and item code of its own lines and the quote's reference, validity, delivery and channel; quantity
@@ -3093,10 +3093,10 @@ Fixes:
   Revised and shows nothing of the new revision; spec case added.
 - R4 (low, hardening) The pages' and the writes' lines are the capability's order part's (a purchase order has one part
   today); revoke#OrderCapabilities reads the order's own status instead of trusting its parameters.
-Decision on F-P16-1: kept. An earlier revision's link still opens BillUpload: a bill is for the order, not a revision, AP
+Decision on F164: kept. An earlier revision's link still opens BillUpload: a bill is for the order, not a revision, AP
 matches it against the order's current lines and receipts (P6), and BillUpload shows nothing of the order beyond what
 Accounting P18 already shows; the acknowledgement on that link stays SupersededRevision.
-For the lead: F-P16-7 (a remote frontend shows the generic text for Unprocessable or Conflict) stands; QuoteResponse shows
+For the lead: F170 (a remote frontend shows the generic text for Unprocessable or Conflict) stands; QuoteResponse shows
 the RFQ's current header and lines, so an edit the buyer has not re-sent is visible on the page (the revision check makes
 the supplier answer the current one); showing the last sent revision instead is a design choice for P12/P16.
 Specs run (pass): Mantle SupplierPortal (6), AccountingPortals (17), Sourcing (7), PurchaseOrders (8), PurchaseRevisions
@@ -3319,6 +3319,27 @@ is written there too.
 | F153 | P14b: The drop-ship route buys from the suggestion's supplier (the plan's lowest minimum-quantity price), which may not drop-ship the product (NOT_DROP_SHIPPABLE, named); `convert#PlanningSuggestions` takes `supplierPartyId`, but Convert offers no supplier choice yet. | See P14b |
 | F154 | P14b: No BOSS regression spec: the rules are Mantle's (ReplenishmentRoutes); BOSS adds no access rule (Reserve is the receive capability on a receipt, PurchasingAccess's P5 case), and the screens are the walk's. | See P14b |
 | F155 | P14b: F125 is answered: the request route writes the RequestItemOrder from a request line to its customer order line, and ReplenishmentRoutes covers RequestSourcing's drop-ship route. | See P14b |
+| F156 | P12: (F145) A quote order had no marker: OrderHeader's `supplierQuote` is set when a quote order is made, and Purchase orders' find leaves out a marked order with no `placedDate` (declined or not awarded); an awarded quote is placed and listed. Quotes made before P12 carry no marker and stay listed when closed. | See P12 |
+| F157 | P12: OrderRequested had no transition to OrderCancelled; a requested quote never answered is not declined (OrderRejected is the supplier's "Reject Request"), so the Default flow gains "Cancel Quote Request" (a widening; no existing service moves a requested order there). | See P12 |
+| F158 | P12: (F35) Cancel Quote fires the EDI acknowledgement SECA on OrderCancelled; `record#OrderAcknowledgment` returns at once for an order not received in an 850, which no quote is. Accepted, no condition. | See P12 |
+| F159 | P12: Mantle's `update#OrderItem` prices a product line again by the resolver when no `unitAmount` is given, so P11's `store#SupplierQuoteItem` changing a quote line's quantity alone lost the quoted price (and placing an award lost the totals: a zero grand total auto-approved the placed order). Both now pass the price. | See P12 |
+| F160 | P12: QuoteTerms' freight estimate was not built (P11): `store#SupplierQuoteFreight` keeps it as the quote's one ItemShipping line, so the landed cost has a source; tax inclusion, MOQ/increment and warranty are still not recorded. | See P12 |
+| F161 | P12: Lead time is the line's promise, else the quote's delivery date; the on-time rate from scorecard evidence is P15's and not shown. Risk is the buying policy's supplier check. | See P12 |
+| F162 | P12: The awarded-quote branch of `publish#SupplierQuotePrice` is now tested (SourcingAwards). An agreement price row exactly as specific as a published one still meets Products' overlap refusal with its own message; P13's rows name the agreement and item, so they are a narrower scope; the case is not exercised by P12's specs and is left as P11 noted it. | See P12 |
+| F163 | P12: Design SelectOffer's "requester acceptance where policy requires it" for a substitute is not built: a substitute is accepted by the buyer's explicit choice (INVALID_SUBSTITUTE without it); the referral of released BOM material to Manufacturing change review is not built. | See P12 |
+| F164 | P16: ExternalAccessCapability had no revision (design §13 names one); added as `recordRevision`. The plan's "a new revision revokes it" is built as the acknowledgement superseded on the older link, its bill upload kept. | See P16 |
+| F165 | P16: store#SupplierQuote, store#SupplierQuoteItem and record#Acknowledgement check PURCHASE_ORDER_EDIT and the user's organizations, which a public supplier has neither of. A supplier's claim (`ec.context.sharedMap`, set only by SupplierPortal.js after the capability check) stands in for both on that one order, and every other order stays unavailable; the check is in PurchaseOrders.js and one line of Sourcing.js `requirePermission` (P12's file). | See P16 |
+| F166 | P16: Mantle's store verbs set a field that is passed, even as null; the portal passes only what the supplier gave. | See P16 |
+| F167 | P16: OrderContent counts a revision on an order without `commercialRevisionOnly` (Order.eecas.xml), so a supplier's file or delivery report would supersede its own link; they are written uncounted (PurchaseRevisions.js `uncounted`). | See P16 |
+| F168 | P16: Without a draft record, Save draft would write the quote's lines, which the buyer reads; drafts and receipts are `SupplierPortalResponse`. | See P16 |
+| F169 | P16: PASS's REST and gRPC transports sent every operation with a `file` field as multipart and required the file; the quote's and acknowledgement's file is optional, so without one it is an ordinary call. Lines cross a multipart form as JSON text. | See P16 |
+| F170 | P16: A remote frontend shows only the envelope's generic message for an Unprocessable or Conflict (PassAuthority MESSAGES), so a supplier's validation message ("Give the reason") reads "The authority could not complete this request" remotely, as BillUpload's do. For the lead: pass the refusal's own text for those kinds. | See P16 |
+| F171 | P16: Design QuoteResponse accepts a late response "only if policy permits", and PurchasePolicy has no such flag; late responses are accepted and marked (§7). | See P16 |
+| F172 | P16: invite#Contact makes the PASS invitation but mails nothing (as Accounting P18); Supplier360 shows its link once for the buyer to send. | See P16 |
+| F173 | P16: QuoteResponse offers no file downloads (the published RFQ PDF, permitted files): PASS has no supplier file operation yet, and the RFQ email carries the PDF (§7). | See P16 |
+| F174 | P16: A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery does not prefill from it yet, and a subcontract order shows the components held at the custody facility but not the dispatch and inspection evidence (§7). | See P16 |
+| F175 | P16: Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier mount; P16 adds the quote and acknowledgement links to it. The Supplier app's default page is now SupplierHome (was BillUpload). | See P16 |
+| F176 | W8 reviews: QuoteResponse shows the RFQ as it is now, so buyer edits not yet re-sent are visible to the supplier (the as-of print could show the last sent revision); a supplier price published from a quote line stays in effect when the award drops the line; with default settings a quote line price change does not move `orderRevision`, so the comparison-to-award SOURCE_CHANGED check rarely fires (the approval path's stamp covers it) | Open, for P17 or later |
 
 ## 7. Later
 
@@ -3337,9 +3358,9 @@ Designed, not in this build:
   - quantity tiers by a purchase promotion's auto-adjust (F41, F140): a purchasing ProductStore with calculation,
     emails and reservation off, and its promotions scoped to purchase orders;
   - an RFQ invitation's own contact, channel and deadline (F143).
-  - from the supplier pages (P16): a buying-policy flag refusing late quote responses (F-P16-8); file downloads on
-    QuoteResponse and OrderAcknowledgement (F-P16-10); OrderDetail's Confirm delivery prefilled from a supplier's
-    delivery report, and a subcontract order's dispatch and inspection evidence on its page (F-P16-11).
+  - from the supplier pages (P16): a buying-policy flag refusing late quote responses (F171); file downloads on
+    QuoteResponse and OrderAcknowledgement (F173); OrderDetail's Confirm delivery prefilled from a supplier's
+    delivery report, and a subcontract order's dispatch and inspection evidence on its page (F174).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
