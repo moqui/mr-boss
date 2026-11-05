@@ -288,7 +288,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | partly done Oct 28 (§6 F1–F44) |
-| P1 Foundation | Mantle, BOSS | the Customer Service root and menu, Home | — |
+| P1 Foundation | Mantle, BOSS | the Customer Service root and menu, Home | built Nov 5, 2026 |
 | P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | — |
 | P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | — |
 | P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | — |
@@ -418,6 +418,93 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
   group may create. An agent finds their organization's customers and orders through the palette but not another
   organization's, and a forged customer or order ID is refused. A Projects client contact is refused the root and every
   `ironstone.customerservice` service.
+
+**Built Nov 5 (P1).**
+- Mantle: `MantleSetupData.xml` seeds `SUPPORT_CASE_EDIT`, `SUPPORT_CASE_MANAGE`, `SUPPORT_POLICY_EDIT`,
+  `SUPPORT_KNOWLEDGE_EDIT`, `SUPPORT_CONTACT_INVITE`, `ORDER_CHANGE_REQUEST`, `ORDER_CHANGE_APPROVE`, `ORDER_CHANGE_APPLY`,
+  `ORDER_CHANGE_HOLD_RELEASE`, `RETURN_EXCEPTION_APPROVE`, `RETURN_POLICY_EDIT` and `WARRANTY_APPROVE` beside
+  `ORDER_APPROVE`, each with its ADMIN grant (none existed; `RETURN_AUTHORIZE` and `CUSTOMER_CREDIT_VIEW` did).
+  X4: `OrderHoldEntities.xml`'s OhtChange takes `ORDER_CHANGE_HOLD_RELEASE`; `test/order/PurchaseHoldPermission` checks
+  the Change hold's new permission and that `ORDER_APPROVE` no longer places or releases it, and `PurchaseRevisions`' gate
+  feature releases with the new permission (the only caller that released a Change hold under `ORDER_APPROVE`).
+- BOSS access (`data/BossSetupData.xml`): the groups `BOSS_CUSTOMER_SERVICE` (root user group), `_AGENT`, `_MANAGER`,
+  `_ORDER_DESK`, `_RETURN_AUTHORIZER` and `_KNOWLEDGE`; the root authz `BOSS_CUSTOMER_SERVICE_ROOT` (`MANTLE_USER_ORG`,
+  `MANTLE_PRIVATE_CONTACT`) and the `ironstone\.customerservice\..*` service pattern on the `BOSS_CUSTOMER_SERVICE`
+  artifact group; `customerservice` in the client deny pattern (its fourth row split in two, F-P1-2); the area groups
+  `BOSS_CS_RETURNS` and `BOSS_CS_REPORTS` (agent, manager, return authorizer, admin), `BOSS_CS_APPROVALS` (manager,
+  return authorizer, admin) and `BOSS_CS_SETTINGS` (admin), each denying the root user group; the record link group
+  `BOSS_CS_RECORD_LINK`; the `UserGroupPermission` grants of the list above. No authz for the raw Mantle request, return
+  and order mutators or their REST paths.
+- `ironstone.customerservice.AccessServices` (`get#SharedContext`, `check#Record`, `get#Choices`, `search#Records`) over
+  `CustomerService.js`, whose tables later phases extend: `capabilityPermissions` (own, and the borrowed `receive`,
+  `inspect`, `dispose`, `invoiceCredit`, `paymentRefund`, `returnCredit`), `areas` (returns, approvals, reports,
+  settings), `recordKinds` (order, customer; a `destination` once a screen is built), `searchFinds` (sales orders,
+  customers), `choiceSources` (customers, organizations) and `linkPaths`; the scope's `queueIds` and `teamIds` are empty
+  until P2. A customer is a Customer-role party, not internal, not another user's private contact, owned by one of the
+  user's organizations or shared (`_NA_`); a sales order's selling organizations must be the user's and its customers ones
+  they serve. `ReportingServices.get#ServiceDashboard` (every measure not configured, the period, and the panels by role).
+- The root (`screen/CustomerService.xml`): the menu of design §1 (Home, Cases, Customers, Orders, Returns, Approvals,
+  Availability, Knowledge, Reports, Settings; Approvals and Reports added, the placeholders renamed and re-indexed, each
+  comment naming its phase and groups), `<shell-providers>` with the palette source and the `customerservice` keymap;
+  Home (`CustomerService/Home.xml`: the KPI strip, each "Not configured", with its period and time, and the record
+  lookup); `PaletteServices.get#RecordLink` opens a sales order under Customer Service (Home's lookup until P3 sets
+  OrderDetail) and a customer once Customer360 is built (F-P1-4).
+- Demo: `BossCustomerServiceDemoData.xml` (the warranted, serialized thermostat `BOSS_CS_THERMOSTAT` with its
+  `BOSS_CS_WARRANTY_12` PftWarranty feature and serials CS-THERMO-1001/1002, the stocked filter `BOSS_CS_FILTER`, both
+  Retail's at ZIRET_WH; Ziziwork Services' customer `BOSS_CS_CUST_OTHER` and open order `BOSS_CS_SO_OTHER`) and
+  `BossZCustomerServiceDemoData.xml`, which runs `ironstone.customerservice.DemoServices.load#CustomerServiceDemo`
+  (`Demo.js`, each order in its own transaction, F-P1-3): `BOSS_CS_SO_DELIVERED` to CustJqp (paid by check, shipped,
+  invoiced at ship and delivered; the thermostat's Asset is the customer's, AstDelivered, with its AssetIssuance),
+  `BOSS_CS_SO_PICK` to JoeDist (approved and reserved, awaiting pick) and `BOSS_CS_SO_PACKED` to JoeDist (packed).
+  BossUsersDemoData's `customerservice.*` users: agent, manager, orderdesk, returns, knowledge, admin (in
+  `BOSS_CUSTOMER_SERVICE_ADMIN` alone), agentwh (with `BOSS_WAREHOUSE_RECEIVE` and `_INSPECT`, no Warehouse launcher),
+  returnsar (with `BOSS_ACCOUNTING_AR`), read (the root user group alone) and services (Ziziwork Services' agent).
+- Specs: `test/CustomerService/CustomerServiceSpecLib.js` (ids, users, `shell`, `page`, `routeFixtures`) and
+  `CustomerServiceAccess` (8 features, about 3 s: the context and its refusals, a Projects client's among them; the menu,
+  providers and launcher per group; Home's one qvt render; the capabilities per group; customer scope in choices and the
+  palette; the record check with another organization's and forged ids and a capability on a record; record links; the
+  guarded areas, REST and raw mutators refused). No separate Shell spec (impl-purchasing F44). Acceptance:
+  `acceptance/CustomerService/CustomerServiceFoundationWalk` (the usable-when: every area per group, the palette and
+  record links of the agent and the other organization, forged ids on check#Record and Home's lookup, a Projects client
+  refused the root and every `ironstone.customerservice` service; the demo orders' state), and `AppStructure` renders
+  Customer Service's built screens (CustomerServiceSpecLib.routeFixtures; the placeholder count is now 54, the floor stays
+  53). ProjectsAccess walks the new package with the deny pattern.
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1 (Home's request lists are P2's).
+- Tests run: CustomerServiceAccess (8), ProjectsAccess, PurchasingAccess, PurchasingRevisions, PurchasingOrders,
+  WarehouseAccess, WarehousePicking, WarehousePacking, WarehouseShipping, WarehouseReports, WarehouseInventory,
+  AccountingReceivables, AccountingAccess, AppOrganizationFilters, Contacts, Inbox, CommsHome, ProductsAccess,
+  ManufacturingAccess (BOSS, all pass); PurchaseHoldPermission, PurchaseRevisions, PurchaseOrders, OrderToCashBasicFlow,
+  ReturnToResponseBasicFlow, ShipmentReturnMisc, AccountingCredit, SupplierPortal, WorkProjectRequests, RecordLinks
+  (Mantle, all pass); acceptance CustomerServiceFoundationWalk (5) and AppStructure (18), all pass. `moqui lint
+  --screens`: no idiom or hazard site in the Customer Service screens.
+- Decisions:
+  - The areas by group: Home, Cases, Customers, Orders, Availability and Knowledge for every Customer Service user (the
+    service reader reads them, each list and record limited by AccessServices); Returns and Reports for the agent,
+    manager and return authorizer; Approvals for the manager and return authorizer; Settings for the administrator. A
+    later phase opens a settings page to the manager, authorizer or author with its own authz row. The order desk and the
+    knowledge author see the reader's menu until their phases (P10, P12) add their areas.
+  - Cases, Orders, Returns and Availability stay single placeholder screens until their phases make them menu groups
+    holding their lists (P2, P3, P9).
+  - The demo uses its own products (as Accounting's `BOSS_ACCT_SUPPLY`), so its orders change no other product's
+    availability; POPC_DEFAULT is the orders' store.
+  - No quick create, Today source or notification topic in P1: the phases that build their records add them.
+- Findings (provisional):
+  - **F-P1-1** `mantle.party.Party.ownerPartyId` defaults to `_NA_`, so Mantle's ORG_ACME and ORG_BLUTH, which the data
+    gives no owner, are shared parties (P0's F73 reads them as unowned): ORG_ACME is a shared customer in every
+    organization's Customer Service scope, as ZiddlemanInc is a shared supplier in Purchasing's. The demo leaves it so;
+    CustomerServiceAccess checks that both organizations serve it.
+  - **F-P1-2** Adding `customerservice` to the client deny pattern took its fourth row (post … reply) past the 255
+    characters of `artifactName`; it is split into two rows. The next app package will need the same check.
+  - **F-P1-3** A data file loads in one transaction, so a demo service that makes each record in a transaction of its own
+    (for failure tolerance) cannot see the rows of its own file: the products and stock are in
+    `BossCustomerServiceDemoData.xml` and the service call in `BossZCustomerServiceDemoData.xml`, loaded after.
+  - **F-P1-4** A customer's record link stays the Commons contact until P3 builds Customer360 under Customer Service
+    (`hasScreen('customer')`), as Purchasing left requests to their other apps until its screens were built; a sales order,
+    which had no link (impl-purchasing F46), opens Customer Service's Home lookup now.
+  - **F-P1-5** Crosscut X4's table also names `BOSS_PURCHASING_BUYER` (a PO revision) and `BOSS_SALES_CHANGE` for
+    `ORDER_CHANGE_HOLD_RELEASE`. P1 grants neither: a purchase revision's Change hold is released by its approval or
+    cancel (`PurchaseRevisions.releaseRevisionHold`), not by `release#OrderHold`, and no Purchasing group held
+    `ORDER_APPROVE`, so nothing it did is refused; Sales has no group yet. For the lead to decide with X4.
 
 ### P2 — Cases and queues
 

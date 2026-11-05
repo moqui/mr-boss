@@ -12,11 +12,57 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Customer Service landing page (initial-design.md); design-customer-service.md designs
-    it. -->
+<!-- Customer Service Home (design-customer-service §3 Home; style-guide §3.1 Landing): ServiceMetrics, the KPI strip of
+    every role (open, overdue, unassigned, SLA compliance, first response, resolution and CSAT, each with its period and the
+    time it was read; ironstone.customerservice.ReportingServices.get#ServiceDashboard), each "Not configured" until the
+    phase that measures it (P2, P4, P13), never zero; and the lookup of a record (lookupType and lookupId, through
+    ironstone.customerservice.AccessServices.check#Record): record links of kinds whose Customer Service screen is not built
+    yet open it here. The panels of design §1 by role (My cases, Team queues, Returns awaiting approval, Approvals waiting)
+    and the shortcuts (New case, Request return) arrive with their phases, each for the roles the dashboard's panels name. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="lookupType"/>
+    <parameter name="lookupId"/>
+    <actions>
+        <service-call name="ironstone.customerservice.ReportingServices.get#ServiceDashboard" in-map="{appRoot:appRoot}"
+                out-map="dashboard"/>
+        <set field="measureText" from="Object.fromEntries((dashboard.measures || []).map((measure) =&gt;
+                [measure.key, measure.configured ? measure.valueText : 'Not configured']))"/>
+        <if condition="lookupId">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:lookupType, recordId:lookupId}"
+                    out-map="lookup"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <set field="lookupFound" from="!!lookup?.recordId"/>
+        </if>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Customer Service landing page for support and the order desk." type="p"/>
+        <label text="Customer Service" type="h5"/>
+        <section name="LookupResult" condition="lookupId">
+            <widgets>
+                <container-box>
+                    <box-header title="Record"/>
+                    <box-body>
+                        <label text="${lookup.kindName} ${lookup.recordId}" type="strong" condition="lookupFound"/>
+                        <label text="${lookup.label}" type="p"
+                                condition="lookupFound &amp;&amp; lookup.label &amp;&amp; lookup.label != lookup.recordId"/>
+                        <label text="${lookup.detail}" type="p" style="text-caption m-muted"
+                                condition="lookupFound &amp;&amp; lookup.detail"/>
+                        <label text="${lookupId} is not available to you." type="p" condition="!lookupFound"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="Service health, ${dashboard.periodText}, as of ${dashboard.asOfText}" type="p" style="text-caption m-muted"/>
+        <dashboard min-width="170">
+            <number-card title="Open" value="${measureText.open}" icon="sym_o_inbox" size="sm"/>
+            <number-card title="Overdue" value="${measureText.overdue}" icon="sym_o_schedule" size="sm"/>
+            <number-card title="Unassigned" value="${measureText.unassigned}" icon="sym_o_person_off" size="sm"/>
+            <number-card title="SLA compliance" value="${measureText.slaCompliance}" icon="sym_o_verified" size="sm"/>
+            <number-card title="First response" value="${measureText.firstResponse}" icon="sym_o_reply" size="sm"/>
+            <number-card title="Resolution" value="${measureText.resolution}" icon="sym_o_task_alt" size="sm"/>
+            <number-card title="CSAT" value="${measureText.csat}" icon="sym_o_sentiment_satisfied" size="sm"/>
+        </dashboard>
     </widgets>
 </screen>

@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Cases section of IronStone Customer Service (initial-design.md app table);
-    design-customer-service.md decides its screens. -->
+<!-- The Cases area of IronStone Customer Service (design-customer-service §3): the case lists with saved queues, NewCase,
+    CaseDetail, merge and split, and the channel sessions (impl-customer-service P2, P6, P8); every Customer Service user,
+    each list limited to the cases of their queues and teams. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cases" default-menu-index="2" menu-image="sym_o_flag" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Cases (requests)." type="p"/>
+        <label text="Placeholder: Support cases and their queues." type="p"/>
     </widgets>
 </screen>

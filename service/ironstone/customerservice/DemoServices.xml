@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service demo (impl-customer-service P1; Demo.js), loaded from data/BossCustomerServiceDemoData.xml. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="CustomerServiceDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent Customer Service demo orders for ORG_ZIZI_RETAIL, by fixed ID through Mantle's order, shipment
+            and payment services: a delivered order of a serialized, warranted thermostat to Joe Q Public, paid and invoiced;
+            an order awaiting pick and a packed order of Joe's Distributing. Each order in its own transaction; one that fails
+            is named in errors and the others are made. Only data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Demo.js')
+                .execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+    <service verb="load" noun="DemoOrder" authenticate="anonymous-all" allow-remote="false">
+        <description>One Customer Service demo order (delivered, awaitingPick or packed), made once; load#CustomerServiceDemo
+            calls it in a transaction of its own. Only data loading or a system administrator may run it.</description>
+        <in-parameters>
+            <parameter name="order" required="true"/>
+        </in-parameters>
+        <actions>
+            <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/Demo.js').execute('loadOrder', context)</script>
+        </actions>
+    </service>
+</services>

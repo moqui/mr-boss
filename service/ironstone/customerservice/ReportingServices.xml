@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service reports (design-customer-service §3 Home, §7): get#ServiceDashboard, Home's ServiceMetrics. Each
+    measure comes from the phase that builds its records (P2 open, overdue and unassigned cases; P4 SLA compliance, first
+    response and resolution; P13 CSAT); until then it is not configured, which Home shows as "Not configured", never as zero.
+    Each phase appends its block; P14 adds the reports. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="ServiceDashboard" allow-remote="false">
+        <description>Home's service measures for the user's scope over a period (the last 30 days by default): open,
+            overdue, unassigned, SLA compliance, first response, resolution and CSAT, each with its label, value text (null
+            where not configured), whether it is configured, its denominator and the change against the previous period of
+            the same length; the period and the time they were read; and which of Home's panels the user's role sees (my
+            cases, team queues, returns awaiting approval, approvals waiting). Refuses a user without Customer
+            Service.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="periodDays" type="Integer" default="30"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="measures" type="List"><description>Each measure's key, label, icon, configured, valueText,
+                denominatorText and changeText.</description></parameter>
+            <parameter name="periodText"/>
+            <parameter name="asOfText"/>
+            <parameter name="panels" type="Map"><description>myCases, teamQueues, awaitingReturns and approvalsWaiting: whether
+                the user's role sees the panel (design §1).</description></parameter>
+        </out-parameters>
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                    out-map="shared"/>
+            <set field="can" from="shared.capabilities"/>
+            <set field="days" from="Math.max(1, Math.min(366, periodDays || 30))"/>
+            <set field="periodStart" from="new Date(Number(ec.user.nowTimestamp) - days * 86400000)"/>
+            <set field="periodText" from="ec.l10n.format(periodStart, 'd MMM yyyy') + ' – ' + ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy')"/>
+            <set field="asOfText" from="ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy HH:mm')"/>
+            <set field="measures" from="[
+                    {key: 'open', label: 'Open', icon: 'sym_o_inbox'},
+                    {key: 'overdue', label: 'Overdue', icon: 'sym_o_schedule'},
+                    {key: 'unassigned', label: 'Unassigned', icon: 'sym_o_person_off'},
+                    {key: 'slaCompliance', label: 'SLA compliance', icon: 'sym_o_verified'},
+                    {key: 'firstResponse', label: 'First response', icon: 'sym_o_reply'},
+                    {key: 'resolution', label: 'Resolution', icon: 'sym_o_task_alt'},
+                    {key: 'csat', label: 'CSAT', icon: 'sym_o_sentiment_satisfied'}
+                ].map((measure) =&gt; Object.assign(measure, {configured: false, valueText: null, denominatorText: null,
+                    changeText: null}))"/>
+            <!-- the panels of design §1 by role: My cases (A, M, D), Team queues (A, M), Returns awaiting approval (R, M),
+                Approvals waiting (M, R); each shows once its phase builds its records (P2, P9, P10) -->
+            <set field="panels" from="{myCases: !!(can.caseEdit || can.orderChangeApply), teamQueues: !!can.caseEdit,
+                    awaitingReturns: !!(can.returnAuthorize || can.returnExceptionApprove), approvalsWaiting: !!can.approvals}"/>
+            <!-- later phases: each measures its records here, in the user's scope -->
+        </actions>
+    </service>
+</services>

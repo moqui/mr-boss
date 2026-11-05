@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Customer Service (impl-customer-service P1; design-customer-service §1): ORG_ZIZI_RETAIL is the service
+        organization, with POPC_DEFAULT's store and the ZIRET_WH warehouse, serving Mantle's customers Joe Q Public
+        (CustJqp) and Joe's Distributing (JoeDist), both owned by Retail. ORG_ACME's owner is the Party default, shared
+        (_NA_), so it is every organization's customer (F-P1-1). The demo products are the app's own, so their stock
+        changes no other product's availability: a serialized thermostat under a 12-month warranty (two serial numbers)
+        and a stocked air filter, both Retail's. The orders are made by load#CustomerServiceDemo through Mantle's services
+        (BossZCustomerServiceDemoData.xml, loaded after this file commits) (Mantle seeds no sales orders, F34): a
+        delivered order to Joe Q Public, paid and invoiced, with one thermostat; an order awaiting pick and a packed order
+        of Joe's Distributing. Ziziwork Services' customer and open order are another organization's records, which
+        Retail's agents never reach. Queues, teams, cases, returns and contacts are added as the phases need them. -->
+    <mantle.product.feature.ProductFeature productFeatureId="BOSS_CS_WARRANTY_12" productFeatureTypeEnumId="PftWarranty"
+            description="12-month warranty" numberSpecified="12" numberUomId="TF_mon" abbrev="12M"/>
+    <mantle.product.Product productId="BOSS_CS_THERMOSTAT" pseudoId="CS-THERMO" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" assetClassEnumId="AsClsInventoryFin" productName="Service demo smart thermostat"
+            ownerPartyId="ORG_ZIZI_RETAIL">
+        <prices productPriceId="BOSS_CS_THERMOSTAT_LIST" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptList"
+                fromDate="2026-01-01 00:00:00" minQuantity="1" price="120.00" priceUomId="USD" vendorPartyId="ORG_ZIZI_RETAIL"/>
+    </mantle.product.Product>
+    <mantle.product.feature.ProductFeatureAppl productId="BOSS_CS_THERMOSTAT" productFeatureId="BOSS_CS_WARRANTY_12"
+            applTypeEnumId="PfatStandard" fromDate="2026-01-01 00:00:00"/>
+    <mantle.product.asset.Asset assetId="BOSS_CS_THERMO_1" productId="BOSS_CS_THERMOSTAT" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" serialNumber="CS-THERMO-1001" statusId="AstAvailable" facilityId="ZIRET_WH"
+            ownerPartyId="ORG_ZIZI_RETAIL" acquireCost="70.00" acquireCostUomId="USD" receivedDate="2026-09-01 00:00:00">
+        <mantle.product.asset.AssetDetail assetDetailId="BOSS_CS_THERMO_1" effectiveDate="2026-09-01 00:00:00"
+                quantityOnHandDiff="1" availableToPromiseDiff="1"/>
+    </mantle.product.asset.Asset>
+    <mantle.product.asset.Asset assetId="BOSS_CS_THERMO_2" productId="BOSS_CS_THERMOSTAT" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" serialNumber="CS-THERMO-1002" statusId="AstAvailable" facilityId="ZIRET_WH"
+            ownerPartyId="ORG_ZIZI_RETAIL" acquireCost="70.00" acquireCostUomId="USD" receivedDate="2026-09-02 00:00:00">
+        <mantle.product.asset.AssetDetail assetDetailId="BOSS_CS_THERMO_2" effectiveDate="2026-09-02 00:00:00"
+                quantityOnHandDiff="1" availableToPromiseDiff="1"/>
+    </mantle.product.asset.Asset>
+    <mantle.product.Product productId="BOSS_CS_FILTER" pseudoId="CS-FILTER" productTypeEnumId="PtAsset"
+            assetTypeEnumId="AstTpInventory" assetClassEnumId="AsClsInventoryFin" productName="Service demo air filter"
+            ownerPartyId="ORG_ZIZI_RETAIL">
+        <prices productPriceId="BOSS_CS_FILTER_LIST" pricePurposeEnumId="PppPurchase" priceTypeEnumId="PptList"
+                fromDate="2026-01-01 00:00:00" minQuantity="1" price="15.00" priceUomId="USD" vendorPartyId="ORG_ZIZI_RETAIL"/>
+    </mantle.product.Product>
+    <mantle.product.asset.Asset assetId="BOSS_CS_FILTER_A" productId="BOSS_CS_FILTER" assetTypeEnumId="AstTpInventory"
+            classEnumId="AsClsInventoryFin" statusId="AstAvailable" facilityId="ZIRET_WH" ownerPartyId="ORG_ZIZI_RETAIL"
+            acquireCost="6.00" acquireCostUomId="USD" receivedDate="2026-09-01 00:00:00">
+        <mantle.product.asset.AssetDetail assetDetailId="BOSS_CS_FILTER_A" effectiveDate="2026-09-01 00:00:00"
+                quantityOnHandDiff="40" availableToPromiseDiff="40"/>
+    </mantle.product.asset.Asset>
+    <!-- another organization's: Ziziwork Services' customer and its open order -->
+    <mantle.party.Party partyId="BOSS_CS_CUST_OTHER" pseudoId="CS-OTHER" partyTypeEnumId="PtyOrganization"
+            ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_CS_CUST_OTHER" organizationName="Services Office Customer"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_CUST_OTHER" roleTypeId="Customer"/>
+    <mantle.order.OrderHeader orderId="BOSS_CS_SO_OTHER" orderName="Services office supplies" statusId="OrderOpen"
+            currencyUomId="USD" entryDate="2026-10-30 00:00:00"/>
+    <mantle.order.OrderPart orderId="BOSS_CS_SO_OTHER" orderPartSeqId="01" statusId="OrderOpen"
+            vendorPartyId="ORG_ZIZI_SERVICES" customerPartyId="BOSS_CS_CUST_OTHER"/>
+    <mantle.order.OrderItem orderId="BOSS_CS_SO_OTHER" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
+            productId="BOSS_CS_FILTER" itemDescription="Service demo air filter" quantity="1" unitAmount="15"/>
+</entity-facade-xml>
