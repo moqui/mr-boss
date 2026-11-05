@@ -536,6 +536,14 @@ Practices-App-Dev:
   must check the hold's order through `check#Record` first, as Purchasing's `releaseHold` transition does. P3's
   Customer360 of a shared customer must list only the user's organizations' orders, cases, returns and invoices.
 
+- **Wave 1 suites (Nov 5, on master after P1 merged; the framework worker's Rust build ran at the same time, so the
+  times measure the load):** standalone mr-mantle 1,655 passed, 2 failed (the baseline WorkTimeEntries and
+  WorkTimesheets), 11 skipped; `./moq test-apps` 2,925 server features passed, 3 failed (AccountingActivities: the
+  demo's check payment posted to ORG_ZIZI_RETAIL's cash account in the month the spec checks; fixed in 4e23c37 by
+  posting it to Undeposited Receipts, and the three features pass with mr-boss loaded), and 11 client features passed
+  with the mr-mantle/mr-marble server's setup failing on the same check; `moqui lint --screens` clean. The load put
+  mr-boss at 339.5 s, mr-pass at 16.8 s and AccountingAccess at 15.2 s; later waves measure with nothing running.
+
 ### P2 — Cases and queues
 
 Design §3 Home, Cases, NewCase, CaseDetail and WorkItemDetail; §9 Settings, Queues, AgentTeams, CaseTypes,
