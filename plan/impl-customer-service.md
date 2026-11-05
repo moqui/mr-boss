@@ -981,6 +981,27 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
     then;
   - a dependency cycle is refused.
 
+- **Built (framework), Nov 5, 2026** (mr-moqui, merged from cs/fw): dated DbForm rows (F70): `DbForm.isDated`, non-key
+  `fromDate` and `thruDate` on DbFormField and DbFormFieldOption (and `replacesFieldName`), key fields audit-logged; on a
+  dated form a draft is a row with no fromDate; a form is read as of a date (`dbFormAsOfDate`, `dbFormIncludeDrafts` for
+  previews; `ec.screen.getFormNode(loc, asOf, drafts)`), and `get#FormResponse` reads it as of the response's date.
+  `DbFormFieldDependency` (F69: source, operator equals, not-equals, empty or not-empty, value, target, effect show or
+  require, dated, audit-logged) renders as `visible-when` (with a new `operator`) and the new `require-when` in qvt,
+  qvt-static, html (the self-hosted `/js/moqui-form-when.js`, CSP-safe; a PASS page loads it itself) and tui. Services
+  in `org.moqui.impl.ScreenServices` (`DbForms.js`): `set#DbFormDated`, `publish#DbForm`, `end#DbFormField`,
+  `end#DbFormFieldOption`, `delete#DbFormFieldOption`, `create#DbFormFieldSuccessor`, `store#DbFormFieldDependency`,
+  `end#DbFormFieldDependency` and `evaluate#DbFormDependencies`, which `validate#TemplateValues` calls. Undated forms keep
+  the delete-and-recreate `update#DbFormField`. F71 fixed (qvt multi `depends-on` row suffix). Docs `docs/ui/Db-Forms.md`;
+  specs framework `DbForms` and Rust `screen::tests::db_forms`; the gallery's Widgets "Field rules" form.
+- **Review (framework), Nov 5:** qvt rules trim values and match multiple fields as html, tui and the server do; equals
+  or not-equals with no value refused; a dated `update#DbFormField` cannot change dates or `replacesFieldName`; cycle and
+  duplicate checks at every date; forms extending a DbForm not cached; a field with no type left out, not fatal; dead
+  code removed; the gallery form; `moqui-form-when.js` drops removed boxes; publish, successor, dependency and end
+  changes start or end now or later, never in the past, and a published dependency is ended and replaced, never edited.
+  `./moq test-framework`'s failures were the load (three moqui-host tests pass by name) and two ConfReload features that
+  need mr-mantle's demo user in an empty worktree runtime. Left: qvt `require-when` covers text-line, password and
+  date-time only (§7).
+
 ### P8 — Merge, split and closing
 
 Design §3 MergeCases and SplitCase, §9 StatusCategories' closing and ServiceDefaults' auto-close; CS-MERGE and
@@ -1491,6 +1512,8 @@ Designed, not in this build:
   - the Support app's terminal pages (design §8), when PASS gains a terminal UI;
   - Admin's PrivacyRequests and the PASS Account privacy page (Admin's `later`), which take over P2's interim privacy
     cases.
+- **Framework:** qvt's browser-side `require-when` on drop-down, text-area, radio and check, which need a `required` prop
+  on their `m-*` components; the server check (`evaluate#DbFormDependencies`) refuses a missing value meanwhile.
 - **Other apps' contexts:** the Sales rows of the screens Customer Service mounts; Marketing's and People's mounts of
   the survey builder.
 - **Other apps' callers:** the order owner (Sales) applying the order-change kinds Customer Service only approves:
