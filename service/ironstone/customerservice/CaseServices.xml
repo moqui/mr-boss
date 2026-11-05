@@ -189,4 +189,50 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="label" from="today.label"/>
         </actions>
     </service>
+    <!-- P3: the order lookup (design Orders OrderLookup, OrderResults; F30; Orders.js) -->
+    <service verb="find" noun="ServiceOrders" allow-remote="false">
+        <description>The sales orders the user may work with (design Orders): an exact order id, external id or customer
+            reference first (exact true); else by the order name and the customers the user serves by name, id, email or phone
+            (find#ServiceCustomers), narrowed by customer, product, status and entry date; newest first, at most 200 read
+            (truncated). Each row is checked again (recordOf); a missing id and another organization's find nothing alike
+            ("No order matches"). Each row has its customer, dates, total, the order's state, fulfillment (not shipped,
+            preparing, packed, shipped, delivered), payment (not invoiced, not paid, paid: never an amount) and next
+            delivery.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="term"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="productId"/>
+            <parameter name="statusId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="orders" type="List"/>
+            <parameter name="ordersCount" type="Integer"/>
+            <parameter name="ordersPageIndex" type="Integer"/>
+            <parameter name="ordersPageSize" type="Integer"/>
+            <parameter name="ordersPageMaxIndex" type="Integer"/>
+            <parameter name="ordersPageRangeLow" type="Integer"/>
+            <parameter name="ordersPageRangeHigh" type="Integer"/>
+            <parameter name="exact" type="Boolean"/>
+            <parameter name="truncated" type="Boolean"/>
+            <parameter name="message"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').execute('serviceOrders', context)"/>
+            <set field="orders" from="found.orders"/>
+            <set field="ordersCount" from="found.ordersCount"/>
+            <set field="ordersPageIndex" from="found.ordersPageIndex"/>
+            <set field="ordersPageSize" from="found.ordersPageSize"/>
+            <set field="ordersPageMaxIndex" from="found.ordersPageMaxIndex"/>
+            <set field="ordersPageRangeLow" from="found.ordersPageRangeLow"/>
+            <set field="ordersPageRangeHigh" from="found.ordersPageRangeHigh"/>
+            <set field="exact" from="found.exact"/>
+            <set field="truncated" from="found.truncated"/>
+            <set field="message" from="found.message"/>
+        </actions>
+    </service>
 </services>

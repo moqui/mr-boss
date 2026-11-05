@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
         <container-box>
             <box-header title="Inventory projection"/>
             <box-body>
-                <label text="${projectionMessage}" type="p"/>
+                <!-- a projection that cannot be read is unknown, never zero (impl-customer-service F31) -->
+                <label text="${projectionAvailable ? projectionMessage : 'Projected availability is unknown, not zero. ' + projectionMessage}"
+                        type="p"/>
                 <form-list name="InventoryProjection" list="projectionRows" skip-form="true" paginate="false">
                     <field name="horizonText">
                         <default-field title="Through date">

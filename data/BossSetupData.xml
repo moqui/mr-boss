@@ -1778,4 +1778,16 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Customer Service P2: the case topics Mantle sends (mantle.request.SupportCaseServices, F44) open the case -->
     <moqui.security.user.NotificationTopic topic="SupportCaseAssigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
     <moqui.security.user.NotificationTopic topic="SupportCaseCustomerReply" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
+    <!-- Customer Service P3 (impl-customer-service P3, F52): the product master read only for every Customer Service user
+        (Availability's Product360, InventoryAvailability and StockAtDate; Products' SharedContext.js turns cost, supplier
+        price and policy off in this context), and price read (Product360's Prices and PriceExplain) for the agent, manager,
+        order desk and administrator; the service reader reads no price. The Products app stays closed to them (its root
+        authorization). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE" userPermissionId="PRODUCT_CATALOG_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRICE_VIEW" fromDate="0"/>
 </entity-facade-xml>

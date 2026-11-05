@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ContactDetail in Customer Service (design-customer-service §4 ContactDetail; crosscut §3.1 Customer Service row;
+    impl-customer-service P3): the Commons contact record (template/ContactRecord.xml's ContactRecordSection and its
+    transitions, as Commons/Contacts/ContactDetail shows it) for a contact of a customer the user serves: the customer
+    itself or a current contact, employee or representative of one (ironstone.customerservice.CustomerServices
+    check#ServiceContact); anyone else is "not available". Channels are maintained under the record's own party checks
+    (ContactServices.check#ContactAccess: party write); consent is read there. Invite to support comes with the Support app
+    (P15), for SUPPORT_CONTACT_INVITE only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Contact" default-menu-include="false">
+    <parameter name="partyId" required="true"/>
+    <parameter name="tab"/>
+    <parameter name="showExpired"/>
+    <transition-include name="contactUpdate" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactOrganization" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoStore" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactInfoPurpose" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactRelationshipAdd" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactNote" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarUpload" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatarRemove" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactFavorite" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBooks" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactLink" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactDelete" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactExport" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactAvatar" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactSearch" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactGeoRegions" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="contactBookGroups" location="component://mr-boss/template/ContactRecord.xml"/>
+    <transition-include name="consentRecord" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <transition-include name="consentListSet" location="component://mr-boss/template/ConsentRecord.xml"/>
+    <actions>
+        <service-call name="ironstone.customerservice.CustomerServices.check#ServiceContact" out-map="serviceContact"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, partyId:partyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="contactFound" from="!!serviceContact?.customerPartyId"/>
+        <set field="recordPartyId" from="partyId"/>
+        <set field="inSplit" from="false"/>
+        <set field="recordBase" value="/qapps/CustomerService/Customers/ContactDetail"/>
+        <set field="customerUrl" from="contactFound ? sharedLinks['Customers/Customer360'] : null"/>
+    </actions>
+    <widgets>
+        <section name="ServiceContactMissing" condition="!contactFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Contact not available"/>
+                    <box-body>
+                        <label type="p" text="This contact is not available: it does not exist, or it is not a contact of a
+                                customer you serve."/>
+                        <link url="${sharedLinks['Customers/Customers']}" text="Back to customers" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ServiceContactFound" condition="contactFound">
+            <widgets>
+                <container style="q-mb-xs">
+                    <link url="${customerUrl}" link-type="anchor" text="${serviceContact.customerName}" icon="arrow_back"
+                            parameter-map="{customerPartyId:serviceContact.customerPartyId}"/>
+                </container>
+                <section-include name="ContactRecordSection" location="component://mr-boss/template/ContactRecord.xml"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -409,9 +409,18 @@ function serviceCustomers(p) {
             .list()
     ).map(row => row.contactMechId)
     const digits = term.replace(/[^0-9]/g, "")
+    // P3: the number as typed (with its separators, as contactNumber keeps them) or its digits alone
     if (digits.length >= 4)
         for (const row of find("mantle.party.contact.TelecomNumber")
-            .condition(factory().makeCondition("contactNumber", "like", "%" + digits + "%"))
+            .condition(
+                factory().makeCondition(
+                    [
+                        factory().makeCondition("contactNumber", "like", cs.likeText(term)),
+                        factory().makeCondition("contactNumber", "like", "%" + digits + "%")
+                    ],
+                    "or"
+                )
+            )
             .selectField("contactMechId")
             .limit(limit)
             .list())
@@ -563,11 +572,29 @@ function caseDetail(p) {
                 "&requestId=" +
                 encodeURIComponent(p.requestId)
         }))
-    const links = rows("mantle.request.RequestRecord", {requestId: p.requestId}).map(link => ({
-        recordEntityName: link.recordEntityName,
-        recordId: link.recordId,
-        linkedText: textOf(link.linkedDate)
-    }))
+    // P3: each linked record with its kind and, when the user may work with it here, its Customer Service screen (an order,
+    // shipment, invoice, customer or case); another record keeps its id only
+    const links = rows("mantle.request.RequestRecord", {requestId: p.requestId}).map(link => {
+        const kind = cs.kindOfEntity(link.recordEntityName)
+        let url = null,
+            label = null
+        if (kind)
+            try {
+                const record = cs.recordOf(userScope, kind, link.recordId)
+                url = cs.recordUrl(kind, link.recordId)
+                label = record.kindName + " " + link.recordId + (record.detail ? " · " + record.detail : "")
+            } catch (error) {
+                if (lib.reasonCode(error) !== "RECORD_UNAVAILABLE")
+                    ec.logger.warn("Case " + p.requestId + " link " + link.recordId + ": " + error.message)
+            }
+        return {
+            recordEntityName: link.recordEntityName,
+            recordId: link.recordId,
+            recordText: label || link.recordEntityName.split(".").pop() + " " + link.recordId,
+            url,
+            linkedText: textOf(link.linkedDate)
+        }
+    })
     const tags = rows("mantle.request.RequestTag", {requestId: p.requestId})
         .filter(tag => !tag.thruDate)
         .map(tag => ({tagEnumId: tag.tagEnumId, label: cs.enumText(tag.tagEnumId)}))

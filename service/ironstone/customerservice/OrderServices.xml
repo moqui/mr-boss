@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's order, shipment and invoice detail reads (impl-customer-service P3; crosscut §3.6, §3.8, §3.16;
+    Orders.js), each the Customer Service branch of a shared screen: scoped by AccessServices (the user's organizations'
+    sales records of customers they serve), a missing record and another organization's refused alike
+    (RECORD_UNAVAILABLE); invoice amounts and payments only for ACCOUNTING_VIEW
+    or RECEIVABLE_VIEW, a credit hold's reason only for
+    CUSTOMER_CREDIT_VIEW, never a payment's details. The actions are Mantle's, called by the screens after check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="OrderDetail" allow-remote="false">
+        <description>Shared/OrderDetail's Customer Service branch: the header (customer, seller, states, total), the open
+            holds read only, the items with what shipped, the shipments with tracking, the invoices (amounts withheld without
+            ACCOUNTING_VIEW
+            or RECEIVABLE_VIEW), the status history, the linked cases the user sees, the stored confirmation and its sends, the
+            recipients a resend may go to (Mantle's check), the accounts the user sends from, and whether the user may resend
+            (SUPPORT_CASE_EDIT, a placed order) and link a case.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="orderId" required="true"/></in-parameters>
+        <out-parameters><parameter name="detail" type="Map"/></out-parameters>
+        <actions>
+            <set field="detail" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').execute('orderDetail', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ShipmentDetail" allow-remote="false">
+        <description>Shared/ShipmentDetail's Customer Service branch: a shipment to or a return from a customer the user
+            serves, of their organization: its items, tracking, packages, the orders and returns it carries, the linked cases
+            and a plain-text update to copy into a reply. No stock action.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="shipmentId" required="true"/></in-parameters>
+        <out-parameters><parameter name="detail" type="Map"/></out-parameters>
+        <actions>
+            <set field="detail" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').execute('shipmentDetail', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="InvoiceDetail" allow-remote="false">
+        <description>Shared/InvoiceDetail's Customer Service branch (F53): a sales invoice of the user's organization to a
+            customer they serve: the customer-safe header and lines, its payment status, the orders it bills and the linked
+            cases; amounts, balance and payments only for ACCOUNTING_VIEW
+            or RECEIVABLE_VIEW (withheld, never zero); whether the user may send a
+            copy (RECEIVABLE_EDIT, a finalized, sent or paid invoice). No correction.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="invoiceId" required="true"/></in-parameters>
+        <out-parameters><parameter name="detail" type="Map"/></out-parameters>
+        <actions>
+            <set field="detail" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Orders.js').execute('invoiceDetail', context)"/>
+        </actions>
+    </service>
+</services>

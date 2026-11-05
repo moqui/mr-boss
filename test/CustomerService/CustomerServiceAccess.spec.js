@@ -233,12 +233,17 @@ feature("a user's customers are their organization's and the shared ones, in the
             asUser(user, () => invoke(access + "search#Records", {text, limit: 20}).rows.map(row => row.url))
         const orders = search(users.read, "boss_cs_so")
         for (const orderId of [ids.deliveredOrderId, ids.pickOrderId, ids.packedOrderId])
-            if (!orders.some(url => url.includes("lookupType=order&lookupId=" + orderId)))
+            if (!orders.some(url => url.endsWith("OrderDetail?orderId=" + orderId)))
                 problems.push(`the reader's palette misses ${orderId}: ${orders}`)
         if (orders.some(url => url.includes(ids.otherOrderId))) problems.push("the reader's palette has the other order")
         if (search(users.read, "boss_pur_po").length) problems.push("the reader's palette has a purchase order")
-        if (!search(users.read, "public").some(url => url.includes("lookupId=" + ids.customerId)))
+        if (!search(users.read, "public").some(url => url.endsWith("Customer360?customerPartyId=" + ids.customerId)))
             problems.push("the reader's palette has no Joe Q Public")
+        // P3: a customer by email and by phone
+        if (!search(users.read, "joe@public.com").some(url => url.endsWith("Customer360?customerPartyId=" + ids.customerId)))
+            problems.push("the reader's palette does not find Joe Q Public by email")
+        if (!search(users.read, "234-5678").some(url => url.endsWith("Customer360?customerPartyId=" + ids.customerId)))
+            problems.push("the reader's palette does not find Joe Q Public by phone")
         const servicesOrders = search(users.services, "boss_cs_so")
         if (
             !servicesOrders.some(url => url.includes(ids.otherOrderId)) ||
@@ -304,7 +309,7 @@ feature("another organization's or a forged record is refused like a missing one
 })
 
 feature(
-    "a sales order's record link opens under Customer Service for its users only; customers and purchase orders keep theirs",
+    "a sales order's and a customer's record links open OrderDetail and Customer360 for Customer Service users only (F77); purchase orders keep theirs",
     {
         when() {
             const link = (user, recordEntityName, id, enabled = true) =>
@@ -322,20 +327,69 @@ feature(
                 warehouse: link("warehouse.read", order, ids.deliveredOrderId, false),
                 // a purchase order stays Purchasing's
                 purchase: link("purchasing.read", order, ids.purchaseOrderId),
-                // P1 builds no Customer360, so a customer keeps its Commons contact
+                // P3: a customer the reader serves opens Customer360 here (F77)
                 customer: link(users.read, "mantle.party.Party", ids.customerId)
             }
         },
         then({own, other, services, warehouse, purchase, customer}) {
-            own == "/qapps/CustomerService/Home?lookupType=order&lookupId=" + ids.deliveredOrderId
+            own == "/qapps/CustomerService/Orders/OrderDetail?orderId=" + ids.deliveredOrderId
             other == null
-            services == "/qapps/CustomerService/Home?lookupType=order&lookupId=" + ids.otherOrderId
+            services == "/qapps/CustomerService/Orders/OrderDetail?orderId=" + ids.otherOrderId
             warehouse == null
             String(purchase).startsWith("/qapps/Purchasing/")
-            customer == "/qapps/Commons/Contacts/ContactDetail?partyId=" + ids.customerId
+            customer == "/qapps/CustomerService/Customers/Customer360?customerPartyId=" + ids.customerId
         }
     }
 )
+
+// P3: a shipment and an invoice are the user's organization's of a customer they serve, a contact a served customer's or its
+// contact's; the confirmation resend is a case editor's on the order
+feature("a shipment, an invoice and a contact are the user's organization's customers'; the resend is a case editor's", {
+    when() {
+        const problems = []
+        const first = (entity, field) =>
+            system(
+                () => ec.entity.find(entity).condition("orderId", ids.deliveredOrderId).disableAuthz().list()[0]?.[field] || null
+            )
+        const shipmentId = first("mantle.shipment.ShipmentItemSource", "shipmentId")
+        const invoiceId = first("mantle.order.OrderItemBilling", "invoiceId")
+        const check = (user, recordType, recordId, capability) =>
+            asUser(user, () => refusal(access + "check#Record", {recordType, recordId, capability}))
+        for (const [recordType, recordId] of [
+            ["shipment", shipmentId],
+            ["invoice", invoiceId]
+        ]) {
+            const own = check(users.read, recordType, recordId)
+            if (own !== "") problems.push(`the reader is refused its ${recordType} ${recordId}: ${own}`)
+            for (const [user, id] of [
+                [users.services, recordId],
+                [users.read, "BOSS_CS_FORGED"]
+            ]) {
+                const message = check(user, recordType, id)
+                if (!message.includes("RECORD_UNAVAILABLE"))
+                    problems.push(`${user} reaches ${recordType} ${id}: ${message || "accepted"}`)
+            }
+        }
+        const contact = (user, partyId) =>
+            asUser(user, () => refusal("ironstone.customerservice.CustomerServices.check#ServiceContact", {partyId}))
+        if (contact(users.read, ids.customerId) !== "") problems.push("the reader is refused its customer's contact record")
+        for (const partyId of [ids.otherCustomerId, "BOSS_CS_AGENT"]) {
+            const message = contact(users.read, partyId)
+            if (!message.includes("RECORD_UNAVAILABLE"))
+                problems.push(`the reader opens contact ${partyId}: ${message || "accepted"}`)
+        }
+        const holder = check(users.agent, "order", ids.deliveredOrderId, "caseEdit")
+        if (holder !== "") problems.push(`the agent may not resend: ${holder}`)
+        const reader = check(users.read, "order", ids.deliveredOrderId, "caseEdit")
+        if (!reader.includes("PERMISSION_DENIED")) problems.push(`the reader may resend: ${reader || "accepted"}`)
+        return {problems, shipmentId, invoiceId}
+    },
+    then({problems, shipmentId, invoiceId}) {
+        shipmentId != null
+        invoiceId != null
+        problems.join("\n") == ""
+    }
+})
 
 feature("the areas a group guards refuse a Customer Service user without it; no group reaches the Mantle REST or raw mutators", {
     when() {

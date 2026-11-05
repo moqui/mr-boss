@@ -41,7 +41,11 @@ along with this software (see the LICENSE.md file). If not, see
     ironstone.purchasing.OrderServices.get#OrderDetail; template/PurchasingOrderDetail.xml): a purchase order of the user's
     organizations, its header with Place, Approve or Send by status and More (hold, release, close remainder, clone, print as
     of, cancel), its holds, lines (a draft's edited here; a service line's acceptance), approvals, documents and emails, and
-    history; each action through the Mantle purchase services. -->
+    history; each action through the Mantle purchase services.
+    Customer Service (appRoot CustomerService, mounted at CustomerService/Orders/OrderDetail; crosscut §3.6 Customer Service
+    row, impl-customer-service P3; ironstone.customerservice.OrderServices.get#OrderDetail;
+    template/CustomerServiceOrderDetail.xml): a sales order of a customer the user serves, read only but for New case, Link
+    to case and Resend confirmation (the stored confirmation as placed); its holds read only. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Order" default-menu-include="false">
 
@@ -98,6 +102,11 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="recordAcknowledgement" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
     <transition-include name="linePromise" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
     <transition-include name="sendReminders" location="component://mr-boss/template/PurchasingOrderRevisions.xml"/>
+    <!-- Customer Service (impl-customer-service P3): link a case, resend the stored confirmation, its PDF -->
+    <transition-include name="serviceChoices" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
+    <transition-include name="resendConfirmation" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
+    <transition-include name="linkOrderCase" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
+    <transition-include name="confirmationFile" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'"><then>
             <service-call name="ironstone.accounting.PayableScreenServices.get#OrderContext"
@@ -124,6 +133,14 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.purchasing.OrderServices.get#OrderDetail" in-map="{appRoot:appRoot, orderId:orderId}"
                     out-map="purchaseOrderOut" transaction="force-new" ignore-error="true"/>
             <set field="purchaseOrder" from="purchaseOrderOut?.purchaseOrder || null"/>
+            <set field="recordFound" from="false"/>
+        </else-if><else-if condition="appRoot == 'CustomerService'">
+            <!-- Customer Service (crosscut §3.6 Customer Service row, impl-customer-service P3): a sales order of a customer the
+                user serves -->
+            <service-call name="ironstone.customerservice.OrderServices.get#OrderDetail" in-map="{appRoot:appRoot, orderId:orderId}"
+                    out-map="serviceOrderOut" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="serviceOrder" from="serviceOrderOut?.detail || null"/>
             <set field="recordFound" from="false"/>
         </else-if><else>
         <script><![CDATA[
@@ -157,8 +174,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseOrder" location="component://mr-boss/template/WarehouseOrderDetail.xml"/>
         <section-include name="ManufacturingOrder" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
         <section-include name="PurchasingOrder" location="component://mr-boss/template/PurchasingOrderDetail.xml"/>
+        <section-include name="CustomerServiceOrder" location="component://mr-boss/template/CustomerServiceOrderDetail.xml"/>
         <section name="OrderNotFound"
-                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing'].includes(appRoot)"><widgets>
+                condition="!recordFound &amp;&amp; !['Accounting', 'Warehouse', 'Manufacturing', 'Purchasing', 'CustomerService'].includes(appRoot)"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Order ${orderId} is not available: it does not exist, it is not linked to a project you see, or you do not manage money."/>
                 <link url="invoices" link-type="anchor" text="Back to the invoices"/>

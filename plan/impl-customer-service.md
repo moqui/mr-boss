@@ -290,7 +290,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 5 (§6 F1–F73) |
 | P1 Foundation | Mantle, BOSS | the Customer Service root and menu, Home | built Nov 5, 2026 |
 | P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | built Nov 5, 2026 |
-| P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | — |
+| P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | built Nov 5, 2026 |
 | P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | — |
 | P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | — |
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | — |
@@ -822,6 +822,113 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
   - InventoryAvailability for a product whose projection is not ready says unknown;
   - StockAtDate answers the quantity at a past cut-off for ZIRET_WH;
   - Product360 shows no cost or supplier price, and a reader without price read sees no PriceExplain.
+
+**Built Nov 5 (P3).**
+- Mantle (`entity/OrderConfirmationEntities.xml`, `service/mantle/order/OrderConfirmationServices.xml`,
+  `OrderConfirmations.js`, `template/order/OrderConfirmation.print.html.fancy`; `OctOrderConfirmation` in
+  `MantleSetupData.xml`): `get#OrderConfirmationPrint` (a placed sales order as placed: its lines read back from the audit log
+  at the placed time), `store#OrderConfirmation` (the PDF stored once as OrderContent under the order's lock) and
+  `resend#OrderConfirmation` (the stored PDF to a checked recipient, an address of the customer or of a current contact,
+  employee or representative of it, as a mail client draft of an account the user sends from, through `send#EmailDraft` filed
+  on the order; an OrderEmailMessage with the recipient's party and `orderContentId`, the version, new on OrderEmailMessage;
+  the operation key answers a retry). Each requires SUPPORT_CASE_EDIT or ORDER_APPROVE and an order of the user's
+  organizations; refusals RECORD_UNAVAILABLE (missing, another organization's or a purchase order alike), ORDER_NOT_PLACED,
+  RECIPIENT_REQUIRED, RECIPIENT_INVALID, RECIPIENT_UNCHECKED, SEND_ACCOUNT_REQUIRED.
+- BOSS reads (`service/ironstone/customerservice/`): `CaseServices.find#ServiceOrders` over `Orders.js` (an exact order id,
+  external id or customer reference first, then the order name and the customers of find#ServiceCustomers, narrowed by
+  customer, product, status and dates; a missing and another organization's id answer "No order matches" alike, F30);
+  `OrderServices.xml` over `Orders.js` (`get#OrderDetail`, `get#ShipmentDetail`, `get#InvoiceDetail`); `CustomerServices.xml`
+  over `Customers.js` (`find#Customers`, `get#Customer360`, `check#ServiceContact`); `AvailabilityServices.get#StockAtDate`
+  (Mantle's get#InventoryAtDate at the customer-serving facilities). `CustomerService.js`: the order's and customer's
+  destinations (OrderDetail, Customer360; F77, so `get#RecordLink` opens them here), the shipment and invoice record kinds, the
+  palette's customers by email and phone, the choices `products`, `facilities` and `customerCases`, the P3 linkPaths and
+  `servingFacilities`. `Cases.js`: CaseDetail's linked records name their kind and open the Customer Service screen of an
+  order, shipment, invoice, customer or case the user may work with; find#ServiceCustomers' phone search also matches the
+  number as typed.
+- Products' `SharedContext.js` Customer Service branch (F52): read only, the tabs Summary, Identifiers, Dimensions, Stock,
+  Documents and Prices (a price reader only), cost, supplier price, margin, method and stock policy off, the customer-serving
+  facilities (the user's organizations' stores' inventory and store facilities, else their warehouses); `Inventory.js` takes
+  them as Warehouse's facilities; InventoryAvailability's Projection says "Projected availability is unknown, not zero" when it
+  cannot be read (F31, every context) and its Policy tab is not shown here; PriceExplain is refused here without price read and
+  explains the sales direction only.
+- Screens: `CustomerService/Customers.xml` a menu group with `Customers/Customers` (CustomerFind, CustomerList with the hold
+  reason, a credit hold's for a credit reader only), `Customers/Customer360` (Shared/Customer360: its Customer Service branch
+  reads in always-actions, `template/CustomerServiceCustomer360.xml` the header and key numbers, the tabs
+  `Shared/Customer360/ServiceOverview`, `ServiceCases`, `ServiceOrders` and `ServiceBilling` with Files; Accounting's seven tabs
+  are kept to Accounting) and `Customers/ContactDetail` (the Commons ContactRecordSection for a served customer's contact);
+  `CustomerService/Orders.xml` a menu group with `Orders/Orders` (OrderLookup, OrderResults) and the mounts OrderDetail
+  (`template/CustomerServiceOrderDetail.xml`: header, holds read only, items, shipments and tracking, invoices, cases,
+  confirmation and its sends, history; New case through NewCase with the order, Link to case, Resend confirmation and the
+  stored PDF), ShipmentDetail (`template/CustomerServiceShipmentDetail.xml`, read only, with the delivery update to copy) and
+  InvoiceDetail (`template/CustomerServiceInvoiceDetail.xml`, F53: amounts for a receivables reader, Send a copy through
+  `send#Invoice` for RECEIVABLE_EDIT, no correction); `CustomerService/Availability.xml` a menu group with
+  `Availability/Products` (the product lookup), StockAtDate (Shared/StockAtDate with `template/CustomerServiceAvailability.xml`'s
+  find: product, facility, days) and the mounts InventoryAvailability, Product360 and PriceExplain. NewCase takes an `orderId`
+  and links the order through create#Case; the root's keymap gains Customers and Orders.
+- Grants and demo: `BossSetupData.xml` PRODUCT_CATALOG_VIEW for the root user group and the administrator, PRICE_VIEW for the
+  agent, manager, order desk and administrator; `BossZCustomerServiceDemoData.xml` Retail's shared service mailbox
+  `BOSS_CS_SERVICE_MAIL` (local sink) for the agent, manager and administrator; `Demo.js` the held order `BOSS_CS_SO_HELD` (Joe
+  Q Public, a manual hold with its reason).
+- Specs: Mantle `test/order/OrderConfirmations` (3 features, about 1.7 s: the first resend renders as placed, stores once and
+  sends to the checked address with the PDF; a retry and a second resend of one stored version; the refusals). BOSS
+  `CustomerServiceOrders` (6 features, about 1 s: the lookup's exact id and the missing and other organization's alike;
+  Customer360 of the shared ORG_ACME per organization, F74; the §2 audience; CaseDetail's linked order; Products' Customer
+  Service context; OrderDetail's and Customer360's one qvt render) and `CustomerServiceAccess` (+1 feature: the shipment,
+  invoice and contact checks and the resend's capability; the palette and record-link features now expect OrderDetail and
+  Customer360, F77). Acceptance `acceptance/CustomerService/CustomerServiceOrdersWalk` (the usable-when, 6 features),
+  `CustomerServiceFoundationWalk` (customers open Customer360; the client refused the P3 services) and `AppStructure` (the P3
+  routes and mounts, the placeholder floor 49).
+- Tests run (all pass): Mantle OrderConfirmations, OrderToCashBasicFlow, ReturnToResponseBasicFlow, ShipmentReturnMisc,
+  PurchaseOrders, PurchaseRevisions, RecordLinks, RecordVisibility, SupportCases, AccountingCredit (133 features); BOSS
+  CustomerServiceAccess, CustomerServiceCases, CustomerServiceOrders, AccountingReceivables, AccountingCollections,
+  AccountingAccess, AccountingOutputs, WarehouseShipping, WarehouseReports, WarehouseInventory, WarehouseReturns,
+  WarehouseReceiving, ProductsInventory, ProductsSharedContext, ProductsPricing, ProductsAccess, PurchasingOrders,
+  PurchasingBills, PurchasingReceiving, PurchasingAccess, PurchasingReplenishment, Billing, ClientBilling, ProjectsAccess,
+  ManufacturingSubcontracting, ManufacturingAccess, QuickCreate, Contacts, CommsHome, Inbox, Requests (288 features);
+  acceptance CustomerServiceOrdersWalk (6), CustomerServiceFoundationWalk (5), CustomerServiceCasesWalk and AppStructure.
+  `moqui lint --screens`: 136 flagged sites, as master; none in the new screens.
+- Inventories: ss-inventory's FindCustomer, CustomerData, FindOrder OrderList and OrderDetail forms; usl-inventory's
+  availability, credit, send#Invoice, send#EmailDraft and link#RequestRecord rows, and a P3 table for the confirmation
+  services and get#InventoryAtDate.
+- Decisions:
+  - F55 (placement): no placement rule. The confirmation is stored by the first store or resend, rendered as of the order's
+    placed time from the audit log (OrderItem's product, quantity, unit price and required date are audit-logged on create
+    and update), so the stored file is the order as placed; Mantle's placement path is unchanged, with no PDF render (and
+    Chromium) on every order and no organization flag to set. A later resend attaches that file, never a new render.
+  - The resend is a mail client send (`send#EmailDraft`, as the plan names), so it needs an account the user may send from:
+    the organization's shared service mailbox (the demo's `BOSS_CS_SERVICE_MAIL`), chosen in the dialog.
+  - Money (§2): invoice amounts, balances and payments for ACCOUNTING_VIEW or RECEIVABLE_VIEW (Accounting's AR group holds the
+    second); an order's line prices and total for every Customer Service user (they are on the customer's own confirmation);
+    payment details never. A credit hold's reason, and the credit status, for CUSTOMER_CREDIT_VIEW only.
+  - Customer360 in Customer Service has its own tabs (Overview and contacts, Cases, Orders and shipments, Billing, Files):
+    Accounting's tabs read Accounting's context and are kept to it; PaymentDetails (Finance details) never shows here; the
+    identifications and tax registrations are read only on Overview. Returns (P9), Delivered items (P11) and Service (P14)
+    come with their phases.
+  - Availability is a menu group whose default is a product lookup (InventoryAvailability and Product360 need a product);
+    StockAtDate is in its menu.
+  - ShipmentDetail's "send update" is the delivery text copied into the case's reply (a shipment has no channel of its own).
+- Findings (provisional):
+  - **F-P3-1** `org.moqui.impl.EmailClientServices.save#Draft` refuses an attachment outside the account's own mail files
+    unless authorization is disabled; Mantle's resend attaches the stored OrderContent PDF that way, after its own checks.
+  - **F-P3-2** Accounting's receivables groups hold RECEIVABLE_VIEW, not ACCOUNTING_VIEW, so §2's "financial amount by
+    ACCOUNTING_VIEW" would withhold invoice amounts from an AR user; Customer Service reads either (§2 should say so).
+  - **F-P3-3** Customer Service users held no catalog read: Products' shared screens refuse without PRODUCT_CATALOG_VIEW. P3
+    grants it to the root group and PRICE_VIEW to the agent, manager, order desk and administrator; the service reader has no
+    price read, so Product360 has no Prices tab for it and PriceExplain, which checked catalog read only, is refused it here.
+  - **F-P3-4** Shared/Customer360 is Accounting's: its header and every tab read `get#CustomerContext` and its capabilities;
+    the Customer Service branch reads in always-actions (a tab renders alone), adds its own tabs and a conditional default,
+    and keeps Accounting's tabs to Accounting by a condition on each.
+  - **F-P3-5** find#ServiceCustomers' phone search (P2) matched the digits alone, which miss a number kept with its separators
+    ("234-5678"); it and the palette now match the number as typed too.
+  - **F-P3-6** A credit hold is placed only by the credit policy (`hold#Order`), so the demo's held order is a manual hold
+    with its reason; a credit hold's reason is withheld from a user without CUSTOMER_CREDIT_VIEW (checked on Customers and
+    OrderDetail by the code path, not by demo data).
+  - **F-P3-7** Customer creation (FindCustomer's create forms) is not in Customer Service: the Commons contact record and
+    Sales create parties; ss-inventory marks them so.
+  - **F-P3-8** CustomerService.js's `partyName` leaves out a middle name ("Joe Public") where Mantle's `partyNames` keeps it
+    ("Joe Q Public", CaseDetail); P16 may align them.
+  - **F-P3-9** A shared screen's service (`CatalogServices.get#SharedContext`) is authorized through the mounting root's
+    inherited authorization, so a spec calls it as a Customer Service user with authorization off, as Warehouse's do.
 
 ### P4 — Service levels
 

@@ -12,11 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Customers area of IronStone Customer Service (design-customer-service §4): the service customers, Customer360 and
-    ContactDetail (impl-customer-service P3); every Customer Service user, limited to the customers they serve. -->
+<!-- The Customers area of IronStone Customer Service (design-customer-service §4; impl-customer-service P3): a menu group
+    holding Customers (the default: CustomerFind and CustomerList), with Customer360 (the shared Customer360 in the Customer
+    Service context, crosscut §3.2) and ContactDetail (the Commons contact record, crosscut §3.1) hidden from the menu. Every
+    Customer Service user, limited to the customers they serve. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Customers" default-menu-index="3" menu-image="sym_o_person" menu-image-type="icon">
+    <subscreens default-item="Customers" always-use-full-path="true">
+        <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Customers and their service history." type="p"/>
+        <subscreens-panel id="CustomerServiceCustomersPanel" type="tab"/>
     </widgets>
 </screen>

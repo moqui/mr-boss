@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customers (design-customer-service §4 Customers; style-guide §3.2 List; impl-customer-service P3): CustomerFind, the
+    customers the user serves by name, id, email or phone, and CustomerList (ironstone.customerservice.CustomerServices
+    find#Customers over CaseServices.find#ServiceCustomers, F30: empty criteria list nothing, so no search pages through every
+    party), each row with its email, phone, open cases, latest order and a held order's reason read only (a credit hold's for
+    a credit reader only). A row opens Customer360. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Customers" default-menu-index="1">
+    <parameter name="term"/>
+    <actions>
+        <service-call name="ironstone.customerservice.CustomerServices.find#Customers" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, term:term}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="customers" from="found?.customers || []"/>
+        <set field="emptyText" from="found?.message || 'Enter a name, email, phone or id.'"/>
+        <set field="findValues" from="{term:term || ''}"/>
+    </actions>
+    <widgets>
+        <context title="Customers"/>
+        <label text="Customers" type="h5"/>
+        <container-box>
+            <box-body>
+                <form-single name="CustomerFind" transition="." map="findValues" focus-field="term">
+                    <field name="term">
+                        <default-field title="Customer" tooltip="A name, account id, email address or phone number">
+                            <text-line size="40"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                    <field-layout><field-row><field-ref name="term"/><field-ref name="submitButton"/></field-row></field-layout>
+                </form-single>
+            </box-body>
+        </container-box>
+        <container-box>
+            <box-header title="Customers · ${customers.length}"/>
+            <box-body-nopad>
+                <form-list name="CustomerList" list="customers" skip-form="true" paginate="false">
+                    <field name="name">
+                        <default-field title="Customer">
+                            <link url="${url}" url-type="plain" text="${name}" link-type="anchor"/>
+                        </default-field>
+                    </field>
+                    <field name="email"><default-field title="Email"><display/></default-field></field>
+                    <field name="phone"><default-field title="Phone"><display/></default-field></field>
+                    <field name="openCaseCount" align="right"><default-field title="Open cases"><display/></default-field></field>
+                    <field name="latestOrderText">
+                        <default-field title="Latest order">
+                            <link url="${latestOrderUrl}" url-type="plain" text="${latestOrderText}" link-type="anchor"
+                                    condition="latestOrderUrl"/>
+                        </default-field>
+                    </field>
+                    <field name="holdText">
+                        <default-field title="Hold">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[${holdText ? '<q-chip dense square class="q-ma-none m-tonal text-warning">'
+                                    + WebUtilities.encodeHtml(holdText) + '</q-chip>' : ''}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: holdText || ""})}]]></text>
+                                <text type="html">${holdText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="name"/><field-ref name="email"/></column>
+                        <column><field-ref name="openCaseCount"/><field-ref name="holdText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted q-pa-sm q-mb-none" text="${emptyText}" condition="!customers.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

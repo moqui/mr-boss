@@ -41,7 +41,10 @@ along with this software (see the LICENSE.md file). If not, see
     received, accepted, rejected, held and due), receipts, inspections, files and conversation; Receive per line, Finish
     receipt and Receive all as expected for a holder of Warehouse's receive permission through Warehouse's receive guard,
     Create draft bill for AP intake, progress only for others (ironstone.purchasing.ReceiptServices.get#ReceiptDetail;
-    template/PurchasingReceiptDetail.xml). -->
+    template/PurchasingReceiptDetail.xml). Customer Service mounts it at CustomerService/Orders/ShipmentDetail (crosscut §3.8
+    Customer Service row, impl-customer-service P3), read only: a shipment to or a return from a customer the user serves, its
+    items, tracking, packages, orders, returns, cases and a delivery update to copy, no stock action
+    (ironstone.customerservice.OrderServices.get#ShipmentDetail; template/CustomerServiceShipmentDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Shipment"
@@ -119,6 +122,14 @@ along with this software (see the LICENSE.md file). If not, see
                     ignore-error="true"/>
             <set field="purchaseReceipt" from="purchaseReceiptOut?.receiptFound ? purchaseReceiptOut : null"/>
         </if>
+        <!-- Customer Service (crosscut §3.8 Customer Service row, impl-customer-service P3): a customer's shipment, read only -->
+        <if condition="appRoot == 'CustomerService'">
+            <service-call name="ironstone.customerservice.OrderServices.get#ShipmentDetail"
+                    in-map="{appRoot:appRoot, shipmentId:shipmentId}" out-map="serviceShipmentOut" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="serviceShipment" from="serviceShipmentOut?.detail || null"/>
+        </if>
     </actions>
     <widgets>
         <section-include name="AccountingShipment" location="component://mr-boss/template/AccountingRecords.xml"/>
@@ -128,8 +139,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseTransfer" location="component://mr-boss/template/WarehouseTransferDetail.xml"/>
         <section-include name="ManufacturingShipment" location="component://mr-boss/template/ManufacturingSubcontractParts.xml"/>
         <section-include name="PurchasingReceipt" location="component://mr-boss/template/PurchasingReceiptDetail.xml"/>
+        <section-include name="CustomerServiceShipment" location="component://mr-boss/template/CustomerServiceShipmentDetail.xml"/>
         <label text="This shipment is not available in this app." type="p"
                 condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Manufacturing'
-                    &amp;&amp; appRoot != 'Purchasing'"/>
+                    &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService'"/>
     </widgets>
 </screen>

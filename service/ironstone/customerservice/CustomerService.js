@@ -264,7 +264,20 @@ const linkPaths = [
     "Settings/AgentTeams",
     "Settings/CaseTypes",
     "Settings/StatusCategories",
-    "Settings/ServiceDefaults"
+    "Settings/ServiceDefaults",
+    // P3: the customer, order and availability screens and the shared mounts under them
+    "Customers/Customers",
+    "Customers/Customer360",
+    "Customers/ContactDetail",
+    "Orders/Orders",
+    "Orders/OrderDetail",
+    "Orders/ShipmentDetail",
+    "Orders/InvoiceDetail",
+    "Availability/Products",
+    "Availability/InventoryAvailability",
+    "Availability/StockAtDate",
+    "Availability/Product360",
+    "Availability/PriceExplain"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -301,6 +314,36 @@ function readOrder(orderId) {
         detail: [customerIds.map(partyName).join(", "), statusText(order.statusId)].filter(Boolean).join(" · ")
     }
 }
+// P3: a shipment of a sales order or a customer return: one side is an internal organization (its owner), the other the
+// customer; a transfer between internal organizations or a purchase receipt from a supplier is not Customer Service's.
+function readShipment(shipmentId) {
+    const shipment = one("mantle.shipment.Shipment", {shipmentId})
+    if (!shipment) return null
+    const fromInternal = isInternal(shipment.fromPartyId),
+        toInternal = isInternal(shipment.toPartyId)
+    if (fromInternal === toInternal) return null
+    const owner = fromInternal ? shipment.fromPartyId : shipment.toPartyId
+    const customerPartyId = fromInternal ? shipment.toPartyId : shipment.fromPartyId
+    if (!hasRole(customerPartyId, "Customer")) return null
+    return {
+        owners: [owner],
+        customers: [customerPartyId],
+        label: "Shipment " + shipmentId,
+        detail: [partyName(customerPartyId), statusText(shipment.statusId)].filter(Boolean).join(" · ")
+    }
+}
+// P3: a sales invoice: from an internal organization (its owner) to a customer.
+function readInvoice(invoiceId) {
+    const invoice = one("mantle.account.invoice.Invoice", {invoiceId})
+    if (!invoice || !isInternal(invoice.fromPartyId) || isInternal(invoice.toPartyId)) return null
+    if (!hasRole(invoice.toPartyId, "Customer")) return null
+    return {
+        owners: [invoice.fromPartyId],
+        customers: [invoice.toPartyId],
+        label: "Invoice " + invoiceId,
+        detail: [partyName(invoice.toPartyId), statusText(invoice.statusId)].filter(Boolean).join(" · ")
+    }
+}
 // A customer by itself: no organization of its own beyond its owner, checked as a customer in scope.
 function readCustomer(partyId) {
     const party = one("mantle.party.Party", {partyId})
@@ -331,11 +374,27 @@ function readCase(requestId) {
 // Each kind a Customer Service screen, mount, palette or record link may be given: its name, icon, the screen that opens it
 // (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup) and its read (a record answers its owners (service organizations) and customers, a label and a detail, or null
-// when there is no such record). P2 adds the case, P9 the return, P11 the warranty claim; P3 sets the destinations.
+// when there is no such record). P2 adds the case, P9 the return, P11 the warranty claim; P3 sets the order's and customer's
+// destinations (F77) and adds the shipment and the invoice, which a case links and OrderDetail opens.
 const recordKinds = {
-    order: {name: "Sales order", icon: "sym_o_receipt_long", destination: null, read: readOrder},
-    customer: {name: "Customer", icon: "sym_o_person", destination: null, read: readCustomer},
-    case: {name: "Case", icon: "sym_o_support_agent", destination: "Cases/CaseDetail?requestId=", read: readCase}
+    order: {name: "Sales order", icon: "sym_o_receipt_long", destination: "Orders/OrderDetail?orderId=", read: readOrder},
+    customer: {name: "Customer", icon: "sym_o_person", destination: "Customers/Customer360?customerPartyId=", read: readCustomer},
+    case: {name: "Case", icon: "sym_o_support_agent", destination: "Cases/CaseDetail?requestId=", read: readCase},
+    shipment: {
+        name: "Shipment",
+        icon: "sym_o_local_shipping",
+        destination: "Orders/ShipmentDetail?shipmentId=",
+        read: readShipment
+    },
+    invoice: {name: "Invoice", icon: "sym_o_request_quote", destination: "Orders/InvoiceDetail?invoiceId=", read: readInvoice}
+}
+// The record kind of an entity a case or another record links (CaseDetail's linked records, P3).
+const entityKinds = {
+    "mantle.order.OrderHeader": "order",
+    "mantle.party.Party": "customer",
+    "mantle.request.Request": "case",
+    "mantle.shipment.Shipment": "shipment",
+    "mantle.account.invoice.Invoice": "invoice"
 }
 
 // A record the user may work with: every organization it names is one of theirs and every customer it names is one they
@@ -405,6 +464,12 @@ function isSalesOrder(orderId) {
     return parts.length > 0 && parts.every(part => isInternal(part.vendorPartyId) && !isInternal(part.customerPartyId))
 }
 
+// P3: the facilities that serve the user's customers (Products' SharedContext.js Customer Service branch has the rule).
+const servingFacilities = userScope =>
+    ec.resource
+        .script("component://mr-boss/service/ironstone/products/SharedContext.js")
+        .customerServiceFacilities(vendorIds(userScope))
+
 // ===== palette =====
 // The finds of the palette (design §1: permitted cases, customers, orders and RMAs): each kind by its id and names, ignoring
 // case, limited in the query to the user's organizations or customer scope, and each row checked again by recordOf. P2 adds
@@ -430,6 +495,41 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("partyId"),
         idField: "partyId"
+    },
+    // P3: customers by email or phone (a contact mechanism's party; recordOf keeps the customers the user serves)
+    {
+        kind: "customer",
+        query: (userScope, condition) =>
+            find("mantle.party.contact.PartyContactMechInfo")
+                .condition(condition(["infoString"]))
+                .selectField("partyId")
+                .distinct(true)
+                .orderBy("partyId"),
+        idField: "partyId"
+    },
+    {
+        kind: "customer",
+        query: (userScope, condition, text) =>
+            find("mantle.party.contact.PartyContactMechTelecomNumber")
+                // the number as typed (with its separators) or its digits alone
+                .condition(
+                    ec.entity.conditionFactory.makeCondition(
+                        [
+                            ec.entity.conditionFactory.makeCondition("contactNumber", "like", likeText(text)),
+                            ec.entity.conditionFactory.makeCondition(
+                                "contactNumber",
+                                "like",
+                                "%" + (String(text).replace(/[^0-9]/g, "") || "_NA_") + "%"
+                            )
+                        ],
+                        "or"
+                    )
+                )
+                .selectField("partyId")
+                .distinct(true)
+                .orderBy("partyId"),
+        idField: "partyId",
+        minimumDigits: 4
     },
     // P2: the cases of the user's queues and those assigned to them, by id or subject
     {
@@ -467,9 +567,10 @@ function search(p) {
         )
     const found = new Map()
     for (const definition of searchFinds) {
+        if (definition.minimumDigits && text.replace(/[^0-9]/g, "").length < definition.minimumDigits) continue
         let rowsFound = []
         try {
-            rowsFound = Array.from(definition.query(userScope, condition).limit(limit).list())
+            rowsFound = Array.from(definition.query(userScope, condition, text).limit(limit).list())
         } catch (error) {
             ec.logger.error("Customer Service palette " + definition.kind + " search failed: " + error.message)
         }
@@ -595,6 +696,71 @@ const choiceSources = {
             .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
             .slice(0, choiceLimit)
     },
+    // P3: the products a customer may be told about (the order lookup's product, the availability lookup): by id, name or
+    // pseudo id, of the user's organizations or shared, not discontinued for sale
+    products: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.product.Product")
+            .selectField("productId")
+            .selectField("productName")
+            .selectField("pseudoId")
+            .orderBy("productName")
+            .limit(choiceLimit)
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", ["_NA_"].concat(userScope.ownerIds))
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["productId", "pseudoId", "productName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const label = row => [row.pseudoId || row.productId, row.productName].filter(Boolean).join(" · ")
+        const options = Array.from(query.list()).map(row => ({value: row.productId, label: label(row)}))
+        if (selected && !options.some(option => option.value === selected)) {
+            const product = one("mantle.product.Product", {productId: selected})
+            if (product && (!userScope.ownerIds || ["_NA_"].concat(userScope.ownerIds).includes(product.ownerPartyId || "_NA_")))
+                options.push({value: selected, label: label(product)})
+        }
+        return options
+    },
+    // P3: the customer-serving facilities of the user's organizations (their stores' inventory facilities, else their
+    // warehouses), for StockAtDate
+    facilities: (userScope, term, selected) => {
+        const ids = servingFacilities(userScope)
+        const options = ids
+            .map(facilityId => one("mantle.facility.Facility", {facilityId}))
+            .filter(Boolean)
+            .map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .sort((a, b) => a.label.localeCompare(b.label))
+        return options.slice(0, choiceLimit)
+    },
+    // P3: the open cases of a customer the user sees (OrderDetail's Link to case), newest first
+    customerCases: (userScope, term, selected, p) => {
+        if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+        const requestIds = rows("mantle.request.RequestParty", {partyId: p.customerPartyId, roleTypeId: "Customer"})
+            .filter(row => lib.active(row))
+            .map(row => row.requestId)
+        if (!requestIds.length) return []
+        const options = []
+        for (const row of find("mantle.request.support.CaseRequest")
+            .condition("requestId", "in", requestIds)
+            .condition("statusId", "in", ["ReqSubmitted", "ReqReviewed", "ReqInProgress", "ReqWaitingCustomer", "ReqOnHold"])
+            .orderBy("-requestDate")
+            .limit(choiceLimit)
+            .list()) {
+            try {
+                recordOf(userScope, "case", row.requestId)
+            } catch (error) {
+                continue
+            }
+            const label = row.requestId + " · " + (row.requestName || "")
+            if (!term || label.toLowerCase().includes(term.toLowerCase())) options.push({value: row.requestId, label})
+        }
+        return options
+    },
     // the user's service organizations (internal organizations they belong to, or every one for the administrator)
     organizations: (userScope, term, selected) => {
         const ids = vendorIds(userScope)
@@ -639,6 +805,11 @@ const operations = {sharedContext, checkRecord, search, choices}
     likeText,
     // whether a kind has its Customer Service screen yet (get#RecordLink leaves a customer to Commons until it has)
     hasScreen: kind => !!recordKinds[kind]?.destination,
+    // P3: the kind of a linked record's entity, and the shared reads of the customer and order modules
+    kindOfEntity: entityName => entityKinds[entityName] || null,
+    servingFacilities,
+    hasRole,
+    isInternal,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service operation " + op)
         return operations[op](parameters)

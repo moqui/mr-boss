@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's customer reads (impl-customer-service P3; design-customer-service §4 Customers, Customer360,
+    ContactDetail; Customers.js): scoped by AccessServices (the customers the user serves; a shared customer's records only
+    of the user's organizations, F74), with the audience rule of §2 (no payment details; invoice amounts for ACCOUNTING_VIEW
+    or RECEIVABLE_VIEW;
+    the credit status, Mantle's get#CustomerCreditStatus, for CUSTOMER_CREDIT_VIEW). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Customers" allow-remote="false">
+        <description>CustomerList (design Customers): the customers the user serves by name or id, email or phone
+            (find#ServiceCustomers; empty text finds none), each with its email, phone, open cases, latest order with the
+            user's organizations and the reason of a held order (a credit hold's only for CUSTOMER_CREDIT_VIEW, else "On
+            hold").</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="term"/></in-parameters>
+        <out-parameters>
+            <parameter name="customers" type="List"/>
+            <parameter name="message"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Customers.js').execute('findCustomers', context)"/>
+            <set field="customers" from="found.customers"/>
+            <set field="message" from="found.message"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Customer360" allow-remote="false">
+        <description>Shared/Customer360's Customer Service branch (crosscut §3.2): the customer's name, kind and owner, its
+            contact mechanisms and contact people, identifications and tax registrations (read only), its cases the user
+            sees, its orders and shipments with the user's organizations, its invoices from them (amounts only for
+            ACCOUNTING_VIEW
+            or RECEIVABLE_VIEW), the held orders and, for CUSTOMER_CREDIT_VIEW, its credit with each organization. A customer
+            the user does not serve has customerFound false, like a missing one.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="customerPartyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="customerFound" type="Boolean"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="customerDetail" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Customers.js').execute('customer360', context)"/>
+            <set field="customerFound" from="found.customerFound"/>
+            <set field="customerPartyId" from="found.customerPartyId"/>
+            <set field="customerDetail" from="found.customerDetail"/>
+        </actions>
+    </service>
+    <service verb="check" noun="ServiceContact" allow-remote="false">
+        <description>A contact Customer Service's ContactDetail may open (crosscut §3.1): a customer the user serves, or a
+            current contact, employee or representative of one; answers the customer. Anyone else, an internal party among
+            them, is refused like a missing party (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="partyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="partyId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="customerName"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Customers.js').execute('serviceContact', context)"/>
+            <set field="partyId" from="found.partyId"/>
+            <set field="customerPartyId" from="found.customerPartyId"/>
+            <set field="customerName" from="found.customerName"/>
+        </actions>
+    </service>
+</services>

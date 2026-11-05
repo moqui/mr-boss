@@ -56,8 +56,9 @@ feature("an agent finds their organization's customers and orders in the palette
             if (!orders.some(url => url.includes(orderId))) problems.push(`the agent's palette misses ${orderId}`)
         if (orders.some(url => url.includes(ids.otherOrderId))) problems.push("the agent's palette has the other order")
         const customers = palette(users.agent, "Joe")
+        // P3: a customer opens Customer360 (F77)
         for (const partyId of [ids.customerId, ids.companyCustomerId])
-            if (!customers.some(url => url.includes("lookupId=" + partyId)))
+            if (!customers.some(url => url.includes("customerPartyId=" + partyId)))
                 problems.push(`the agent's palette misses ${partyId}`)
         if (palette(users.agent, "Services Office").length) problems.push("the agent's palette has the other customer")
         if (palette(users.services, "Joe").some(url => url.includes(ids.customerId)))
@@ -119,7 +120,13 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         // P2: the cases' required parameters, so the refusal is the authorization's, not a validation's
                         requestId: ids.thermostatCaseId,
                         requestIds: [ids.thermostatCaseId],
-                        operation: "assign"
+                        operation: "assign",
+                        // P3: the customer, order, shipment and invoice reads' required parameters
+                        partyId: ids.customerId,
+                        customerPartyId: ids.customerId,
+                        orderId: ids.deliveredOrderId,
+                        shipmentId: "BOSS_CS_NO_SHIPMENT",
+                        invoiceId: "BOSS_CS_NO_INVOICE"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))

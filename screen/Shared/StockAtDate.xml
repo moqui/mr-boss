@@ -21,7 +21,9 @@ along with this software (see the LICENSE.md file). If not, see
     never zero. Both tabs export with the find's filters. No quantity change, cost or promise. Its one service is Mantle's
     mantle.product.InventoryReportServices.get#InventoryAtDate; Warehouse mounts it at Warehouse/Reports/StockAtDate with the
     Warehouse context (ironstone.warehouse.ReportServices.get#StockAtDate: the user's facilities, Warehouse links). Customer
-    Service adds its context when it is built. -->
+    Service mounts it at CustomerService/Availability/StockAtDate (crosscut §3.26 Customer Service row, impl-customer-service
+    P3): product, customer-serving facility and the days only (no location, lot or owner), over
+    ironstone.customerservice.AvailabilityServices.get#StockAtDate; its find is template/CustomerServiceAvailability.xml's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Stock at date"
@@ -40,6 +42,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="choices" location="component://mr-boss/template/WarehouseParts.xml"/>
     <transition-include name="inventoryChoices" location="component://mr-boss/template/WarehouseInventoryParts.xml"/>
     <transition-include name="reportChoices" location="component://mr-boss/template/WarehouseReportParts.xml"/>
+    <!-- Customer Service (impl-customer-service P3): its product and facility choices -->
+    <transition-include name="serviceAvailabilityChoices" location="component://mr-boss/template/CustomerServiceAvailability.xml"/>
     <subscreens default-item="Places"/>
     <actions>
         <set field="options" from="{asOfDate:asOfDate, fromDate:fromDate, productId:productId, facilityId:reportFacilityId,
@@ -54,9 +58,10 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
         </container>
+        <section-include name="CustomerServiceStockAtDate" location="component://mr-boss/template/CustomerServiceAvailability.xml"/>
         <section name="StockAtDateNotMounted" condition="appRoot != 'Warehouse'">
             <widgets>
-                <label text="Stock at date is not available in this app." type="p"/>
+                <label text="Stock at date is not available in this app." type="p" condition="appRoot != 'CustomerService'"/>
             </widgets>
             <fail-widgets>
                 <form-single name="StockDateFind" transition="." map="options">

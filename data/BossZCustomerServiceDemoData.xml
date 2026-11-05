@@ -13,7 +13,16 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <entity-facade-xml type="demo">
-    <!-- Customer Service's demo orders (impl-customer-service P1), made through Mantle's order, shipment and payment services
+    <!-- P3: Retail's service mailbox, which the agent, manager and administrator send from (a confirmation resend through the
+        mail client, mantle.order.OrderConfirmationServices); delivery stays on a local sink, as Accounting's demo mail -->
+    <moqui.basic.email.EmailServer emailServerId="BOSS_CS_DEMO_MAIL" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N" smtpSsl="N"/>
+    <moqui.basic.email.EmailAccount emailAccountId="BOSS_CS_SERVICE_MAIL" ownerPartyId="ORG_ZIZI_RETAIL" accountKindEnumId="EakShared"
+            emailServerId="BOSS_CS_DEMO_MAIL" emailAddress="service@retail.example" accountName="Retail customer service"
+            statusId="EasActive" recordFilingEnumId="ErfLinkedOnly"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_AGENT" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_MANAGER" fromDate="0" permissionEnumId="EapSend"/>
+    <moqui.basic.email.EmailAccountUser emailAccountId="BOSS_CS_SERVICE_MAIL" userId="BOSS_CS_ADMIN" fromDate="0" permissionEnumId="EapSend"/>
+    <!-- Customer Service's demo orders (impl-customer-service P1; P3 adds the held order), made through Mantle's order, shipment and payment services
         once the products and stock of BossCustomerServiceDemoData.xml are committed: each order runs in a transaction of its
         own, which sees only committed rows, so this file loads after that one (and after the other BOSS demo data). -->
     <ironstone.customerservice.DemoServices.load-CustomerServiceDemo/>

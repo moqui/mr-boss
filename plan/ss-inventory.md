@@ -441,13 +441,13 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| CustomerData | CustomerDataList | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
-| FindCustomer | CreatePersonForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
-| FindCustomer | CreateOrganizationForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
-| FindCustomer | CreateAccountForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts |  |
-| FindCustomer | CreateContactForm | CustomerService/Customers/ContactDetail; Sales/Accounts/Contacts |  |
-| FindCustomer | OuterSearchForm | CustomerService/Customers; Sales/Accounts/Accounts |  |
-| FindCustomer | CustomerListForm | CustomerService/Customers; Sales/Accounts/Accounts |  |
+| CustomerData | CustomerDataList | CustomerService/Customers/Customer360; Sales/Accounts/Accounts | CustomerService/Customers/Customer360 (ServiceOverview, ServiceOrders, ServiceBilling; Customer Service P3) |
+| FindCustomer | CreatePersonForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts | — CustomerService/Customers/Customer360 (no create here: the Commons contact record and Sales create parties; Customer Service P3) |
+| FindCustomer | CreateOrganizationForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts | — CustomerService/Customers/Customer360 (no create here: the Commons contact record and Sales create parties; Customer Service P3) |
+| FindCustomer | CreateAccountForm | CustomerService/Customers/Customer360; Sales/Accounts/Accounts | — CustomerService/Customers/Customer360 (no create here: Sales creates accounts; Customer Service P3) |
+| FindCustomer | CreateContactForm | CustomerService/Customers/ContactDetail; Sales/Accounts/Contacts | CustomerService/Customers/ContactDetail (the Commons contact record, ContactRecordSection, for a served customer's contact; Customer Service P3) |
+| FindCustomer | OuterSearchForm | CustomerService/Customers; Sales/Accounts/Accounts | CustomerService/Customers/Customers (CustomerFind: find#Customers; Customer Service P3) |
+| FindCustomer | CustomerListForm | CustomerService/Customers; Sales/Accounts/Accounts | CustomerService/Customers/Customers (CustomerList; Customer Service P3) |
 
 ## Facility (18 forms)
 
@@ -526,12 +526,12 @@ is unchanged.
 | FindOrder | ApproveOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkApprove: decide#PurchaseApproval per order) (Purchasing P3) |
 | FindOrder | CloseOrdersForm | Purchasing/Orders/PurchaseOrders; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (BulkClose: close#PurchaseRemainders per order) (Purchasing P3) |
 | FindOrder | CreatePurchaseOrder | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders (CreatePurchaseOrder); Purchasing/NewPurchaseOrder (quick create) (Purchasing P3) |
-| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (PurchaseOrderList, views and saved finds) (Purchasing P3); Purchasing/Sourcing/Quotes (QuoteList, the quote statuses) (Purchasing P11) |
+| FindOrder | OrderList | Purchasing/Orders/PurchaseOrders; CustomerService/Orders/Orders; Sales/Quotes/Quotes; Sales/Orders/Orders | Purchasing/Orders/PurchaseOrders (PurchaseOrderList, views and saved finds) (Purchasing P3); Purchasing/Sourcing/Quotes (QuoteList, the quote statuses) (Purchasing P11); CustomerService/Orders/Orders (OrderLookup and OrderResults: find#ServiceOrders; Customer Service P3) |
 | OrderDetail | CloseOrderPartItems | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: ClosePurchaseRemainder) (Purchasing P3) |
 | OrderDetail | AddPartForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Purchasing: one purchase part per order (impl-purchasing §4) (Purchasing P17) |
 | OrderDetail | RecurOptions | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders | — Purchasing: no recurring purchase order; recurring agreement releases are §7 (F134) (Purchasing P17) |
-| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderHistory) (Purchasing P3) |
-| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: the record header, EditPurchaseOrder) (Purchasing P3) |
+| OrderDetail | AuditLogList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderHistory) (Purchasing P3); Shared/OrderDetail (Customer Service: ServiceOrderHistory; Customer Service P3) |
+| OrderDetail | HeaderForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: the record header, EditPurchaseOrder) (Purchasing P3); Shared/OrderDetail (Customer Service: the record header, read only, with New case, Link to case and Resend confirmation; Customer Service P3) |
 | OrderDetail | AddPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | AddPartyPromoCode | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderDetail | OrderPromoCodeList | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
@@ -540,8 +540,8 @@ is unchanged.
 | OrderDetail | UpdateNoteForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/Chatter | Shared/Chatter (the order's record context on Purchasing/Orders/OrderDetail) (Purchasing P3) |
 | OrderDetail | NewContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles | Shared/RecordFiles (the order's record context); Shared/OrderDetail (Purchasing: PurchaseOrderDocuments) (Purchasing P3) |
 | OrderDetail | UpdateContentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail; Shared/RecordFiles | Shared/RecordFiles (the order's record context) (Purchasing P3) |
-| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: SendPurchaseOrder: send#PurchaseOrder) (Purchasing P3) |
-| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderEmails) (Purchasing P3) |
+| OrderDetail | SendPlacedEmailForm | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: SendPurchaseOrder: send#PurchaseOrder) (Purchasing P3); Shared/OrderDetail (Customer Service: ServiceResendForm, resend#OrderConfirmation of the stored confirmation; Customer Service P3) |
+| OrderDetail | EmailMessageList | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderEmails) (Purchasing P3); Shared/OrderDetail (Customer Service: ServiceOrderConfirmationSends; Customer Service P3) |
 | OrderDetail | SystemMessageList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Purchasing: no EDI or system messages (impl-purchasing §7) (Purchasing P17) |
 | OrderDetail | ChildOrderList | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Purchasing: no child-order list; a drop-ship order's parent is its customer order (Purchasing P7) |
 | OrderDetail | AddOrderPartToShipmentForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Receiving/Receipts (PrepareReceipt, "Expected receipt (ASN)"); Purchasing/Orders/OrderDetail (Receipts and inspection) |
@@ -556,7 +556,7 @@ is unchanged.
 | OrderDetail | SetOrderInfoForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (EditPurchaseOrder) (Purchasing P3) |
 | OrderDetail | AddProductItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: AddPurchaseOrderLine) (Purchasing P3) |
 | OrderDetail | AddOtherItemForm | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Purchasing: product lines only (AddPurchaseOrderLine; a service is a product line) (Purchasing P3) |
-| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderLines) (Purchasing P3) |
+| OrderDetail | OrderItems | Purchasing/Orders/OrderDetail; CustomerService/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: PurchaseOrderLines) (Purchasing P3); Shared/OrderDetail (Customer Service: ServiceOrderItems, read only; Customer Service P3) |
 | EditItem | EditOrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/OrderDetail (Purchasing: EditPurchaseOrderLine) (Purchasing P3) |
 | ItemReserve | ReserveItem | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | ReturnItem | ReturnItem | CustomerService/Returns/NewReturn; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail |  |
