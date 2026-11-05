@@ -3,7 +3,8 @@
 // audiences, the kept case's clock and the source's breach, and the source says where it went; merging cases of two customers
 // is refused; a message split into a new case (SplitCase) starts its clock at that message's receipt, and the source stays
 // open; a reply 20 days after resolution makes a linked follow-up case, one within 14 days reopens; auto-close sets the
-// closed date, and a rerun changes nothing. The rules are Mantle's SupportRelations spec. The time is moved ahead with the
+// closed date, and a rerun changes nothing (scoped to the walk's own case, so Retail's other resolved cases stay open to a
+// reply). The rules are Mantle's SupportRelations spec. The time is moved ahead with the
 // effective time (a follow-up of a reply is made after the commit on the real clock, so its cases are made now).
 // Run: ./moq accept mr-boss --spec CustomerServiceRelationsWalk
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
@@ -313,9 +314,9 @@ feature("auto-close sets the closed date and keeps the status; a rerun changes n
         const closing = newCase("Resolved and quiet")
         resolve(closing)
         ahead(31 * day)
-        const first = system(() => invoke(S + "close#ResolvedCases", {limit: 2000}))
+        const first = system(() => invoke(S + "close#ResolvedCases", {limit: 2000, requestIds: [closing]}))
         const closedDate = one("mantle.request.support.CaseProfile", {requestId: closing}).closedDate
-        const second = system(() => invoke(S + "close#ResolvedCases", {limit: 2000}))
+        const second = system(() => invoke(S + "close#ResolvedCases", {limit: 2000, requestIds: [closing]}))
         ahead(null)
         return {
             saved,
@@ -330,11 +331,12 @@ feature("auto-close sets the closed date and keeps the status; a rerun changes n
     },
     then(r) {
         r.saved.servicePolicyId != null
-        r.first.closedCount >= 1
+        r.first.closedCount == 1
         r.closedDate != null
         r.request.statusId == "ReqCompleted"
         String(r.closedAgain) == String(r.closedDate)
-        r.second.failedList.every(row => row.requestId != r.closing)
+        r.second.closedCount == 0
+        r.second.failedList.length == 0
         r.detail.output.includes("Open a follow-up case")
     }
 })

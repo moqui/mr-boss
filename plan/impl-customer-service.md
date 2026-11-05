@@ -1819,6 +1819,35 @@ CS-JOBS.
   - **F-P8-8** SupportSla's status-event check read events with no order, which a longer run returned out of order (the
     table's order after updates); it sorts them by id.
 
+**Review Nov 5 (P8).** Checked against design §3 MergeCases/SplitCase, §9 and §2. Merge: one transaction, the cases locked
+(FOR UPDATE) in id order with nothing locked before them, so two merges, a merge and a split, and a merge beside update#Case or
+transition#Case (one request each) cannot deadlock on requests; a reply racing a merge waits on the source's lock (its
+RequestCommEvent's key share on PostgreSQL) and then goes to the kept case by `replyArrived`. Audience: referenced messages are
+the same CommunicationEvent, so a note stays a note on the kept case and on a split case; items are written before the link, so
+`recordMessage` and `notify#CaseCustomerReply` count none; a redirected or follow-up reply has no item and counts once where it
+lands. SLA: a running clock is copied with its due and breach and the source's ends Merged (never counted), an ended breach
+stays on the source, so a breach counts once; split's clock from the earliest chosen message's receipt or a manager's start with
+its reason; a reopen within the window is the status rule's new episode, the first breach kept; `endCustomerWait` acts only on a
+paused case and `replyArrived` only on a resolved or cancelled one, never both. Threading: the merged-source redirect comes
+after P6's `senderOnRequest`/`tokenCase` checks on the source, and the kept case has the same customer; staff and automatic mail
+to a closed case join it. Access: the new transitions call AccessServices.check#Record for each case and the Mantle services
+check their permission and organization. F-P8-5: the after-commit follow-up is dated by the reply's receipt; no effective-time
+spec depends on it. Fixes:
+- **R1 (medium)** `delete#RequestComment` on either case deleted a referenced comment from both (F-P8-4): `check#RequestComment`
+  refuses deleting a comment a CaseRelationItem references, naming the other case (acts only on a case relation);
+  SupportRelations asserts it.
+- **R2 (medium)** `close#ResolvedCases` reads oldest first by `lastUpdatedStamp`, so resolved cases with a clock still running
+  (CLOCK_OPEN) stayed first every run and could fill the batch for good; they are named without taking a place in it (a window
+  of 5x the limit is read). It takes `requestIds`, and the acceptance walk and SupportRelations close only their own cases (the
+  walk had closed every resolved Retail case in the shared acceptance database). The stamp pre-filter skips no case for good: a
+  resolved case's stamp is at or after its resolution and ages past the cutoff.
+- Left for the lead: (1) `scan#CaseSla`'s `mark` locks an episode, then inserts a CaseSlaEvent (a key share on the request),
+  while update#Case, transition#Case and now merge#Cases lock the request FOR UPDATE, then update its episodes: a deadlock
+  PostgreSQL breaks by aborting one (the scan retries in 5 minutes); since P4, and the merge adds a path of that shape. (2) P14's
+  reports must read only met, missed, running, paused and unmet clocks, never SlsMerged (F-P8-3).
+- Specs run: Mantle SupportRelations (5), RecordNotes (7), CrmMiscServices (7); acceptance CustomerServiceRelationsWalk (4); all
+  pass.
+
 
 ### P9 — Returns
 
