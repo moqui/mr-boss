@@ -3264,7 +3264,7 @@ scanner with type, signature and size), BOSS's Invite to support and ServiceDefa
   - the W agent and the F authorizer open neither the Warehouse nor the Accounting root and work from Customer Service's
     ReturnDetail and InvoiceDetail; their receipt, inspection and settlement are CustomerServiceReturnsWalk's;
   - a Support customer account (dana@joesdist, morgan@joesdist, joe@public.com) opens no app root but Commons and Comms
-    (F-P16-2), sees there no case of either side but Joe his own as one of its people (never its internal note), has no
+    (F216), sees there no case of either side but Joe his own as one of its people (never its internal note), has no
     other launcher entry, and is refused the Customer Service services and the staff case print.
   The Customer Service administrator is left out of the isolation sweeps: its MANTLE_ACTIVE_ORG grant works in every
   organization when none is active, by design (CustomerService.js grants; impl-purchasing F185). Universal search has no
@@ -3325,23 +3325,23 @@ scanner with type, signature and size), BOSS's Invite to support and ServiceDefa
   CustomerServiceWarranty (1), CustomerServiceReturns (5), CustomerServiceRelations, pass. `moqui lint --screens`: no
   parse failure, no new flagged site, no Customer Service TUI worklist item.
 - Findings (provisional):
-  - **F-P16-1** The Customer Service administrator (BOSS_CUSTOMER_SERVICE_ADMIN, MANTLE_ACTIVE_ORG) reaches every
+  - **F215** The Customer Service administrator (BOSS_CUSTOMER_SERVICE_ADMIN, MANTLE_ACTIVE_ORG) reaches every
     organization's cases, customers, orders, palette rows, links, choices and report rows when no organization is active
     (by design, CustomerService.js; impl-purchasing F185); the isolation sweeps leave it out.
-  - **F-P16-2** Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a PASS public account (a
+  - **F216** Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a PASS public account (a
     Support contact, which holds no group) opens both BOSS roots and its launcher lists them; Joe Q Public's own account
     reads his own case in Commons Requests as one of its people (its title, status and conversation as Commons shows a
     request's people, not its internal notes). Design §8 says a customer contact reaches nothing in BOSS; Projects denies
     its client contacts Commons and Comms through BOSS_PROJECT_CLIENT, and a public account has no group to deny. Left for
     the lead (§7): a deny for public accounts on the BOSS roots (a framework or PASS marker of a public account, or a
     Commons and Comms grant narrowed to internal users).
-  - **F-P16-3** `ignore-error` on a screen's service-call leaves no error message, so `!ec.message.hasError()` after it
+  - **F217** `ignore-error` on a screen's service-call leaves no error message, so `!ec.message.hasError()` after it
     says nothing; ReturnAuthorization took another organization's return for the user's (fixed here); other screens that
     test hasError after an ignored call may say "not authorized" or "empty" where "not available" is meant (none leaked a
     record in the walk).
-  - **F-P16-4** CaseDetail has no Items tab (design CaseDetail: "Items only when present"); a claim's product and an order
+  - **F218** CaseDetail has no Items tab (design CaseDetail: "Items only when present"); a claim's product and an order
     change's lines show on WarrantyAssessment and OrderChangeDetail (§7).
-  - **F-P16-5** The case summary's internal variant shows the template's customer-visible answers only; an internal field's
+  - **F219** The case summary's internal variant shows the template's customer-visible answers only; an internal field's
     answer stays on CaseDetail (CaseTemplates.js has no staff projection of a response to reuse).
 
 **Review Nov 5 (P16).** Checked the three repos' diffs against this section, §2, design §10 and §11, AGENTS.md and the
@@ -3357,14 +3357,14 @@ SUPPORT_POLICY_EDIT whose party works for that organization (organizationsOf, em
 another organization's; they join at the next team sync. The regression additions are one feature each (SupportPortal,
 SupportWarranty, SupportAssignment, AccountingControls, CustomerServiceAssignment, CustomerServiceWarranty).
 - **R1** (minor, defensive) Settings/SavedReplies previewed a saved reply on the case named by `previewRequestId` when
-  `!ec.message.hasError()` after an ignored check#Record, which is always true (F-P16-3); Mantle's preview#SavedReply
+  `!ec.message.hasError()` after an ignored check#Record, which is always true (F217); Mantle's preview#SavedReply
   refuses another organization's case itself, so nothing leaked, but the screen now previews only when the check answers
   the case, and says "Case … is not available" or that the reply cannot be previewed instead of an empty problem text.
   The other Customer Service screens that read hasError after an ignored call only lose the refusal's text (ReturnPolicies,
   ChannelRouting, ChannelSessions, NewReturn, SplitCase, MergeCases, the four reports, CaseSummary's print error,
   CustomerServiceReplies, CustomerServiceChannels): their data comes from the call's answer, so none can show a refused
-  record; their error labels stay blank (F-P16-3, §7).
-- **F-P16-2, for the lead.** BossSetupData grants BOSS_COMMONS and BOSS_COMMS to ALL_USERS (AUTHZT_ALLOW, MANTLE_USER_ORG
+  record; their error labels stay blank (F217, §7).
+- **F216, for the lead.** BossSetupData grants BOSS_COMMONS and BOSS_COMMS to ALL_USERS (AUTHZT_ALLOW, MANTLE_USER_ORG
   and MANTLE_PRIVATE_CONTACT filters). A public account is an ordinary UserAccount with no group: framework
   `org/moqui/public/Account.js` beginRegistration creates it through create#UserAccount with no group; invitations
   (ExternalAccess.js) bind a party, not a group; the demo's joe@public.com is a Mantle demo UserAccount. So nothing in data
@@ -3646,6 +3646,11 @@ is written there too.
 | F212 | P14 review: CaseVolumes' open-at-the-as-of-time count uses each case's current status, so a case open at an earlier as-of time and resolved since is not counted; the clocks dataset could be granted beyond ADMIN once Insights' admission filters it by `organizationPartyId` | §7, with the statuses at a past time from the audit log (as F192) |
 | F213 | P15 review: the saved-reply preview does not say the mail will carry the Support link; the return label is always served as a PDF whatever the carrier returned; MyCases reads all of a customer's case ids before paging, fine at portal sizes | §7 |
 | F214 | P15 review: `send#EmailDraft` gains a hook adding the CustomerCase link to an agent's mail filed on a case when every recipient is on the case's customer side and the sender holds SUPPORT_CASE_EDIT; `authorize#Return` and `decide#ReturnException` now mail the customer a decision notice (no reason) where the organization has a service policy, so Retail's demo authorizations mail the customer | Kept: both act only on cases and service-policy returns (§2's Mantle rule changes) |
+| F215 | P16: The Customer Service administrator (BOSS_CUSTOMER_SERVICE_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's cases, customers, orders, palette rows, links, choices and report rows when no organization is active (by design, CustomerService.js; impl-purchasing F185); the isolation sweeps leave it out. | See P16 |
+| F216 | P16: Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a PASS public account (a Support contact, which holds no group) opens both BOSS roots and its launcher lists them; Joe Q Public's own account reads his own case in Commons Requests as one of its people (its title, status and conversation as Commons shows a request's people, not its internal notes). Design §8 says a customer contact reaches nothing in BOSS; Projects denies its client contacts Commons and Comms through BOSS_PROJECT_CLIENT, and a public account has no group to deny. Left for the lead (§7): a deny for public accounts on the BOSS roots (a framework or PASS marker of a public account, or a Commons and Comms grant narrowed to internal users). | See P16 |
+| F217 | P16: `ignore-error` on a screen's service-call leaves no error message, so `!ec.message.hasError()` after it says nothing; ReturnAuthorization took another organization's return for the user's (fixed here); other screens that test hasError after an ignored call may say "not authorized" or "empty" where "not available" is meant (none leaked a record in the walk). | See P16 |
+| F218 | P16: CaseDetail has no Items tab (design CaseDetail: "Items only when present"); a claim's product and an order change's lines show on WarrantyAssessment and OrderChangeDetail (§7). | See P16 |
+| F219 | P16: The case summary's internal variant shows the template's customer-visible answers only; an internal field's answer stays on CaseDetail (CaseTemplates.js has no staff projection of a response to reuse). | See P16 |
 
 ## 7. Later
 
@@ -3676,10 +3681,10 @@ Designed, not in this build:
     CaseVolumes' open count at a past as-of time from the audit log, and the clocks dataset beyond ADMIN (F212); the
     saved-reply preview naming the Support link, the label's content type, MyCases paging before reading all ids (F213);
     NewCase's warranty path refusing the whole case for a serial not the customer's, and its customerAssets choice listing
-    a resold serial (F185); CaseDetail's Items tab when present (F-P16-4); the internal case summary's internal template
-    answers (F-P16-5).
-  - Access: a deny for PASS public accounts on the BOSS Commons and Comms roots, which ALL_USERS grants (F-P16-2); screens
-    that test `hasError` after an ignored service-call (F-P16-3).
+    a resold serial (F185); CaseDetail's Items tab when present (F218); the internal case summary's internal template
+    answers (F219).
+  - Access: a deny for PASS public accounts on the BOSS Commons and Comms roots, which ALL_USERS grants (F216); screens
+    that test `hasError` after an ignored service-call (F217).
   - Comms and channels: an Inbox `message-actions` slot (F121); a permission test on Chat's and Voicemail's ext-actions and
     a hold on mail failing DMARC (F132).
   - Other components: mr-marble's survey screens refusing a form that is not a survey (F134); Purchasing's callers of
