@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AgentTeams (design-customer-service §9 AgentTeams TeamMembers; impl-customer-service P2): the organization's service
+    teams and their members (ironstone.customerservice.ConfigurationServices.get#ServiceTeam): New team
+    (mantle.request.SupportCaseServices.save#ServiceTeam, the administrator), Add member and Remove (save#ServiceTeamMember, a
+    dated PartyRelationship; a manager of the team or the administrator). Participation (eligibility, maximum cases,
+    substitute) comes in P5. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Agent teams" default-menu-index="3">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="memberSearch" read-only="true">
+        <actions>
+            <service-call name="ironstone.commons.TaskServices.search#Assignees" in-map="{term:term}" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.optionList || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveTeam">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceTeam"
+                    in-map="{organizationPartyId:organizationPartyId, teamPartyId:(teamPartyId || null), teamName:teamName}"/>
+            <message type="success">Saved the team ${teamName}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveMember">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceTeamMember"
+                    in-map="{teamPartyId:teamPartyId, partyId:partyId, roleTypeId:(roleTypeId || 'Agent'), end:(end == 'Y')}"/>
+            <message type="success">Saved the team's members</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceTeam" out-map="teamsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="teams" from="teamsOut?.teams || []"/>
+        <set field="cfgOrganizations" from="teamsOut?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="teamsOut?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfgOrganizationPartyId"/>
+        <section name="TeamSettings" condition="cfgOrganizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Agent teams" type="h5"/></container>
+                    <container style="col-auto">
+                        <container-dialog id="NewTeam" button-text="New team" icon="sym_o_group_add" type="primary" width="480"
+                                title="New service team" condition="can.policyEdit">
+                            <form-single name="NewTeamForm" transition="saveTeam" map="{organizationPartyId:cfgOrganizationPartyId}">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="teamName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Create team"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <section-iterate name="Teams" list="teams" entry="team">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${team.teamName} · ${team.memberCount} members"/>
+                            <box-toolbar>
+                                <container-dialog id="AddMember_${team.teamPartyId}" button-text="Add member" icon="sym_o_person_add"
+                                        width="480" title="Add a member to ${team.teamName}" condition="team.canChange">
+                                    <form-single name="AddMemberForm" transition="saveMember"
+                                            map="{teamPartyId:team.teamPartyId, roleTypeId:'Agent', organizationPartyId:cfgOrganizationPartyId}">
+                                        <field name="teamPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="partyId">
+                                            <default-field title="Person">
+                                                <drop-down><dynamic-options transition="memberSearch" server-search="true" min-length="1"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="roleTypeId">
+                                            <default-field title="As">
+                                                <radio><option key="Agent" text="Agent"/><option key="Manager" text="Team manager"/></radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Add member"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="TeamMembers" list="team.members" skip-form="true" paginate="false">
+                                    <field name="name"><default-field title="Member"><display/></default-field></field>
+                                    <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="openCaseCount" align="right"><default-field title="Open cases"><display/></default-field></field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <link url="saveMember" text="Remove" icon="sym_o_person_remove" link-type="hidden-form-link"
+                                                    btn-type="danger" condition="team.canChange"
+                                                    parameter-map="{teamPartyId:teamPartyId, partyId:partyId, end:'Y', organizationPartyId:cfgOrganizationPartyId}"
+                                                    confirmation="Remove ${name} from the team? Their cases stay assigned to them."/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="roleText"/></column>
+                                        <column><field-ref name="openCaseCount"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!team.members.length" text="No member yet."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section-iterate>
+                <label type="p" style="m-muted" condition="!teams.length" text="No service team yet. Make one with New team, then add its agents."/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

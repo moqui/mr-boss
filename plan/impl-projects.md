@@ -1049,6 +1049,7 @@ Each result is a row in §9.6 and, where it changes the design, an edit there. S
 | F156 | C0: a client's file list of a visible request may include RqCntInternal content (impl-customer-service F18) | C0 confirms; C3 lists client-visible files only |
 | F157 | C0: RequestIntake is a BOSS public page, `screen/RequestIntake.xml` at `/r/<token>` (a `<token-route>` in BOSS's `MoquiConf.xml`), its token the project's `WstIntakeToken` | C6 |
 | F158 | C0: the demo clients sheldon.acme and gob.bluth hold `BOSS_PROJECT_CLIENT` and `EXTERNAL_USER` (F134) | C1 invites them to the app; C7 ends their BOSS grants |
+| F159 | Customer Service P2 (impl-customer-service F68, confirming F156): in BOSS's Projects client mode today, `ironstone.shared.RecordFilesServices.get#RecordFiles` (mr-boss service/ironstone/shared/RecordFilesServices.xml) and Chatter's `forFiles` give a `PROJECT_CLIENT` user every file of a request it sees, `RqCntInternal` (internal) content included: an internal file on a client's request is shown to the client. Not fixed by Customer Service, which keeps cases with no project from clients (`get#ClientRecordVisibility`) and leaves Projects' clients its own | Projects to fix: the client's file reads leave out `RqCntInternal` content (C3's client-visible files, or a fix in BOSS's client mode before it) |
 
 ### 9.7 Later
 

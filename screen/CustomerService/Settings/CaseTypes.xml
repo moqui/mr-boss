@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CaseTypes (design-customer-service §9 CaseTypes ServiceTypes; impl-customer-service P2): every request type with how
+    the organization offers it for cases (ironstone.customerservice.ConfigurationServices.get#ServiceSettings), and Edit over
+    mantle.request.SupportCaseServices.save#ServiceRequestType from now: service-enabled (a customer's request of the type
+    with no category goes into its default queue and is a case), the customer label, the default queue and priority. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Case types" default-menu-index="4">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition name="saveType">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceRequestType"
+                    in-map="{organizationPartyId:organizationPartyId, requestTypeEnumId:requestTypeEnumId, serviceEnabled:serviceEnabled,
+                        customerLabel:(customerLabel || null), defaultCategoryId:(defaultCategoryId || null),
+                        defaultPriority:(defaultPriority || null), publicAvailable:(publicAvailable || 'N')}"/>
+            <message type="success">Saved the case type</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cfg" from="settingsOut?.settings || null"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="types" from="cfg?.types || []"/>
+        <set field="queueOptions" from="cfg?.queueOptions || []"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
+        <section name="TypeSettings" condition="cfg">
+            <widgets>
+                <label text="Case types" type="h5"/>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ServiceTypes" list="types" skip-form="true" paginate="false">
+                            <field name="typeText"><default-field title="Request type"><display/></default-field></field>
+                            <field name="serviceText">
+                                <default-field title="Cases">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${serviceEnabled == 'Y' ? 'positive' : 'grey-7'}">${
+                                            WebUtilities.encodeHtml(serviceText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: serviceText})}]]></text>
+                                        <text type="html">${serviceText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="customerLabel"><default-field title="Customer label"><display/></default-field></field>
+                            <field name="defaultQueueName"><default-field title="Default queue"><display/></default-field></field>
+                            <field name="defaultPriority"><default-field title="Default priority"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditType_${requestTypeEnumId}" button-text="Edit" icon="sym_o_edit" width="560"
+                                            title="${typeText} for cases" condition="can.policyEdit">
+                                        <form-single name="EditTypeForm" transition="saveType"
+                                                map="{organizationPartyId:cfgOrganizationPartyId, requestTypeEnumId:requestTypeEnumId,
+                                                    serviceEnabled:serviceEnabled, customerLabel:customerLabel, defaultCategoryId:defaultCategoryId,
+                                                    defaultPriority:defaultPriority, publicAvailable:publicAvailable}">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="requestTypeEnumId"><default-field><hidden/></default-field></field>
+                                            <field name="serviceEnabled">
+                                                <default-field title="Cases">
+                                                    <radio><option key="Y" text="Service-enabled"/><option key="N" text="Not offered for cases"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="customerLabel"><default-field title="Customer label"><text-line size="30"/></default-field></field>
+                                            <field name="defaultCategoryId">
+                                                <default-field title="Default queue">
+                                                    <drop-down allow-empty="true"><list-options list="queueOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="defaultPriority">
+                                                <default-field title="Default priority">
+                                                    <drop-down allow-empty="true">
+                                                        <option key="2" text="2 (urgent)"/><option key="4" text="4 (high)"/>
+                                                        <option key="5" text="5 (normal)"/><option key="7" text="7 (low)"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="publicAvailable">
+                                                <default-field title="On the customer pages">
+                                                    <radio><option key="Y" text="Offered"/><option key="N" text="Not offered"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="typeText"/><field-ref name="defaultQueueName"/></column>
+                                <column><field-ref name="serviceText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <label type="p" style="text-caption m-muted" text="Support alone makes no case: an employee's request stays a request. A customer's request of a service-enabled type does."/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

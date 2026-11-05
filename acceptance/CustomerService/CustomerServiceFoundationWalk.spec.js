@@ -1,6 +1,6 @@
 // Customer Service P1's "usable when" (impl-customer-service P1), as an acceptance walk with artifact authorization on: the
 // menu renders for each group, and each area of it opens while the others are refused; quick create offers nothing a group
-// may not create (no area of P1 creates a record); an agent finds their organization's customers and orders through the
+// may not create (P2: a case to the groups that enter cases); an agent finds their organization's customers and orders through the
 // palette but not another organization's, and a forged customer or order id is refused, on Home's lookup too; a Projects
 // client contact is refused the root and every ironstone.customerservice service. And the demo the later phases build on:
 // the delivered, invoiced and paid order with its serialized thermostat now the customer's, the order awaiting pick with its
@@ -12,14 +12,19 @@ const access = "ironstone.customerservice.AccessServices."
 const areas = ["Home", "Cases", "Customers", "Orders", "Returns", "Approvals", "Availability", "Knowledge", "Reports", "Settings"]
 const opened = rendered => rendered.status === 200 && rendered.errors.length === 0
 
-feature("the menu renders for each group, its areas open, the others are refused, and quick create offers nothing", {
+feature("the menu renders for each group, its areas open, the others are refused, and quick create offers a case to its groups", {
     when() {
         const problems = []
         for (const user of Object.values(users)) {
             const found = shell(user)
             if (found.status != 200 || !found.names.length) problems.push(`${user}'s menu: ${found.status} ${found.names}`)
-            if ((found.providers?.quickCreate || []).some(item => String(item.screen || "").startsWith("CustomerService/")))
-                problems.push(`${user} is offered a Customer Service quick create`)
+            // P2: a case for the groups that enter cases (BOSS_CS_NEW_CASE), nothing else of Customer Service's
+            const offered = (found.providers?.quickCreate || [])
+                .filter(item => String(item.kind || "").startsWith("customerService"))
+                .map(item => item.kind)
+            const mayCreate = [users.agent, users.manager, users.admin, users.agentWarehouse, users.services].includes(user)
+            if (JSON.stringify(offered) !== JSON.stringify(mayCreate ? ["customerServiceCase"] : []))
+                problems.push(`${user} is offered the Customer Service quick create ${offered}`)
             for (const area of areas) {
                 const expected = found.names.includes(area)
                 const rendered = asUser(user, () => lib.page(area, {}, "html"))
@@ -110,7 +115,11 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         recordId: ids.deliveredOrderId,
                         text: "joe",
                         choice: "customers",
-                        order: "packed"
+                        order: "packed",
+                        // P2: the cases' required parameters, so the refusal is the authorization's, not a validation's
+                        requestId: ids.thermostatCaseId,
+                        requestIds: [ids.thermostatCaseId],
+                        operation: "assign"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))

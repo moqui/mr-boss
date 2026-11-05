@@ -44,6 +44,10 @@ along with this software (see the LICENSE.md file). If not, see
     Projects). With peek=true (WorkItems' Peek pane, whose bar has Open full) it renders compact: the title row, the facts, then the
     description, the sub-items and Chatter one under the other (the tabs would load the whole page, not the pane).
 
+    Customer Service (impl-customer-service P2, crosscut §3.12 Customer Service row): a work item of a case the user sees, at
+    CustomerService/Cases/WorkItemDetail, on the Commons task rule, with the way back to its case; finishing it tells the case's
+    assignee and never resolves the case (complete#RequestFromWork).
+
     Manufacturing (impl-manufacturing P11, crosscut §3.12 Manufacturing row; ironstone.manufacturing.DowntimeServices
     get#WorkItemContext, template/ManufacturingRequestParts.xml ManufacturingWorkItemContext): a follow-up task of a maintenance
     request of the user's plants, at Manufacturing/WorkCenters/WorkItemDetail: the Commons task with a Production box of its
@@ -415,6 +419,24 @@ along with this software (see the LICENSE.md file). If not, see
             mfgTask = appRoot === 'Manufacturing'
             productionTask = {}
             if (mfgTask) detailPath = '/qapps/Manufacturing/WorkCenters/WorkItemDetail'
+            // Customer Service (impl-customer-service P2, crosscut §3.12, F49): a work item of a case the user sees, on the
+            // Commons rule (its transitions' 'commons' key), with the way back to its case
+            csTask = appRoot === 'CustomerService'
+            csCaseId = null
+            if (csTask) {
+                detailPath = '/qapps/CustomerService/Cases/WorkItemDetail'
+                ec.message.pushErrors()
+                try {
+                    for (const link of ec.entity.find('mantle.request.RequestWorkEffort').condition('workEffortId', workEffortId).disableAuthz().list()) {
+                        const checked = ec.service.sync().name('ironstone.customerservice.AccessServices.check#Record')
+                                .parameters({appRoot: appRoot, recordType: 'case', recordId: link.requestId}).call()
+                        if (!ec.message.hasError() && checked?.recordId) { csCaseId = link.requestId; break }
+                        ec.message.clearErrors()
+                    }
+                } catch (error) {
+                    csCaseId = null
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+            }
             // the Development tab: when the item's project has the Code module on or a repository linked (design §5)
             devShown = false
             if (projects) {
@@ -437,7 +459,7 @@ along with this software (see the LICENSE.md file). If not, see
             } else {
                 detail = ec.service.sync().name('ironstone.commons.TaskServices.get#TaskDetail').parameters({workEffortId: workEffortId}).call() || {}
             }
-            recordFound = !!detail.visible
+            recordFound = !!detail.visible && (!csTask || !!csCaseId)
             if (mfgTask && recordFound) {
                 ec.message.pushErrors()
                 try {
@@ -602,7 +624,13 @@ along with this software (see the LICENSE.md file). If not, see
                 <link url="${sharedLinks['WorkCenters/Downtime']}" text="Back to Downtime" link-type="anchor"/>
             </box-body></container-box>
         </widgets></section>
-        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask"><widgets>
+        <section name="CaseTaskNotFound" condition="!recordFound &amp;&amp; csTask"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Work item ${workEffortId} is not available in Customer Service: it is not the work of a case you see."/>
+                <link url="${sharedLinks['Cases/Cases']}" text="Back to Cases" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="TaskNotFound" condition="!recordFound &amp;&amp; !mfgTask &amp;&amp; !csTask"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Task ${workEffortId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="tasks" text="${projects ? 'Back to Work items' : 'Back to Tasks'}" link-type="anchor"/>
@@ -615,7 +643,11 @@ along with this software (see the LICENSE.md file). If not, see
 
             <!-- ===== the header card (style-guide §3.3): the identity with the status-bar at its right, then the facts with the actions at
                 their right. Above it, Commons: the way back to Tasks; Projects: the path, the project then each ancestor ===== -->
-            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask"><widgets>
+            <section name="CaseBack" condition="csTask"><widgets>
+                <container style="q-mb-xs"><link url="${sharedLinks['Cases/CaseDetail']}" link-type="anchor" text="Case ${csCaseId}" icon="arrow_back"
+                        parameter-map="{requestId:csCaseId, tab:'work'}"/></container>
+            </widgets></section>
+            <section name="CommonsBack" condition="!projects &amp;&amp; !mfgTask &amp;&amp; !csTask"><widgets>
                 <container style="q-mb-xs"><link url="tasks" link-type="anchor" text="Tasks" icon="arrow_back"/></container>
             </widgets></section>
             <section name="ManufacturingBack" condition="mfgTask"><widgets>

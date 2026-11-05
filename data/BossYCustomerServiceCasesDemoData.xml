@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's demo teams' members and cases (impl-customer-service P2): rows that name the demo users of
+    BossUsersDemoData.xml, so they load after it; the teams, queues and policies are BossCustomerServiceDemoData.xml's. The
+    requests become cases through Mantle's case rule (ensure#CaseProfile, which BossZCustomerServiceDemoData.xml runs once this
+    file is committed, F76): Joe Q Public's two open cases (the thermostat one assigned to the agent, on his delivered order;
+    NewCase's duplicate warning shows both), Joe's Distributing's case waiting for the customer, Joe's privacy request in the
+    restricted Privacy queue, and Ziziwork Services' case of its customer. -->
+<entity-facade-xml type="demo">
+    <mantle.party.PartyRole partyId="BOSS_CS_AGENT" roleTypeId="Agent"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_AGENT_WH" roleTypeId="Agent"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_MANAGER" roleTypeId="Manager"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_ADMIN" roleTypeId="Agent"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_SERVICES" roleTypeId="Agent"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_AGENT" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_AGENT" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_AGENT_WH" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_AGENT_WH" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_MANAGER" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_MANAGER" fromRoleTypeId="Manager" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_PRIVACY" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_ADMIN" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_PRIVACY" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_SERVICES" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_SERVICES" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SERVICES" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.request.Request requestId="BOSS_CS_CASE_THERMO" requestName="Thermostat shows the wrong temperature"
+            requestTypeEnumId="RqtSupport" requestCategoryId="BOSS_CS_Q_SUPPORT" statusId="ReqSubmitted" priority="3"
+            salesChannelEnumId="ScPhone" requestDate="2026-11-02 09:30:00" requestResolutionEnumId="RrUnresolved"
+            filedByPartyId="BOSS_CS_AGENT"
+            description="Joe says the thermostat he received reads three degrees high since it was installed."/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_THERMO" partyId="CustJqp" roleTypeId="Customer" fromDate="2026-11-02 09:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_THERMO" partyId="BOSS_CS_AGENT" roleTypeId="Assignee" fromDate="2026-11-02 09:30:00"/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_THERMO" partyId="BOSS_CS_AGENT" roleTypeId="Reporter" fromDate="2026-11-02 09:30:00"/>
+    <mantle.request.RequestRecord requestId="BOSS_CS_CASE_THERMO" recordEntityName="mantle.order.OrderHeader" recordId="BOSS_CS_SO_DELIVERED"
+            linkedByUserId="BOSS_CS_AGENT" linkedDate="2026-11-02 09:31:00"/>
+    <mantle.request.RequestTag requestId="BOSS_CS_CASE_THERMO" tagEnumId="RtgProduct" fromDate="2026-11-02 09:31:00"/>
+    <mantle.request.Request requestId="BOSS_CS_CASE_FILTERS" requestName="When do the replacement filters ship?"
+            requestTypeEnumId="RqtSupport" requestCategoryId="BOSS_CS_Q_SUPPORT" statusId="ReqSubmitted" priority="5"
+            salesChannelEnumId="ScEmail" requestDate="2026-11-04 14:10:00" requestResolutionEnumId="RrUnresolved"
+            filedByPartyId="CustJqp" description="Joe asks when the filters he wants to order will be in stock."/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_FILTERS" partyId="CustJqp" roleTypeId="Customer" fromDate="2026-11-04 14:10:00"/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_FILTERS" partyId="CustJqp" roleTypeId="Reporter" fromDate="2026-11-04 14:10:00"/>
+    <mantle.request.Request requestId="BOSS_CS_CASE_PICK" requestName="Status of order awaiting pick"
+            requestTypeEnumId="RqtSupport" requestCategoryId="BOSS_CS_Q_SUPPORT" statusId="ReqWaitingCustomer" priority="6"
+            salesChannelEnumId="ScPhone" requestDate="2026-11-03 11:00:00" requestResolutionEnumId="RrUnresolved"
+            filedByPartyId="BOSS_CS_AGENT_WH" description="Joe's Distributing asked whether the four filters can ship sooner; we asked for their dock hours."/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_PICK" partyId="JoeDist" roleTypeId="Customer" fromDate="2026-11-03 11:00:00"/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_PICK" partyId="BOSS_CS_AGENT_WH" roleTypeId="Assignee" fromDate="2026-11-03 11:00:00"/>
+    <mantle.request.RequestRecord requestId="BOSS_CS_CASE_PICK" recordEntityName="mantle.order.OrderHeader" recordId="BOSS_CS_SO_PICK"
+            linkedByUserId="BOSS_CS_AGENT_WH" linkedDate="2026-11-03 11:01:00"/>
+    <mantle.request.Request requestId="BOSS_CS_CASE_PRIVACY" requestName="Please delete my account data"
+            requestTypeEnumId="RqtPrivacy" requestCategoryId="BOSS_CS_Q_PRIVACY" statusId="ReqSubmitted" priority="3"
+            salesChannelEnumId="ScEmail" requestDate="2026-11-04 08:00:00" requestResolutionEnumId="RrUnresolved"
+            filedByPartyId="CustJqp" description="Joe asks that the data we hold on him be deleted."/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_PRIVACY" partyId="CustJqp" roleTypeId="Customer" fromDate="2026-11-04 08:00:00"/>
+    <mantle.request.Request requestId="BOSS_CS_CASE_OTHER" requestName="Office supplies invoice question"
+            requestTypeEnumId="RqtSupport" requestCategoryId="BOSS_CS_Q_SERVICES" statusId="ReqSubmitted" priority="5"
+            salesChannelEnumId="ScPhone" requestDate="2026-11-04 10:00:00" requestResolutionEnumId="RrUnresolved"
+            filedByPartyId="BOSS_CS_SERVICES" description="The Services customer asks about its invoice."/>
+    <mantle.request.RequestParty requestId="BOSS_CS_CASE_OTHER" partyId="BOSS_CS_CUST_OTHER" roleTypeId="Customer" fromDate="2026-11-04 10:00:00"/>
+</entity-facade-xml>

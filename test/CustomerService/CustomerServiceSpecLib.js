@@ -19,7 +19,19 @@ const ids = {
     purchaseOrderId: "BOSS_PUR_PO_A",
     serializedProductId: "BOSS_CS_THERMOSTAT",
     organizationId: "ORG_ZIZI_RETAIL",
-    otherOrganizationId: "ORG_ZIZI_SERVICES"
+    otherOrganizationId: "ORG_ZIZI_SERVICES",
+    // P2: the queues, teams and cases (BossCustomerServiceDemoData.xml, made cases by load#CaseDemo): Joe Q Public's two open
+    // cases (the thermostat one assigned to the agent), Joe's Distributing's waiting one, Joe's privacy request in the
+    // restricted Privacy queue, and Ziziwork Services' case
+    supportQueueId: "BOSS_CS_Q_SUPPORT",
+    privacyQueueId: "BOSS_CS_Q_PRIVACY",
+    otherQueueId: "BOSS_CS_Q_SERVICES",
+    supportTeamId: "BOSS_CS_TEAM_SUPPORT",
+    thermostatCaseId: "BOSS_CS_CASE_THERMO",
+    filtersCaseId: "BOSS_CS_CASE_FILTERS",
+    pickCaseId: "BOSS_CS_CASE_PICK",
+    privacyCaseId: "BOSS_CS_CASE_PRIVACY",
+    otherCaseId: "BOSS_CS_CASE_OTHER"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -112,9 +124,23 @@ function shell(user) {
 function routeFixtures() {
     const routes = {
         // P1: Home's measures (measured by later phases) and the lookup of the delivered demo order
-        Home: {parameters: {lookupType: "order", lookupId: ids.deliveredOrderId}, text: "Thermostat and filters"}
+        Home: {parameters: {lookupType: "order", lookupId: ids.deliveredOrderId}, text: "Thermostat and filters"},
+        // P2: the case screens and the settings
+        "Cases/Cases": {parameters: {view: "all"}, text: "Cases"},
+        "Cases/NewCase": {parameters: {customerPartyId: ids.customerId}, text: "New case"},
+        "Cases/CaseDetail": {parameters: {requestId: ids.thermostatCaseId}, text: "Thermostat shows the wrong temperature"},
+        "Settings/SettingsHome": {parameters: {}, text: "Customer Service settings"},
+        "Settings/Queues": {parameters: {}, text: "Queues"},
+        "Settings/AgentTeams": {parameters: {}, text: "Agent teams"},
+        "Settings/CaseTypes": {parameters: {}, text: "Case types"},
+        "Settings/StatusCategories": {parameters: {}, text: "Status categories"},
+        "Settings/ServiceDefaults": {parameters: {}, text: "Service defaults"},
+        "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"}
     }
-    const mounts = []
+    const mounts = [
+        ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
+        ["Cases/WorkItemDetail", "component://mr-boss/screen/Shared/WorkItemDetail.xml"]
+    ]
     return {routes, mounts}
 }
 

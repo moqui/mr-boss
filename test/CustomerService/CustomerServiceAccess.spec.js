@@ -62,26 +62,30 @@ const order = ["Home", "Cases", "Customers", "Orders", "Returns", "Approvals", "
 const open = ["Home", "Cases", "Customers", "Orders", "Availability", "Knowledge"]
 const menuOf = extra => order.filter(name => open.includes(name) || extra.includes(name))
 
-// no area of P1 creates a record, so quick create offers nothing yet: P2 adds New case, P9 Request return
+// quick create offers a case to the groups that enter cases (NewCase, BOSS_CS_NEW_CASE; P2); P9 adds Request return
 feature("the Customer Service menu and providers follow each group's areas; the launcher shows it to its users only", {
     when() {
         const rows = [
-            {user: users.read, extra: []},
-            {user: users.agent, extra: ["Returns", "Reports"]},
-            {user: users.manager, extra: ["Returns", "Approvals", "Reports"]},
-            {user: users.orderDesk, extra: []},
-            {user: users.returns, extra: ["Returns", "Approvals", "Reports"]},
-            {user: users.knowledge, extra: []},
-            {user: users.admin, extra: order}
+            {user: users.read, extra: [], quick: []},
+            {user: users.agent, extra: ["Returns", "Reports"], quick: ["customerServiceCase"]},
+            {user: users.manager, extra: ["Returns", "Approvals", "Reports", "Settings"], quick: ["customerServiceCase"]},
+            {user: users.orderDesk, extra: [], quick: []},
+            {user: users.returns, extra: ["Returns", "Approvals", "Reports"], quick: []},
+            {user: users.knowledge, extra: [], quick: []},
+            {user: users.admin, extra: order, quick: ["customerServiceCase"]}
         ]
         const problems = []
-        for (const {user, extra} of rows) {
+        for (const {user, extra, quick} of rows) {
             const found = shell(user)
             const quickKinds = (found.providers?.quickCreate || []).map(item => item.kind)
             if (found.status != 200) problems.push(`${user}'s menu: ${found.status}`)
             if (JSON.stringify(found.names) !== JSON.stringify(menuOf(extra)))
                 problems.push(`${user}'s menu is ${found.names}, not ${menuOf(extra)}`)
-            if (quickKinds.length) problems.push(`${user} is offered quick create ${quickKinds}`)
+            if (JSON.stringify(quickKinds) !== JSON.stringify(quick))
+                problems.push(`${user} is offered quick create ${quickKinds}, not ${quick}`)
+            const topics = (found.providers?.notificationTopics || []).map(item => item.topic || item)
+            if (quick.length && !["SupportCaseAssigned", "SupportCaseCustomerReply"].every(topic => topics.includes(topic)))
+                problems.push(`${user} lacks the case topics: ${JSON.stringify(topics)}`)
             if (!(found.providers?.paletteSources || []).some(source => source.group === "CustomerService"))
                 problems.push(`${user} has no Customer Service palette source`)
             if (!(found.providers?.keymaps || []).some(keymap => keymap.scope === "customerservice"))
@@ -103,7 +107,7 @@ feature("the Customer Service menu and providers follow each group's areas; the 
     }
 })
 
-feature("Home shows every measure as not configured, with its period, and the lookup of the agent's order", {
+feature("Home counts the agent's open cases, shows the later measures as not configured, My cases and the lookup of the order", {
     when() {
         return asUser(users.agent, () => lib.page("Home", {lookupType: "order", lookupId: ids.deliveredOrderId}))
     },
@@ -116,6 +120,9 @@ feature("Home shows every measure as not configured, with its period, and the lo
         output.includes("Service health,")
         output.includes("Sales order " + ids.deliveredOrderId)
         output.includes("Thermostat and filters")
+        output.includes("My cases")
+        output.includes(ids.thermostatCaseId)
+        output.includes("Team queues")
     }
 })
 
@@ -159,7 +166,7 @@ const capabilityUsers = [
             "orderChangeApprove",
             "returnExceptionApprove",
             "warrantyApprove"
-        ].concat(["returns", "approvals", "reports"])
+        ].concat(["returns", "approvals", "reports", "settings"])
     },
     {user: users.orderDesk, granted: ["orderChangeApply", "orderHoldRelease"]},
     {user: users.returns, granted: authorizer},
@@ -185,7 +192,10 @@ feature("each group holds exactly the capabilities of its permissions and areas,
         const extra = borrowed.filter(name => admin.capabilities[name])
         if (extra.length) problems.push(`the administrator borrows ${extra}`)
         if (admin.allOrganizations !== true) problems.push("the administrator is not in every organization")
-        if (JSON.stringify(admin.queueIds) !== "[]") problems.push(`queues before P2: ${admin.queueIds}`)
+        // P2: the administrator sees the team queues of every organization and the restricted Privacy queue of its team
+        const adminQueues = Array.from(admin.queueIds).sort().join()
+        if (adminQueues !== [ids.privacyQueueId, ids.otherQueueId, ids.supportQueueId].sort().join())
+            problems.push(`the administrator's queues: ${adminQueues}`)
         return {problems}
     },
     then({problems}) {
@@ -333,7 +343,7 @@ feature("the areas a group guards refuse a Customer Service user without it; no 
         for (const [user, path] of [
             [users.read, "Returns"],
             [users.agent, "Approvals"],
-            [users.manager, "Settings"]
+            [users.agent, "Settings"]
         ]) {
             const got = screenRefusal(user, path)
             if (!unauthorized(got) || !got.includes("AT_XML_SCREEN [")) problems.push(`${user} ${path}: ${got || "opened"}`)
@@ -367,6 +377,50 @@ feature("the areas a group guards refuse a Customer Service user without it; no 
             () => ec.entity.find("mantle.order.OrderHeader").condition("orderId", ids.pickOrderId).one().statusId
         )
         if (status !== "OrderApproved") problems.push(`the order awaiting pick is ${status}`)
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+
+// P2: a case is checked by its organization, customer and queue: the agent of its team's queue reaches it (and with caseEdit
+// may change it), the reader of no team does not, another organization's agent does not, and the restricted Privacy queue's
+// case only its team; its record link opens CaseDetail for a user who sees it and keeps the Commons link for another
+feature("a case is its queue's team's and its assignee's; another organization's and a restricted queue's are refused", {
+    when() {
+        const problems = []
+        const check = (user, recordId, capability) =>
+            asUser(user, () => refusal(access + "check#Record", {recordType: "case", recordId, capability}))
+        for (const [user, recordId, capability, expected] of [
+            [users.agent, ids.thermostatCaseId, "caseEdit", ""],
+            [users.read, ids.thermostatCaseId, null, "RECORD_UNAVAILABLE"],
+            [users.services, ids.thermostatCaseId, null, "RECORD_UNAVAILABLE"],
+            [users.services, ids.otherCaseId, "caseEdit", ""],
+            [users.agent, ids.otherCaseId, null, "RECORD_UNAVAILABLE"],
+            [users.agent, ids.privacyCaseId, null, "RECORD_UNAVAILABLE"],
+            [users.manager, ids.privacyCaseId, null, "RECORD_UNAVAILABLE"],
+            [users.admin, ids.privacyCaseId, null, ""],
+            [users.read, ids.otherCaseId, null, "RECORD_UNAVAILABLE"]
+        ]) {
+            const message = check(user, recordId, capability)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} on case ${recordId}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const link = user =>
+            asUser(
+                user,
+                () =>
+                    invoke("ironstone.commons.PaletteServices.get#RecordLink", {
+                        recordEntityName: "mantle.request.Request",
+                        id: ids.thermostatCaseId
+                    }).url || null
+            )
+        const agentLink = link(users.agent)
+        if (agentLink !== "/qapps/CustomerService/Cases/CaseDetail?requestId=" + ids.thermostatCaseId)
+            problems.push(`the agent's case link: ${agentLink}`)
+        const readerLink = link(users.read)
+        if (String(readerLink).includes("CustomerService")) problems.push(`the reader's case link: ${readerLink}`)
         return {problems}
     },
     then({problems}) {

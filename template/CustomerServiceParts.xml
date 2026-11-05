@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Customer Service screens (impl-customer-service P2). A screen includes each transition it uses by
+    name (transition-include), so a form here posts to the screen it is on.
+    - choices: the server-search drop-downs (ironstone.customerservice.AccessServices.get#Choices: customers, organizations,
+      queues, teams, agents, caseTypes, tags, contacts).
+    - customerSearch: the customers the user serves by name, id, email or phone (CaseServices.find#ServiceCustomers, F30), as
+      a drop-down's options with their email or phone.
+    - bulkCases: one change on the selected cases (CaseServices.apply#CaseBatch), its result per case in the message. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="customerSearch" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.CaseServices.find#ServiceCustomers" in-map="{appRoot:appRoot, term:term}"
+                    out-map="found"/>
+            <script><![CDATA[
+                const options = Array.from(found.customers || []).map((row) => ({value: row.partyId,
+                    label: row.name + ([row.email, row.phone].filter(Boolean).length ? ' · ' + [row.email, row.phone].filter(Boolean).join(' · ') : '')}))
+                // the selected customer's label when it is not among the options (its check is the choice source's)
+                if (selected && !options.some((option) => option.value === selected)) {
+                    const chosen = ec.service.sync().name('ironstone.customerservice.AccessServices.get#Choices')
+                            .parameters({appRoot: appRoot, choice: 'customers', selected: selected}).call()?.options || []
+                    for (const option of chosen) if (option.value === selected) options.push(option)
+                }
+                ec.web.sendJsonResponse(options)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the selected cases' change (a transition with actions, so the row selection posts its ids) -->
+    <transition name="bulkCases">
+        <actions>
+            <set field="requestIds" from="(Array.isArray(selectedIds) ? selectedIds : String(selectedIds || '').split(','))
+                    .filter((id) =&gt; id)"/>
+            <service-call name="ironstone.customerservice.CaseServices.apply#CaseBatch" out-map="applied"
+                    in-map="{appRoot:appRoot, requestIds:requestIds, operation:operation, assigneePartyId:(assigneePartyId ?? null),
+                        toStatusId:(toStatusId || null), resolutionEnumId:(resolutionEnumId || null), reason:(reason || null),
+                        tagEnumIds:(tagEnumIds || null), tagMode:(tagMode || null), operationKey:(operationKey || null)}"/>
+            <script>if (!ec.message.hasError()) ec.message.addMessage(applied.message, applied.failedCount ? 'warning' : 'success')</script>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <widgets/>
+</screen>

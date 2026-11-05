@@ -5,7 +5,7 @@
 // AstDelivered, with its AssetIssuance);
 // Joe's Distributing's order of four filters, approved and reserved, awaiting pick; and its order of two filters, packed.
 // The products, their stock and the other organization's order are rows of the data file. Later phases add queues, teams,
-// cases, returns and contacts.
+// cases (P2: loadCases), returns and contacts.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, rows, call} = lib
 
@@ -141,7 +141,34 @@ function loadOrder(p) {
     })
 }
 
-const operations = {load, loadOrder}
+// P2: the demo requests of BossCustomerServiceDemoData.xml made cases by the case rule (Mantle's ensure#CaseProfile), each
+// on its own; one that fails is named and the others are made. The rule's own run after the data file's commit may have made
+// them already; ensure is idempotent.
+const demoCases = [
+    "BOSS_CS_CASE_THERMO",
+    "BOSS_CS_CASE_FILTERS",
+    "BOSS_CS_CASE_PICK",
+    "BOSS_CS_CASE_PRIVACY",
+    "BOSS_CS_CASE_OTHER"
+]
+function loadCases() {
+    return asDemoAdministrator(() => {
+        const errors = []
+        for (const requestId of demoCases) {
+            try {
+                const made = lib.probe("mantle.request.SupportCaseServices.ensure#CaseProfile", {requestId})
+                if (!made.isCase) errors.push(requestId + ": not a case (" + (made.reason || "") + ")")
+            } catch (error) {
+                ec.logger.error("Customer Service demo case " + requestId + " was not made: " + error.message)
+                errors.push(requestId + ": " + error.message)
+            }
+        }
+        if (errors.length) ec.logger.error("Customer Service demo cases: " + errors.join("; "))
+        return {complete: errors.length === 0, errors}
+    })
+}
+
+const operations = {load, loadOrder, loadCases}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service demonstration operation " + op)
