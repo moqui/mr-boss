@@ -2975,31 +2975,31 @@ ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, Purchasi
     next evaluation or a recalculation, while a risk rule applies to the active risks at the time of the check.
   - Report reads are BOSS's (ironstone.purchasing.ReportServices, §2); each export is the report's own CSV transition
     (`exportCsv`) over the same service, not the form-list's CSV button, so it carries the filters, snapshot time and
-    what was left out (F-P15-1).
+    what was left out (F177).
 - Findings (provisional):
-  - **F-P15-1** The form-list CSV export (ScreenCsv.js `$csv`; XLSX writes string cells and is safe) quotes but does not guard formula-like text, so a
+  - **F177** The form-list CSV export (ScreenCsv.js `$csv`; XLSX writes string cells and is safe) quotes but does not guard formula-like text, so a
     list exported with show-csv-button can carry `=...` from a supplier's name or reference into a spreadsheet; the
     Purchasing reports guard their own export (Reports.js `csvCell`, as moqui-report's dashboard export does). For the lead:
     a framework guard in ScreenCsv.js would cover every list (Review P15).
-  - **F-P15-2** A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending
+  - **F178** A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending
     the rule or the risk (PURCHASE_POLICY_EDIT, SUPPLIER_PROFILE_EDIT) or a newer evaluation: there is no per-document
     override. ScoreActions has one effect for RFQs and orders alike, and no reviewer role or expiry; Warn and review warns
     and marks the evaluation, and no follow-up work item is made (§7).
-  - **F-P15-3** RFQ response counts an invitation from its first sent email (EmailMessage ES_SENT): a quote entered on the
+  - **F179** RFQ response counts an invitation from its first sent email (EmailMessage ES_SENT): a quote entered on the
     supplier's behalf with no email sent is not an invitation here. Price variance leaves out a bill in another currency
     than its order (no conversion) and compares in the order line's unit.
-  - **F-P15-4** Evaluating every supplier (no supplier named) reads the period's receipts (at most 5,000 orders), so a
+  - **F180** Evaluating every supplier (no supplier named) reads the period's receipts (at most 5,000 orders), so a
     supplier with only RFQ invitations in the period is evaluated only when named.
-  - **F-P15-5** The supplier statement counts bills received for review and later (not Incoming), credits by invoice type
+  - **F181** The supplier statement counts bills received for review and later (not Incoming), credits by invoice type
     (InvoiceCreditMemo, InvoiceReturn) and Delivered or Confirmed payments by effective date, not their applications: a
     payment not yet applied lowers the balance.
-  - **F-P15-6** The walk follows P10's request through its bill; paying the bill (AP's approval and a payment run) is not
+  - **F182** The walk follows P10's request through its bill; paying the bill (AP's approval and a payment run) is not
     driven, so the tracker's payment shows "Not paid" to a payables reader and the bill's actual is Accounting's conversion
     called directly, as approve#Payable makes it.
-  - **F-P15-7** Spend's received measure is the receipts at the order's price, not landed cost (Accounting's allocation,
+  - **F183** Spend's received measure is the receipts at the order's price, not landed cost (Accounting's allocation,
     linked for its users); paid is by applied date and not by product. A withheld measure still lists its groups, so a
     reader sees which suppliers had spend.
-  - **F-P15-8** Home's counters are all counted now; a Purchasing reader sees no "Unavailable" card (PurchasingAccess's Home
+  - **F184** Home's counters are all counted now; a Purchasing reader sees no "Unavailable" card (PurchasingAccess's Home
     check changed with it).
 - Tests run: Mantle SupplierScorecards with PurchasePolicy, Sourcing, SourcingAwards, PurchaseOrders, SupplierPortal and
   OrderProcureToPayBasicFlow (pass); BOSS PurchasingPerformance, PurchasingAccess, PurchasingSourcing, PurchasingSuppliers,
@@ -3022,7 +3022,7 @@ withheld as null and "Withheld", never zero; Commitments' stage arithmetic again
   (unset period and suppliers as unset) and checks the key before finding the period's suppliers. Spec case added.
 - **R2** (medium, rule) The supplier check applied an evaluation's stored effect whenever any response rule was in effect, so
   ending the score rule that drew a Block did not lift it while a risk rule stayed. An evaluation's response now applies
-  only while the rule that drew it is in effect (ending or changing a rule lifts it until the next evaluation, as F-P15-2
+  only while the rule that drew it is in effect (ending or changing a rule lifts it until the next evaluation, as F178
   says). Spec case added.
 - **R3** (medium, cost) `compare#SupplierQuotes` ran the supplier check (now with the scorecard reads) for every offer line;
   it is once per supplier per comparison. The evaluation reads a line's first acknowledged date once per line, not per
@@ -3036,11 +3036,11 @@ withheld as null and "Withheld", never zero; Commitments' stage arithmetic again
 - **R6** (low) Scorecards' result and score filters picked a supplier's latest matching evaluation, so an older low score
   stood in for a newer one; the filters now apply to the latest evaluation of each supplier (or to every one, view all).
 - **R7** (low) ProcurementTracker's supplier filter left a request's rows of other suppliers in; it applies to them too.
-- For the lead (F-P15-1, framework, unchanged): `runtime/base-component/framework/template/screen/ScreenCsv.js` lines 29-35,
+- For the lead (F177, framework, unchanged): `runtime/base-component/framework/template/screen/ScreenCsv.js` lines 29-35,
   the csv render mode's `$csv`, only quotes a value holding a comma, quote or LF (`/[,"\n]/`, not CR) and never prefixes
   text starting `=`, `+`, `-`, `@`, tab or CR, so a form-list CSV export carries a supplier's `=...` name as a formula. The
   XLSX export is not affected: `crates/moqui-core/src/screen/xlsx.rs` writes text with `write_string_with_format` (lines
-  164, 175), a string cell Excel does not evaluate. F-P15-1's "and the XLSX writer" is only the CSV.
+  164, 175), a string cell Excel does not evaluate. F177's "and the XLSX writer" is only the CSV.
 - Left as they are (bounded and flagged): Spend's receipts and payment applications are read across organizations before the
   order and bill filter, so in a database with many organizations the cap can be reached by others' rows (flagged
   incomplete); SupplierStatement reads bills and payments from the beginning, oldest first, to carry the opening balance, so
@@ -3493,6 +3493,14 @@ is written there too.
 | F174 | P16: A drop-ship delivery report is the order's content and the buyer's notice; OrderDetail's Confirm delivery does not prefill from it yet, and a subcontract order shows the components held at the custody facility but not the dispatch and inspection evidence (§7). | See P16 |
 | F175 | P16: Accounting's portal demo already invites a Ziddleman contact (ziddleman.billing) on ZIZI_PORTAL's Supplier mount; P16 adds the quote and acknowledgement links to it. The Supplier app's default page is now SupplierHome (was BillUpload). | See P16 |
 | F176 | W8 reviews: QuoteResponse shows the RFQ as it is now, so buyer edits not yet re-sent are visible to the supplier (the as-of print could show the last sent revision); a supplier price published from a quote line stays in effect when the award drops the line; with default settings a quote line price change does not move `orderRevision`, so the comparison-to-award SOURCE_CHANGED check rarely fires (the approval path's stamp covers it) | Open, for P17 or later |
+| F177 | P15: The form-list CSV export (ScreenCsv.js `$csv`; XLSX writes string cells and is safe) quotes but does not guard formula-like text, so a list exported with show-csv-button can carry `=...` from a supplier's name or reference into a spreadsheet; the Purchasing reports guard their own export (Reports.js `csvCell`, as moqui-report's dashboard export does). For the lead: a framework guard in ScreenCsv.js would cover every list (Review P15). | See P15 |
+| F178 | P15: A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending the rule or the risk (PURCHASE_POLICY_EDIT, SUPPLIER_PROFILE_EDIT) or a newer evaluation: there is no per-document override. ScoreActions has one effect for RFQs and orders alike, and no reviewer role or expiry; Warn and review warns and marks the evaluation, and no follow-up work item is made (§7). | See P15 |
+| F179 | P15: RFQ response counts an invitation from its first sent email (EmailMessage ES_SENT): a quote entered on the supplier's behalf with no email sent is not an invitation here. Price variance leaves out a bill in another currency than its order (no conversion) and compares in the order line's unit. | See P15 |
+| F180 | P15: Evaluating every supplier (no supplier named) reads the period's receipts (at most 5,000 orders), so a supplier with only RFQ invitations in the period is evaluated only when named. | See P15 |
+| F181 | P15: The supplier statement counts bills received for review and later (not Incoming), credits by invoice type (InvoiceCreditMemo, InvoiceReturn) and Delivered or Confirmed payments by effective date, not their applications: a payment not yet applied lowers the balance. | See P15 |
+| F182 | P15: The walk follows P10's request through its bill; paying the bill (AP's approval and a payment run) is not driven, so the tracker's payment shows "Not paid" to a payables reader and the bill's actual is Accounting's conversion called directly, as approve#Payable makes it. | See P15 |
+| F183 | P15: Spend's received measure is the receipts at the order's price, not landed cost (Accounting's allocation, linked for its users); paid is by applied date and not by product. A withheld measure still lists its groups, so a reader sees which suppliers had spend. | See P15 |
+| F184 | P15: Home's counters are all counted now; a Purchasing reader sees no "Unavailable" card (PurchasingAccess's Home check changed with it). | See P15 |
 
 ## 7. Later
 
@@ -3515,8 +3523,8 @@ Designed, not in this build:
     QuoteResponse and OrderAcknowledgement (F173); OrderDetail's Confirm delivery prefilled from a supplier's
     delivery report, and a subcontract order's dispatch and inspection evidence on its page (F174).
   - from performance (P15): a response rule's separate RFQ and order effects, reviewer role, expiry and follow-up work
-    item, and a per-document override of a block (F-P15-2); a guard of formula-like text in the form-list CSV
-    export (F-P15-1, framework).
+    item, and a per-document override of a block (F178); a guard of formula-like text in the form-list CSV
+    export (F177, framework).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
 - **The rest of the other apps' needs:** Warehouse's transfer conversion and mount in SupplyPlanning (impl-warehouse
