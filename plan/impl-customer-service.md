@@ -947,10 +947,25 @@ usable-when, passing). Fixes:
   RECEIVABLE_VIEW (OrderDetail, OrderResults, Customer360's orders, the confirmation file), withheld otherwise, so the service
   reader without price read sees none; Mantle's get#OrderConfirmationPrint needs PRICE_VIEW, ACCOUNTING_VIEW or ORDER_APPROVE.
 - R3 (medium) A credit hold's type and reason are withheld on OrderDetail from a user without CUSTOMER_CREDIT_VIEW.
-- Left for the lead: F55's first-resend store cannot rebuild every order (R1 refuses those); storing the confirmation at
-  placement behind a store or organization flag, off by default, would remove the refusal. Customer360's Activities tab
-  (P3's list) is not in the Customer Service context. A resend whose send fails leaves its draft, with the PDF, in the shared
-  mailbox, where a mailbox user could change the recipient outside Mantle's check.
+- R4 (medium, Mantle; the lead's follow-up) F55: `PartyAcctgPreference.orderConfirmationOnPlace` (off by default, beside
+  the organization's other order and invoice flags) and the OrderPlacedStoreConfirmation rule (tx-commit on a sales order's
+  placement) store the confirmation at placement through the internal store#PlacedOrderConfirmation, in a transaction of
+  its own, a failure logged and never failing the place; orders placed before the flag keep the first-resend store. Not
+  async: an async call runs as the placing user and updates their UserAccount when it ends, which deadlocked against the
+  BOSS demo loader holding that row. storeOf renders before taking the order's lock. The BOSS demo leaves the flag off for
+  ORG_ZIZI_RETAIL: turned on, the demo load hit statement timeouts (the slower placements overlapping the Accounting demo
+  worker) and OrderToCashBasicFlow and OrderProcureToPayBasicFlow failed, with about 2 s more across those five specs.
+- R5 (medium) Customer360's Activities tab in Customer Service (`Shared/Customer360/ServiceActivities.xml`,
+  CustomerServices.get#CustomerActivities): the customer's and its contact people's communication events on a case the user
+  sees or with the user's organizations (and on no case hidden from them; F74), and the activities on the customer whose
+  owner or assignee is of the user's organizations; read only, no body.
+- R6 (low, Mantle) A resend whose send fails (ES_READY with a sendError) is cancelled by the OrderConfirmationSendFailed rule
+  (cancel#FailedConfirmationSend), so its PDF is not left editable in the shared mailbox's Outbox.
+- Specs after R4–R6: Mantle OrderConfirmations (4 features), OrderToCashBasicFlow, ReturnToResponseBasicFlow (with the BOSS
+  demo); BOSS CustomerServiceOrders, CustomerServiceAccess, AccountingReceivables, AccountingCollections; acceptance
+  AppStructure; lint as before.
+- Left for the lead: the flag has no field on Accounting's organization settings yet (SetupServices' flag list), and the
+  demo load's contention with an on flag (R4) is the demo loader's, worth a look before a demo turns it on.
 
 ### P4 — Service levels
 

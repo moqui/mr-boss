@@ -40,6 +40,20 @@ spec({
                     statusId: "OrderPlaced"
                 })
             }
+            // a message from the shared customer to each organization (Customer360's Activities, F74)
+            for (const [communicationEventId, toPartyId] of [
+                ["BOSS_CS_SPEC_ACME_MSG_RETAIL", ids.organizationId],
+                ["BOSS_CS_SPEC_ACME_MSG_SERVICES", ids.otherOrganizationId]
+            ])
+                if (!ec.entity.find("mantle.party.communication.CommunicationEvent").condition({communicationEventId}).one())
+                    invoke("create#mantle.party.communication.CommunicationEvent", {
+                        communicationEventId,
+                        communicationEventTypeId: "Email",
+                        fromPartyId: ids.sharedCustomerId,
+                        toPartyId,
+                        entryDate: ec.user.nowTimestamp,
+                        subject: "Spec message " + communicationEventId
+                    })
             const billing = ec.entity
                 .find("mantle.order.OrderItemBilling")
                 .condition("orderId", ids.deliveredOrderId)
@@ -86,7 +100,7 @@ feature(
 )
 
 feature(
-    "Customer360 of a shared customer lists only the user's organizations' orders; another organization's customer is not found",
+    "Customer360 of a shared customer lists only the user's organizations' orders and communications; another organization's customer is not found",
     {
         when() {
             const orderList = detail => Array.from(detail.customerDetail?.orderRows || []).map(row => row.orderId)
@@ -96,6 +110,14 @@ feature(
             const services = asUser(users.services, () =>
                 invoke(customers + "get#Customer360", {customerPartyId: ids.sharedCustomerId})
             )
+            const events = user =>
+                asUser(user, () =>
+                    Array.from(
+                        invoke(customers + "get#CustomerActivities", {customerPartyId: ids.sharedCustomerId}).eventRows || []
+                    ).map(row => row.communicationEventId)
+                )
+            const retailEvents = events(users.agent)
+            const servicesEvents = events(users.services)
             const otherCustomer = asUser(users.agent, () =>
                 invoke(customers + "get#Customer360", {customerPartyId: ids.otherCustomerId})
             )
@@ -103,15 +125,21 @@ feature(
                 retail: orderList(retail),
                 services: orderList(services),
                 shared: retail.customerDetail?.shared,
+                retailEvents,
+                servicesEvents,
                 otherCustomer
             }
         },
-        then({retail, services, shared, otherCustomer}) {
+        then({retail, services, shared, retailEvents, servicesEvents, otherCustomer}) {
             shared == true
             retail.includes("BOSS_CS_SPEC_ACME_RETAIL")
             !retail.includes("BOSS_CS_SPEC_ACME_SERVICES")
             services.includes("BOSS_CS_SPEC_ACME_SERVICES")
             !services.includes("BOSS_CS_SPEC_ACME_RETAIL")
+            retailEvents.includes("BOSS_CS_SPEC_ACME_MSG_RETAIL")
+            !retailEvents.includes("BOSS_CS_SPEC_ACME_MSG_SERVICES")
+            servicesEvents.includes("BOSS_CS_SPEC_ACME_MSG_SERVICES")
+            !servicesEvents.includes("BOSS_CS_SPEC_ACME_MSG_RETAIL")
             otherCustomer.customerFound == false
             otherCustomer.customerDetail == null
         }

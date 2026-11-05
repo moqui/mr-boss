@@ -18,6 +18,24 @@ along with this software (see the LICENSE.md file). If not, see
     or RECEIVABLE_VIEW;
     the credit status, Mantle's get#CustomerCreditStatus, for CUSTOMER_CREDIT_VIEW). -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="CustomerActivities" allow-remote="false">
+        <description>Customer360's Activities tab in Customer Service (crosscut §3.2): the communication events of the
+            customer and its contact people that are on a case the user sees, or with the user's organizations and on no case
+            hidden from them (a shared customer's other organizations' left out, F74), and the activities on the customer whose
+            owner or assignee is of the user's organizations; read only, subjects and dates, no body. A customer the user
+            does not serve is refused like a missing one (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="customerPartyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="eventRows" type="List"/>
+            <parameter name="activityRows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Customers.js').execute('customerActivities', context)"/>
+            <set field="eventRows" from="found.eventRows"/>
+            <set field="activityRows" from="found.activityRows"/>
+        </actions>
+    </service>
     <service verb="find" noun="Customers" allow-remote="false">
         <description>CustomerList (design Customers): the customers the user serves by name or id, email or phone
             (find#ServiceCustomers; empty text finds none), each with its email, phone, open cases, latest order with the

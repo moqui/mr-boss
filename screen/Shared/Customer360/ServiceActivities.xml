@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Activities tab, in the Customer Service context (crosscut §3.2 Customer Service row; impl-customer-service
+    P3 review): the customer's and its contact people's communication events on cases the user sees or with the user's
+    organizations, and the activities on the customer (CustomerServices.get#CustomerActivities, F74), read only. Accounting's
+    Activities tab (collections) stays Accounting's. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Activities" default-menu-index="5">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService'</expression></condition>
+    <actions>
+        <set field="activities" from="null"/>
+        <if condition="customerFound">
+            <service-call name="ironstone.customerservice.CustomerServices.get#CustomerActivities" out-map="activities"
+                    in-map="{appRoot:appRoot, customerPartyId:customerPartyId}" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="eventRows" from="activities?.eventRows || []"/>
+        <set field="activityRows" from="activities?.activityRows || []"/>
+    </actions>
+    <widgets>
+        <section name="ServiceActivitiesTab" condition="customerFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Communications · ${eventRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="ServiceCustomerEvents" list="eventRows" skip-form="true" paginate="false">
+                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="subject"><default-field title="Subject"><display/></default-field></field>
+                            <field name="fromName"><default-field title="From"><display/></default-field></field>
+                            <field name="toName"><default-field title="To"><display/></default-field></field>
+                            <field name="caseId">
+                                <default-field title="Case">
+                                    <link url="${caseUrl}" url-type="plain" text="${caseId}" link-type="anchor" condition="caseUrl"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="subject"/><field-ref name="dateText"/></column>
+                                <column><field-ref name="kindText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No communication you see."
+                                condition="!eventRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Activities · ${activityRows.length}"/>
+                    <box-body-nopad>
+                        <form-list name="ServiceCustomerActivities" list="activityRows" skip-form="true" paginate="false">
+                            <field name="name"><default-field title="Activity"><display/></default-field></field>
+                            <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="assigneeText"><default-field title="Assigned to"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="name"/><field-ref name="dueText"/></column>
+                                <column><field-ref name="statusText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No activity on this customer you see."
+                                condition="!activityRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

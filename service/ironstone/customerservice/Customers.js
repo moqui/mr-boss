@@ -126,6 +126,95 @@ function creditOf(userScope, customerPartyId) {
     return {read: true, rows: out}
 }
 
+// ===== Activities (crosscut §3.2 Customer Service row) =====
+// A party of the user's organizations: one of them, or a person with a current relationship to one (an employee, agent
+// or member).
+function ofOrganizations(vendors, partyId) {
+    if (!partyId) return false
+    if (vendors.includes(partyId)) return true
+    return rows("mantle.party.PartyRelationship", {fromPartyId: partyId}).some(
+        row => vendors.includes(row.toPartyId) && lib.active(row)
+    )
+}
+// get#CustomerActivities: the customer's and its contact people's communication events and its activities the user may
+// see, read only, newest first. An event shows when it is on a case the user sees, or it is with the user's organizations
+// (its other party is one of them or of their people) and on no case the user does not see; a shared customer's other
+// organizations' are left out (F74). An activity (a WorkEffortRecord on the customer) shows when its owner or assignee is
+// of the user's organizations. Subjects, dates, kinds and parties only: no body.
+function customerActivities(p) {
+    const userScope = cs.required()
+    const customerPartyId = String(p.customerPartyId || "")
+    cs.recordOf(userScope, "customer", customerPartyId)
+    const vendors = cs.vendorIds(userScope)
+    const people = new Set([customerPartyId].concat(contactPeople(customerPartyId).map(row => row.partyId)))
+    const caseSeen = new Map()
+    const seen = requestId => {
+        if (!caseSeen.has(requestId)) caseSeen.set(requestId, !!orders.linkOf(userScope, "case", requestId))
+        return caseSeen.get(requestId)
+    }
+    const eventIds = new Set()
+    for (const partyId of people)
+        for (const field of ["fromPartyId", "toPartyId"])
+            for (const row of find("mantle.party.communication.CommunicationEvent")
+                .condition(field, partyId)
+                .selectField("communicationEventId")
+                .orderBy("-entryDate")
+                .limit(listCap)
+                .list())
+                eventIds.add(row.communicationEventId)
+    const events = eventIds.size
+        ? Array.from(
+              find("mantle.party.communication.CommunicationEvent")
+                  .condition("communicationEventId", "in", Array.from(eventIds))
+                  .orderBy("-entryDate")
+                  .list()
+          )
+        : []
+    const eventRows = []
+    for (const event of events) {
+        const caseIds = rows("mantle.request.RequestCommEvent", {communicationEventId: event.communicationEventId}).map(
+            row => row.requestId
+        )
+        const onSeenCase = caseIds.find(seen)
+        if (caseIds.length && !onSeenCase) continue
+        const other = people.has(event.fromPartyId) ? event.toPartyId : event.fromPartyId
+        if (!onSeenCase && !ofOrganizations(vendors, other)) continue
+        eventRows.push({
+            communicationEventId: event.communicationEventId,
+            dateText: dayText(event.entryDate || event.datetimeStarted),
+            kindText: cs.enumText(event.communicationEventTypeId) || event.communicationEventTypeId || "",
+            subject: event.subject || "",
+            fromName: event.fromPartyId ? cs.partyName(event.fromPartyId) : "",
+            toName: event.toPartyId ? cs.partyName(event.toPartyId) : "",
+            caseId: onSeenCase || null,
+            caseUrl: onSeenCase ? orders.linkOf(userScope, "case", onSeenCase) : null
+        })
+        if (eventRows.length >= listCap) break
+    }
+    const activityRows = []
+    for (const link of rows("mantle.work.effort.WorkEffortRecord", {
+        recordEntityName: "mantle.party.Party",
+        recordId: customerPartyId
+    })) {
+        const effort = one("mantle.work.effort.WorkEffort", {workEffortId: link.workEffortId})
+        if (!effort) continue
+        const assignees = rows("mantle.work.effort.WorkEffortParty", {workEffortId: effort.workEffortId})
+            .filter(row => lib.active(row))
+            .map(row => row.partyId)
+        if (![effort.ownerPartyId].concat(assignees).some(partyId => ofOrganizations(vendors, partyId))) continue
+        activityRows.push({
+            workEffortId: effort.workEffortId,
+            name: effort.workEffortName || effort.workEffortId,
+            dueText: dayText(effort.estimatedCompletionDate || effort.estimatedStartDate),
+            sortDate: ms(effort.estimatedCompletionDate || effort.estimatedStartDate) || 0,
+            statusText: cs.statusText(effort.statusId),
+            assigneeText: assignees.map(cs.partyName).join(", ")
+        })
+    }
+    activityRows.sort((a, b) => b.sortDate - a.sortDate)
+    return {eventRows, activityRows: activityRows.slice(0, listCap)}
+}
+
 // get#Customer360: the customer's record in Customer Service (crosscut §3.2 Customer Service row). A customer the user does
 // not serve is not found, like a missing one.
 function customer360(p) {
@@ -267,7 +356,7 @@ function serviceContact(p) {
     return {partyId, customerPartyId: customer, customerName: cs.partyName(customer)}
 }
 
-const operations = {customer360, findCustomers, serviceContact}
+const operations = {customer360, customerActivities, findCustomers, serviceContact}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service customer operation " + op)
