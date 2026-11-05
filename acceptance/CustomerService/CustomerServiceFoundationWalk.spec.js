@@ -148,7 +148,9 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         returnIds: [ids.warehouseReturnId],
                         returnId: ids.warehouseReturnId,
                         qualityInspectionId: "BOSS_CS_NO_INSPECTION",
-                        capability: "inspect"
+                        capability: "inspect",
+                        // P13: a feedback answer's read
+                        formResponseId: "BOSS_CS_NO_RESPONSE"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))
