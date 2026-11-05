@@ -52,6 +52,8 @@ feature(
                 values: Array.from(values.options || []).map(row => row.value),
                 agent: mine(users.agent),
                 manager: mine(users.manager),
+                // the administrator, on no team, is in Retail's group too (F131: Mantle keeps its service managers there)
+                admin: mine(users.admin),
                 services: mine(users.services),
                 comms,
                 otherComms
@@ -69,6 +71,7 @@ feature(
             r.manager.includes("BOSS_CS_REPLY_DETAILS")
             !r.manager.includes("BOSS_CS_REPLY_PATIENCE")
             !r.services.includes("BOSS_CS_REPLY_FILTERS")
+            r.admin.includes("BOSS_CS_REPLY_FILTERS")
             r.comms.includes("BOSS_CS_REPLY_PATIENCE")
             r.comms.includes("BOSS_CS_REPLY_DETAILS")
             r.comms.includes("BOSS_CS_REPLY_FILTERS")

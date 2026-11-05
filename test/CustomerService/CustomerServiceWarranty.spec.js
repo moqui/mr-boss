@@ -3,7 +3,8 @@
 // action), WarrantyClaims' one qvt render listing it, Customer360's Delivered items' one html render (a tab alone) showing the serial with its
 // warranty end and the claim, and NewCase's template step taking the warranty claim type's template before the queue's. The
 // rules are Mantle's SupportWarranty spec; the access rule is CustomerServiceAccess's; the usable-when is the acceptance
-// CustomerServiceWarrantyWalk. The claim is the spec's own, closed at the end.
+// CustomerServiceWarrantyWalk. RequestDetail's unlink of the claim's order moves its revision (F185, through WarrantyServices).
+// The claim is the spec's own, closed at the end.
 // Run: ./moq test mr-boss --spec CustomerServiceWarranty
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
 const {ids, users, asUser, invoke} = lib
@@ -53,7 +54,26 @@ feature(
                 .condition("requestId", made.requestId)
                 .disableAuthz()
                 .one()
+            // F185: RequestDetail's unlink of the claim's order goes through WarrantyServices, which moves its revision
+            const unlinked = asUser(users.agent, () => {
+                const posted = ec.screen
+                    .makeTest()
+                    .rootScreen("component://webroot/screen/webroot.xml")
+                    .render(
+                        "apps/CustomerService/Cases/CaseDetail/unlinkRecord",
+                        {requestId: made.requestId, recordEntityName: "mantle.order.OrderHeader", recordId: ids.deliveredOrderId},
+                        "post"
+                    )
+                const result = {status: posted.status, errors: Array.from(posted.errorMessages || []).join(" | ")}
+                ec.message.clearErrors()
+                return result
+            })
+            const revision = Number(
+                ec.entity.find("mantle.request.Request").condition("requestId", made.requestId).disableAuthz().one().claimRevision
+            )
             return {
+                unlinked,
+                revision,
                 thermostat,
                 made,
                 endText,
@@ -65,9 +85,23 @@ feature(
                 profile
             }
         },
-        then({thermostat, made, endText, assessment, list, delivered, warrantyTemplate, supportTemplate, profile}) {
+        then({
+            unlinked,
+            revision,
+            thermostat,
+            made,
+            endText,
+            assessment,
+            list,
+            delivered,
+            warrantyTemplate,
+            supportTemplate,
+            profile
+        }) {
             thermostat.assetId != null
             made.error == ""
+            unlinked.errors == ""
+            revision == made.claimRevision + 1
             profile.templateFormId == ids.warrantyTemplateFormId
             assessment.errors == []
             assessment.output.includes("Warranty claim " + made.requestId)
