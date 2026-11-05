@@ -91,7 +91,8 @@ along with this software (see the LICENSE.md file). If not, see
             </if>
             <message type="success">Created case ${requestId}</message>
         </actions>
-        <conditional-response url="//CustomerService/Returns/WarrantyAssessment" condition="requestTypeEnumId == 'RqtWarranty'">
+        <conditional-response url="//CustomerService/Returns/WarrantyAssessment">
+            <condition><expression>requestTypeEnumId == 'RqtWarranty'</expression></condition>
             <parameter name="requestId"/></conditional-response>
         <default-response url="../CaseDetail"><parameter name="requestId"/></default-response>
         <error-response url="."/>

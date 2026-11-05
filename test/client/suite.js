@@ -5,7 +5,8 @@ suite(
         "ProductsWalk",
         "WarehouseReceivingWalk",
         "ManufacturingWorkOrdersWalk",
-        "PurchasingOrdersWalk"
+        "PurchasingOrdersWalk",
+        "CustomerServiceCasesWalk"
     ],
     {
         server: {
