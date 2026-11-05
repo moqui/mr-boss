@@ -1023,3 +1023,39 @@ feature("feedback: the administrator keeps the forms, the manager reads the answ
         problems.join("\n") == ""
     }
 })
+
+feature(
+    "Invite to support is a SUPPORT_CONTACT_INVITE holder's, to the contact's own address; another organization's contact is refused",
+    {
+        when() {
+            const contactId = "BOSS_CS_JOEDIST_CONTACT"
+            const S = "ironstone.customerservice.SupportAppServices."
+            const offer = user =>
+                asUser(user, () => invoke(S + "get#SupportInvite", {appRoot: "CustomerService", partyId: contactId}))
+            const holder = offer(users.manager)
+            const agent = offer(users.agent)
+            const inviteAs = (user, emailAddress) =>
+                asUser(user, () =>
+                    refusal(S + "create#SupportInvitation", {appRoot: "CustomerService", partyId: contactId, emailAddress})
+                )
+            return {
+                holder,
+                agent,
+                agentInvite: inviteAs(users.agent, "dana@joesdist.example.com"),
+                otherAddress: inviteAs(users.manager, "someone@elsewhere.example.com"),
+                otherOrganization: asUser(users.services, () =>
+                    refusal(S + "get#SupportInvite", {appRoot: "CustomerService", partyId: contactId})
+                )
+            }
+        },
+        then({holder, agent, agentInvite, otherAddress, otherOrganization}) {
+            holder.canInvite === true
+            holder.customerPartyId === "JoeDist"
+            holder.emailOptions.some(row => row.value === "dana@joesdist.example.com")
+            agent.canInvite === false
+            agentInvite.includes("PERMISSION_DENIED")
+            otherAddress.includes("EMAIL_INVALID")
+            otherOrganization.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)

@@ -302,7 +302,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
 | P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | built Nov 5, 2026 |
 | P14 Reports | BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis | — |
-| P15 Support app | Mantle, mr-pass, BOSS | Support's SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle; ContactDetail's invitation | — |
+| P15 Support app | Mantle, mr-pass, BOSS | Support's SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle; ContactDetail's invitation | built Nov 5, 2026 |
 | P16 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -2911,6 +2911,129 @@ Design §8; CS-PORTAL.
     published help only;
   - the same walk passes through a remote PASS frontend with only framework, webroot and PASS installed;
   - the regression suites of mr-pass and mr-boss pass unchanged.
+
+**Built Nov 5 (P15).**
+- Mantle, the customer side (CS-PORTAL; F41): `service/mantle/request/SupportPortal.js` (SupportHome, help, cases),
+  `service/mantle/order/CustomerReturns.js` (returns) and `service/mantle/order/CustomerOrders.js` (the cancel request), each
+  operation finding the support mount's organization (a published site, an internal target with a service policy) and the
+  asker first: a bearer link through `ExternalAccess.check` (a case's CaseView, a queue's CaseIntake, an RMA's ReturnRma), or a
+  signed-in account acting for a customer of the organization (`ExternalAccess.actingParties`: its contact grants, with the
+  administrator flag, and its own party through the self relationship), each a customer the organization serves. Services
+  appended to their packages: `SupportCaseServices` get#SupportHome, find#CustomerCases, get#CaseIntake, create#CustomerCase,
+  get#CustomerCase, reply#CustomerCase, request#CaseReopen, cancel#CustomerCase, get#CaseFile, save#SupportAppSetting,
+  get#SupportAppSetting, get#CaseCustomerLink; `KnowledgeServices` get#CustomerArticle and rate#Article; `ReturnPolicyServices`
+  find#CustomerReturns, get#ReturnableOrder, request#CustomerReturn, get#CustomerReturn, add#ReturnEvidence,
+  withdraw#CustomerReturn, get#ReturnLabel; `OrderChangeServices` request#CustomerCancel, get#CustomerCancel,
+  withdraw#CustomerCancel. The projections: a case's customer status label (the mapping's customerLabel, else the customer's
+  words), its outward messages only (no Comment, Message, StatusUpdate, CpServiceInternal call, cancelled or bounced message;
+  a staff mail once ES_SENT; a staff sender shown as the organization), files of the new customer-shared type only, the
+  customer-visible template values (P7's contact path: `CaseTemplates.customerProjection`), the customer's own order and return
+  links, its revision and what the page may do; a return in the customer's words with quantities, remedy, what was issued
+  (never an amount), expiry, instructions, tracking and evidence.
+- Mantle, the writes: create#CustomerCase files into one of the mount's queues and types (the queue's priority, assignment and
+  SLA through `ensure#CaseProfile`; P7's `checkValues` with the customer audience; the order and the cited article linked, the
+  article named in the description; a file staged and scanned into RequestContent RqCntCustomerShared), or with a queue's
+  token create#IntakeRequest's public form (its limits; an unknown sender held; the answer reads no case); a reply is a WebSite
+  message from the customer's side filed on the case, so P4's and P8's rules record it (the clocks, the assignee's notice, a
+  reopen within the window or a follow-up); request#CaseReopen a reply with the reason within the window; cancel#CustomerCase
+  the workflow's move to Cancelled at the shown revision, resolved RrWithdrawn. A return request is `submit#CustomerReturn` on
+  the Support claim (`ReturnPolicies.js asCustomer`; F-P15-4) for the customer's eligible lines only (a self-service policy,
+  in its window, at most what is left), customer-visible reasons and the policy's remedies, the server choosing the facility
+  and keeping the policy, no assignee; withdraw#CustomerReturn is `cancel#CustomerReturn` on the claim before any effect,
+  after it "ask an agent"; evidence a scanned file as ReturnContent RtcntCustomerEvidence; the label `labelImage` kept once as
+  RtcntReturnLabel. requestOrderCancel is P10's `save#OrderChange` cancel kind on the claim (`OrderChanges.js customerSide`),
+  "Cancellation requested" unless customerImmediateCancel; the customer's read (F162) names its state and lines, no decision
+  reason or approver; withdraw#OrderChange takes the filer unscoped. Posts throttled per requester (the framework's sign-in
+  limits); creates, replies, evidence and withdrawals keyed by the page's operationId (CX-POSTING's operation record).
+- Mantle, the rest: `entity/SupportPortalEntities.xml` (`SupportAppSetting`, dated and audit-logged: the mount's queues, types
+  and knowledge spaces; `ExternalAccessContact.administrator`; `ArticleFeedback.nonceDigest`; the seeds RqCntCustomerShared,
+  RtcntCustomerEvidence, RtcntReturnLabel, RrWithdrawn). `ExternalAccess.js`: `selfOf` and `actingParties`, the Request and
+  ReturnHeader kinds' `self`, the Request kind's `contactAllows` (a contact's own case, else a customer administrator), the
+  support app kind taking a person customer (F57) and a Customer role, `invite#Contact`'s `administrator`. `party/PortalMedia.js`,
+  Accounting's `Portal.js stage` moved to a shared module (F58; Portal.js delegates). `send#ReturnAuthorization` makes the RMA
+  link when none is given (F60). Help: the mount's customer and public sources (an anonymous reader public ones only), searched
+  by `find#ArticleSuggestions`' customer-visible rule, read by `get#PublishedArticle` (F59), the link by `PublicApps.pageUrl`
+  (F105), rated once per view's nonce (30 in ten minutes per requester) as an AfsCustomer ArticleFeedback for P12's review.
+  The outside-working-hours notice from the queue team's schedule calendar (BusinessTime.js, P4).
+- PASS (mr-pass): `screen/Support/` SupportHome (HelpSearch, HelpResults), MyCases (MyCaseFind, MyCaseList), NewCustomerCase
+  (with OrderCancelRequest; the type's template fields with `/js/moqui-form-when.js`; the queue form's sender fields and
+  honeypot), CustomerCase (reply, reopen, cancel, files), MyReturns (MyReturnFind, MyReturnList), RequestReturn, CustomerReturn
+  (evidence, withdraw, label) and CustomerArticle (Was this helpful?), each `.xml` with its `.html.fancy`, and `Support.js`
+  (a parameter, the notice across a post's redirect, a post, a download); `Support.xml` defaults to SupportHome; the Support
+  header's Help, My cases, My returns and Contact support; Account Settings' Support links (the hub). The 21 operations in
+  `Schema.js` and `Routes.js` (`support/...`) with Mantle's mirrors; TOKEN_WRITES (createCustomerCase, replyCustomerCase,
+  requestCaseReopen, cancelCustomerCase, rateArticle, addReturnEvidence, withdrawCustomerReturn) in `Transport.js`, `PassApi.js`
+  and `PassAuthority.js`; downloads through the facade (`Facade.downloadFile`, `Transport.downloadOperation`, PassAuthority's
+  DOWNLOADS: getCaseFile, getReturnLabel; F-P15-12). No `ironstone.*` call in mr-pass.
+- BOSS: `service/ironstone/customerservice/SupportAppServices.xml`, `SupportApp.js` (get#SupportInvite, create#SupportInvitation,
+  get#SupportMountSettings); ContactDetail's Invite to support (`template/CustomerServiceSupportInvite.xml`: SUPPORT_CONTACT_INVITE
+  holders, the contact's own addresses only, the customer administrator choice); ServiceDefaults' Support app section (its
+  sites, queues, case types and knowledge spaces from a date).
+- Demo: `data/BossZZZCustomerServiceSupportDemoData.xml`, `SupportDemo.js` (`DemoServices.load#SupportDemo`): Retail's Support
+  mount settings (the Support queue, ZZW_RETAIL), Joe's Distributing's contact dana@joesdist.example.com and customer
+  administrator morgan@joesdist.example.com as invited and redeemed PASS accounts, CustJqp's own account (joe@public.com) with its
+  address verified (the self relationship), a case the contact filed through the app, and the Support queue's public form token
+  (`SupportDemo.js SUPPORT_TOKENS`); demo password moqui.
+- Specs: Mantle `test/request/SupportPortal` (5 features, 1.6 s: the contact's, administrator's, own account's, unverified
+  and uninvited accounts' cases, a hidden queue refused; outward messages and shared files only, a reply, a stale and a good
+  cancel; a queue token's request with no case read and a forged one; a return of eligible lines with the policy and facility,
+  its RMA link, a contact of no grant refused, the withdrawal; a cancel request filed, read and withdrawn). mr-pass
+  `test/Support/SupportAccess` (+1 feature, 0.12 s: MyCases and CustomerCase rendered once each for the contact; a colleague's,
+  another customer's and an uninvited account's refused; the case link signed out), `SupportFixtures.js contacts`. BOSS
+  `CustomerServiceAccess` (+1 feature, 0.19 s: Invite to support for the manager, refused the agent and another organization's
+  user, an address not the contact's refused). Acceptance: mr-pass `acceptance/SupportFixtures` (+1 feature),
+  `acceptance/client/SupportPagesHttp` (2 features: at 390 px the contact's cases, reply and new request, a colleague's case;
+  on the desktop the case link, the RMA link and its withdrawal, a visitor and a forged link) and `RemoteHttp` (+1 feature);
+  BOSS `acceptance/CustomerService/CustomerServiceSupportWalk` (3 features on the demo: JoeDist's contact and administrator, Joe's
+  own account; Retail's help read and rated once per view, none for a visitor; the queue form token; Invite to support;
+  ServiceDefaults' settings read).
+- Tests run (all pass): Mantle SupportPortal, AccountingPortals, SupplierPortal, ReturnPolicies, OrderChanges, CaseFeedback,
+  SupportCases, SupportKnowledge, WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday,
+  OrderToCashBasicFlow, ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow; mr-pass SupportAccess, Forum,
+  ForumAccess, PublicIdentity, Integrations, Portals, SupplierPages, Media, Transport; BOSS CustomerServiceAccess,
+  CustomerServiceFeedback, CustomerServiceReturns, CustomerServiceOrderChanges, CustomerServiceKnowledge, CustomerServiceCases;
+  acceptance CustomerServiceSupportWalk, SupportPagesHttp and RemoteHttp against the local authority, and the remote pair of
+  docs/Deployment.md "Reproducing the remote check" over REST (a scratch frontend runtime of framework, webroot and mr-pass only;
+  RemoteFixtures passes): RemoteHttp's 9 features and SupportPagesHttp's 2 through the frontend. `moqui lint --screens`: 136
+  flagged sites, as master; none in the screens added or changed.
+- Findings (provisional):
+  - **F-P15-1** ExternalAccessContact had no role for "a customer administrator, a role on that relationship": it gains
+    `administrator` (audit-logged), set from the invitation's scope on redeem; a contact's case is one it filed or reports (or
+    is the Customer party of) unless it is an administrator (the Request kind's `contactAllows`, inside `ExternalAccess.check`).
+  - **F-P15-2** "A verified email" is a framework `VerifiedAddress` row of the account; the self relationship holds only for an
+    account whose party is the record's outside party, not internal and working for no internal organization, on the kinds that
+    allow it (Request, ReturnHeader), and the own account sees all of its own cases.
+  - **F-P15-3** The Support mount's settings (design ServiceDefaults' "the Support mount's queues, intake types and knowledge
+    spaces") have no field: `save#ServiceDefaults` starts each ServicePolicy row from its own fields, so new fields there would be
+    dropped by every other save. They are a dated `SupportAppSetting` row of their own, saved by save#SupportAppSetting. Design
+    ServiceDefaults changed.
+  - **F-P15-4** A public account holds no Mantle permission, so the customer writes run on a Support claim in
+    `ec.context.sharedMap` (`SupportCustomerClaim`, set only by CustomerReturns.js and CustomerOrders.js after ExternalAccess),
+    as Purchasing's supplier claim: ReturnPolicies.js honours it for the lists naming SUPPORT_CASE_EDIT (and RETURN_AUTHORIZE only
+    for a withdrawal) with the claim's organization and customer in place of the facility scope, and leaves the return
+    unassigned; OrderChanges.js's `customerSide` takes it. Cases are written by SupportPortal.js through create#Request, the
+    parties and ensure#CaseProfile rather than create#Case, which is an agent's (SUPPORT_CASE_EDIT, the queue's assignee).
+  - **F-P15-5** "Approved shared files" had no type: RequestContent RqCntCustomerShared ("Shared with the customer"); RecordFiles
+    keeps its internal default (RqCntInternal), so an agent shares a file by choosing the type; customer files land in it.
+  - **F-P15-6** P9's ReturnHeader kind resolves no cancelled return, so a withdrawn return's page closes for its link and its
+    contact alike: the withdrawal's receipt says so and MyReturns lists a withdrawn return without a link.
+  - **F-P15-7** The rating's per-page nonce is a random value issued with the article; Mantle has no server secret to sign it,
+    so it proves one rating per view (its digest unique on ArticleFeedback), not that the server issued it; the requester's
+    limit (30 in ten minutes) bounds the rest.
+  - **F-P15-8** PASS's file downloads were Forum's and exports only: PassAuthority's DOWNLOADS list, `Facade.downloadFile` and
+    `Transport.downloadOperation` (REST: the operation's GET route with its input as the query; gRPC: the operation) stream a
+    Support file; the label image is kept once as ReturnContent so the transports stream a location.
+  - **F-P15-9** BOSS's client deny pattern names the write verbs of ironstone services; `invite` is none of them, so BOSS's
+    service is `create#SupportInvitation`.
+  - **F-P15-10** Shop does not exist (mr-pass has only plan/design-shop.md and impl-shop.md; BOSS Commerce is placeholders): X7's
+    Get help, Request return and cancel wait for Shop, which calls create#CustomerCase, request#CustomerReturn and
+    request#CustomerCancel; the store's queue and the SalesOrder OrderView token (impl-shop F27) are not built.
+  - **F-P15-11** Admin's privacy provider contract (`org.moqui.admin.PrivacyServices`) does not exist, so CS-PRIVACY's provider
+    and F187's `redact#FormResponse` wait for it; P2's interim privacy cases take the requests (§7).
+- Not done: notices: an agent's case reply mail does not yet carry the case's Support link (`get#CaseCustomerLink` is built for
+  BOSS's reply compose, not wired), and P9 sends customers no decision notice, so only the RMA mail links its page; MyCases and
+  MyReturns show the newest 100 with no opaque cursor; the label download and the immediate cancel are not exercised by a spec
+  (P9's label fixture and P10's spec cover their rules); F181's readiness stays in CaseFeedbackServices.
 
 ### P16 — Finish
 

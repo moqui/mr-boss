@@ -98,12 +98,12 @@ is unchanged.
 | SingleMessage | ReplyMessageForm | Comms/Inbox/Compose; Shared/Chatter | Comms/Inbox/Compose; Shared/Chatter |
 | Notifications | NotificationTopicList | Commons/Settings/Notifications | Commons/Settings/Notifications |
 | Notifications | NotificationList | Commons/Notifications; Commons/Panel/Notifications | Commons/Notifications; Commons/Panel/Notifications |
-| EditRequest | EditRequest | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
-| EditRequest | UpdatePartyForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail |
-| RequestCommentReply | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
-| RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter |
-| MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; PASS:Support/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate |
-| MyRequests | ListRequests | Commons/Home; Commons/Requests; PASS:Support/MyCases | Commons/Home; Commons/Requests/List |
+| EditRequest | EditRequest | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase (Customer Service P15) |
+| EditRequest | UpdatePartyForm | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; PASS:Support/CustomerCase (Customer Service P15) |
+| RequestCommentReply | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase (Customer Service P15) |
+| RequestCommentUpdate | ReplyCommentForm | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase | Commons/Requests/RequestDetail; Shared/Chatter; PASS:Support/CustomerCase (Customer Service P15) |
+| MyRequests | NewRequestForm | Commons/Requests; Commons/QuickCreate; PASS:Support/NewCustomerCase | Commons/Requests/List; Commons/QuickCreate; PASS:Support/NewCustomerCase (Customer Service P15) |
+| MyRequests | ListRequests | Commons/Home; Commons/Requests; PASS:Support/MyCases | Commons/Home; Commons/Requests/List; PASS:Support/MyCases (Customer Service P15) |
 | ScheduledFinds | ScreenScheduledList | Insights/ScheduledReports |  |
 | EditScheduledFind | EditScreenScheduled | Insights/ScheduledReports/ScheduledReportDetail |  |
 | MyTasks | NewTaskForm | Commons/Tasks; Commons/QuickCreate | Commons/Tasks/List; Commons/QuickCreate |
@@ -777,14 +777,14 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#PurchasingReturnEligibleList (Shared/ReturnDetail); CustomerService/Returns/NewReturn (Customer Service P9) |
-| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#AddReturnReceipt (Shared/ReturnDetail); CustomerService/Returns/NewReturn (Customer Service P9) |
+| AddOrderItems | LookBackDaysForm | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#ReturnEligibleList (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#PurchasingReturnEligibleList (Shared/ReturnDetail); CustomerService/Returns/NewReturn (Customer Service P9); PASS:Support/RequestReturn (Customer Service P15) |
+| AddOrderItems | AddOrderItemToReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/NewReturn; PASS:Support/RequestReturn; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail#AddReturnItem (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#AddReturnReceipt (Shared/ReturnDetail); CustomerService/Returns/NewReturn (Customer Service P9); PASS:Support/RequestReturn (Customer Service P15) |
 | EditReturn | AuditLogList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Warehouse/Returns/ReturnDetail (Conversation: the chatter's audited changes of the return; no item audit, P14); Purchasing/Returns/ReturnDetail (Conversation); CustomerService/Returns/ReturnDetail (Customer Service P9) |
 | EditReturn | UpdateReturn | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | — not built (P14): ReturnDetail edits a return only by adding eligible items; the header is set at Returns' New return; Purchasing/Returns/ReturnDetail (RecordSupplierRmaForm: the supplier's RMA) (Purchasing P8); CustomerService/Returns/ReturnDetail (Customer Service P9) |
 | EditReturnItems | ReturnItemList | Warehouse/Returns/ReturnDetail; Purchasing/Returns/ReturnDetail; CustomerService/Returns/ReturnDetail; Shared/ReturnDetail | Accounting/Records/ReturnDetail#AccountingReturnItems (Shared/ReturnDetail); Warehouse/Returns/ReturnDetail#ReturnItemList (Shared/ReturnDetail); Purchasing/Returns/ReturnDetail#PurchasingReturnItems (Shared/ReturnDetail); CustomerService/Returns/ReturnDetail (Customer Service P9) |
 | FindReturn | CreateReturn | Warehouse/Returns/Returns; CustomerService/Returns/NewReturn | Warehouse/Returns/Returns#NewReturn; CustomerService/Returns/NewReturn (Customer Service P9) |
 | FindReturn | CreateSupplierReturn | Warehouse/Returns/Returns; Purchasing/Returns | Warehouse/Returns/Returns#NewReturn; Purchasing/Returns/SupplierReturns#NewSupplierReturn |
-| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; PASS:Support/MyReturns | Warehouse/Returns/Returns#ReturnList; Purchasing/Returns/SupplierReturns#SupplierReturnList; CustomerService/Returns/Returns (Customer Service P9) |
+| FindReturn | ReturnHeaderList | Warehouse/Returns/Returns; Purchasing/Returns; CustomerService/Returns/Returns; PASS:Support/MyReturns | Warehouse/Returns/Returns#ReturnList; Purchasing/Returns/SupplierReturns#SupplierReturnList; CustomerService/Returns/Returns (Customer Service P9); PASS:Support/MyReturns (Customer Service P15) |
 
 ## Shipment (46 forms)
 

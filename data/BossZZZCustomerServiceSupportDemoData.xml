@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Customer Service P15: the Support app's demo on ZIZI_PORTAL (portal.zizi.localhost/support) for ORG_ZIZI_RETAIL, after
+        the feedback demo: the mount's settings, Joe's Distributing's contact (dana@joesdist.example.com) and customer
+        administrator (morgan@joesdist.example.com) as invited PASS accounts, Joe Q Public's own account (joe@public.com) through
+        the self relationship, all with the demo password moqui, a case the contact filed, and the Support queue's public form
+        token (SupportDemo.js SUPPORT_TOKENS). -->
+    <ironstone.customerservice.DemoServices.load-SupportDemo/>
+</entity-facade-xml>

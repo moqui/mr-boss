@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ContactDetail's Invite to support for Customer Service (design-customer-service §4 ContactDetail, §8 Access;
+    impl-customer-service P15): a holder of SUPPORT_CONTACT_INVITE invites the contact, at one of the contact's own addresses,
+    to the PASS Support app of an organization of theirs with a published Support site, through
+    ironstone.customerservice.SupportAppServices.create#SupportInvitation and Mantle's invite#Contact: a PASS invitation bound
+    to the Support app and the contact's customer. Redeeming it lets the account see its own cases and returns there (all of the
+    customer's as a customer administrator), with no user group. The link is shown once, for the agent to send. Included by name
+    in CustomerService/Customers/ContactDetail.xml. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="inviteSupportContact">
+        <actions>
+            <service-call name="ironstone.customerservice.SupportAppServices.create#SupportInvitation" out-map="invited"
+                    in-map="{appRoot:appRoot, partyId:partyId, organizationPartyId:(organizationPartyId || null),
+                        emailAddress:emailAddress, administrator:(administrator || null)}"/>
+            <message type="success">Invitation for ${emailAddress} made; send them this link, which works until ${ec.l10n.format(invited.expiresAt, 'yyyy-MM-dd')}: ${invited.invitationUrl}</message>
+        </actions>
+        <default-response url="."><parameter name="partyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceSupportInvite" condition="appRoot == 'CustomerService' &amp;&amp; !!customerService?.capabilities?.contactInvite">
+            <actions>
+                <service-call name="ironstone.customerservice.SupportAppServices.get#SupportInvite" out-map="supportInvite"
+                        transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, partyId:partyId}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="inviteScope" from="{partyId:partyId, organizationPartyId:supportInvite?.organizationOptions?.[0]?.value,
+                        emailAddress:supportInvite?.emailOptions?.[0]?.value}"/>
+            </actions>
+            <widgets>
+                <section name="SupportInviteAvailable" condition="!!supportInvite?.canInvite">
+                    <widgets>
+                        <container-dialog id="SupportInviteDialog" button-text="Invite to support" icon="sym_o_person_add"
+                                width="520" title="Invite this contact of ${supportInvite.customerName} to the Support app">
+                            <label text="The contact signs in to see and file their own cases and returns with you, and nothing else; a customer administrator sees all of the customer's cases." type="p"/>
+                            <form-single name="InviteSupportContact" transition="inviteSupportContact" map="inviteScope">
+                                <field name="partyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <conditional-field title="For" condition="supportInvite.organizationOptions.length &gt; 1">
+                                        <drop-down><list-options list="supportInvite.organizationOptions" key="${value}" text="${label}"/></drop-down></conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="emailAddress">
+                                    <default-field title="Contact's email">
+                                        <drop-down><list-options list="supportInvite.emailOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="administrator">
+                                    <default-field title="Customer administrator" tooltip="Sees every case of the customer, not only their own">
+                                        <check><option key="Y" text="Customer administrator"/></check></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Invite"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </widgets>
+                    <fail-widgets>
+                        <label text="Invite to support: ${supportInvite?.reason || 'not available for this contact'}" type="p" style="text-grey"/>
+                    </fail-widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1901,6 +1901,29 @@ Purchasing's pages in the PASS Supplier app call these through `pass.Facade.call
 | order/SupplierPortalServices | revoke#OrderCapabilities |  | the SupplierPortalRevoke EECA (Purchasing P16) |
 
 
+## Customer Service P15 — Support app (Nov 5, 2026)
+
+Added in `request/SupportCaseServices.xml`, `request/KnowledgeServices.xml`, `order/ReturnPolicyServices.xml` and
+`order/OrderChangeServices.xml` (impl-customer-service P15, CS-PORTAL; `SupportPortal.js`, `CustomerReturns.js`,
+`CustomerOrders.js`), the PASS Support app's operations (mr-pass `Schema.js`, `Routes.js`; PassApi for a remote frontend), and
+BOSS's `ironstone.customerservice.SupportAppServices` (`SupportApp.js`).
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/SupportCaseServices | get#SupportHome | PASS:Support/SupportHome | PASS:Support/SupportHome (HelpSearch, HelpResults; getSupportHome) |
+| request/SupportCaseServices | find#CustomerCases | PASS:Support/MyCases | PASS:Support/MyCases (MyCaseFind, MyCaseList; findCustomerCases) |
+| request/SupportCaseServices | get#CaseIntake, create#CustomerCase | PASS:Support/NewCustomerCase | PASS:Support/NewCustomerCase (getCaseIntake; createCustomerCase, a TOKEN_WRITE with a queue's form token) |
+| request/SupportCaseServices | get#CustomerCase, reply#CustomerCase, request#CaseReopen, cancel#CustomerCase, get#CaseFile | PASS:Support/CustomerCase | PASS:Support/CustomerCase (getCustomerCase; Reply, Ask to reopen, Cancel this request, the files' download) |
+| request/SupportCaseServices | save#SupportAppSetting, get#SupportAppSetting | CustomerService/Settings/ServiceDefaults | CustomerService/Settings/ServiceDefaults (Support app; through SupportAppServices.get#SupportMountSettings) |
+| request/SupportCaseServices | get#CaseCustomerLink |  | for a notice's link to CustomerCase (F60); not yet called by CaseDetail's reply |
+| request/SupportCaseServices | validate#TemplateValues | PASS:Support/NewCustomerCase | PASS:Support/NewCustomerCase, its rule (CaseTemplates.checkValues, customer audience) through create#CustomerCase |
+| request/KnowledgeServices | get#CustomerArticle, rate#Article | PASS:Support/CustomerArticle | PASS:Support/CustomerArticle (getCustomerArticle; Was this helpful?, rateArticle, a TOKEN_WRITE with the view's nonce) |
+| order/ReturnPolicyServices | find#CustomerReturns | PASS:Support/MyReturns | PASS:Support/MyReturns (MyReturnFind, MyReturnList) |
+| order/ReturnPolicyServices | get#ReturnableOrder, request#CustomerReturn | PASS:Support/RequestReturn | PASS:Support/RequestReturn (through submit#CustomerReturn on the Support claim) |
+| order/ReturnPolicyServices | get#CustomerReturn, add#ReturnEvidence, withdraw#CustomerReturn, get#ReturnLabel | PASS:Support/CustomerReturn | PASS:Support/CustomerReturn (the RMA link or a signed-in account; evidence, withdraw through cancel#CustomerReturn, the label's download) |
+| order/OrderChangeServices | request#CustomerCancel, get#CustomerCancel, withdraw#CustomerCancel | PASS:Support/NewCustomerCase | PASS:Support/NewCustomerCase (OrderCancelRequest; requestOrderCancel through save#OrderChange, getOrderCancelRequest, withdrawOrderCancel) |
+| party/ExternalAccessServices | invite#Contact | CustomerService/Customers/ContactDetail | CustomerService/Customers/ContactDetail (Invite to support, through ironstone.customerservice.SupportAppServices.create#SupportInvitation) |
+
 ## Customer Service P13 — Feedback (Nov 5, 2026)
 
 Added in `request/CaseFeedbackServices.xml` (impl-customer-service P13, CS-FEEDBACK, CS-JOBS; `CaseFeedback.js`) and Commons'
@@ -1930,8 +1953,8 @@ app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleS
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | request/KnowledgeServices | save#ServiceKnowledgeSource | CustomerService/Settings/KnowledgeSources | CustomerService/Settings/KnowledgeSources (ServiceKnowledgeSources: Add source, Edit, End) |
-| request/KnowledgeServices | find#ArticleSuggestions | CustomerService/Cases/NewCase; CustomerService/Cases/CaseDetail; PASS:Support/CustomerArticle | CustomerService/Cases/NewCase (CaseIdentity's suggestions); CustomerService/Cases/CaseDetail (Knowledge tab, through ironstone.customerservice.KnowledgeServices.get#CaseKnowledge) |
-| request/KnowledgeServices | get#PublishedArticle | PASS:Support/CustomerArticle | for P15's CustomerArticle (F59) |
+| request/KnowledgeServices | find#ArticleSuggestions | CustomerService/Cases/NewCase; CustomerService/Cases/CaseDetail; PASS:Support/CustomerArticle | CustomerService/Cases/NewCase (CaseIdentity's suggestions); CustomerService/Cases/CaseDetail (Knowledge tab, through ironstone.customerservice.KnowledgeServices.get#CaseKnowledge); PASS:Support/SupportHome and NewCustomerCase (customer-visible, through get#SupportHome and get#CaseIntake; Customer Service P15) |
+| request/KnowledgeServices | get#PublishedArticle | PASS:Support/CustomerArticle | PASS:Support/CustomerArticle and SupportHome, through get#CustomerArticle (F59; Customer Service P15) |
 | request/KnowledgeServices | get#ArticlePublicLink | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Send to customer); CustomerService/Knowledge/Knowledge (Send to customer), through prepare#ArticleSend |
 | request/KnowledgeServices | record#ArticleFeedback | PASS:Support/CustomerArticle | CustomerService/Cases/CaseDetail (Knowledge tab: Helpful?) |
 | request/KnowledgeServices | review#ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | CustomerService/Knowledge/ArticleFeedback (FeedbackReview) |
