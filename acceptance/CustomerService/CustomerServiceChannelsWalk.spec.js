@@ -325,7 +325,7 @@ feature("a customer's chat message becomes a case on channel ScChat, and the age
 })
 
 feature(
-    "a forum topic escalated through PASS lands in Support by its route; the agent's previewed public reply posts, no private note",
+    "a forum topic escalated through PASS lands in Support, held for a member who is no customer until accepted; the agent's previewed public reply posts, no private note",
     {
         when() {
             const forum = (name, input) =>
@@ -433,6 +433,13 @@ feature(
                 false
             )
             const requestId = created.requestId
+            // a public member who is no customer of Retail: held for review, and the manager accepts the member as customer
+            const heldRole = one("mantle.party.PartyRole", {partyId: poster, roleTypeId: "Customer"})
+            const accepted = post(users.manager, "CustomerService/Settings/ChannelRouting/reviewHeld", {
+                requestId,
+                decision: "accept",
+                organizationPartyId: ids.organizationId
+            })
             profileOf(requestId)
             const body = "<p>CSCW reset the hub, then pair again.</p>"
             const preview = asUser(users.agent, () =>
@@ -455,6 +462,8 @@ feature(
             login("john.doe")
             return {
                 route,
+                heldRole,
+                accepted,
                 request: one("mantle.request.Request", {requestId}),
                 profile: one("mantle.request.support.CaseProfile", {requestId}),
                 customer: all("mantle.request.RequestParty", {requestId, roleTypeId: "Customer"})[0],
@@ -466,6 +475,8 @@ feature(
         },
         then(r) {
             r.route.errors == ""
+            r.heldRole == null
+            r.accepted.errors == ""
             r.request.statusId == "ReqSubmitted"
             r.request.requestCategoryId == ids.supportQueueId
             r.request.salesChannelEnumId == "ScForum"

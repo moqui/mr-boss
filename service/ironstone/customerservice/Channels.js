@@ -112,9 +112,9 @@ function findRoutes(p) {
         }
     })
     const held = mantleChannels.heldRequests([organizationPartyId], 50).map(row => {
-        const reporter = rows("mantle.request.RequestParty", {requestId: row.requestId, roleTypeId: "Reporter"}).filter(r =>
-            lib.active(r)
-        )[0]
+        // the sender: a held forum request's poster (its Customer party), else the reporter, as review#HeldRequest takes it
+        const parties = rows("mantle.request.RequestParty", {requestId: row.requestId}).filter(r => lib.active(r))
+        const reporter = parties.find(r => r.roleTypeId === "Customer") || parties.find(r => r.roleTypeId === "Reporter") || null
         const note = rows("mantle.request.RequestNote", {requestId: row.requestId}).sort(
             (a, b) => Number(ms(b.noteDate)) - Number(ms(a.noteDate))
         )[0]
