@@ -7,7 +7,8 @@
 //   Purchasing and none of the other app roots;
 // - the other side's users never see a side's records on the Purchasing routes that show them to its own reader or to
 //   john.doe (URLs with the record's id, the shared mounts, the record panels, html and, for a reader, the terminal), nor in
-//   the CSV exports, the prints, the palette, record links, drop-downs and search;
+//   the CSV exports, the prints, the palette, record links and drop-downs (universal search has no index in a test
+//   runtime, F-P17-3);
 // - no Purchasing user sees a product's standard cost, a bill's payments and unpaid amounts without a finance group, or
 //   another organization's supplier price, and none may post stock, match a bill, release a hold or approve a payable
 //   without the group that grants it;
@@ -124,10 +125,6 @@ function read(username, service, parameters, enabled = false) {
         enabled
     )
 }
-const refusedFor = message =>
-    /PERMISSION_DENIED|ACCESS_DENIED|is not authorized|FORBIDDEN|RECORD_UNAVAILABLE|PURCHASING_UNAVAILABLE|not available/.test(
-        message
-    )
 
 // a spec user in Purchasing's root and buyer groups and the given others, an agent of Retail
 function standaloneUser(username, groups) {
@@ -535,7 +532,7 @@ feature("exports and prints of each side hold only its rows", {
     }
 })
 
-feature("the palette, record links, drop-downs and search keep each side to its records", {
+feature("the palette, record links and drop-downs keep each side to its records", {
     when() {
         const problems = []
         const access = "ironstone.purchasing.AccessServices."
@@ -587,11 +584,8 @@ feature("the palette, record links, drop-downs and search keep each side to its 
                     )
                         problems.push(`${username} gets ${choice} ${JSON.stringify(extra)} of ${side}`)
                 }
-                // universal search with the user's authorization and organization filters (no index in a test runtime:
-                // it answers nothing for either side, so the palette above is the check that counts)
-                const universal = read(username, "mantle.search.UniversalSearchServices.search#Universal", {q: s.text}, true)
-                if (s.pattern.test(JSON.stringify(Array.from(universal.results || []))))
-                    problems.push(`${username} finds ${s.text} in search`)
+                // universal search is not checked here: a test runtime has no index, so it answers nothing for either
+                // side (F-P17-3); the palette above, with its own-side control, is the search check
             }
             // the control: each side's own reader finds its order in the palette and gets its link
             const reader = sides[mine].reader
@@ -658,7 +652,19 @@ feature("no Purchasing user sees a standard cost, a bill's payments or another o
             })
         const buyerPrice = price(users.buyer)
         if (sides.services.pattern.test(JSON.stringify(buyerPrice))) problems.push("the buyer gets Services' price")
-        // posting: finance and stock verbs the Purchasing groups do not hold, with the service's own permission check
+        // posting: finance and stock verbs the Purchasing groups do not hold, with the service's own permission check, each
+        // on a real record so the refusal is the permission's, not a missing record's (P17 review: a hold and a transaction
+        // that did not exist were refused as "not available"). post#AcctgTrans is left out: a manual posting's authority is
+        // the posting guard's (REVIEW_REQUIRED), not a permission refusal; the Accounting walks cover it
+        const holdId = "BOSS_PUR_P17_HOLD"
+        if (!one("mantle.account.invoice.InvoiceHold", {invoiceHoldId: holdId}))
+            call("create#mantle.account.invoice.InvoiceHold", {
+                invoiceHoldId: holdId,
+                invoiceId: state.retail.invoiceId,
+                holdComment: "P17 access walk",
+                placedByUserId: "EX_JOHN_DOE",
+                placedDate: ec.user.nowTimestamp
+            })
         const verbs = [
             [
                 "mantle.account.InvoiceServices.approve#Payable",
@@ -667,25 +673,28 @@ feature("no Purchasing user sees a standard cost, a bill's payments or another o
                     lastUpdatedStamp: one("mantle.account.invoice.Invoice", {invoiceId: state.retail.invoiceId}).lastUpdatedStamp
                 }
             ],
-            ["mantle.account.InvoiceServices.release#InvoiceHold", {invoiceHoldId: "BOSS_PUR_P17_NO_HOLD"}],
+            ["mantle.account.InvoiceServices.release#InvoiceHold", {invoiceHoldId: holdId, releaseComment: "P17 access walk"}],
             [
                 "mantle.shipment.WarehouseTaskServices.receive#ShipmentStock",
                 {operationKey: key(), shipmentId: state.retail.shipmentId, productId: "DEMO_1_1", quantityAccepted: 1}
-            ],
-            ["mantle.ledger.LedgerServices.post#AcctgTrans", {acctgTransId: "BOSS_PUR_P17_NO_TRANS"}]
+            ]
         ]
         const refusals = {}
         for (const username of retailUsers.filter(user => user !== users.buyReceive))
             for (const [service, parameters] of verbs) {
                 const got = read(username, service, parameters)
                 refusals[`${username} ${service}`] = got.error
-                if (!refusedFor(got.error)) problems.push(`${username} ${service}: ${got.error || "accepted"}`)
+                if (!/PERMISSION_DENIED|ACCESS_DENIED|is not authorized|FORBIDDEN/.test(got.error))
+                    problems.push(`${username} ${service}: ${got.error || "accepted"}`)
             }
         const received = rows("mantle.product.receipt.AssetReceipt", {shipmentId: state.retail.shipmentId}).length
+        const holdReleased = !!one("mantle.account.invoice.InvoiceHold", {invoiceHoldId: holdId}).releasedDate
+        call("delete#mantle.account.invoice.InvoiceHold", {invoiceHoldId: holdId})
         if (problems.length) log.warn("Purchasing access walk problems:\n" + problems.join("\n"))
-        return {problems, costControl, buyerBill, matcherBill, received}
+        return {problems, costControl, buyerBill, matcherBill, received, holdReleased}
     },
-    then({problems, costControl, buyerBill, matcherBill, received}) {
+    then({problems, costControl, buyerBill, matcherBill, received, holdReleased}) {
+        holdReleased == false
         problems.join("\n") == ""
         costControl == true
         buyerBill.error == ""
