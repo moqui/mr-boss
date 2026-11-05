@@ -705,8 +705,8 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
 - Inventories: ss-inventory's request forms of CaseDetail, NewCase, Cases and Home; usl-inventory's RequestServices that
   the case services and CaseDetail call.
 - Decisions:
-  - The rule counts any open status, not only Submitted (a Customer party added to a request in progress makes it a
-    case); a draft is never one.
+  - ~~The rule counts any open status, not only Submitted~~ (review R1: Submitted, per §4's Nov 5 row; a request already in
+    progress becomes a case only by a move into a service queue); a draft is never one.
   - A team is an OrgTeam party owned by the organization; a member is a dated `PrtServiceTeam` relationship (Agent, or
     Manager for one who manages the team).
   - Workflows (`CaseStatusMapping`, `CaseTransition`) are shared settings, as status flows are; an organization picks
@@ -739,6 +739,38 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
   - **F-P2-6** The rule runs after the commit on the service pool (`registerOnCommit` is asynchronous), so a request's
     profile is there a moment after its create returns; a spec of the rule waits for it, and a screen that makes a case
     calls `create#Case`, which makes the profile in its own transaction.
+
+**Review Nov 5 (P2).** Checked the diff of both repos against this section, §4's Nov 5 rows and F45–F78: the case rule
+against the Nov 5 decision; the after-commit ensure (two triggers of one create, e.g. create#Request with a customer, make
+one profile: ensure locks the request and the profile's key is the request, no error logged; a failing ensure is caught and
+logged by queue#CaseProfile or the pool and never fails the caller; readers right after a create (raise#Request's due date)
+ask get#CaseState's wouldBeCase rather than the profile); update#Request's CASE_MANAGED guard and its callers (a field not
+passed is not in the context, so a case with a due date takes other changes; mr-marble's EditRequest posting an unchanged
+due date or resolution passes; make#RequestWorkItem, convert#RequestToProject, create#RequestFromEmail, InventoryRequests
+and the forum's create#CaseFromTopic set no due date, resolution or close of a case); access (find#Cases, get#CaseDetail,
+apply#CaseBatch's Forbidden, the palette and get#RecordLink through recordOf; the restricted queue out of the scope's
+queueIds and so out of get#QueueCounts and the dashboard); the Settings narrowing; F-P2-4 (no other demo policy
+service-enables a type for ORG_ZIZI_SERVICES); regression leanness (SupportCases 3.5 s, CustomerServiceCases about 1 s;
+CaseDetail and NewCase render once, in qvt; the settings and case route fixtures are acceptance-only).
+- **R1 (medium, Mantle)** The rule inferred a filer's customer from any relationship to a Customer-role party and took a
+  staff person with the Customer role as a customer, so an employee's or agent's own request (Commons QuickRequest, a
+  Projects internal request) could become a case. A filer who works for an internal organization is never a customer
+  side; a contact is a PrtContact or PrtEmployee of the customer; an explicit Customer party who works for an internal
+  organization is not a served customer. The rule also made a case of any open request, so a ServicePolicy set up later,
+  or a Customer party added to a request in progress, converted it mid-flight (a Projects request triaged to In Progress
+  became a case, and its resolve was then refused): a request becomes a case when Submitted, one in progress only by a
+  move into a service queue. Specs: a staff customer-contact's request and an in-progress request given a customer stay
+  plain.
+- **R2 (medium, Mantle)** `save#ServiceTeamMember` took any person, so a team's manager could add a customer's contact
+  or another organization's agent, who then saw the restricted Privacy queue's cases through Mantle's record visibility.
+  A member works for the team's organization. Specs: a manager of another team and an outside member refused.
+- Specs run, all passing (with mr-boss loaded): Mantle SupportCases, CrmMiscServices, WorkTimeEntries, WarehouseTransfers,
+  WorkProjectRequests, CommonsToday, WorkPlanToCashBasicFlow, RecordVisibility, RecordLinks, WorkProjectClients; BOSS
+  CustomerServiceCases, CustomerServiceAccess, Requests, ProjectRequests, Chat, QuickCreate (238 features); mr-pass
+  Forum Integrations (create#CaseFromTopic, 6 features).
+- Left for the lead: Projects' create of a request with a due date and a customer (and email intake) can make a case that
+  carries the due date given at create (only Commons' raise#Request refuses it, by wouldBeCase); P4's service level
+  replaces it. The acceptance walk CustomerServiceCasesWalk was not rerun (no acceptance spec changed).
 
 ### P3 — Customers and orders
 
