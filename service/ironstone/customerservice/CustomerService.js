@@ -264,7 +264,12 @@ const linkPaths = [
     "Settings/AgentTeams",
     "Settings/CaseTypes",
     "Settings/StatusCategories",
-    "Settings/ServiceDefaults"
+    "Settings/ServiceDefaults",
+    // P12: knowledge, its feedback, an article from a case and the knowledge sources
+    "Knowledge/Knowledge",
+    "Knowledge/ArticleFeedback",
+    "Knowledge/CaseToArticle",
+    "Settings/KnowledgeSources"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

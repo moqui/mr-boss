@@ -21,7 +21,7 @@ along with this software (see the LICENSE.md file). If not, see
     first (Chatter: reply, note and log), Overview (the description, the customer and people, the linked records, the tags),
     Work (the linked work items, each opening WorkItemDetail here, and Add task) and Files; and the Recent cases pane (the
     customer's other open or recent cases). Later phases add the clocks (P4), saved replies (P5), merge and split (P8), the
-    RMA, order-change and warranty actions (P9-P11) and Knowledge (P12). -->
+    RMA, order-change and warranty actions (P9-P11) and Knowledge (P12: template/CustomerServiceKnowledge.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="caseChoices" read-only="true">
@@ -85,6 +85,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="csValues" from="{requestId:requestId, tab:csTab, caseRevision:sc.caseRevision, priority:String(sc.priority ?? 5),
                         requestCategoryId:sc.requestCategoryId, assigneePartyId:sc.assigneePartyId || ''}"/>
                 <set field="csTagIds" from="(cd?.tags || []).map((tag) =&gt; tag.tagEnumId)"/>
+                <!-- P12: the Knowledge tab (template/CustomerServiceKnowledge.xml), after the others -->
+                <set field="csTab" from="tab == 'knowledge' ? 'knowledge' : csTab"/>
+                <script>csTabs.push({key: 'knowledge', label: 'Knowledge'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
             </actions>
             <widgets>
                 <section name="CaseMissing" condition="!cd">
@@ -391,6 +394,12 @@ along with this software (see the LICENSE.md file). If not, see
                                                         text="No work on this case. Its work done tells you; it never resolves the case."/>
                                             </box-body-nopad>
                                         </container-box>
+                                    </widgets>
+                                </section>
+                                <!-- P12: linked and suggested articles (template/CustomerServiceKnowledge.xml) -->
+                                <section name="CaseKnowledgeTab" condition="csTab == 'knowledge'">
+                                    <widgets>
+                                        <section-include name="CaseKnowledge" location="component://mr-boss/template/CustomerServiceKnowledge.xml"/>
                                     </widgets>
                                 </section>
                                 <section name="CaseFiles" condition="csTab == 'files'">

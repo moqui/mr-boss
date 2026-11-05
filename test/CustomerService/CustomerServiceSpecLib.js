@@ -31,7 +31,15 @@ const ids = {
     filtersCaseId: "BOSS_CS_CASE_FILTERS",
     pickCaseId: "BOSS_CS_CASE_PICK",
     privacyCaseId: "BOSS_CS_CASE_PRIVACY",
-    otherCaseId: "BOSS_CS_CASE_OTHER"
+    otherCaseId: "BOSS_CS_CASE_OTHER",
+    // P12: the demo articles (load#KnowledgeDemo) as [space, page path]: published for customers in English and Spanish, a
+    // draft, and the agents' internal one
+    articlePaths: {
+        english: ["ZZW_RETAIL", "help/Thermostat reads the wrong temperature"],
+        spanish: ["ZZW_RETAIL", "help/es/Thermostat temperatura incorrecta"],
+        draft: ["ZZW_RETAIL", "help/Thermostat battery replacement"],
+        internal: ["ZZW_SVC", "Thermostat calibration offset"]
+    }
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -135,11 +143,19 @@ function routeFixtures() {
         "Settings/CaseTypes": {parameters: {}, text: "Case types"},
         "Settings/StatusCategories": {parameters: {}, text: "Status categories"},
         "Settings/ServiceDefaults": {parameters: {}, text: "Service defaults"},
-        "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"}
+        "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"},
+        // P12: Knowledge (Commons Knowledge mounted, its qvue component), the feedback queue, an article from Joe's case and
+        // the knowledge sources
+        Knowledge: {fullPathOnly: true},
+        "Knowledge/Knowledge": {parameters: {}, text: "BossKnowledge"},
+        "Knowledge/ArticleFeedback": {parameters: {}, text: "Article feedback"},
+        "Knowledge/CaseToArticle": {parameters: {requestId: ids.thermostatCaseId}, text: "Article from case"},
+        "Settings/KnowledgeSources": {parameters: {}, text: "Knowledge sources"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
-        ["Cases/WorkItemDetail", "component://mr-boss/screen/Shared/WorkItemDetail.xml"]
+        ["Cases/WorkItemDetail", "component://mr-boss/screen/Shared/WorkItemDetail.xml"],
+        ["Knowledge/Knowledge", "component://mr-boss/screen/Commons/Knowledge.xml"]
     ]
     return {routes, mounts}
 }

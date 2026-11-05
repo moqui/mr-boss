@@ -427,3 +427,40 @@ feature("a case is its queue's team's and its assignee's; another organization's
         problems.join("\n") == ""
     }
 })
+
+// P12: article feedback is the knowledge author's (who reviews it) and the service manager's (who reads it), never an agent's,
+// in the service and on the screen; an article drafted from a case is the knowledge author's, on a case of their organization
+feature(
+    "article feedback is the knowledge author's and the manager's; an article from a case the author's, on their organization's cases",
+    {
+        when() {
+            const problems = []
+            const knowledge = "ironstone.customerservice.KnowledgeServices."
+            for (const [user, service, parameters, expected] of [
+                [users.knowledge, "find#ArticleFeedback", {}, ""],
+                [users.manager, "find#ArticleFeedback", {}, ""],
+                [users.agent, "find#ArticleFeedback", {}, "PERMISSION_DENIED"],
+                [users.knowledge, "prepare#ArticleFromCase", {requestId: ids.thermostatCaseId}, ""],
+                [users.agent, "prepare#ArticleFromCase", {requestId: ids.thermostatCaseId}, "PERMISSION_DENIED"],
+                [users.knowledge, "prepare#ArticleFromCase", {requestId: ids.otherCaseId}, "RECORD_UNAVAILABLE"]
+            ]) {
+                const message = asUser(user, () =>
+                    refusal(knowledge + service, Object.assign({appRoot: "CustomerService"}, parameters))
+                )
+                if (expected === "" ? message !== "" : !message.includes(expected))
+                    problems.push(
+                        `${user} ${service} ${parameters.requestId || ""}: ${message || "accepted"}, not ${expected || "accepted"}`
+                    )
+            }
+            for (const path of ["Knowledge/ArticleFeedback", "Knowledge/CaseToArticle"]) {
+                const got = screenRefusal(users.agent, path)
+                if (!unauthorized(got) || !got.includes("AT_XML_SCREEN ["))
+                    problems.push(`the agent on ${path}: ${got || "opened"}`)
+            }
+            return {problems}
+        },
+        then({problems}) {
+            problems.join("\n") == ""
+        }
+    }
+)

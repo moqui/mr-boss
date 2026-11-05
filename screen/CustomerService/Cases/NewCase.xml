@@ -17,13 +17,16 @@ along with this software (see the LICENSE.md file). If not, see
     warning (the customer's open cases from CaseDetail's Recent cases read; another customer's are never shown), then
     CaseDescription and SubmitCase (subject, description, queue, priority band, channel, contact and assignee) over
     mantle.request.SupportCaseServices.create#Case, after the customer's check, which opens the case in CaseDetail. The
-    choices come from ironstone.customerservice.CaseServices.prepare#Case. Template fields come in P7, knowledge suggestions
-    in P12. The quick create's New case. -->
+    choices come from ironstone.customerservice.CaseServices.prepare#Case. Template fields come in P7. P12: what the case is
+    about (subject) in the first step, and the articles it suggests (mantle.request.KnowledgeServices.find#ArticleSuggestions,
+    the customer's language first), each opening in Knowledge; suggestions never block the case. The quick create's New
+    case. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="New case" default-menu-index="2">
     <parameter name="organizationPartyId"/>
     <parameter name="customerPartyId"/>
     <parameter name="requestTypeEnumId"/>
+    <parameter name="subject"/>
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <!-- CaseIdentity: the screen again with the customer, organization and type chosen (a link form) -->
@@ -32,6 +35,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="organizationPartyId"/>
             <parameter name="customerPartyId"/>
             <parameter name="requestTypeEnumId"/>
+            <parameter name="subject"/>
         </default-response>
     </transition>
     <transition name="createCase">
@@ -64,6 +68,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="caseValues" from="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId,
                 requestTypeEnumId:prepared.requestTypeEnumId, requestCategoryId:prepared.requestCategoryId,
                 priority:prepared.priority, salesChannelEnumId:'ScPhone'}"/>
+        <!-- P12: the subject asked in the first step is the case's subject -->
+        <script>identity.subject = subject || ''; caseValues.requestName = subject || null</script>
         <set field="describe" from="!!(prepared.customerFound &amp;&amp; prepared.requestTypeEnumId &amp;&amp; prepared.queueOptions.length)"/>
     </actions>
     <widgets>
@@ -106,9 +112,15 @@ along with this software (see the LICENSE.md file). If not, see
                                     <drop-down><list-options list="prepared.typeOptions" key="${value}" text="${label}"/></drop-down>
                                 </default-field>
                             </field>
+                            <field name="subject">
+                                <default-field title="What is it about?" tooltip="The case's subject; it suggests articles that may answer it">
+                                    <text-line size="60"/>
+                                </default-field>
+                            </field>
                             <field name="submitButton"><default-field title="Continue"><submit/></default-field></field>
                             <field-layout>
                                 <field-row><field-ref name="customerPartyId"/><field-ref name="requestTypeEnumId"/></field-row>
+                                <field-ref name="subject"/>
                                 <field-ref name="organizationPartyId"/>
                                 <field-ref name="submitButton"/>
                             </field-layout>
@@ -141,6 +153,42 @@ along with this software (see the LICENSE.md file). If not, see
                                         text="Open one of these to add to it, or describe a distinct case below."/>
                             </box-body-nopad>
                         </container-box>
+                    </widgets>
+                </section>
+                <!-- P12: the articles the subject suggests, the customer's language first (drafts and internal articles marked);
+                    reading one does not block the case -->
+                <section name="ArticleSuggestions" condition="subject &amp;&amp; prepared.customerFound">
+                    <actions>
+                        <service-call name="mantle.request.KnowledgeServices.find#ArticleSuggestions" out-map="suggestOut"
+                                in-map="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId, text:subject, limit:5}"
+                                transaction="force-new" ignore-error="true"/>
+                        <script>ec.message.clearErrors()</script>
+                        <set field="suggestedArticles" from="Array.from(suggestOut?.articleList || []).map((row) =&gt; Object.assign({}, row,
+                                {url: '/qapps/CustomerService/Knowledge/Knowledge?wikiPageId=' + encodeURIComponent(row.wikiPageId),
+                                    note: [row.spaceName, row.internal ? 'internal' : '', row.published ? '' : 'draft',
+                                        row.localeLanguage ? String(row.localeLanguage).toUpperCase() : ''].filter(Boolean).join(' · ')}))"/>
+                    </actions>
+                    <widgets>
+                        <section name="SuggestedArticleBox" condition="suggestedArticles.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Articles that may answer it"/>
+                                    <box-body-nopad>
+                                        <form-list name="SuggestedArticles" list="suggestedArticles" skip-form="true" paginate="false">
+                                            <field name="title">
+                                                <default-field title="Article">
+                                                    <link url="${url}" url-type="plain" text="${title}" link-type="anchor" target-window="_blank"/>
+                                                    <label text="${note}" type="div" style="text-caption m-muted"/>
+                                                </default-field>
+                                            </field>
+                                            <columns type="mobile">
+                                                <column><field-ref name="title"/></column>
+                                            </columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
                     </widgets>
                 </section>
                 <section name="NoQueue" condition="prepared.customerFound &amp;&amp; !prepared.queueOptions.length">

@@ -299,7 +299,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | — |
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | — |
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
-| P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | — |
+| P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
 | P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | — |
 | P14 Reports | BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis | — |
 | P15 Support app | Mantle, mr-pass, BOSS | Support's SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle; ContactDetail's invitation | — |
@@ -1215,6 +1215,140 @@ CS-KNOWLEDGE.
   - CaseToArticle makes a redacted draft in the service space, unpublished;
   - a reviewed feedback makes a task and leaves the article unchanged;
   - an internal article is never suggested on a customer-visible surface.
+
+**Built Nov 5 (P12).**
+- Mantle entities (`entity/SupportKnowledgeEntities.xml`): `mantle.request.support.ServiceKnowledgeSource` (effective-dated,
+  key fields audit-logged: organization, space and the part of it by `pagePathPrefix` (F-P12-1), audience `SkaInternal`,
+  `SkaCustomer`, `SkaPublic`, language, the queue and product category it is first for, priority, allow suggestions, review
+  team, draft space and parent path) and `ArticleFeedback` (page and version, helpful, plain-text comment, case,
+  organization and source, agent or customer, `AfbSubmitted`/`AfbReviewed` with `AfdImprove`, `AfdNoChange`, `AfdDismissed`,
+  note, reviewer, task).
+- Mantle services (`service/mantle/request/KnowledgeServices.xml`, `Knowledge.js`): `save#ServiceKnowledgeSource`
+  (SUPPORT_POLICY_EDIT and the organization; a space the user may read, never an internal source in a space with a public
+  address, F-P12-2; dated by SupportCases.js's `startRow`, now exported), `find#ArticleSuggestions` (the subject's words in the
+  pages' paths, F-P12-5; the requester's language first, then the case's queue or product category, words matched and the
+  source's priority; an agent's surface needs the organization and offers only pages the wiki lets the user view, drafts and
+  internal articles flagged; `customerVisible` only published, unrestricted pages of customer and public sources), F59's
+  `get#PublishedArticle` (the exact published version through `get#PublishedWikiPageText` with no version asked, checked
+  against the page's, cleaned with `StringUtilities.cleanHtml`, as Forum.js's site pages; for P15), `get#ArticlePublicLink`
+  (Send to customer: refuses a draft, ARTICLE_NOT_PUBLISHED, and an internal or unsourced article, ARTICLE_INTERNAL; the
+  space's `publicPageUrl`, made absolute on the server, F-P12-3), `record#ArticleFeedback` (SUPPORT_CASE_EDIT, F-P12-7),
+  `review#ArticleFeedback` (SUPPORT_KNOWLEDGE_EDIT; each feedback in its own transaction, Done, Forbidden, AlreadyReviewed or
+  Failed named per id; one task per article made by `make#ArticleTask`, a WikiPageWorkEffort for the source's review team, or
+  the task given linked; the article never changed; an operation key answers a retry), `suggest#ArticleEdit` (F15: a task on
+  the page for the review team, linked to the case) and `create#ArticleFromCase` (SUPPORT_KNOWLEDGE_EDIT, the case of the
+  user's organization, a draft space of its sources the user may update; the chosen outward and customer emails, an internal
+  note or message refused, INTERNAL_MESSAGE; the case's customer and contact names, emails, phones, street addresses and
+  linked orders and returns, and email- and phone-shaped text, replaced; a new unpublished page linked by WikiPageRequest;
+  `preview` answers the redacted text and writes nothing).
+- BOSS reads (`service/ironstone/customerservice/KnowledgeServices.xml`, `Knowledge.js`): `get#KnowledgeContext` (the
+  Customer Service row of Commons Knowledge: the sources' spaces, the case and what the user may do), `get#CaseKnowledge`
+  (the Knowledge tab), `prepare#ArticleSend` (the Comms Compose address for the case's contact, else its customer, with the
+  case as the mail's record), `find#ArticleFeedback` (for SUPPORT_KNOWLEDGE_EDIT or SUPPORT_CASE_MANAGE; the case only when
+  the user sees it), `prepare#ArticleFromCase` (the answers with their audience, internal notes counted and never offered,
+  the personal data found, the draft spaces and the redacted preview) and `find#KnowledgeSources`.
+- Screens: `CustomerService/Knowledge.xml` a menu group (always-use-full-path) holding `Knowledge` (Commons Knowledge mounted
+  with the Customer Service row: `Commons/Knowledge.xml`'s setup asks get#KnowledgeContext when `inCustomerService`, and its
+  transitions `linkCaseArticle`, `sendArticle` and `suggestArticleEdit`; `Knowledge.qvue` shows the case banner, Send to
+  customer, Link to case and Suggest edit, keeps `requestId` on every request, and finds its path by the last `Knowledge`;
+  `KnowledgeTui` lists the sources' spaces too), the hidden `KnowledgeTui`, `Knowledge/ArticleFeedback` (FeedbackFind,
+  FeedbackList, FeedbackReview as a row-selection action, `BOSS_CS_ARTICLE_FEEDBACK` for the knowledge author, manager and
+  administrator) and `Knowledge/CaseToArticle` (AnswerSelection, ArticleDraft; `BOSS_CS_CASE_TO_ARTICLE` for the author and
+  administrator); CaseDetail's Knowledge tab (`template/CustomerServiceKnowledge.xml`: linked and suggested articles, the
+  search, Link, Unlink, Send to customer, Helpful?, Suggest edit, Open knowledge, Make an article; its transitions included
+  by Shared/RequestDetail; CustomerServiceCaseDetail.xml adds the tab after the others); NewCase's "What is it about?" in
+  CaseIdentity and its suggestions box (the subject becomes the case's); `Settings/KnowledgeSources`
+  (ServiceKnowledgeSources: Add source, Edit from now, End) linked from SettingsHome's Knowledge and feedback box. `linkPaths`
+  gains the four routes.
+- Demo: `KnowledgeDemo.js` (`DemoServices.load#KnowledgeDemo` from BossZCustomerServiceDemoData.xml after the cases, each
+  step in its own transaction through the wiki's and Mantle's services): in ZZW_RETAIL (F34) the published
+  `help/Thermostat reads the wrong temperature` and `help/Replacement filter schedule`, the draft `help/Thermostat battery
+  replacement` and the Spanish `help/es/Thermostat temperatura incorrecta`; the new internal space ZZW_SVC with the published
+  `Thermostat calibration offset` and `drafts/`; Retail's sources (help/ customers en, help/es/ customers es, both reviewed by
+  the Support team with drafts in ZZW_SVC; ZZW_SVC agents en); two agents' feedback on the thermostat article from Joe's case.
+  BossYCustomerServiceCasesDemoData: the knowledge author in the Support team (F-P12-8), and on Joe's thermostat case the
+  agent's outward email (his name and the order to take out) and an internal note.
+- Specs: Mantle `test/request/SupportKnowledge` (6 features, about 1.5 s: the sources' save and refusals, suggestions in the
+  requester's language first and on both surfaces, the exact published version and the public link's refusals, the feedback
+  batch with its failures named and one task, Suggest edit, the article from a case redacted and its refusals). BOSS
+  `CustomerServiceKnowledge` (4 features, about 0.7 s: the tab's read and the mount's context, Send to customer and its
+  refusals, ArticleFeedback's one qvt render, CaseToArticle's one qvt render) and `CustomerServiceAccess` (+1 feature: the
+  feedback for the author and manager and not an agent, CaseToArticle for the author on their organization's case, both
+  screens refused the agent). Acceptance `acceptance/CustomerService/CustomerServiceKnowledgeWalk` (the usable-when, 4
+  features); `AppStructure` (the four routes, `fullPathOnly` for the Knowledge group, F-P12-4; the placeholder floor 51) and
+  `CustomerServiceFoundationWalk` (Knowledge opens in tui; Send to customer's parameter for the client sweep).
+- Tests run (all pass): Mantle SupportKnowledge, SupportCases; BOSS CustomerServiceKnowledge, CustomerServiceAccess,
+  CustomerServiceCases, Knowledge, KnowledgeReview, Notes, ProjectsAccess; acceptance CustomerServiceKnowledgeWalk,
+  AppStructure, CustomerServiceFoundationWalk. `moqui lint --screens`: 136 flagged sites, as master; none in the screens
+  changed.
+- Inventories: ss-inventory's EditWikiPages AddWprForm and DeleteWprForm (CaseDetail's Knowledge tab, the Knowledge mount);
+  usl-inventory's link#RequestRecord and unlink#RequestRecord rows and a Customer Service P12 table of the new services.
+- Decisions:
+  - Knowledge is Commons Knowledge mounted with a Customer Service row (as ProjectDetail's Docs), not a second article
+    reader: the qvue and its terminal twin list the sources' spaces; the case's own actions are in CaseDetail's tab too.
+  - Send to customer is Comms Compose with the body, recipient and the case as the record (the sent mail is filed on the
+    case); nothing is sent until the agent sends it.
+  - The knowledge author drafts from a case of a team they belong to; the manager reads the feedback queue, only the author
+    reviews it.
+- Findings (provisional):
+  - **F-P12-1** WikiPage has no language and the demo keeps English and Spanish customer articles in the one space ZZW_RETAIL,
+    so a source is a space or the part of it under a page path; a page belongs to its space's source with the longest
+    matching prefix. Design KnowledgeSources changed.
+  - **F-P12-2** ZZW_RETAIL is the POPC store's public content space (`publicPageUrl` /popc/content/…, restrictView N): a
+    published page there is public, so an internal article cannot be one of its pages. Internal articles are in ZZW_SVC, and
+    save#ServiceKnowledgeSource refuses an internal source in a space with a public address (INTERNAL_PUBLIC_SPACE). Design
+    changed.
+  - **F-P12-3** ZZW_RETAIL's `publicPageUrl` is relative; get#ArticlePublicLink makes it absolute on the webroot's URL when
+    there is a web request (a send from a job would keep it relative). P15's CustomerArticle builds the link with
+    `PublicApps.pageUrl` instead.
+  - **F-P12-4** Commons Knowledge renders in vue, qvue and tui only, so the Customer Service Knowledge group, whose default it
+    is, opens at its full path; AppStructure skips the group path (`fullPathOnly`) and renders the mount, and
+    FoundationWalk opens the area in tui. Knowledge.qvue finds its own level by the last `Knowledge` of the path.
+  - **F-P12-5** Without a search index `search#WikiPages` matches only a page path containing the whole text, so suggestions
+    match each word of the subject (three letters or more, common words left out) in the page paths, ignoring case, in the
+    query; ranking by the text through the index is later.
+  - **F-P12-6** An agent who files a case is its Reporter (P2's thermostat demo case), so the customer's side of a case's
+    messages and personal data is its Customer and Reporter parties that are not staff (an internal organization or someone
+    who works for one).
+  - **F-P12-7** The plan names four Mantle services; Send to customer, the agents' feedback, Suggest edit and F59's read need
+    `get#ArticlePublicLink`, `record#ArticleFeedback`, `suggest#ArticleEdit` (with the internal `make#ArticleTask`) and
+    `get#PublishedArticle`, which P15's CustomerArticle and its rating call. Design CaseDetail's Knowledge tab changed
+    (Helpful?).
+  - **F-P12-8** A knowledge author sees no case unless in a team of its queue (the Support queue is SqvTeam); the demo
+    author joined the Support team.
+
+**Review Nov 5 (P12).** Checked both repos' diffs against this section, §2, design §3, §6 and §9, AGENTS.md and
+Practices-App-Dev: the audience of each customer-visible read (find#ArticleSuggestions with customerVisible,
+get#PublishedArticle by id or by space and path, get#ArticlePublicLink), the exact published version, the wiki's view rule
+on the agent's reads, create#ArticleFromCase's redaction, message audience and checks, the Commons Knowledge mount for
+non-Customer Service users, review#ArticleFeedback's failure tolerance and operation key, and the acceptance walk against
+the usable-when (it covers all four).
+- R1 (high) find#ArticleSuggestions found a page's source among the suggested sources only, so a part of a space kept
+  internal and not suggested (allowSuggestions N) fell to the broader customer source and its pages were suggested on a
+  customer-visible surface. A page's source is found among all current sources, and of two equal ones the internal source
+  wins (also for get#PublishedArticle across organizations). Mantle SupportKnowledge feature.
+- R2 (medium) CaseDetail's Knowledge tab listed every linked page with its title and path, whether or not the wiki let the
+  agent view it (a link widened page access). It lists only pages of the user's view scope (get#WikiViewScope).
+  CustomerServiceKnowledge case.
+- R3 (medium) create#ArticleFromCase took any email not from the customer as "our reply (customer-visible)", so a staff
+  email or one to a supplier could go into an article; now outward is an email of the service desk to the customer or
+  contact, anything else internal (INTERNAL_MESSAGE). Redaction missed the first name alone ("Thanks, Ana"), and an email
+  address lost its name before its shape was matched; it now takes out first names and nicknames, party ids, address2, every
+  linked record but products and categories, the customer's own orders, returns and invoices (the latest 200 each), and the
+  parties of the case's emails, emails by shape first. Mantle spec cases.
+- R4 (medium) review#ArticleFeedback made the task and reviewed the feedback in two transactions, so a failed review left a
+  task behind; each feedback is one transaction (the internal review#ArticleFeedbackItem, as PurchaseRequests' groups).
+- R5 (low) Send to customer addressed the case's Reporter even when an agent filed the case (F-P12-6); a staff party is
+  skipped for the customer.
+- R6 (low) get#PublishedArticle accepted an answer with no version; the version read must be the page's published one.
+- Checked and kept: get#PublishedArticle refuses a page of an internal source, of no source, a draft or a restricted page
+  whatever id or path is guessed, and reads the published version with no version asked; Commons Knowledge's own behaviour
+  is unchanged outside Customer Service (`inCustomerService` only narrows the spaces, and its transitions check the case);
+  the operation key answers a retry; the feedback list's comments are of the user's organizations. Left: a retry with an
+  operation key after the batch committed and before the key was recorded reviews nothing again (AlreadyReviewed), as other
+  batches.
+- Specs (pass): Mantle SupportKnowledge (7), SupportCases; BOSS CustomerServiceKnowledge, CustomerServiceAccess,
+  CustomerServiceCases, Commons Knowledge, KnowledgeReview, Notes. Acceptance not rerun (not changed).
 
 ### P13 — Feedback
 

@@ -1778,4 +1778,40 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Customer Service P2: the case topics Mantle sends (mantle.request.SupportCaseServices, F44) open the case -->
     <moqui.security.user.NotificationTopic topic="SupportCaseAssigned" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
     <moqui.security.user.NotificationTopic topic="SupportCaseCustomerReply" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}"/>
+    <!-- Customer Service P12: ArticleFeedback, the review queue, for the knowledge author (who reviews: SUPPORT_KNOWLEDGE_EDIT), the
+        service manager (who reads it) and the administrator; find#ArticleFeedback and review#ArticleFeedback check again -->
+    <artifactGroups artifactGroupId="BOSS_CS_ARTICLE_FEEDBACK">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Knowledge/ArticleFeedback.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_KNOWLEDGE" userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_MANAGER" userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_ARTICLE_FEEDBACK_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- P12: CaseToArticle, an article drafted from a case, for the knowledge author and the administrator
+        (SUPPORT_KNOWLEDGE_EDIT); prepare#ArticleFromCase and create#ArticleFromCase check again -->
+    <artifactGroups artifactGroupId="BOSS_CS_CASE_TO_ARTICLE">
+        <artifacts artifactName="component://mr-boss/screen/CustomerService/Knowledge/CaseToArticle.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_DENY" userGroupId="BOSS_CUSTOMER_SERVICE"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_KNOWLEDGE" userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_CS_CASE_TO_ARTICLE_ADMIN" userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
 </entity-facade-xml>

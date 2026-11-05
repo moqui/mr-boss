@@ -27,7 +27,8 @@ feature("the menu renders for each group, its areas open, the others are refused
                 problems.push(`${user} is offered the Customer Service quick create ${offered}`)
             for (const area of areas) {
                 const expected = found.names.includes(area)
-                const rendered = asUser(user, () => lib.page(area, {}, "html"))
+                // P12: Knowledge is Commons Knowledge, a .qvue screen with its terminal twin and no html: it opens in tui
+                const rendered = asUser(user, () => lib.page(area, {}, area === "Knowledge" ? "tui" : "html"))
                 if (opened(rendered) !== expected)
                     problems.push(`${user} ${area}: ${expected ? "refused" : "opened"} ${rendered.status} ${rendered.errors}`)
             }
@@ -119,7 +120,9 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         // P2: the cases' required parameters, so the refusal is the authorization's, not a validation's
                         requestId: ids.thermostatCaseId,
                         requestIds: [ids.thermostatCaseId],
-                        operation: "assign"
+                        operation: "assign",
+                        // P12: Send to customer's article
+                        wikiPageId: "BOSS_CS_NO_PAGE"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))

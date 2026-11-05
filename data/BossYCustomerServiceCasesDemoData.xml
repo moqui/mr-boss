@@ -69,4 +69,19 @@ along with this software (see the LICENSE.md file). If not, see
             salesChannelEnumId="ScPhone" requestDate="2026-11-04 10:00:00" requestResolutionEnumId="RrUnresolved"
             filedByPartyId="BOSS_CS_SERVICES" description="The Services customer asks about its invoice."/>
     <mantle.request.RequestParty requestId="BOSS_CS_CASE_OTHER" partyId="BOSS_CS_CUST_OTHER" roleTypeId="Customer" fromDate="2026-11-04 10:00:00"/>
+    <!-- P12: the knowledge author works in the Support team (so sees its cases, for CaseToArticle), and Joe's thermostat case
+        has the agent's reply (an outward email, with his name, address and order to take out of an article) and an internal
+        note (never put in an article) -->
+    <mantle.party.PartyRole partyId="BOSS_CS_KNOWLEDGE" roleTypeId="Agent"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_CS_TM_KNOWLEDGE" relationshipTypeEnumId="PrtServiceTeam"
+            fromPartyId="BOSS_CS_KNOWLEDGE" fromRoleTypeId="Agent" toPartyId="BOSS_CS_TEAM_SUPPORT" toRoleTypeId="OrgTeam" fromDate="0"/>
+    <mantle.party.communication.CommunicationEvent communicationEventId="BOSS_CS_CE_THERMO_REPLY" communicationEventTypeId="Email"
+            contactMechTypeEnumId="CmtEmailAddress" statusId="CeSent" fromPartyId="BOSS_CS_AGENT" toPartyId="CustJqp"
+            entryDate="2026-11-02 10:15:00" subject="Your thermostat reading" contentType="text/html"
+            body="&lt;p&gt;Hello Joe Public,&lt;/p&gt;&lt;p&gt;A new thermostat can read up to three degrees high on its first day. If it still does, open Settings, choose Calibrate and enter the temperature of a room thermometer.&lt;/p&gt;&lt;p&gt;We can also replace it under order BOSS_CS_SO_DELIVERED.&lt;/p&gt;"/>
+    <mantle.request.RequestCommEvent requestId="BOSS_CS_CASE_THERMO" communicationEventId="BOSS_CS_CE_THERMO_REPLY"/>
+    <mantle.party.communication.CommunicationEvent communicationEventId="BOSS_CS_CE_THERMO_NOTE" communicationEventTypeId="Comment"
+            fromPartyId="BOSS_CS_AGENT" entryDate="2026-11-02 10:20:00" contentType="text/html"
+            body="&lt;p&gt;Internal: this is the October batch; if calibrating does not help, replace it.&lt;/p&gt;"/>
+    <mantle.request.RequestCommEvent requestId="BOSS_CS_CASE_THERMO" communicationEventId="BOSS_CS_CE_THERMO_NOTE"/>
 </entity-facade-xml>

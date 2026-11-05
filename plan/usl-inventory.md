@@ -1075,8 +1075,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | get#UserTodayRequests |  | Commons |
-| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2) |
-| RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10) |
+| RequestServices | link#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; CustomerService/Returns/WarrantyAssessment; Shared/RequestDetail; Manufacturing/WorkCenters/Downtime; Maintenance/Requests/RequestDetail; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequestDetail | Commons/QuickCreate; Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2); CustomerService/Cases/CaseDetail (Knowledge tab: an article by WikiPageRequest, Customer Service P12); CustomerService/Knowledge/Knowledge (Link to case) |
+| RequestServices | unlink#RequestRecord | Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/RequestDetail; — Purchasing: a purchase request links its orders (RequestItemOrder), not records (Purchasing P10); CustomerService/Cases/CaseDetail (Knowledge tab: Unlink an article, Customer Service P12) |
 
 Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), called by built screens:
 
@@ -1900,3 +1900,20 @@ Purchasing's pages in the PASS Supplier app call these through `pass.Facade.call
 | order/SupplierPortalServices | revoke#QuoteCapabilities |  | for close#QuoteRequest (Purchasing P12) |
 | order/SupplierPortalServices | revoke#OrderCapabilities |  | the SupplierPortalRevoke EECA (Purchasing P16) |
 
+
+## Customer Service P12 — Knowledge (Nov 5, 2026)
+
+Added in `request/KnowledgeServices.xml` (impl-customer-service P12, CS-KNOWLEDGE), called by built screens; the Support
+app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleSuggestions` on its customer-visible surface.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/KnowledgeServices | save#ServiceKnowledgeSource | CustomerService/Settings/KnowledgeSources | CustomerService/Settings/KnowledgeSources (ServiceKnowledgeSources: Add source, Edit, End) |
+| request/KnowledgeServices | find#ArticleSuggestions | CustomerService/Cases/NewCase; CustomerService/Cases/CaseDetail; PASS:Support/CustomerArticle | CustomerService/Cases/NewCase (CaseIdentity's suggestions); CustomerService/Cases/CaseDetail (Knowledge tab, through ironstone.customerservice.KnowledgeServices.get#CaseKnowledge) |
+| request/KnowledgeServices | get#PublishedArticle | PASS:Support/CustomerArticle | for P15's CustomerArticle (F59) |
+| request/KnowledgeServices | get#ArticlePublicLink | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Send to customer); CustomerService/Knowledge/Knowledge (Send to customer), through prepare#ArticleSend |
+| request/KnowledgeServices | record#ArticleFeedback | PASS:Support/CustomerArticle | CustomerService/Cases/CaseDetail (Knowledge tab: Helpful?) |
+| request/KnowledgeServices | review#ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | CustomerService/Knowledge/ArticleFeedback (FeedbackReview) |
+| request/KnowledgeServices | suggest#ArticleEdit | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Suggest edit); CustomerService/Knowledge/Knowledge (Suggest edit) |
+| request/KnowledgeServices | create#ArticleFromCase | CustomerService/Knowledge/CaseToArticle | CustomerService/Knowledge/CaseToArticle (ArticleDraft; AnswerSelection's preview through prepare#ArticleFromCase) |
+| request/KnowledgeServices | make#ArticleTask |  | for review#ArticleFeedback and suggest#ArticleEdit |

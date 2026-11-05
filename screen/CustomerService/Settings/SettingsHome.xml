@@ -80,6 +80,15 @@ along with this software (see the LICENSE.md file). If not, see
                         </form-list>
                     </box-body-nopad>
                 </container-box>
+                <!-- P12: Knowledge and feedback (design Settings), the knowledge sources -->
+                <container-box>
+                    <box-header title="Knowledge and feedback"/>
+                    <box-body>
+                        <link url="/qapps/CustomerService/Settings/KnowledgeSources?organizationPartyId=${cfg.organizationPartyId}" url-type="plain"
+                                text="Knowledge sources" link-type="anchor"/>
+                        <label type="div" style="text-caption m-muted" text="The wiki spaces whose articles agents are offered and send to customers."/>
+                    </box-body>
+                </container-box>
                 <label type="p" style="text-caption m-muted" text="Account, profile, branding, working hours and mail accounts are set in Commons."/>
             </widgets>
         </section>
