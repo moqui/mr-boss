@@ -14,8 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- The Orders area of IronStone Customer Service (design-customer-service §1, §4; impl-customer-service P3): a menu group
     holding Orders (the default: OrderLookup and OrderResults), with OrderDetail, ShipmentDetail and InvoiceDetail (the shared
-    screens in the Customer Service context, crosscut §3.6, §3.8, §3.16) hidden from the menu; the change requests follow
-    (P10). Every Customer Service user, limited to their organizations' sales orders of customers they serve. -->
+    screens in the Customer Service context, crosscut §3.6, §3.8, §3.16) hidden from the menu; P10: Changes (OrderChanges)
+    and OrderChangeDetail, the shared change detail, hidden from the menu. Every Customer Service user, limited to their organizations' sales orders of customers they serve. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Orders" default-menu-index="4" menu-image="sym_o_receipt_long" menu-image-type="icon">
     <subscreens default-item="Orders" always-use-full-path="true">
@@ -23,6 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="ShipmentDetail" location="component://mr-boss/screen/Shared/ShipmentDetail.xml"
                 menu-include="false"/>
         <subscreens-item name="InvoiceDetail" location="component://mr-boss/screen/Shared/InvoiceDetail.xml"
+                menu-include="false"/>
+        <!-- P10: the order changes (Orders/OrderChanges, a tab) and the shared change detail (Shared/OrderChangeDetail) -->
+        <subscreens-item name="OrderChangeDetail" location="component://mr-boss/screen/Shared/OrderChangeDetail.xml"
                 menu-include="false"/>
     </subscreens>
     <widgets>

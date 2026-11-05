@@ -229,7 +229,8 @@ function purchasingContext() {
 // organizations' stores, else their warehouses), Documents, and Prices with their explanation for a price reader
 // (PRICE_VIEW). No cost, supplier price, margin, method or stock policy: those capabilities are off here whatever the user
 // holds, so Mantle's reads leave them out. An unready projection shows unknown, never zero (Inventory.js projection, F31).
-const customerServiceTabs = ["Summary", "Identifiers", "Dimensions", "Stock", "Documents", "Prices"]
+// P10 (impl-customer-service): Associations, read only, shows a product's substitutes (PatEquivalent, PatReplacement)
+const customerServiceTabs = ["Summary", "Identifiers", "Dimensions", "Stock", "Documents", "Prices", "Associations"]
 const customerServicePaths = {
     "": "Availability",
     "Products/Product360": "Availability/Product360",

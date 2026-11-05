@@ -275,8 +275,8 @@ Added in Accounting P10 (collections, credit and recurring invoices), called by 
 | CreditServices | evaluate#OrderCredit | Accounting/Records/OrderDetail | (approve#Order; the OrderPreApproveCredit SECA) |
 | CreditServices | release#CreditHold | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360 | Accounting/Records/OrderDetail; Accounting/Receivables/Customer360/Credit |
 | CreditServices | get#CustomerCreditStatus | Accounting/Receivables/Customer360 | Accounting/Receivables/Customer360/Credit; CustomerService/Customers/Customer360/ServiceBilling (read only, for CUSTOMER_CREDIT_VIEW; Customer Service P3) |
-| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit); Purchasing/Orders/OrderDetail (Hold, a Purchase reason; Purchasing P3) |
-| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold); Purchasing/Orders/OrderDetail (Release hold, a Purchase reason; Purchasing P3) |
+| OrderServices | hold#Order | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.evaluate#OrderCredit); Purchasing/Orders/OrderDetail (Hold, a Purchase reason; Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: the Change hold, through OrderChangeServices.apply#OrderChange; Customer Service P10) |
+| OrderServices | release#OrderHold | Shared/OrderDetail; Commerce/Orders/OrderDetail | (CreditServices.release#CreditHold); Purchasing/Orders/OrderDetail (Release hold, a Purchase reason; Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange releases its Change hold, another hold kept; Customer Service P10) |
 | RecurringInvoiceServices | store#Schedule | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | preview#Period | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
 | RecurringInvoiceServices | generate#Invoices | Accounting/Receivables/RecurringInvoices | Accounting/Receivables/RecurringInvoices |
@@ -603,7 +603,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | create#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; Sales/Orders/Orders; Sales/Quotes/Quotes | — Purchasing: one part per order, made by create#PurchaseOrder (Purchasing P3) |
 | OrderServices | update#OrderPart | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft's receiving facility through PurchaseServices.update#PurchaseOrder) |
 | OrderServices | get#OrderItemTotal |  |  |
-| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3) |
+| OrderServices | create#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Add line, through PurchaseServices.store#PurchaseOrderItem) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: a short pick's substitute line; Customer Service P10) |
 | OrderServices | update#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (Purchasing P3: a draft line through PurchaseServices.store#PurchaseOrderItem, the entity update) |
 | OrderServices | delete#OrderItem | Purchasing/Orders/OrderDetail; Shared/OrderDetail; PASS:Shop/Cart; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | Purchasing/Orders/OrderDetail (Remove, through PurchaseServices.delete#PurchaseOrderItem) (Purchasing P3) |
 | OrderServices | recalc#OrderItemAmount |  |  |
@@ -632,7 +632,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders and Purchasing/Orders/OrderDetail (Close remainder: close#PurchaseRemainders completes the part) (Purchasing P3) |
 | OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3) |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail | — Purchasing: cancel#PurchaseOrder (Purchasing P3) |
-| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11); Purchasing/Orders/OrderDetail (Close remainder, through close#PurchaseRemainders) (Purchasing P3) |
+| OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11); Purchasing/Orders/OrderDetail (Close remainder, through close#PurchaseRemainders) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: the open remainder or a short pick's, through apply#OrderChange; Customer Service P10) |
 | OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
@@ -645,7 +645,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | handle#OrderMajorChange |  |  |
 | OrderServices | update#OrderHeaderTotal |  |  |
 | OrderServices | update#OrderPartTotal |  |  |
-| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9) |
+| OrderServices | increment#OrderRevision | Purchasing/Orders/OrderChanges | (Purchasing P3: the commercial revision behind PurchasePolicy.commercialRevisionOnly); Purchasing/Orders/OrderChanges (ApplyRevision counts the revision once, through apply#PurchaseRevision; Purchasing P9); (Customer Service P10: a sales order's commercial revision behind PartyAcctgPreference.salesCommercialRevisionOnly, F55) |
 | OrderServices | create#OrderContent | Shared/RecordFiles; Shared/OrderDetail; Sales/Orders/OrderDetail | Shared/RecordFiles |
 | OrderServices | update#OrderContent | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | OrderServices | save#OrderContentFile | Shared/RecordFiles |  |
@@ -900,7 +900,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | AssetServices | reserve#AssetForOrderItem | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/OrderDetail; Shared/ShipmentDetail; Sales/Orders/OrderDetail | (the expiry gate, behind WarehousePolicy expiryBlock: expired stock skipped, the shortfall named; impl-warehouse P5); Purchasing/Receiving/ShipmentDetail (Bought for customer orders: Reserve for this order, through mantle.order.PurchasePegServices.reserve#ReceiptPeg; Purchasing P14b, R-PUR-37) |
 | AssetServices | remove#OrderItemReservations | Shared/OrderDetail; Sales/Orders/OrderDetail |  |
 | AssetServices | remove#OrderReservations |  |  |
-| AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail | — not offered: Warehouse/Orders/OrderDetail and ShipmentDetail show Reserved only; a held-stock disposition reduces it (Quality.js) |
+| AssetServices | reduce#AssetReservation | Warehouse/Orders/OrderDetail; Warehouse/Shipping/ShipmentDetail; Shared/ShipmentDetail | — not offered: Warehouse/Orders/OrderDetail and ShipmentDetail show Reserved only; a held-stock disposition reduces it (Quality.js); — not called by apply#OrderChange: cancel#OrderItem's rule re-reserves the remainder (F66; Customer Service P10) |
 | AssetServices | reReserve#Assets |  |  |
 | AssetServices | reserve#IncreasedAsset |  |  |
 | AssetServices | move#AssetReservation |  |  |
@@ -1154,7 +1154,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | ShipmentServices | reset#ShipmentPackage | Warehouse/Handheld/Pack; Warehouse/Shipping/Pack | — not built (P12): Warehouse/Shipping/Pack's Move and Remove cover it (edit#ShipmentPackage) |
 | ShipmentServices | ship#OrderPart |  |  |
 | ShipmentServices | create#OrderPartShipment | Warehouse/Orders/OrderDetail; Warehouse/Receiving/Receipts; Warehouse/Shipping/Shipments; Purchasing/Receiving/Receipts; Shared/OrderDetail; Sales/Orders/OrderDetail | Warehouse/Receiving/Receipts and NewReceipt (NewReceipt), through WarehouseTaskServices.ensure#PurchaseReceipt; — Purchasing: ensure#PurchaseReceipt (Receipts' PrepareReceipt) (Purchasing P5) |
-| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Warehouse/Orders/OrderDetail (Create shipment: a new shipment per part, create#OutgoingShipment over create#OrderPartShipment) |
+| ShipmentServices | add#OrderPartToShipment | Warehouse/Orders/OrderDetail; Shared/OrderDetail; Sales/Orders/OrderDetail | — Warehouse/Orders/OrderDetail (Create shipment: a new shipment per part, create#OutgoingShipment over create#OrderPartShipment); CustomerService/Orders/OrderChangeDetail (ApplyChange: the substitute on its short pick's shipment; Customer Service P10) |
 | ShipmentServices | pickMove#ProductToContainer | Warehouse/Inventory/ContainerDetail | — Warehouse/Picking/Pick (PickScan into a pick container: pick#ShipmentStock over pickMove#ShipmentProduct); ContainerDetail attaches only |
 | ShipmentServices | pickMove#ShipmentProduct | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick and Handheld/Pick (PickScan) through WarehouseTaskServices.pick#ShipmentStock, for one line (its new shipmentItemSourceId and pickedMoveList) |
 | ShipmentServices | get#ShipmentProductByScan | Warehouse/Handheld/Pick; Warehouse/Picking/Pick; Shared/ShipmentDetail | Warehouse/Picking/Pick (inside pickMove#ShipmentProduct; the handheld product scan must be the line's product) |
@@ -1964,3 +1964,20 @@ Mantle services Customer Service P3 added or calls that had no row.
 | order/OrderConfirmationServices | store#OrderConfirmation | CustomerService/Orders/OrderDetail | — (resend#OrderConfirmation stores it on the first resend) (Customer Service P3) |
 | order/OrderConfirmationServices | resend#OrderConfirmation | CustomerService/Orders/OrderDetail | CustomerService/Orders/OrderDetail (Resend confirmation) (Customer Service P3) |
 | product/InventoryReportServices | get#InventoryAtDate | CustomerService/Availability/StockAtDate; Shared/StockAtDate | Warehouse/Reports/StockAtDate (Warehouse P17); CustomerService/Availability/StockAtDate (AvailabilityServices.get#StockAtDate, the customer-serving facilities; Customer Service P3) |
+
+## Customer Service P10 — Order changes (Nov 5, 2026)
+
+Mantle services Customer Service P10 added or calls that had no row.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| order/OrderChangeServices | save#OrderChange | CustomerService/Orders/OrderChangeDetail; Shared/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ChangeProposal, its Edit; from OrderDetail's Propose change and CaseDetail's Request order change) (Customer Service P10) |
+| order/OrderChangeServices | withdraw#OrderChange | CustomerService/Orders/OrderChanges | CustomerService/Orders/OrderChangeDetail (Withdraw) (Customer Service P10) |
+| order/OrderChangeServices | get#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (the record header, ChangeProposal, ChangeDecision) (Customer Service P10) |
+| order/OrderChangeServices | preview#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ChangeImpact) (Customer Service P10) |
+| order/OrderChangeServices | decide#OrderChange | CustomerService/Orders/OrderChangeDetail; CustomerService/Approvals | CustomerService/Orders/OrderChangeDetail (ChangeDecision) (Customer Service P10) |
+| order/OrderChangeServices | approve#OrderChangeMessage, refuse#OrderChangeMessage | CustomerService/Approvals | Commons/Notifications (the OrderChangeApproval topic's approve and refuse) (Customer Service P10) |
+| order/OrderChangeServices | apply#OrderChange | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (ApplyChange) (Customer Service P10) |
+| order/OrderChangeServices | send#OrderChangeConfirmation | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (Send confirmation: the applied change's PDF) (Customer Service P10) |
+| order/OrderChangeServices | find#OrderChanges | CustomerService/Orders/OrderChanges | CustomerService/Orders/OrderChanges (ChangeFind, ChangeList) (Customer Service P10) |
+| shipment/WarehouseTaskServices | reopen#ShipmentPackageForChange |  | (internal: apply#OrderChange's reopen between pack and ship, under ORDER_CHANGE_APPLY; Customer Service P10) |

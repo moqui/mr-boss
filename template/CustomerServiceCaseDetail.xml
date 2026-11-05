@@ -120,6 +120,9 @@ along with this software (see the LICENSE.md file). If not, see
                 <set field="csTab" from="tab == 'reply' &amp;&amp; cd?.canEdit ? 'reply' : csTab"/>
                 <script>if (cd?.canEdit) csTabs.splice(1, 0, {key: 'reply', label: 'Saved reply'}); for (const csTabEntry of csTabs) csTabEntry.current = csTabEntry.key == csTab</script>
                 <set field="csValues" from="Object.assign({}, csValues, {tab: csTab})"/>
+                <!-- P10: Request order change, for the case's linked order the user may work with -->
+                <set field="csChangeOrderId" from="(cd?.links || []).find((link) =&gt; link.recordEntityName == 'mantle.order.OrderHeader'
+                        &amp;&amp; link.url)?.recordId || null"/>
             </actions>
             <widgets>
                 <section name="CaseMissing" condition="!cd">
@@ -244,6 +247,10 @@ along with this software (see the LICENSE.md file). If not, see
                                         </form-single>
                                     </container-dialog>
                                     <button-menu text="More" icon="more_horiz" condition="cd.canEdit || (cd.canTransition &amp;&amp; csOtherMoves.length)">
+                                        <!-- P10: a change of the case's order (Shared/OrderChangeDetail), linked to the case -->
+                                        <link url="${sharedLinks['Orders/OrderChangeDetail']}" text="Request order change" icon="sym_o_edit_note"
+                                                parameter-map="{orderId:csChangeOrderId, caseRequestId:requestId}"
+                                                condition="cd.canEdit &amp;&amp; csChangeOrderId &amp;&amp; customerService?.capabilities?.orderChangeRequest"/>
                                         <section-iterate name="CaseMoves" list="csOtherMoves" entry="move">
                                             <widgets>
                                                 <container-dialog id="CaseMove_${move.toStatusId}" button-text="${move.label}" icon="sym_o_flag"

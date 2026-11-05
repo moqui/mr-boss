@@ -297,7 +297,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | built Nov 5, 2026 |
 | P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | built Nov 5, 2026 |
 | P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | — |
-| P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | — |
+| P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | built Nov 5, 2026 |
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
 | P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | — |
@@ -1979,6 +1979,161 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
   - a customer's cancel before approval with nothing reserved applies at once only with `customerImmediateCancel` on;
   - an approved price change cannot be applied here; a stale proposal names the current revision;
   - a Credit hold placed by Accounting stays when the Change hold is released.
+
+**Built Nov 5 (P10).**
+- Mantle entities (`entity/SupportOrderChangeEntities.xml`, named to load after RequestEntities and OrderEntities, whose
+  enumeration types its seeds use): the proposal's fields on Request (`orderId`, `orderChangeKindEnumId`,
+  `expectedOrderRevision`, `customerConsentRef`, `cancellationReason`, `addressContactMechId`, `shipmentMethodEnumId`,
+  `carrierPartyId`, all audit-logged; `caseRequestId`, `changeAppliedDate`) and on RequestItem (`changeActionEnumId`,
+  `proposedUnitAmount`, audit-logged; `pickExceptionId`); `mantle.request.support.OrderChangeDecision` (PurchaseApprovalDecision's
+  fields: the request and its revision, the order and its revision, the organization, decision, date, user and party,
+  reason, `expireDate`, the ServicePolicy row, `operationKey`, `supersededDate`); ServicePolicy's `orderChangeSelfApproval`
+  and `orderChangeApprovalDays` (7 when empty); PartyAcctgPreference's `salesCommercialRevisionOnly` (off). Seeds:
+  `RqtOrderChange`, OrderChangeKind (cancel and substitute `applied`, price, quantity increase, ship date, address, ship
+  method and carrier `owner`), OrderChangeAction, OrderChangeDecision and `OctOrderChangeApplied`.
+- Mantle services (`service/mantle/order/OrderChangeServices.xml` over `OrderChanges.js`): `save#OrderChange`
+  (ORDER_CHANGE_REQUEST; a customer contact's own cancel without it; the applied kinds' lines checked when filed:
+  ALREADY_SHIPPED, BILLING_CONFLICT, SUBSTITUTE_INVALID, PRODUCT_NOT_USABLE, CONSENT_REQUIRED; STALE_ORDER; a resave moves
+  the revision and supersedes the decisions; the OrderChangeApproval notice to the approvers of its kind; under
+  `customerImmediateCancel` a customer's cancel of an order not approved with nothing reserved, picked, shipped or invoiced
+  applied at once with the policy as its decision, else "Cancellation requested"), `withdraw#OrderChange`, `get#OrderChange`,
+  `preview#OrderChange` (each line's reserved, picked, packed, shipped and billed quantities, a substitute's association,
+  usability, resolver price (`get#OrderProductPrice`) and ATP, the conflicts, the order's paid amount for a finance reader,
+  `previewVersion`), `decide#OrderChange` (ORDER_CHANGE_APPROVE, or SALES_APPROVE for the commercial kinds;
+  REVISION_REQUIRED, STALE_REVISION naming the current revision, STALE_ORDER, SELF_APPROVAL, REASON_REQUIRED; a refusal closes
+  the proposal Rejected), `approve#OrderChangeMessage` and `refuse#OrderChangeMessage` (the topic's handlers at the message's
+  `sourceRevision`, refusing none: F45, F46), `apply#OrderChange` (ORDER_CHANGE_APPLY; FORBIDDEN for a commercial kind; every
+  check under the order's lock: STALE_REVISION, STALE_ORDER, NOT_APPROVED, APPROVAL_EXPIRED, CLOSED_PERIOD, ALREADY_SHIPPED,
+  BILLING_CONFLICT, STOCK_CHANGED against the preview; then a packed quantity off its package, the Change hold, the lines
+  (cancel#OrderItem, no reduce#AssetReservation, F66; a substitute through create#OrderItem, the short remainder cancelled,
+  the short pick SpresSubstitute), the hold released (another hold kept), the substitute added to the short pick's shipment,
+  the request Completed and its PDF stored as OrderContent; one transaction, so a failure leaves the order as it was),
+  `send#OrderChangeConfirmation` (the stored PDF to a checked recipient from a mailbox the user sends from, as P3's resend;
+  `OrderConfirmations.js` exports `senderAccount`) and `find#OrderChanges` (by order, customer, organization, requester,
+  approver, case, state and period). The print `template/order/OrderChangeApplied.print.html.fancy`; the topic
+  `OrderChangeApproval` in `MantleSetupData.xml`.
+- Mantle changes: `increment#OrderRevision` counts a sales part's commercial changes only when the seller's preference
+  (find#PartyAcctgPreference, the parent organization's when it has none) sets `salesCommercialRevisionOnly` (F55);
+  `reopen#ShipmentPackage`'s checks and writes are `Packing.js` `reopenCheck` and `reopenWork`, shared with the new internal
+  `WarehouseTaskServices.reopen#ShipmentPackageForChange`, which apply calls under ORDER_CHANGE_APPLY with the order's
+  organization in place of the user's facilities and SHIPMENT_PACK, keeping the confirmation, reason and state checks.
+- BOSS: `CustomerService.js` the `orderChange` record kind (destination OrderChangeDetail), order changes in the palette,
+  the choices `customerOrders`, `orderLines`, `shortPicks` and `substitutes` (get#Choices takes `orderId` and
+  `orderItemSeqId`) and the links `Orders/OrderChanges` and `Orders/OrderChangeDetail`; `screen/CustomerService/Orders/OrderChanges.xml`
+  (Changes: ChangeFind and ChangeList over find#OrderChanges, states as chips); `screen/Shared/OrderChangeDetail.xml` (the
+  canonical shared screen, Customer Service context only: a new proposal's ChangeProposal; a proposal's record header with
+  Decide, Apply or Send confirmation by state, Edit, the applied PDF, the case and Withdraw in More; Proposal, Decisions and
+  Impact with its conflicts; every transition after check#Record), mounted at `CustomerService/Orders/OrderChangeDetail`;
+  OrderDetail's More gains Propose change and Order changes (`template/CustomerServiceOrderDetail.xml`); CaseDetail's More
+  gains Request order change for the case's linked order (`template/CustomerServiceCaseDetail.xml`); Product360 in Customer
+  Service shows Associations (the substitutes, read only; Products' `SharedContext.js`); Shared/RequestDetail's Items tab
+  covers RqtOrderChange with a link to its detail (F49); the root's `OrderChangeApproval` topic and BossSetupData's link to
+  OrderChangeDetail. Demo: the filter's equivalent `BOSS_CS_FILTER_PLUS` (stocked, priced 16) and ORG_ZIZI_CORP's
+  `salesCommercialRevisionOnly` (Retail inherits it).
+- Specs: Mantle `test/order/OrderChanges` (6 features, about 4.5 s: the commercial revision and its default; the substitute
+  with its refusals, the topic's revision, the confirmation's recipient check; STOCK_CHANGED then the cancel with the
+  reservation rows; the reopen between pack and ship and the invoice after pack and ship, ALREADY_SHIPPED after; the
+  customer's cancel with the flag off and on; the price change, the list, another organization, STALE_ORDER,
+  APPROVAL_EXPIRED, SELF_APPROVAL and the Credit hold kept). BOSS `CustomerServiceAccess` (+1: the record kind's
+  capability for the order desk and the agent, another organization's record, Mantle's read and the order lines; the menu
+  feature expects OrderChangeApproval) and `CustomerServiceOrderChanges` (1 feature: OrderChangeDetail's and OrderChanges'
+  one qvt render). Acceptance `acceptance/CustomerService/CustomerServiceOrderChangesWalk` (the usable-when, 5 features,
+  through OrderChangeDetail's transitions) and AppStructure's fixtures (OrderChanges, OrderChangeDetail).
+- Tests run (all pass): Mantle OrderChanges, OrderToCashBasicFlow, AssetReservationMisc, AssetReservationMultipleThreads,
+  WarehousePicking, WarehousePacking, AccountingCredit, PurchaseRevisions, PurchaseHoldPermission, PurchaseOrders,
+  PurchaseApprovals, OrderLifecycle, ReturnToResponseBasicFlow, ShipmentReturnMisc, SupportCases, OrderConfirmations,
+  ShipmentPick, OrderBulk, WorkPlanToCashBasicFlow, OrderProcureToPayBasicFlow, WorkProjectRequests, RecordVisibility,
+  RecordLinks, WorkProjectClients, CommonsToday, SupplierPortal (250 features); BOSS CustomerServiceAccess,
+  CustomerServiceOrders, CustomerServiceCases, CustomerServiceOrderChanges, WarehousePicking, WarehousePacking,
+  WarehouseShipping, WarehouseInventory, PurchasingRevisions, PurchasingRequests, PurchasingOrders, PurchasingAccess,
+  ProductsSharedContext, ProductsAccess, Requests, ProjectRequests, AccountingReceivables, AccountingCollections,
+  AccountingAccess, ProjectsAccess, Notifications (166 features); acceptance CustomerServiceOrderChangesWalk (5),
+  CustomerServiceFoundationWalk, CustomerServiceOrdersWalk and AppStructure (34 features). `moqui lint --screens`: 136
+  flagged sites, as master; none in the new or changed screens.
+- Inventories: usl-inventory's hold#Order, release#OrderHold, create#OrderItem, cancel#OrderItem, increment#OrderRevision,
+  reduce#AssetReservation (not called, F66) and add#OrderPartToShipment, and a P10 table for the OrderChangeServices and the
+  internal reopen. No ss-inventory row is designed into OrderChanges or OrderChangeDetail (they have no mr-marble form).
+- Decisions:
+  - The named failures are Mantle reason codes (STALE_ORDER, STOCK_CHANGED, ALREADY_SHIPPED, BILLING_CONFLICT,
+    APPROVAL_EXPIRED, FORBIDDEN, CLOSED_PERIOD), the form `lib.reasonCode` reads; FORBIDDEN is a kind applied by the order's
+    owner, PERMISSION_DENIED a missing permission. Each is an error of the one apply transaction, so the order is unchanged.
+  - The proposal's states are read, not stored: Requested and Needs information (Submitted, Waiting for customer), Approved
+    (a current, unexpired approval), Applied (Completed), Rejected (Cancelled, RrRejected), Cancelled (withdrawn, RrWontFix)
+    and Stale (the order's revision moved).
+  - An applied kind's conflicts are refused when filed as well as at apply; the approval binds the proposal's revision and
+    refuses a moved order (STALE_ORDER); the separation is ServicePolicy's (another approver unless orderChangeSelfApproval).
+  - OrderChangeDetail's ChangeProposal files one line per proposal (the Mantle service takes several).
+  - The applied PDF renders inside apply's transaction; a render that fails is logged and the change stays (no PDF, so no
+    confirmation to send). The confirmation is sent by the order desk or an agent from the service mailbox, as P3's resend.
+  - A customer contact (the customer itself, or a current contact or employee of it) may file a cancel of their own order
+    through save#OrderChange; P15's `request#CustomerCancel` calls it.
+- Findings (provisional):
+  - **F-P10-1** An entity file's seed data loads in file order, so the proposal's seeds failed in `OrderChangeEntities.xml`
+    (RequestType and OrderContentType not loaded yet) and the whole file was skipped; the file is
+    `SupportOrderChangeEntities.xml`, after them, its seeds in an entity's `seed-data` (not an extend-entity's).
+  - **F-P10-2** Ziziwork's organizations have no PartyAcctgPreference of their own and inherit ORG_ZIZI_CORP's
+    (find#PartyAcctgPreference): a demo row for ORG_ZIZI_RETAIL replaced the inherited one (WarehousePacking's
+    kitCostFromComponents failed), so the sales flag is read through find#PartyAcctgPreference and set on ORG_ZIZI_CORP.
+  - **F-P10-3** Retail finalizes its pack invoice at pack (no D3 flag), so the demo packed order's change is BILLING_CONFLICT
+    when filed; the walk's reopen is its own order, packed while the company finalizes at ship. The demo order becomes
+    reopenable when Accounting turns salesInvoiceFinalizedAtShip on for Ziziwork, which also changes Mantle's flows that run
+    with the BOSS demo; for the lead.
+  - **F-P10-4** pack#Shipment completes a fully packed order part (OrderCompleted), and hold#Order refuses a completed order:
+    save and apply accept a completed order, refuse only what shipped, and reopen the package (back to Approved) before the
+    Change hold.
+  - **F-P10-5** Mantle reserves at placement by default (AsResAutoPlaced, an ad hoc asset when out of stock), so
+    customerImmediateCancel's "nothing reserved" holds only for an order part that reserves at approval; the condition stays
+    as designed.
+  - **F-P10-6** The stock put back after a reduced packed line is Warehouse's: cancel#OrderItem flags putBackQuantity and
+    Warehouse's reverse#Pick (SHIPMENT_PICK, which the order desk lacks) moves it, as design §4's receiving sides say; apply
+    does not call reverse#Pick.
+  - **F-P10-7** This runtime's entity find is consumed by `condition()`: a find built across statements must reassign it
+    (`query = query.condition(...)`), or its `list()` fails "entity find was already used".
+  - **F-P10-8** F78: apply places and releases its own Change hold in one transaction (a failed apply rolls it back), so P10
+    builds no manual release of a Change hold; one left by another path is released through release#OrderHold with
+    ORDER_CHANGE_HOLD_RELEASE, which a later screen must put behind check#Record.
+  - **F-P10-9** No BOSS group holds SALES_APPROVE or SALES_ORDER_CHANGE (Sales is not built): a commercial kind is filed and
+    routed, and no one in BOSS decides it until Sales grants them (§7).
+  - **F-P10-10** Approvals (P9's screen) should pass the OrderChangeApproval topic; until then the notice is decided from
+    Notifications or OrderChangeDetail.
+
+**Review Nov 5 (P10).** Checked both repos' diffs against this section, §2, design §4, AGENTS.md and Practices-App-Dev:
+apply's atomicity (every named failure is a `denied` or a nested service error of the one apply transaction; the checks
+come before the first write, and the writes after them, the reopen, the Change hold, the lines, the pick exception, the
+release, the substitute's shipment and the PDF, roll back together); the reopen split (`reopen#ShipmentPackage` keeps its
+operation, SHIPMENT_PACK, user facility, confirmation and reason checks and writes as before; the internal
+`reopen#ShipmentPackageForChange` is allow-remote false, keeps the confirmation, reason, state, package and
+INVOICE_FINALIZED checks, scopes the shipment to the order's organization, and neither it nor apply calls
+release#ShipmentDraftInvoice or refund#OrderPayment); F-P10-4's re-approval (a reopen's Completed to Approved and every
+Change hold's release run Mantle's OrderApproved rules again, as a Credit hold's release does: the store's approval email is
+not sent twice (send#OrderStoreEmail skips a type already sent), subscriptions fulfil an item once, reserve#AssetsForOrder
+reserves only the unreserved remainder, the drop-ship rule answers a line already on a purchase order; the high-priority
+notice repeats and an EDI order records its next 855, which an applied change warrants); F-P10-2 and F55 (the flag on
+ORG_ZIZI_CORP merges into its demo preference and is read through find#PartyAcctgPreference, so Retail keeps the
+inherited kitCostFromComponents; no Mantle or BOSS spec asserts a Ziziwork sales order's revision moving on a note, file
+or status); permissions by kind, FORBIDDEN for the commercial kinds, the Credit hold kept, the topic handlers at the
+message's revision, the customer's cancel only under customerImmediateCancel on an order not approved with nothing
+reserved, picked, shipped or invoiced; the walk restores salesInvoiceFinalizedAtShip and customerImmediateCancel in
+`finally`.
+- **R1 (high, Mantle)** A pick locks its shipment, its line and the asset, never the order, so apply's checks "under the
+  order's lock" did not serialize with a pick; and apply held the order while its reopen waited on the shipment, the
+  reverse of Warehouse's lock order (F294: the shipment, then the order parts and header), a deadlock against a pack or
+  reopen of the same order. `orderOf` with a lock now locks the order's shipments (by its ShipmentItemSources, in id order)
+  before the order, so a concurrent pick, pack or reopen either commits before the checks, which then answer
+  STOCK_CHANGED, or waits for the change.
+- **R2 (medium, Mantle; at the lead's request)** `hold#Order` and `release#OrderHold` locked the order header, then the
+  part, the reverse of Warehouse's `lockOrders` (F294: the parts, then the header), so a Credit or Change hold could
+  deadlock against a pack or reopen of the order. Both now lock the order's parts (the one named, else all, in sequence)
+  before the header, their behaviour otherwise unchanged; apply's `orderOf` takes the parts after the shipments, so the
+  hold it places inside apply takes nothing new. AccountingCredit, PurchaseHoldPermission, PurchaseRevisions, OrderChanges,
+  WarehousePacking, WarehousePicking and OrderToCashBasicFlow pass (84 features).
+- Left for the lead: F-P10-7 is the framework's design, not a P10 bug: `HostFind`'s chain methods
+  (`crates/moqui-core/src/script/runtime/entities.rs`, `take_find`) take the inner find and return a new object, so
+  Java-style `q.condition(...); q.list()` fails loudly ("entity find was already used") where Java's mutable EntityFind
+  works; returning the same object with the find changed in place would make both styles work. Callers that lock the
+  order header themselves before hold#Order (PurchaseOrders.js `purchaseOrder(orderId, true)` for the purchase revisions,
+  several OrderServices verbs) still take the header first. A customer filer's `get#OrderChange` is scoped to the user's
+  organizations and shows the decisions' reasons and approvers; P15's Support app needs its own audience read.
 
 ### P11 — Warranty
 

@@ -1848,4 +1848,9 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="PRICE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="PRICE_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRICE_VIEW" fromDate="0"/>
+    <!-- Customer Service P10: an order change to decide (Mantle's OrderChangeApproval, sent to ORDER_CHANGE_APPROVE holders of
+        the order's organization) opens OrderChangeDetail; the decision is mantle.order.OrderChangeServices.decide#OrderChange
+        at the message's revision, from Notifications or the detail -->
+    <moqui.security.user.NotificationTopic topic="OrderChangeApproval"
+            linkTemplate="/qapps/CustomerService/Orders/OrderChangeDetail?requestId=${requestId}"/>
 </entity-facade-xml>
