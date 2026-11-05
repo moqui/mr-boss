@@ -2382,38 +2382,38 @@ Design §5 WarrantyClaims and WarrantyAssessment, crosscut §3.2 DeliveredItems;
   - A chargeable repair is a partly covered or rejected decision with a charge estimate; its consent is recorded by deciding
     again (More's Record consent), a new decision at the same revision; the repair is linked only with it.
   - A claim is a case: its record link and the palette open CaseDetail, which links the assessment (More); WarrantyClaims
-    and the topic open WarrantyAssessment. Product360's warranty editing is Products' (F-P11-1).
+    and the topic open WarrantyAssessment. Product360's warranty editing is Products' (F164).
 - Findings (provisional):
-  - **F-P11-1** Products already edits a warranty: a PftWarranty feature's number and time unit on Products/Features
+  - **F164** Products already edits a warranty: a PftWarranty feature's number and time unit on Products/Features
     (NewFeature, FeatureDetail Summary) and its application to a product on Product360's Features tab, so Products' contract
     needed nothing here; Customer Service's Product360 context does not show the term (its tabs are P3's), a P16 polish.
-  - **F-P11-2** P4 built no store for service agreements (F101); P11 adds `store#ServiceAgreement` with the TtWarranty term
+  - **F165** P4 built no store for service agreements (F101); P11 adds `store#ServiceAgreement` with the TtWarranty term
     and reads Agreement rows by type, organization, customer, dates and status.
-  - **F-P11-3** `link#RequestRecord` asks the user's record visibility (get#RecordLinkInfo), which refuses an invoice to an
+  - **F166** `link#RequestRecord` asks the user's record visibility (get#RecordLinkInfo), which refuses an invoice to an
     agent who reads no finance records, though the invoice is evidence of the sale: WarrantyServices writes the claim's
     RequestRecord rows itself after its own organization and customer checks.
-  - **F-P11-4** Nothing in BOSS finished an AssetMaintenance (Manufacturing's EquipmentDetail only requests one), so
+  - **F167** Nothing in BOSS finished an AssetMaintenance (Manufacturing's EquipmentDetail only requests one), so
     `update#WarrantyWork` moves a claim's repair through the AssetMaintenance status flow (its task following), and the
     completion notice is a rule on AssetMaintenance's status, so a Maintenance app's own path tells the agent too.
-  - **F-P11-5** Shipment has no shipped date; the ship date is the AssetIssuance's issue date (a sales order's stock is issued
+  - **F168** Shipment has no shipped date; the ship date is the AssetIssuance's issue date (a sales order's stock is issued
     when it ships), as crosscut DeliveredItems reads.
-  - **F-P11-6** "WARRANTY_APPROVE for a rejection override" is read as covering a claim the lookup found expired (a coverage
+  - **F169** "WARRANTY_APPROVE for a rejection override" is read as covering a claim the lookup found expired (a coverage
     end set with its reason); design WarrantyAssessment says so.
-  - **F-P11-7** ServiceRequestType.templateFormId was not read (P7) and `save#ServiceRequestType` dropped it on a resave (as
+  - **F170** ServiceRequestType.templateFormId was not read (P7) and `save#ServiceRequestType` dropped it on a resave (as
     F127 for queues): `create#Case` and NewCase take the type's template before the queue's, and the save keeps it.
-  - **F-P11-8** A case's revision moves with every update of the request (status, due date), so a claim's revision is its own
+  - **F171** A case's revision moves with every update of the request (status, due date), so a claim's revision is its own
     counter (`Request.claimRevision`), moved only by its evidence; a status change does not stale a decision.
-  - **F-P11-9** Delivered items lists serials and lots only: an issued asset with neither (the demo's filters) is stock, not a
+  - **F172** Delivered items lists serials and lots only: an issued asset with neither (the demo's filters) is stock, not a
     delivered item, and a claim on it names its product and sale.
 
 **Review Nov 5 (P11).** Checked both diffs against this section, §2, §4, design §5 and crosscut §3.2: the coverage hierarchy
 (the agreement by type, organization, customer, product item, dates and Active status; the sale through AssetIssuance to a
 sales part of the organization to the customer; the PftWarranty term; goodwill), the services' own organization and customer
-checks, F-P11-3 (the claim's RequestRecord rows are written after checks that match Customer Service's own invoice, order and
+checks, F166 (the claim's RequestRecord rows are written after checks that match Customer Service's own invoice, order and
 asset scope; CaseDetail shows a linked invoice by id, customer and status only, and Shared/RequestDetail still hides a record
 get#RecordLinkInfo refuses), the WarrantyWorkFinished rule (it acts only on a maintenance an RqtWarranty case links; no
 Manufacturing path completes an AssetMaintenance; ProductionDowntime, ManufacturingDowntime and ManufacturingWorkCenters pass),
-WARRANTY_APPROVE and the approver, the revision (F-P11-8), consent before the repair, the demo's RqtWarranty type (Retail only,
+WARRANTY_APPROVE and the approver, the revision (F171), consent before the repair, the demo's RqtWarranty type (Retail only,
 F82; no Mantle spec files an RqtWarranty request outside SupportWarranty; P2's case rule unchanged), P7's templates (the
 type's template is read only where a type row names one: only the warranty demo and spec) and the walk (the usable-when).
 Fixes:
@@ -2654,14 +2654,14 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
     response at the authority.
 
 **Built Nov 5 (P13).**
-- Commons' form publication (built here under the owner-contract rule, F-P13-1): Mantle `entity/FormPublicationEntities.xml`
+- Commons' form publication (built here under the owner-contract rule, F173): Mantle `entity/FormPublicationEntities.xml`
   `mantle.party.FormPublication` (a DbForm offered for a purpose by an organization: context, site, open and close, access,
   repeat) and `FormInvitation` (recipient and address, context record and the record holding it, the app's policy row, the
   once-key, schedule, expiry, delivery state, sends, reminders, the one response and its score), with their enumerations
   (`FppCaseFeedback`, `FpaInvited`, `FprOnce`, `FinScheduled` … `FinRevoked`) and the DbForm purpose `DbfpCaseFeedback`;
   `service/mantle/party/FormPublication.js` (`publicationFor`, `guardResponse`) and `FormPublicationServices.guard#FormResponse`;
   the guard as run-before entity ECA rules (`entity/FormPublication.eecas.xml`: FormResponse update and delete, FormResponseAnswer
-  create, update and delete refuse RESPONSE_LOCKED for a response linked from an invitation; F-P13-2). `ExternalAccess.js` gains
+  create, update and delete refuse RESPONSE_LOCKED for a response linked from an invitation; F174). `ExternalAccess.js` gains
   the `FormInvitation` record kind (scope `CaseFeedback`, the Support app's `/Feedback?token=`) and the `support` app kind with
   `SUPPORT_CONTACT_INVITE` (F57); `PublicApps.js` the `support` app (target organization, readiness
   `CaseFeedbackServices.check#SupportAppReadiness`).
@@ -2669,17 +2669,17 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   `FeedbackFollowUp`; `service/mantle/request/CaseFeedbackServices.xml`, `CaseFeedback.js`): `create#FeedbackForm` (the default
   required rating 1–5 or 1–3 with an optional reason, comment and consent, or a copy of a published form), `publish#FeedbackForm`
   (refused while the form has a problem or no rating), `save#FeedbackFormField`, `save#FeedbackFormCondition`,
-  `end#FeedbackFormPart`, `rename#FeedbackForm`, `get#FeedbackForm` (through P7's template rules, F-P13-5), `save#InvitationPolicy`
+  `end#FeedbackFormPart`, `rename#FeedbackForm`, `get#FeedbackForm` (through P7's template rules, F177), `save#InvitationPolicy`
   (SUPPORT_POLICY_EDIT; a published form of the organization, its types and queues, delay, frequency, channel email, link days,
   reminders, low score, follow-up team and days; dated by `startRow`; `end`), `queue#Invitation` and `create#Invitation` (the
   `SupportCaseFeedbackInvitation` rule after the commit of a case's resolution: the policy then, its types and queues, the case's
   customer at a customer reporter's email else the customer's, the latest resolution episode as context, once per case or per
-  resolution; F-P13-3), `send#Invitations` (the `send_CaseFeedbackInvitations` job every 15 minutes, `data/CaseFeedbackSetupData.xml`:
+  resolution; F175), `send#Invitations` (the `send_CaseFeedbackInvitations` job every 15 minutes, `data/CaseFeedbackSetupData.xml`:
   bounded, each in its own transaction, a reopened case not sent, a send with no Support site or no mail tried three
-  times, reminders, expiry; each send its own capability, F-P13-4) and `send#Invitation`, `get#Invitation` and
+  times, reminders, expiry; each send its own capability, F176) and `send#Invitation`, `get#Invitation` and
   `submit#CaseFeedback` (the page's operations: the support mount's target, `ExternalAccess.check`, the form as of now, the
   customer's label and never the case; the answer checked by P7's `checkValues` with the form's rules again, one FormResponse, a
-  repeat answering the first, posts throttled 30 in ten minutes per requester beside the token lookups' 100, F-P13-8; a score at
+  repeat answering the first, posts throttled 30 in ten minutes per requester beside the token lookups' 100, F180; a score at
   or under the low score makes a `FeedbackFollowUp` assigned to the follow-up team's first manager, else the queue team's, told on
   the new `CaseFeedbackFollowUp` topic, which names no comment), `record#FeedbackFollowUp` (a manager, or a member of the
   follow-up team) and `check#SupportAppReadiness`. `CaseTemplates.js` takes a feedback form in `templateOf` and exports `formAt`
@@ -2692,12 +2692,12 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   `forum/ForumSchema.js` and `script/PassRoutes.js`, `TOKEN_WRITES` in `Transport.js`, `PassApi.js` and `PassAuthority.js`, and
   `test/MoquiConf.xml`'s `/support` mount; docs/Deployment.md's Support section and the README.
 - BOSS (`service/ironstone/customerservice/FeedbackServices.xml`, `Feedback.js`): `find#FeedbackForms`, `get#FeedbackPolicy`,
-  `find#CaseResponses` (service management; one form and one effective period at a time, F-P13-7; queue, team, customer, score and
+  `find#CaseResponses` (service management; one form and one effective period at a time, F179; queue, team, customer, score and
   state; the counts on the raw scale), `get#CaseResponse` (the answers as of the response, text answers for managers and, with
-  the customer's consent, the follow-up team, F-P13-10) and Home's CSAT (`csatMeasure`, the top two scores' share with the change,
+  the customer's consent, the follow-up team, F182) and Home's CSAT (`csatMeasure`, the top two scores' share with the change,
   in `get#ServiceDashboard`). The survey builder's four shared screens with the Customer Service context only:
   `Shared/SurveyForms.xml` (FeedbackFormList, NewFeedbackForm) and `Shared/SurveyFormDetail.xml` (FeedbackFormHeader, FormFields,
-  FieldOptions, the rules, FormPreview with drafts, FormAccess read only, F-P13-6) mounted as `Settings/FeedbackForms` and
+  FieldOptions, the rules, FormPreview with drafts, FormAccess read only, F178) mounted as `Settings/FeedbackForms` and
   `Settings/FeedbackFormDetail`; `Shared/SurveyResponses.xml` (CsatFind, CsatStats, CsatResponseList) and
   `Shared/SurveyResponseDetail.xml` (ResponseDetails, FeedbackFollowUp) mounted as `Reports/SatisfactionResults` and
   `Reports/ResponseDetail`. ServiceDefaults' FeedbackDeliveryPolicy (Save from a date, Stop asking, the earlier rows); SettingsHome's
@@ -2739,46 +2739,46 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   - Comments are service management's; the follow-up team reads text answers only with the customer's consent (the seeded
     "You may contact me"). No agent ranking is built.
   - SatisfactionResults and ResponseDetail are checked in their services, not by an artifact group on the shared screen files,
-    which Marketing will mount too (F-P13-11).
+    which Marketing will mount too (F183).
 - Findings (provisional):
-  - **F-P13-1** Commons' FormPublication and FormInvitation (design-drawers-commons §19, X16) did not exist; built in
+  - **F173** Commons' FormPublication and FormInvitation (design-drawers-commons §19, X16) did not exist; built in
     `mantle.party` with the Commons names, the case's context on the invitation (contextEntityName and contextId: the resolution
     CaseSlaEpisode, else the Request) and the record holding it (recordEntityName and recordId), so Marketing's publications use
     the same rows. Design-drawers-commons §19 changed.
-  - **F-P13-2** P0 left the guard to an entity ECA rule or an authorization rule: an authorization rule would bind only artifact
+  - **F174** P0 left the guard to an entity ECA rule or an authorization rule: an authorization rule would bind only artifact
     calls, and the framework services run their entity writes with the caller's authorization, so the guard is a run-before
     entity ECA rule on FormResponse and FormResponseAnswer, which every path (the services, entity-auto, a data load) meets; a
     response with no invitation is untouched.
-  - **F-P13-3** A resolution episode exists only where a service level policy applies (P4's start#CaseEpisode records
+  - **F175** A resolution episode exists only where a service level policy applies (P4's start#CaseEpisode records
     NO_POLICY and makes none), so a case with no SLA has no episode to bind: its invitation's context is the Request, and once per
     resolution keys it by the request's update stamp at resolution.
-  - **F-P13-4** An ExternalAccessCapability keeps only its token's digest, so the job cannot mail the same link twice: each send
+  - **F176** An ExternalAccessCapability keeps only its token's digest, so the job cannot mail the same link twice: each send
     and reminder makes its own capability ending at the invitation's expiry, every one opening the one invitation.
-  - **F-P13-5** A feedback form is edited by P7's template rules (successor fields, ended options, rules, problems) with every
+  - **F177** A feedback form is edited by P7's template rules (successor fields, ended options, rules, problems) with every
     field customer-visible: `CaseTemplates.js` `templateOf` takes the purpose `DbfpCaseFeedback`; Mantle's raw messages say
     "template" there.
-  - **F-P13-6** Design FormAccess grants author and read access by DbFormUserGroup, but DbFormUserGroup modifies a screen form
+  - **F178** Design FormAccess grants author and read access by DbFormUserGroup, but DbFormUserGroup modifies a screen form
     for a user group and grants nothing on a survey; access is the permissions Mantle checks, so FormAccess shows who may change
     and read the form, read only. Design FeedbackFormDetail changed.
-  - **F-P13-7** DbForm has no version; SatisfactionResults' "version" is an effective period of the form, from each date its
+  - **F179** DbForm has no version; SatisfactionResults' "version" is an effective period of the form, from each date its
     fields, options or rules start or end, and an invitation counts in the period it was made in.
-  - **F-P13-8** "PASS's throttling" is two limits in Mantle: ExternalAccess's token lookups (100 in ten minutes per requester) and
+  - **F180** "PASS's throttling" is two limits in Mantle: ExternalAccess's token lookups (100 in ten minutes per requester) and
     the feedback posts (30 in ten minutes), both by the framework's sign-in limits.
-  - **F-P13-9** The Support app's readiness service is `CaseFeedbackServices.check#SupportAppReadiness` while Feedback is its only
+  - **F181** The Support app's readiness service is `CaseFeedbackServices.check#SupportAppReadiness` while Feedback is its only
     page (organization, service policy, feedback policy, canonical host); P15 may move it to SupportCaseServices.
-  - **F-P13-10** The plan's "comments private to service management and the customer-authorized follow-up": the consent is a
+  - **F182** The plan's "comments private to service management and the customer-authorized follow-up": the consent is a
     checkbox answer Y on the form (the default's contactOk); an agent of the follow-up team reads text answers only with it.
-  - **F-P13-11** The four survey screens are shared files Marketing will mount, so a DENY of the Customer Service root group on a
+  - **F183** The four survey screens are shared files Marketing will mount, so a DENY of the Customer Service root group on a
     file would follow a user into Marketing; their reads check the capability instead, and an agent opening CSAT results is told
     it is not available.
-  - **F-P13-12** In a client acceptance spec an array answered by `when()` reached `then()` without its array methods, and a
+  - **F184** In a client acceptance spec an array answered by `when()` reached `then()` without its array methods, and a
     session's `get` called from an array's `map` callback failed ("not a function"), so the walks answer objects and counts.
 
 **Review Nov 5 (P13).** Checked the three repos' diffs against this section, §2, design §7–§9, crosscut X16 and
 design-forum §4.1/§4.3: the token (`ExternalAccess.check` with the FormInvitation kind's scope, the capability's thruDate at the
 invitation's expiry, revocation, an invitation no longer reachable, the mount's target as the organization), a GET that only
 reads, the bad links' guidance with nothing of the customer, get#Invitation's projection (the form as of now, the organization's
-and customer's names, the receipt), the post's limit per requester (a registered deployment's browser address, F-P13-8),
+and customer's names, the receipt), the post's limit per requester (a registered deployment's browser address, F180),
 submit's checkValues with the customer audience and evaluate#DbFormDependencies (a value for a name not on the form dropped,
 an internal field refused), one response under the invitation's row lock (a concurrent second post waits, then answers the
 first); PASS's operations (allow-listed fields, HTTP kinds NotFound, Unprocessable, Tarpit; the invitation is the operation's
@@ -2801,7 +2801,7 @@ consent, the notice naming no comment); no per-agent ranking; leanness.
   SupportFixtures --serve`), a scratch frontend runtime of framework, webroot, tools and mr-pass only (RemoteFixtures passes: no
   Mantle catalog) with `pass_backend_url` over REST, and RemoteHttp through it: 8 features pass, the Support feature's rating 2,
   its receipt, and a repeat's 5 answering "2 of 5".
-- Left for the lead: (1) the CSAT results tab shows to an agent, who is then told it is not available (F-P13-11); a menu item is
+- Left for the lead: (1) the CSAT results tab shows to an agent, who is then told it is not available (F183); a menu item is
   hidden only by artifact authorization, which the shared file cannot carry, so hiding it needs P14's catalogue (the tab
   `menu-include="false"`, a link for managers) or a framework `hide-when`. (2) P15's privacy anonymization needs a way past
   the guard: a Mantle service `FormPublicationServices.redact#FormResponse` (a privacy permission and the organization, blanking
@@ -3126,6 +3126,31 @@ is written there too.
 | F161 | P10 review (F156): the script runtime's entity find chain methods (`condition`, `orderBy`, `limit` and the others; crates/moqui-core/src/script/runtime/entities.rs `take_find`) take the inner find and return a new one, so Java-style `q.condition(...); q.list()` fails loudly with "entity find was already used"; Java's EntityFind changes in place | By design and loud; §7: a framework choice to change the find in place and return it, and a line in the script docs |
 | F162 | P10 review: a customer who filed a change reads it through the organization-scoped `get#OrderChange`, which shows decisions' reasons and approvers | P15: a customer-facing read and withdraw of a cancel request |
 | F163 | P9 review: at Mantle's default (`returnSettlementRequired` N), Mantle's own receipt at delivery (`respond#ReturnItems` as the receiving user) needs INVOICE_APPROVE for an immediate credit memo's Incoming to Approved, as authorization did (R1); Warehouse's `addReturnItem` checks invoiced quantity, not shipped, and no policy (routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W users lack) | Mantle's and Warehouse's: §7 |
+| F164 | P11: Products already edits a warranty: a PftWarranty feature's number and time unit on Products/Features (NewFeature, FeatureDetail Summary) and its application to a product on Product360's Features tab, so Products' contract needed nothing here; Customer Service's Product360 context does not show the term (its tabs are P3's), a P16 polish. | See P11 |
+| F165 | P11: P4 built no store for service agreements (F101); P11 adds `store#ServiceAgreement` with the TtWarranty term and reads Agreement rows by type, organization, customer, dates and status. | See P11 |
+| F166 | P11: `link#RequestRecord` asks the user's record visibility (get#RecordLinkInfo), which refuses an invoice to an agent who reads no finance records, though the invoice is evidence of the sale: WarrantyServices writes the claim's RequestRecord rows itself after its own organization and customer checks. | See P11 |
+| F167 | P11: Nothing in BOSS finished an AssetMaintenance (Manufacturing's EquipmentDetail only requests one), so `update#WarrantyWork` moves a claim's repair through the AssetMaintenance status flow (its task following), and the completion notice is a rule on AssetMaintenance's status, so a Maintenance app's own path tells the agent too. | See P11 |
+| F168 | P11: Shipment has no shipped date; the ship date is the AssetIssuance's issue date (a sales order's stock is issued when it ships), as crosscut DeliveredItems reads. | See P11 |
+| F169 | P11: "WARRANTY_APPROVE for a rejection override" is read as covering a claim the lookup found expired (a coverage end set with its reason); design WarrantyAssessment says so. | See P11 |
+| F170 | P11: ServiceRequestType.templateFormId was not read (P7) and `save#ServiceRequestType` dropped it on a resave (as F127 for queues): `create#Case` and NewCase take the type's template before the queue's, and the save keeps it. | See P11 |
+| F171 | P11: A case's revision moves with every update of the request (status, due date), so a claim's revision is its own counter (`Request.claimRevision`), moved only by its evidence; a status change does not stale a decision. | See P11 |
+| F172 | P11: Delivered items lists serials and lots only: an issued asset with neither (the demo's filters) is stock, not a delivered item, and a claim on it names its product and sale. | See P11 |
+| F173 | P13: Commons' FormPublication and FormInvitation (design-drawers-commons §19, X16) did not exist; built in `mantle.party` with the Commons names, the case's context on the invitation (contextEntityName and contextId: the resolution CaseSlaEpisode, else the Request) and the record holding it (recordEntityName and recordId), so Marketing's publications use the same rows. Design-drawers-commons §19 changed. | See P13 |
+| F174 | P13: P0 left the guard to an entity ECA rule or an authorization rule: an authorization rule would bind only artifact calls, and the framework services run their entity writes with the caller's authorization, so the guard is a run-before entity ECA rule on FormResponse and FormResponseAnswer, which every path (the services, entity-auto, a data load) meets; a response with no invitation is untouched. | See P13 |
+| F175 | P13: A resolution episode exists only where a service level policy applies (P4's start#CaseEpisode records NO_POLICY and makes none), so a case with no SLA has no episode to bind: its invitation's context is the Request, and once per resolution keys it by the request's update stamp at resolution. | See P13 |
+| F176 | P13: An ExternalAccessCapability keeps only its token's digest, so the job cannot mail the same link twice: each send and reminder makes its own capability ending at the invitation's expiry, every one opening the one invitation. | See P13 |
+| F177 | P13: A feedback form is edited by P7's template rules (successor fields, ended options, rules, problems) with every field customer-visible: `CaseTemplates.js` `templateOf` takes the purpose `DbfpCaseFeedback`; Mantle's raw messages say "template" there. | See P13 |
+| F178 | P13: Design FormAccess grants author and read access by DbFormUserGroup, but DbFormUserGroup modifies a screen form for a user group and grants nothing on a survey; access is the permissions Mantle checks, so FormAccess shows who may change and read the form, read only. Design FeedbackFormDetail changed. | See P13 |
+| F179 | P13: DbForm has no version; SatisfactionResults' "version" is an effective period of the form, from each date its fields, options or rules start or end, and an invitation counts in the period it was made in. | See P13 |
+| F180 | P13: "PASS's throttling" is two limits in Mantle: ExternalAccess's token lookups (100 in ten minutes per requester) and the feedback posts (30 in ten minutes), both by the framework's sign-in limits. | See P13 |
+| F181 | P13: The Support app's readiness service is `CaseFeedbackServices.check#SupportAppReadiness` while Feedback is its only page (organization, service policy, feedback policy, canonical host); P15 may move it to SupportCaseServices. | See P13 |
+| F182 | P13: The plan's "comments private to service management and the customer-authorized follow-up": the consent is a checkbox answer Y on the form (the default's contactOk); an agent of the follow-up team reads text answers only with it. | See P13 |
+| F183 | P13: The four survey screens are shared files Marketing will mount, so a DENY of the Customer Service root group on a file would follow a user into Marketing; their reads check the capability instead, and an agent opening CSAT results is told it is not available. | See P13 |
+| F184 | P13: In a client acceptance spec an array answered by `when()` reached `then()` without its array methods, and a session's `get` called from an array's `map` callback failed ("not a function"), so the walks answer objects and counts. | See P13 |
+| F185 | P11 review: evidence changed outside `save#WarrantyClaim` (unlinking the claim's asset or order through Shared/RequestDetail, editing its RequestItem) does not move `claimRevision`; NewCase's warranty path refuses the whole case when the template's serial is not the customer's; NewCase's `customerAssets` choice lists a serial resold to another customer, which saving refuses | §7, or P16: RequestDetail's unlink and item edits on an RqtWarranty case through WarrantyServices |
+| F186 | P13 review: the CSAT results tab shows to agents, who are then told it is not available; a menu item is hidden only by artifact authorization, which the shared survey screen cannot carry | P14: the Reports catalogue (ReportsHome) offers SatisfactionResults to managers, the tab not in the menu |
+| F187 | P13 review: P15's privacy anonymization needs a way past the response guard | P15: a `mantle.party.FormPublicationServices.redact#FormResponse` service checking a privacy permission and the organization, blanking text answers and logging who and why, the guard letting a write through only while that service is on the artifact execution stack |
+| F188 | P13 review: the true remote pair ran (an authority serving the acceptance fixtures, a frontend with only framework, webroot, tools and mr-pass): RemoteHttp 8 of 8, a rating of 2 kept as 2 of 5 on a repeat posting 5 | None |
 
 ## 7. Later
 
