@@ -120,7 +120,7 @@ feature("Quotes: the answer is in Expiring; QuoteDetail's one html render; Publi
     }
 })
 
-feature("Home counts RFQs due and quotes expiring; Today lists the RFQ due for a buyer only", {
+feature("Home counts RFQs due, quotes expiring and quotes to compare; Today lists the RFQ due for a buyer only", {
     when() {
         const home = asUser(users.buyer, () => invoke("ironstone.purchasing.BuyerServices.get#Home", {}).counters)
         const today = user =>
@@ -132,6 +132,8 @@ feature("Home counts RFQs due and quotes expiring; Today lists the RFQ due for a
     then({home, buyer, reader}) {
         home.quoteDueCount >= 1
         home.quoteExpiringCount >= 1
+        // P15: the RFQ with Ziddleman's proposed quote is one to compare
+        home.quoteCompareCount >= 1
         buyer.includes(state.requestId)
         reader.length == 0
     }

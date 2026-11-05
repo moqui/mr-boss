@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PurchaseHistory (design-purchasing §11 PurchaseHistory; style-guide §3.12 Report; impl-purchasing P15):
+    PurchaseHistoryOptions (product, supplier, organization, period) and PurchaseHistoryRows
+    (ironstone.purchasing.ReportServices.get#PurchaseHistory): the quoted, ordered and billed unit prices kept apart, each in
+    its document's currency and unit, with the supplier, facility, quantity and lead time. Prices are a supplier-price
+    reader's; others see them withheld. A historical price becomes a new order's only through the current price resolver and
+    approval. Product360's Purchase history tab shows the same rows for one product. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Purchase history" default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#PurchaseHistory" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, productId:productId || null,
+                supplierPartyId:supplierPartyId || null, fromDate:fromDate || null, thruDate:thruDate || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#PurchaseHistory" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="historyRows" from="answer?.historyRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['historyRows' + key] = answer['historyRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Purchase history" type="h5"/>
+                <label text="Quoted, ordered and billed prices apart, in each document's currency and unit."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="PurchaseHistoryOptions" transition="." map="options">
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'orderProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="supplierPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="A year before the end when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="thruDate"><default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field></field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productId"/>
+                    <field-ref name="supplierPartyId"/>
+                    <field-ref name="organizationPartyId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="Purchase history is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+        <section-include name="PurchaseHistoryRows" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+    </widgets>
+</screen>

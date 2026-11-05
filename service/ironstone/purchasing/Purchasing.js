@@ -302,7 +302,16 @@ const linkPaths = [
     "Sourcing/QuoteDetail",
     // P12: the comparison and award of an RFQ's quotes
     "Sourcing/QuoteComparison",
-    "Sourcing/Award"
+    "Sourcing/Award",
+    // P15: the performance reports and an evaluation's detail, and the scorecard policies
+    "Performance/Scorecards",
+    "Performance/ScorecardDetail",
+    "Performance/Spend",
+    "Performance/Commitments",
+    "Performance/ProcurementTracker",
+    "Performance/PurchaseHistory",
+    "Performance/SupplierStatement",
+    "Settings/ScorecardPolicies"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Purchasing") denied("PURCHASING_CONTEXT", "Purchasing context is not available")
@@ -815,6 +824,11 @@ const choiceSources = {
     currencies: (userScope, term, selected) => agreementReads().currencyChoices(term, selected),
     // P11: the open RFQs a quote may answer, and how a quote came (Sourcing.js)
     rfqs: (userScope, term, selected) => sourcingReads().rfqChoices(userScope, term, selected),
+    // P15: the purchase requests the procurement tracker follows
+    trackerRequests: (userScope, term, selected) =>
+        ec.resource
+            .script("component://mr-boss/service/ironstone/purchasing/Reports.js")
+            .requestChoices(userScope, term, selected),
     quoteChannels: () => sourcingReads().channelChoices(),
     // P2: the supplier categories (PartyClassification rows of PcltSupplierCategory)
     supplierCategories: (userScope, term, selected) => {
@@ -851,6 +865,7 @@ const operations = {sharedContext, checkRecord, search, choices}
     scope,
     required,
     owns,
+    buyerIds,
     supplierOf,
     supplierFind,
     recordOf,

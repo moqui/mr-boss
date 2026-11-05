@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Spend (design-purchasing §11 Spend; style-guide §3.12 Report; impl-purchasing P15): SpendOptions (organization, supplier,
+    product, period, by supplier, product or month) and SpendRows (ironstone.purchasing.ReportServices.get#PurchaseSpend):
+    committed, received, billed and paid as four measures in their own columns, never added together, each per group and
+    currency with totals per currency; a measure the user may not read is withheld and named in what the report left out.
+    Landed costs are actual only once Accounting allocates them (its LandedCosts task, linked for its users). The export holds
+    the same rows with the filters, snapshot time and what was left out. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Spend" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <parameter name="supplierPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="groupBy"/>
+    <transition-include name="choices" location="component://mr-boss/template/PurchasingParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.purchasing.ReportServices.get#PurchaseSpend" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{organizationPartyId:organizationPartyId || null, supplierPartyId:supplierPartyId || null,
+                productId:productId || null, fromDate:fromDate || null, thruDate:thruDate || null, groupBy:groupBy || 'supplier'}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.purchasing.ReportServices.get#PurchaseSpend" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot, pageIndex:pageIndex, pageSize:pageSize})"
+                transaction="force-new" ignore-error="true"/>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOf"/>
+        <set field="spendRows" from="answer?.spendRows || []"/>
+        <set field="totalRows" from="answer?.totalRows || []"/>
+        <script>if (answer) for (const key of ['Count', 'PageIndex', 'PageSize', 'PageMaxIndex', 'PageRangeLow', 'PageRangeHigh'])
+            context['spendRows' + key] = answer['spendRows' + key]</script>
+        <set field="exportParameters" from="options"/>
+        <set field="groupOptions" from="[{value:'supplier', label:'Supplier'}, {value:'product', label:'Product'}, {value:'month', label:'Month'}]"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Spend" type="h5"/>
+                <label text="Committed, received, billed and paid are separate measures, each in its own column and currency; they are never added together."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="SpendOptions" transition="." map="options">
+            <field name="organizationPartyId">
+                <default-field title="Organization" tooltip="Every organization of yours when empty">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="supplierPartyId">
+                <default-field title="Supplier">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'suppliers', selected:supplierPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'orderProducts', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="groupBy">
+                <default-field title="By">
+                    <drop-down>
+                        <list-options list="groupOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate">
+                <default-field title="From" tooltip="90 days before the end when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="thruDate">
+                <default-field title="Through" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="supplierPartyId"/>
+                    <field-ref name="productId"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="groupBy"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                </field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <label text="The spend report is not available for these choices." type="p" condition="!reportFound"/>
+        <section-include name="ReportFrame" location="component://mr-boss/template/PurchasingReportParts.xml"/>
+        <link url="${answer.landedCostsUrl}" url-type="plain" text="Landed costs in Accounting" link-type="anchor"
+                condition="reportFound &amp;&amp; answer.landedCostsUrl"/>
+        <section name="SpendTotalsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Totals by currency"/>
+                    <box-body-nopad>
+                        <label text="No spend in this period." type="p" style="q-pa-md m-muted" condition="!totalRows.length"/>
+                        <form-list name="SpendTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="committedText" align="right"><default-field title="Committed"><display/></default-field></field>
+                            <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                            <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                            <field name="paidText" align="right"><default-field title="Paid"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="currencyUomId"/>
+                                    <field-ref name="committedText"/>
+                                </column>
+                                <column>
+                                    <field-ref name="billedText"/>
+                                    <field-ref name="paidText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SpendRowsSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="By ${answer.groupLabel.toLowerCase()}"/>
+                    <box-body-nopad>
+                        <label text="No spend in this period." type="p" style="q-pa-md m-muted" condition="!spendRows.length"/>
+                        <form-list name="SpendRows" list="spendRows" skip-form="true" paginate="true">
+                            <field name="groupText"><default-field title="${answer.groupLabel}"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="committedText" align="right"><default-field title="Committed"><display/></default-field></field>
+                            <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                            <field name="billedText" align="right"><default-field title="Billed"><display/></default-field></field>
+                            <field name="paidText" align="right"><default-field title="Paid"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column>
+                                    <field-ref name="groupText"/>
+                                    <field-ref name="currencyUomId"/>
+                                </column>
+                                <column>
+                                    <field-ref name="committedText"/>
+                                    <field-ref name="billedText"/>
+                                </column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

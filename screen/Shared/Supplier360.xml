@@ -85,6 +85,9 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- Purchasing (impl-purchasing P7): the supplier's drop-ship facilities and their integrations -->
         <subscreens-item name="PurchasingDropShip" menu-index="12"
                 location="component://mr-boss/screen/Shared/Supplier360/PurchasingDropShip.xml" menu-title="Drop-ship"/>
+        <!-- Purchasing (impl-purchasing P15): the supplier's latest evaluation and active risks -->
+        <subscreens-item name="PurchasingPerformance" menu-index="13"
+                location="component://mr-boss/screen/Shared/Supplier360/PurchasingPerformance.xml" menu-title="Performance"/>
     </subscreens>
     <actions>
         <entity-find-one entity-name="mantle.party.Organization" value-field="buyerOrganization" cache="true">

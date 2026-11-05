@@ -186,7 +186,17 @@ function routeFixtures() {
         NewQuoteRequest: {parameters: {}, text: "New RFQ"},
         // P12: the comparison and award of an RFQ (no demo RFQ: not available)
         "Sourcing/QuoteComparison": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"},
-        "Sourcing/Award": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"}
+        "Sourcing/Award": {parameters: {requestId: "BOSS_PUR_NO_RFQ"}, text: "not available"},
+        // P15: the performance reports (no demo evaluation: its detail not available) and the scorecard policies
+        Performance: {parameters: {}, text: "Supplier scorecards"},
+        "Performance/Scorecards": {parameters: {}, text: "Supplier scorecards"},
+        "Performance/ScorecardDetail": {parameters: {supplierScorecardId: "BOSS_PUR_NO_SCORECARD"}, text: "not available"},
+        "Performance/Spend": {parameters: {}, text: "Spend"},
+        "Performance/Commitments": {parameters: {}, text: "Commitments"},
+        "Performance/ProcurementTracker": {parameters: {requestId: ids.requestId}, text: "Procurement tracker"},
+        "Performance/PurchaseHistory": {parameters: {productId: "DEMO_1_1"}, text: "Purchase history"},
+        "Performance/SupplierStatement": {parameters: {supplierPartyId: ids.sharedSupplierId}, text: "Supplier statement"},
+        "Settings/ScorecardPolicies": {parameters: {}, text: "Scorecard polic"}
     }
     // P2: Products' shared supplier, price and product screens under Suppliers and Products
     const mounts = [
