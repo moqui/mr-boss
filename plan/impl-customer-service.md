@@ -506,6 +506,35 @@ were made in the Oct 28 design sweep. The Support app's are made when P0 closes:
     cancel (`PurchaseRevisions.releaseRevisionHold`), not by `release#OrderHold`, and no Purchasing group held
     `ORDER_APPROVE`, so nothing it did is refused; Sales has no group yet. For the lead to decide with X4.
 
+**Review Nov 5 (P1).** Checked the Mantle and BOSS diffs against this section, §2, design §1, AGENTS.md and
+Practices-App-Dev:
+- Record links: a sales order went to Purchasing's branch before (`orderKind` answers `order` for any order, and its
+  `readOrder` refuses one whose customer is not internal), so it had no link for anyone; now a Customer Service user in
+  scope gets Home's lookup and every other user (Accounting, Warehouse, Commons, Purchasing) still gets none. A purchase
+  order fails `isSalesOrder` and stays Purchasing's; a party keeps Commons until `hasScreen('customer')`.
+- Shared customers: a `_NA_` customer passes `customerOf` for every organization, as the Party filter passes it, but a
+  sales order is checked by its selling organizations (`readOrder`'s owners, every one the user's) as well as its
+  customers, so another organization's order of a shared customer is refused; the palette's order find is limited to the
+  user's vendors in the query.
+- Demo data: the orders use their own products, so DEMO_* stock, availability and projections are unchanged. Ran besides
+  the worker's list (all pass): Mantle SalesReports, ProductStockTotals, ReportLookups, MantleSearch, CrmMiscServices,
+  OrderBulk, ShipmentLoads, WarehousePicking, ShipmentPick, InvoiceOrderApply, FinancialAccountServices,
+  AssetReservationMisc, OrderLifecycle, OrderToCashTime, WarehousePacking; BOSS ProductsInventory, ProductsAccess,
+  ProductsSharedContext, ProductsVariants, ProductsSuppliers, ProductsTaxonomy, ProductsPricing, ProductsPriceLists,
+  WarehousePolicies, WarehouseReturns, WarehouseMoves, WarehouseCounts, WarehouseAdjustments, WarehousePutaway,
+  Accounting Payables, Valuation, Reporting, PeriodClose, Collections, Matching, Payments, Settlement,
+  ProductionCostClose, ManufacturingPlanning, Materials, Methods, PurchasingAccess, PurchasingReplenishment.
+- X4: no Mantle, BOSS or PASS code or spec released a Change hold under `ORDER_APPROVE` other than PurchaseRevisions'
+  gate feature (updated); Purchasing approves or cancels a revision through `releaseRevisionHold`, which checks no hold
+  permission, and its OrderDetail release is of Purchase holds by `PURCHASE_HOLD_RELEASE`.
+- CustomerServiceAccess: 8 features, about 3 s.
+- Fixes: **R1** (low) `get#Choices` carried four in-parameters copied from Purchasing (receipt, supplier, return receipt,
+  agreement choices Customer Service does not have); removed.
+- For the lead: `ORDER_CHANGE_HOLD_RELEASE` now places and releases a Change hold on any order through `hold#Order` and
+  `release#OrderHold`, which check no organization or direction (a purchase revision's hold included); P10's release
+  must check the hold's order through `check#Record` first, as Purchasing's `releaseHold` transition does. P3's
+  Customer360 of a shared customer must list only the user's organizations' orders, cases, returns and invoices.
+
 ### P2 — Cases and queues
 
 Design §3 Home, Cases, NewCase, CaseDetail and WorkItemDetail; §9 Settings, Queues, AgentTeams, CaseTypes,
