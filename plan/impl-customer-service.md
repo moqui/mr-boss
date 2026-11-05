@@ -3094,7 +3094,7 @@ Design §8; CS-PORTAL.
   `Schema.js` and `Routes.js` (`support/...`) with Mantle's mirrors; TOKEN_WRITES (createCustomerCase, replyCustomerCase,
   requestCaseReopen, cancelCustomerCase, rateArticle, addReturnEvidence, withdrawCustomerReturn) in `Transport.js`, `PassApi.js`
   and `PassAuthority.js`; downloads through the facade (`Facade.downloadFile`, `Transport.downloadOperation`, PassAuthority's
-  DOWNLOADS: getCaseFile, getReturnLabel; F-P15-12). No `ironstone.*` call in mr-pass.
+  DOWNLOADS: getCaseFile, getReturnLabel; F208). No `ironstone.*` call in mr-pass.
 - BOSS: `service/ironstone/customerservice/SupportAppServices.xml`, `SupportApp.js` (get#SupportInvite, create#SupportInvitation,
   get#SupportMountSettings); ContactDetail's Invite to support (`template/CustomerServiceSupportInvite.xml`: SUPPORT_CONTACT_INVITE
   holders, the contact's own addresses only, the customer administrator choice); ServiceDefaults' Support app section (its
@@ -3215,6 +3215,12 @@ scanner with type, signature and size), BOSS's Invite to support and ServiceDefa
 - Left: the saved reply preview does not yet say the mail will carry the Support link (BOSS's ReplyPreview template);
   the label is served as a PDF whatever the carrier's labelFileType; MyCases reads all of a customer's case ids before
   paging (fine at portal sizes; a join with the cursor in the query if customers get large).
+
+- **Wave 7 suites (Nov 5, on master after P14 and P15 merged, nothing else running):** standalone mr-mantle 1,749
+  passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,078 server features passed and 2 failed
+  (CustomerServiceChannels and AccountingPayables expected no Support queue form token, which P15's demo issues; both
+  updated), 14 client features passed; within every budget (server: mr-mantle 326.7 of 335 s, mr-boss 227.6 of 245 s,
+  mr-pass 12.2 of 15 s; client: mr-boss 41.7 of 44 s, mr-pass 4.2 of 6 s); `moqui lint --screens` clean.
 
 ### P16 — Finish
 
