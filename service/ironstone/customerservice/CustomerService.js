@@ -309,7 +309,12 @@ const linkPaths = [
     "Returns/QualityInspection",
     "Returns/ReturnAuthorization",
     "Settings/ReturnPolicies",
-    "Approvals/Notifications"
+    "Approvals/Notifications",
+    // P13: the survey builder's mounts (feedback forms, CSAT results and one answer)
+    "Settings/FeedbackForms",
+    "Settings/FeedbackFormDetail",
+    "Reports/SatisfactionResults",
+    "Reports/ResponseDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")

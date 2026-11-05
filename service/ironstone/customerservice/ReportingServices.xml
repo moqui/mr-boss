@@ -73,6 +73,13 @@ along with this software (see the LICENSE.md file). If not, see
                 if (levels.configured) for (const measure of measures) if (levels[measure.key])
                     Object.assign(measure, levels[measure.key])
             ]]></script>
+            <!-- P13: CSAT, the share of the period's answers in the top two scores of their form's scale (Feedback.js
+                csatMeasure); not configured until one of the user's organizations has a feedback delivery policy -->
+            <script><![CDATA[
+                const satisfaction = ec.resource.script('component://mr-boss/service/ironstone/customerservice/Feedback.js').execute('csatMeasure', {periodDays: days})
+                if (satisfaction.configured) for (const measure of measures) if (measure.key === 'csat')
+                    Object.assign(measure, satisfaction.csat)
+            ]]></script>
             <!-- later phases: each measures its records here, in the user's scope -->
         </actions>
     </service>

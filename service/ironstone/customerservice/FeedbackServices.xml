@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's feedback reads (impl-customer-service P13, CS-FEEDBACK; design-customer-service §3 Home, §7
+    SatisfactionResults, ResponseDetail, §9 FeedbackForms, FeedbackFormDetail, ServiceDefaults; Feedback.js): scoped by
+    AccessServices (the user's organizations; SatisfactionResults for service management). The forms, the delivery policy,
+    the invitations and the follow-up are Mantle's mantle.request.CaseFeedbackServices, which the screens call after these. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="FeedbackForms" allow-remote="false">
+        <description>The feedback forms of one of the user's settings organizations (design FeedbackForms FeedbackFormList):
+            name, purpose, state (draft, published, changes to publish), version and since when, the rating's scale, whether
+            the delivery policy sends it and how many answered; with the organization choice and the published forms a new
+            one may copy. Refuses an organization not the user's (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="forms" type="List"/>
+            <parameter name="sourceOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Feedback.js').execute('findFeedbackForms', context)"/>
+            <script>for (const name of ['organizationPartyId', 'organizations', 'forms', 'sourceOptions']) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="FeedbackPolicy" allow-remote="false">
+        <description>ServiceDefaults' FeedbackDeliveryPolicy: the organization's delivery policy now and its earlier rows, with
+            its published feedback forms, its service-enabled case types, its queues and its teams to choose from.</description>
+        <implements service="ironstone.customerservice.ConfigurationServices.define#SettingsParameters"/>
+        <out-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="policy" type="Map"/>
+            <parameter name="history" type="List"/>
+            <parameter name="formOptions" type="List"/>
+            <parameter name="typeOptions" type="List"/>
+            <parameter name="queueOptions" type="List"/>
+            <parameter name="teamOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Feedback.js').execute('getFeedbackPolicy', context)"/>
+            <script>for (const name of ['organizationPartyId', 'organizations', 'policy', 'history', 'formOptions', 'typeOptions',
+                'queueOptions', 'teamOptions']) context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="find" noun="CaseResponses" allow-remote="false">
+        <description>SatisfactionResults (design CsatFind, CsatResponseList, CsatStats), for service management
+            (SUPPORT_CASE_MANAGE): one feedback form of the user's organizations in one of its effective periods (the current
+            one by default; a period starts each time the form's rows change), so a changed scale or question is compared only
+            with itself, filtered by queue, team, customer, score and state: the invitations with their cases (a link when the
+            user may open the case), resolution episodes, dates, scores, comments and follow-up state, at most 200; and the
+            counts: invited, delivered, answered, the response rate, the average, the share in the top two scores, the score
+            distribution on the raw scale and the comments.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="formId"/>
+            <parameter name="periodId"/>
+            <parameter name="requestCategoryId"/>
+            <parameter name="teamPartyId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="score"/>
+            <parameter name="statusEnumId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="formId"/>
+            <parameter name="formOptions" type="List"/>
+            <parameter name="periodId"/>
+            <parameter name="periodOptions" type="List"/>
+            <parameter name="rows" type="List"/>
+            <parameter name="stats" type="Map"/>
+            <parameter name="scale" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Feedback.js').execute('findCaseResponses', context)"/>
+            <script>for (const name of ['formId', 'formOptions', 'periodId', 'periodOptions', 'rows', 'stats', 'scale'])
+                context[name] = found[name]</script>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseResponse" allow-remote="false">
+        <description>ResponseDetail (design ResponseDetails, FeedbackFollowUp): an invited response of the user's organizations,
+            its answers with the form as of the response (org.moqui.impl.ScreenServices.get#FormResponse), the case, the
+            episode, the dates, the score and the consent, and its follow-up; for service management, or an agent of the
+            follow-up team, who reads the text answers only when the customer agreed to be contacted. A response with no
+            invitation, or of another organization, is RECORD_UNAVAILABLE.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="formResponseId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="response" type="Map"/>
+            <parameter name="followUp" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Feedback.js').execute('getCaseResponse', context)"/>
+            <set field="response" from="found.response"/>
+            <set field="followUp" from="found.followUp"/>
+        </actions>
+    </service>
+</services>

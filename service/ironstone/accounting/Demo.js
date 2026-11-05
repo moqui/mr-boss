@@ -1646,7 +1646,9 @@ function portal() {
     for (const [app, targetId] of [
         ["account", null],
         ["billing", org],
-        ["supplier", org]
+        ["supplier", org],
+        // Customer Service P13: the Support app (its Feedback page), for Retail's service desk
+        ["support", org]
     ])
         createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: app}, {app, pathPrefix: "/" + app, enabled: "Y", targetId})
     createOnce(

@@ -94,4 +94,28 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/KnowledgeDemo.js').execute('runStep', context)</script>
         </actions>
     </service>
+    <service verb="load" noun="FeedbackDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>P13: ORG_ZIZI_RETAIL's demo feedback form, its delivery policy and one answered invitation (Joe Q Public's
+            damaged-filter case, resolved and rated 4 on ZIZI_PORTAL's Support app), through Mantle's services, each step in its
+            own transaction; one that fails is named in errors and the others are made. Idempotent. Only data loading or a
+            system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/FeedbackDemo.js')
+                .execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+    <service verb="run" noun="FeedbackDemoStep" authenticate="anonymous-all" allow-remote="false">
+        <description>One step of load#FeedbackDemo (the form, the policy, the case, the answer), made once, in a transaction of
+            its own. Only data loading or a system administrator may run it.</description>
+        <in-parameters><parameter name="step"/></in-parameters>
+        <actions>
+            <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/FeedbackDemo.js').execute('runStep', context)</script>
+        </actions>
+    </service>
 </services>

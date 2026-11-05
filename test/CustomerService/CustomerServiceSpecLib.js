@@ -260,7 +260,12 @@ function routeFixtures() {
         "Returns/ReturnAuthorization": {parameters: {returnId: ids.warehouseReturnId}, text: ids.warehouseReturnId},
         "Settings/ReturnPolicies": {parameters: {}, text: "Return policies"},
         Approvals: {parameters: {}, text: "Approvals"},
-        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"}
+        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"},
+        // P13: the survey builder's mounts: the feedback forms, a form, the CSAT results and one answer
+        "Settings/FeedbackForms": {parameters: {}, text: "Feedback forms"},
+        "Settings/FeedbackFormDetail": {parameters: {formId: "BOSS_CS_NO_FORM"}, text: "is not available"},
+        "Reports/SatisfactionResults": {parameters: {}, text: "Satisfaction results"},
+        "Reports/ResponseDetail": {parameters: {formResponseId: "BOSS_CS_NO_RESPONSE"}, text: "not available"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
@@ -276,7 +281,12 @@ function routeFixtures() {
         ["Orders/OrderChangeDetail", "component://mr-boss/screen/Shared/OrderChangeDetail.xml"],
         ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"],
         ["Returns/QualityInspection", "component://mr-boss/screen/Shared/QualityInspection.xml"],
-        ["Approvals/Notifications", "component://mr-boss/screen/Commons/Notifications.xml"]
+        ["Approvals/Notifications", "component://mr-boss/screen/Commons/Notifications.xml"],
+        // P13
+        ["Settings/FeedbackForms", "component://mr-boss/screen/Shared/SurveyForms.xml"],
+        ["Settings/FeedbackFormDetail", "component://mr-boss/screen/Shared/SurveyFormDetail.xml"],
+        ["Reports/SatisfactionResults", "component://mr-boss/screen/Shared/SurveyResponses.xml"],
+        ["Reports/ResponseDetail", "component://mr-boss/screen/Shared/SurveyResponseDetail.xml"]
     ]
     return {routes, mounts}
 }

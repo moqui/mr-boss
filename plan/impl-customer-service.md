@@ -300,7 +300,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | built Nov 5, 2026 |
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
-| P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | — |
+| P13 Feedback | Mantle, mr-pass, BOSS | FeedbackForms, FeedbackFormDetail, SatisfactionResults, ResponseDetail; the Support app with its Feedback page | built Nov 5, 2026 |
 | P14 Reports | BOSS | Reports, ServiceLevelCompliance, ResponseTimes, CaseVolumes, ReturnAnalysis | — |
 | P15 Support app | Mantle, mr-pass, BOSS | Support's SupportHome, MyCases, NewCustomerCase, CustomerCase, MyReturns, RequestReturn, CustomerReturn and CustomerArticle; ContactDetail's invitation | — |
 | P16 Finish | BOSS | — | — |
@@ -2516,6 +2516,127 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
     SatisfactionResults compares one effective period at a time;
   - the same rating through a remote PASS frontend, with only framework, webroot and PASS installed, records one
     response at the authority.
+
+**Built Nov 5 (P13).**
+- Commons' form publication (built here under the owner-contract rule, F-P13-1): Mantle `entity/FormPublicationEntities.xml`
+  `mantle.party.FormPublication` (a DbForm offered for a purpose by an organization: context, site, open and close, access,
+  repeat) and `FormInvitation` (recipient and address, context record and the record holding it, the app's policy row, the
+  once-key, schedule, expiry, delivery state, sends, reminders, the one response and its score), with their enumerations
+  (`FppCaseFeedback`, `FpaInvited`, `FprOnce`, `FinScheduled` … `FinRevoked`) and the DbForm purpose `DbfpCaseFeedback`;
+  `service/mantle/party/FormPublication.js` (`publicationFor`, `guardResponse`) and `FormPublicationServices.guard#FormResponse`;
+  the guard as run-before entity ECA rules (`entity/FormPublication.eecas.xml`: FormResponse update and delete, FormResponseAnswer
+  create, update and delete refuse RESPONSE_LOCKED for a response linked from an invitation; F-P13-2). `ExternalAccess.js` gains
+  the `FormInvitation` record kind (scope `CaseFeedback`, the Support app's `/Feedback?token=`) and the `support` app kind with
+  `SUPPORT_CONTACT_INVITE` (F57); `PublicApps.js` the `support` app (target organization, readiness
+  `CaseFeedbackServices.check#SupportAppReadiness`).
+- Case feedback (Mantle `entity/SupportFeedbackEntities.xml`: the dated, audit-logged `FeedbackDeliveryPolicy` and
+  `FeedbackFollowUp`; `service/mantle/request/CaseFeedbackServices.xml`, `CaseFeedback.js`): `create#FeedbackForm` (the default
+  required rating 1–5 or 1–3 with an optional reason, comment and consent, or a copy of a published form), `publish#FeedbackForm`
+  (refused while the form has a problem or no rating), `save#FeedbackFormField`, `save#FeedbackFormCondition`,
+  `end#FeedbackFormPart`, `rename#FeedbackForm`, `get#FeedbackForm` (through P7's template rules, F-P13-5), `save#InvitationPolicy`
+  (SUPPORT_POLICY_EDIT; a published form of the organization, its types and queues, delay, frequency, channel email, link days,
+  reminders, low score, follow-up team and days; dated by `startRow`; `end`), `queue#Invitation` and `create#Invitation` (the
+  `SupportCaseFeedbackInvitation` rule after the commit of a case's resolution: the policy then, its types and queues, the case's
+  customer at a customer reporter's email else the customer's, the latest resolution episode as context, once per case or per
+  resolution; F-P13-3), `send#Invitations` (the `send_CaseFeedbackInvitations` job every 15 minutes, `data/CaseFeedbackSetupData.xml`:
+  bounded, each in its own transaction, a reopened case not sent, no Support site Not delivered, a failed send tried three
+  times, reminders, expiry; each send its own capability, F-P13-4) and `send#Invitation`, `get#Invitation` and
+  `submit#CaseFeedback` (the page's operations: the support mount's target, `ExternalAccess.check`, the form as of now, the
+  customer's label and never the case; the answer checked by P7's `checkValues` with the form's rules again, one FormResponse, a
+  repeat answering the first, posts throttled 30 in ten minutes per requester beside the token lookups' 100, F-P13-8; a score at
+  or under the low score makes a `FeedbackFollowUp` assigned to the follow-up team's first manager, else the queue team's, told on
+  the new `CaseFeedbackFollowUp` topic, which names no comment), `record#FeedbackFollowUp` (a manager, or a member of the
+  follow-up team) and `check#SupportAppReadiness`. `CaseTemplates.js` takes a feedback form in `templateOf` and exports `formAt`
+  and `problemsOf`. The email template `MANTLE_CASE_FEEDBACK_EMAIL`.
+- PASS (mr-pass): the Support app, `screen/Support.xml` (`passApp` support, default Feedback) and `screen/Support/Feedback.xml`
+  with `Feedback.html.fancy` (CaseFeedback: a GET only reads; Send my answer posts `submit`; the receipt; guidance for a bad
+  link; the rules as `data-visible-when`/`data-require-when` with `/js/moqui-form-when.js` loaded by the page); registered in
+  `service/pass/Apps.js`, `screen/Pass.xml`, `screen/Shared/Header.html.fancy` (the Support header), `Schema.js` and `Routes.js`
+  (`getCaseFeedbackInvitation` GET `support/feedback`, `submitCaseFeedback` POST `support/feedback/response`) with Mantle's mirrors
+  `forum/ForumSchema.js` and `script/PassRoutes.js`, `TOKEN_WRITES` in `Transport.js`, `PassApi.js` and `PassAuthority.js`, and
+  `test/MoquiConf.xml`'s `/support` mount; docs/Deployment.md's Support section and the README.
+- BOSS (`service/ironstone/customerservice/FeedbackServices.xml`, `Feedback.js`): `find#FeedbackForms`, `get#FeedbackPolicy`,
+  `find#CaseResponses` (service management; one form and one effective period at a time, F-P13-7; queue, team, customer, score and
+  state; the counts on the raw scale), `get#CaseResponse` (the answers as of the response, text answers for managers and, with
+  the customer's consent, the follow-up team, F-P13-10) and Home's CSAT (`csatMeasure`, the top two scores' share with the change,
+  in `get#ServiceDashboard`). The survey builder's four shared screens with the Customer Service context only:
+  `Shared/SurveyForms.xml` (FeedbackFormList, NewFeedbackForm) and `Shared/SurveyFormDetail.xml` (FeedbackFormHeader, FormFields,
+  FieldOptions, the rules, FormPreview with drafts, FormAccess read only, F-P13-6) mounted as `Settings/FeedbackForms` and
+  `Settings/FeedbackFormDetail`; `Shared/SurveyResponses.xml` (CsatFind, CsatStats, CsatResponseList) and
+  `Shared/SurveyResponseDetail.xml` (ResponseDetails, FeedbackFollowUp) mounted as `Reports/SatisfactionResults` and
+  `Reports/ResponseDetail`. ServiceDefaults' FeedbackDeliveryPolicy (Save from a date, Stop asking, the earlier rows); SettingsHome's
+  Feedback forms link; the `CaseFeedbackFollowUp` topic's link and the root's notification topic; `linkPaths`.
+- Demo: Accounting's portal demo mounts the Support app on ZIZI_PORTAL for ORG_ZIZI_RETAIL; `FeedbackDemo.js`
+  (`DemoServices.load#FeedbackDemo`, `data/BossZZCustomerServiceFeedbackDemoData.xml`): Retail's "Retail case feedback" form,
+  published, its policy (an hour after resolving, once per case, one reminder, a score of 2 or less followed up by the Support
+  team), and Joe Q Public's "Replacement filter arrived damaged" case, resolved and rated 4 through the page's operation.
+- Specs: Mantle `test/request/CaseFeedback` (5 features, 1.2 s: the form and policy with their refusals; the rule's one
+  invitation and NO_POLICY; the job's one send with its Support link and a rerun's none; the page's read, a forged token's
+  NotFound, the refused submits, a 2 with a comment kept once, the follow-up and its notice without the comment; the follow-up
+  recorded and refused; update#FormResponse and delete#FormResponse refused for the invited response and unchanged for a plain
+  one). mr-pass `test/Support/SupportAccess` (2 features, 0.1 s: the page with its rules and script, never the case, a GET
+  answering nothing, three bad links' guidance; an answer through the facade with the comment rule, a repeat, the receipt) and
+  `Portals` (the targeted apps now billing, supplier and support). BOSS `CustomerServiceFeedback` (2 features, 0.9 s:
+  FeedbackFormDetail and ServiceDefaults rendered once in qvt; SatisfactionResults' read and one qvt render; ResponseDetail's
+  read; Home's CSAT), `CustomerServiceAccess` (+1 feature: forms the administrator's, answers the manager's, the agent and Services
+  refused; Home's measures all configured now). Acceptance: BOSS `CustomerServiceFeedbackWalk` (5 features: the usable-when
+  through FeedbackForms, FeedbackFormDetail, ServiceDefaults, the rule, the job after the delay, the page operations,
+  ResponseDetail's follow-up in qvt, the guard, a successor question from a date and one period at a time) and `AppStructure`
+  (the four mounts' routes); mr-pass `acceptance/SupportFixtures` (PASS_HTTP's support mount and two invitations),
+  `acceptance/client/SupportFeedbackHttp` (2 features: a scanner's two GETs answer nothing; at 390 px the comment shows and is
+  required for a 2, the answer, the receipt, a repeat post; bad links) and `RemoteHttp` (+1 feature: the same rating through the
+  frontend, one response at the authority).
+- Tests run (all pass): Mantle CaseFeedback, SupportTemplates, SupportCases, SupportSla, SupportRelations, WorkProjectRequests,
+  RecordVisibility, RecordLinks, WorkProjectClients, CommonsToday, OrderToCashBasicFlow, ReturnToResponseBasicFlow,
+  ShipmentReturnMisc, WorkPlanToCashBasicFlow, AccountingPortals, SupplierPortal (192 features); mr-pass SupportAccess, Forum,
+  ForumAccess, Portals, SupplierPages, PublicIdentity, Integrations; BOSS CustomerServiceFeedback, CustomerServiceAccess,
+  CustomerServiceTemplates, CustomerServiceCases, CustomerServiceRelations, CustomerServiceKnowledge; acceptance
+  CustomerServiceFeedbackWalk, AppStructure, SupportFeedbackHttp and RemoteHttp (local authority; the remote pair of
+  docs/Deployment.md "Reproducing the remote check" not run here). `moqui lint --screens`: 136 flagged sites, as master; none in
+  the screens added or changed.
+- Inventories: ss-inventory's Survey forms (all 14); usl-inventory's Customer Service P13 table.
+- Decisions:
+  - The rating is the form's first choice (buttons or list) whose option values are all whole numbers, and the value chosen is
+    the score; a successor rating keeps the rule.
+  - The page asks the form as of now and a response reads it as of its time; the invitation keeps its form and policy row.
+  - The invitation goes to a customer reporter (not a staff one) with an email, else the customer; it names the case's customer.
+  - Comments are service management's; the follow-up team reads text answers only with the customer's consent (the seeded
+    "You may contact me"). No agent ranking is built.
+  - SatisfactionResults and ResponseDetail are checked in their services, not by an artifact group on the shared screen files,
+    which Marketing will mount too (F-P13-11).
+- Findings (provisional):
+  - **F-P13-1** Commons' FormPublication and FormInvitation (design-drawers-commons §19, X16) did not exist; built in
+    `mantle.party` with the Commons names, the case's context on the invitation (contextEntityName and contextId: the resolution
+    CaseSlaEpisode, else the Request) and the record holding it (recordEntityName and recordId), so Marketing's publications use
+    the same rows. Design-drawers-commons §19 changed.
+  - **F-P13-2** P0 left the guard to an entity ECA rule or an authorization rule: an authorization rule would bind only artifact
+    calls, and the framework services run their entity writes with the caller's authorization, so the guard is a run-before
+    entity ECA rule on FormResponse and FormResponseAnswer, which every path (the services, entity-auto, a data load) meets; a
+    response with no invitation is untouched.
+  - **F-P13-3** A resolution episode exists only where a service level policy applies (P4's start#CaseEpisode records
+    NO_POLICY and makes none), so a case with no SLA has no episode to bind: its invitation's context is the Request, and once per
+    resolution keys it by the request's update stamp at resolution.
+  - **F-P13-4** An ExternalAccessCapability keeps only its token's digest, so the job cannot mail the same link twice: each send
+    and reminder makes its own capability ending at the invitation's expiry, every one opening the one invitation.
+  - **F-P13-5** A feedback form is edited by P7's template rules (successor fields, ended options, rules, problems) with every
+    field customer-visible: `CaseTemplates.js` `templateOf` takes the purpose `DbfpCaseFeedback`; Mantle's raw messages say
+    "template" there.
+  - **F-P13-6** Design FormAccess grants author and read access by DbFormUserGroup, but DbFormUserGroup modifies a screen form
+    for a user group and grants nothing on a survey; access is the permissions Mantle checks, so FormAccess shows who may change
+    and read the form, read only. Design FeedbackFormDetail changed.
+  - **F-P13-7** DbForm has no version; SatisfactionResults' "version" is an effective period of the form, from each date its
+    fields, options or rules start or end, and an invitation counts in the period it was made in.
+  - **F-P13-8** "PASS's throttling" is two limits in Mantle: ExternalAccess's token lookups (100 in ten minutes per requester) and
+    the feedback posts (30 in ten minutes), both by the framework's sign-in limits.
+  - **F-P13-9** The Support app's readiness service is `CaseFeedbackServices.check#SupportAppReadiness` while Feedback is its only
+    page (organization, service policy, feedback policy, canonical host); P15 may move it to SupportCaseServices.
+  - **F-P13-10** The plan's "comments private to service management and the customer-authorized follow-up": the consent is a
+    checkbox answer Y on the form (the default's contactOk); an agent of the follow-up team reads text answers only with it.
+  - **F-P13-11** The four survey screens are shared files Marketing will mount, so a DENY of the Customer Service root group on a
+    file would follow a user into Marketing; their reads check the capability instead, and an agent opening CSAT results is told
+    it is not available.
+  - **F-P13-12** In a client acceptance spec an array answered by `when()` reached `then()` without its array methods, and a
+    session's `get` called from an array's `map` callback failed ("not a function"), so the walks answer objects and counts.
 
 ### P14 — Reports
 

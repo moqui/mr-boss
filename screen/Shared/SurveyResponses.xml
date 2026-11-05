@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SurveyResponses, the survey builder's answers and their counts (crosscut §2, §8; Commons' builder, built by
+    impl-customer-service P13 with the Customer Service context only): mounted by Customer Service as
+    Reports/SatisfactionResults (design SatisfactionResults: CsatFind, CsatResponseList, CsatStats), for service management;
+    any other app root sees "not available". One feedback form and one of its effective periods at a time (a period starts
+    when its questions or options change), so a changed scale or question is never compared with the earlier one; then the
+    queue, team, customer, score and state (ironstone.customerservice.FeedbackServices.find#CaseResponses). The counts are on
+    the form's raw scale. Each answer opens ResponseDetail; its case opens CaseDetail when the user may open it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Survey responses">
+    <parameter name="formId"/>
+    <parameter name="periodId"/>
+    <parameter name="requestCategoryId"/>
+    <parameter name="teamPartyId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="score"/>
+    <parameter name="statusEnumId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="findResponses">
+        <default-response url="."><parameter name="formId"/><parameter name="periodId"/><parameter name="requestCategoryId"/>
+            <parameter name="teamPartyId"/><parameter name="customerPartyId"/><parameter name="score"/>
+            <parameter name="statusEnumId"/></default-response>
+    </transition>
+    <actions>
+        <set field="inCustomerService" from="appRoot == 'CustomerService'"/>
+        <if condition="inCustomerService">
+            <service-call name="ironstone.customerservice.FeedbackServices.find#CaseResponses" out-map="found"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{appRoot:appRoot, formId:formId, periodId:periodId, requestCategoryId:requestCategoryId,
+                        teamPartyId:teamPartyId, customerPartyId:customerPartyId, score:score, statusEnumId:statusEnumId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="responsesFound" from="!!found?.formOptions"/>
+        <set field="responseRows" from="found?.rows || []"/>
+        <set field="stats" from="found?.stats || null"/>
+        <set field="distribution" from="stats?.distribution || []"/>
+        <set field="findValues" from="{formId: found?.formId || '', periodId: found?.periodId || '', requestCategoryId: requestCategoryId || '',
+                teamPartyId: teamPartyId || '', customerPartyId: customerPartyId || '', score: score || '', statusEnumId: statusEnumId || ''}"/>
+        <set field="formChoices" from="found?.formOptions || []"/>
+        <set field="periodChoices" from="found?.periodOptions || []"/>
+        <set field="scoreChoices" from="found?.scale ? Array.from({length: found.scale.high - found.scale.low + 1}, (x, i) =&gt;
+                ({value: String(found.scale.high - i), label: String(found.scale.high - i)})) : []"/>
+        <set field="detailLink" from="sharedLinks?.['Reports/ResponseDetail']"/>
+        <set field="statLines" from="stats ? [
+                {label: 'Invited', value: String(stats.invited)},
+                {label: 'Delivered', value: String(stats.delivered)},
+                {label: 'Answered', value: String(stats.answered)},
+                {label: 'Response rate', value: stats.responseRateText || '–'},
+                {label: 'Average score', value: stats.averageText || '–'},
+                {label: 'In the top two scores', value: stats.satisfiedText || '–'},
+                {label: 'With a comment', value: String(stats.commentCount)},
+                {label: 'Scale', value: stats.scaleText || '–'}] : []"/>
+    </actions>
+    <widgets>
+        <label text="Satisfaction results are not available to you." type="p" condition="!responsesFound"/>
+        <section name="SatisfactionResults" condition="responsesFound">
+            <widgets>
+                <label text="Satisfaction results" type="h5"/>
+                <!-- CsatFind -->
+                <container-box>
+                    <box-body>
+                        <form-single name="CsatFind" transition="findResponses" map="findValues">
+                            <field name="formId">
+                                <default-field title="Form">
+                                    <drop-down submit-on-select="true"><list-options list="formChoices" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="periodId">
+                                <default-field title="Version" tooltip="One effective period of the form: answers to changed questions are not mixed">
+                                    <drop-down><list-options list="periodChoices" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="requestCategoryId">
+                                <default-field title="Queue">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'queues'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="teamPartyId">
+                                <default-field title="Team">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'teams'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="customerPartyId">
+                                <default-field title="Customer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="2" parameter-map="{choice:'customers'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="score">
+                                <default-field title="Score">
+                                    <drop-down allow-empty="true"><list-options list="scoreChoices" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="statusEnumId">
+                                <default-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="FinResponded" text="Answered"/><option key="FinSent" text="Sent, not answered"/>
+                                        <option key="FinScheduled" text="Scheduled"/><option key="FinExpired" text="Expired unanswered"/>
+                                        <option key="FinFailed" text="Not delivered"/><option key="FinSuppressed" text="Not sent"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="findButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="formId"/><field-ref name="periodId"/></field-row>
+                                <field-row><field-ref name="requestCategoryId"/><field-ref name="teamPartyId"/></field-row>
+                                <field-row><field-ref name="customerPartyId"/><field-ref name="score"/></field-row>
+                                <field-row><field-ref name="statusEnumId"/><field-ref name="findButton"/></field-row>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <label type="p" style="m-muted" condition="!formChoices.length"
+                        text="No feedback form yet: make one in Settings, Feedback forms."/>
+                <section name="CsatResults" condition="stats">
+                    <widgets>
+                        <container-row>
+                            <!-- CsatStats -->
+                            <row-col lg="5">
+                                <container-box>
+                                    <box-header title="Counts"/>
+                                    <box-body-nopad>
+                                        <form-list name="CsatStats" list="statLines" skip-form="true" paginate="false" skip-header="true">
+                                            <field name="label"><default-field title=""><display/></default-field></field>
+                                            <field name="value"><default-field title=""><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="label"/></column><column><field-ref name="value"/></column></columns>
+                                        </form-list>
+                                        <label type="p" style="q-pa-sm text-caption m-muted q-mb-none" condition="stats.truncated"
+                                                text="Counted over the latest 5000 invitations of the period."/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col lg="7">
+                                <container-box>
+                                    <box-header title="Scores"/>
+                                    <box-body-nopad>
+                                        <form-list name="CsatDistribution" list="distribution" skip-form="true" paginate="false">
+                                            <field name="score"><default-field title="Score"><display/></default-field></field>
+                                            <field name="count"><default-field title="Answers"><display/></default-field></field>
+                                            <field name="shareText"><default-field title="Share"><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="score"/></column><column><field-ref name="count"/><field-ref name="shareText"/></column></columns>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                        <!-- CsatResponseList -->
+                        <container-box>
+                            <box-header title="${stats.listedText || 'Invitations'}"/>
+                            <box-body-nopad>
+                                <form-list name="CsatResponseList" list="responseRows" skip-form="true" paginate="false">
+                                    <field name="caseText">
+                                        <default-field title="Case">
+                                            <link url="${caseUrl}" url-type="plain" text="${caseText}" link-type="anchor" condition="caseUrl"/>
+                                            <label text="${caseText}" type="span" condition="!caseUrl"/>
+                                            <label text="${customerText} · ${episodeText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="sentText"><default-field title="Sent"><display/></default-field></field>
+                                    <field name="respondedText"><default-field title="Answered"><display/></default-field></field>
+                                    <field name="scoreText">
+                                        <default-field title="Score">
+                                            <link url="${detailLink}" text="${scoreText || 'Open'}" link-type="anchor"
+                                                    parameter-map="{formResponseId:formResponseId}" condition="formResponseId &amp;&amp; detailLink"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="commentText"><default-field title="Comment"><display/></default-field></field>
+                                    <field name="followUpText"><default-field title="Follow-up"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="caseText"/><field-ref name="commentText"/></column>
+                                        <column><field-ref name="scoreText"/><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-sm m-muted q-mb-none" condition="!responseRows.length"
+                                        text="No invitation of this form in this period."/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

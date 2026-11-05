@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Customer Service P13: Retail's feedback form, its delivery policy and one answered invitation, after Accounting's portal
+        demo (BossZPortalDemoData.xml), whose ZIZI_PORTAL site mounts the Support app at /support for ORG_ZIZI_RETAIL; a PASS
+        runtime serves it with a <public-site> for portal.zizi.localhost mounting /support too (mr-pass docs/Deployment.md). -->
+    <ironstone.customerservice.DemoServices.load-FeedbackDemo/>
+</entity-facade-xml>

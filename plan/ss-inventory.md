@@ -903,20 +903,20 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditSurvey | EditSurveyForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| EditSurvey | NewUserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| EditSurvey | UserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| Fields | NewDbFormFieldForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| Fields | SurveyPreview | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| Fields | DbFormFieldList | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| Fields | NewFieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| Fields | FieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail |  |
-| FindSurvey | NewSurveyForm | CustomerService/Settings/FeedbackForms; Marketing/Surveys |  |
-| FindSurvey | SurveyList | CustomerService/Settings/FeedbackForms; Marketing/Surveys |  |
-| ResponseDetails | ResponseDetailsForm | CustomerService/Reports/ResponseDetail; Marketing/Surveys/ResponseDetail |  |
-| ResponseStats | TextDbFormFieldResponseCountList | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
-| ResponseStats | FieldOptionForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
-| Responses | ResponseListForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses |  |
+| EditSurvey | EditSurveyForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (Shared/SurveyFormDetail: FeedbackFormHeader, Rename, Publish) (Customer Service P13) |
+| EditSurvey | NewUserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | — CustomerService/Settings/FeedbackFormDetail (FormAccess: who may change and read it, from the permissions Mantle checks; no per-form group grant, F-P13-6) (Customer Service P13) |
+| EditSurvey | UserGroupForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | — CustomerService/Settings/FeedbackFormDetail (FormAccess, read only, F-P13-6) (Customer Service P13) |
+| Fields | NewDbFormFieldForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (FormFields: Add question, through mantle.request.CaseFeedbackServices.save#FeedbackFormField) (Customer Service P13) |
+| Fields | SurveyPreview | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (FormPreview, drafts included); PASS:Support/Feedback (CaseFeedback) (Customer Service P13) |
+| Fields | DbFormFieldList | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (FormFields: Edit, End; the rules) (Customer Service P13) |
+| Fields | NewFieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (a question's options as value | label lines; the value of the rating its score) (Customer Service P13) |
+| Fields | FieldOptionForm | CustomerService/Settings/FeedbackFormDetail; Marketing/Surveys/SurveyDetail | CustomerService/Settings/FeedbackFormDetail (FieldOptions: the options and scores, End) (Customer Service P13) |
+| FindSurvey | NewSurveyForm | CustomerService/Settings/FeedbackForms; Marketing/Surveys | CustomerService/Settings/FeedbackForms (Shared/SurveyForms: NewFeedbackForm, through create#FeedbackForm) (Customer Service P13) |
+| FindSurvey | SurveyList | CustomerService/Settings/FeedbackForms; Marketing/Surveys | CustomerService/Settings/FeedbackForms (Shared/SurveyForms: FeedbackFormList) (Customer Service P13) |
+| ResponseDetails | ResponseDetailsForm | CustomerService/Reports/ResponseDetail; Marketing/Surveys/ResponseDetail | CustomerService/Reports/ResponseDetail (Shared/SurveyResponseDetail: ResponseDetails, FeedbackFollowUp) (Customer Service P13) |
+| ResponseStats | TextDbFormFieldResponseCountList | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses | CustomerService/Reports/SatisfactionResults (Shared/SurveyResponses: CsatStats, the comments counted) (Customer Service P13) |
+| ResponseStats | FieldOptionForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses | CustomerService/Reports/SatisfactionResults (CsatStats: the score distribution of one period) (Customer Service P13) |
+| Responses | ResponseListForm | CustomerService/Reports/SatisfactionResults; Marketing/Surveys/Responses | CustomerService/Reports/SatisfactionResults (CsatFind, CsatResponseList) (Customer Service P13) |
 
 ## Task (32 forms)
 
