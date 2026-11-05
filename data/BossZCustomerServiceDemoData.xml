@@ -17,4 +17,6 @@ along with this software (see the LICENSE.md file). If not, see
         once the products and stock of BossCustomerServiceDemoData.xml are committed: each order runs in a transaction of its
         own, which sees only committed rows, so this file loads after that one (and after the other BOSS demo data). -->
     <ironstone.customerservice.DemoServices.load-CustomerServiceDemo/>
+    <!-- P2: the demo requests made cases by the case rule (Mantle's ensure#CaseProfile) -->
+    <ironstone.customerservice.DemoServices.load-CaseDemo/>
 </entity-facade-xml>

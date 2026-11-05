@@ -1,0 +1,6 @@
+{
+    "case": ["ticket", "support request", "incident", "complaint"],
+    "queue": ["inbox", "team queue"],
+    "reply": ["respond", "answer", "write back"],
+    "customer": ["client", "buyer"]
+}

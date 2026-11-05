@@ -125,7 +125,7 @@ function scope() {
     for (const [name, permission] of Object.entries(capabilityPermissions))
         capabilities[name] = grants.read && access.has(permission)
     for (const [name, area] of Object.entries(areas)) capabilities[name] = areaGrant(grants, area)
-    return {
+    const base = {
         read: grants.read,
         unrestricted: grants.unrestricted,
         organizationPartyIds: memberIds,
@@ -135,12 +135,50 @@ function scope() {
               ? organization.activeOrgId
               : null,
         ownerIds,
-        // the service queues and agent teams the user works (P2: an agent's teams' queues, a manager's managed teams)
-        queueIds: [],
-        teamIds: [],
         partyId: ec.user.userAccount?.partyId || null,
         capabilities
     }
+    return Object.assign(base, grants.read ? serviceScope(base) : {queueIds: [], teamIds: [], managedTeamIds: []})
+}
+// The service teams and queues the user works (P2; design §1 CX-ACCESS): the teams they are a current member of
+// (PrtServiceTeam; as Manager, a team they manage) of their organizations, and the queues whose cases they see: a queue of
+// one of their teams, any queue of their organizations visible to its organization (SqvOrganization), and for a manager or
+// the administrator a team queue (SqvTeam); a restricted queue (SqvRestricted, the Privacy queue) only by its team. A case
+// assigned to the user is theirs too (recordOf).
+function serviceScope(base) {
+    const memberships = base.partyId
+        ? rows("mantle.party.PartyRelationship", {fromPartyId: base.partyId, relationshipTypeEnumId: "PrtServiceTeam"}).filter(
+              row => lib.active(row) && owns(base, one("mantle.party.Party", {partyId: row.toPartyId})?.ownerPartyId)
+          )
+        : []
+    const teamIds = Array.from(new Set(memberships.map(row => row.toPartyId)))
+    const managedTeamIds = Array.from(
+        new Set(memberships.filter(row => row.fromRoleTypeId === "Manager").map(row => row.toPartyId))
+    )
+    const manager = base.capabilities.caseManage || base.capabilities.policyEdit
+    const queueIds = []
+    for (const queue of currentQueues()) {
+        const owner = one("mantle.request.RequestCategory", {requestCategoryId: queue.requestCategoryId})?.ownerPartyId
+        if (!owner || !owns(base, owner)) continue
+        const team = !!queue.responsibleTeamPartyId && teamIds.includes(queue.responsibleTeamPartyId)
+        const visible =
+            team ||
+            (queue.visibilityEnumId === "SqvOrganization" && base.capabilities.read) ||
+            (queue.visibilityEnumId === "SqvTeam" && manager)
+        if (visible && !queueIds.includes(queue.requestCategoryId)) queueIds.push(queue.requestCategoryId)
+    }
+    return {queueIds, teamIds, managedTeamIds}
+}
+// The current ServiceQueue rows (a draft has no from date), one per queue.
+function currentQueues() {
+    const seen = new Set()
+    return Array.from(
+        find("mantle.request.support.ServiceQueue")
+            .condition(ec.entity.conditionFactory.makeCondition("fromDate", "is-not-null", null))
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .orderBy("-fromDate")
+            .list()
+    ).filter(row => !seen.has(row.requestCategoryId) && seen.add(row.requestCategoryId))
 }
 function required(userScope = scope()) {
     if (!userScope.read) denied("CUSTOMER_SERVICE_UNAVAILABLE", "Customer Service is not available")
@@ -151,6 +189,11 @@ const hasRole = (partyId, roleTypeId) => !!partyId && !!one("mantle.party.PartyR
 const isInternal = partyId => hasRole(partyId, "OrgInternal")
 const statusText = statusId => (statusId ? one("moqui.basic.StatusItem", {statusId})?.description || statusId : "")
 const likeText = text => "%" + String(text).replace(/[\\%_]/g, character => "\\" + character) + "%"
+const enumText = enumId => (enumId ? one("moqui.basic.Enumeration", {enumId})?.description || enumId : "")
+const queueName = requestCategoryId =>
+    requestCategoryId ? one("mantle.request.RequestCategory", {requestCategoryId})?.description || requestCategoryId : ""
+const queueOwner = requestCategoryId =>
+    requestCategoryId ? one("mantle.request.RequestCategory", {requestCategoryId})?.ownerPartyId || null : null
 function partyName(partyId) {
     if (!partyId) return ""
     const organization = one("mantle.party.Organization", {partyId})
@@ -210,7 +253,18 @@ const linkPaths = [
     "Availability",
     "Knowledge",
     "Reports",
-    "Settings"
+    "Settings",
+    // P2: the case screens and the settings pages
+    "Cases/Cases",
+    "Cases/NewCase",
+    "Cases/CaseDetail",
+    "Cases/WorkItemDetail",
+    "Settings/SettingsHome",
+    "Settings/Queues",
+    "Settings/AgentTeams",
+    "Settings/CaseTypes",
+    "Settings/StatusCategories",
+    "Settings/ServiceDefaults"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -223,6 +277,7 @@ function sharedContext(p) {
         allOrganizations: !userScope.ownerIds,
         queueIds: userScope.queueIds,
         teamIds: userScope.teamIds,
+        managedTeamIds: userScope.managedTeamIds,
         appRoot: "CustomerService",
         linkBase: "//CustomerService",
         webBase: "/qapps/CustomerService",
@@ -253,13 +308,34 @@ function readCustomer(partyId) {
     return {owners: [], customers: [partyId], shared: true, label: partyName(partyId), detail: party.pseudoId || ""}
 }
 
+// A case (P2): a request with a CaseProfile; its owner is its organization (the OrgInternal party, F74), its customer the
+// Customer party, and its queue and assignee decide whether the user sees it (recordOf).
+function readCase(requestId) {
+    const profile = one("mantle.request.support.CaseProfile", {requestId})
+    const request = profile ? one("mantle.request.Request", {requestId}) : null
+    if (!request) return null
+    const parties = rows("mantle.request.RequestParty", {requestId}).filter(row => lib.active(row))
+    const roleOf = roleTypeId => parties.find(row => row.roleTypeId === roleTypeId)?.partyId || null
+    const customerPartyId = roleOf("Customer")
+    return {
+        owners: [roleOf("OrgInternal")],
+        customers: customerPartyId ? [customerPartyId] : [],
+        shared: false,
+        queueId: request.requestCategoryId || null,
+        assigneePartyId: roleOf("Assignee"),
+        label: request.requestName || requestId,
+        detail: [partyName(customerPartyId), statusText(request.statusId)].filter(Boolean).join(" · ")
+    }
+}
+
 // Each kind a Customer Service screen, mount, palette or record link may be given: its name, icon, the screen that opens it
 // (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup) and its read (a record answers its owners (service organizations) and customers, a label and a detail, or null
 // when there is no such record). P2 adds the case, P9 the return, P11 the warranty claim; P3 sets the destinations.
 const recordKinds = {
     order: {name: "Sales order", icon: "sym_o_receipt_long", destination: null, read: readOrder},
-    customer: {name: "Customer", icon: "sym_o_person", destination: null, read: readCustomer}
+    customer: {name: "Customer", icon: "sym_o_person", destination: null, read: readCustomer},
+    case: {name: "Case", icon: "sym_o_support_agent", destination: "Cases/CaseDetail?requestId=", read: readCase}
 }
 
 // A record the user may work with: every organization it names is one of theirs and every customer it names is one they
@@ -274,10 +350,21 @@ function recordOf(userScope, kind, recordId) {
     const owners = found.owners.filter(owner => owner !== undefined)
     const allowed =
         (owners.length > 0 || found.shared || !userScope.ownerIds) &&
-        owners.every(owner => owns(userScope, owner)) &&
+        owners.every(owner => owner && owns(userScope, owner)) &&
         found.customers.every(partyId => !!customerOf(userScope, partyId))
     if (!allowed) unavailable()
+    // a case: in one of the user's queues, or assigned to them
+    if (found.queueId !== undefined && !caseVisible(userScope, found)) unavailable()
     return {recordType: kind, recordId, kindName: definition.name, label: found.label, detail: found.detail}
+}
+
+// Whether the user sees a case they may work with by organization and customer: its queue is one of theirs, or it is
+// assigned to them (a restricted queue's case only by its team, whoever it is assigned to).
+function caseVisible(userScope, found) {
+    if (found.queueId && userScope.queueIds.includes(found.queueId)) return true
+    const queue = found.queueId ? currentQueues().find(row => row.requestCategoryId === found.queueId) : null
+    if (queue?.visibilityEnumId === "SqvRestricted") return false
+    return !!userScope.partyId && found.assigneePartyId === userScope.partyId
 }
 
 // check#Record: a record a Customer Service screen or mount was given, refused unless the user may work with it and, when a
@@ -343,6 +430,28 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("partyId"),
         idField: "partyId"
+    },
+    // P2: the cases of the user's queues and those assigned to them, by id or subject
+    {
+        kind: "case",
+        query: (userScope, condition) => {
+            const factory = ec.entity.conditionFactory
+            const mine = userScope.partyId
+                ? rows("mantle.request.RequestParty", {partyId: userScope.partyId, roleTypeId: "Assignee"})
+                      .filter(row => lib.active(row))
+                      .map(row => row.requestId)
+                : []
+            const scoped = [
+                factory.makeCondition("requestCategoryId", "in", userScope.queueIds.length ? userScope.queueIds : ["_NA_"])
+            ]
+            if (mine.length) scoped.push(factory.makeCondition("requestId", "in", mine))
+            return find("mantle.request.support.CaseRequest")
+                .condition(factory.makeCondition(scoped, "or"))
+                .condition(condition(["requestId", "requestName"]))
+                .selectField("requestId")
+                .orderBy("-requestDate")
+        },
+        idField: "requestId"
     }
 ]
 function search(p) {
@@ -408,6 +517,84 @@ const choiceSources = {
             options.push({value: selected, label: partyName(selected)})
         return options
     },
+    // P2: the service queues the user works (by name), the teams of their organizations, the agents of a queue's team
+    // (or of the user's teams), the request types their organization service-enables, the case tags and a customer's contacts
+    queues: (userScope, term, selected, p) => {
+        const options = userScope.queueIds
+            .map(requestCategoryId => ({value: requestCategoryId, label: queueName(requestCategoryId)}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .filter(option => !p.organizationPartyId || queueOwner(option.value) === p.organizationPartyId)
+            .sort((a, b) => a.label.localeCompare(b.label))
+        return options.slice(0, choiceLimit)
+    },
+    teams: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.PartyDetailAndRole", {roleTypeId: "OrgTeam"}).selectField("partyId").limit(choiceLimit)
+        query = query.condition("ownerPartyId", "in", vendorIds(userScope))
+        if (term) query = query.condition(factory.makeCondition("organizationName", "like", likeText(term)).ignoreCase())
+        const options = Array.from(query.list()).map(row => ({value: row.partyId, label: partyName(row.partyId)}))
+        if (
+            selected &&
+            !options.some(option => option.value === selected) &&
+            owns(userScope, one("mantle.party.Party", {partyId: selected})?.ownerPartyId)
+        )
+            options.push({value: selected, label: partyName(selected)})
+        return options
+    },
+    agents: (userScope, term, selected, p) => {
+        const queue = p.queueId ? currentQueues().find(row => row.requestCategoryId === p.queueId) : null
+        const teamIds = queue?.responsibleTeamPartyId ? [queue.responsibleTeamPartyId] : userScope.teamIds
+        const ids = new Set()
+        for (const teamId of teamIds)
+            for (const row of rows("mantle.party.PartyRelationship", {
+                toPartyId: teamId,
+                relationshipTypeEnumId: "PrtServiceTeam"
+            }))
+                if (lib.active(row)) ids.add(row.fromPartyId)
+        if (userScope.partyId && !queue) ids.add(userScope.partyId)
+        const options = Array.from(ids)
+            .map(partyId => ({value: partyId, label: partyName(partyId)}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .slice(0, choiceLimit)
+        if (selected && !options.some(option => option.value === selected))
+            options.push({value: selected, label: partyName(selected)})
+        return options
+    },
+    caseTypes: (userScope, term, selected, p) => {
+        const organizationIds = p.organizationPartyId ? [p.organizationPartyId] : vendorIds(userScope)
+        const seen = new Map()
+        for (const row of find("mantle.request.support.ServiceRequestType")
+            .condition("organizationPartyId", "in", organizationIds)
+            .condition("serviceEnabled", "Y")
+            .condition(ec.entity.conditionFactory.makeCondition("fromDate", "is-not-null", null))
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .list())
+            if (!seen.has(row.requestTypeEnumId))
+                seen.set(row.requestTypeEnumId, row.customerLabel || enumText(row.requestTypeEnumId))
+        return Array.from(seen.entries())
+            .map(([value, label]) => ({value, label}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .sort((a, b) => a.label.localeCompare(b.label))
+    },
+    tags: (userScope, term) =>
+        rows("moqui.basic.Enumeration", {enumTypeId: "RequestTag"})
+            .sort((a, b) => (a.sequenceNum ?? 99) - (b.sequenceNum ?? 99))
+            .map(row => ({value: row.enumId, label: row.description || row.enumId}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase())),
+    contacts: (userScope, term, selected, p) => {
+        if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+        const ids = new Set(
+            rows("mantle.party.PartyRelationship", {toPartyId: p.customerPartyId})
+                .filter(row => lib.active(row))
+                .map(row => row.fromPartyId)
+                .filter(partyId => one("mantle.party.Party", {partyId})?.partyTypeEnumId === "PtyPerson")
+        )
+        return Array.from(ids)
+            .map(partyId => ({value: partyId, label: partyName(partyId)}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .slice(0, choiceLimit)
+    },
     // the user's service organizations (internal organizations they belong to, or every one for the administrator)
     organizations: (userScope, term, selected) => {
         const ids = vendorIds(userScope)
@@ -440,6 +627,16 @@ const operations = {sharedContext, checkRecord, search, choices}
     customerFind,
     recordOf,
     recordUrl,
+    // P2: the reads the case and settings modules share
+    caseVisible,
+    currentQueues,
+    partyName,
+    statusText,
+    enumText,
+    queueName,
+    queueOwner,
+    vendorIds,
+    likeText,
     // whether a kind has its Customer Service screen yet (get#RecordLink leaves a customer to Commons until it has)
     hasScreen: kind => !!recordKinds[kind]?.destination,
     execute: (op, parameters) => {

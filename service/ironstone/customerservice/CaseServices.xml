@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's case reads and batch (impl-customer-service P2; design-customer-service §3; Cases.js): scoped by
+    AccessServices (the user's organizations and customers, and the cases of their queues or assigned to them). The case's
+    create, update, transition and tags are Mantle's mantle.request.SupportCaseServices, which the screens call after
+    check#Record; apply#CaseBatch calls them per case. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Cases" allow-remote="false">
+        <description>The cases the user sees (design Cases CaseFind, CaseList; Home's MyCases): a saved view (mine, the
+            default; unassigned; waiting; needsResponse; slaRisk, none until service levels; resolved, the last 7 days; all),
+            with text (id or subject, ignoring case), type, queue, status or status category, priority band, customer,
+            assignee, team, channel, tag and request dates, paged, newest first. With recentFor, the Recent cases read: that
+            customer's other cases open or changed in the last 90 days (CaseDetail's pane, NewCase's duplicate warning); a
+            customer the user does not serve gets none. Each row has its display text: customer, assignee, queue, the
+            workflow's agent label and its colour, the priority band, due, updated, tags and revision.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="text"/>
+            <parameter name="requestTypeEnumId"/>
+            <parameter name="requestCategoryId"/>
+            <parameter name="statusId"/>
+            <parameter name="statusCategoryEnumId"/>
+            <parameter name="bandEnumId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="teamPartyId"/>
+            <parameter name="salesChannelEnumId"/>
+            <parameter name="tagEnumId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+            <parameter name="recentFor"/>
+            <parameter name="excludeRequestId"/>
+            <parameter name="orderByField"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="cases" type="List"/>
+            <parameter name="casesCount" type="Integer"/>
+            <parameter name="casesPageIndex" type="Integer"/>
+            <parameter name="casesPageSize" type="Integer"/>
+            <parameter name="casesPageMaxIndex" type="Integer"/>
+            <parameter name="casesPageRangeLow" type="Integer"/>
+            <parameter name="casesPageRangeHigh" type="Integer"/>
+            <parameter name="view"/>
+            <parameter name="viewText"/>
+            <parameter name="views" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('findCases', context)"/>
+            <set field="cases" from="found.cases"/>
+            <set field="casesCount" from="found.casesCount"/>
+            <set field="casesPageIndex" from="found.casesPageIndex"/>
+            <set field="casesPageSize" from="found.casesPageSize"/>
+            <set field="casesPageMaxIndex" from="found.casesPageMaxIndex"/>
+            <set field="casesPageRangeLow" from="found.casesPageRangeLow"/>
+            <set field="casesPageRangeHigh" from="found.casesPageRangeHigh"/>
+            <set field="view" from="found.view"/>
+            <set field="viewText" from="found.viewText"/>
+            <set field="views" from="found.views"/>
+        </actions>
+    </service>
+    <service verb="get" noun="QueueCounts" allow-remote="false">
+        <description>Per queue the user works (design Home TeamQueues): its team, open, unassigned and overdue cases, and
+            breached (not configured until service levels, P4), each linking its list; with the totals.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="queueRows" type="List"/>
+            <parameter name="openCount" type="Integer"/>
+            <parameter name="unassignedCount" type="Integer"/>
+            <parameter name="overdueCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="counts" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('queueCounts', context)"/>
+            <set field="queueRows" from="counts.queueRows"/>
+            <set field="openCount" from="counts.openCount"/>
+            <set field="unassignedCount" from="counts.unassignedCount"/>
+            <set field="overdueCount" from="counts.overdueCount"/>
+        </actions>
+    </service>
+    <service verb="find" noun="ServiceCustomers" allow-remote="false">
+        <description>The customers the user serves (F30) by name or id, email or phone, ignoring case, in the query: each
+            with its email, phone and open case count. Empty text finds none.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="term"/></in-parameters>
+        <out-parameters><parameter name="customers" type="List"/></out-parameters>
+        <actions>
+            <set field="customers" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('serviceCustomers', context).customers"/>
+        </actions>
+    </service>
+    <service verb="prepare" noun="Case" allow-remote="false">
+        <description>NewCase's choices for the user (design NewCase CaseIdentity): the organizations with Customer Service
+            set up, the types the chosen one service-enables with their customer labels, the queues of the user's that take
+            the type, the defaults (the type's queue and priority, else the policy's queue), the priority bands, and the
+            chosen customer's open cases (the duplicate warning; only a customer the user serves).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="requestTypeEnumId"/>
+            <parameter name="requestCategoryId"/>
+        </in-parameters>
+        <out-parameters><parameter name="prepared" type="Map"/></out-parameters>
+        <actions>
+            <set field="prepared" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('prepareCase', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CaseDetail" allow-remote="false">
+        <description>A case for CaseDetail (crosscut §3.11 Customer Service row): its facts (customer, contact,
+            organization, queue, priority band, assignee, the agent and customer status labels, due, channel, intake, the
+            resolution), the moves its workflow allows from its status (a manager's only for a manager), its work, linked
+            records, tags, revision and the customer's recent cases; and whether the user may change it (SUPPORT_CASE_EDIT,
+            and SUPPORT_CASE_MANAGE for another agent's). Refuses a case the user does not see
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="requestId" required="true"/></in-parameters>
+        <out-parameters><parameter name="detail" type="Map"/></out-parameters>
+        <actions>
+            <set field="detail" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('caseDetail', context)"/>
+        </actions>
+    </service>
+    <service verb="apply" noun="CaseBatch" allow-remote="false">
+        <description>One change on each selected case (design BulkCaseAction): assign (an empty assignee unassigns), status
+            (with resolutionEnumId and reason), priority, queue or tags (tagMode add, remove or replace), each case checked and
+            changed through mantle.request.SupportCaseServices in a transaction of its own; the outcome of each is Done,
+            StaleCase (revisions names the revision each was read at), AssigneeUnavailable, Forbidden or Failed, and the
+            others go on. An operation key answers a retry with the first result.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="requestIds" required="true"/>
+            <parameter name="operation" required="true"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="toStatusId"/>
+            <parameter name="resolutionEnumId"/>
+            <parameter name="reason"/>
+            <parameter name="priority"/>
+            <parameter name="requestCategoryId"/>
+            <parameter name="tagEnumIds"/>
+            <parameter name="tagMode"/>
+            <parameter name="revisions" type="Map"/>
+            <parameter name="operationKey"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="doneCount" type="Integer"/>
+            <parameter name="failedCount" type="Integer"/>
+            <parameter name="message"/>
+            <parameter name="alreadyApplied" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="applied" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('applyBatch', context)"/>
+            <set field="results" from="applied.results"/>
+            <set field="doneCount" from="applied.doneCount"/>
+            <set field="failedCount" from="applied.failedCount"/>
+            <set field="message" from="applied.message"/>
+            <set field="alreadyApplied" from="!!applied.alreadyApplied"/>
+        </actions>
+    </service>
+    <service verb="get" noun="TodayItems" allow-remote="false">
+        <description>The Customer Service today-source (CustomerService.xml shell-providers; F9, F63): the user's own open
+            cases due by the end of the range or overdue, each opening CaseDetail. Another user's Today and a user without
+            Customer Service get none.</description>
+        <in-parameters>
+            <parameter name="userId"/>
+            <parameter name="partyId"/>
+            <parameter name="fromDate" type="Timestamp"/>
+            <parameter name="thruDate" type="Timestamp"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="items" type="List"/>
+            <parameter name="label"/>
+        </out-parameters>
+        <actions>
+            <set field="today" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('today', context)"/>
+            <set field="items" from="today.items"/>
+            <set field="label" from="today.label"/>
+        </actions>
+    </service>
+</services>

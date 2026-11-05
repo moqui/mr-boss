@@ -12,12 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Cases area of IronStone Customer Service (design-customer-service §3): the case lists with saved queues, NewCase,
-    CaseDetail, merge and split, and the channel sessions (impl-customer-service P2, P6, P8); every Customer Service user,
-    each list limited to the cases of their queues and teams. -->
+<!-- The Cases area of IronStone Customer Service (design-customer-service §1, §3; impl-customer-service P2): a menu group
+    holding Cases (the default: CaseFind, CaseList and the board, the saved views and the bulk actions) and NewCase, with
+    CaseDetail (the shared RequestDetail in the Customer Service context, crosscut §3.11) and WorkItemDetail (the shared
+    WorkItemDetail, crosscut §3.12) hidden from the menu; merge and split (P8) and the channel sessions (P6) follow. Every
+    Customer Service user, each list limited to the cases of their queues and those assigned to them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cases" default-menu-index="2" menu-image="sym_o_flag" menu-image-type="icon">
+    <subscreens default-item="Cases" always-use-full-path="true">
+        <subscreens-item name="CaseDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
+        <subscreens-item name="WorkItemDetail" location="component://mr-boss/screen/Shared/WorkItemDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Support cases and their queues." type="p"/>
+        <subscreens-panel id="CustomerServiceCasesPanel" type="tab"/>
     </widgets>
 </screen>

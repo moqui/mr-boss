@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StatusCategories (design-customer-service §9 StatusCategories CaseStatusMap and CaseTransitionPolicy;
+    impl-customer-service P2): the workflow's statuses with the agent's and the customer's labels and their categories, and
+    the moves it allows (ironstone.customerservice.ConfigurationServices.get#ServiceSettings), each edited from now over
+    mantle.request.SupportCaseServices.save#CaseStatusMapping and save#CaseWorkflow. Workflows are shared settings, as
+    status flows are. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Status categories" default-menu-index="5">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition name="saveMapping">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseStatusMapping"
+                    in-map="{caseWorkflowId:caseWorkflowId, statusId:statusId, agentLabel:agentLabel, customerLabel:customerLabel,
+                        statusCategoryEnumId:statusCategoryEnumId, reasonRequired:(reasonRequired || 'N'), sequenceNum:(sequenceNum || null)}"/>
+            <message type="success">Saved the status ${agentLabel}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveMove">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#CaseWorkflow"
+                    in-map="{caseWorkflowId:caseWorkflowId, statusId:statusId, toStatusId:toStatusId,
+                        resolutionRequired:(resolutionRequired || 'N'), reasonRequired:(reasonRequired || 'N'),
+                        manageRequired:(manageRequired || 'N'), end:(end == 'Y')}"/>
+            <message type="success">Saved the move</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cfg" from="settingsOut?.settings || null"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="mappings" from="cfg?.mappings || []"/>
+        <set field="transitions" from="cfg?.transitions || []"/>
+        <set field="caseWorkflowId" from="cfg?.caseWorkflowId || 'CwfDefault'"/>
+        <set field="workflowName" from="(cfg?.workflows || []).find((row) =&gt; row.value == caseWorkflowId)?.label || caseWorkflowId"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
+        <section name="StatusSettings" condition="cfg">
+            <widgets>
+                <label text="Status categories" type="h5"/>
+                <label text="${workflowName}" type="p" style="text-caption m-muted"/>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                        <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                            <field name="organizationPartyId">
+                                <default-field title="Organization">
+                                    <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </widgets>
+                </section>
+                <container-box>
+                    <box-header title="Statuses"/>
+                    <box-body-nopad>
+                        <form-list name="CaseStatusMap" list="mappings" skip-form="true" paginate="false">
+                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                            <field name="agentLabel"><default-field title="Agents see"><display/></default-field></field>
+                            <field name="customerLabel"><default-field title="Customers see"><display/></default-field></field>
+                            <field name="categoryText"><default-field title="Category"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditMapping_${statusId}" button-text="Edit" icon="sym_o_edit" width="560"
+                                            title="The status ${statusText}" condition="can.policyEdit">
+                                        <form-single name="EditMappingForm" transition="saveMapping"
+                                                map="{caseWorkflowId:caseWorkflowId, statusId:statusId, agentLabel:agentLabel,
+                                                    customerLabel:customerLabel, statusCategoryEnumId:statusCategoryEnumId,
+                                                    reasonRequired:reasonRequired, sequenceNum:sequenceNum, organizationPartyId:cfgOrganizationPartyId}">
+                                            <field name="caseWorkflowId"><default-field><hidden/></default-field></field>
+                                            <field name="statusId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="agentLabel"><default-field title="Agents see"><text-line size="30"/></default-field></field>
+                                            <field name="customerLabel"><default-field title="Customers see"><text-line size="30"/></default-field></field>
+                                            <field name="statusCategoryEnumId">
+                                                <default-field title="Category">
+                                                    <drop-down>
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="CaseStatusCategory"/>
+                                                                <order-by field-name="sequenceNum"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="reasonRequired">
+                                                <default-field title="Needs a reason"><radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio></default-field>
+                                            </field>
+                                            <field name="sequenceNum"><default-field title="Order"><text-line size="4" input-type="number"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="statusText"/><field-ref name="agentLabel"/></column>
+                                <column><field-ref name="categoryText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Moves"/>
+                    <box-toolbar>
+                        <container-dialog id="NewMove" button-text="Add move" icon="sym_o_add" width="560" title="Add a move"
+                                condition="can.policyEdit">
+                            <form-single name="NewMoveForm" transition="saveMove" map="{caseWorkflowId:caseWorkflowId, organizationPartyId:cfgOrganizationPartyId}">
+                                <field name="caseWorkflowId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="statusId">
+                                    <default-field title="From">
+                                        <drop-down><list-options list="mappings" key="${statusId}" text="${agentLabel}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="toStatusId">
+                                    <default-field title="To">
+                                        <drop-down><list-options list="mappings" key="${statusId}" text="${agentLabel}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="resolutionRequired">
+                                    <default-field title="Needs a resolution"><radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio></default-field>
+                                </field>
+                                <field name="reasonRequired">
+                                    <default-field title="Needs a reason"><radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio></default-field>
+                                </field>
+                                <field name="manageRequired">
+                                    <default-field title="Managers only"><radio><option key="Y" text="Yes"/><option key="N" text="No"/></radio></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="CaseTransitionPolicy" list="transitions" skip-form="true" paginate="false">
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                            <field name="needsText"><default-field title="Needs"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="saveMove" text="Remove" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                            condition="can.policyEdit"
+                                            parameter-map="{caseWorkflowId:caseWorkflowId, statusId:statusId, toStatusId:toStatusId, end:'Y',
+                                                organizationPartyId:cfgOrganizationPartyId}"
+                                            confirmation="Remove the move from ${fromText} to ${toText}?"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="fromText"/><field-ref name="toText"/></column>
+                                <column><field-ref name="needsText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Queues (design-customer-service §9 Queues; impl-customer-service P2, CS-QUEUE): QueueList, the organization's
+    queues as a tree with a table (ironstone.customerservice.ConfigurationServices.find#ServiceQueues), and QueueEdit (New
+    queue, Edit, End) over mantle.request.SupportCaseServices.save#ServiceQueue: a category the organization owns with its
+    effective-dated service row (offered types, visibility, responsible team, fallback assignee). Saving starts a row from
+    now and ends the one it replaces; End refuses a queue new cases still go to. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Queues" default-menu-index="2">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="saveQueue">
+        <actions>
+            <service-call name="mantle.request.SupportCaseServices.save#ServiceQueue" out-map="saved"
+                    in-map="{requestCategoryId:(requestCategoryId || null), organizationPartyId:organizationPartyId,
+                        description:description, parentCategoryId:(parentCategoryId || null),
+                        offeredTypeEnumIds:(offeredTypeEnumIds || null), visibilityEnumId:visibilityEnumId,
+                        responsibleTeamPartyId:(responsibleTeamPartyId || null),
+                        fallbackAssigneePartyId:(fallbackAssigneePartyId || null), changeReason:(changeReason || null),
+                        end:(end == 'Y')}"/>
+            <message type="success">Saved the queue ${description || requestCategoryId}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.find#ServiceQueues" out-map="queuesOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="queues" from="queuesOut?.queues || []"/>
+        <set field="cfgOrganizations" from="queuesOut?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="queuesOut?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="parentOptions" from="queues.map((row) =&gt; ({value: row.requestCategoryId, label: row.description}))"/>
+        <set field="newQueue" from="{organizationPartyId:cfgOrganizationPartyId, visibilityEnumId:'SqvOrganization'}"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfgOrganizationPartyId"/>
+        <section name="QueueSettings" condition="cfgOrganizationPartyId">
+            <widgets>
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col"><label text="Queues" type="h5"/></container>
+                    <container style="col-auto">
+                        <container-dialog id="NewQueue" button-text="New queue" icon="sym_o_add" type="primary" width="640"
+                                title="New queue" condition="can.policyEdit">
+                            <form-single name="NewQueueForm" transition="saveQueue" map="newQueue">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                <field name="parentCategoryId">
+                                    <default-field title="Under">
+                                        <drop-down allow-empty="true"><list-options list="parentOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="visibilityEnumId">
+                                    <default-field title="Who sees its cases">
+                                        <drop-down>
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="ServiceQueueVisibility"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="responsibleTeamPartyId">
+                                    <default-field title="Team">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'teams'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="offeredTypeEnumIds">
+                                    <default-field title="Types it takes" tooltip="Empty takes every service-enabled type">
+                                        <drop-down allow-multiple="true" allow-empty="true">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="RequestType"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Create queue"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="description"/><field-ref name="parentCategoryId"/></field-row>
+                                    <field-row><field-ref name="visibilityEnumId"/><field-ref name="responsibleTeamPartyId"/></field-row>
+                                    <field-ref name="offeredTypeEnumIds"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+                    <widgets>
+                <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="QueueList" list="queues" skip-form="true" paginate="false">
+                            <field name="treeText">
+                                <default-field title="Queue">
+                                    <label text="${treeText}" type="span" style="${active ? 'text-weight-medium' : 'm-muted'}"/>
+                                </default-field>
+                            </field>
+                            <field name="visibilityText"><default-field title="Who sees its cases"><display/></default-field></field>
+                            <field name="teamName"><default-field title="Team"><display/></default-field></field>
+                            <field name="offeredText"><default-field title="Types"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EditQueue_${requestCategoryId}" button-text="Edit" icon="sym_o_edit" width="640"
+                                            title="Queue ${description}" condition="can.policyEdit">
+                                        <form-single name="EditQueueForm" transition="saveQueue"
+                                                map="{requestCategoryId:requestCategoryId, organizationPartyId:cfgOrganizationPartyId,
+                                                    description:description, parentCategoryId:parentCategoryId,
+                                                    visibilityEnumId:(visibilityEnumId || 'SqvOrganization'), responsibleTeamPartyId:responsibleTeamPartyId,
+                                                    offeredTypeEnumIds:offeredTypeEnumIds ? offeredTypeEnumIds.split(',') : [],
+                                                    fallbackAssigneePartyId:fallbackAssigneePartyId}">
+                                            <field name="requestCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                            <field name="visibilityEnumId">
+                                                <default-field title="Who sees its cases">
+                                                    <drop-down>
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="ServiceQueueVisibility"/>
+                                                                <order-by field-name="sequenceNum"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="responsibleTeamPartyId">
+                                                <default-field title="Team">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'teams', selected:responsibleTeamPartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="offeredTypeEnumIds">
+                                                <default-field title="Types it takes" tooltip="Empty takes every service-enabled type">
+                                                    <drop-down allow-multiple="true" allow-empty="true">
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="RequestType"/>
+                                                                <order-by field-name="description"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="fallbackAssigneePartyId">
+                                                <default-field title="Fallback assignee">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'agents', queueId:requestCategoryId, selected:fallbackAssigneePartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason"><default-field title="Reason for the change"><text-line/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save from now"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="saveQueue" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                            condition="can.policyEdit &amp;&amp; active"
+                                            parameter-map="{requestCategoryId:requestCategoryId, organizationPartyId:cfgOrganizationPartyId, end:'Y'}"
+                                            confirmation="End the queue ${description}? Its cases stay where they are."/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="treeText"/><field-ref name="teamName"/></column>
+                                <column><field-ref name="visibilityText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!queues.length"
+                                text="No queue yet. Make the first with New queue, then give it a team."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

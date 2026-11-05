@@ -40,4 +40,19 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.resource.script('component://mr-boss/service/ironstone/customerservice/Demo.js').execute('loadOrder', context)</script>
         </actions>
     </service>
+    <service verb="load" noun="CaseDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>P2: the demo requests of BossCustomerServiceDemoData.xml made cases through Mantle's
+            ensure#CaseProfile, each in its own transaction; one that fails is named in errors and the others are made.
+            Idempotent. Only data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Demo.js')
+                .execute('loadCases', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
 </services>

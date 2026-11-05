@@ -289,7 +289,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 5 (§6 F1–F73) |
 | P1 Foundation | Mantle, BOSS | the Customer Service root and menu, Home | built Nov 5, 2026 |
-| P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | — |
+| P2 Cases and queues | Mantle, BOSS | Cases, NewCase, CaseDetail, WorkItemDetail, Settings, Queues, AgentTeams, CaseTypes, StatusCategories, ServiceDefaults | built Nov 5, 2026 |
 | P3 Customers and orders | Mantle, BOSS | Customers, Customer360, ContactDetail, Orders, OrderDetail, ShipmentDetail, InvoiceDetail, InventoryAvailability, StockAtDate, Product360 | — |
 | P4 Service levels | Mantle, BOSS | ServiceLevelPolicies, CaseAnalytics, CaseDetail's clocks | — |
 | P5 Assignment and saved replies | mr-moqui (P0), Mantle, BOSS | AssignmentRules, SavedReplies, AgentTeams' participation | — |
@@ -621,6 +621,156 @@ StatusCategories and ServiceDefaults; CS-QUEUE, CS-SETTINGS, CX-REQUEST, CS-STAC
     work as before;
   - Commons' Resolve on a case is hidden for a user without `SUPPORT_CASE_EDIT`;
   - a privacy request filed as a case lands in the Privacy queue, and a general agent sees neither it nor its count.
+
+**Built Nov 5 (P2).**
+- Mantle entities (`entity/SupportCaseEntities.xml`): `mantle.request.support.CaseProfile` (policy and workflow opened
+  under, intake queue and time, the originating message, template and close date for later phases), `ServiceQueue`,
+  `ServiceRequestType`, `ServicePolicy`, `CaseStatusMapping` and `CaseTransition` (each effective-dated, key fields
+  audit-logged; a draft has no from date), `mantle.request.RequestTag`, and the views `CaseRequest` and
+  `CaseRequestParty`; `RequestCategory.ownerPartyId` (F6); the audit log (on update) on Request's type, category,
+  priority, due date and resolution. Seeds: `ReqWaitingCustomer` and `ReqOnHold` with their Default-flow transitions,
+  `RqtPrivacy`, the `CaseWorkflow` (`CwfDefault`), `CaseStatusCategory`, `CasePriorityBand` (1–2 Urgent, 3–4 High, 5–6
+  Normal, 7–9 Low), `ServiceQueueVisibility` (organization, team and managers, team only), `ServiceUnknownSender` and
+  `RequestTag` enumerations and `PrtServiceTeam`; `MantleSetupData.xml` seeds the default workflow's mappings (agent and
+  customer labels, categories) and moves, and the topics `SupportCaseAssigned` and `SupportCaseCustomerReply`.
+- Mantle services (`service/mantle/request/SupportCaseServices.xml`, `SupportCases.js`): the case rule `ensure#CaseProfile`
+  (F62: submitted and not closed; a served Customer party, or the filer when it is a customer or its contact, F-P2-1; an
+  organization with a current ServicePolicy, found as the OrgInternal party, the queue's owner, the customer's owner, the
+  filer's organization or the project's owner; in one of its service queues, or of a service-enabled type with no
+  category, moved into the type's queue; a project's request too), run after the commit by `queue#CaseProfile` from the
+  rules `SupportCaseRule` (Request made, or its status, type or category changed) and `SupportCaseCustomerRule`
+  (a Customer RequestParty made) in `entity/Request.eecas.xml`, a no-op with no ServicePolicy; `get#CaseState`,
+  `get#CaseStatusMappings`; `create#Case`, `update#Case`, `transition#Case` and `set#CaseTags` (SUPPORT_CASE_EDIT,
+  SUPPORT_CASE_MANAGE for another agent's case or a manager's move; STALE_CASE by `caseRevision`); the saves
+  `save#ServiceQueue`, `save#ServiceRequestType`, `save#CaseStatusMapping`, `save#CaseWorkflow`, `save#ServiceDefaults`,
+  `save#ServiceTeam` (SUPPORT_POLICY_EDIT) and `save#ServiceTeamMember` (SUPPORT_CASE_MANAGE and the team's manager, or
+  SUPPORT_POLICY_EDIT); `notify#CaseCustomerReply` from the rule `SupportCaseCustomerReply` (RequestCommEvent made).
+- Mantle changes for CX-REQUEST: `update#Request` refuses on a case a due date, resolution or close (CASE_MANAGED, F64,
+  F-P2-5); `complete#RequestFromWork` never moves a case (a project's too) and tells only its assignee when a linked item
+  is done or cancelled (F48; the RequestUpdate message carries `isCase`); `get#UserTodayRequests` leaves cases out (F63);
+  `get#ClientRecordVisibility` leaves out cases with no project (F68, F-P2-3); record visibility shows a restricted
+  queue's case only to its team (and its filer).
+- BOSS reads (`service/ironstone/customerservice/`): `CaseServices.xml` over `Cases.js` (`find#Cases` with the saved
+  views and the Recent cases read, `get#QueueCounts`, `find#ServiceCustomers` by name, id, email and phone, `prepare#Case`,
+  `get#CaseDetail`, `apply#CaseBatch` with Done, StaleCase, AssigneeUnavailable, Forbidden or Failed per case and an
+  operation key, `get#TodayItems`); `ConfigurationServices.xml` over `Configuration.js` (`find#ServiceQueues`,
+  `get#ServiceTeam`, `get#ServiceSettings` with the readiness); `CaseGuard.js`, the paths around a case (F64) that
+  Commons' `set#RequestStatus` (cancel), `update#MyRequest` (due) and `raise#Request` (due on a would-be case),
+  Projects' `triage#Request` (resolve, cancel, reopen and due; so `bulk#Requests`) and `update#ProjectRequest` (due), and
+  `ClientServices.cancel#ClientRequest` call: a holder of SUPPORT_CASE_EDIT is routed through `transition#Case`, anyone
+  else refused (CASE_IN_CUSTOMER_SERVICE, CASE_DUE_DATE). `CustomerService.js`: the scope's teams and queues (a team's
+  queues, organization-visible ones, team queues for managers and the administrator, a restricted queue for its team
+  only), the case record kind (destination CaseDetail; a case of the user's queues or assigned to them), cases in the
+  palette, the choices queues, teams, agents, caseTypes, tags and contacts; `get#RecordLink` opens a case in CaseDetail
+  for a user who sees it. `ReportingServices.get#ServiceDashboard` counts open, overdue and unassigned cases.
+- Screens: `CustomerService/Cases.xml` a menu group with `Cases/Cases` (CaseFind and CaseList in a header dialog, the saved
+  views, the board by status in the workflow's order and the row's Change status, both through `transition#Case`, and
+  BulkCaseAction's Assign, Set status and Tag) and `Cases/NewCase` (customer and type, the duplicate warning, the case;
+  `create#Case`), with `Cases/CaseDetail` (Shared/RequestDetail; its Customer Service branch is
+  `template/CustomerServiceCaseDetail.xml`: header, moves, Assign, priority, queue, tags, Conversation first, Overview,
+  Work, Files and the Recent cases pane) and `Cases/WorkItemDetail` (Shared/WorkItemDetail's Customer Service branch: a
+  case's work on the Commons task rule, the way back to its case); `CustomerService/Settings.xml` a menu group with
+  `Settings/SettingsHome`, `Queues`, `AgentTeams`, `CaseTypes`, `StatusCategories` and `ServiceDefaults`; Home's My cases,
+  Team queues and New case; `template/CustomerServiceParts.xml` (choices, customerSearch, bulkCases). Shared/RequestDetail's
+  Projects and Commons contexts hide Resolve and Complete or Cancel of a case from a user without SUPPORT_CASE_EDIT and
+  link CaseDetail (F8, F49).
+- Shell: cases in the palette; quick create Case (`Cases/NewCase`, for the agent, manager and administrator by the
+  `BOSS_CS_NEW_CASE` authz); the Today source `CaseServices.get#TodayItems`; the topics `SupportCaseAssigned` and
+  `SupportCaseCustomerReply` with BossSetupData's links to CaseDetail, and RequestUpdate's link to CaseDetail for a case.
+  `BOSS_CS_SETTINGS_MANAGER` opens Settings to the manager.
+- Assist: `skill/case-reply.md`, `skill/case-summary.md`, `skill/aliases.json` and `test/skill-retrieval.json`.
+- Demo: `BossCustomerServiceDemoData.xml` (Retail's Support team, Privacy team and Services' team; the Support (team),
+  Privacy (restricted, RqtPrivacy only) and Services support queues; Retail's and Services' service policies; RqtSupport
+  service-enabled into Support and RqtPrivacy into Privacy for Retail only, F-P2-4); `BossYCustomerServiceCasesDemoData.xml`
+  (new, after the users: the team members and the requests `BOSS_CS_CASE_THERMO`, `_FILTERS`, `_PICK`, `_PRIVACY` and
+  `_OTHER`); `BossZCustomerServiceDemoData.xml` runs `DemoServices.load#CaseDemo` (`Demo.js loadCases`: ensure#CaseProfile
+  for each, each on its own, F76). The demo payment stays on Undeposited Receipts (W1).
+- Specs: Mantle `test/request/SupportCases` (11 features, about 4 s: the default with no policy, the saves and their
+  refusals, the rule on every path, create/update/transition/tags with their refusals, update#Request's guard and its
+  unchanged default, a case's work, Today, the client, the restricted queue). BOSS `CustomerServiceAccess` (+1 feature:
+  the case's scope, a holder, a non-holder, another organization's and the restricted queue's; menu rows with quick create
+  and topics, the administrator's queues, the manager's Settings) and `CustomerServiceCases` (7 features, about 2 s: the
+  demo cases, find#Cases and the counts by scope, the batch with Forbidden and a retry, Today, the paths around a case,
+  the settings reads, CaseDetail's and NewCase's one qvt render). Acceptance `acceptance/CustomerService/CustomerServiceCasesWalk`
+  (the usable-when, 7 features), `CustomerServiceFoundationWalk` (quick create now offers a case to its groups; the client
+  refused the case services) and `AppStructure` (the case and settings routes, the placeholder floor 52).
+- Tests run (all pass): Mantle SupportCases, WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients,
+  CommonsToday, OrderToCashBasicFlow, ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow (154
+  features); BOSS CustomerServiceAccess, CustomerServiceCases, Requests, ProjectRequests, ProjectsAccess, QuickCreate,
+  TodayPanel, WorkItemDetail, Chatter, RecordFiles, Notifications, Chat, Code, CommsHome, EventDetail, Files,
+  ManufacturingDowntime, MergeRequests, PurchasingAccess, PurchasingRequests, PurchasingSourcing, Tasks,
+  WarehouseTransfers, Inbox, Contacts, AppOrganizationFilters, WorkItems, ProjectDetail; acceptance
+  CustomerServiceCasesWalk, CustomerServiceFoundationWalk and AppStructure (30 features). `moqui lint --screens`: 136
+  flagged sites, as master; none in the Customer Service screens.
+- Inventories: ss-inventory's request forms of CaseDetail, NewCase, Cases and Home; usl-inventory's RequestServices that
+  the case services and CaseDetail call.
+- Decisions:
+  - ~~The rule counts any open status, not only Submitted~~ (review R1: Submitted, per §4's Nov 5 row; a request already in
+    progress becomes a case only by a move into a service queue); a draft is never one.
+  - A team is an OrgTeam party owned by the organization; a member is a dated `PrtServiceTeam` relationship (Agent, or
+    Manager for one who manages the team).
+  - Workflows (`CaseStatusMapping`, `CaseTransition`) are shared settings, as status flows are; an organization picks
+    one in its policy (an own copy would need an owner on the workflow enumeration).
+  - Settings opens to the service manager (`BOSS_CS_SETTINGS_MANAGER`), who reads every page and changes the members of
+    the teams they manage; the other saves are the administrator's (SUPPORT_POLICY_EDIT), each form shown only to a user
+    who may save it.
+  - A case's revision is the later of the request's last update and its assignee rows' (STALE_CASE).
+  - "Needs response" lists the new (Submitted) cases until P4 and P5 record replies; "SLA risk" is empty until P4.
+- Findings (provisional):
+  - **F-P2-1** A customer contact's own request (Chat's, Commons' `raise#Request`, the forum's) has no Customer
+    RequestParty, so F62's rule made none a case, while the usable-when needs Chat's to be one. The rule takes the filer
+    when it is a Customer-role party, else the customer parties the filer is a current contact of, and ensure adds the
+    Customer party (design §3 NewCase changed).
+  - **F-P2-2** `BOSS_ADMIN_PRIVACY` does not exist (Admin is not built). The Privacy queue is restricted
+    (`SqvRestricted`): its cases are seen only by its team, in Customer Service's scope and in Mantle's record visibility
+    (Commons, Chatter, record links). The demo's Privacy team is customerservice.admin; Admin's privacy group joins it
+    when it ships (§7).
+  - **F-P2-3** F68's exclusion hid a project's case from its own Projects client (ProjectsAccess's client upload on its
+    request on project ACME, whose customer is shared, failed), against §4's Nov 5 row that a project's case stays visible
+    in Projects. `get#ClientRecordVisibility` leaves out only cases with no project.
+  - **F-P2-4** The test runtime loads BOSS's demo data under Mantle's specs, which file RqtSupport requests as john.doe
+    (an agent of ORG_ZIZI_SERVICES) for shared customers: a Services policy service-enabling RqtSupport made
+    WorkPlanToCashBasicFlow's request a case (its close refused, CASE_MANAGED). The Services demo policy enables no type;
+    a later phase's demo must not service-enable a type for ORG_ZIZI_SERVICES.
+  - **F-P2-5** F64's "not from SlaServices/SupportCaseServices" is not a caller check (Practices-App-Dev §4: no
+    authorization by caller): the case services write the Request entity (`update#mantle.request.Request`), as
+    `complete#RequestFromWork` does, and `update#Request` refuses on a case; P4's SlaServices writes the due date the
+    same way.
+  - **F-P2-6** The rule runs after the commit on the service pool (`registerOnCommit` is asynchronous), so a request's
+    profile is there a moment after its create returns; a spec of the rule waits for it, and a screen that makes a case
+    calls `create#Case`, which makes the profile in its own transaction.
+
+**Review Nov 5 (P2).** Checked the diff of both repos against this section, §4's Nov 5 rows and F45–F78: the case rule
+against the Nov 5 decision; the after-commit ensure (two triggers of one create, e.g. create#Request with a customer, make
+one profile: ensure locks the request and the profile's key is the request, no error logged; a failing ensure is caught and
+logged by queue#CaseProfile or the pool and never fails the caller; readers right after a create (raise#Request's due date)
+ask get#CaseState's wouldBeCase rather than the profile); update#Request's CASE_MANAGED guard and its callers (a field not
+passed is not in the context, so a case with a due date takes other changes; mr-marble's EditRequest posting an unchanged
+due date or resolution passes; make#RequestWorkItem, convert#RequestToProject, create#RequestFromEmail, InventoryRequests
+and the forum's create#CaseFromTopic set no due date, resolution or close of a case); access (find#Cases, get#CaseDetail,
+apply#CaseBatch's Forbidden, the palette and get#RecordLink through recordOf; the restricted queue out of the scope's
+queueIds and so out of get#QueueCounts and the dashboard); the Settings narrowing; F-P2-4 (no other demo policy
+service-enables a type for ORG_ZIZI_SERVICES); regression leanness (SupportCases 3.5 s, CustomerServiceCases about 1 s;
+CaseDetail and NewCase render once, in qvt; the settings and case route fixtures are acceptance-only).
+- **R1 (medium, Mantle)** The rule inferred a filer's customer from any relationship to a Customer-role party and took a
+  staff person with the Customer role as a customer, so an employee's or agent's own request (Commons QuickRequest, a
+  Projects internal request) could become a case. A filer who works for an internal organization is never a customer
+  side; a contact is a PrtContact or PrtEmployee of the customer; an explicit Customer party who works for an internal
+  organization is not a served customer. The rule also made a case of any open request, so a ServicePolicy set up later,
+  or a Customer party added to a request in progress, converted it mid-flight (a Projects request triaged to In Progress
+  became a case, and its resolve was then refused): a request becomes a case when Submitted, one in progress only by a
+  move into a service queue. Specs: a staff customer-contact's request and an in-progress request given a customer stay
+  plain.
+- **R2 (medium, Mantle)** `save#ServiceTeamMember` took any person, so a team's manager could add a customer's contact
+  or another organization's agent, who then saw the restricted Privacy queue's cases through Mantle's record visibility.
+  A member works for the team's organization. Specs: a manager of another team and an outside member refused.
+- Specs run, all passing (with mr-boss loaded): Mantle SupportCases, CrmMiscServices, WorkTimeEntries, WarehouseTransfers,
+  WorkProjectRequests, CommonsToday, WorkPlanToCashBasicFlow, RecordVisibility, RecordLinks, WorkProjectClients; BOSS
+  CustomerServiceCases, CustomerServiceAccess, Requests, ProjectRequests, Chat, QuickCreate (238 features); mr-pass
+  Forum Integrations (create#CaseFromTopic, 6 features).
+- Left for the lead: Projects' create of a request with a due date and a customer (and email intake) can make a case that
+  carries the due date given at create (only Commons' raise#Request refuses it, by wouldBeCase); P4's service level
+  replaces it. The acceptance walk CustomerServiceCasesWalk was not rerun (no acceptance spec changed).
 
 ### P3 — Customers and orders
 

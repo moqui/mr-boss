@@ -49,8 +49,17 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P1: sales orders and customers in the palette (search#Records); P2 adds cases, P9 RMAs -->
         <palette-source group="CustomerService" label="Customer Service records" icon="sym_o_support_agent"
                 service="ironstone.customerservice.AccessServices.search#Records" sequence="49"/>
+        <!-- P2: cases in the palette (search#Records above), a new case for the groups that enter cases (NewCase checks
+            caseEdit), the user's own due and overdue cases in Today (in place of Commons' request rows for a case, F9), and
+            the case topics Mantle sends (BossSetupData.xml sets their links to CaseDetail) -->
+        <quick-create kind="customerServiceCase" label="Case" screen="CustomerService/Cases/NewCase" icon="sym_o_support_agent"
+                sequence="74"/>
+        <today-source service="ironstone.customerservice.CaseServices.get#TodayItems" label="Cases"/>
+        <notification-topic topic="SupportCaseAssigned"/>
+        <notification-topic topic="SupportCaseCustomerReply"/>
         <keymap scope="customerservice">
             <key keys="g v" label="Customer Service home" screen="CustomerService/Home"/>
+            <key keys="g c" label="Cases" screen="CustomerService/Cases/Cases"/>
         </keymap>
     </shell-providers>
 

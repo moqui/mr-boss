@@ -49,6 +49,12 @@ along with this software (see the LICENSE.md file). If not, see
     production runs and operations among the tasks open in Manufacturing, never as tasks (F38); a follow-up task opens
     WorkItemDetail under Manufacturing. Any other request is not available there.
 
+    Customer Service (impl-customer-service P2, crosscut §3.11 Customer Service row; ironstone.customerservice.CaseServices
+    get#CaseDetail, template/CustomerServiceCaseDetail.xml): a case of the user's queues, or assigned to them, at
+    CustomerService/Cases/CaseDetail: its header and moves, Conversation first, Overview, Work, Files and the Recent cases
+    pane. In the other contexts a case's Complete and Cancel are hidden from a user without SUPPORT_CASE_EDIT, who is sent to
+    CaseDetail; the services route a holder's through transition#Case.
+
     The request is found under the record visibility rule (R5, R28; in Projects also its project's, impl-projects.md F1): one the
     user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -73,6 +79,13 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="decidePurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
     <transition-include name="cancelPurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
     <transition-include name="completePurchaseRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
+
+    <!-- Customer Service (impl-customer-service P2): a case's assignee, priority, queue, status and tags
+        (template/CustomerServiceCaseDetail.xml) -->
+    <transition-include name="caseChoices" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+    <transition-include name="updateCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+    <transition-include name="transitionCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+    <transition-include name="setCaseTags" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -291,6 +304,12 @@ along with this software (see the LICENSE.md file). If not, see
                 recordFound = false
                 return
             }
+            // Customer Service (impl-customer-service P2, F49): a case in its own section (template/CustomerServiceCaseDetail.xml)
+            if (appRoot === 'CustomerService') {
+                detailPath = '/qapps/CustomerService/Cases/CaseDetail'
+                recordFound = false
+                return
+            }
             let pd = {}
             if (projects) {
                 const out = ec.service.sync().name('ironstone.projects.ProjectRequestServices.get#ProjectRequestDetail').parameters({requestId: requestId}).call() || {}
@@ -322,8 +341,14 @@ along with this software (see the LICENSE.md file). If not, see
             const L = (text) => ec.l10n.localize(text)
             const enc = (text) => String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
             request = detail.request
+            // a support case (impl-customer-service P2, F8, F64): its Complete and Cancel belong to Customer Service; a user
+            // without SUPPORT_CASE_EDIT sees neither here and is sent to CaseDetail, one with it moves through Mantle
+            caseLocked = false
+            caseUrl = '/qapps/CustomerService/Cases/CaseDetail?requestId=' + encodeURIComponent(requestId)
+            if (ec.entity.find('mantle.request.support.CaseProfile').condition('requestId', requestId).disableAuthz().count() > 0)
+                caseLocked = !ec.user.hasPermission('SUPPORT_CASE_EDIT') ? 'locked' : 'routed'
             canSubmit = !!detail.canSubmit
-            canCancel = !!detail.canCancel
+            canCancel = !!detail.canCancel && caseLocked !== 'locked'
             canEdit = !!detail.canEdit
             canReassign = !!detail.canReassign
             canAddTask = !!detail.canAddTask
@@ -333,6 +358,7 @@ along with this software (see the LICENSE.md file). If not, see
             // the status-bar: the stages and the moves the user may make
             stageStatusIds = projects ? (pd.stageStatusIds || []) : (detail.stageStatusIds || [])
             allowedStatusIds = projects ? (pd.allowedStatusIds || []) : (detail.allowedStatusIds || [])
+            if (caseLocked === 'locked') allowedStatusIds = Array.from(allowedStatusIds).filter((statusId) => statusId !== 'ReqCompleted' && statusId !== 'ReqCancelled')
             // a client contact opens no contact (Commons is not its): the people without links
             partyList = (detail.partyList || []).map((one) => clientView ? Object.assign({}, one, {url: null}) : one)
             taskList = detail.taskList || []
@@ -427,7 +453,8 @@ along with this software (see the LICENSE.md file). If not, see
     <widgets>
         <section-include name="WarehouseStockRequest" location="component://mr-boss/template/WarehouseRequestDetail.xml"/>
         <section-include name="PurchasingRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; !mfgRequest"><widgets>
+        <section-include name="CustomerServiceCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; !mfgRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>
@@ -443,6 +470,13 @@ along with this software (see the LICENSE.md file). If not, see
         <section name="RequestFound" condition="recordFound"><widgets>
             <!-- the record for the shell: quick create's link chip and the activity kind, Today's "Add activity on this record" -->
             <context record-entity="mantle.request.Request" record-id="${requestId}" title="${request.requestName || requestId}"/>
+            <!-- a support case: resolved in Customer Service (impl-customer-service P2) -->
+            <section name="RequestIsCase" condition="caseLocked"><widgets>
+                <container-box type="info"><box-body>
+                    <label type="p" style="q-mb-none" text="${caseLocked == 'locked' ? 'This request is a support case: it is resolved or cancelled in Customer Service.' : 'This request is a support case: resolving or cancelling it here records it on the case.'}"/>
+                    <link url="${caseUrl}" url-type="plain" text="Open the case" link-type="anchor"/>
+                </box-body></container-box>
+            </widgets></section>
             <container style="q-mb-xs"><link url="requests" link-type="anchor" text="Requests" icon="arrow_back" condition="!mfgRequest"/>
                 <link url="${sharedLinks['WorkCenters/Downtime']}" link-type="anchor" text="Downtime" icon="arrow_back" condition="mfgRequest"/></container>
 
@@ -647,7 +681,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     </form-single>
                                 </container-dialog>
                                 <container-dialog id="ResolveRequestDialog" button-text="Resolve" icon="sym_o_task_alt" width="560" title="Complete or cancel request ${requestId}"
-                                        condition="isOpen">
+                                        condition="isOpen &amp;&amp; caseLocked != 'locked'">
                                     <form-single name="ResolveRequest" transition="resolve">
                                         <field name="requestId"><default-field><hidden/></default-field></field>
                                         <field name="tab" from="tab"><default-field><hidden/></default-field></field>

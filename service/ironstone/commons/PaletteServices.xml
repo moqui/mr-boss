@@ -65,6 +65,17 @@ along with this software (see the LICENSE.md file). If not, see
             // builds OrderDetail), else nowhere, as before (no other app has a sales order screen, impl-purchasing F46); a
             // customer once Customer Service has its Customer360 (P3; until then its Commons contact below); cases, returns and
             // warranty claims as their phases build them, leaving Projects' and Commons' requests as they are (F9)
+            // a support case (impl-customer-service P2) opens CaseDetail for a Customer Service user who sees it; anyone else
+            // keeps its Projects or Commons link below
+            if (ec.user.userId && (recordEntityName === 'mantle.request.Request' || docType === 'MantleRequest')
+                    && ec.entity.find('mantle.request.support.CaseProfile').condition('requestId', id).disableAuthz().count() > 0) {
+                const caseUrl = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js').recordLink('case', id)
+                if (caseUrl) {
+                    url = caseUrl
+                    icon = 'sym_o_support_agent'
+                    return
+                }
+            }
             if (ec.user.userId && (recordEntityName === 'mantle.order.OrderHeader' || recordEntityName === 'mantle.party.Party'
                     || docType === 'MantleParty')) {
                 const customerService = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js')

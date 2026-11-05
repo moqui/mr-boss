@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service settings (design-customer-service §9 Settings SettingLinks; style-guide §3 settings landing;
+    impl-customer-service P2): the settings pages grouped as design Settings has them (Work routing; Customer channels,
+    Knowledge and feedback and Returns as their phases build them), each with its readiness for the organization
+    (ironstone.customerservice.ConfigurationServices.get#ServiceSettings): no request becomes a case until the service
+    defaults are set. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Settings" default-menu-index="1">
+    <parameter name="organizationPartyId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ConfigurationServices.get#ServiceSettings" out-map="settingsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cfg" from="settingsOut?.settings || null"/>
+        <set field="cfgOrganizations" from="cfg?.organizations || []"/>
+        <set field="cfgOrganizationPartyId" from="cfg?.organizationPartyId"/>
+        <set field="can" from="customerService.capabilities"/>
+        <set field="linkRows" from="(cfg?.readiness || []).map((row) =&gt; Object.assign({}, row, {group: 'Work routing',
+                url: '/qapps/CustomerService/Settings/' + ({queues: 'Queues', teams: 'AgentTeams', types: 'CaseTypes',
+                    defaults: 'ServiceDefaults', statuses: 'StatusCategories'})[row.key] + '?organizationPartyId='
+                    + encodeURIComponent(cfg.organizationPartyId), readyText: row.ready ? 'Ready' : 'To do',
+                readyColor: row.ready ? 'positive' : 'warning'}))"/>
+    </actions>
+    <widgets>
+        <label text="Customer Service settings are not available to you." type="p" condition="!cfg"/>
+        <section name="SettingsLanding" condition="cfg">
+            <widgets>
+                <label text="Customer Service settings" type="h5"/>
+        <section name="OrganizationPicker" condition="cfgOrganizations.length &gt; 1">
+            <widgets>
+                <form-single name="SettingsOrganization" transition="chooseOrganization" map="{organizationPartyId:cfgOrganizationPartyId}">
+                    <field name="organizationPartyId">
+                        <default-field title="Organization">
+                            <drop-down submit-on-select="true"><list-options list="cfgOrganizations" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+                <container-box>
+                    <box-header title="Work routing"/>
+                    <box-body-nopad>
+                        <form-list name="SettingLinks" list="linkRows" skip-form="true" paginate="false">
+                            <field name="label">
+                                <default-field title="Setting">
+                                    <link url="${url}" url-type="plain" text="${label}" link-type="anchor"/>
+                                </default-field>
+                            </field>
+                            <field name="text"><default-field title="Now"><display/></default-field></field>
+                            <field name="readyText">
+                                <default-field title="Readiness">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readyColor}">${
+                                            WebUtilities.encodeHtml(readyText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readyText})}]]></text>
+                                        <text type="html">${readyText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="text"/></column>
+                                <column><field-ref name="readyText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <label type="p" style="text-caption m-muted" text="Account, profile, branding, working hours and mail accounts are set in Commons."/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -12,12 +12,16 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Settings area of IronStone Customer Service (design-customer-service §9): the settings landing and its pages,
-    queues, teams, policies, templates and defaults (impl-customer-service P2 on); for the service administrator
-    (BOSS_CS_SETTINGS); later phases open their pages to the manager, authorizer or author. -->
+<!-- The Settings area of IronStone Customer Service (design-customer-service §9; impl-customer-service P2): SettingsHome
+    (the default: SettingLinks with each area's readiness), Queues, AgentTeams, CaseTypes, StatusCategories and
+    ServiceDefaults; later phases add their pages. For the service administrator, and the service manager, who changes the
+    members of the teams they manage (BOSS_CS_SETTINGS); every save is Mantle's mantle.request.SupportCaseServices, which
+    checks SUPPORT_POLICY_EDIT or SUPPORT_CASE_MANAGE, and a form shows only to a user who may save it. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
+    <subscreens default-item="SettingsHome" always-use-full-path="true"/>
     <widgets>
-        <label text="Placeholder: Customer Service settings." type="p"/>
+        <subscreens-menu id="CustomerServiceSettingsTabs" type="tab"/>
+        <subscreens-active/>
     </widgets>
 </screen>

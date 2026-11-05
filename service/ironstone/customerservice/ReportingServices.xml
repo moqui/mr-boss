@@ -58,6 +58,14 @@ along with this software (see the LICENSE.md file). If not, see
                 Approvals waiting (M, R); each shows once its phase builds its records (P2, P9, P10) -->
             <set field="panels" from="{myCases: !!(can.caseEdit || can.orderChangeApply), teamQueues: !!can.caseEdit,
                     awaitingReturns: !!(can.returnAuthorize || can.returnExceptionApprove), approvalsWaiting: !!can.approvals}"/>
+            <!-- P2: open, overdue and unassigned cases of the user's queues now (CaseServices.get#QueueCounts) -->
+            <service-call name="ironstone.customerservice.CaseServices.get#QueueCounts" in-map="{appRoot:appRoot}" out-map="caseCounts"/>
+            <script><![CDATA[
+                const counted = {open: caseCounts.openCount, overdue: caseCounts.overdueCount, unassigned: caseCounts.unassignedCount}
+                const queueText = (caseCounts.queueRows || []).length + ' ' + ec.l10n.localize('queues') + ', ' + ec.l10n.localize('now')
+                for (const measure of measures) if (Object.hasOwn(counted, measure.key))
+                    Object.assign(measure, {configured: true, valueText: String(counted[measure.key] ?? 0), denominatorText: queueText})
+            ]]></script>
             <!-- later phases: each measures its records here, in the user's scope -->
         </actions>
     </service>

@@ -385,8 +385,15 @@ along with this software (see the LICENSE.md file). If not, see
             const name = request.requestName || requestId
             const update = (fields) => ec.service.sync().name('mantle.request.RequestServices.update#Request').parameters(Object.assign({requestId: requestId}, fields)).call()
             const text = value == null ? '' : String(value).trim()
+            // a support case (impl-customer-service P2, F64): its resolve, cancel and reopen go through Customer Service's
+            // transition#Case, or are refused; its due date is refused
+            const caseGuard = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CaseGuard.js')
             switch (action) {
                 case 'status': {
+                    if (['ReqCompleted', 'ReqCancelled'].includes(text) || request.statusId === 'ReqCompleted') {
+                        const routed = caseGuard.resolve(requestId, text, resolutionEnumId, comment)
+                        if (routed) { message = routed.message; return }
+                    }
                     const moves = {ReqSubmitted: ['ReqReviewed', 'ReqInProgress', 'ReqCompleted', 'ReqCancelled'], ReqReviewed: ['ReqInProgress', 'ReqCompleted', 'ReqCancelled'],
                         ReqInProgress: ['ReqSubmitted', 'ReqCompleted', 'ReqCancelled'], ReqCompleted: ['ReqInProgress']}
                     if (!(moves[request.statusId] || []).includes(text)) {
@@ -443,6 +450,7 @@ along with this software (see the LICENSE.md file). If not, see
                     return
                 }
                 case 'due': {
+                    caseGuard.refuseDue(requestId)
                     const day = text.substring(0, 10)
                     if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) { ec.message.addError(L('A due date is yyyy-MM-dd')); return }
                     update({responseRequiredDate: day ? ec.l10n.parseTimestamp(day + ' 17:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS') : null})
@@ -553,6 +561,12 @@ along with this software (see the LICENSE.md file). If not, see
                 const day = String(responseRequiredDate).trim().substring(0, 10)
                 if (day && !/^\d{4}-\d{2}-\d{2}$/.test(day)) { ec.message.addError(L('A due date is yyyy-MM-dd')); return }
                 fields.responseRequiredDate = day ? ec.l10n.parseTimestamp(day + ' 17:00:00.000', 'yyyy-MM-dd HH:mm:ss.SSS') : null
+                // a support case's due date is its service level's (impl-customer-service P2, F64): an unchanged one is left
+                const stored = access.request.responseRequiredDate
+                const same = (stored == null && fields.responseRequiredDate == null) || (stored != null && fields.responseRequiredDate != null
+                        && Number(new Date(stored)) === Number(new Date(fields.responseRequiredDate)))
+                if (same) delete fields.responseRequiredDate
+                else ec.resource.script('component://mr-boss/service/ironstone/customerservice/CaseGuard.js').refuseDue(requestId)
             }
             if (customerPartyId) {
                 const customer = ec.entity.find('mantle.party.PartyDetail').condition('partyId', customerPartyId).one()

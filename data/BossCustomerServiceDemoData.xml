@@ -68,4 +68,46 @@ along with this software (see the LICENSE.md file). If not, see
             vendorPartyId="ORG_ZIZI_SERVICES" customerPartyId="BOSS_CS_CUST_OTHER"/>
     <mantle.order.OrderItem orderId="BOSS_CS_SO_OTHER" orderItemSeqId="01" orderPartSeqId="01" itemTypeEnumId="ItemProduct"
             productId="BOSS_CS_FILTER" itemDescription="Service demo air filter" quantity="1" unitAmount="15"/>
+    <!-- P2: cases and queues. Ziziwork Retail's service: the Support team (customerservice.agent and .agentwh, with
+        customerservice.manager its manager; their membership is BossYCustomerServiceCasesDemoData.xml's, after the users) works the Support queue, seen by its team and the managers; the Privacy team
+        (customerservice.admin; the interim privacy cases of design §8, F-P2-2) works the restricted Privacy queue, the only
+        one offering RqtPrivacy; the service policy (CwfDefault, 14-day reopen) turns the case rules on, and RqtSupport is
+        service-enabled into Support. Ziziwork Services has its own queue and policy, for its agent customerservice.services, and
+        service-enables no type: only a request filed into its queue is its case, so the requests Mantle's specs file as
+        john.doe (its agent) for shared customers stay requests (F-P2-4).
+        The cases are requests (fixed ids, in BossYCustomerServiceCasesDemoData.xml, after the users) that
+        BossZCustomerServiceDemoData.xml makes cases through
+        mantle.request.SupportCaseServices.ensure#CaseProfile once this file is committed (F76): Joe Q Public's two open
+        cases (NewCase's duplicate warning shows them), one assigned and linked to his delivered order; Joe's Distributing's
+        case, waiting for the customer; Joe's privacy request; and Services' case of its customer. -->
+    <mantle.party.Party partyId="BOSS_CS_TEAM_SUPPORT" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_CS_TEAM_SUPPORT" organizationName="Retail support team"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_TEAM_SUPPORT" roleTypeId="OrgTeam"/>
+    <mantle.party.Party partyId="BOSS_CS_TEAM_PRIVACY" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_CS_TEAM_PRIVACY" organizationName="Retail privacy team"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_TEAM_PRIVACY" roleTypeId="OrgTeam"/>
+    <mantle.party.Party partyId="BOSS_CS_TEAM_SERVICES" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.party.Organization partyId="BOSS_CS_TEAM_SERVICES" organizationName="Services support team"/>
+    <mantle.party.PartyRole partyId="BOSS_CS_TEAM_SERVICES" roleTypeId="OrgTeam"/>
+    <mantle.request.RequestCategory requestCategoryId="BOSS_CS_Q_SUPPORT" description="Support" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.request.RequestCategory requestCategoryId="BOSS_CS_Q_PRIVACY" description="Privacy" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.request.RequestCategory requestCategoryId="BOSS_CS_Q_SERVICES" description="Services support" ownerPartyId="ORG_ZIZI_SERVICES"/>
+    <mantle.request.support.ServiceQueue serviceQueueId="BOSS_CS_SQ_SUPPORT" requestCategoryId="BOSS_CS_Q_SUPPORT"
+            visibilityEnumId="SqvTeam" responsibleTeamPartyId="BOSS_CS_TEAM_SUPPORT" fromDate="0"/>
+    <mantle.request.support.ServiceQueue serviceQueueId="BOSS_CS_SQ_PRIVACY" requestCategoryId="BOSS_CS_Q_PRIVACY"
+            offeredTypeEnumIds="RqtPrivacy" visibilityEnumId="SqvRestricted" responsibleTeamPartyId="BOSS_CS_TEAM_PRIVACY" fromDate="0"/>
+    <mantle.request.support.ServiceQueue serviceQueueId="BOSS_CS_SQ_SERVICES" requestCategoryId="BOSS_CS_Q_SERVICES"
+            visibilityEnumId="SqvTeam" responsibleTeamPartyId="BOSS_CS_TEAM_SERVICES" fromDate="0"/>
+    <mantle.request.support.ServicePolicy servicePolicyId="BOSS_CS_POLICY_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            defaultCategoryId="BOSS_CS_Q_SUPPORT" caseWorkflowId="CwfDefault" unknownSenderEnumId="SusReview" reopenWindowDays="14"
+            resolutionRequired="Y" customerImmediateCancel="N" fromDate="0"/>
+    <mantle.request.support.ServicePolicy servicePolicyId="BOSS_CS_POLICY_SERVICES" organizationPartyId="ORG_ZIZI_SERVICES"
+            defaultCategoryId="BOSS_CS_Q_SERVICES" caseWorkflowId="CwfDefault" unknownSenderEnumId="SusReview" reopenWindowDays="14"
+            resolutionRequired="Y" customerImmediateCancel="N" fromDate="0"/>
+    <mantle.request.support.ServiceRequestType serviceRequestTypeId="BOSS_CS_ST_SUPPORT" organizationPartyId="ORG_ZIZI_RETAIL"
+            requestTypeEnumId="RqtSupport" serviceEnabled="Y" customerLabel="Help with a product or order"
+            defaultCategoryId="BOSS_CS_Q_SUPPORT" defaultPriority="5" publicAvailable="Y" fromDate="0"/>
+    <mantle.request.support.ServiceRequestType serviceRequestTypeId="BOSS_CS_ST_PRIVACY" organizationPartyId="ORG_ZIZI_RETAIL"
+            requestTypeEnumId="RqtPrivacy" serviceEnabled="Y" customerLabel="A privacy request about my data"
+            defaultCategoryId="BOSS_CS_Q_PRIVACY" defaultPriority="3" publicAvailable="N" fromDate="0"/>
 </entity-facade-xml>
