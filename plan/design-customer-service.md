@@ -63,69 +63,69 @@ All internal paths are under `CustomerService/`. `Support/` paths are pages of t
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | CustomerService/Home | landing | xml | Work and service health | Request | own | app; panels by role (§1) | new | Request rows of own and team scope; organization |
-| Cases | CustomerService/Cases/Cases | list | xml | Saved queues and triage | Request | own | A,M | parity | Request rows; list find parameters |
-| NewCase | CustomerService/Cases/NewCase | wizard | xml | Intake with suggestions and template | Request | own | A,D | parity | Request requestId once created; source record when given |
-| CaseDetail | CustomerService/Cases/CaseDetail | detail | xml | Resolve a support case | Request | Projects RequestDetail / CX §3.11 | A,M,D,R | parity | Request requestId |
-| MergeCases | CustomerService/Cases/MergeCases | wizard | xml | Deduplicate related cases | Request | own | M | new | Request rows (the selected cases) |
-| SplitCase | CustomerService/Cases/SplitCase | wizard | xml | Separate issues with evidence | Request | own | A,M | new | Request requestId (source); CommunicationEvent rows (selected messages) |
-| WorkItemDetail | CustomerService/Cases/WorkItemDetail | detail | xml | Follow the work linked to a case | WorkEffort | Task / work item, Projects §5 / CX §3.12 | A,M | parity | WorkEffort workEffortId |
-| ChannelSessions | CustomerService/Cases/ChannelSessions | list | xml | Call/chat history and intake | CommunicationEvent | own | A,M | new | CommunicationEvent rows; list find parameters |
-| Customers | CustomerService/Customers | list | xml | Find service customers | Party | own | A,D,R | parity | Party rows; list find parameters |
-| Customer360 | CustomerService/Customers/Customer360 | 360 | xml | Customer service context | Party | CX §3.2 | A,D,R | parity | Party customerPartyId |
-| ContactDetail | CustomerService/Customers/ContactDetail | detail | xml | Customer contact | Party | Commons contact record / CX §3.1 | A,D | parity | Party partyId |
-| Orders | CustomerService/Orders/Orders | list | xml | Quick and advanced lookup | OrderHeader | own | A,D | parity | OrderHeader rows; list find parameters |
-| OrderDetail | CustomerService/Orders/OrderDetail | detail | xml | Enquiry and service actions | OrderHeader | CX §3.6 | A,D,R | parity | OrderHeader orderId |
-| OrderChanges | CustomerService/Orders/OrderChanges | list | xml | Proposed changes and approvals | Request | own | D,M | new | Request rows of the proposed `RqtOrderChange` type; list find parameters |
-| OrderChangeDetail | CustomerService/Orders/OrderChangeDetail | detail | xml | Compare, approve and apply | Request (`RqtOrderChange`) with its RequestItems + proposed OrderChangeDecision | Shared/OrderChangeDetail, crosscut §2 | D,M | new | Request requestId; OrderHeader orderId, orderRevision |
-| ShipmentDetail | CustomerService/Orders/ShipmentDetail | detail | xml | Tracking and delivery evidence | Shipment | CX §3.8 | A,D | parity | Shipment shipmentId |
-| InvoiceDetail | CustomerService/Orders/InvoiceDetail | detail | xml | Explain bill, credit and payment | Invoice | CX §3.16 | A,D,F | parity | Invoice invoiceId |
-| Returns | CustomerService/Returns/Returns | list | xml | RMA queue and exceptions | ReturnHeader | own | A,R,M | parity | ReturnHeader rows; list find parameters |
-| NewReturn | CustomerService/Returns/NewReturn | wizard | xml | Select returnable source lines | ReturnHeader | own | A,R | parity | ReturnHeader returnId (draft); OrderHeader orderId |
-| ReturnDetail | CustomerService/Returns/ReturnDetail | detail | xml | Authorize and follow resolution | ReturnHeader | CX §3.18 | A,R,W,F | parity | ReturnHeader returnId |
-| QualityInspection | CustomerService/Returns/QualityInspection | task | xml | Inspect returned goods | QualityInspection | CX §3.19 | A,R,W | new | QualityInspection qualityInspectionId; ReturnHeader returnId |
-| WarrantyClaims | CustomerService/Returns/WarrantyClaims | list | xml | Warranty claim queue | Request | own | A,M | new | Request rows of the proposed `RqtWarranty` type; list find parameters |
-| WarrantyAssessment | CustomerService/Returns/WarrantyAssessment | detail | xml | Assess coverage and coordinate repair | Request (`RqtWarranty`) + proposed WarrantyDecision | own | A,M | new | Request requestId; Asset assetId |
-| Approvals | CustomerService/Approvals | list | xml | Decide order-change and return exceptions in the shared center | NotificationMessage | Notifications, Commons §4; CX §3.15 | M,R | new | NotificationMessage rows; topic and recipient filters |
-| InventoryAvailability | CustomerService/Availability/InventoryAvailability | list | xml | Availability and incoming supply | Product/Asset | CX §3.7 | A,D | parity | Product productId; list find parameters |
-| StockAtDate | CustomerService/Availability/StockAtDate | report | xml | Explain historical stock | `mantle.product.InventoryReportServices.get#InventoryAtDate` (built, Warehouse P17) over AssetDetail | StockAtDate, Warehouse §14; crosscut §3.26 | A,D | new | Product productId, Facility facilityId; report parameters |
-| Product360 | CustomerService/Availability/Product360 | 360 | xml | Explain product/variant | Product | CX §3.5 | A,D | parity | Product productId |
-| Knowledge | CustomerService/Knowledge | editor | qvue | Search, read, link and suggest edits to articles | WikiPage | Commons Knowledge | A,K | parity | WikiPage wikiPageId; WikiSpace wikiSpaceId |
-| ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | list | xml | Review unsuccessful answers | proposed article feedback | own | K,M | new | proposed ArticleFeedback rows; list find parameters |
-| CaseToArticle | CustomerService/Knowledge/CaseToArticle | wizard | xml | Draft reusable answer | WikiPage/Request | own | A,K | new | Request requestId; WikiSpace wikiSpaceId |
-| Reports | CustomerService/Reports | landing | xml | Service report catalogue | Request | own | A,M | new | none |
-| ServiceLevelCompliance | CustomerService/Reports/ServiceLevelCompliance | report | xml | Breaches and policy performance | proposed SLA episodes | own | M | new | report parameters (queue, policy, period) |
-| ResponseTimes | CustomerService/Reports/ResponseTimes | report | xml | First response and resolution | proposed SLA episodes | own | M | new | report parameters (team, priority, period, time basis) |
-| CaseVolumes | CustomerService/Reports/CaseVolumes | report | xml | Demand, backlog and workloads | Request | own | M | new | report parameters (channel, type, team, period) |
-| SatisfactionResults | CustomerService/Reports/SatisfactionResults | report | xml | Survey responses and trends | FormResponse | Shared/SurveyResponses, crosscut §2 | M | parity | FormResponse rows; report parameters |
-| ResponseDetail | CustomerService/Reports/ResponseDetail | detail | xml | Inspect feedback | FormResponse | Shared/SurveyResponseDetail, crosscut §2 | M | parity | FormResponse formResponseId |
-| CaseAnalytics | CustomerService/Reports/CaseAnalytics | report | xml | Explain one case's measurements | Request/SLA events | own | A,M | new | Request requestId |
-| ReturnAnalysis | CustomerService/Reports/ReturnAnalysis | report | xml | Returns by reason, product, disposition and credited amount | ReturnItem | own | M,R | new | report parameters (reason, product, disposition, period) |
-| SupportHome | Support/SupportHome | landing | xml | Search first and find support | WikiPage | own | C,public | new | none (published content only) |
-| MyCases | Support/MyCases | list | xml | Customer's permitted cases | Request | own | C | parity | Request rows; list find parameters |
-| NewCustomerCase | Support/NewCustomerCase | wizard | xml | Customer intake | Request | NewCase (§3) | C,token | parity | Request requestId once created |
-| CustomerCase | Support/CustomerCase | detail | xml | Safe case conversation | Request | Projects RequestDetail / CX §3.11 | C | parity | Request requestId |
-| MyReturns | Support/MyReturns | list | xml | Customer's return requests | ReturnHeader | own | C | new | ReturnHeader rows; list find parameters |
-| RequestReturn | Support/RequestReturn | wizard | xml | Ask to return eligible goods | ReturnHeader | NewReturn (§5) | C | new | ReturnHeader returnId (draft); OrderHeader orderId |
-| CustomerReturn | Support/CustomerReturn | detail | xml | Authorization and return progress | ReturnHeader | CX §3.18 | C,token | new | ReturnHeader returnId |
-| CustomerArticle | Support/CustomerArticle | detail | qvue | Published help and feedback | WikiPage | Commons Knowledge | C,public | parity | WikiPage wikiPageId |
-| Feedback | Support/Feedback | task | xml | Submit CSAT once per invitation | FormResponse | own | invitation holder | new | none (token-scoped page) |
-| Settings | CustomerService/Settings | settings | xml | Configuration index | — | own | S | new | none |
-| Queues | CustomerService/Settings/Queues | settings | xml | Categories, teams and visibility | RequestCategory + proposed ServiceQueue rows | own | S,M | new | RequestCategory rows |
-| AgentTeams | CustomerService/Settings/AgentTeams | settings | xml | Service team participation | Party/PartyRelationship | own | S,M | new | Party rows (team members) |
-| AssignmentRules | CustomerService/Settings/AssignmentRules | settings | xml | Deterministic routing | proposed rule | own | S | new | proposed ServiceAssignmentRule rows |
-| ServiceLevelPolicies | CustomerService/Settings/ServiceLevelPolicies | settings | xml | SLA targets and calendar bindings | proposed policy | own | S | new | proposed ServiceLevelPolicy rows |
-| StatusCategories | CustomerService/Settings/StatusCategories | settings | xml | Case workflow semantics | StatusItem + proposed mapping | own | S | new | proposed CaseStatusMapping rows |
-| CaseTypes | CustomerService/Settings/CaseTypes | settings | xml | Offered request types | Enumeration | own | S | parity | Enumeration rows of type RequestType |
-| CaseTemplates | CustomerService/Settings/CaseTemplates | settings | xml | Intake templates and dependencies | DbForm + proposed dependency rows | own | S | new | DbForm rows (case templates) |
-| SavedReplies | CustomerService/Settings/SavedReplies | settings | xml | Messages and explicit actions | EmailTextBlock + proposed SavedReplyAction | own | A,S | new | EmailTextBlock rows |
-| ChannelRouting | CustomerService/Settings/ChannelRouting | settings | xml | Mail/chat intake mapping | existing EmailRule (`ErActCreateRequest`), queue routes and the queue's intake token (ExternalAccessCapability) | own | S | new | EmailRule rows; organization |
-| ReturnPolicies | CustomerService/Settings/ReturnPolicies | settings | xml | Return window and authority | proposed policy/ReturnReason | own | S,R | new | proposed ReturnPolicy rows |
-| KnowledgeSources | CustomerService/Settings/KnowledgeSources | settings | xml | Permitted service knowledge | WikiSpace | own | S,K | new | WikiSpace rows |
-| FeedbackForms | CustomerService/Settings/FeedbackForms | list | xml | Customer Service mount of the shared survey builder: feedback definitions | DbForm | Shared/SurveyForms, crosscut §2 | S | parity | DbForm rows |
-| FeedbackFormDetail | CustomerService/Settings/FeedbackFormDetail | detail | xml | Form fields and preview | DbForm | Shared/SurveyFormDetail, crosscut §2 | S | parity | DbForm formId |
-| ServiceDefaults | CustomerService/Settings/ServiceDefaults | settings | xml | Intake and resolution defaults | proposed service policy | own | S | new | none |
-| ChannelAutomation | CustomerService/Settings/ChannelAutomation | settings | xml | Scripted chat and CTI adapters | proposed channel rule | own | S | later | none |
+| Home | CustomerService/Home | landing | xml (built P1; measures P4, P14) | Work and service health | Request | own | app; panels by role (§1) | new | Request rows of own and team scope; organization |
+| Cases | CustomerService/Cases/Cases | list | xml (built P2, at `CustomerService/Cases/Cases`; bulk P5) | Saved queues and triage | Request | own | A,M | parity | Request rows; list find parameters |
+| NewCase | CustomerService/Cases/NewCase | wizard | xml (built P2; template step P7) | Intake with suggestions and template | Request | own | A,D | parity | Request requestId once created; source record when given |
+| CaseDetail | CustomerService/Cases/CaseDetail | detail | xml (built P2, the Customer Service context of Shared/RequestDetail; clocks P4, replies P5, call log P6, lineage P8, knowledge P12, case summary P16) | Resolve a support case | Request | Projects RequestDetail / CX §3.11 | A,M,D,R | parity | Request requestId |
+| MergeCases | CustomerService/Cases/MergeCases | wizard | xml (built P8) | Deduplicate related cases | Request | own | M | new | Request rows (the selected cases) |
+| SplitCase | CustomerService/Cases/SplitCase | wizard | xml (built P8) | Separate issues with evidence | Request | own | A,M | new | Request requestId (source); CommunicationEvent rows (selected messages) |
+| WorkItemDetail | CustomerService/Cases/WorkItemDetail | detail | xml (built P2) | Follow the work linked to a case | WorkEffort | Task / work item, Projects §5 / CX §3.12 | A,M | parity | WorkEffort workEffortId |
+| ChannelSessions | CustomerService/Cases/ChannelSessions | list | xml (built P6) | Call/chat history and intake | CommunicationEvent | own | A,M | new | CommunicationEvent rows; list find parameters |
+| Customers | CustomerService/Customers | list | xml (built P3, at `CustomerService/Customers/Customers`) | Find service customers | Party | own | A,D,R | parity | Party rows; list find parameters |
+| Customer360 | CustomerService/Customers/Customer360 | 360 | xml (built P3; Returns P9, Delivered items P11, Service tab P14) | Customer service context | Party | CX §3.2 | A,D,R | parity | Party customerPartyId |
+| ContactDetail | CustomerService/Customers/ContactDetail | detail | xml (built P3; invitation P15) | Customer contact | Party | Commons contact record / CX §3.1 | A,D | parity | Party partyId |
+| Orders | CustomerService/Orders/Orders | list | xml (built P3) | Quick and advanced lookup | OrderHeader | own | A,D | parity | OrderHeader rows; list find parameters |
+| OrderDetail | CustomerService/Orders/OrderDetail | detail | xml (built P3) | Enquiry and service actions | OrderHeader | CX §3.6 | A,D,R | parity | OrderHeader orderId |
+| OrderChanges | CustomerService/Orders/OrderChanges | list | xml (built P10) | Proposed changes and approvals | Request | own | D,M | new | Request rows of the proposed `RqtOrderChange` type; list find parameters |
+| OrderChangeDetail | CustomerService/Orders/OrderChangeDetail | detail | xml (built P10) | Compare, approve and apply | Request (`RqtOrderChange`) with its RequestItems + proposed OrderChangeDecision | Shared/OrderChangeDetail, crosscut §2 | D,M | new | Request requestId; OrderHeader orderId, orderRevision |
+| ShipmentDetail | CustomerService/Orders/ShipmentDetail | detail | xml (built P3) | Tracking and delivery evidence | Shipment | CX §3.8 | A,D | parity | Shipment shipmentId |
+| InvoiceDetail | CustomerService/Orders/InvoiceDetail | detail | xml (built P3) | Explain bill, credit and payment | Invoice | CX §3.16 | A,D,F | parity | Invoice invoiceId |
+| Returns | CustomerService/Returns/Returns | list | xml (built P9) | RMA queue and exceptions | ReturnHeader | own | A,R,M | parity | ReturnHeader rows; list find parameters |
+| NewReturn | CustomerService/Returns/NewReturn | wizard | xml (built P9) | Select returnable source lines | ReturnHeader | own | A,R | parity | ReturnHeader returnId (draft); OrderHeader orderId |
+| ReturnDetail | CustomerService/Returns/ReturnDetail | detail | xml (built P9) | Authorize and follow resolution | ReturnHeader | CX §3.18 | A,R,W,F | parity | ReturnHeader returnId |
+| QualityInspection | CustomerService/Returns/QualityInspection | task | xml (built P9) | Inspect returned goods | QualityInspection | CX §3.19 | A,R,W | new | QualityInspection qualityInspectionId; ReturnHeader returnId |
+| WarrantyClaims | CustomerService/Returns/WarrantyClaims | list | xml (built P11) | Warranty claim queue | Request | own | A,M | new | Request rows of the proposed `RqtWarranty` type; list find parameters |
+| WarrantyAssessment | CustomerService/Returns/WarrantyAssessment | detail | xml (built P11) | Assess coverage and coordinate repair | Request (`RqtWarranty`) + proposed WarrantyDecision | own | A,M | new | Request requestId; Asset assetId |
+| Approvals | CustomerService/Approvals | list | xml (built P9, Commons Notifications at `CustomerService/Approvals`; order-change topics P10) | Decide order-change and return exceptions in the shared center | NotificationMessage | Notifications, Commons §4; CX §3.15 | M,R | new | NotificationMessage rows; topic and recipient filters |
+| InventoryAvailability | CustomerService/Availability/InventoryAvailability | list | xml (built P3) | Availability and incoming supply | Product/Asset | CX §3.7 | A,D | parity | Product productId; list find parameters |
+| StockAtDate | CustomerService/Availability/StockAtDate | report | xml (built P3) | Explain historical stock | `mantle.product.InventoryReportServices.get#InventoryAtDate` (built, Warehouse P17) over AssetDetail | StockAtDate, Warehouse §14; crosscut §3.26 | A,D | new | Product productId, Facility facilityId; report parameters |
+| Product360 | CustomerService/Availability/Product360 | 360 | xml (built P3; warranty term P16) | Explain product/variant | Product | CX §3.5 | A,D | parity | Product productId |
+| Knowledge | CustomerService/Knowledge | editor | qvue (built P12, Commons Knowledge at `CustomerService/Knowledge/Knowledge`, its twin KnowledgeTui) | Search, read, link and suggest edits to articles | WikiPage | Commons Knowledge | A,K | parity | WikiPage wikiPageId; WikiSpace wikiSpaceId |
+| ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | list | xml (built P12) | Review unsuccessful answers | proposed article feedback | own | K,M | new | proposed ArticleFeedback rows; list find parameters |
+| CaseToArticle | CustomerService/Knowledge/CaseToArticle | wizard | xml (built P12) | Draft reusable answer | WikiPage/Request | own | A,K | new | Request requestId; WikiSpace wikiSpaceId |
+| Reports | CustomerService/Reports | landing | xml (built P14, at `CustomerService/Reports/ReportsHome`) | Service report catalogue | Request | own | A,M | new | none |
+| ServiceLevelCompliance | CustomerService/Reports/ServiceLevelCompliance | report | xml (built P14) | Breaches and policy performance | proposed SLA episodes | own | M | new | report parameters (queue, policy, period) |
+| ResponseTimes | CustomerService/Reports/ResponseTimes | report | xml (built P14) | First response and resolution | proposed SLA episodes | own | M | new | report parameters (team, priority, period, time basis) |
+| CaseVolumes | CustomerService/Reports/CaseVolumes | report | xml (built P14) | Demand, backlog and workloads | Request | own | M | new | report parameters (channel, type, team, period) |
+| SatisfactionResults | CustomerService/Reports/SatisfactionResults | report | xml (built P13) | Survey responses and trends | FormResponse | Shared/SurveyResponses, crosscut §2 | M | parity | FormResponse rows; report parameters |
+| ResponseDetail | CustomerService/Reports/ResponseDetail | detail | xml (built P13) | Inspect feedback | FormResponse | Shared/SurveyResponseDetail, crosscut §2 | M | parity | FormResponse formResponseId |
+| CaseAnalytics | CustomerService/Reports/CaseAnalytics | report | xml (built P4) | Explain one case's measurements | Request/SLA events | own | A,M | new | Request requestId |
+| ReturnAnalysis | CustomerService/Reports/ReturnAnalysis | report | xml (built P14) | Returns by reason, product, disposition and credited amount | ReturnItem | own | M,R | new | report parameters (reason, product, disposition, period) |
+| SupportHome | Support/SupportHome | landing | xml (built P15, mr-pass) | Search first and find support | WikiPage | own | C,public | new | none (published content only) |
+| MyCases | Support/MyCases | list | xml (built P15, mr-pass) | Customer's permitted cases | Request | own | C | parity | Request rows; list find parameters |
+| NewCustomerCase | Support/NewCustomerCase | wizard | xml (built P15, mr-pass) | Customer intake | Request | NewCase (§3) | C,token | parity | Request requestId once created |
+| CustomerCase | Support/CustomerCase | detail | xml (built P15, mr-pass) | Safe case conversation | Request | Projects RequestDetail / CX §3.11 | C | parity | Request requestId |
+| MyReturns | Support/MyReturns | list | xml (built P15, mr-pass) | Customer's return requests | ReturnHeader | own | C | new | ReturnHeader rows; list find parameters |
+| RequestReturn | Support/RequestReturn | wizard | xml (built P15, mr-pass) | Ask to return eligible goods | ReturnHeader | NewReturn (§5) | C | new | ReturnHeader returnId (draft); OrderHeader orderId |
+| CustomerReturn | Support/CustomerReturn | detail | xml (built P15, mr-pass) | Authorization and return progress | ReturnHeader | CX §3.18 | C,token | new | ReturnHeader returnId |
+| CustomerArticle | Support/CustomerArticle | detail | xml (built P15, mr-pass: a server page with its fancy template, not qvue) | Published help and feedback | WikiPage | Commons Knowledge | C,public | parity | WikiPage wikiPageId |
+| Feedback | Support/Feedback | task | xml (built P13, mr-pass) | Submit CSAT once per invitation | FormResponse | own | invitation holder | new | none (token-scoped page) |
+| Settings | CustomerService/Settings | settings | xml (built P2, at `CustomerService/Settings/SettingsHome`) | Configuration index | — | own | S | new | none |
+| Queues | CustomerService/Settings/Queues | settings | xml (built P2) | Categories, teams and visibility | RequestCategory + proposed ServiceQueue rows | own | S,M | new | RequestCategory rows |
+| AgentTeams | CustomerService/Settings/AgentTeams | settings | xml (built P2; participation P5) | Service team participation | Party/PartyRelationship | own | S,M | new | Party rows (team members) |
+| AssignmentRules | CustomerService/Settings/AssignmentRules | settings | xml (built P5) | Deterministic routing | proposed rule | own | S | new | proposed ServiceAssignmentRule rows |
+| ServiceLevelPolicies | CustomerService/Settings/ServiceLevelPolicies | settings | xml (built P4) | SLA targets and calendar bindings | proposed policy | own | S | new | proposed ServiceLevelPolicy rows |
+| StatusCategories | CustomerService/Settings/StatusCategories | settings | xml (built P2) | Case workflow semantics | StatusItem + proposed mapping | own | S | new | proposed CaseStatusMapping rows |
+| CaseTypes | CustomerService/Settings/CaseTypes | settings | xml (built P2) | Offered request types | Enumeration | own | S | parity | Enumeration rows of type RequestType |
+| CaseTemplates | CustomerService/Settings/CaseTemplates | settings | xml (built P7) | Intake templates and dependencies | DbForm + proposed dependency rows | own | S | new | DbForm rows (case templates) |
+| SavedReplies | CustomerService/Settings/SavedReplies | settings | xml (built P5) | Messages and explicit actions | EmailTextBlock + proposed SavedReplyAction | own | A,S | new | EmailTextBlock rows |
+| ChannelRouting | CustomerService/Settings/ChannelRouting | settings | xml (built P6) | Mail/chat intake mapping | existing EmailRule (`ErActCreateRequest`), queue routes and the queue's intake token (ExternalAccessCapability) | own | S | new | EmailRule rows; organization |
+| ReturnPolicies | CustomerService/Settings/ReturnPolicies | settings | xml (built P9) | Return window and authority | proposed policy/ReturnReason | own | S,R | new | proposed ReturnPolicy rows |
+| KnowledgeSources | CustomerService/Settings/KnowledgeSources | settings | xml (built P12) | Permitted service knowledge | WikiSpace | own | S,K | new | WikiSpace rows |
+| FeedbackForms | CustomerService/Settings/FeedbackForms | list | xml (built P13) | Customer Service mount of the shared survey builder: feedback definitions | DbForm | Shared/SurveyForms, crosscut §2 | S | parity | DbForm rows |
+| FeedbackFormDetail | CustomerService/Settings/FeedbackFormDetail | detail | xml (built P13) | Form fields and preview | DbForm | Shared/SurveyFormDetail, crosscut §2 | S | parity | DbForm formId |
+| ServiceDefaults | CustomerService/Settings/ServiceDefaults | settings | xml (built P2; P8, P13, P15 settings) | Intake and resolution defaults | proposed service policy | own | S | new | none |
+| ChannelAutomation | CustomerService/Settings/ChannelAutomation | settings | xml (later, §7 of impl-customer-service) | Scripted chat and CTI adapters | proposed channel rule | own | S | later | none |
 
 The last row is a specified deferred surface, not a prerequisite for cases, call notes, chat-linked intake or email. Related-record links may open a permitted shared mount in this app even when the destination app root is not granted.
 
@@ -969,7 +969,7 @@ inspected for patterns and corroborated with active BOSS/Mantle source. They are
 | Output | Kind | From screen | Derived from | Contents / permission / delivery |
 | --- | --- | --- | --- | --- |
 | Case acknowledgement and outward reply | email | NewCase, CaseDetail | existing `send#IntakeConfirmation` and `mantle.party.CommunicationServices.send#EmailDraft`; Frappe ticket acknowledgement | verified requester, case reference, customer-safe summary/status and support link; queued/sent/failed state with original message identity; never sent for auto-generated mail |
-| Case summary PDF/text | `html-print` | CaseDetail | `Request/EditRequest`; Frappe ticket print | customer-visible or internal variant explicitly labeled; authorized messages, resolution and selected links; private notes never enter customer variant; a sent summary is stored as RequestContent |
+| Case summary PDF/text | `html-print` | CaseDetail (built P16: `CustomerService/Cases/CaseSummary`, Mantle's `get#CaseSummaryPrint` and `send#CaseSummary`) | `Request/EditRequest`; Frappe ticket print | customer-visible or internal variant explicitly labeled; authorized messages, resolution and selected links; private notes never enter customer variant; a sent summary is stored as RequestContent |
 | RMA authorization/instructions/label | email, `html-print` and carrier label | ReturnDetail, CustomerReturn | Odoo portal return label (`order_return_label`); Warehouse WH-LABEL | approved items/quantities, expiry, address, instructions, customer-safe reason/fees; the authorization PDF is stored as ReturnContent at authorization; the label comes from Issue return label (`request#ReturnLabel` over the Warehouse WH-LABEL adapter) with operation reconciliation |
 | Order-change decision/confirmation | email | OrderChangeDetail | existing placed-order email (`Order/OrderDetail` `SendPlacedEmailForm`) | exact approved/applied proposal revision, order reference, price/date consequences, outstanding actions; the applied change's PDF stored as OrderContent; no obsolete proposal sent as applied |
 | Credit memo/refund/replacement notice | email | ReturnDetail / InvoiceDetail | Accounting's `send#Invoice`; Carbon RMA credit | Accounting document/payment status and amounts; “pending” remains pending, service cannot manufacture paid status |

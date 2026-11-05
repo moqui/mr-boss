@@ -141,6 +141,23 @@ along with this software (see the LICENSE.md file). If not, see
                 virtualProduct = product.productTypeEnumId === 'PtVirtual'
                 kitProduct = product.productTypeEnumId === 'PtPickAssembly'
             ]]></script>
+            <!-- Customer Service (impl-customer-service P16, F164): the product's warranty at sale, its PftWarranty feature's term
+                as Products keeps it (the term WarrantyAssessment counts from the ship date) -->
+            <if condition="appRoot == 'CustomerService'">
+                <script><![CDATA[
+                    const units = {TF_day: ['day', 'days'], TF_wk: ['week', 'weeks'], TF_mon: ['month', 'months'], TF_yr: ['year', 'years']}
+                    const warranty = Array.from(ec.entity.find('mantle.product.feature.ProductFeatureAppl').condition('productId', productId)
+                            .conditionDate('fromDate', 'thruDate', ec.user.nowTimestamp).disableAuthz().list())
+                        .filter(row => row.applTypeEnumId !== 'PfatSelectable')
+                        .map(row => ec.entity.find('mantle.product.feature.ProductFeature').condition('productFeatureId', row.productFeatureId).disableAuthz().one())
+                        .find(feature => feature?.productFeatureTypeEnumId === 'PftWarranty')
+                    const quantity = warranty?.numberSpecified == null ? null : Number(String(warranty.numberSpecified))
+                    const unit = warranty ? units[warranty.numberUomId] : null
+                    warrantyText = !warranty ? ec.l10n.localize('No product warranty') : ec.l10n.localize('Warranty') + ': ' +
+                        (quantity > 0 && unit ? quantity + ' ' + unit[quantity === 1 ? 0 : 1] + ' from delivery' : (warranty.description || warranty.productFeatureId)) +
+                        ' (' + warranty.productFeatureId + ')'
+                ]]></script>
+            </if>
             <!-- Purchasing (impl-purchasing P2, crosscut §3.5): whether the product may be bought, with the lifecycle's reason -->
             <if condition="appRoot == 'Purchasing'">
                 <service-call name="mantle.product.ProductServices.check#ProductUsable" out-map="buyingUsable"
@@ -169,6 +186,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </container>
                             <label text="${factsText}" type="p" style="text-caption m-muted q-mb-none"/>
                             <label text="${buyingRefusedText}" type="p" style="text-negative q-mb-none" condition="buyingRefusedText"/>
+                            <label text="${warrantyText}" type="p" style="text-caption q-mb-none" condition="warrantyText"/>
                         </container>
                         <container style="col-12 col-md-auto m-record-status">
                             <status-bar id="ProductStatus" status-id="${detail.effectiveStatusId}" status-flow-id="Default" stages="PrdDraft,PrdActive,PrdDiscontinued,PrdObsolete" read-only="true"/>

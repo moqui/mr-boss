@@ -18,7 +18,7 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.request.SupportCaseServices.save#CaseStatusMapping and save#CaseWorkflow. Workflows are shared settings, as
     status flows are. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Status categories" default-menu-index="5">
+        default-menu-title="Status categories" default-menu-index="5" server-static="qvt">
     <parameter name="organizationPartyId"/>
     <transition name="chooseOrganization">
         <default-response url="."><parameter name="organizationPartyId"/></default-response>

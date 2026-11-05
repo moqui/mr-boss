@@ -299,6 +299,8 @@ const linkPaths = [
     // P8: merge and split, from CaseDetail
     "Cases/MergeCases",
     "Cases/SplitCase",
+    // P16: the case summary print, from CaseDetail
+    "Cases/CaseSummary",
     // P10: the order changes and the shared change detail
     "Orders/OrderChanges",
     "Orders/OrderChangeDetail",

@@ -592,6 +592,17 @@ along with this software (see the LICENSE.md file). If not, see
             }
             if (!entityName || !id) { ec.message.addError(L('Choose the record to link')); return }
             if (entityName === 'mantle.request.Request' && id === requestId) { ec.message.addError(L('A request is not linked to itself')); return }
+            // a warranty claim's evidence (its serial, order, invoice, agreement) through Mantle's WarrantyServices, which checks it
+            // and moves the claim's revision (impl-customer-service F185)
+            if (access.request.requestTypeEnumId === 'RqtWarranty' && ['mantle.product.asset.Asset', 'mantle.order.OrderHeader',
+                    'mantle.account.invoice.Invoice', 'mantle.party.agreement.Agreement'].includes(entityName)) {
+                const claimOut = ec.service.sync().name('mantle.request.WarrantyServices.link#ClaimEvidence').parameters({
+                    requestId: requestId, recordEntityName: entityName, recordId: id}).call()
+                if (ec.message.hasError()) return
+                created = !!claimOut?.changed
+                message = created ? L('Linked; the claim is at a new revision') : L('It was linked already')
+                return
+            }
             const out = ec.service.sync().name('mantle.request.RequestServices.link#RequestRecord').parameters({requestId: requestId,
                 recordEntityName: entityName, recordId: id}).call()
             if (ec.message.hasError()) return
@@ -616,6 +627,16 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.message.hasError()) return
             if (!(access.isParty || access.isRaiser)) { ec.message.addError(L('Only the request\'s people may link a record to it')); return }
             if (['ReqCompleted', 'ReqCancelled'].includes(access.request.statusId)) { ec.message.addError(L('This request is closed')); return }
+            // a warranty claim's evidence through Mantle's WarrantyServices, which moves the claim's revision (F185)
+            if (access.request.requestTypeEnumId === 'RqtWarranty' && ['mantle.product.asset.Asset', 'mantle.order.OrderHeader',
+                    'mantle.account.invoice.Invoice', 'mantle.party.agreement.Agreement'].includes(recordEntityName)) {
+                const claimOut = ec.service.sync().name('mantle.request.WarrantyServices.unlink#ClaimEvidence').parameters({
+                    requestId: requestId, recordEntityName: recordEntityName, recordId: recordId}).call()
+                if (ec.message.hasError()) return
+                unlinked = !!claimOut?.changed
+                message = L(unlinked ? 'Taken off the record; the claim is at a new revision' : 'It was not linked')
+                return
+            }
             const out = ec.service.sync().name('mantle.request.RequestServices.unlink#RequestRecord').parameters({requestId: requestId,
                 recordEntityName: recordEntityName, recordId: recordId}).call()
             if (ec.message.hasError()) return

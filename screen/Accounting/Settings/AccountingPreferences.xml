@@ -288,6 +288,16 @@ along with this software (see the LICENSE.md file). If not, see
                             </radio>
                         </default-field>
                     </field>
+                    <field name="orderConfirmationOnPlace">
+                        <default-field title="Order confirmations"
+                                tooltip="On: a placed sales order's confirmation PDF is stored at placement; off, it is
+                                    stored when first sent or resent, as of the placed time">
+                            <radio>
+                                <option key="N" text="Stored when sent"/>
+                                <option key="Y" text="Stored at placement"/>
+                            </radio>
+                        </default-field>
+                    </field>
                     <field name="changeReason" from="''">
                         <default-field title="Reason">
                             <text-line/>
@@ -338,6 +348,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field-ref name="kitCostFromComponents"/>
                             <field-ref name="projectCostPostingEnabled"/>
                         </field-row>
+                        <field-ref name="orderConfirmationOnPlace"/>
                         <field-ref name="invoicePayGatewayConfigId"/>
                         <field-ref name="changeReason"/>
                         <field-ref name="submit"/>

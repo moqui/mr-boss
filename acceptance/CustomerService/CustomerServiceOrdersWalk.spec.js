@@ -202,7 +202,7 @@ feature("StockAtDate answers the quantity at a past cut-off for ZIRET_WH; anothe
     }
 })
 
-feature("Product360 shows no cost or supplier price; a reader without price read sees no PriceExplain", {
+feature("Product360 shows the warranty term and no cost or supplier price; a reader without price read sees no PriceExplain", {
     when() {
         return {
             summary: html(users.agent, "Availability/Product360/Summary", {productId: ids.serializedProductId}),
@@ -213,6 +213,8 @@ feature("Product360 shows no cost or supplier price; a reader without price read
     then({summary, agentExplain, readerExplain}) {
         summary.errors == []
         summary.output.includes("Service demo smart thermostat")
+        // P16 (F164): the product's warranty at sale, as WarrantyAssessment counts it
+        summary.output.includes("Warranty: 12 months from delivery (" + ids.warrantyFeatureId + ")")
         !summary.output.includes("70.00")
         !summary.output.includes("Standard cost")
         agentExplain.output.includes("Transaction price context")

@@ -595,7 +595,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
 | OrderInfoServices | validate#Order |  |  |
 | OrderInfoServices | validate#OrderRequireManual |  |  |
-| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order); Purchasing/Orders/OrderDetail (Approve: approve#Order meets check#PurchaseApprovalRequired's warning, the SECA on this service) (Purchasing P3, P4) |
+| OrderInfoServices | check#OrderPreApprove | Shared/OrderDetail; Accounting/Records/OrderDetail; CustomerService/Orders/OrderDetail; Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | (the OrderPreApproveCredit SECA; autoApprove#Order); Purchasing/Orders/OrderDetail (Approve: approve#Order meets check#PurchaseApprovalRequired's warning, the SECA on this service) (Purchasing P3, P4); CustomerService/Orders/OrderDetail (its credit hold read only, Customer Service P3) |
 | OrderInfoServices | send#OrderStoreEmail | Purchasing/Orders/OrderDetail; Shared/OrderDetail; Commerce/Orders/OrderDetail | — Purchasing: send#PurchaseOrder mails the purchase order (Purchasing P3) |
 | OrderInfoServices | notify#OrderHighPriority |  |  |
 | OrderServices | create#Order | Purchasing/Orders/PurchaseOrders; Sales/Quotes/Quotes; Sales/Orders/Orders; Sales/Quotes/QuoteRequestDetail | Purchasing/Orders/PurchaseOrders and Purchasing/NewPurchaseOrder (through mantle.order.PurchaseServices.create#PurchaseOrder) (Purchasing P3) |
@@ -727,7 +727,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | AgreementServices | update#AgreementContent | Purchasing/Agreements/AgreementDetail; Sales/Agreements/AgreementDetail | — Purchasing: an agreement's file is not edited after its upload (F135) (Purchasing P13) |
 | AgreementServices | save#AgreementContentFile | Shared/RecordFiles |  |
 | CommunicationServices | find#PartyCommunicationEvents | Shared/Chatter; CustomerService/Cases/ChannelSessions | CustomerService/Cases/ChannelSessions |
-| CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose; Sales/Pipeline/OpportunityDetail | Comms/Inbox/Compose; Shared/Chatter |
+| CommunicationServices | create#Message | Commons/QuickCreate; Commons/Files; Comms/Inbox/Compose; Projects/Requests/RequestDetail; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter; CustomerService/Cases/CaseDetail; Shared/RequestDetail; PASS: Forum/Compose; Sales/Pipeline/OpportunityDetail | Comms/Inbox/Compose; Shared/Chatter; CustomerService/Cases/CaseDetail (Conversation, through Shared/Chatter and Compose, Customer Service P2) |
 | CommunicationServices | reply#CommunicationEvent | Comms/Inbox/Compose; Projects/Code/MergeRequestDetail/Changes; Shared/Chatter | Comms/Inbox/Compose; Shared/Chatter |
 | CommunicationServices | add#WikiPageComment | Commons/Knowledge; Commons/Knowledge/Review |  |
 | CommunicationServices | get#CommunicationEventContentLocation |  |  |
@@ -770,7 +770,7 @@ Added in Accounting P15 (budgets), called by built screens:
 | PartyServices | search#Party | Commons/Contacts; Comms/Panel/Chat; Comms/Inbox |  |
 | PartyServices | search#Person |  | Commons/Calendar; Commons/Calendar/EventDetail; Commons/QuickCreate; Projects/Projects/ProjectDetail/Plan/Calendar |
 | PartyServices | get#UserNoticeCounts |  |  |
-| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1) |
+| PartyServices | setup#UserOrganizationInfo | Commons; Comms; Projects; Products; Warehouse; Purchasing; CustomerService; Accounting; Manufacturing; Maintenance; Commerce; Marketing; Admin; Insights | Commons; Comms; Projects; Products; Manufacturing (the root's always-actions, Manufacturing P1); CustomerService (the root's always-actions, Customer Service P1) |
 | PartyServices | get#PartyOrganizationInfo |  |  |
 | PartyServices | create#Account |  |  |
 | PartyServices | update#Account |  | Commons/Settings/Account |
@@ -1058,7 +1058,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | create#Request | Commons/QuickCreate; Commons/Requests; Comms/Inbox; Comms/Chat; Projects/Requests; Warehouse/Transfers/StockRequests; Purchasing/Requests; Purchasing/Requests/RequestDetail; CustomerService/Cases/NewCase; Manufacturing/WorkCenters/Downtime; Maintenance/Requests; Maintenance/WorkOrders/WorkOrderDetail; Sales/Quotes/QuoteRequests | Commons/QuickCreate; Commons/Requests/List; Commons/Tasks/TaskDetail; Projects/Requests/List; Projects/WorkItems/WorkItemDetail; Warehouse/Transfers/StockRequests and NewStockRequest (RqtInventory, validated: the facility in scope; P15); Manufacturing/WorkCenters/Downtime (the maintenance request of request#ProductionMaintenance, RqtMaintenance, linked to the stop, the equipment, the maintenance and the stopped work; Manufacturing P11); — Purchasing: create#PurchaseRequest and create#QuoteRequest (Purchasing P10, P11); CustomerService/Cases/NewCase (SupportCaseServices.create#Case; Customer Service P2) |
-| RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; Warehouse/Transfers/RequestDetail (Submit, Complete, Cancel; approve#InventoryRequest, P15); — Purchasing: the purchase request's own verbs (submit, cancel and complete#PurchaseRequest) (Purchasing P10, P17) |
+| RequestServices | update#Request | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; Shared/RequestDetail; Sales/Quotes/QuoteRequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; Warehouse/Transfers/RequestDetail (Submit, Complete, Cancel; approve#InventoryRequest, P15); — Purchasing: the purchase request's own verbs (submit, cancel and complete#PurchaseRequest) (Purchasing P10, P17); CustomerService/Cases/CaseDetail (through mantle.request.SupportCaseServices.update#Case and transition#Case, Customer Service P2) |
 | RequestServices | create#ContactRequest | Projects/Requests/Intake |  |
 | RequestServices | create#ContactRequestReCaptcha | Projects/Requests/Intake |  |
 | RequestServices | replace#RequestParty | Commons/Requests/RequestDetail; Projects/Requests; Projects/Requests/RequestDetail; Purchasing/Requests/RequestDetail; CustomerService/Cases/CaseDetail; CustomerService/Cases/NewCase; Shared/RequestDetail | Commons/Requests/RequestDetail; Projects/Requests/List; Projects/Requests/RequestDetail; — Purchasing: the organization and requester are parties by role, set when filed (Purchasing P10); CustomerService/Cases/CaseDetail (Assign: SupportCaseServices.update#Case; Customer Service P2) |
@@ -1083,9 +1083,9 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | Service XML | Service | Designed in | Implemented in |
 | --- | --- | --- | --- |
 | RequestServices | convert#RequestToProject |  | Projects/Requests/RequestDetail |
-| RequestServices | create#IntakeRequest | PASS:Support/NewCustomerCase | RequestIntake |
+| RequestServices | create#IntakeRequest | PASS:Support/NewCustomerCase | RequestIntake; PASS:Support/NewCustomerCase (a queue's form token, through create#CustomerCase, Customer Service P15) |
 | RequestServices | create#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
-| RequestServices | get#IntakeSettings | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; Projects/Settings/Intake |
+| RequestServices | get#IntakeSettings | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; Projects/Settings/Intake; CustomerService/Settings/ChannelRouting (the queue's intake token, Customer Service P6) |
 | RequestServices | make#RequestWorkItem |  | Projects/Requests/List; Projects/Requests/RequestDetail |
 | RequestServices | remove#IntakeToken | CustomerService/Settings/ChannelRouting | Projects/Projects/ProjectDetail/Settings; Projects/Requests/List; CustomerService/Settings/ChannelRouting |
 
@@ -1956,7 +1956,7 @@ app's CustomerArticle (P15) is to call `get#PublishedArticle` and `find#ArticleS
 | request/KnowledgeServices | find#ArticleSuggestions | CustomerService/Cases/NewCase; CustomerService/Cases/CaseDetail; PASS:Support/CustomerArticle | CustomerService/Cases/NewCase (CaseIdentity's suggestions); CustomerService/Cases/CaseDetail (Knowledge tab, through ironstone.customerservice.KnowledgeServices.get#CaseKnowledge); PASS:Support/SupportHome and NewCustomerCase (customer-visible, through get#SupportHome and get#CaseIntake; Customer Service P15) |
 | request/KnowledgeServices | get#PublishedArticle | PASS:Support/CustomerArticle | PASS:Support/CustomerArticle and SupportHome, through get#CustomerArticle (F59; Customer Service P15) |
 | request/KnowledgeServices | get#ArticlePublicLink | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Send to customer); CustomerService/Knowledge/Knowledge (Send to customer), through prepare#ArticleSend |
-| request/KnowledgeServices | record#ArticleFeedback | PASS:Support/CustomerArticle | CustomerService/Cases/CaseDetail (Knowledge tab: Helpful?) |
+| request/KnowledgeServices | record#ArticleFeedback | PASS:Support/CustomerArticle | CustomerService/Cases/CaseDetail (Knowledge tab: Helpful?); PASS:Support/CustomerArticle (rate#Article, Customer Service P15) |
 | request/KnowledgeServices | review#ArticleFeedback | CustomerService/Knowledge/ArticleFeedback | CustomerService/Knowledge/ArticleFeedback (FeedbackReview) |
 | request/KnowledgeServices | suggest#ArticleEdit | CustomerService/Cases/CaseDetail; CustomerService/Knowledge | CustomerService/Cases/CaseDetail (Suggest edit); CustomerService/Knowledge/Knowledge (Suggest edit) |
 | request/KnowledgeServices | create#ArticleFromCase | CustomerService/Knowledge/CaseToArticle | CustomerService/Knowledge/CaseToArticle (ArticleDraft; AnswerSelection's preview through prepare#ArticleFromCase) |
@@ -1977,7 +1977,7 @@ from the same reply rule (Sla.js recordMessage).
 | request/SupportCaseServices | create#FollowUpCase | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Open a follow-up case, template/CustomerServiceLineage.xml) |
 | request/SupportCaseServices | make#FollowUpCase |  | the reply rule after the commit (Sla.js recordMessage, CaseRelations.js replyArrived) |
 | request/SupportCaseServices | get#CaseLineage | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (the lineage, a merged case's redirect, through CaseServices.get#CaseDetail) |
-| request/SupportCaseServices | close#ResolvedCases, close#ResolvedCase | CustomerService/Settings/ServiceDefaults | the close_ResolvedCases ServiceJob (ServicePolicy.autoCloseDays, ServiceDefaults) |
+| request/SupportCaseServices | close#ResolvedCases, close#ResolvedCase | CustomerService/Settings/ServiceDefaults | CustomerService/Settings/ServiceDefaults (the auto-close delay); the close_ResolvedCases ServiceJob (ServicePolicy.autoCloseDays) (Customer Service P8) |
 | RequestServices | link#RequestRecord, add#RequestComment, replace#RequestParty, create#Request, file#RequestEmail |  | through merge#Cases, split#Case and the follow-up (Customer Service P8) |
 
 ## Customer Service P7 — Case templates (Nov 5, 2026)
@@ -1993,8 +1993,8 @@ call `get#CaseTemplate` and `validate#TemplateValues` with the customer's audien
 | request/SupportCaseServices | save#CaseTemplateCondition |  | CustomerService/Settings/CaseTemplates (the condition rows) |
 | request/SupportCaseServices | end#CaseTemplatePart |  | CustomerService/Settings/CaseTemplates (End a field or condition) |
 | request/SupportCaseServices | validate#CaseTemplate | CustomerService/Settings/CaseTemplates | CustomerService/Settings/CaseTemplates (TemplatePreview's check; the problems) |
-| request/SupportCaseServices | validate#TemplateValues | CustomerService/Cases/NewCase; PASS:Support/NewCustomerCase | CustomerService/Cases/NewCase (through create#Case) |
-| request/SupportCaseServices | get#CaseTemplate | PASS:Support/NewCustomerCase | CustomerService/Settings/CaseTemplates (TemplateEdit, with its drafts); the customer's projection for P15 |
+| request/SupportCaseServices | validate#TemplateValues | CustomerService/Cases/NewCase; PASS:Support/NewCustomerCase | CustomerService/Cases/NewCase (through create#Case); PASS:Support/NewCustomerCase (create#CustomerCase, Customer Service P15) |
+| request/SupportCaseServices | get#CaseTemplate | PASS:Support/NewCustomerCase | CustomerService/Settings/CaseTemplates (TemplateEdit, with its drafts); the customer's projection for P15; PASS:Support/NewCustomerCase (the customer projection of get#CaseIntake, Customer Service P15) |
 | request/SupportCaseServices | get#CaseTemplateValues | CustomerService/Cases/CaseDetail | CustomerService/Cases/CaseDetail (Overview, template/CustomerServiceTemplates.xml) |
 | ScreenServices (framework) | publish#DbForm, create#DbFormFieldSuccessor, store#DbFormFieldDependency, end#DbFormField, end#DbFormFieldOption, end#DbFormFieldDependency, evaluate#DbFormDependencies, create#FormResponse, get#FormResponse |  | through the services above (Customer Service P7) |
 
