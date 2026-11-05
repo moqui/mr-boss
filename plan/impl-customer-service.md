@@ -1292,6 +1292,34 @@ later, §4 Nov 5).
   - **F-P5-6** A team's group is `SVT_<team>` of type `UgtServiceTeam`, found by the team's id with no new record; the demo's
     data names it and BossZ fills it.
 
+**Review Nov 5 (P5).** Checked the Mantle and BOSS diffs against CS-ASSIGNMENT and CS-REPLIES: the cursor lock (a mutation
+without `forUpdate` fails the two-intakes spec, so the lock does serialize; ensure#CaseProfile and update#Case lock the request
+before the cursors, the least-open counts are read after the cursors), business hours, apply#SavedReply's transaction, retry and
+recipients, the variable allowlist (the case's own customer, contact, subject, queue, organization, agent and the customer label
+of its status; nothing internal or of another customer), the bulk reply's per-case key, thread and named outcomes, access, Comms'
+visibility of shared blocks, and the acceptance walk (its four features are the usable-when).
+- R1 (medium) An agent whose hours start later (more than a week on) or a two-weekly series in its off week read as around the
+  clock (F-P5-5): `inHours` now takes hours as set when get#WorkingHours finds a series in effect or to come, and then needs an
+  occurrence at the instant; SupportAssignment checks hours that start in two weeks.
+- R2 (low) assign#Case locks a queue's cursors in the order of their ids, not the rules' order, which a concurrent save can change.
+- R3 (high) apply#SavedReply's retry held the case's lock and locked the message while the sent message's filing held the
+  message and wrote the case's RequestCommEvent: the two waited until the statement timeout (SupportReplies failed about one run in
+  three after 60 s). The retry reads the message; the case's lock serializes retries.
+- R4 (medium, F-P5-3) A service-wide reply shared with BOSS_CUSTOMER_SERVICE was listed by Comms TextBlocks and Compose to every
+  organization's Customer Service users (Retail's "Filters ship soon" to Ziziwork Services' agent). It is now shared with the
+  organization's group `SVO_<organization>` (`UgtServiceOrganization`), which sync#ServiceTeamGroup keeps with the members of all
+  the organization's teams, and is that organization's (save#SavedReplyAction sets and checks it). A Customer Service user on no
+  team (order desk, returns, knowledge, the administrator) no longer sees service-wide replies.
+- R5 (medium, F-P5-2) The agent opens SavedReplies (design §9: A and S): BossSetupData `BOSS_CS_SAVED_REPLIES` grants
+  BOSS_CUSTOMER_SERVICE_AGENT the one Settings child always (the framework checks a screen path's parents without requiring
+  them, so the root group's Settings deny stays for the other pages), and CaseDetail's Saved reply links it. Sharing narrowed with
+  it: a team's group only for the team's manager or a service manager, an organization's only for a service manager.
+- Specs run (pass): Mantle SupportAssignment, SupportReplies (four runs), SupportCases; BOSS CustomerServiceAccess,
+  CustomerServiceAssignment, CustomerServiceCases, MailSettings, Compose. `lint --screens`: nothing new. Acceptance not run (none
+  changed).
+- For the lead: the administrator still cannot share a service-wide reply (not a team member; F-P5-3); Comms TextBlocks lets any
+  group member share a block with a team's group, which Customer Service then lists as a team reply without actions.
+
 ### P6 — Channels
 
 Design §3 ChannelSessions, §9 ChannelRouting, CaseDetail's Reply publicly in forum; CS-CHANNELS, CS-STACK (the Comms
