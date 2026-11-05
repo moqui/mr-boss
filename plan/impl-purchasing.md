@@ -2977,10 +2977,10 @@ ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, Purchasi
     (`exportCsv`) over the same service, not the form-list's CSV button, so it carries the filters, snapshot time and
     what was left out (F-P15-1).
 - Findings (provisional):
-  - **F-P15-1** The form-list CSV and XLSX export (ScreenCsv.js `$csv`) quotes but does not guard formula-like text, so a
+  - **F-P15-1** The form-list CSV export (ScreenCsv.js `$csv`; XLSX writes string cells and is safe) quotes but does not guard formula-like text, so a
     list exported with show-csv-button can carry `=...` from a supplier's name or reference into a spreadsheet; the
     Purchasing reports guard their own export (Reports.js `csvCell`, as moqui-report's dashboard export does). For the lead:
-    a framework guard in ScreenCsv.js (and the XLSX writer) would cover every list.
+    a framework guard in ScreenCsv.js would cover every list (Review P15).
   - **F-P15-2** A Block rule is the explicit approved rule the design asks for (no rule, no change); its override is ending
     the rule or the risk (PURCHASE_POLICY_EDIT, SUPPLIER_PROFILE_EDIT) or a newer evaluation: there is no per-document
     override. ScoreActions has one effect for RFQs and orders alike, and no reviewer role or expiry; Warn and review warns
@@ -3007,6 +3007,45 @@ ManufacturingPlanning, ManufacturingSubcontracting, PurchasingRequests, Purchasi
   AppStructure. `moqui lint --screens`: no flagged site in the new or changed screens (informational anchors only).
   `ss-inventory.md`'s FinancialInfo OutgoingPaymentList and PaidPayablesList rows name the statement; no `usl-inventory.md`
   row is called (the report services are new).
+
+**Review Nov 4 (P15).** Checked both diffs against this phase, §2, design §11, §12, §18: the supplier check with no rule
+(one indexed read of the organization's rules, nothing else, tested), Warn against Block and the order of the checks (a
+purchase block or suspension first, then a scorecard Block, then the unapproved warning); the measures by hand (on-time 40 of
+60 by quantity against the first acknowledged else required date, quality 47 of 50 with the undecided inspection left out,
+price variance 5 of 50, score (44.44 x 30) / 90 = 14.81, and fewer than five eligible receipts Insufficient with no
+response); each evaluation in its own transaction (`lib.probe`) with a named failure; a recalculation of the same period
+keeping and naming the earlier one; every report's organization, supplier, product, request and order checks; amounts
+withheld as null and "Withheld", never zero; Commitments' stage arithmetic against Budgets.js `consumedAmounts` and
+`openAmount` (a released or actual child consumes, a blocked or reversed one does not); `csvCell`'s guard; the caps.
+- **R1** (medium, retry) `evaluate#SupplierScorecard` hashed the period it defaulted to now and the suppliers it found, so a
+  retry with the same operation key and no period was refused OPERATION_KEY_CONFLICT. It hashes the request as asked
+  (unset period and suppliers as unset) and checks the key before finding the period's suppliers. Spec case added.
+- **R2** (medium, rule) The supplier check applied an evaluation's stored effect whenever any response rule was in effect, so
+  ending the score rule that drew a Block did not lift it while a risk rule stayed. An evaluation's response now applies
+  only while the rule that drew it is in effect (ending or changing a rule lifts it until the next evaluation, as F-P15-2
+  says). Spec case added.
+- **R3** (medium, cost) `compare#SupplierQuotes` ran the supplier check (now with the scorecard reads) for every offer line;
+  it is once per supplier per comparison. The evaluation reads a line's first acknowledged date once per line, not per
+  receipt, and finds the evaluation it recalculates by its period instead of reading every evaluation of the supplier.
+- **R4** (medium, cost) Home ran the whole Spend report (receipts and payment applications too) and counted quotes to compare
+  with an invitation read per RFQ (up to 500 RFQs, several reads each) on every load. SpendSummary reads committed and billed
+  only; `compareCount` is three bounded reads (proposed quotes not expired, their RFQ links, the RFQs still open).
+- **R5** (low, large data) Spend's payment applications and PurchaseHistory's quotes were capped without saying so; both now
+  name the cap in what was left out (so `complete` is false). PurchaseHistory reads its lines' billings, billed prices and
+  first receipts per 500 orders, and Commitments its request lines' suppliers per 500 requests, instead of per line.
+- **R6** (low) Scorecards' result and score filters picked a supplier's latest matching evaluation, so an older low score
+  stood in for a newer one; the filters now apply to the latest evaluation of each supplier (or to every one, view all).
+- **R7** (low) ProcurementTracker's supplier filter left a request's rows of other suppliers in; it applies to them too.
+- For the lead (F-P15-1, framework, unchanged): `runtime/base-component/framework/template/screen/ScreenCsv.js` lines 29-35,
+  the csv render mode's `$csv`, only quotes a value holding a comma, quote or LF (`/[,"\n]/`, not CR) and never prefixes
+  text starting `=`, `+`, `-`, `@`, tab or CR, so a form-list CSV export carries a supplier's `=...` name as a formula. The
+  XLSX export is not affected: `crates/moqui-core/src/screen/xlsx.rs` writes text with `write_string_with_format` (lines
+  164, 175), a string cell Excel does not evaluate. F-P15-1's "and the XLSX writer" is only the CSV.
+- Left as they are (bounded and flagged): Spend's receipts and payment applications are read across organizations before the
+  order and bill filter, so in a database with many organizations the cap can be reached by others' rows (flagged
+  incomplete); SupplierStatement reads bills and payments from the beginning, oldest first, to carry the opening balance, so
+  a supplier with over 5,000 of them shows an incomplete period (flagged) where an aggregated opening balance would not; an
+  evaluation's price variance reads every billing of the supplier's (up to 5,000) orders before the period filter.
 
 ### P16 — Supplier portal
 
@@ -3476,7 +3515,7 @@ Designed, not in this build:
     QuoteResponse and OrderAcknowledgement (F173); OrderDetail's Confirm delivery prefilled from a supplier's
     delivery report, and a subcontract order's dispatch and inspection evidence on its page (F174).
   - from performance (P15): a response rule's separate RFQ and order effects, reviewer role, expiry and follow-up work
-    item, and a per-document override of a block (F-P15-2); a guard of formula-like text in the form-list CSV and XLSX
+    item, and a per-document override of a block (F-P15-2); a guard of formula-like text in the form-list CSV
     export (F-P15-1, framework).
 - **Other apps' contexts:** the Sales and Customer Service rows of the screens Purchasing mounts; a supplier return
   linked from a customer case (design §14.4 #4, Customer Service's side).
