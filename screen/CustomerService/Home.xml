@@ -46,7 +46,24 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.customerservice.CaseServices.get#QueueCounts" out-map="queuesOut" transaction="force-new"
                     ignore-error="true" in-map="{appRoot:appRoot}"/>
         </if>
+        <!-- P9: Returns awaiting approval (R, M) and Approvals waiting (M, R: the service topics' decisions, read only) -->
+        <if condition="dashboard.panels.awaitingReturns">
+            <service-call name="ironstone.customerservice.ReturnServices.get#AwaitingReturns" out-map="awaitingOut"
+                    transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, limit:8}"/>
+        </if>
+        <if condition="dashboard.panels.approvalsWaiting">
+            <service-call name="org.moqui.impl.NotificationServices.get#UserNotifications" out-map="approvalsOut"
+                    transaction="force-new" ignore-error="true"
+                    in-map="{approvals:true, pageSize:8, inboxEnumId:'NinNotifications',
+                        topicList:customerService.approvalTopics}"/>
+        </if>
         <script>ec.message.clearErrors()</script>
+        <set field="awaitingReturns" from="awaitingOut?.approvalRows || []"/>
+        <set field="approvalsWaiting" from="Array.from(approvalsOut?.notificationList || []).map((row) =&gt; ({
+                notificationMessageId: row.notificationMessageId, title: row.titleText || row.topicDescription || row.topic,
+                ageText: row.sentDate ? ec.l10n.format(row.sentDate, 'd MMM HH:mm') : '',
+                url: row.linkText || (row.recordEntityName == 'mantle.order.return.ReturnHeader'
+                    ? '/qapps/CustomerService/Returns/ReturnDetail?returnId=' + encodeURIComponent(row.recordId) : null)}))"/>
         <set field="myCases" from="myCasesOut?.cases || []"/>
         <set field="teamQueues" from="queuesOut?.queueRows || []"/>
     </actions>
@@ -56,6 +73,9 @@ along with this software (see the LICENSE.md file). If not, see
             <container style="col-auto">
                 <link url="${sharedLinks['Cases/NewCase']}" text="New case" link-type="anchor-button" btn-type="primary"
                         icon="sym_o_add" condition="can.caseEdit"/>
+                <!-- P9: the Request return shortcut -->
+                <link url="${sharedLinks['Returns/NewReturn']}" text="Request return" link-type="anchor-button"
+                        icon="sym_o_assignment_return" condition="can.returns &amp;&amp; (can.caseEdit || can.returnAuthorize)"/>
             </container>
         </container>
         <section name="LookupResult" condition="lookupId">
@@ -141,6 +161,61 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-list>
                                 <label text="You work no queue yet: a service manager adds you to a team." type="p"
                                         style="q-pa-sm m-muted q-mb-none" condition="!teamQueues.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+        </container-row>
+        <!-- P9: Returns awaiting approval and Approvals waiting -->
+        <container-row>
+            <row-col md="7">
+                <section name="AwaitingReturns" condition="dashboard.panels.awaitingReturns">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Returns awaiting approval"/>
+                            <box-body-nopad>
+                                <form-list name="AwaitingReturnList" list="awaitingReturns" skip-form="true" paginate="false">
+                                    <field name="returnId">
+                                        <default-field title="Return">
+                                            <link url="${url}" url-type="plain" text="${displayId}" link-type="anchor"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                                    <field name="entryText"><default-field title="Requested"><display/></default-field></field>
+                                    <field name="previewExpireText"><default-field title="Valid until"><display/></default-field></field>
+                                    <field name="exceptionText"><default-field title="Exception"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="returnId"/><field-ref name="customerName"/></column>
+                                        <column><field-ref name="exceptionText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No return waits for authorization." type="p" style="q-pa-sm m-muted q-mb-none"
+                                        condition="!awaitingReturns.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </row-col>
+            <row-col md="5">
+                <section name="ApprovalsWaiting" condition="dashboard.panels.approvalsWaiting">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Approvals waiting"/>
+                            <box-body-nopad>
+                                <form-list name="ApprovalsWaitingList" list="approvalsWaiting" skip-form="true" paginate="false">
+                                    <field name="title">
+                                        <default-field title="Decision">
+                                            <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                                            <label text="${title}" condition="!url"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="ageText"><default-field title="Since"><display/></default-field></field>
+                                </form-list>
+                                <label text="No decision waits for you." type="p" style="q-pa-sm m-muted q-mb-none"
+                                        condition="!approvalsWaiting.length"/>
+                                <link url="${sharedLinks['Approvals']}" text="Open Approvals" link-type="anchor"
+                                        style="q-pa-sm" condition="approvalsWaiting.length"/>
                             </box-body-nopad>
                         </container-box>
                     </widgets>

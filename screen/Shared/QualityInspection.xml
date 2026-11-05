@@ -30,7 +30,11 @@ along with this software (see the LICENSE.md file). If not, see
     Purchasing (impl-purchasing P5, crosscut §3.19 Purchasing row) mounts it at Purchasing/Receiving/QualityInspection for the
     inspections of its purchase receipts (ironstone.purchasing.ReceiptServices.get#InspectionDetail: the receipt and order
     links): the holders of the inspect, verify and dispose permissions act where Warehouse's scope covers the inspection's
-    facility (Warehouse's transitions and choices), others read. -->
+    facility (Warehouse's transitions and choices), others read.
+    Customer Service (impl-customer-service P9, crosscut §3.19 Customer Service row, F38) mounts it at
+    CustomerService/Returns/QualityInspection for the inspections of its customers' returns
+    (ironstone.customerservice.ReturnServices.get#InspectionDetail: the return's link): read for A and R, inspect and dispose
+    for the borrowed W capability where Warehouse's scope covers the inspection's facility (Warehouse's transitions). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Inspection"
@@ -68,6 +72,16 @@ along with this software (see the LICENSE.md file). If not, see
                     transaction="force-new"
                     ignore-error="true"/>
         </if>
+        <!-- Customer Service (impl-customer-service P9, F38): an inspection of a customer return the user works with; W acts
+            where Warehouse's scope covers it, A and R read -->
+        <if condition="appRoot == 'CustomerService'">
+            <service-call name="ironstone.customerservice.ReturnServices.get#InspectionDetail"
+                    in-map="{appRoot:appRoot, qualityInspectionId:qualityInspectionId}"
+                    out-map="detail"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
         <set field="operatorMode" from="appRoot == 'Manufacturing' &amp;&amp; !!operatorMode"/>
         <set field="nextStep" from="detail?.operator?.next || null"/>
         <set field="stepProgress" from="detail?.operator ? detail.operator.doneCount + ' of ' + detail.operator.stepCount +
@@ -103,6 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 icon="arrow_back" condition="appRoot == 'Manufacturing'"/>
                         <link url="${sharedLinks['Receiving/Inspections']}" text="Inspections" link-type="anchor"
                                 icon="arrow_back" condition="appRoot == 'Purchasing'"/>
+                        <link url="${sharedLinks['Returns/Returns']}" text="Returns" link-type="anchor"
+                                icon="arrow_back" condition="appRoot == 'CustomerService'"/>
                     </box-body>
                 </container-box>
             </widgets>
@@ -484,8 +500,10 @@ along with this software (see the LICENSE.md file). If not, see
                                     condition="links.asset"/>
                             <link url="${links.shipment}" text="Open the receipt" link-type="anchor" icon="sym_o_inbox"
                                     condition="links.shipment"/>
-                            <link url="${links.order}" text="Open the purchase order" link-type="anchor"
-                                    icon="sym_o_receipt_long" condition="links.order"/>
+                            <link url="${links.order}" text="${appRoot == 'CustomerService' ? 'Open the order' : 'Open the purchase order'}"
+                                    link-type="anchor" icon="sym_o_receipt_long" condition="links.order"/>
+                            <link url="${links.returnUrl}" text="Open the return" link-type="anchor" icon="sym_o_assignment_return"
+                                    condition="links.returnUrl"/>
                             <link url="${links.run}" text="Open the work order" link-type="anchor"
                                     icon="sym_o_precision_manufacturing" condition="links.run"/>
                             <link url="${links.operation}" text="Open the operation" link-type="anchor" icon="sym_o_task_alt"

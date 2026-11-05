@@ -571,6 +571,9 @@ const operations = {serviceOrders, orderDetail, shipmentDetail, invoiceDetail}
     linkOf,
     moneyRead,
     amountRead,
+    // P9: ReturnDetail's RMA mail (Returns.js)
+    recipientOptions,
+    senderOptions,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service order operation " + op)
         return operations[op](parameters || {})

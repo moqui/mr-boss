@@ -67,12 +67,17 @@ feature("the Customer Service menu and providers follow each group's areas; the 
     when() {
         const rows = [
             {user: users.read, extra: [], quick: []},
-            {user: users.agent, extra: ["Returns", "Reports"], quick: ["customerServiceCase"]},
-            {user: users.manager, extra: ["Returns", "Approvals", "Reports", "Settings"], quick: ["customerServiceCase"]},
+            {user: users.agent, extra: ["Returns", "Reports"], quick: ["customerServiceCase", "customerServiceReturn"]},
+            {
+                user: users.manager,
+                extra: ["Returns", "Approvals", "Reports", "Settings"],
+                quick: ["customerServiceCase", "customerServiceReturn"]
+            },
             {user: users.orderDesk, extra: [], quick: []},
-            {user: users.returns, extra: ["Returns", "Approvals", "Reports"], quick: []},
+            // P9: Request return for the Returns area's groups
+            {user: users.returns, extra: ["Returns", "Approvals", "Reports"], quick: ["customerServiceReturn"]},
             {user: users.knowledge, extra: [], quick: []},
-            {user: users.admin, extra: order, quick: ["customerServiceCase"]}
+            {user: users.admin, extra: order, quick: ["customerServiceCase", "customerServiceReturn"]}
         ]
         const problems = []
         for (const {user, extra, quick} of rows) {
@@ -84,7 +89,12 @@ feature("the Customer Service menu and providers follow each group's areas; the 
             if (JSON.stringify(quickKinds) !== JSON.stringify(quick))
                 problems.push(`${user} is offered quick create ${quickKinds}, not ${quick}`)
             const topics = (found.providers?.notificationTopics || []).map(item => item.topic || item)
-            if (quick.length && !["SupportCaseAssigned", "SupportCaseCustomerReply"].every(topic => topics.includes(topic)))
+            if (
+                quick.length &&
+                !["SupportCaseAssigned", "SupportCaseCustomerReply", "ReturnExceptionApproval"].every(topic =>
+                    topics.includes(topic)
+                )
+            )
                 problems.push(`${user} lacks the case topics: ${JSON.stringify(topics)}`)
             if (!(found.providers?.paletteSources || []).some(source => source.group === "CustomerService"))
                 problems.push(`${user} has no Customer Service palette source`)
@@ -752,6 +762,60 @@ feature("assignment rules are the administrator's, saved replies on a case a cas
             if (expected === "" ? message !== "" : !message.includes(expected))
                 problems.push(`${user} save#SavedReplyAction: ${message || "accepted"}, not ${expected || "accepted"}`)
         }
+        return {problems}
+    },
+    then({problems}) {
+        problems.join("\n") == ""
+    }
+})
+// P9: a customer return is its organization's and its customer's: the return authorizer authorizes it, the agent may not; the
+// return's record check with a capability; another organization's agent is refused it and its reads
+feature("returns: the authorizer's to authorize and the agent's to enter; another organization's return is refused", {
+    when() {
+        const problems = []
+        const check = (user, capability) =>
+            asUser(user, () =>
+                refusal(access + "check#Record", {
+                    appRoot: "CustomerService",
+                    recordType: "return",
+                    recordId: ids.warehouseReturnId,
+                    capability
+                })
+            )
+        for (const [user, capability, expected] of [
+            [users.returns, "returnAuthorize", ""],
+            [users.agent, "returnAuthorize", "PERMISSION_DENIED"],
+            [users.agent, null, ""],
+            [users.services, null, "RECORD_UNAVAILABLE"],
+            [users.agent, "returnPolicyEdit", "PERMISSION_DENIED"]
+        ]) {
+            const message = check(user, capability)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} check ${capability}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const P = "mantle.order.ReturnPolicyServices."
+        for (const [user, service, parameters, expected] of [
+            [users.agent, "authorize#Return", {operationKey: "CSA-RET-1", returnId: ids.warehouseReturnId}, "PERMISSION_DENIED"],
+            [users.services, "get#ReturnState", {returnId: ids.warehouseReturnId}, "RECORD_UNAVAILABLE"],
+            [
+                users.manager,
+                "save#Policy",
+                {organizationPartyId: ids.organizationId, policyName: "Access spec"},
+                "PERMISSION_DENIED"
+            ],
+            [users.agent, "evaluate#ReturnPolicy", {returnId: ids.warehouseReturnId}, ""]
+        ]) {
+            const message = asUser(user, () => refusal(P + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        const theirs = asUser(users.services, () =>
+            refusal("ironstone.customerservice.ReturnServices.get#ReturnDetail", {
+                appRoot: "CustomerService",
+                returnId: ids.warehouseReturnId
+            })
+        )
+        if (!theirs.includes("RECORD_UNAVAILABLE")) problems.push(`Retail's return for Services: ${theirs || "accepted"}`)
         return {problems}
     },
     then({problems}) {

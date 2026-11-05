@@ -50,7 +50,10 @@ const ids = {
     templateFormId: "BOSS_CS_TPL_DEFECTIVE",
     // P6: Retail's mail and public form routes into the Support queue
     mailRouteId: "BOSS_CS_ROUTE_MAIL",
-    formRouteId: "BOSS_CS_ROUTE_FORM"
+    formRouteId: "BOSS_CS_ROUTE_FORM",
+    // P9: Retail's return policy, and the Warehouse demo's requested return of Joe Q Public to Retail (BossWarehouseDemoData.xml)
+    returnPolicyId: "BOSS_CS_RPOL_RETAIL",
+    warehouseReturnId: "BOSS_WH_RETURN"
 }
 // The demo users of each group (each also in BOSS_CUSTOMER_SERVICE but the administrator), and the other organization's agent.
 const users = {
@@ -192,7 +195,16 @@ function routeFixtures() {
         "Availability/StockAtDate": {parameters: {productId: ids.filterProductId}, text: "Stock at date"},
         // P6: the channel sessions and the channel routing
         "Cases/ChannelSessions": {parameters: {}, text: "Channel sessions"},
-        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"}
+        "Settings/ChannelRouting": {parameters: {}, text: "Channel routing"},
+        // P9: the returns, a return, the RMA print, the return policies, the approvals and Customer360's Returns tab
+        "Returns/Returns": {parameters: {view: "all"}, text: "Returns"},
+        "Returns/NewReturn": {parameters: {orderId: ids.deliveredOrderId}, text: "What comes back"},
+        "Returns/ReturnDetail": {parameters: {returnId: ids.warehouseReturnId}, text: "Return " + ids.warehouseReturnId},
+        "Returns/QualityInspection": {parameters: {qualityInspectionId: "BOSS_CS_NO_INSPECTION"}, text: "not available"},
+        "Returns/ReturnAuthorization": {parameters: {returnId: ids.warehouseReturnId}, text: ids.warehouseReturnId},
+        "Settings/ReturnPolicies": {parameters: {}, text: "Return policies"},
+        Approvals: {parameters: {}, text: "Approvals"},
+        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
@@ -204,7 +216,10 @@ function routeFixtures() {
         ["Orders/InvoiceDetail", "component://mr-boss/screen/Shared/InvoiceDetail.xml"],
         ["Availability/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"],
         ["Availability/StockAtDate", "component://mr-boss/screen/Shared/StockAtDate.xml"],
-        ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"]
+        ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
+        ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"],
+        ["Returns/QualityInspection", "component://mr-boss/screen/Shared/QualityInspection.xml"],
+        ["Approvals/Notifications", "component://mr-boss/screen/Commons/Notifications.xml"]
     ]
     return {routes, mounts}
 }

@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReturnPolicies (design-customer-service §9 ReturnPolicies; impl-customer-service P9, CS-RETURN-POLICY): the organization's
+    return policies, the most specific first (ReturnPolicyList over Mantle's mantle.order.ReturnPolicyServices.find#Policies),
+    each with its conditions, window, authorization days, reasons, remedies, fee and period; New policy and Change from a date
+    (ReturnPolicyEdit: save#Policy starts a row from its date and ends the one it replaces, or keeps a draft; End ends a row),
+    the administrator's (RETURN_POLICY_EDIT); ReturnReasons, the organization's dated row per return reason (save#ReturnReason);
+    and ReturnPolicyPreview (evaluate#ReturnPolicy): an order's lines against the policies now. With no policy a return is
+    manual review; a return keeps the row it was evaluated against. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Return policies" default-menu-index="12">
+    <parameter name="organizationPartyId"/>
+    <parameter name="previewOrderId"/>
+    <transition name="chooseOrganization">
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+    </transition>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="savePolicy">
+        <actions>
+            <set field="multi" from="(value) =&gt; Array.isArray(value) ? value.join(',') : (value ?? '')"/>
+            <service-call name="mantle.order.ReturnPolicyServices.save#Policy"
+                    in-map="{returnPolicyId:(returnPolicyId || null), organizationPartyId:organizationPartyId, policyName:policyName,
+                        productStoreId:(productStoreId ?? ''), partyClassificationId:(partyClassificationId ?? ''),
+                        productCategoryId:(productCategoryId ?? ''), windowDays:(windowDays ?? ''), windowFromEnumId:(windowFromEnumId ?? ''),
+                        authorizationDays:(authorizationDays ?? ''), selfServiceEnabled:(selfServiceEnabled || 'N'),
+                        allowedReasonEnumIds:multi(allowedReasonEnumIds), allowedResponseEnumIds:multi(allowedResponseEnumIds),
+                        proofRequired:(proofRequired || 'N'), destinationFacilityId:(destinationFacilityId ?? ''),
+                        receiptlessEligible:(receiptlessEligible || 'N'), advanceReplacement:(advanceReplacement || 'N'),
+                        instantCredit:(instantCredit || 'N'), restockFeePercent:(restockFeePercent ?? ''), restockFeeCap:(restockFeeCap ?? ''),
+                        instructions:(instructions ?? ''), fromDate:(fromDate || null), draft:(draft == 'Y'),
+                        changeReason:(changeReason || null)}"/>
+            <message type="success">Saved the return policy ${policyName}</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endPolicy">
+        <actions>
+            <service-call name="mantle.order.ReturnPolicyServices.save#Policy"
+                    in-map="{returnPolicyId:returnPolicyId, end:true, fromDate:(fromDate || null)}"/>
+            <message type="success">Ended the return policy</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveReason">
+        <actions>
+            <service-call name="mantle.order.ReturnPolicyServices.save#ReturnReason"
+                    in-map="{organizationPartyId:organizationPartyId, returnReasonEnumId:returnReasonEnumId,
+                        customerLabel:(customerLabel || null), customerVisible:(customerVisible || 'N'),
+                        evidenceRequired:(evidenceRequired || 'N'), suggestedResponseEnumId:(suggestedResponseEnumId || null),
+                        inspectionRequired:(inspectionRequired || 'N'), end:(end == 'Y')}"/>
+            <message type="success">Saved the return reason</message>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="previewPolicy">
+        <default-response url="."><parameter name="organizationPartyId"/><parameter name="previewOrderId"/></default-response>
+    </transition>
+    <actions>
+        <service-call name="ironstone.customerservice.ReturnServices.get#ReturnPolicySettings" out-map="out" transaction="force-new"
+                ignore-error="true"
+                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, previewOrderId:previewOrderId}"/>
+        <set field="settingsError" from="ec.message.hasError() ? ec.message.getErrorsString() : ''"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cfg" from="out?.settings || {policies: [], reasons: [], organizations: []}"/>
+        <set field="policies" from="cfg.policies.map((row) =&gt; Object.assign({}, row, {
+                allowedReasonEnumIds: row.allowedReasonEnumIds ? String(row.allowedReasonEnumIds).split(',') : [],
+                allowedResponseEnumIds: row.allowedResponseEnumIds ? String(row.allowedResponseEnumIds).split(',') : []}))"/>
+        <set field="reasons" from="cfg.reasons || []"/>
+        <set field="preview" from="cfg.preview"/>
+        <set field="newPolicy" from="{organizationPartyId:cfg.organizationPartyId, windowDays:'30', windowFromEnumId:'RpwDelivered',
+                authorizationDays:'30'}"/>
+    </actions>
+    <widgets>
+        <label text="Return policies" type="h5"/>
+        <label type="p" style="text-caption m-muted" text="With no policy a return is reviewed by a person; a return keeps the policy row it was evaluated against."/>
+        <label type="p" style="m-negative" text="${settingsError}" condition="settingsError"/>
+        <form-single name="ReturnPolicyOrganization" transition="chooseOrganization" map="{organizationPartyId:cfg.organizationPartyId}"
+                condition="cfg.organizations.length &gt; 1">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down><list-options list="cfg.organizations" key="${value}" text="${label}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title=""><submit text="Show"/></default-field></field>
+        </form-single>
+        <container-dialog id="NewReturnPolicy" button-text="New policy" type="primary" icon="sym_o_add" title="New return policy"
+                width="720" condition="cfg.canEdit">
+            <form-single name="NewReturnPolicyForm" transition="savePolicy" map="newPolicy" extends="component://mr-boss/screen/CustomerService/Settings/ReturnPolicies.xml#ReturnPolicyEditForm"/>
+        </container-dialog>
+        <section-iterate name="ReturnPolicyList" list="policies" entry="policy">
+            <widgets>
+                <container-box>
+                    <box-header title="${policy.policyName} · ${policy.state}"/>
+                    <box-body>
+                        <label type="p" text="${[policy.rankText + ': ' + policy.conditionText, policy.windowText,
+                                'authorization ' + policy.authorizationText, policy.reasonsText, policy.responsesText, policy.feeText,
+                                policy.periodText].join(' · ')}"/>
+                        <label type="p" style="text-caption m-muted" text="${policy.instructions}" condition="policy.instructions"/>
+                        <container style="row q-gutter-sm" >
+                            <container-dialog id="ChangeReturnPolicy_${policy.returnPolicyId}" button-text="Change from a date"
+                                    title="Change ${policy.policyName}" width="720" condition="cfg.canEdit &amp;&amp; policy.state != 'Ended'">
+                                <form-single name="ChangeReturnPolicy_${policy.returnPolicyId}" transition="savePolicy" map="policy"
+                                        extends="component://mr-boss/screen/CustomerService/Settings/ReturnPolicies.xml#ReturnPolicyEditForm"/>
+                            </container-dialog>
+                            <link url="endPolicy" text="End" link-type="hidden-form" parameter-map="{returnPolicyId:policy.returnPolicyId,
+                                    organizationPartyId:cfg.organizationPartyId}" condition="cfg.canEdit &amp;&amp; policy.state == 'In effect'"
+                                    confirmation="End this policy now? Returns already evaluated keep it."/>
+                        </container>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section-iterate>
+        <label type="p" style="m-muted" text="No return policy: every return goes to manual review." condition="!policies.length"/>
+        <container-box>
+            <box-header title="Return reasons"/>
+            <box-body-nopad>
+                <form-list name="ReturnReasonRows" list="reasons" skip-form="true" paginate="false">
+                    <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                    <field name="customerLabel"><default-field title="Customer label"><display/></default-field></field>
+                    <field name="evidenceRequired"><default-field title="Evidence"><display/></default-field></field>
+                    <field name="suggestedText"><default-field title="Suggested remedy"><display/></default-field></field>
+                    <field name="periodText"><default-field title="From"><display/></default-field></field>
+                </form-list>
+                <label type="p" style="q-pa-sm m-muted" text="Every return reason is offered with its own name." condition="!reasons.length"/>
+            </box-body-nopad>
+        </container-box>
+        <container-dialog id="SaveReturnReason" button-text="Set a reason" type="default" title="A return reason" width="560"
+                condition="cfg.canEdit">
+            <form-single name="SaveReturnReasonForm" transition="saveReason"
+                    map="{organizationPartyId:cfg.organizationPartyId, customerVisible:'Y'}">
+                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                <field name="returnReasonEnumId">
+                    <default-field title="Reason">
+                        <drop-down><list-options list="cfg.reasonOptions" key="${value}" text="${label}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="customerLabel"><default-field title="Customer label"><text-line size="40"/></default-field></field>
+                <field name="customerVisible">
+                    <default-field title=""><check><option key="Y" text="Customers may choose it"/></check></default-field>
+                </field>
+                <field name="evidenceRequired">
+                    <default-field title=""><check><option key="Y" text="Evidence required"/></check></default-field>
+                </field>
+                <field name="inspectionRequired">
+                    <default-field title=""><check><option key="Y" text="Inspected on receipt"/></check></default-field>
+                </field>
+                <field name="suggestedResponseEnumId">
+                    <default-field title="Suggested remedy">
+                        <drop-down allow-empty="true"><list-options list="cfg.responseOptions" key="${value}" text="${label}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="end">
+                    <default-field title=""><check><option key="Y" text="End this reason's row"/></check></default-field>
+                </field>
+                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+            </form-single>
+        </container-dialog>
+        <container-box>
+            <box-header title="Policy preview"/>
+            <box-body>
+                <form-single name="ReturnPolicyPreview" transition="previewPolicy"
+                        map="{organizationPartyId:cfg.organizationPartyId, previewOrderId:previewOrderId}">
+                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                    <field name="previewOrderId"><default-field title="Order"><text-line size="20"/></default-field></field>
+                    <field name="submitButton"><default-field title=""><submit text="Preview"/></default-field></field>
+                </form-single>
+                <section name="ReturnPolicyPreviewResult" condition="preview">
+                    <widgets>
+                        <label type="strong" text="${preview.outcomeText}"/>
+                        <label type="p" style="text-caption m-muted" text="${['authorization valid until ' + preview.expireText,
+                                preview.feeText, preview.approvalText].join(' · ')}"/>
+                        <form-list name="ReturnPolicyPreviewLines" list="preview.lineRows" skip-form="true" paginate="false">
+                            <field name="productText"><default-field title="Product"><display/></default-field></field>
+                            <field name="policyName"><default-field title="Policy"><display/></default-field></field>
+                            <field name="shippedQuantity" align="right"><default-field title="Shipped"><display/></default-field></field>
+                            <field name="returnedQuantity" align="right"><default-field title="Returned"><display/></default-field></field>
+                            <field name="eligibleQuantity" align="right"><default-field title="Left"><display/></default-field></field>
+                            <field name="windowEndText"><default-field title="Window ends"><display/></default-field></field>
+                            <field name="exceptionText"><default-field title="Exception"><display/></default-field></field>
+                        </form-list>
+                    </widgets>
+                </section>
+            </box-body>
+        </container-box>
+        <!-- ReturnPolicyEdit, the form a new policy and a change extend (never shown itself) -->
+        <section name="ReturnPolicyEditBase" condition="false">
+            <widgets>
+                <form-single name="ReturnPolicyEditForm" transition="savePolicy">
+                    <field name="returnPolicyId"><default-field><hidden/></default-field></field>
+                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                    <field name="policyName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                    <field name="productStoreId">
+                        <default-field title="Store" tooltip="Empty: every store">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="false" parameter-map="{choice:'returnStores',
+                                        organizationPartyId:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="partyClassificationId">
+                        <default-field title="Customer group" tooltip="Empty: every customer">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="false" parameter-map="{choice:'returnCustomerGroups'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="productCategoryId">
+                        <default-field title="Product category" tooltip="Empty: every product">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'returnCategories'}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="windowDays"><default-field title="Window (days)"><text-line size="5"/></default-field></field>
+                    <field name="windowFromEnumId">
+                        <default-field title="From">
+                            <drop-down allow-empty="true"><list-options list="cfg.windowOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="authorizationDays"><default-field title="Authorization valid (days)"><text-line size="5"/></default-field></field>
+                    <field name="allowedReasonEnumIds">
+                        <default-field title="Reasons allowed" tooltip="Empty: every reason">
+                            <drop-down allow-multiple="true"><list-options list="cfg.reasonOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="allowedResponseEnumIds">
+                        <default-field title="Remedies allowed" tooltip="Empty: credit, refund and replacement">
+                            <drop-down allow-multiple="true"><list-options list="cfg.responseOptions" key="${value}" text="${label}"/></drop-down>
+                        </default-field>
+                    </field>
+                    <field name="destinationFacilityId">
+                        <default-field title="Goods go to">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="false" parameter-map="{choice:'returnFacilities',
+                                        organizationPartyId:organizationPartyId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="selfServiceEnabled">
+                        <default-field title=""><check><option key="Y" text="Customers may request returns themselves"/></check></default-field>
+                    </field>
+                    <field name="proofRequired">
+                        <default-field title=""><check><option key="Y" text="Proof of purchase or condition required"/></check></default-field>
+                    </field>
+                    <field name="receiptlessEligible">
+                        <default-field title=""><check><option key="Y" text="A credit without receipt may be given"/></check></default-field>
+                    </field>
+                    <field name="instantCredit">
+                        <default-field title=""><check><option key="Y" text="Instant credit (needs finance rights at authorization)"/></check></default-field>
+                    </field>
+                    <field name="advanceReplacement">
+                        <default-field title=""><check><option key="Y" text="Advance replacement (needs finance rights at authorization)"/></check></default-field>
+                    </field>
+                    <field name="restockFeePercent"><default-field title="Restocking fee %"><text-line size="5"/></default-field></field>
+                    <field name="restockFeeCap"><default-field title="Fee cap"><text-line size="8"/></default-field></field>
+                    <field name="instructions"><default-field title="Customer instructions"><text-area rows="3"/></default-field></field>
+                    <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                    <field name="draft">
+                        <default-field title=""><check><option key="Y" text="Keep as a draft"/></check></default-field>
+                    </field>
+                    <field name="changeReason"><default-field title="Why"><text-line size="40"/></default-field></field>
+                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

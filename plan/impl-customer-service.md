@@ -296,7 +296,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Channels | Mantle, BOSS | ChannelRouting, ChannelSessions | built Nov 5, 2026 |
 | P7 Case templates | mr-moqui, Mantle, BOSS | CaseTemplates, NewCase's template step | built Nov 5, 2026 |
 | P8 Merge, split and closing | Mantle, BOSS | MergeCases, SplitCase | — |
-| P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | — |
+| P9 Returns | Mantle, BOSS | Returns, NewReturn, ReturnDetail, QualityInspection, ReturnPolicies, Approvals | built Nov 5, 2026 |
 | P10 Order changes | Mantle, BOSS | OrderChanges, OrderChangeDetail | — |
 | P11 Warranty | Mantle, BOSS | WarrantyClaims, WarrantyAssessment, Customer360's Delivered items | — |
 | P12 Knowledge | Mantle, BOSS | Knowledge, ArticleFeedback, CaseToArticle, KnowledgeSources | built Nov 5, 2026 |
@@ -1773,6 +1773,98 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
   - two drafts cannot together return more than was shipped; with no policy the return goes to manual review;
   - an agent with the A, R, W and F groups does all of this from Customer Service without the Warehouse or Accounting
     root; an agent alone sees disposition and credit read only.
+
+**Built Nov 5 (P9).**
+- Mantle entities (`entity/ReturnPolicyEntities.xml`, new): `mantle.order.return.ReturnPolicy` (dated, key fields audit-logged:
+  store, customer group (PartyClassification), product category, window days from shipment or delivery (`ReturnWindowFrom`),
+  authorization days, self-service, reasons and remedies allowed, proof, destination facility, the exception group,
+  receiptless, advance replacement, instant credit, restocking fee percent and cap, instructions, `previousPolicyId`),
+  `ReturnReasonPolicy` (dated rows over the ReturnReason enums: customer label, customer-visible, evidence, suggested remedy,
+  inspection), ReturnHeader's `customerReference`, `authorizationExpireDate`, `returnPolicyId`, `policyEvaluatedDate` and
+  `manualReview` (audit-logged), the dated `ReturnParty` (Assignee, F24) and `ReturnAuthorizationDecision` (PurchaseApprovalDecision's
+  fields, F45; `ReturnDecision` enums RdAuthorized, RdExceptionRequested/Approved/Refused, RdCancelled, RdRemainderClosed).
+- Mantle services (`service/mantle/order/ReturnPolicyServices.xml` over `ReturnPolicies.js`, new): `find#Policies`, `save#Policy`
+  (RETURN_POLICY_EDIT; EQUAL_RANK_OVERLAP, STORE_UNAVAILABLE...), `save#ReturnReason`, `evaluate#ReturnPolicy` (per line: ordered,
+  shipped, invoiced, on other returns not cancelled, drafts included, eligible; the policy by rank category > customer group >
+  store > default; window, reason, remedy and unreferenced exceptions; the expiry, fee, instructions; outcome Eligible,
+  ManualReview, ExceptionRequired, NotEligible), `save#ReturnItem` (F21: under locks on the return and the source order line;
+  BOSS writes lines only through it), `assign#Return`, `submit#CustomerReturn` (operation key; case linked by
+  `link#RequestRecord` on ReturnHeader, F47; the policy kept on the return; the label's carrier and service; requested unless a
+  draft; the exception sent), `authorize#Return` (RETURN_AUTHORIZE; STALE_REVISION, EXCEPTION_REQUIRED, REASON_REQUIRED for
+  manual review; responseImmediate N unless asked, allowed by the policy and RECEIVABLE_EDIT, PAYMENT_EDIT for a refund; the
+  expiry; `approve#Return`, no settlement; the decision; the RMA PDF as ReturnContent RtcntAuthorization, a render failure
+  logged; ReturnDecision to the assignee), `request#ReturnException`, `decide#ReturnException` (RETURN_EXCEPTION_APPROVE) with the
+  topic handlers `approve#ReturnException`/`refuse#ReturnException` (recordEntityName, recordId, message, notificationMessageId,
+  reason; the message's revision, REVISION_REQUIRED with none, STALE_REVISION, F46), `cancel#CustomerReturn` (RETURN_HAS_EFFECT),
+  `close#ReturnRemainder`, `find#ServiceReturns` (views, the credited amount for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW
+  only), `find#ReturnApprovals`, `get#ReturnState`, `get#ReturnAuthorizationPrint` and `send#ReturnAuthorization`
+  (`template/order/ReturnAuthorization.print.html.fancy`; OrderConfirmations.js's checked recipients and sender, `senderAccount`
+  now exported). Mantle changes: `cancel#Return` cancels its return shipment when nothing was received on it and it carries only
+  that return (F22); `add#ReturnToShipment` no longer sets the non-field `ReturnItemBilling.shipmentId` (F23; Warehouse P14 had not
+  fixed it); `ExternalAccess.js` ReturnHeader kind (scope ReturnRma, RETURN_AUTHORIZE or SUPPORT_CASE_EDIT, vendor and customer,
+  the Support app's CustomerReturn page, F61); `MantleSetupData.xml` the `ReturnExceptionApproval` (approve/refuse handlers,
+  refuse reason required) and `ReturnDecision` topics.
+- BOSS (`service/ironstone/customerservice/ReturnServices.xml` over `Returns.js`, new): `find#Returns`, `apply#ReturnBatch` (Done,
+  Forbidden, Refused with Mantle's code, Failed per return, each in its own transaction), `prepare#Return`, `get#ReturnDetail`,
+  `get#InspectionDetail`, `check#ReturnInspection`, `get#AwaitingReturns`, `get#CustomerReturns`, `get#ReturnPolicySettings`.
+  `CustomerService.js`: the `return` record kind (ReturnDetail), returns in the palette, the choices returnReasons,
+  returnResponses, returnOrders, returnAssignees, returnStores, returnCategories, returnCustomerGroups, returnFacilities, the P9
+  linkPaths, and **`approvalTopics`, the one list of Approvals' topics** (ReturnExceptionApproval and OrderChangeApproval;
+  get#SharedContext returns it; Approvals and Home read it, so P10 adds nothing there). Orders.js exports its recipient and sender
+  options.
+- Screens: `CustomerService/Returns.xml` a menu group with `Returns/Returns` (views, find, list, batch Authorize and Cancel),
+  `Returns/NewReturn` (source, returnable lines as a multi form, the request with the policy preview, the label's carrier;
+  submit#CustomerReturn), `Returns/ReturnAuthorization` (the RMA as html-print) and the mounts ReturnDetail
+  (`template/CustomerServiceReturnDetail.xml`, Shared/ReturnDetail's Customer Service branch: Authorize, Request and Decide
+  exception, Issue return label with weight and unit, Close remainder, Send and Print RMA, Assign, Cancel, line changes, Receive for
+  W through `receive#ReturnItems`, Settle for F through `settle#Return`, shipment and label, inspections, settlement, decisions,
+  cases, Files, Conversation) and QualityInspection (Shared/QualityInspection's Customer Service branch; WarehouseInspectionParts'
+  inspect and dispose transitions check `check#ReturnInspection` here, F-P9-3); `Settings/ReturnPolicies` (list, New policy and
+  Change from a date, End, reasons, preview); `Approvals.xml` the Commons Notifications mount; Home's Returns awaiting approval,
+  Approvals waiting and Request return; CaseDetail's Request RMA (More); `Shared/Customer360/ServiceReturns` (Returns tab);
+  OrderDetail's Create return. Shell: quick create `customerServiceReturn` (Returns area's groups), the two topics, `g r`.
+  BossSetupData: the topics' links to ReturnDetail. Demo: Retail's policy `BOSS_CS_RPOL_RETAIL` (a year from delivery, defect,
+  damage or wrong item; did-not-want needs an exception) and two reason rows.
+- Specs: Mantle `test/order/ReturnPolicies` (8 features, about 2.5 s); BOSS `CustomerServiceReturns` (5 features, about 2 s: the
+  scope, the reader refused, NewReturn and a return under Retail's policy, the batch with Forbidden, ReturnDetail's audience, the
+  one qvt render of Returns, NewReturn and ReturnDetail; its returns cancelled at the end) and `CustomerServiceAccess` (+1 feature;
+  the menu feature's quick creates and topics). Acceptance `CustomerServiceReturnsWalk` (the usable-when, 5 features: case to RMA,
+  authorize with no credit, the test carrier's label and its retry, two boxes with a dock rejection, F credits only what was
+  received and a second credit refused, release and scrap, the agent alone read only, two drafts over the shipped quantity, a
+  receiptless credit refused without RETURN_CREDIT_APPROVE), `CustomerServiceFoundationWalk` (Request return in quick create; the
+  client refused the return services), `AppStructure` (the P9 routes and mounts; placeholders 46).
+- Tests run (all pass): Mantle ReturnPolicies, ReturnToResponseBasicFlow, ShipmentReturnMisc, OrderToCashBasicFlow,
+  OrderProcureToPayBasicFlow, AccountingReturns, PurchaseReturns, SupportChannels, AccountingPortals (117 features); BOSS
+  CustomerServiceReturns, CustomerServiceAccess, CustomerServiceOrders, CustomerServiceCases, WarehouseReturns,
+  WarehouseInspections, PurchasingReturns, AccountingAccess, WarehouseAccess, PurchasingAccess, Notifications, ProjectsAccess,
+  QuickCreate, AccountingReceivables; acceptance CustomerServiceReturnsWalk, CustomerServiceFoundationWalk, AppStructure. `moqui
+  lint --screens`: 136 sites, as master. Mantle's WarehouseReturns spec was not rerun (no Warehouse Mantle service changed).
+- Not done: ReturnAnalysis (P14); the credit, refund or replacement notice through send#Invoice (pending Accounting); the RMA mail
+  takes a link but issues no Support capability itself (P15 builds the page); NewReturn's reasons show the enum names, not the
+  organization's reason labels; SettingsHome has no Returns readiness row.
+- Findings (provisional):
+  - **F-P9-1** ReturnHeader has no revision field; a return's revision is the latest `lastUpdatedStamp` of its header, items and
+    ReturnParty rows (ReturnPolicies.js `revisionOf`), which every path (Warehouse's receipt, settlement) moves.
+  - **F-P9-2** ORG_ZIZI_RETAIL settles returns at Mantle's default (`returnSettlementRequired` N, which Mantle's return flows
+    need), so Warehouse's `receive#ReturnItems` refuses its returns (RETURN_SETTLEMENT_OFF): ReturnDetail offers Receive only where
+    the organization settles separately and says Mantle receives at delivery otherwise; the walk turns the flag on and restores it.
+    For the lead: whether the Customer Service demo needs its own organization with the flag (as Warehouse's BOSS_WH_RETURNS).
+  - **F-P9-3** Warehouse's inspection transitions checked Warehouse's scope, refusing a borrowed W without the Warehouse root
+    (WAREHOUSE_UNAVAILABLE); WarehouseInspectionParts gains a Customer Service branch (`check#ReturnInspection`). Verification
+    stays the quality verifier's (a different user, Warehouse); the inspection drop-downs are still Warehouse's choices.
+  - **F-P9-4** A customer return shipment has no store and comes from the customer, so `request#ReturnLabel` finds no gateway
+    unless its route segment names one (no organization default is read), and the test carrier needs a weight and unit
+    (WEIGHT_REQUIRED): NewReturn takes the label's carrier and service, Issue return label the weight and unit, and the walk sets
+    TEST_SHIPPING on the segment. For Warehouse (design-warehouse ReturnReceipt): the vendor's default gateway for a return.
+  - **F-P9-5** With no policy the return is manual review: authorization needs a reason (recorded on the decision), not an
+    exception; an exception (outside the window, a reason or remedy not allowed, goods with no order line) needs a manager's
+    approval at the return's current revision first. Goods with no order line are entered with a description of the goods and
+    ownership and always need the exception.
+  - **F-P9-6** Under the default flag an immediate response is processed by Mantle at approval; in a fresh organization
+    `process#ReturnItemResponses` failed making the credit memo (Incoming to Approved), so the Mantle spec's organization settles
+    separately. Mantle's own behaviour, unchanged.
+  - **F-P9-7** F22 changes an existing Mantle service's behaviour (not a refusal): `cancel#Return` now cancels its unreceived
+    return shipment; the compatibility specs pass.
 
 ### P10 — Order changes
 

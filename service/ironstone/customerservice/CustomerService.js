@@ -240,6 +240,11 @@ function customerFind(userScope) {
     )
 }
 
+// The decision topics Customer Service's Approvals lists (design §5 Approvals, F14): the one list Approvals and Home's
+// Approvals waiting read (sharedContext's approvalTopics); a phase that seeds a decision topic adds it here (P10:
+// OrderChangeApproval).
+const approvalTopics = ["ReturnExceptionApproval", "OrderChangeApproval"]
+
 // ===== shared context =====
 // The Customer Service routes other screens link to (sharedLinks), by path under the root; each phase adds its screens.
 const linkPaths = [
@@ -290,7 +295,15 @@ const linkPaths = [
     "Cases/ChannelSessions",
     "Settings/ChannelRouting",
     // P5: the saved replies (CaseDetail's Saved reply links them)
-    "Settings/SavedReplies"
+    "Settings/SavedReplies",
+    // P9: the returns, the shared return and inspection mounts, the RMA print, the return policies and the approvals
+    "Returns/Returns",
+    "Returns/NewReturn",
+    "Returns/ReturnDetail",
+    "Returns/QualityInspection",
+    "Returns/ReturnAuthorization",
+    "Settings/ReturnPolicies",
+    "Approvals/Notifications"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
@@ -305,6 +318,7 @@ function sharedContext(p) {
         teamIds: userScope.teamIds,
         managedTeamIds: userScope.managedTeamIds,
         appRoot: "CustomerService",
+        approvalTopics,
         linkBase: "//CustomerService",
         webBase: "/qapps/CustomerService",
         sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//CustomerService/" + path]))
@@ -384,6 +398,19 @@ function readCase(requestId) {
     }
 }
 
+// P9: a customer return: its vendor an internal organization (the owner), its customer not internal; a supplier return is
+// Purchasing's and a transfer return none of Customer Service's.
+function readReturn(returnId) {
+    const header = one("mantle.order.return.ReturnHeader", {returnId})
+    if (!header || !isInternal(header.vendorPartyId) || !header.customerPartyId || isInternal(header.customerPartyId)) return null
+    return {
+        owners: [header.vendorPartyId],
+        customers: [header.customerPartyId],
+        label: "Return " + (header.displayId || returnId) + (header.customerReference ? " · " + header.customerReference : ""),
+        detail: [partyName(header.customerPartyId), statusText(header.statusId)].filter(Boolean).join(" · ")
+    }
+}
+
 // Each kind a Customer Service screen, mount, palette or record link may be given: its name, icon, the screen that opens it
 // (destination, the path and id parameter under the root; null until its phase builds it, and then the record opens Home's
 // lookup) and its read (a record answers its owners (service organizations) and customers, a label and a detail, or null
@@ -399,7 +426,9 @@ const recordKinds = {
         destination: "Orders/ShipmentDetail?shipmentId=",
         read: readShipment
     },
-    invoice: {name: "Invoice", icon: "sym_o_request_quote", destination: "Orders/InvoiceDetail?invoiceId=", read: readInvoice}
+    invoice: {name: "Invoice", icon: "sym_o_request_quote", destination: "Orders/InvoiceDetail?invoiceId=", read: readInvoice},
+    // P9: a customer return (RMA)
+    return: {name: "Return", icon: "sym_o_assignment_return", destination: "Returns/ReturnDetail?returnId=", read: readReturn}
 }
 // The record kind of an entity a case or another record links (CaseDetail's linked records, P3).
 const entityKinds = {
@@ -407,7 +436,8 @@ const entityKinds = {
     "mantle.party.Party": "customer",
     "mantle.request.Request": "case",
     "mantle.shipment.Shipment": "shipment",
-    "mantle.account.invoice.Invoice": "invoice"
+    "mantle.account.invoice.Invoice": "invoice",
+    "mantle.order.return.ReturnHeader": "return"
 }
 
 // A record the user may work with: every organization it names is one of theirs and every customer it names is one they
@@ -565,6 +595,17 @@ const searchFinds = [
                 .orderBy("-requestDate")
         },
         idField: "requestId"
+    },
+    // P9: the customer returns of the user's organizations by id, RMA number or the customer's reference
+    {
+        kind: "return",
+        query: (userScope, condition) =>
+            find("mantle.order.return.ReturnHeader")
+                .condition("vendorPartyId", "in", vendorIds(userScope))
+                .condition(condition(["returnId", "displayId", "customerReference"]))
+                .selectField("returnId")
+                .orderBy("-entryDate"),
+        idField: "returnId"
     }
 ]
 function search(p) {
@@ -824,6 +865,63 @@ choiceSources.cases = (userScope, term, selected) => {
         }
     return options
 }
+// P9: the return drop-downs: reasons and remedies (with the organization's customer labels), a customer's sales orders a
+// return may come from (approved, sent or completed, newest first), the staff a return may be assigned to (the user's teams'
+// members and the user), and the return policy conditions (the organization's stores, customer groups, categories, groups)
+choiceSources.returnReasons = (userScope, term) =>
+    rows("moqui.basic.Enumeration", {enumTypeId: "ReturnReason"})
+        .sort((a, b) => (a.sequenceNum ?? 99) - (b.sequenceNum ?? 99))
+        .map(row => ({value: row.enumId, label: String(row.description || row.enumId).replace(/^\d+ /, "")}))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+choiceSources.returnResponses = () =>
+    ["RrspCredit", "RrspRefund", "RrspReplace"].map(enumId => ({value: enumId, label: enumText(enumId)}))
+choiceSources.returnOrders = (userScope, term, selected, p) => {
+    if (!p.customerPartyId || !customerOf(userScope, p.customerPartyId)) return []
+    const options = []
+    for (const row of find("mantle.order.OrderHeaderAndPart")
+        .condition("customerPartyId", p.customerPartyId)
+        .condition("vendorPartyId", "in", vendorIds(userScope))
+        .condition("partStatusId", "in", ["OrderApproved", "OrderSent", "OrderCompleted"])
+        .selectField("orderId,orderName,placedDate")
+        .orderBy("-placedDate")
+        .limit(choiceLimit)
+        .list()) {
+        const label = row.orderId + (row.orderName ? " · " + row.orderName : "")
+        if ((!term || label.toLowerCase().includes(term.toLowerCase())) && !options.some(option => option.value === row.orderId))
+            options.push({value: row.orderId, label})
+    }
+    return options
+}
+choiceSources.returnAssignees = (userScope, term, selected) => {
+    const ids = new Set(userScope.partyId ? [userScope.partyId] : [])
+    for (const teamId of userScope.teamIds)
+        for (const row of rows("mantle.party.PartyRelationship", {toPartyId: teamId, relationshipTypeEnumId: "PrtServiceTeam"}))
+            if (lib.active(row)) ids.add(row.fromPartyId)
+    if (selected) ids.add(selected)
+    return Array.from(ids)
+        .map(partyId => ({value: partyId, label: partyName(partyId)}))
+        .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+        .sort((a, b) => a.label.localeCompare(b.label))
+}
+choiceSources.returnStores = (userScope, term, selected, p) =>
+    rows("mantle.product.store.ProductStore", {organizationPartyId: p.organizationPartyId || "_NA_"})
+        .filter(row => vendorIds(userScope).includes(row.organizationPartyId))
+        .map(row => ({value: row.productStoreId, label: row.storeName || row.productStoreId}))
+choiceSources.returnCategories = (userScope, term) => {
+    const factory = ec.entity.conditionFactory
+    let query = find("mantle.product.category.ProductCategory").orderBy("categoryName").limit(choiceLimit)
+    if (term) query = query.condition(factory.makeCondition("categoryName", "like", likeText(term)).ignoreCase())
+    return Array.from(query.list()).map(row => ({value: row.productCategoryId, label: row.categoryName || row.productCategoryId}))
+}
+choiceSources.returnCustomerGroups = () =>
+    Array.from(find("mantle.party.PartyClassification").orderBy("description").limit(100).list()).map(row => ({
+        value: row.partyClassificationId,
+        label: row.description || row.partyClassificationId
+    }))
+choiceSources.returnFacilities = (userScope, term, selected, p) =>
+    rows("mantle.facility.Facility", {ownerPartyId: p.organizationPartyId || "_NA_"})
+        .filter(row => vendorIds(userScope).includes(row.ownerPartyId))
+        .map(row => ({value: row.facilityId, label: row.facilityName || row.facilityId}))
 const assignedCaseIds = userScope =>
     userScope.partyId
         ? rows("mantle.request.RequestParty", {partyId: userScope.partyId, roleTypeId: "Assignee"})
