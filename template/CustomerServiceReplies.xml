@@ -80,6 +80,11 @@ along with this software (see the LICENSE.md file). If not, see
             <widgets>
                 <container-box>
                     <box-header title="Reply with a saved reply"/>
+                    <!-- the agent's own replies are kept on SavedReplies, the one Settings page they open (F-P5-2) -->
+                    <box-toolbar>
+                        <link url="${sharedLinks['Settings/SavedReplies']}" text="Saved replies" icon="sym_o_text_snippet"
+                                link-type="anchor"/>
+                    </box-toolbar>
                     <box-body>
                         <form-single name="CaseReplyPick" transition="previewCaseReply" map="{requestId:requestId, tab:'reply', replyBlockId:replyBlockId}">
                             <field name="requestId"><default-field><hidden/></default-field></field>

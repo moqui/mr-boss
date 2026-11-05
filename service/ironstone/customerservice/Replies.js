@@ -61,14 +61,27 @@ function scopeOf(block) {
         scopeText: one("moqui.security.UserGroup", {userGroupId: block.userGroupId})?.description || block.userGroupId
     }
 }
-// The groups the user may share a reply with: their teams' groups and their organizations' (they are in them).
-function shareOptions() {
+// The groups the user may share a reply with, of those they are in: a team's when they manage the team (its Manager) or
+// are a service manager, an organization's when they are a service manager; an agent's replies are their own.
+function shareOptions(userScope) {
     const groupIds = myGroupIds()
+    const manager = !!(userScope.capabilities.caseManage || userScope.capabilities.policyEdit)
+    const me = ec.user.userAccount?.partyId || "_NA_"
+    const manages = teamPartyId =>
+        rows("mantle.party.PartyRelationship", {
+            fromPartyId: me,
+            toPartyId: teamPartyId,
+            relationshipTypeEnumId: "PrtServiceTeam",
+            fromRoleTypeId: "Manager"
+        }).some(row => lib.active(row))
     const options = [{value: "", label: L("Just me")}]
-    for (const userGroupId of groupIds.filter(id => String(id).startsWith(teamGroupPrefix)).sort())
-        options.push({value: userGroupId, label: cs.partyName(userGroupId.substring(teamGroupPrefix.length))})
-    for (const userGroupId of groupIds.filter(id => String(id).startsWith(organizationGroupPrefix)).sort())
-        options.push({value: userGroupId, label: everyAgentOf(userGroupId)})
+    for (const userGroupId of groupIds.filter(id => String(id).startsWith(teamGroupPrefix)).sort()) {
+        const teamPartyId = userGroupId.substring(teamGroupPrefix.length)
+        if (manager || manages(teamPartyId)) options.push({value: userGroupId, label: cs.partyName(teamPartyId)})
+    }
+    if (manager)
+        for (const userGroupId of groupIds.filter(id => String(id).startsWith(organizationGroupPrefix)).sort())
+            options.push({value: userGroupId, label: everyAgentOf(userGroupId)})
     return options
 }
 
@@ -142,7 +155,7 @@ function findReplies(p) {
     }
     return {
         replies: list,
-        shareOptions: shareOptions(),
+        shareOptions: shareOptions(userScope),
         variableNames: replies().variableNames,
         organizationOptions: organizationIds.map(partyId => ({value: partyId, label: cs.partyName(partyId)}))
     }
@@ -201,7 +214,7 @@ function saveReply(p) {
     const organizationPartyId = text(p.organizationPartyId)
     if (organizationPartyId && !cs.vendorIds(userScope).includes(organizationPartyId))
         denied("RECORD_UNAVAILABLE", "Organization " + organizationPartyId + " is not available")
-    if (p.userGroupId && !shareOptions().some(option => option.value === p.userGroupId))
+    if (p.userGroupId && !shareOptions(userScope).some(option => option.value === p.userGroupId))
         denied("GROUP_UNAVAILABLE", "You may not share a reply with " + p.userGroupId)
     let emailTextBlockId = existing?.emailTextBlockId || null
     const textGiven = p.title != null || p.bodyHtml != null || !existing

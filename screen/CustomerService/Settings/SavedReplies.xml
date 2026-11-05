@@ -20,7 +20,9 @@ along with this software (see the LICENSE.md file). If not, see
     ReplyServices.save#SavedReplyAction; only its owner changes it); and ReplyPreview, the reply on a case as it would go
     (Mantle's mantle.request.SupportCaseServices.preview#SavedReply: the case's values put in, an unsupported or unresolved
     variable named as an error, the recipient and each action's check), applied from the case (CaseDetail's Saved reply).
-    Comms' TextBlocks keeps listing the same blocks with the user's other ones. -->
+    Comms' TextBlocks keeps listing the same blocks with the user's other ones. The agent opens this page too, the one page of
+    Settings they do (BossSetupData BOSS_CS_SAVED_REPLIES, F-P5-2; CaseDetail's Saved reply links it), for their own replies:
+    sharing with a team is its manager's, with every service agent of the organization a service manager's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Saved replies" default-menu-index="9">
     <parameter name="emailTextBlockId"/>

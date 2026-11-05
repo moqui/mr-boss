@@ -285,7 +285,9 @@ const linkPaths = [
     "Availability/InventoryAvailability",
     "Availability/StockAtDate",
     "Availability/Product360",
-    "Availability/PriceExplain"
+    "Availability/PriceExplain",
+    // P5: the saved replies (CaseDetail's Saved reply links them)
+    "Settings/SavedReplies"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "CustomerService")
