@@ -21,6 +21,12 @@ const R = "mantle.request.RequestServices.",
 const dayMs = 86400000
 const at = days => new Date(Number(ec.user.nowTimestamp) + days * dayMs)
 const state = {name: "Walk performance supplies " + Date.now()}
+// Brightline's billed spend as Spend shows it to the buyer
+const billedSpend = () =>
+    asUser(
+        users.buyer,
+        () => invoke(RS + "get#PurchaseSpend", {supplierPartyId: ids.supplierId, groupBy: "supplier"}).answer.spendRows[0]?.billed
+    ) ?? "0"
 // a transition of a Purchasing screen as the user posts it: its status and errors
 function post(user, path, parameters) {
     return asUser(user, () => {
@@ -331,6 +337,8 @@ feature("a purchase request followed to its order, receipt and bill shows in the
             ec.artifactExecution.disableAuthz()
             receive(state.orderId, one("mantle.order.OrderPart", {orderId: state.orderId}).orderPartSeqId, 10)
         })
+        // Brightline's billed spend before the walk's bill: the earlier specs in a shared database bill it too
+        state.billedBefore = billedSpend()
         state.invoiceId = asUser(
             users.buyer,
             () =>
@@ -439,9 +447,9 @@ feature("Spend shows committed and billed as separate measures, withheld from a 
     then(r) {
         r.buyer.spendRows.length == 1
         // the walk's five orders of 100.00 and the request's 110.00 committed (with any other order of the period); the one
-        // bill of 110.00 billed: two measures, never one total
+        // bill of 110.00 billed (over what was billed before it): two measures, never one total
         toDecimal(r.buyer.spendRows[0].committed).compare(toDecimal("610.00")) >= 0
-        r.buyer.spendRows[0].billed == "110.00"
+        toDecimal(r.buyer.spendRows[0].billed).subtract(toDecimal(state.billedBefore)).compare(toDecimal("110.00")) == 0
         r.buyer.spendRows[0].total == null
         r.reader.spendRows[0].committedText == "Withheld"
         r.reader.spendRows[0].billedText == "Withheld"
