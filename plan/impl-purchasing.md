@@ -3393,9 +3393,13 @@ Ten inventory and design Impl entries spot-checked against the screens and servi
   post#AcctgTrans ran on records that did not exist, refused as "not available", which the walk counted as a refusal.
   The hold is now a real one on Retail's bill (left unreleased), post#AcctgTrans is left out (its authority is the posting
   guard's REVIEW_REQUIRED), and only a permission refusal counts. The universal search check (F-P17-3, no index) is removed.
-Left for the lead: a signed-in contact's order page (P16 `orderView`) shows the current lines of an applied revision that
-waits for its approval, before it is sent (a token link of the earlier revision answers SupersededRevision); the
-drop-down checks of the walk have no own-side control.
+- R4 (medium, P16 leak, at the lead's request) a signed-in contact's order page (`orderView`) showed the current lines of
+  a revision the buyer applied that still waited for its approval, before it was sent. While such a revision waits, the
+  page reads the order as of its last send to the supplier before the Change hold (else just before the hold), through
+  PurchaseOrderDocuments' `orderAt` (now exported): its revision, terms, lines and total then, a line added since left
+  out, Acknowledge not offered; the home list and a token link's superseded check use the same sent revision.
+  SupplierPortal spec: a held order with a raised line and an added one shows revision 2, line 01 at 10 and no new line.
+Left for the lead: the drop-down checks of the walk have no own-side control.
 
 ## 4. Decisions
 
