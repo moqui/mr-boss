@@ -1961,6 +1961,38 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
   - **F-P10-10** Approvals (P9's screen) should pass the OrderChangeApproval topic; until then the notice is decided from
     Notifications or OrderChangeDetail.
 
+**Review Nov 5 (P10).** Checked both repos' diffs against this section, §2, design §4, AGENTS.md and Practices-App-Dev:
+apply's atomicity (every named failure is a `denied` or a nested service error of the one apply transaction; the checks
+come before the first write, and the writes after them, the reopen, the Change hold, the lines, the pick exception, the
+release, the substitute's shipment and the PDF, roll back together); the reopen split (`reopen#ShipmentPackage` keeps its
+operation, SHIPMENT_PACK, user facility, confirmation and reason checks and writes as before; the internal
+`reopen#ShipmentPackageForChange` is allow-remote false, keeps the confirmation, reason, state, package and
+INVOICE_FINALIZED checks, scopes the shipment to the order's organization, and neither it nor apply calls
+release#ShipmentDraftInvoice or refund#OrderPayment); F-P10-4's re-approval (a reopen's Completed to Approved and every
+Change hold's release run Mantle's OrderApproved rules again, as a Credit hold's release does: the store's approval email is
+not sent twice (send#OrderStoreEmail skips a type already sent), subscriptions fulfil an item once, reserve#AssetsForOrder
+reserves only the unreserved remainder, the drop-ship rule answers a line already on a purchase order; the high-priority
+notice repeats and an EDI order records its next 855, which an applied change warrants); F-P10-2 and F55 (the flag on
+ORG_ZIZI_CORP merges into its demo preference and is read through find#PartyAcctgPreference, so Retail keeps the
+inherited kitCostFromComponents; no Mantle or BOSS spec asserts a Ziziwork sales order's revision moving on a note, file
+or status); permissions by kind, FORBIDDEN for the commercial kinds, the Credit hold kept, the topic handlers at the
+message's revision, the customer's cancel only under customerImmediateCancel on an order not approved with nothing
+reserved, picked, shipped or invoiced; the walk restores salesInvoiceFinalizedAtShip and customerImmediateCancel in
+`finally`.
+- **R1 (high, Mantle)** A pick locks its shipment, its line and the asset, never the order, so apply's checks "under the
+  order's lock" did not serialize with a pick; and apply held the order while its reopen waited on the shipment, the
+  reverse of Warehouse's lock order (F294: the shipment, then the order parts and header), a deadlock against a pack or
+  reopen of the same order. `orderOf` with a lock now locks the order's shipments (by its ShipmentItemSources, in id order)
+  before the order, so a concurrent pick, pack or reopen either commits before the checks, which then answer
+  STOCK_CHANGED, or waits for the change.
+- Left for the lead: F-P10-7 is the framework's design, not a P10 bug: `HostFind`'s chain methods
+  (`crates/moqui-core/src/script/runtime/entities.rs`, `take_find`) take the inner find and return a new object, so
+  Java-style `q.condition(...); q.list()` fails loudly ("entity find was already used") where Java's mutable EntityFind
+  works; returning the same object with the find changed in place would make both styles work. `hold#Order` locks the
+  header then the part and Warehouse's `lockOrders` the part then the header (master, not P10's): a Credit hold placed
+  while Warehouse reopens the order can deadlock. A customer filer's `get#OrderChange` is scoped to the user's
+  organizations and shows the decisions' reasons and approvers; P15's Support app needs its own audience read.
+
 ### P11 — Warranty
 
 Design §5 WarrantyClaims and WarrantyAssessment, crosscut §3.2 DeliveredItems; CS-WARRANTY.
