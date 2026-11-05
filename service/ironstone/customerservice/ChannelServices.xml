@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Customer Service's channel reads and Comms hooks (impl-customer-service P6, CS-CHANNELS, CS-STACK L8; design-customer-service
     §3 ChannelSessions, §9 ChannelRouting; Channels.js): scoped by AccessServices. The rules and writes are Mantle's
-    (mantle.request.SupportCaseServices save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest, create#Case;
+    (mantle.request.SupportCaseServices save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest;
     mantle.request.RequestServices create#IntakeToken, remove#IntakeToken), which the screens and hooks call after these
     checks. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">

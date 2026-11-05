@@ -129,7 +129,9 @@ feature("a Projects client contact is refused the root and every ironstone.custo
                         customerPartyId: ids.customerId,
                         orderId: ids.deliveredOrderId,
                         shipmentId: "BOSS_CS_NO_SHIPMENT",
-                        invoiceId: "BOSS_CS_NO_INVOICE"
+                        invoiceId: "BOSS_CS_NO_INVOICE",
+                        // P6: a case from a message's kind
+                        kind: "email"
                     })
                 )
                 if (!/is not authorized|CUSTOMER_SERVICE_UNAVAILABLE|requires system administration/.test(message))

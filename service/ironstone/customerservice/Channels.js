@@ -2,7 +2,7 @@
 // ChannelSessions, §9 ChannelRouting, §1 Stack contributions; ChannelServices.xml): what ChannelRouting and ChannelSessions
 // show, each limited by CustomerService.js's scope, and the Comms hooks (a case from a mail, a chat message or a voicemail;
 // the call-context provider with the caller's open cases). The rules and writes are Mantle's mantle.request
-// SupportCaseServices (save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest, create#Case) and
+// SupportCaseServices (save#ServiceRoute, preview#ServiceRoute, log#CaseCall, review#HeldRequest) and
 // RequestServices (create#IntakeToken, remove#IntakeToken), which check their own permission and organization; a hook checks
 // the message is the user's to read and its sender a customer the user serves before it calls them.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
