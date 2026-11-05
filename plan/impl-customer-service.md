@@ -2539,7 +2539,7 @@ FeedbackDeliveryPolicy; CS-FEEDBACK, CS-JOBS.
   `SupportCaseFeedbackInvitation` rule after the commit of a case's resolution: the policy then, its types and queues, the case's
   customer at a customer reporter's email else the customer's, the latest resolution episode as context, once per case or per
   resolution; F-P13-3), `send#Invitations` (the `send_CaseFeedbackInvitations` job every 15 minutes, `data/CaseFeedbackSetupData.xml`:
-  bounded, each in its own transaction, a reopened case not sent, no Support site Not delivered, a failed send tried three
+  bounded, each in its own transaction, a reopened case not sent, a send with no Support site or no mail tried three
   times, reminders, expiry; each send its own capability, F-P13-4) and `send#Invitation`, `get#Invitation` and
   `submit#CaseFeedback` (the page's operations: the support mount's target, `ExternalAccess.check`, the form as of now, the
   customer's label and never the case; the answer checked by P7's `checkValues` with the form's rules again, one FormResponse, a
@@ -2670,10 +2670,13 @@ consent, the notice naming no comment); no per-agent ranking; leanness.
   `menu-include="false"`, a link for managers) or a framework `hide-when`. (2) P15's privacy anonymization needs a way past
   the guard: a Mantle service `FormPublicationServices.redact#FormResponse` (a privacy permission and the organization, blanking
   text answers and logging who and why), with `guardResponse` letting a write through only while that service is on the
-  artifact execution stack, never by a context flag a caller could set. (3) The guard keys on FormInvitation.formResponseId, so
-  an entity-level write that unlinks it (an administrator's entity-auto) defeats it; a run-before EECA on FormInvitation refusing
-  a change of a set formResponseId would close that. (4) send#Invitations' expiry sweep updates its rows without a per-row
-  catch, and a link that cannot be made (no Support site) is Not delivered at once rather than retried.
+  artifact execution stack, never by a context flag a caller could set. Both go to P14 and P15.
+- R4 (medium) The guard keyed on FormInvitation.formResponseId, so an entity-level write that unlinked it or deleted the
+  invitation took the response past it: run-before EECAs on FormInvitation refuse a change of a set formResponseId and a
+  delete of an invitation with a response (RESPONSE_LOCKED); CaseFeedback checks both.
+- R5 (low) A link the job could not make (no Support site for the organization) left the invitation Not delivered at once; it
+  is tried again on the next runs as an unsent mail is, up to three tries. The expiry sweep marks each row in its own catch,
+  naming a failing invitation and going on. CaseFeedback reran with BOSS loaded, and SupportAccess: pass.
 
 ### P14 — Reports
 
