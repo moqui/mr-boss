@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Returns tab, in the Customer Service context (crosscut §3.2; impl-customer-service P9): the customer's returns
+    with the user's organizations (a shared customer's other organizations' left out, F74), newest first, each with its RMA
+    number, the customer's reference, order, quantities, expiry and status, opening ReturnDetail; Request return opens NewReturn
+    for the customer. For the Returns area's groups (ironstone.customerservice.ReturnServices.get#CustomerReturns). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Returns" default-menu-index="4">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService' &amp;&amp; !!customerService?.capabilities?.returns</expression></condition>
+    <actions>
+        <service-call name="ironstone.customerservice.ReturnServices.get#CustomerReturns" out-map="returnsOut"
+                transaction="force-new" ignore-error="true" in-map="{appRoot:appRoot, customerPartyId:customerPartyId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="customerReturnRows" from="returnsOut?.returnRows || []"/>
+        <set field="can" from="customerService.capabilities"/>
+    </actions>
+    <widgets>
+        <section name="ServiceReturnsTab" condition="customerFound">
+            <widgets>
+                <link url="${sharedLinks['Returns/NewReturn']}" text="Request return" link-type="anchor-button" icon="sym_o_add"
+                        parameter-map="{customerPartyId:customerPartyId}" condition="can.caseEdit || can.returnAuthorize"/>
+                <form-list name="ServiceCustomerReturns" list="customerReturnRows" skip-form="true" paginate="false">
+                    <field name="returnId">
+                        <default-field title="RMA">
+                            <link url="${url}" url-type="plain" text="${displayId}" link-type="anchor" style="text-mono"/>
+                        </default-field>
+                    </field>
+                    <field name="customerReference"><default-field title="Their reference"><display/></default-field></field>
+                    <field name="orderText"><default-field title="Order"><display/></default-field></field>
+                    <field name="entryText"><default-field title="Entered"><display/></default-field></field>
+                    <field name="quantitiesText"><default-field title="Quantities"><display/></default-field></field>
+                    <field name="expireText"><default-field title="Valid until"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="returnId"/><field-ref name="orderText"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="quantitiesText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No return of this customer with your organizations."
+                        condition="!customerReturnRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

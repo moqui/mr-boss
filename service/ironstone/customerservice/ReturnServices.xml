@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer Service's return reads and batch (impl-customer-service P9; design-customer-service §5; Returns.js): the Returns
+    list, NewReturn's source and lines with the policy preview, ReturnDetail's and QualityInspection's Customer Service
+    branches, Home's Returns awaiting approval and Customer360's Returns tab, each scoped by AccessServices (the user's
+    organizations' customer returns of customers they serve; a missing return and another organization's refused alike,
+    RECORD_UNAVAILABLE); and the batch of authorizations and cancels with a result per return. Credit, refund and settlement
+    amounts only for the borrowed settlement capability (F), prices for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW. The
+    writes are Mantle's (mantle.order.ReturnPolicyServices, WarehouseTaskServices, ReturnServices' settlement), called by the
+    screens after check#Record. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Returns" allow-remote="false">
+        <description>Returns' ReturnFind and ReturnList: the customer returns of the user's organizations and customers, by view
+            (design Returns: requested, awaiting authorization, authorized and awaiting goods, received and awaiting disposition,
+            manual response, settlement pending, expiring, cancelled, closed, all), text, customer, order, status and assignee,
+            each with its row of Mantle's find#ServiceReturns and its ReturnDetail link. Refuses a user without the Returns
+            area.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="view"/>
+            <parameter name="text"/>
+            <parameter name="customerPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="statusId"/>
+            <parameter name="assigneePartyId"/>
+            <parameter name="pageIndex" type="Integer"/>
+            <parameter name="pageSize" type="Integer"/>
+        </in-parameters>
+        <out-parameters><parameter name="found" type="Map"/></out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('findReturns', context)"/>
+        </actions>
+    </service>
+    <service verb="apply" noun="ReturnBatch" allow-remote="false">
+        <description>Returns' batch: authorize (authorize#Return, with the reason a manual review needs) or cancel
+            (cancel#CustomerReturn, before any effect) each selected return in its own transaction, with a result per return:
+            Done, Forbidden (not the user's, or no authority), Refused (Mantle's code: EXCEPTION_REQUIRED, RETURN_HAS_EFFECT...) or
+            Failed; one that fails names its reason and the others go on. Refuses a user without the Returns
+            area.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="action" required="true"><description>authorize or cancel</description></parameter>
+            <parameter name="returnIds" type="List" required="true"/>
+            <parameter name="operationKey"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="results" type="List"/>
+            <parameter name="doneCount" type="Integer"/>
+            <parameter name="summary"/>
+        </out-parameters>
+        <actions>
+            <set field="applied" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('applyBatch', context)"/>
+            <set field="results" from="applied.results"/>
+            <set field="doneCount" from="applied.doneCount"/>
+            <set field="summary" from="applied.summary"/>
+        </actions>
+    </service>
+    <service verb="prepare" noun="Return" allow-remote="false">
+        <description>NewReturn's ReturnSource and ReturnableLines: the customer (one the user serves; from the case or the
+            order when given), the sales orders a return may come from, and the chosen order's product lines with what was
+            shipped, invoiced and is on other returns, what is left, and the policy preview (Mantle's evaluate#ReturnPolicy).
+            Refuses a user who may not enter returns (SUPPORT_CASE_EDIT or RETURN_AUTHORIZE) and a case, order or customer the
+            user may not work with (RECORD_UNAVAILABLE, ORDER_MISMATCH).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="customerPartyId"/>
+            <parameter name="orderId"/>
+            <parameter name="requestId"/>
+        </in-parameters>
+        <out-parameters><parameter name="prepared" type="Map"/></out-parameters>
+        <actions>
+            <set field="prepared" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('prepareReturn', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnDetail" allow-remote="false">
+        <description>Shared/ReturnDetail's Customer Service branch (crosscut §3.18 Customer Service row): a customer return of
+            the user's organizations and customers: its header (RMA number, customer reference, assignee, expiry, policy and its
+            outcome, the exception and its decision), items with what was authorized, received, accepted, rejected and settled,
+            the return shipment with its label, the inspections, the settlement summary (Accounting's preview for the borrowed
+            settlement capability, amounts withheld otherwise), the decisions, the linked cases, and the actions the user may
+            take: authorize, request or decide an exception, issue the return label, close a remainder, cancel before any
+            effect, receive (W, when the organization settles returns separately), settle (F), send and print the RMA.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="returnId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="returnFound" type="Boolean"/>
+            <parameter name="rh" type="Map"/>
+            <parameter name="itemRows" type="List"/>
+            <parameter name="shipmentRows" type="List"/>
+            <parameter name="inspectionRows" type="List"/>
+            <parameter name="decisionRows" type="List"/>
+            <parameter name="lineRows" type="List"/>
+            <parameter name="settlement" type="Map"/>
+            <parameter name="caseRows" type="List"/>
+            <parameter name="recipientOptions" type="List"/>
+            <parameter name="senderOptions" type="List"/>
+            <parameter name="amountsWithheld" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('returnDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="get" noun="InspectionDetail" allow-remote="false">
+        <description>Shared/QualityInspection's Customer Service branch (crosscut §3.19, F38): an inspection of a customer return
+            the user may work with (Mantle's get#Inspection), its return and order links under Customer Service, and the inspect
+            and dispose actions for the borrowed W capability (QUALITY_INSPECT, QUALITY_DISPOSE) where Warehouse's scope covers
+            its facility (Warehouse's transitions); others read. Refuses an inspection of no such return
+            (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="qualityInspectionId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="recordFound" type="Boolean"/>
+            <parameter name="inspection" type="Map"/>
+            <parameter name="items" type="List"/>
+            <parameter name="readings" type="List"/>
+            <parameter name="dispositions" type="List"/>
+            <parameter name="history" type="List"/>
+            <parameter name="acceptedLeft"/>
+            <parameter name="rejectedLeft"/>
+            <parameter name="missingReadings" type="List"/>
+            <parameter name="actions" type="Map"/>
+            <parameter name="links" type="Map"/>
+            <parameter name="submitDefaults" type="Map"/>
+            <parameter name="disposeDefaults" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('inspectionDetail', context)"/>
+            <script>ec.context.putAll(found)</script>
+        </actions>
+    </service>
+    <service verb="check" noun="ReturnInspection" allow-remote="false">
+        <description>The shared inspection transitions' check in the Customer Service context (F38): an inspection of a customer
+            return the user works with (RECORD_UNAVAILABLE otherwise) and the borrowed W capability the action needs, inspect
+            (QUALITY_INSPECT) or dispose (QUALITY_DISPOSE; PERMISSION_DENIED), without the Warehouse root. Mantle's quality
+            services check the permission and the organization again.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="qualityInspectionId" required="true"/>
+            <parameter name="capability" required="true"><description>inspect or dispose</description></parameter>
+        </in-parameters>
+        <out-parameters><parameter name="returnId"/></out-parameters>
+        <actions>
+            <set field="returnId" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('checkInspection', context).returnId"/>
+        </actions>
+    </service>
+    <service verb="get" noun="AwaitingReturns" allow-remote="false">
+        <description>Home's Returns awaiting approval (R, M): the requested returns of the user's organizations and customers,
+            the oldest first, with the expiry an authorization now would have and the exception waiting. Empty for a user with
+            neither RETURN_AUTHORIZE nor RETURN_EXCEPTION_APPROVE.</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="limit" type="Integer"/></in-parameters>
+        <out-parameters>
+            <parameter name="approvalRows" type="List"/>
+            <parameter name="approvalCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('awaitingReturns', context)"/>
+            <set field="approvalRows" from="found.approvalRows"/>
+            <set field="approvalCount" from="found.approvalCount"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CustomerReturns" allow-remote="false">
+        <description>Customer360's Returns tab: a customer's returns with the user's organizations (a shared customer's other
+            organizations' left out), newest first; none (available false) for a user without the Returns area. Refuses a
+            customer the user does not serve (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters><parameter name="customerPartyId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="returnRows" type="List"/>
+            <parameter name="available" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('customerReturns', context)"/>
+            <set field="returnRows" from="found.returnRows"/>
+            <set field="available" from="!!found.available"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReturnPolicySettings" allow-remote="false">
+        <description>ReturnPolicies: the settings organization (one Mantle's saves accept), its return policies with their state
+            and its reason rows (Mantle's find#Policies), the reason, remedy and window options, whether the user may change them
+            (RETURN_POLICY_EDIT), and ReturnPolicyPreview's evaluation of an order the user may work with (previewOrderId).
+            Refuses an organization the user may not set up (RECORD_UNAVAILABLE).</description>
+        <implements service="ironstone.customerservice.AccessServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="organizationPartyId"/>
+            <parameter name="includeEnded" type="Boolean"/>
+            <parameter name="previewOrderId"/>
+        </in-parameters>
+        <out-parameters><parameter name="settings" type="Map"/></out-parameters>
+        <actions>
+            <set field="settings" from="ec.resource.script('component://mr-boss/service/ironstone/customerservice/Returns.js').execute('policySettings', context)"/>
+        </actions>
+    </service>
+</services>

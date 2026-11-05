@@ -48,6 +48,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="sharedLinks" type="Map"/>
             <parameter name="linkBase" type="String"/>
             <parameter name="webBase" type="String"/>
+            <parameter name="approvalTopics" type="List"><description>P9: the decision topics Approvals lists</description></parameter>
         </out-parameters>
         <actions>
             <set field="module" value="component://mr-boss/service/ironstone/customerservice/CustomerService.js"/>
@@ -63,6 +64,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="sharedLinks" from="shared.sharedLinks"/>
             <set field="linkBase" from="shared.linkBase"/>
             <set field="webBase" from="shared.webBase"/>
+            <set field="approvalTopics" from="shared.approvalTopics"/>
         </actions>
     </service>
     <service verb="check" noun="Record" allow-remote="false">

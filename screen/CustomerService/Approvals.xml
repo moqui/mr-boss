@@ -12,12 +12,25 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Approvals area of IronStone Customer Service (design-customer-service §5 Approvals): the order-change and return
-    exception decisions in the shared Notifications center (impl-customer-service P9, P10); for the manager and return
-    authorizer (BOSS_CS_APPROVALS). -->
+<!-- The Approvals area of IronStone Customer Service (design-customer-service §5 Approvals; crosscut §3.15; impl-customer-service
+    P9, F14): the Commons Notifications list mounted with Customer Service's decision topics and the current recipient, for
+    the manager, return authorizer and administrator (BOSS_CS_APPROVALS). Its rows are the decisions waiting: a return's
+    exception (ReturnExceptionApproval, one per approver, titled with the return, customer and exception) and, from P10, an
+    order change (OrderChangeApproval). Approve and refuse call the topics' handlers through the framework
+    (mantle.order.ReturnPolicyServices approve#ReturnException and refuse#ReturnException, which decide at the revision in the
+    message and refuse a stale one naming the current revision); opening a row opens ReturnDetail. The center holds no
+    decision of its own. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Approvals" default-menu-index="6" menu-image="sym_o_approval" menu-image-type="icon">
+    <always-actions>
+        <!-- the service topics, one list in CustomerService.js (approvalTopics) -->
+        <set field="notificationTopics" from="customerService.approvalTopics"/>
+        <set field="notificationsTitle" value="Approvals"/>
+    </always-actions>
+    <subscreens default-item="Notifications" always-use-full-path="true">
+        <subscreens-item name="Notifications" location="component://mr-boss/screen/Commons/Notifications.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Order-change and return decisions waiting." type="p"/>
+        <subscreens-active/>
     </widgets>
 </screen>

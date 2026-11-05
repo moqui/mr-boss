@@ -1853,4 +1853,9 @@ along with this software (see the LICENSE.md file). If not, see
         at the message's revision, from Notifications or the detail -->
     <moqui.security.user.NotificationTopic topic="OrderChangeApproval"
             linkTemplate="/qapps/CustomerService/Orders/OrderChangeDetail?requestId=${requestId}"/>
+    <!-- Customer Service P9 (impl-customer-service P9, F44): a customer return's exception waiting for a manager
+        (ReturnExceptionApproval, decided in Approvals or on ReturnDetail) and a decision on a return its assignee is told of
+        (ReturnDecision) open the return under Customer Service -->
+    <moqui.security.user.NotificationTopic topic="ReturnExceptionApproval" linkTemplate="/qapps/CustomerService/Returns/ReturnDetail?returnId=${returnId}"/>
+    <moqui.security.user.NotificationTopic topic="ReturnDecision" linkTemplate="/qapps/CustomerService/Returns/ReturnDetail?returnId=${returnId}"/>
 </entity-facade-xml>

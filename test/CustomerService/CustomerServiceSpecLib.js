@@ -52,7 +52,10 @@ const ids = {
     mailRouteId: "BOSS_CS_ROUTE_MAIL",
     formRouteId: "BOSS_CS_ROUTE_FORM",
     // P10: the filter's equivalent (a substitute for a short pick of the filter)
-    substituteProductId: "BOSS_CS_FILTER_PLUS"
+    substituteProductId: "BOSS_CS_FILTER_PLUS",
+    // P9: Retail's return policy, and the Warehouse demo's requested return of Joe Q Public to Retail (BossWarehouseDemoData.xml)
+    returnPolicyId: "BOSS_CS_RPOL_RETAIL",
+    warehouseReturnId: "BOSS_WH_RETURN"
 }
 // P10: a proposed change of an order, made by a spec as the user and removed with its lines, parties, decisions and notices
 // (no other spec's lists show it): {requestId, sourceRevision} or {error}.
@@ -248,7 +251,16 @@ function routeFixtures() {
         "Cases/SplitCase": {parameters: {requestId: ids.thermostatCaseId}, text: "Split case"},
         // P10: the order changes and the shared change detail
         "Orders/OrderChanges": {parameters: {}, text: "Order changes"},
-        "Orders/OrderChangeDetail": {parameters: {requestId: "BOSS_CS_NO_CHANGE"}, text: "Order change not available"}
+        "Orders/OrderChangeDetail": {parameters: {requestId: "BOSS_CS_NO_CHANGE"}, text: "Order change not available"},
+        // P9: the returns, a return, the RMA print, the return policies, the approvals and Customer360's Returns tab
+        "Returns/Returns": {parameters: {view: "all"}, text: "Returns"},
+        "Returns/NewReturn": {parameters: {orderId: ids.deliveredOrderId}, text: "What comes back"},
+        "Returns/ReturnDetail": {parameters: {returnId: ids.warehouseReturnId}, text: "Return " + ids.warehouseReturnId},
+        "Returns/QualityInspection": {parameters: {qualityInspectionId: "BOSS_CS_NO_INSPECTION"}, text: "not available"},
+        "Returns/ReturnAuthorization": {parameters: {returnId: ids.warehouseReturnId}, text: ids.warehouseReturnId},
+        "Settings/ReturnPolicies": {parameters: {}, text: "Return policies"},
+        Approvals: {parameters: {}, text: "Approvals"},
+        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"}
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
@@ -261,7 +273,10 @@ function routeFixtures() {
         ["Availability/InventoryAvailability", "component://mr-boss/screen/Shared/InventoryAvailability.xml"],
         ["Availability/StockAtDate", "component://mr-boss/screen/Shared/StockAtDate.xml"],
         ["Availability/Product360", "component://mr-boss/screen/Shared/Product360.xml"],
-        ["Orders/OrderChangeDetail", "component://mr-boss/screen/Shared/OrderChangeDetail.xml"]
+        ["Orders/OrderChangeDetail", "component://mr-boss/screen/Shared/OrderChangeDetail.xml"],
+        ["Returns/ReturnDetail", "component://mr-boss/screen/Shared/ReturnDetail.xml"],
+        ["Returns/QualityInspection", "component://mr-boss/screen/Shared/QualityInspection.xml"],
+        ["Approvals/Notifications", "component://mr-boss/screen/Commons/Notifications.xml"]
     ]
     return {routes, mounts}
 }

@@ -186,4 +186,22 @@ along with this software (see the LICENSE.md file). If not, see
         commercial changes only in their revision, so an order change proposal stays bound to the order it saw while a
         confirmation is stored or the order is held -->
     <mantle.ledger.config.PartyAcctgPreference organizationPartyId="ORG_ZIZI_CORP" salesCommercialRevisionOnly="Y"/>
+    <!-- P9 (CS-RETURN-POLICY): Retail's default return policy, a year from delivery (so the demo's orders stay within it
+        however old the database is), an authorization valid 14 days, the goods back to ZIRET_WH, a defect, damage or wrong
+        item returned for a credit, refund or replacement, no restocking fee; and its reason rows (the customer's labels; a
+        defect needs evidence). Another reason (did not want it) needs a manager's exception. Mantle's own return flows read no
+        policy, so Mantle's specs are unchanged (F82). -->
+    <mantle.order.return.ReturnPolicy returnPolicyId="BOSS_CS_RPOL_RETAIL" organizationPartyId="ORG_ZIZI_RETAIL"
+            policyName="Retail returns" windowDays="365" windowFromEnumId="RpwDelivered" authorizationDays="14"
+            selfServiceEnabled="Y" allowedReasonEnumIds="RrsnDefective,RrsnDamagedShip,RrsnMisShip"
+            allowedResponseEnumIds="RrspCredit,RrspRefund,RrspReplace" proofRequired="N" destinationFacilityId="ZIRET_WH"
+            receiptlessEligible="N" advanceReplacement="N" instantCredit="N"
+            instructions="Pack the item with its accessories, write the RMA number on the box and attach the return label."
+            fromDate="2026-01-01 00:00:00"/>
+    <mantle.order.return.ReturnReasonPolicy returnReasonPolicyId="BOSS_CS_RRSN_DEFECT" organizationPartyId="ORG_ZIZI_RETAIL"
+            returnReasonEnumId="RrsnDefective" customerLabel="It does not work" customerVisible="Y" evidenceRequired="Y"
+            suggestedResponseEnumId="RrspReplace" inspectionRequired="Y" fromDate="2026-01-01 00:00:00"/>
+    <mantle.order.return.ReturnReasonPolicy returnReasonPolicyId="BOSS_CS_RRSN_DAMAGED" organizationPartyId="ORG_ZIZI_RETAIL"
+            returnReasonEnumId="RrsnDamagedShip" customerLabel="It arrived damaged" customerVisible="Y" evidenceRequired="Y"
+            suggestedResponseEnumId="RrspReplace" inspectionRequired="Y" fromDate="2026-01-01 00:00:00"/>
 </entity-facade-xml>

@@ -1,0 +1,622 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Shared/ReturnDetail's Customer Service branch (crosscut §3.18 Customer Service row; design-customer-service §5 ReturnDetail;
+    impl-customer-service P9), section-included by Shared/ReturnDetail with its transitions: a customer return of the user's
+    organizations and customers (ironstone.customerservice.ReturnServices.get#ReturnDetail) with
+    - the record header: the RMA number, the customer's reference, assignee, expiry, the policy and its outcome, the promised
+      remedy; Authorize (RETURN_AUTHORIZE: mantle.order.ReturnPolicyServices.authorize#Return, which makes the return shipment
+      and settles nothing), Request exception and the manager's Approve or Refuse exception (decide#ReturnException at the
+      return's revision), Issue return label (mantle.shipment.WarehouseTaskServices.request#ReturnLabel), Close remainder
+      (close#ReturnRemainder), Cancel before any effect (cancel#CustomerReturn), Send RMA (send#ReturnAuthorization) and
+      Print RMA (html-print), Assign;
+    - Items with what was authorized, received, accepted, rejected and settled, and for an open return the line changes
+      (save#ReturnItem, F21); Receive for W (STOCK_RECEIVE) through Warehouse's receive#ReturnItems when the organization
+      settles returns separately;
+    - Shipment and label, Inspections (each opening QualityInspection here), the settlement summary (Accounting's preview and
+      Settle for F; amounts withheld from others), Decisions, Cases, Files (ReturnContent, with the stored RMA) and
+      Conversation.
+    Each write checks the return with AccessServices.check#Record and the capability, then calls the Mantle service, which
+    checks its permission and the organization again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="csReturnChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="csAuthorizeReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'returnAuthorize'}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.authorize#Return" out-map="authorized"
+                    in-map="{operationKey:operationKey, returnId:returnId, sourceRevision:sourceRevision || null,
+                        immediate:immediate == 'Y', reason:reason || null}"/>
+            <message type="success">${authorized.result.resultCode == 'AUTHORIZED' ? 'Return ' + returnId + ' is authorized until '
+                    + authorized.result.expireText + '; its return shipment waits for the goods' : 'Return ' + returnId + ' was already authorized'}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csRequestException">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.request#ReturnException" out-map="asked"
+                    in-map="{returnId:returnId, reason:reason || null}"/>
+            <message type="success">Exception asked of ${asked.notifiedCount} approver(s): ${asked.exceptionText}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csDecideException">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'returnExceptionApprove'}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.decide#ReturnException" out-map="decided"
+                    in-map="{returnId:returnId, sourceRevision:sourceRevision, decision:decision, reason:reason || null}"/>
+            <message type="success">Exception ${decided.decision == 'approve' ? 'approved' : 'refused'} for return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csSaveReturnLine">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.save#ReturnItem" out-map="saved"
+                    in-map="{returnId:returnId, returnItemSeqId:returnItemSeqId || null, returnQuantity:returnQuantity,
+                        returnReasonEnumId:returnReasonEnumId || null, returnResponseEnumId:returnResponseEnumId || null}"/>
+            <message type="success">${saved.removed ? 'Removed the line' : 'Saved the line'}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csAssignReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.assign#Return"
+                    in-map="{returnId:returnId, assigneePartyId:assigneePartyId || null}"/>
+            <message type="success">Assigned return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csIssueLabel">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'returnAuthorize'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.request#ReturnLabel" out-map="labelled"
+                    in-map="{operationKey:operationKey, returnId:returnId, weight:weight || null,
+                        weightUomId:(weight ? weightUomId || 'WT_lb' : null)}"/>
+            <set field="labelResult" from="labelled.result || {}"/>
+            <script>ec.message.addMessage(labelResult.resultCode == 'LABEL_REQUESTED' || labelResult.resultCode == 'LABEL_EXISTS'
+                    ? 'Return label ' + (labelResult.trackingCode || '') + ' is on return ' + returnId
+                    : labelResult.resultCode + ': ' + (labelResult.message || ''), labelResult.resultCode == 'LABEL_REQUESTED'
+                    || labelResult.resultCode == 'LABEL_EXISTS' ? 'success' : 'warning')</script>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csCloseRemainder">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'returnAuthorize'}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.close#ReturnRemainder" out-map="closed"
+                    in-map="{returnId:returnId, returnItemSeqId:returnItemSeqId || null, reason:reason}"/>
+            <message type="success">Closed what will not come back of return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csCancelReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.cancel#CustomerReturn"
+                    in-map="{returnId:returnId, reason:reason || null}"/>
+            <message type="success">Cancelled return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <!-- W: a box of the return received through Warehouse's task (quarantine and an inspection per accepted receipt) -->
+    <transition name="csReceiveReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'receive'}"/>
+            <service-call name="mantle.shipment.WarehouseTaskServices.receive#ReturnItems" out-map="received"
+                    in-map="{shipmentId:shipmentId, operationKey:operationKey,
+                        itemList:[{returnId:returnId, returnItemSeqId:returnItemSeqId, quantityAccepted:quantityAccepted || 0,
+                            quantityRejected:quantityRejected || 0, rejectionReasonEnumId:rejectionReasonEnumId || null,
+                            serialNumbers:(serialNumbers ? String(serialNumbers).split(/[\s,]+/).filter((serial) =&gt; serial) : null)}]}"/>
+            <message type="success">Received on return ${returnId}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <!-- F: Accounting's settlement of what was received, as previewed -->
+    <transition name="csSettleReturn">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId, capability:'invoiceCredit'}"/>
+            <service-call name="mantle.order.ReturnServices.settle#Return" out-map="settled"
+                    in-map="{returnId:returnId, previewVersion:previewVersion, operationKey:operationKey,
+                        receiptless:receiptless == 'Y', reason:reason || null}"/>
+            <message type="success">${settled.resultCode == 'REFUND_PENDING' ? 'Return ' + returnId +
+                ' settled; its refund waits for the gateway' : 'Return ' + returnId + ' settled'}</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <transition name="csSendRma">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'return', recordId:returnId}"/>
+            <service-call name="mantle.order.ReturnPolicyServices.send#ReturnAuthorization" out-map="sent"
+                    in-map="{operationKey:operationKey, returnId:returnId, toAddress:toAddress, emailAccountId:emailAccountId || null,
+                        note:note || null}"/>
+            <message type="success">Sent the authorization to ${sent.recipient} (${sent.status})</message>
+        </actions>
+        <default-response url="."><parameter name="returnId"/></default-response>
+        <error-response url="."><parameter name="returnId"/></error-response>
+    </transition>
+    <widgets>
+        <section name="CustomerServiceReturn" condition="appRoot == 'CustomerService'">
+            <widgets>
+                <section name="CustomerServiceReturnMissing" condition="!returnFound">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Return not available"/>
+                            <box-body>
+                                <label type="p" text="Return ${returnId} is not available: it does not exist, or it is not a return
+                                        of your organizations from a customer you serve."/>
+                                <link url="${sharedLinks['Returns/Returns']}" text="Back to returns" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CustomerServiceReturnFound" condition="returnFound">
+                    <actions>
+                        <set field="opKey" from="'return-' + ec.user.randomString(20)"/>
+                        <set field="settle" from="settlement || {}"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}"
+                                title="Return ${rh.displayId} · ${rh.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Return ${rh.displayId}" type="h5"/>
+                                    <label text="${[rh.customerName, rh.customerReference ? 'their reference ' + rh.customerReference : '',
+                                            rh.orderText ? 'order ' + rh.orderText : 'no order', rh.facilityName ? 'to ' + rh.facilityName : '',
+                                            'entered ' + rh.entryText, rh.assigneeName ? 'assigned to ' + rh.assigneeName : 'unassigned',
+                                            rh.expireText ? 'valid until ' + rh.expireText + (rh.expired ? ' (expired)' : '') : '']
+                                            .filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                    <label text="${rh.outcomeText}${rh.policyName ? ' · policy ' + rh.policyName : ''}" type="p"
+                                            style="text-caption" condition="rh.outcomeText"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${
+                                            rh.statusColor}">${WebUtilities.encodeHtml(rh.statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "CustomerReturnStatus",
+                                            style: "strong", text: rh.statusText})}]]></text>
+                                        <text type="html">${rh.statusText}</text>
+                                        <text type="html-print">${rh.statusText}</text>
+                                    </render-mode>
+                                </container>
+                            </container>
+                            <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                                <container style="col-12 row items-center q-gutter-sm m-record-actions">
+                                    <container-dialog id="CsAuthorizeReturn" button-text="Authorize" type="primary"
+                                            icon="sym_o_verified" title="Authorize return ${rh.displayId}" width="560"
+                                            condition="rh.canAuthorize">
+                                        <label type="p" text="Valid until ${rh.previewExpireText}. ${rh.feeText}. Nothing is credited
+                                                until the goods are received and finance settles them."/>
+                                        <form-single name="CsAuthorizeReturnForm" transition="csAuthorizeReturn"
+                                                map="{returnId:returnId, sourceRevision:rh.sourceRevision, operationKey:opKey}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason" tooltip="Required when no return policy covers it (manual review)">
+                                                    <text-line size="40"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="immediate">
+                                                <default-field title="">
+                                                    <check><option key="Y" text="Credit or replace now, where the policy and your finance rights allow"/></check>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Authorize the return"><submit/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsRequestException" button-text="Request exception" type="default"
+                                            title="Ask for an exception to return ${rh.displayId}" width="560"
+                                            condition="rh.canRequestException">
+                                        <label type="p" text="Needs: ${rh.exceptionText}."/>
+                                        <form-single name="CsRequestExceptionForm" transition="csRequestException"
+                                                map="{returnId:returnId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Why"><text-area rows="3"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Send to the approvers"><submit/></default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsDecideException" button-text="Decide exception" type="default"
+                                            title="The exception of return ${rh.displayId}" width="560"
+                                            condition="rh.canDecideException">
+                                        <label type="p" text="${rh.exceptionText}${rh.exceptionApproved ? ' · approved at this revision' : ''}."/>
+                                        <form-single name="CsDecideExceptionForm" transition="csDecideException"
+                                                map="{returnId:returnId, sourceRevision:rh.sourceRevision, decision:'approve'}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="sourceRevision"><default-field><hidden/></default-field></field>
+                                            <field name="decision">
+                                                <default-field title="">
+                                                    <radio><option key="approve" text="Approve"/><option key="refuse" text="Refuse"/></radio>
+                                                </default-field>
+                                            </field>
+                                            <field name="reason">
+                                                <default-field title="Reason" tooltip="Required to refuse"><text-line size="40"/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Decide"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsIssueLabel" button-text="Issue return label" type="default"
+                                            icon="sym_o_label" title="Return label for ${rh.displayId}" width="480"
+                                            condition="rh.canIssueLabel">
+                                        <form-single name="CsIssueLabelForm" transition="csIssueLabel"
+                                                map="{returnId:returnId, operationKey:'label-' + returnId + '-' + rh.openShipmentId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="weight">
+                                                <default-field title="Weight" tooltip="The package's weight (the carrier needs it)"><text-line size="8"/></default-field>
+                                            </field>
+                                            <field name="weightUomId" from="'WT_lb'">
+                                                <default-field title="Unit">
+                                                    <drop-down>
+                                                        <entity-options key="${uomId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                                                <econdition field-name="uomTypeEnumId" value="UT_WEIGHT_MEASURE"/>
+                                                                <order-by field-name="description"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Request the label"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsCloseRemainder" button-text="Close remainder" type="default"
+                                            title="Close what will not come back of ${rh.displayId}" width="560"
+                                            condition="rh.canCloseRemainder">
+                                        <form-single name="CsCloseRemainderForm" transition="csCloseRemainder" map="{returnId:returnId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Reason"><text-line size="40"/></default-field>
+                                            </field>
+                                            <field name="submitButton">
+                                                <default-field title="Close the remainder">
+                                                    <submit confirmation="Each waiting item then authorizes only what was received."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsSendRma" button-text="Send RMA" type="default" icon="sym_o_send"
+                                            title="Send the authorization of ${rh.displayId}" width="560" condition="rh.canSend">
+                                        <form-single name="CsSendRmaForm" transition="csSendRma"
+                                                map="{returnId:returnId, operationKey:opKey, toAddress:recipientOptions[0]?.value,
+                                                    emailAccountId:senderOptions[0]?.value}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="toAddress">
+                                                <default-field title="To">
+                                                    <drop-down><list-options list="recipientOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="emailAccountId">
+                                                <default-field title="From">
+                                                    <drop-down><list-options list="senderOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="note"><default-field title="Note"><text-area rows="3"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Send"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="${sharedLinks['Returns/ReturnAuthorization']}" text="Print RMA"
+                                            link-type="anchor-button" icon="sym_o_print" target-window="_blank"
+                                            parameter-map="{returnId:returnId, renderMode:'html-print'}" condition="rh.canPrint"/>
+                                    <container-dialog id="CsAssignReturn" button-text="Assign" type="default"
+                                            title="Assign return ${rh.displayId}" width="480" condition="rh.canAssign">
+                                        <form-single name="CsAssignReturnForm" transition="csAssignReturn"
+                                                map="{returnId:returnId, assigneePartyId:rh.assigneePartyId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="assigneePartyId">
+                                                <default-field title="Assignee">
+                                                    <drop-down allow-empty="true">
+                                                        <dynamic-options transition="csReturnChoices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'returnAssignees', selected:assigneePartyId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Assign"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="CsCancelReturn" button-text="Cancel return" type="default"
+                                            title="Cancel return ${rh.displayId}" width="480" condition="rh.canCancel">
+                                        <form-single name="CsCancelReturnForm" transition="csCancelReturn" map="{returnId:returnId}">
+                                            <field name="returnId"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton">
+                                                <default-field title="Cancel the return">
+                                                    <submit confirmation="Nothing has been received or credited; its return shipment is cancelled too."/>
+                                                </default-field>
+                                            </field>
+                                        </form-single>
+                                    </container-dialog>
+                                </container>
+                            </container>
+                        </container>
+                        <dashboard min-width="160" style="q-mb-sm">
+                            <number-card title="Authorized" value="${rh.authorizedQuantity}" icon="sym_o_assignment_return" size="sm"/>
+                            <number-card title="Received" value="${rh.receivedQuantity}" icon="sym_o_inventory" size="sm"/>
+                            <number-card title="Rejected at the dock" value="${rh.rejectedQuantity}" icon="sym_o_block" size="sm"/>
+                            <number-card title="Settled" value="${rh.settledQuantity}" icon="sym_o_request_quote" size="sm"/>
+                        </dashboard>
+                        <label type="p" style="text-caption m-muted" text="${rh.receiveNote}" condition="rh.receiveNote"/>
+                        <container-box>
+                            <box-header title="Items"/>
+                            <box-body-nopad>
+                                <form-list name="CsReturnItems" list="itemRows" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="sourceText"><default-field title="Order line"><display/></default-field></field>
+                                    <field name="reasonText">
+                                        <default-field title="Reason">
+                                            <display text="${reasonText} · ${responseText}${priceText ? ' · ' + priceText : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="authorizedQuantity" align="right">
+                                        <default-field title="Authorized"><display/></default-field>
+                                    </field>
+                                    <field name="receivedQuantity" align="right">
+                                        <default-field title="Received">
+                                            <display text="${receivedQuantity}${rejectedQuantity != '0' ? ' (' + rejectedQuantity + ' rejected)' : ''}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="settledQuantity" align="right">
+                                        <default-field title="Settled"><display/></default-field>
+                                    </field>
+                                    <field name="actions">
+                                        <default-field title="">
+                                            <container-dialog id="CsEditLine_${returnItemSeqId}" button-text="Change"
+                                                    title="Line ${returnItemSeqId} of return ${returnId}" condition="rh.canEditLines">
+                                                <form-single name="CsEditLine_${returnItemSeqId}" transition="csSaveReturnLine"
+                                                        map="{returnId:returnId, returnItemSeqId:returnItemSeqId,
+                                                            returnQuantity:authorizedQuantity, returnReasonEnumId:returnReasonEnumId,
+                                                            returnResponseEnumId:returnResponseEnumId}">
+                                                    <field name="returnId"><default-field><hidden/></default-field></field>
+                                                    <field name="returnItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="returnQuantity">
+                                                        <default-field title="Quantity" tooltip="0 removes the line"><text-line size="6"/></default-field>
+                                                    </field>
+                                                    <field name="returnReasonEnumId">
+                                                        <default-field title="Reason">
+                                                            <drop-down>
+                                                                <dynamic-options transition="csReturnChoices" server-search="false"
+                                                                        parameter-map="{choice:'returnReasons'}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="returnResponseEnumId">
+                                                        <default-field title="Asked for">
+                                                            <drop-down>
+                                                                <dynamic-options transition="csReturnChoices" server-search="false"
+                                                                        parameter-map="{choice:'returnResponses'}"/>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                            <container-dialog id="CsReceive_${returnItemSeqId}" button-text="Receive"
+                                                    title="Receive a box of item ${returnItemSeqId}" condition="rh.canReceive &amp;&amp; waiting">
+                                                <form-single name="CsReceive_${returnItemSeqId}" transition="csReceiveReturn"
+                                                        map="{returnId:returnId, returnItemSeqId:returnItemSeqId, shipmentId:rh.openShipmentId,
+                                                            operationKey:'receive-' + ec.user.randomString(16), quantityAccepted:remainderQuantity,
+                                                            quantityRejected:'0'}">
+                                                    <field name="returnId"><default-field><hidden/></default-field></field>
+                                                    <field name="returnItemSeqId"><default-field><hidden/></default-field></field>
+                                                    <field name="shipmentId"><default-field><hidden/></default-field></field>
+                                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                                    <field name="quantityAccepted">
+                                                        <default-field title="Accepted"><text-line size="6"/></default-field>
+                                                    </field>
+                                                    <field name="quantityRejected">
+                                                        <default-field title="Rejected at the dock"><text-line size="6"/></default-field>
+                                                    </field>
+                                                    <field name="rejectionReasonEnumId">
+                                                        <default-field title="Rejection reason">
+                                                            <drop-down allow-empty="true">
+                                                                <entity-options key="${enumId}" text="${description}">
+                                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                        <econdition field-name="enumTypeId" value="RejectionReason"/>
+                                                                        <order-by field-name="description"/>
+                                                                    </entity-find>
+                                                                </entity-options>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="serialNumbers">
+                                                        <default-field title="Serial numbers" tooltip="A serialized product, one unit at a time">
+                                                            <text-line size="30"/>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="submitButton"><default-field title="Receive"><submit/></default-field></field>
+                                                </form-single>
+                                            </container-dialog>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="statusText"/></column>
+                                        <column><field-ref name="authorizedQuantity"/><field-ref name="receivedQuantity"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Shipment and label"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="q-pa-sm m-muted" condition="!shipmentRows.length"
+                                                text="Authorizing the return makes its return shipment; the label comes after."/>
+                                        <form-list name="CsReturnShipments" list="shipmentRows" skip-form="true" paginate="false">
+                                            <field name="shipmentId">
+                                                <default-field title="Shipment">
+                                                    <link url="${url}" url-type="plain" text="${shipmentId}" link-type="anchor"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="labelText"><default-field title="Label"><display/></default-field></field>
+                                            <field name="receivedText"><default-field title="Received"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Inspection and disposition"/>
+                                    <box-body-nopad>
+                                        <label type="p" style="q-pa-sm m-muted" condition="!inspectionRows.length"
+                                                text="Each box accepted at receipt is inspected before its stock is released."/>
+                                        <form-list name="CsReturnInspections" list="inspectionRows" skip-form="true" paginate="false">
+                                            <field name="qualityInspectionId">
+                                                <default-field title="Inspection">
+                                                    <link url="${url}" url-type="plain" text="${qualityInspectionId}" link-type="anchor"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="dispositionText"><default-field title="Disposition"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Settlement"/>
+                            <box-body>
+                                <label type="p" text="Settled ${rh.settledQuantity} of ${rh.receivedQuantity} received. Credits and
+                                        refunds are finance's, for what was received."/>
+                                <label type="p" condition="settle.reader &amp;&amp; settle.creditText"
+                                        text="Credit ${settle.creditText} · refund ${settle.refundText} · replace ${settle.replaceText}${settle.reasonText ? ' · ' + settle.reasonText : ''}"/>
+                                <label type="p" style="text-caption m-muted" condition="!settle.reader"
+                                        text="Credit and refund amounts are withheld from you."/>
+                                <container-dialog id="CsSettleReturn" button-text="Settle" type="primary"
+                                        title="Settle return ${rh.displayId}" width="560" condition="rh.canSettle">
+                                    <form-single name="CsSettleReturnForm" transition="csSettleReturn"
+                                            map="{returnId:returnId, previewVersion:settle.previewVersion, operationKey:opKey}">
+                                        <field name="returnId"><default-field><hidden/></default-field></field>
+                                        <field name="previewVersion"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="receiptless" hide="!customerService.capabilities.returnCredit">
+                                            <default-field title="">
+                                                <check><option key="Y" text="Credit what was authorized without receipt"/></check>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason">
+                                            <default-field title="Reason" tooltip="Required for a credit without receipt"><text-line size="40"/></default-field>
+                                        </field>
+                                        <field name="submitButton">
+                                            <default-field title="Settle as previewed">
+                                                <submit confirmation="Credit, refund or replace what the preview shows?"/>
+                                            </default-field>
+                                        </field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-body>
+                        </container-box>
+                        <section name="CsReturnDecisions" condition="decisionRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Decisions"/>
+                                    <box-body-nopad>
+                                        <form-list name="CsReturnDecisionList" list="decisionRows" skip-form="true" paginate="false">
+                                            <field name="decisionText"><default-field title="Decision"><display/></default-field></field>
+                                            <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                            <field name="byName"><default-field title="By"><display/></default-field></field>
+                                            <field name="reason">
+                                                <default-field title="Why">
+                                                    <display text="${[reason, exceptionText].filter(Boolean).join(' · ')}"/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section name="CsReturnCases" condition="caseRows.length">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Cases"/>
+                                    <box-body-nopad>
+                                        <form-list name="CsReturnCaseList" list="caseRows" skip-form="true" paginate="false">
+                                            <field name="requestId">
+                                                <default-field title="Case">
+                                                    <link url="${url}" url-type="plain" text="${requestId}" link-type="anchor"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="requestName"><default-field title="Subject"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                        </form-list>
+                                    </box-body-nopad>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <container style="row q-col-gutter-md">
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Files"/>
+                                    <box-body>
+                                        <record-files id="CustomerServiceReturnFiles"
+                                                record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                            <container style="col-12 col-md-6">
+                                <container-box>
+                                    <box-header title="Conversation"/>
+                                    <box-body>
+                                        <chatter id="CustomerServiceReturnChatter" record-entity="mantle.order.return.ReturnHeader"
+                                                record-id="${returnId}"/>
+                                    </box-body>
+                                </container-box>
+                            </container>
+                        </container>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

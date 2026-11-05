@@ -23,7 +23,10 @@ along with this software (see the LICENSE.md file). If not, see
     it at Purchasing/Returns/ReturnDetail (crosscut §3.18 Purchasing row, impl-purchasing P8): a supplier return of the user's
     organizations, authorized with the supplier's RMA, its eligible receipts by receipt and lot, items, outbound shipment,
     replacement orders and the credit read only (ironstone.purchasing.ReturnServices.get#ReturnDetail;
-    template/PurchasingReturnDetail.xml). Customer Service adds its context when it is built. -->
+    template/PurchasingReturnDetail.xml). Customer Service mounts it at CustomerService/Returns/ReturnDetail (crosscut §3.18
+    Customer Service row, impl-customer-service P9): a customer return of the user's organizations and customers, authorized,
+    labelled, closed or cancelled there, received for W and settled for F (ironstone.customerservice.ReturnServices
+    get#ReturnDetail; template/CustomerServiceReturnDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Return"
@@ -41,6 +44,19 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="purchasingAuthorizeReturn" location="component://mr-boss/template/PurchasingReturnDetail.xml"/>
     <transition-include name="purchasingCancelReturn" location="component://mr-boss/template/PurchasingReturnDetail.xml"/>
     <transition-include name="purchasingReplaceReturn" location="component://mr-boss/template/PurchasingReturnDetail.xml"/>
+    <!-- Customer Service (impl-customer-service P9): the customer return's actions -->
+    <transition-include name="csReturnChoices" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csAuthorizeReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csRequestException" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csDecideException" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csSaveReturnLine" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csAssignReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csIssueLabel" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csCloseRemainder" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csCancelReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csReceiveReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csSettleReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+    <transition-include name="csSendRma" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
     <actions>
         <if condition="appRoot == 'Accounting'">
             <service-call name="ironstone.accounting.ReturnScreenServices.get#ReturnContext"
@@ -54,6 +70,12 @@ along with this software (see the LICENSE.md file). If not, see
                     out-map="context" transaction="force-new" ignore-error="true"/>
             <set field="returnFound" from="!!returnFound"/>
         </if>
+        <if condition="appRoot == 'CustomerService'">
+            <service-call name="ironstone.customerservice.ReturnServices.get#ReturnDetail"
+                    in-map="{appRoot:appRoot, returnId:returnId}" out-map="context" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="returnFound" from="!!returnFound"/>
+        </if>
         <if condition="appRoot == 'Purchasing'">
             <service-call name="ironstone.purchasing.ReturnServices.get#ReturnDetail"
                     in-map="{appRoot:appRoot, returnId:returnId}" out-map="context" transaction="force-new" ignore-error="true"/>
@@ -64,7 +86,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="AccountingReturn" location="component://mr-boss/template/AccountingRecords.xml"/>
         <section-include name="WarehouseReturn" location="component://mr-boss/template/WarehouseReturnDetail.xml"/>
         <section-include name="PurchasingReturn" location="component://mr-boss/template/PurchasingReturnDetail.xml"/>
+        <section-include name="CustomerServiceReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
         <label text="This return is not available in this app." type="p"
-                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing'"/>
+                condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing'
+                    &amp;&amp; appRoot != 'CustomerService'"/>
     </widgets>
 </screen>
