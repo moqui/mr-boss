@@ -1737,7 +1737,7 @@ CS-JOBS.
   `close#ResolvedCase` (each organization's current autoCloseDays; a case with a clock still running refused, CLOCK_OPEN,
   and named; idempotent). A merge references the source's messages on the kept case (RequestCommEvent, each
   CommunicationEvent as it was), links its records and work, lists its files, carries each open clock as an obligation
-  (`Sla.js carryOnMerge`, F-P8-3) and leaves the source cancelled as a duplicate when open (RrDuplicate) and closed.
+  (`Sla.js carryOnMerge`, F137) and leaves the source cancelled as a duplicate when open (RrDuplicate) and closed.
 - Mantle changes to existing code: `SupportCases.js` refuses an update, move or tags of a merged case naming the kept one
   (CASE_MERGED) and `notify#CaseCustomerReply` skips a message a merge or split referenced; `Sla.js`: a case's own clocks and
   the carried ones (`openEpisode` own only; a response meets both, a pause, resume, resolve or cancel acts on both, a reopen
@@ -1765,7 +1765,7 @@ CS-JOBS.
   the split's clock from the message's receipt, the source open, a manager's start and the refusals; a reply reopening within
   the window, making follow-ups after it and to a cancelled case, going to the kept case of a merged one, and nothing on a plain
   request; auto-close with a failing case named and a rerun changing nothing, a reply after it a follow-up; mail threading to
-  the kept case and a closed case's follow-up) and `test/request/SupportSla` (its status events read in order, F-P8-8). BOSS
+  the kept case and a closed case's follow-up) and `test/request/SupportSla` (its status events read in order, F142). BOSS
   `CustomerService/CustomerServiceRelations` (2 features, about 0.3 s: CaseDetail's merge and split by capability; MergeCases'
   and SplitCase's one qvt render) and `CustomerServiceAccess` (+1 feature: merge the manager's and not the agent's, split a case
   editor's and not the reader's, another organization's case and lineage refused). Acceptance
@@ -1774,7 +1774,7 @@ CS-JOBS.
 - Tests run (all pass): Mantle SupportRelations, SupportSla, SupportCases, SupportChannels, SupportAssignment,
   SupportReplies, SupportTemplates, SupportKnowledge, WorkProjectRequests, RecordVisibility, RecordLinks, WorkProjectClients,
   CommonsToday, OrderToCashBasicFlow, ReturnToResponseBasicFlow, ShipmentReturnMisc, WorkPlanToCashBasicFlow (200 features;
-  SupportSla failed once there before F-P8-8, and passed alone and after); BOSS CustomerServiceRelations,
+  SupportSla failed once there before F142, and passed alone and after); BOSS CustomerServiceRelations,
   CustomerServiceAccess, CustomerServiceCases, CustomerServiceChannels, CustomerServiceAssignment, CustomerServiceTemplates,
   CustomerServiceKnowledge, CustomerServiceOrders, Requests, ProjectRequests, MergeRequests, WorkItemDetail (85 features);
   acceptance CustomerServiceRelationsWalk (4) and AppStructure (18). `moqui lint --screens`: 136 flagged sites, as master;
@@ -1793,30 +1793,30 @@ CS-JOBS.
     case's CaseDetail (More), over the customer's open cases.
   - Auto-close runs hourly; with no `autoCloseDays` in an organization's policy (the demo's), nothing closes there.
 - Findings (provisional):
-  - **F-P8-1** No request merge exists in Commons or Projects to keep: BOSS's MergeRequests spec is Projects Code's git merge
+  - **F135** No request merge exists in Commons or Projects to keep: BOSS's MergeRequests spec is Projects Code's git merge
     requests (`moqui.resource.GitMergeRequest`), untouched by case merges (it passes).
-  - **F-P8-2** ServicePolicy already had `reopenWindowDays` and `autoCloseDays` (P2), and `transition#Case` already refused a
+  - **F136** ServicePolicy already had `reopenWindowDays` and `autoCloseDays` (P2), and `transition#Case` already refused a
     reopen past the window (REOPEN_WINDOW_PASSED) or of a closed case (CASE_CLOSED); P8 adds the customer's reply path, the
     follow-up and the job that sets the closed date.
-  - **F-P8-3** "Obligations carried" needs a record of each: a merge copies each open clock of the source onto the kept case
+  - **F137** "Obligations carried" needs a record of each: a merge copies each open clock of the source onto the kept case
     (`CaseSlaEpisode.carriedFromEpisodeId`, its start, due, pauses and breach kept), which then follows the kept case's own clock
     of its kind, and the source's own clock ends `SlsMerged` with its figures. So compliance counts the copy and never the
     Merged clock, and a breach is never counted twice; Home's measures already read only met, missed, running, paused and unmet
     clocks, and P14's reports must too. Design MergeCases changed.
-  - **F-P8-4** A message referenced on another case (RequestCommEvent) fires that case's RequestCommEvent rules as a new
+  - **F138** A message referenced on another case (RequestCommEvent) fires that case's RequestCommEvent rules as a new
     response or customer reply; the CaseRelationItem is written before the link, and `Sla.js recordMessage` and
     `notify#CaseCustomerReply` skip a message referenced there. `delete#RequestComment` on either case deletes the comment from
     both (§7).
-  - **F-P8-5** The follow-up of a reply that is not mail runs after the commit (`make#FollowUpCase` by `registerOnCommit`): the
+  - **F139** The follow-up of a reply that is not mail runs after the commit (`make#FollowUpCase` by `registerOnCommit`): the
     reply's transaction is its caller's (Chatter, a filing) and a failed insert would abort it on PostgreSQL. A mail's follow-up
     is made in the intake's own transaction (`resolveMail`). The after-commit call runs on the real clock, not a spec's effective
     time, so SupportRelations makes the cases it follows up in the past and moves ahead only for the mail and the job.
-  - **F-P8-6** `close#ResolvedCases` takes a batch by `lastUpdatedStamp` before the cutoff (resolving is an update, so the
+  - **F140** `close#ResolvedCases` takes a batch by `lastUpdatedStamp` before the cutoff (resolving is an update, so the
     stamp is at or after it; the per-case check reads the status audit log), so cases of organizations without auto-close or
     resolved recently never fill the batch. `lastUpdatedStamp` is the transaction's real start time, not the effective time.
-  - **F-P8-7** A second reply to a closed case would make a second follow-up; it joins the follow-up still open instead (mail
+  - **F141** A second reply to a closed case would make a second follow-up; it joins the follow-up still open instead (mail
     and other replies alike).
-  - **F-P8-8** SupportSla's status-event check read events with no order, which a longer run returned out of order (the
+  - **F142** SupportSla's status-event check read events with no order, which a longer run returned out of order (the
     table's order after updates); it sorts them by id.
 
 **Review Nov 5 (P8).** Checked against design §3 MergeCases/SplitCase, §9 and §2. Merge: one transaction, the cases locked
@@ -1831,9 +1831,9 @@ its reason; a reopen within the window is the status rule's new episode, the fir
 paused case and `replyArrived` only on a resolved or cancelled one, never both. Threading: the merged-source redirect comes
 after P6's `senderOnRequest`/`tokenCase` checks on the source, and the kept case has the same customer; staff and automatic mail
 to a closed case join it. Access: the new transitions call AccessServices.check#Record for each case and the Mantle services
-check their permission and organization. F-P8-5: the after-commit follow-up is dated by the reply's receipt; no effective-time
+check their permission and organization. F139: the after-commit follow-up is dated by the reply's receipt; no effective-time
 spec depends on it. Fixes:
-- **R1 (medium)** `delete#RequestComment` on either case deleted a referenced comment from both (F-P8-4): `check#RequestComment`
+- **R1 (medium)** `delete#RequestComment` on either case deleted a referenced comment from both (F138): `check#RequestComment`
   refuses deleting a comment a CaseRelationItem references, naming the other case (acts only on a case relation);
   SupportRelations asserts it.
 - **R2 (medium)** `close#ResolvedCases` reads oldest first by `lastUpdatedStamp`, so resolved cases with a clock still running
@@ -1846,7 +1846,7 @@ spec depends on it. Fixes:
   (since P4; the merge added a path of that shape). `mark`, `correct#CaseSla` and record#CaseEvent's message rule (Sla.js
   `lockRequest`) now lock the request FOR UPDATE first, then the episode. The status rule runs after its request's update
   (request first already); the work rule writes no episode.
-- Left for the lead: P14's reports must read only met, missed, running, paused and unmet clocks, never SlsMerged (F-P8-3).
+- Left for the lead: P14's reports must read only met, missed, running, paused and unmet clocks, never SlsMerged (F137).
 - Specs run: Mantle SupportRelations (5), SupportSla (8), SupportCases (11), SupportChannels (10), RecordNotes (7),
   CrmMiscServices (7); acceptance CustomerServiceRelationsWalk (4); all pass.
 
@@ -1955,7 +1955,7 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
   exception, Issue return label with weight and unit, Close remainder, Send and Print RMA, Assign, Cancel, line changes, Receive for
   W through `receive#ReturnItems`, Settle for F through `settle#Return`, shipment and label, inspections, settlement, decisions,
   cases, Files, Conversation) and QualityInspection (Shared/QualityInspection's Customer Service branch; WarehouseInspectionParts'
-  inspect and dispose transitions check `check#ReturnInspection` here, F-P9-3); `Settings/ReturnPolicies` (list, New policy and
+  inspect and dispose transitions check `check#ReturnInspection` here, F145); `Settings/ReturnPolicies` (list, New policy and
   Change from a date, End, reasons, preview); `Approvals.xml` the Commons Notifications mount; Home's Returns awaiting approval,
   Approvals waiting and Request return; CaseDetail's Request RMA (More); `Shared/Customer360/ServiceReturns` (Returns tab);
   OrderDetail's Create return. Shell: quick create `customerServiceReturn` (Returns area's groups), the two topics, `g r`.
@@ -1979,38 +1979,38 @@ CX-RETURNS, CX-APPROVAL. On Accounting P17's settlement and receipt and Warehous
   takes a link but issues no Support capability itself (P15 builds the page); NewReturn's reasons show the enum names, not the
   organization's reason labels; SettingsHome has no Returns readiness row.
 - Findings (provisional):
-  - **F-P9-1** ReturnHeader has no revision field; a return's revision is the latest `lastUpdatedStamp` of its header, items and
+  - **F143** ReturnHeader has no revision field; a return's revision is the latest `lastUpdatedStamp` of its header, items and
     ReturnParty rows (ReturnPolicies.js `revisionOf`), which every path (Warehouse's receipt, settlement) moves.
-  - **F-P9-2** ORG_ZIZI_RETAIL settles returns at Mantle's default (`returnSettlementRequired` N, which Mantle's return flows
+  - **F144** ORG_ZIZI_RETAIL settles returns at Mantle's default (`returnSettlementRequired` N, which Mantle's return flows
     need), so Warehouse's `receive#ReturnItems` refuses its returns (RETURN_SETTLEMENT_OFF): ReturnDetail offers Receive only where
     the organization settles separately and says Mantle receives at delivery otherwise; the walk turns the flag on and restores it.
     For the lead: whether the Customer Service demo needs its own organization with the flag (as Warehouse's BOSS_WH_RETURNS).
-  - **F-P9-3** Warehouse's inspection transitions checked Warehouse's scope, refusing a borrowed W without the Warehouse root
+  - **F145** Warehouse's inspection transitions checked Warehouse's scope, refusing a borrowed W without the Warehouse root
     (WAREHOUSE_UNAVAILABLE); WarehouseInspectionParts gains a Customer Service branch (`check#ReturnInspection`). Verification
     stays the quality verifier's (a different user, Warehouse); the inspection drop-downs are still Warehouse's choices.
-  - **F-P9-4** A customer return shipment has no store and comes from the customer, so `request#ReturnLabel` finds no gateway
+  - **F146** A customer return shipment has no store and comes from the customer, so `request#ReturnLabel` finds no gateway
     unless its route segment names one (no organization default is read), and the test carrier needs a weight and unit
     (WEIGHT_REQUIRED): NewReturn takes the label's carrier and service, Issue return label the weight and unit, and the walk sets
     TEST_SHIPPING on the segment. For Warehouse (design-warehouse ReturnReceipt): the vendor's default gateway for a return.
-  - **F-P9-5** With no policy the return is manual review: authorization needs a reason (recorded on the decision), not an
+  - **F147** With no policy the return is manual review: authorization needs a reason (recorded on the decision), not an
     exception; an exception (outside the window, a reason or remedy not allowed, goods with no order line) needs a manager's
     approval at the return's current revision first. Goods with no order line are entered with a description of the goods and
     ownership and always need the exception.
-  - **F-P9-6** Under the default flag an immediate response is processed by Mantle at approval, as the acting user; the credit
+  - **F148** Under the default flag an immediate response is processed by Mantle at approval, as the acting user; the credit
     memo's Incoming to Approved transition needs `INVOICE_APPROVE` (StatusFlowTransition.userPermissionId), so an authorizer
     without it failed the whole authorization. Not a fresh-organization effect: any organization at the default flag hits it
     (review R1: an immediate credit or refund there also needs `INVOICE_APPROVE`, else it waits for receipt). The same
     transition runs in Mantle's own receipt at delivery (`respond#ReturnItems` as the receiving user) — for the lead.
-  - **F-P9-7** F22 changes an existing Mantle service's behaviour (not a refusal): `cancel#Return` now cancels its unreceived
+  - **F149** F22 changes an existing Mantle service's behaviour (not a refusal): `cancel#Return` now cancels its unreceived
     return shipment; the compatibility specs pass.
 
 **Review Nov 5 (P9).** Checked against the phase, §2 and the brief's points: eligibility and its locks, `authorize#Return`
-and F25, F22, F-P9-3, audience, F-P9-2's walk cleanup, merge-friendliness, tests. Specs run (all pass): Mantle ReturnPolicies (9 features),
+and F25, F22, F145, audience, F144's walk cleanup, merge-friendliness, tests. Specs run (all pass): Mantle ReturnPolicies (9 features),
 ReturnToResponseBasicFlow, WarehouseReturns, ShipmentReturnMisc, AccountingReturns, PurchaseReturns, OrderToCashBasicFlow;
 BOSS CustomerServiceReturns, WarehouseInspections, WarehouseReturns, AccountingReceivables; acceptance
 CustomerServiceReturnsWalk.
 - R1 (high) An immediate credit or refund at authorization in an organization at the default flag (Retail's) failed the
-  whole authorization for an authorizer without `INVOICE_APPROVE` (F-P9-6 restated). `immediateAllowed` needs it where Mantle
+  whole authorization for an authorizer without `INVOICE_APPROVE` (F148 restated). `immediateAllowed` needs it where Mantle
   answers at approval; the Mantle spec now runs at Mantle's default flag with a RECEIVABLE_EDIT-only authorizer (no
   immediate, no credit) and an `INVOICE_APPROVE` one (the credit made at approval).
 - R2 (medium) `add#OrderItemToReturn` locks its order line: Warehouse's addReturnItem (Warehouse context only) adds customer
@@ -2027,7 +2027,7 @@ CustomerServiceReturnsWalk.
 - R5 (low) Merge-friendliness: ExternalAccess.js's Prettier churn of untouched lines reverted; OrderConfirmations.js's
   `senderAccount` export made identical to P10's on master.
 - Checked, no change: F22 cancels only a ShipInput or ShipScheduled return shipment with no AssetReceipt that carries only
-  this return (and `cancel#ReturnItem` refuses received items first); Mantle's callers pass. F-P9-3: the branch is
+  this return (and `cancel#ReturnItem` refuses received items first); Mantle's callers pass. F145: the branch is
   `appRoot == 'CustomerService'` only, Warehouse's users unchanged (WarehouseInspections), the borrowed W acts only on
   inspections of returns of its organizations and customers (`recordOf`), `verifyInspection` has no Customer Service branch
   and `canVerify` is false. Audience: credited amounts for PRICE_VIEW, ACCOUNTING_VIEW or RECEIVABLE_VIEW (the agent reads
@@ -2201,33 +2201,33 @@ CX-ORDER-CHANGE. On Accounting P10 and P17 and Warehouse P11 and P12.
   - A customer contact (the customer itself, or a current contact or employee of it) may file a cancel of their own order
     through save#OrderChange; P15's `request#CustomerCancel` calls it.
 - Findings (provisional):
-  - **F-P10-1** An entity file's seed data loads in file order, so the proposal's seeds failed in `OrderChangeEntities.xml`
+  - **F150** An entity file's seed data loads in file order, so the proposal's seeds failed in `OrderChangeEntities.xml`
     (RequestType and OrderContentType not loaded yet) and the whole file was skipped; the file is
     `SupportOrderChangeEntities.xml`, after them, its seeds in an entity's `seed-data` (not an extend-entity's).
-  - **F-P10-2** Ziziwork's organizations have no PartyAcctgPreference of their own and inherit ORG_ZIZI_CORP's
+  - **F151** Ziziwork's organizations have no PartyAcctgPreference of their own and inherit ORG_ZIZI_CORP's
     (find#PartyAcctgPreference): a demo row for ORG_ZIZI_RETAIL replaced the inherited one (WarehousePacking's
     kitCostFromComponents failed), so the sales flag is read through find#PartyAcctgPreference and set on ORG_ZIZI_CORP.
-  - **F-P10-3** Retail finalizes its pack invoice at pack (no D3 flag), so the demo packed order's change is BILLING_CONFLICT
+  - **F152** Retail finalizes its pack invoice at pack (no D3 flag), so the demo packed order's change is BILLING_CONFLICT
     when filed; the walk's reopen is its own order, packed while the company finalizes at ship. The demo order becomes
     reopenable when Accounting turns salesInvoiceFinalizedAtShip on for Ziziwork, which also changes Mantle's flows that run
     with the BOSS demo; for the lead.
-  - **F-P10-4** pack#Shipment completes a fully packed order part (OrderCompleted), and hold#Order refuses a completed order:
+  - **F153** pack#Shipment completes a fully packed order part (OrderCompleted), and hold#Order refuses a completed order:
     save and apply accept a completed order, refuse only what shipped, and reopen the package (back to Approved) before the
     Change hold.
-  - **F-P10-5** Mantle reserves at placement by default (AsResAutoPlaced, an ad hoc asset when out of stock), so
+  - **F154** Mantle reserves at placement by default (AsResAutoPlaced, an ad hoc asset when out of stock), so
     customerImmediateCancel's "nothing reserved" holds only for an order part that reserves at approval; the condition stays
     as designed.
-  - **F-P10-6** The stock put back after a reduced packed line is Warehouse's: cancel#OrderItem flags putBackQuantity and
+  - **F155** The stock put back after a reduced packed line is Warehouse's: cancel#OrderItem flags putBackQuantity and
     Warehouse's reverse#Pick (SHIPMENT_PICK, which the order desk lacks) moves it, as design §4's receiving sides say; apply
     does not call reverse#Pick.
-  - **F-P10-7** This runtime's entity find is consumed by `condition()`: a find built across statements must reassign it
+  - **F156** This runtime's entity find is consumed by `condition()`: a find built across statements must reassign it
     (`query = query.condition(...)`), or its `list()` fails "entity find was already used".
-  - **F-P10-8** F78: apply places and releases its own Change hold in one transaction (a failed apply rolls it back), so P10
+  - **F157** F78: apply places and releases its own Change hold in one transaction (a failed apply rolls it back), so P10
     builds no manual release of a Change hold; one left by another path is released through release#OrderHold with
     ORDER_CHANGE_HOLD_RELEASE, which a later screen must put behind check#Record.
-  - **F-P10-9** No BOSS group holds SALES_APPROVE or SALES_ORDER_CHANGE (Sales is not built): a commercial kind is filed and
+  - **F158** No BOSS group holds SALES_APPROVE or SALES_ORDER_CHANGE (Sales is not built): a commercial kind is filed and
     routed, and no one in BOSS decides it until Sales grants them (§7).
-  - **F-P10-10** Approvals (P9's screen) should pass the OrderChangeApproval topic; until then the notice is decided from
+  - **F159** Approvals (P9's screen) should pass the OrderChangeApproval topic; until then the notice is decided from
     Notifications or OrderChangeDetail.
 
 **Review Nov 5 (P10).** Checked both repos' diffs against this section, §2, design §4, AGENTS.md and Practices-App-Dev:
@@ -2237,11 +2237,11 @@ release, the substitute's shipment and the PDF, roll back together); the reopen 
 operation, SHIPMENT_PACK, user facility, confirmation and reason checks and writes as before; the internal
 `reopen#ShipmentPackageForChange` is allow-remote false, keeps the confirmation, reason, state, package and
 INVOICE_FINALIZED checks, scopes the shipment to the order's organization, and neither it nor apply calls
-release#ShipmentDraftInvoice or refund#OrderPayment); F-P10-4's re-approval (a reopen's Completed to Approved and every
+release#ShipmentDraftInvoice or refund#OrderPayment); F153's re-approval (a reopen's Completed to Approved and every
 Change hold's release run Mantle's OrderApproved rules again, as a Credit hold's release does: the store's approval email is
 not sent twice (send#OrderStoreEmail skips a type already sent), subscriptions fulfil an item once, reserve#AssetsForOrder
 reserves only the unreserved remainder, the drop-ship rule answers a line already on a purchase order; the high-priority
-notice repeats and an EDI order records its next 855, which an applied change warrants); F-P10-2 and F55 (the flag on
+notice repeats and an EDI order records its next 855, which an applied change warrants); F151 and F55 (the flag on
 ORG_ZIZI_CORP merges into its demo preference and is read through find#PartyAcctgPreference, so Retail keeps the
 inherited kitCostFromComponents; no Mantle or BOSS spec asserts a Ziziwork sales order's revision moving on a note, file
 or status); permissions by kind, FORBIDDEN for the commercial kinds, the Credit hold kept, the topic handlers at the
@@ -2260,7 +2260,7 @@ reserved, picked, shipped or invoiced; the walk restores salesInvoiceFinalizedAt
   before the header, their behaviour otherwise unchanged; apply's `orderOf` takes the parts after the shipments, so the
   hold it places inside apply takes nothing new. AccountingCredit, PurchaseHoldPermission, PurchaseRevisions, OrderChanges,
   WarehousePacking, WarehousePicking and OrderToCashBasicFlow pass (84 features).
-- Left for the lead: F-P10-7 is the framework's design, not a P10 bug: `HostFind`'s chain methods
+- Left for the lead: F156 is the framework's design, not a P10 bug: `HostFind`'s chain methods
   (`crates/moqui-core/src/script/runtime/entities.rs`, `take_find`) take the inner find and return a new object, so
   Java-style `q.condition(...); q.list()` fails loudly ("entity find was already used") where Java's mutable EntityFind
   works; returning the same object with the find changed in place would make both styles work. Callers that lock the
@@ -2795,6 +2795,35 @@ is written there too.
 | F132 | P6 review: Chat's and Voicemail's Create a case ext-actions show to every Comms user (an ext-action's condition tests only the item's fields); mail forging a real customer's From makes a case for that customer, the acknowledgement going only to the customer's stored address (EmailMessage keeps no DKIM or DMARC result) | The server refusal in `create#CaseFromMessage` guards the first; §7 for a permission test on ext-actions and a hold on mail failing DMARC |
 | F133 | P7 review: the framework read `dbFormIncludeDrafts` and `dbFormAsOfDate` from the render context, request parameters included, so a URL could show a dated DbForm's drafts on any screen extending it | Fixed in the framework at the W4 boundary (mr-moqui 8939cb46): the as-of date and drafts are the form element's `db-form-as-of` and `db-form-include-drafts` attributes, expressions in the screen's context, the outermost form in an extends chain deciding; with neither, a form reads as of now without drafts. TemplatePreview sets `db-form-include-drafts`; NewCase sets neither |
 | F134 | P7 review: mr-marble's SimpleScreens Survey `Fields.xml` and `EditSurvey.xml` edit any DbForm by formId, case templates included, past Mantle's allowlist (a `${` label the renderer expands, the audience) | mr-marble is read only here and the screens are ADMIN's; §7: Marble's survey screens refuse a form whose purpose is not a survey |
+| F135 | P8: No request merge exists in Commons or Projects to keep: BOSS's MergeRequests spec is Projects Code's git merge requests (`moqui.resource.GitMergeRequest`), untouched by case merges (it passes). | See P8 |
+| F136 | P8: ServicePolicy already had `reopenWindowDays` and `autoCloseDays` (P2), and `transition#Case` already refused a reopen past the window (REOPEN_WINDOW_PASSED) or of a closed case (CASE_CLOSED); P8 adds the customer's reply path, the follow-up and the job that sets the closed date. | See P8 |
+| F137 | P8: "Obligations carried" needs a record of each: a merge copies each open clock of the source onto the kept case (`CaseSlaEpisode.carriedFromEpisodeId`, its start, due, pauses and breach kept), which then follows the kept case's own clock of its kind, and the source's own clock ends `SlsMerged` with its figures. So compliance counts the copy and never the Merged clock, and a breach is never counted twice; Home's measures already read only met, missed, running, paused and unmet clocks, and P14's reports must too. Design MergeCases changed. | See P8 |
+| F138 | P8: A message referenced on another case (RequestCommEvent) fires that case's RequestCommEvent rules as a new response or customer reply; the CaseRelationItem is written before the link, and `Sla.js recordMessage` and `notify#CaseCustomerReply` skip a message referenced there. `delete#RequestComment` on either case deletes the comment from both (§7). | See P8 |
+| F139 | P8: The follow-up of a reply that is not mail runs after the commit (`make#FollowUpCase` by `registerOnCommit`): the reply's transaction is its caller's (Chatter, a filing) and a failed insert would abort it on PostgreSQL. A mail's follow-up is made in the intake's own transaction (`resolveMail`). The after-commit call runs on the real clock, not a spec's effective time, so SupportRelations makes the cases it follows up in the past and moves ahead only for the mail and the job. | See P8 |
+| F140 | P8: `close#ResolvedCases` takes a batch by `lastUpdatedStamp` before the cutoff (resolving is an update, so the stamp is at or after it; the per-case check reads the status audit log), so cases of organizations without auto-close or resolved recently never fill the batch. `lastUpdatedStamp` is the transaction's real start time, not the effective time. | See P8 |
+| F141 | P8: A second reply to a closed case would make a second follow-up; it joins the follow-up still open instead (mail and other replies alike). | See P8 |
+| F142 | P8: SupportSla's status-event check read events with no order, which a longer run returned out of order (the table's order after updates); it sorts them by id. | See P8 |
+| F143 | P9: ReturnHeader has no revision field; a return's revision is the latest `lastUpdatedStamp` of its header, items and ReturnParty rows (ReturnPolicies.js `revisionOf`), which every path (Warehouse's receipt, settlement) moves. | See P9 |
+| F144 | P9: ORG_ZIZI_RETAIL settles returns at Mantle's default (`returnSettlementRequired` N, which Mantle's return flows need), so Warehouse's `receive#ReturnItems` refuses its returns (RETURN_SETTLEMENT_OFF): ReturnDetail offers Receive only where the organization settles separately and says Mantle receives at delivery otherwise; the walk turns the flag on and restores it. For the lead: whether the Customer Service demo needs its own organization with the flag (as Warehouse's BOSS_WH_RETURNS). | See P9 |
+| F145 | P9: Warehouse's inspection transitions checked Warehouse's scope, refusing a borrowed W without the Warehouse root (WAREHOUSE_UNAVAILABLE); WarehouseInspectionParts gains a Customer Service branch (`check#ReturnInspection`). Verification stays the quality verifier's (a different user, Warehouse); the inspection drop-downs are still Warehouse's choices. | See P9 |
+| F146 | P9: A customer return shipment has no store and comes from the customer, so `request#ReturnLabel` finds no gateway unless its route segment names one (no organization default is read), and the test carrier needs a weight and unit (WEIGHT_REQUIRED): NewReturn takes the label's carrier and service, Issue return label the weight and unit, and the walk sets TEST_SHIPPING on the segment. For Warehouse (design-warehouse ReturnReceipt): the vendor's default gateway for a return. | See P9 |
+| F147 | P9: With no policy the return is manual review: authorization needs a reason (recorded on the decision), not an exception; an exception (outside the window, a reason or remedy not allowed, goods with no order line) needs a manager's approval at the return's current revision first. Goods with no order line are entered with a description of the goods and ownership and always need the exception. | See P9 |
+| F148 | P9: Under the default flag an immediate response is processed by Mantle at approval, as the acting user; the credit memo's Incoming to Approved transition needs `INVOICE_APPROVE` (StatusFlowTransition.userPermissionId), so an authorizer without it failed the whole authorization. Not a fresh-organization effect: any organization at the default flag hits it (review R1: an immediate credit or refund there also needs `INVOICE_APPROVE`, else it waits for receipt). The same transition runs in Mantle's own receipt at delivery (`respond#ReturnItems` as the receiving user) — for the lead. | See P9 |
+| F149 | P9: F22 changes an existing Mantle service's behaviour (not a refusal): `cancel#Return` now cancels its unreceived return shipment; the compatibility specs pass. | See P9 |
+| F150 | P10: An entity file's seed data loads in file order, so the proposal's seeds failed in `OrderChangeEntities.xml` (RequestType and OrderContentType not loaded yet) and the whole file was skipped; the file is `SupportOrderChangeEntities.xml`, after them, its seeds in an entity's `seed-data` (not an extend-entity's). | See P10 |
+| F151 | P10: Ziziwork's organizations have no PartyAcctgPreference of their own and inherit ORG_ZIZI_CORP's (find#PartyAcctgPreference): a demo row for ORG_ZIZI_RETAIL replaced the inherited one (WarehousePacking's kitCostFromComponents failed), so the sales flag is read through find#PartyAcctgPreference and set on ORG_ZIZI_CORP. | See P10 |
+| F152 | P10: Retail finalizes its pack invoice at pack (no D3 flag), so the demo packed order's change is BILLING_CONFLICT when filed; the walk's reopen is its own order, packed while the company finalizes at ship. The demo order becomes reopenable when Accounting turns salesInvoiceFinalizedAtShip on for Ziziwork, which also changes Mantle's flows that run with the BOSS demo; for the lead. | See P10 |
+| F153 | P10: pack#Shipment completes a fully packed order part (OrderCompleted), and hold#Order refuses a completed order: save and apply accept a completed order, refuse only what shipped, and reopen the package (back to Approved) before the Change hold. | See P10 |
+| F154 | P10: Mantle reserves at placement by default (AsResAutoPlaced, an ad hoc asset when out of stock), so customerImmediateCancel's "nothing reserved" holds only for an order part that reserves at approval; the condition stays as designed. | See P10 |
+| F155 | P10: The stock put back after a reduced packed line is Warehouse's: cancel#OrderItem flags putBackQuantity and Warehouse's reverse#Pick (SHIPMENT_PICK, which the order desk lacks) moves it, as design §4's receiving sides say; apply does not call reverse#Pick. | See P10 |
+| F156 | P10: This runtime's entity find is consumed by `condition()`: a find built across statements must reassign it (`query = query.condition(...)`), or its `list()` fails "entity find was already used". | See P10 |
+| F157 | P10: F78: apply places and releases its own Change hold in one transaction (a failed apply rolls it back), so P10 builds no manual release of a Change hold; one left by another path is released through release#OrderHold with ORDER_CHANGE_HOLD_RELEASE, which a later screen must put behind check#Record. | See P10 |
+| F158 | P10: No BOSS group holds SALES_APPROVE or SALES_ORDER_CHANGE (Sales is not built): a commercial kind is filed and routed, and no one in BOSS decides it until Sales grants them (§7). | See P10 |
+| F159 | P10: Approvals (P9's screen) should pass the OrderChangeApproval topic; until then the notice is decided from Notifications or OrderChangeDetail. | See P10 |
+| F160 | P10 review: `hold#Order` and `release#OrderHold` now lock an order's parts before its header, as Warehouse's `lockOrders` does, and apply locks the proposal, the order's shipments, its parts and its header; callers that lock the header themselves before calling `hold#Order` still take it first: Purchasing's `PurchaseOrders.js` `purchaseOrder(orderId, true)` (the purchase revisions) and several OrderServices verbs, which can deadlock against purchase receiving locking a part | Purchasing's code: §7, to bring those callers to the parts-then-header order |
+| F161 | P10 review (F156): the script runtime's entity find chain methods (`condition`, `orderBy`, `limit` and the others; crates/moqui-core/src/script/runtime/entities.rs `take_find`) take the inner find and return a new one, so Java-style `q.condition(...); q.list()` fails loudly with "entity find was already used"; Java's EntityFind changes in place | By design and loud; §7: a framework choice to change the find in place and return it, and a line in the script docs |
+| F162 | P10 review: a customer who filed a change reads it through the organization-scoped `get#OrderChange`, which shows decisions' reasons and approvers | P15: a customer-facing read and withdraw of a cancel request |
+| F163 | P9 review: at Mantle's default (`returnSettlementRequired` N), Mantle's own receipt at delivery (`respond#ReturnItems` as the receiving user) needs INVOICE_APPROVE for an immediate credit memo's Incoming to Approved, as authorization did (R1); Warehouse's `addReturnItem` checks invoiced quantity, not shipped, and no policy (routing it through `save#ReturnItem` needs SUPPORT_CASE_EDIT or RETURN_AUTHORIZE, which W users lack) | Mantle's and Warehouse's: §7 |
 
 ## 7. Later
 
