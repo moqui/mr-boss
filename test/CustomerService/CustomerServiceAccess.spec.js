@@ -192,8 +192,12 @@ feature("each group holds exactly the capabilities of its permissions and areas,
         const extra = borrowed.filter(name => admin.capabilities[name])
         if (extra.length) problems.push(`the administrator borrows ${extra}`)
         if (admin.allOrganizations !== true) problems.push("the administrator is not in every organization")
-        // P2: the administrator sees the team queues of every organization and the restricted Privacy queue of its team
-        const adminQueues = Array.from(admin.queueIds).sort().join()
+        // P2: the administrator sees the team queues of every organization and the restricted Privacy queue of its team; of
+        // the demo's queues, as other specs (Mantle's SupportCases) leave queues of their own organizations, which it sees too
+        const adminQueues = Array.from(admin.queueIds)
+            .filter(id => String(id).startsWith("BOSS_CS_Q_"))
+            .sort()
+            .join()
         if (adminQueues !== [ids.privacyQueueId, ids.otherQueueId, ids.supportQueueId].sort().join())
             problems.push(`the administrator's queues: ${adminQueues}`)
         return {problems}
