@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WarrantyClaims (design-customer-service §5 WarrantyClaims; style-guide §3.2 List; impl-customer-service P11): WarrantyFind, by
+    customer, product, serial number, order, the claim's state and its date, and WarrantyList (mantle.request.WarrantyServices
+    find#WarrantyClaims, which checks the warranty read permissions and the user's organizations; here kept to the user's
+    queues and the claims assigned to them, as Cases): each claim with its customer, product and serial, the coverage end and
+    basis, the decision and its approver, the linked repair or return, the next action and the state, opening
+    WarrantyAssessment. New claim opens NewCase with the warranty claim type (its template), or a row of Customer360's
+    Delivered items. For the agent and the manager (a user without SUPPORT_CASE_EDIT or WARRANTY_APPROVE is told so). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Warranty" default-menu-index="3">
+    <parameter name="customerPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="serialNumber"/>
+    <parameter name="orderId"/>
+    <parameter name="state"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+    <parameter name="pageSize"/>
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <actions>
+        <set field="caps" from="customerService.capabilities || {}"/>
+        <set field="mayRead" from="!!(caps.caseEdit || caps.caseManage || caps.warrantyApprove)"/>
+        <set field="found" from="null"/>
+        <if condition="mayRead">
+            <service-call name="mantle.request.WarrantyServices.find#WarrantyClaims" out-map="found" transaction="force-new"
+                    ignore-error="true"
+                    in-map="{customerPartyId:(customerPartyId || null), productId:(productId || null),
+                        serialNumber:(serialNumber || null), orderId:(orderId || null), state:(state || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), queueIds:(customerService.queueIds || []),
+                        visibleAssigneePartyId:(ec.user.userAccount?.partyId || '_NONE_'), pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="claimList" from="found?.claimList || []"/>
+        <set field="claimListCount" from="found?.claimListCount"/>
+        <set field="claimListPageIndex" from="found?.claimListPageIndex"/>
+        <set field="claimListPageSize" from="found?.claimListPageSize"/>
+        <set field="claimListPageMaxIndex" from="found?.claimListPageMaxIndex"/>
+        <set field="claimListPageRangeLow" from="found?.claimListPageRangeLow"/>
+        <set field="claimListPageRangeHigh" from="found?.claimListPageRangeHigh"/>
+        <set field="assessmentUrl" from="sharedLinks['Returns/WarrantyAssessment']"/>
+        <set field="stateColors" from="{needsEvidence: 'warning', assessment: 'info', approved: 'positive', rejected: 'negative',
+                followUp: 'warning', closed: 'grey-7'}"/>
+        <set field="findValues" from="{customerPartyId:customerPartyId || '', productId:productId || '', serialNumber:serialNumber || '',
+                orderId:orderId || '', state:state || '', fromDate:fromDate || '', thruDate:thruDate || ''}"/>
+    </actions>
+    <widgets>
+        <context title="Warranty claims"/>
+        <container style="row items-center q-gutter-sm">
+            <label text="Warranty claims" type="h5"/>
+            <link url="${sharedLinks['Cases/NewCase']}" text="New claim" link-type="anchor-button" btn-type="primary"
+                    icon="sym_o_add" parameter-map="{requestTypeEnumId:'RqtWarranty'}" condition="caps.caseEdit"/>
+        </container>
+        <section name="NoClaimRead" condition="!mayRead">
+            <widgets>
+                <container-box type="info">
+                    <box-body>
+                        <label type="p" text="Warranty claims are for the service agents and managers. Open a return to see its state."/>
+                        <link url="${sharedLinks['Returns/Returns']}" text="Returns" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ClaimLists" condition="mayRead">
+            <widgets>
+                <container-box>
+                    <box-body>
+                        <form-single name="WarrantyFind" transition="." map="findValues">
+                            <field name="customerPartyId">
+                                <default-field title="Customer">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="customerSearch" server-search="true" min-length="1"
+                                                parameter-map="{selected:customerPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'products', selected:productId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="serialNumber"><default-field title="Serial number"><text-line size="20"/></default-field></field>
+                            <field name="orderId"><default-field title="Sale (order)"><text-line size="16"/></default-field></field>
+                            <field name="state">
+                                <default-field title="State">
+                                    <drop-down allow-empty="true">
+                                        <option key="needsEvidence" text="Needs evidence"/>
+                                        <option key="assessment" text="Assessment"/>
+                                        <option key="approved" text="Approved repair or replacement"/>
+                                        <option key="rejected" text="Rejected"/>
+                                        <option key="followUp" text="Customer follow-up"/>
+                                        <option key="closed" text="Closed"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="Claimed from"><date-time type="date"/></default-field></field>
+                            <field name="thruDate"><default-field title="Claimed before"><date-time type="date"/></default-field></field>
+                            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big>
+                                    <field-ref name="customerPartyId"/>
+                                    <field-ref name="productId"/>
+                                    <field-ref name="serialNumber"/>
+                                </field-row-big>
+                                <field-row-big>
+                                    <field-ref name="orderId"/>
+                                    <field-ref name="state"/>
+                                    <field-ref name="fromDate"/>
+                                    <field-ref name="thruDate"/>
+                                </field-row-big>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="WarrantyList" list="claimList" skip-form="true" paginate="true" select-columns="true">
+                            <field name="requestId">
+                                <default-field title="Claim">
+                                    <link url="${assessmentUrl}" text="${requestId}" link-type="anchor" style="text-mono"
+                                            parameter-map="{requestId:requestId}"/>
+                                    <label text="${requestName}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                            <field name="productText">
+                                <default-field title="Equipment"><display text="${[productText, assetText].filter(Boolean).join(' · ')}"/></default-field>
+                            </field>
+                            <field name="orderId"><default-field title="Sale"><display/></default-field></field>
+                            <field name="coverageEndText">
+                                <default-field title="Coverage until"><display text="${[coverageEndText, coverageText].filter(Boolean).join(' · ')}"/></default-field>
+                            </field>
+                            <field name="decisionText">
+                                <default-field title="Assessment"><display text="${[decisionText, approverName ? 'approved by ' + approverName : ''].filter(Boolean).join(' · ')}"/></default-field>
+                            </field>
+                            <field name="workText"><default-field title="Repair or return"><display/></default-field></field>
+                            <field name="nextActionText"><default-field title="Next"><display/></default-field></field>
+                            <field name="assigneeName"><default-field title="Assignee"><display/></default-field></field>
+                            <field name="claimDateText"><default-field title="Claimed"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[state] || 'grey-7'}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="requestId"/><field-ref name="customerName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="nextActionText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No warranty claims match."
+                                condition="!claimList.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

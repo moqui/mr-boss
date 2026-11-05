@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customer360's Delivered items tab, in the Customer Service context (crosscut §3.2 DeliveredItems; impl-customer-service
+    P11): the serials and lots the user's organizations delivered to the customer (mantle.request.WarrantyServices
+    find#DeliveredItems, over AssetIssuance and the orders' parts; a shared customer's other organizations' left out, F74),
+    newest first, each with its product, order, ship date, the warranty end and its source, opening OrderDetail, and its open
+    claim or New claim (NewCase with the warranty claim type, the serial and its order). For the agent and the manager. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Delivered items" default-menu-index="5">
+    <parameter name="customerPartyId"/>
+    <condition><expression>appRoot == 'CustomerService' &amp;&amp; !!(customerService?.capabilities?.caseEdit
+        || customerService?.capabilities?.warrantyApprove)</expression></condition>
+    <actions>
+        <set field="deliveredRows" from="[]"/>
+        <if condition="customerFound">
+            <service-call name="mantle.request.WarrantyServices.find#DeliveredItems" out-map="deliveredOut"
+                    transaction="force-new" ignore-error="true" in-map="{customerPartyId:customerPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="deliveredRows" from="deliveredOut?.deliveredList || []"/>
+        </if>
+        <set field="can" from="customerService.capabilities"/>
+    </actions>
+    <widgets>
+        <section name="DeliveredItemsTab" condition="customerFound">
+            <widgets>
+                <form-list name="DeliveredItems" list="deliveredRows" skip-form="true" paginate="false">
+                    <field name="identText">
+                        <default-field title="Serial or lot">
+                            <display/>
+                            <label text="${productText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor"
+                                    parameter-map="{orderId:orderId}"/>
+                        </default-field>
+                    </field>
+                    <field name="shipText"><default-field title="Shipped"><display/></default-field></field>
+                    <field name="coverageEndText">
+                        <default-field title="Warranty until">
+                            <display text="${[coverageEndText, coveredText].filter(Boolean).join(' · ')}"/>
+                            <label text="${coverageSourceText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="claimRequestId">
+                        <conditional-field title="Claim" condition="claimRequestId">
+                            <link url="${sharedLinks['Returns/WarrantyAssessment']}" text="Claim ${claimRequestId}" link-type="anchor"
+                                    parameter-map="{requestId:claimRequestId}"/>
+                        </conditional-field>
+                        <default-field title="Claim">
+                            <link url="${sharedLinks['Cases/NewCase']}" text="New claim" link-type="anchor" icon="sym_o_add"
+                                    condition="can.caseEdit"
+                                    parameter-map="{customerPartyId:customerPartyId, organizationPartyId:organizationPartyId,
+                                        requestTypeEnumId:'RqtWarranty', assetId:assetId, orderId:orderId,
+                                        subject:'Warranty claim · ' + identText}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="identText"/><field-ref name="orderId"/></column>
+                        <column><field-ref name="coverageEndText"/><field-ref name="claimRequestId"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="m-muted" text="No serial or lot was delivered to this customer by your organizations."
+                        condition="!deliveredRows.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

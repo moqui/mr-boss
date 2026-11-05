@@ -204,4 +204,31 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.order.return.ReturnReasonPolicy returnReasonPolicyId="BOSS_CS_RRSN_DAMAGED" organizationPartyId="ORG_ZIZI_RETAIL"
             returnReasonEnumId="RrsnDamagedShip" customerLabel="It arrived damaged" customerVisible="Y" evidenceRequired="Y"
             suggestedResponseEnumId="RrspReplace" inspectionRequired="Y" fromDate="2026-01-01 00:00:00"/>
+    <!-- P11 (CS-WARRANTY): Retail's warranty claims, RqtWarranty cases in the Support queue, with their own template (a type's
+        template, ServiceRequestType.templateFormId, which NewCase takes before the queue's): the serial number (empty when the
+        claim comes from Customer360's Delivered items, which names the serial), what is wrong with it and how it was used,
+        customer-visible, and the condition on inspection, internal. The thermostat's 12-month warranty (BOSS_CS_WARRANTY_12)
+        covers the delivered order's serial from its ship date. No demo claim: the walks make their own. -->
+    <moqui.screen.form.DbForm formId="BOSS_CS_TPL_WARRANTY" purposeEnumId="DbfpCaseTemplate" isDated="Y" ownerPartyId="ORG_ZIZI_RETAIL"
+            description="Warranty claim" comments="A product under warranty that does not work: its serial, the fault and how it was used."/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_WARRANTY" fieldName="serialNumber" title="Serial number"
+            tooltip="On the label under the device" fieldTypeEnumId="DBFFT_text-line" layoutSequenceNum="10" audienceEnumId="CfaCustomer"
+            fromDate="0"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_WARRANTY" fieldName="faultDetail" title="What is wrong with it?"
+            fieldTypeEnumId="DBFFT_text-area" layoutSequenceNum="20" audienceEnumId="CfaCustomer" fromDate="0"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_WARRANTY" fieldName="usageCondition" title="How was it used?"
+            fieldTypeEnumId="DBFFT_radio" layoutSequenceNum="30" audienceEnumId="CfaCustomer" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_WARRANTY" fieldName="usageCondition" sequenceNum="1" keyValue="normal"
+            text="Installed and used as the instructions say" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_WARRANTY" fieldName="usageCondition" sequenceNum="2" keyValue="damaged"
+            text="Dropped, wet or damaged" fromDate="0"/>
+    <moqui.screen.form.DbFormFieldOption formId="BOSS_CS_TPL_WARRANTY" fieldName="usageCondition" sequenceNum="3" keyValue="modified"
+            text="Repaired or changed elsewhere" fromDate="0"/>
+    <moqui.screen.form.DbFormField formId="BOSS_CS_TPL_WARRANTY" fieldName="inspectionNote" title="Condition on inspection"
+            tooltip="For the service team only" fieldTypeEnumId="DBFFT_text-area" layoutSequenceNum="40" audienceEnumId="CfaInternal"
+            fromDate="0"/>
+    <mantle.request.support.ServiceRequestType serviceRequestTypeId="BOSS_CS_ST_WARRANTY" organizationPartyId="ORG_ZIZI_RETAIL"
+            requestTypeEnumId="RqtWarranty" serviceEnabled="Y" customerLabel="A warranty claim for a product I bought"
+            defaultCategoryId="BOSS_CS_Q_SUPPORT" defaultPriority="4" templateFormId="BOSS_CS_TPL_WARRANTY" publicAvailable="Y"
+            fromDate="0"/>
 </entity-facade-xml>

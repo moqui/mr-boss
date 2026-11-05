@@ -54,14 +54,25 @@ function findTemplates(p) {
 }
 
 // get#CaseTemplateChoice: NewCase's template step: the organization's published templates and the one a case takes (the one
-// chosen, else the queue's), when the organization is one the user serves for; none otherwise.
+// chosen, else its type's, else the queue's), when the organization is one the user serves for; none otherwise. P11: a type's
+// template is its current ServiceRequestType row's (the warranty claim's), when published.
 function caseTemplateChoice(p) {
     const userScope = cs.required()
     const none = {templateOptions: [], templateFormId: null, queueTemplateFormId: null, templateName: null}
     if (blank(p.organizationPartyId) || !cs.vendorIds(userScope).includes(p.organizationPartyId)) return none
     const published = mantleTemplates.templatesOf(p.organizationPartyId).filter(template => template.published)
     const queueTemplateFormId = mantleTemplates.queueTemplate(p.requestCategoryId)
-    const chosen = published.some(template => template.formId === p.templateFormId) ? p.templateFormId : queueTemplateFormId
+    const typeRow = blank(p.requestTypeEnumId)
+        ? null
+        : ec.resource
+              .script("component://mr-mantle/service/mantle/request/SupportCases.js")
+              .typeOf(p.organizationPartyId, p.requestTypeEnumId)
+    const typeTemplateFormId = published.some(template => template.formId === typeRow?.templateFormId)
+        ? typeRow.templateFormId
+        : null
+    const chosen = published.some(template => template.formId === p.templateFormId)
+        ? p.templateFormId
+        : typeTemplateFormId || queueTemplateFormId
     return {
         templateOptions: published.map(template => ({value: template.formId, label: template.description})),
         templateFormId: chosen || null,

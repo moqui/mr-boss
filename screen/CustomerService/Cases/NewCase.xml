@@ -23,7 +23,10 @@ along with this software (see the LICENSE.md file). If not, see
     case. P7: the template step: the template chosen in the first step, else the queue's
     (ironstone.customerservice.TemplateServices.get#CaseTemplateChoice), whose fields SubmitCase takes from the DbForm as of
     now (extends="DbForm#..."), customer-visible and internal alike; create#Case checks them on the server
-    (validate#TemplateValues: hidden ones dropped, required ones present) and keeps them as the case's FormResponse. -->
+    (validate#TemplateValues: hidden ones dropped, required ones present) and keeps them as the case's FormResponse. P11: a
+    warranty claim (RqtWarranty, from WarrantyClaims' New claim or a row of Customer360's Delivered items with its serial,
+    assetId, and sale) takes its type's template before the queue's, and after create#Case its serial (else the template's
+    serial number), sale and fault go to mantle.request.WarrantyServices.save#WarrantyClaim; it opens WarrantyAssessment. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="New case" default-menu-index="2">
     <parameter name="organizationPartyId"/>
@@ -34,6 +37,8 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="orderId"/>
     <!-- P7: the template chosen in the first step (empty: the queue's) -->
     <parameter name="templateFormId"/>
+    <!-- P11: a warranty claim's serial (Customer360's Delivered items), recorded on the claim after the case is made -->
+    <parameter name="assetId"/>
     <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <transition-include name="customerSearch" location="component://mr-boss/template/CustomerServiceParts.xml"/>
     <!-- CaseIdentity: the screen again with the customer, organization and type chosen (a link form) -->
@@ -45,6 +50,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="subject"/>
             <parameter name="orderId"/>
             <parameter name="templateFormId"/>
+            <parameter name="assetId"/>
         </default-response>
     </transition>
     <transition name="createCase">
@@ -60,8 +66,10 @@ along with this software (see the LICENSE.md file). If not, see
                 is never demanded; the template chosen in step one is the way to it -->
             <if condition="templateQueueId &amp;&amp; requestCategoryId &amp;&amp; requestCategoryId != templateQueueId">
                 <service-call name="ironstone.customerservice.TemplateServices.get#CaseTemplateChoice" out-map="queueChoice"
-                        in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, requestCategoryId:requestCategoryId}"/>
-                <if condition="queueChoice.queueTemplateFormId &amp;&amp; queueChoice.queueTemplateFormId != (templateFormId || '')">
+                        in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId, requestCategoryId:requestCategoryId,
+                            requestTypeEnumId:(requestTypeEnumId || null)}"/>
+                <!-- P11: the type's template (a warranty claim's), else the queue's -->
+                <if condition="queueChoice.templateFormId &amp;&amp; queueChoice.templateFormId != (templateFormId || '')">
                     <return error="true" message="This queue asks for the fields of its template ${queueChoice.templateName}: choose it as the Template in step 1, then fill it in"/></if>
             </if>
             <service-call name="mantle.request.SupportCaseServices.create#Case" out-map="created"
@@ -73,8 +81,18 @@ along with this software (see the LICENSE.md file). If not, see
                         records:(orderId ? [{recordEntityName:'mantle.order.OrderHeader', recordId:orderId}] : null),
                         templateFormId:(templateFormId || null), templateValues:Object.assign({}, ec.web.parameters)}"/>
             <set field="requestId" from="created.requestId"/>
+            <!-- P11: a warranty claim's evidence: the serial (from Delivered items, else the template's serial number), its
+                sale and the fault (Mantle's save#WarrantyClaim checks the serial is the customer's and the organization's) -->
+            <if condition="requestTypeEnumId == 'RqtWarranty'">
+                <service-call name="mantle.request.WarrantyServices.save#WarrantyClaim"
+                        in-map="{requestId:requestId, assetId:(assetId || null),
+                            serialNumber:(assetId ? null : (ec.web.parameters.serialNumber || null)), orderId:(orderId || null),
+                            faultText:(ec.web.parameters.faultDetail || description || null)}"/>
+            </if>
             <message type="success">Created case ${requestId}</message>
         </actions>
+        <conditional-response url="//CustomerService/Returns/WarrantyAssessment" condition="requestTypeEnumId == 'RqtWarranty'">
+            <parameter name="requestId"/></conditional-response>
         <default-response url="../CaseDetail"><parameter name="requestId"/></default-response>
         <error-response url="."/>
     </transition>
@@ -88,10 +106,10 @@ along with this software (see the LICENSE.md file). If not, see
                 bandOptions: [], configured: false}"/>
         <set field="can" from="customerService.capabilities"/>
         <set field="identity" from="{organizationPartyId:prepared.organizationPartyId || '', customerPartyId:customerPartyId || '',
-                requestTypeEnumId:prepared.requestTypeEnumId || '', orderId:orderId || ''}"/>
+                requestTypeEnumId:prepared.requestTypeEnumId || '', orderId:orderId || '', assetId:assetId || ''}"/>
         <set field="caseValues" from="{organizationPartyId:prepared.organizationPartyId, customerPartyId:customerPartyId,
                 requestTypeEnumId:prepared.requestTypeEnumId, requestCategoryId:prepared.requestCategoryId,
-                priority:prepared.priority, salesChannelEnumId:'ScPhone', orderId:orderId || ''}"/>
+                priority:prepared.priority, salesChannelEnumId:'ScPhone', orderId:orderId || '', assetId:assetId || ''}"/>
         <!-- P12: the subject asked in the first step is the case's subject -->
         <script>identity.subject = subject || ''; caseValues.requestName = subject || null</script>
         <set field="describe" from="!!(prepared.customerFound &amp;&amp; prepared.requestTypeEnumId &amp;&amp; prepared.queueOptions.length)"/>
@@ -99,7 +117,7 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="ironstone.customerservice.TemplateServices.get#CaseTemplateChoice" out-map="templateChoice"
                 transaction="force-new" ignore-error="true"
                 in-map="{appRoot:appRoot, organizationPartyId:prepared.organizationPartyId, requestCategoryId:prepared.requestCategoryId,
-                    templateFormId:templateFormId}"/>
+                    templateFormId:templateFormId, requestTypeEnumId:prepared.requestTypeEnumId}"/>
         <script>ec.message.clearErrors()</script>
         <set field="caseTemplateFormId" from="templateChoice?.templateFormId || ''"/>
         <set field="caseTemplateOptions" from="templateChoice?.templateOptions || []"/>
@@ -152,6 +170,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 </default-field>
                             </field>
                             <field name="orderId"><default-field><hidden/></default-field></field>
+                            <field name="assetId"><default-field><hidden/></default-field></field>
                             <!-- P7: the template, the queue's by default -->
                             <field name="templateFormId">
                                 <conditional-field title="Template" condition="caseTemplateOptions.length"
@@ -259,6 +278,7 @@ along with this software (see the LICENSE.md file). If not, see
                                     <field name="customerPartyId"><default-field><hidden/></default-field></field>
                                     <field name="requestTypeEnumId"><default-field><hidden/></default-field></field>
                                     <field name="orderId"><default-field><hidden/></default-field></field>
+                                    <field name="assetId"><default-field><hidden/></default-field></field>
                                     <field name="requestName">
                                         <default-field title="Subject"><text-line size="60"/></default-field>
                                     </field>

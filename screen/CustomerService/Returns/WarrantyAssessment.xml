@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- WarrantyAssessment (design-customer-service §5 WarrantyAssessment; style-guide §3.3 Detail; impl-customer-service P11): one
+    claim, its RqtWarranty case. Every read and write checks the case through ironstone.customerservice.AccessServices
+    check#Record first, then calls mantle.request.WarrantyServices, which checks its permission and the case's organization
+    again:
+    - the record header with the claim's state and the one primary action it allows (Record evidence, Decide, Add repair), the
+      others in More with Open the case and Request return (a replacement goes through a return, NewReturn);
+    - WarrantyEvidence: the product, serial (its owner and status), sale, invoice, agreement, fault and the serial's prior
+      claims (save#WarrantyClaim; a case of another type becomes a claim when its evidence is recorded), and the coverage the
+      lookup reads (get#WarrantyCoverage): the basis, the terms and their source, the ship date, the coverage end with its
+      source and each step of the trace;
+    - WarrantyDecision: the decisions at their revisions, and Decide (decide#WarrantyClaim at the claim's revision: covered,
+      partly covered, rejected, or goodwill and a coverage end set with its reason for a WARRANTY_APPROVE holder; a chargeable
+      repair's estimate and the customer's consent);
+    - RepairLinks: the repairs (AssetMaintenance with its WepMaintenance task) and returns linked, Add repair
+      (link#WarrantyWork) and each repair's update (update#WarrantyWork: in process, completed with its result, cancelled);
+      a repair finished tells the agent and leaves the case open. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Warranty claim" default-menu-include="false">
+    <parameter name="requestId"/>
+
+    <transition-include name="choices" location="component://mr-boss/template/CustomerServiceParts.xml"/>
+    <transition name="saveEvidence">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.WarrantyServices.save#WarrantyClaim" out-map="saved"
+                    in-map="{requestId:requestId, claimRevision:(claimRevision || null), assetId:(assetId || null),
+                        productId:(productId || null), quantity:(quantity || null), faultText:(faultText ?? null),
+                        orderId:(orderId || null), invoiceId:(invoiceId || null), agreementId:(agreementId ?? null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">The evidence of claim ${requestId} is recorded</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="decideClaim">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.WarrantyServices.decide#WarrantyClaim" out-map="decided"
+                    in-map="{requestId:requestId, claimRevision:(claimRevision || null), decisionEnumId:decisionEnumId,
+                        reason:(reason || null), termsText:(termsText || null),
+                        overrideCoverageEndDate:(overrideCoverageEndDate || null), overrideReason:(overrideReason || null),
+                        chargeEstimate:(chargeEstimate || null), chargeCurrencyUomId:(chargeCurrencyUomId || null),
+                        customerConsentRef:(customerConsentRef || null), nextDueDate:(nextDueDate || null),
+                        operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Claim ${requestId} is decided</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="linkWork">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.WarrantyServices.link#WarrantyWork" out-map="linked"
+                    in-map="{requestId:requestId, comments:(comments || null), dueDate:(dueDate || null),
+                        assigneePartyId:(assigneePartyId || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Repair ${linked.assetMaintenanceId} is linked to claim ${requestId}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="updateWork">
+        <actions>
+            <service-call name="ironstone.customerservice.AccessServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'case', recordId:requestId, capability:'caseEdit'}"/>
+            <service-call name="mantle.request.WarrantyServices.update#WarrantyWork"
+                    in-map="{requestId:requestId, assetMaintenanceId:assetMaintenanceId, statusId:statusId, comments:(comments || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Repair ${assetMaintenanceId} is updated</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="claim" from="null"/>
+        <if condition="appRoot == 'CustomerService' &amp;&amp; requestId">
+            <service-call name="ironstone.customerservice.AccessServices.check#Record" out-map="checked" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'case', recordId:requestId}"/>
+            <if condition="checked?.recordId">
+                <service-call name="mantle.request.WarrantyServices.get#WarrantyClaim" out-map="claimOut" transaction="force-new"
+                        ignore-error="true" in-map="{requestId:requestId}"/>
+                <set field="claim" from="claimOut?.claim || null"/>
+            </if>
+        </if>
+        <script>ec.message.clearErrors()</script>
+        <set field="coverage" from="claimOut?.coverage || null"/>
+        <set field="decisionList" from="claimOut?.decisions || []"/>
+        <set field="current" from="claimOut?.currentDecision || null"/>
+        <set field="repairList" from="claimOut?.repairs || []"/>
+        <set field="returnList" from="claimOut?.returns || []"/>
+        <set field="can" from="claimOut?.actions || {}"/>
+        <set field="traceList" from="coverage?.trace || []"/>
+        <set field="stateColors" from="{needsEvidence: 'warning', assessment: 'info', approved: 'positive', rejected: 'negative',
+                followUp: 'warning', closed: 'grey-7'}"/>
+        <set field="caseLink" from="sharedLinks?.['Cases/CaseDetail']"/>
+        <set field="claimsLink" from="sharedLinks?.['Returns/WarrantyClaims']"/>
+        <set field="orderLink" from="sharedLinks?.['Orders/OrderDetail']"/>
+        <set field="returnLink" from="sharedLinks?.['Returns/ReturnDetail']"/>
+        <set field="primary" from="!claim ? null : !claim.isClaim || claim.state == 'needsEvidence' ? 'evidence'
+                : claim.state == 'assessment' &amp;&amp; can.decide ? 'decide' : can.linkWork &amp;&amp; !repairList.some(row =&gt; row.open) ? 'repair' : null"/>
+        <set field="evidenceValue" from="claim ? {requestId:requestId, claimRevision:claim.claimRevision, assetId:claim.assetId || '',
+                productId:claim.productId || '', quantity:claim.quantity ?? 1, faultText:claim.faultText || '', orderId:claim.orderId || '',
+                invoiceId:claim.invoiceId || '', agreementId:claim.agreementId || '', operationKey:'claim-' + ec.user.randomString(24)} : null"/>
+        <set field="decideValue" from="claim ? {requestId:requestId, claimRevision:claim.claimRevision,
+                decisionEnumId:(coverage?.covered ? 'WdCovered' : 'WdRejected'), reason:'', termsText:coverage?.termText || '',
+                overrideCoverageEndDate:'', overrideReason:'', chargeEstimate:'', customerConsentRef:'', nextDueDate:'',
+                operationKey:'decide-' + ec.user.randomString(24)} : null"/>
+        <set field="consentValue" from="current ? {requestId:requestId, claimRevision:claim.claimRevision,
+                decisionEnumId:current.decisionEnumId, reason:current.reason, termsText:current.termsText,
+                chargeEstimate:current.chargeEstimate, chargeCurrencyUomId:current.chargeCurrencyUomId, customerConsentRef:'',
+                operationKey:'consent-' + ec.user.randomString(24)} : null"/>
+        <set field="needsConsent" from="!!(current &amp;&amp; current.chargeText &amp;&amp; !current.customerConsentRef)"/>
+        <set field="repairValue" from="claim ? {requestId:requestId, comments:'', dueDate:'', assigneePartyId:'',
+                operationKey:'repair-' + ec.user.randomString(24)} : null"/>
+    </actions>
+    <widgets>
+        <section name="ClaimUnavailable" condition="!claim">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Warranty claim not available"/>
+                    <box-body>
+                        <label type="p" text="This claim is not available: it does not exist, or it is not a case you may work with."/>
+                        <link url="${claimsLink}" text="Back to warranty claims" link-type="anchor" condition="claimsLink"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ClaimFound" condition="claim">
+            <widgets>
+                <context record-entity="mantle.request.Request" record-id="${requestId}" title="Warranty claim ${requestId}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${claim.isClaim ? 'Warranty claim' : 'Case'} ${requestId}" type="h5"/>
+                                <link url="${caseLink}" text="Case" link-type="anchor" parameter-map="{requestId:requestId}"
+                                        condition="caseLink"/>
+                            </container>
+                            <label text="${claim.requestName}" type="p" style="q-mb-none"/>
+                            <label text="${[claim.customerName, claim.productText, claim.assetText, 'claimed ' + claim.claimDateText,
+                                    claim.assigneeName ? 'with ' + claim.assigneeName : ''].filter(Boolean).join(' · ')}"
+                                    type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColors[claim.state] || 'grey-7'}">${
+                                    WebUtilities.encodeHtml(claim.isClaim ? claim.stateText : 'Not a claim yet')}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: claim.isClaim ? claim.stateText : "Not a claim yet"})}]]></text>
+                                <text type="html">${claim.isClaim ? claim.stateText : 'Not a claim yet'}</text>
+                            </render-mode>
+                        </container>
+                    </container>
+                    <container style="row items-center q-gutter-xs m-record-actions">
+                        <container-dialog id="ClaimEvidence" button-text="Record evidence" icon="sym_o_fact_check"
+                                type="${primary == 'evidence' ? 'primary' : 'default'}" title="Evidence of claim ${requestId}" width="640"
+                                condition="can.save">
+                            <form-single name="WarrantyEvidence" transition="saveEvidence" map="evidenceValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="claimRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="assetId">
+                                    <default-field title="Serial or lot" tooltip="Delivered to the customer by your organizations">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'customerAssets', customerPartyId:claim.customerPartyId, selected:assetId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="productId">
+                                    <default-field title="Product" tooltip="Empty takes the serial's product">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'products', selected:productId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="quantity"><default-field title="Quantity"><text-line size="6"/></default-field></field>
+                                <field name="faultText">
+                                    <default-field title="Fault, usage and condition"><text-area rows="3" cols="60"/></default-field>
+                                </field>
+                                <field name="orderId">
+                                    <default-field title="Sale" tooltip="Empty takes the serial's sale">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'customerOrders', customerPartyId:claim.customerPartyId, selected:orderId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="invoiceId">
+                                    <default-field title="Invoice" tooltip="Empty takes the sale line's invoice">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'customerInvoices', customerPartyId:claim.customerPartyId, selected:invoiceId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="agreementId">
+                                    <default-field title="Service agreement">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'serviceAgreements', customerPartyId:claim.customerPartyId, selected:agreementId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Record evidence"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="assetId"/><field-ref name="productId"/></field-row>
+                                    <field-ref name="quantity"/>
+                                    <field-ref name="faultText"/>
+                                    <field-row><field-ref name="orderId"/><field-ref name="invoiceId"/></field-row>
+                                    <field-ref name="agreementId"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="ClaimDecide" button-text="Decide" icon="sym_o_approval"
+                                type="${primary == 'decide' ? 'primary' : 'default'}" title="Decide claim ${requestId}" width="640"
+                                condition="can.decide">
+                            <form-single name="WarrantyDecision" transition="decideClaim" map="decideValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="claimRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="decisionEnumId">
+                                    <conditional-field title="Decision" condition="can.approve">
+                                        <radio>
+                                            <option key="WdCovered" text="Covered"/>
+                                            <option key="WdPartial" text="Partly covered"/>
+                                            <option key="WdRejected" text="Rejected"/>
+                                            <option key="WdGoodwill" text="Goodwill"/>
+                                        </radio>
+                                    </conditional-field>
+                                    <default-field title="Decision">
+                                        <radio>
+                                            <option key="WdCovered" text="Covered"/>
+                                            <option key="WdPartial" text="Partly covered"/>
+                                            <option key="WdRejected" text="Rejected"/>
+                                        </radio>
+                                    </default-field>
+                                </field>
+                                <field name="reason">
+                                    <default-field title="Reason" tooltip="Required unless covered"><text-area rows="3" cols="60"/></default-field>
+                                </field>
+                                <field name="termsText"><default-field title="Terms"><text-line size="60"/></default-field></field>
+                                <field name="overrideCoverageEndDate">
+                                    <conditional-field title="Set the coverage end" condition="can.approve"
+                                            tooltip="A manual override of the lookup's end, with its reason">
+                                        <date-time type="date"/>
+                                    </conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="overrideReason">
+                                    <conditional-field title="Why the coverage end is set" condition="can.approve">
+                                        <text-line size="60"/>
+                                    </conditional-field>
+                                    <default-field><hidden/></default-field>
+                                </field>
+                                <field name="chargeEstimate">
+                                    <default-field title="Charge estimate" tooltip="A chargeable repair (partly covered or rejected), in the organization's currency">
+                                        <text-line size="10"/>
+                                    </default-field>
+                                </field>
+                                <field name="customerConsentRef">
+                                    <default-field title="Customer's consent" tooltip="A message, call or reference; a chargeable repair starts only with it">
+                                        <text-line size="40"/>
+                                    </default-field>
+                                </field>
+                                <field name="nextDueDate"><default-field title="Next follow-up"><date-time type="date"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Decide"><submit confirmation="Decide claim ${requestId} at its revision ${claim.claimRevision}?"/></default-field>
+                                </field>
+                                <field-layout>
+                                    <field-ref name="decisionEnumId"/>
+                                    <field-ref name="reason"/>
+                                    <field-ref name="termsText"/>
+                                    <field-row><field-ref name="overrideCoverageEndDate"/><field-ref name="overrideReason"/></field-row>
+                                    <field-row><field-ref name="chargeEstimate"/><field-ref name="customerConsentRef"/></field-row>
+                                    <field-ref name="nextDueDate"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="ClaimRepair" button-text="Add repair" icon="sym_o_build"
+                                type="${primary == 'repair' ? 'primary' : 'default'}" title="Repair for claim ${requestId}" width="560"
+                                condition="can.linkWork">
+                            <form-single name="RepairLink" transition="linkWork" map="repairValue">
+                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="comments">
+                                    <default-field title="Required work"><text-area rows="3" cols="60"/></default-field>
+                                </field>
+                                <field name="dueDate"><default-field title="Due"><date-time type="date"/></default-field></field>
+                                <field name="assigneePartyId">
+                                    <default-field title="Technician" tooltip="Empty leaves the task unassigned">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'returnAssignees', selected:assigneePartyId}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="Add repair"><submit confirmation="Add a repair of ${claim.assetText} to claim ${requestId}?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="ClaimConsent" button-text="Record consent" icon="sym_o_thumb_up"
+                                    title="The customer's consent to ${current.chargeText}" width="480" condition="needsConsent &amp;&amp; can.decide">
+                                <form-single name="ClaimConsentForm" transition="decideClaim" map="consentValue">
+                                    <field name="requestId"><default-field><hidden/></default-field></field>
+                                    <field name="claimRevision"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="decisionEnumId"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field><hidden/></default-field></field>
+                                    <field name="termsText"><default-field><hidden/></default-field></field>
+                                    <field name="chargeEstimate"><default-field><hidden/></default-field></field>
+                                    <field name="chargeCurrencyUomId"><default-field><hidden/></default-field></field>
+                                    <field name="customerConsentRef">
+                                        <default-field title="Consent" tooltip="A message, call or reference"><text-line size="40"/></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Record consent"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${sharedLinks['Returns/NewReturn']}" text="Request return" icon="sym_o_assignment_return"
+                                    link-type="anchor" parameter-map="{customerPartyId:claim.customerPartyId, orderId:claim.orderId}"
+                                    condition="claim.customerPartyId &amp;&amp; (customerService.capabilities.caseEdit || customerService.capabilities.returnAuthorize)"/>
+                            <link url="${caseLink}" text="Open the case" icon="sym_o_support_agent" link-type="anchor"
+                                    parameter-map="{requestId:requestId}" condition="caseLink"/>
+                        </button-menu>
+                    </container>
+                </container>
+                <label type="p" style="text-caption m-muted" condition="!claim.isClaim"
+                        text="This case is not a warranty claim yet: record its evidence to make it one."/>
+
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Evidence"/>
+                            <box-body>
+                                <label type="p" text="${claim.productText ? 'Product: ' + claim.productText + (claim.quantity != null ? ' × ' + claim.quantity : '') : 'No product recorded.'}"/>
+                                <label type="p" condition="claim.assetText"
+                                        text="${'Serial: ' + claim.assetText + [claim.assetOwnerName ? 'owned by ' + claim.assetOwnerName : '', claim.assetStatusText].filter(Boolean).map(text =&gt; ' · ' + text).join('')}"/>
+                                <container style="row q-gutter-x-sm" >
+                                    <link url="${orderLink}" text="Sale: order ${claim.orderId}" link-type="anchor"
+                                            parameter-map="{orderId:claim.orderId}" condition="claim.orderId &amp;&amp; orderLink"/>
+                                    <label text="Invoice ${claim.invoiceId}" type="span" condition="claim.invoiceId"/>
+                                    <label text="Service agreement ${claim.agreementId}" type="span" condition="claim.agreementId"/>
+                                </container>
+                                <label type="p" style="q-mt-sm" text="${claim.faultText || claim.description || 'No fault described.'}"/>
+                                <label type="p" style="text-caption m-muted" condition="claim.priorClaims.length"
+                                        text="Prior claims on this serial: ${claim.priorClaims.map(row =&gt; row.requestId + ' (' + row.statusText + ', ' + row.claimDateText + ')').join(', ')}"/>
+                            </box-body>
+                        </container-box>
+                        <section name="ClaimCoverage" condition="coverage">
+                            <widgets>
+                                <container-box type="${coverage.covered ? 'default' : 'warning'}">
+                                    <box-header title="Coverage · ${coverage.covered ? 'covered' : 'not covered'} · ${coverage.basisText}"/>
+                                    <box-body>
+                                        <label type="p" condition="coverage.termText"
+                                                text="Terms: ${coverage.termText}${coverage.termsSourceText ? ' (' + coverage.termsSourceText + ')' : ''}"/>
+                                        <label type="p" condition="coverage.shipText"
+                                                text="Shipped ${coverage.shipText} on order ${coverage.saleOrderId}"/>
+                                        <label type="p" condition="coverage.coverageEndText"
+                                                text="Coverage until ${coverage.coverageEndText}: ${coverage.coverageEndSourceText}"/>
+                                        <label type="p" style="text-caption m-muted" text="As of the claim's date, ${coverage.asOfText}."/>
+                                        <form-list name="CoverageTrace" list="traceList" skip-form="true" paginate="false">
+                                            <field name="text"><default-field title="How it was read"><display/></default-field></field>
+                                            <columns type="mobile"><column><field-ref name="text"/></column></columns>
+                                        </form-list>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Decisions · ${decisionList.length}"/>
+                            <box-body-nopad>
+                                <form-list name="ClaimDecisions" list="decisionList" skip-form="true" paginate="false">
+                                    <field name="decisionText">
+                                        <default-field title="Decision"><display/></default-field>
+                                    </field>
+                                    <field name="decidedByName">
+                                        <default-field title="By"><display text="${decidedByName}${approverName ? ' (approved by ' + approverName + ')' : ''}"/></default-field>
+                                    </field>
+                                    <field name="decidedText"><default-field title="When"><display/></default-field></field>
+                                    <field name="coverageEndText">
+                                        <default-field title="Coverage until"><display text="${coverageEndText}${coverageEndSourceText ? ' · ' + coverageEndSourceText : ''}"/></default-field>
+                                    </field>
+                                    <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                                    <field name="chargeText">
+                                        <default-field title="Charge"><display text="${chargeText}${chargeText ? ' · ' + (customerConsentRef ? 'agreed: ' + customerConsentRef : 'not agreed yet') : ''}"/></default-field>
+                                    </field>
+                                    <field name="currentText"><default-field title="Revision"><display text="${sourceRevision} · ${currentText}"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="decisionText"/><field-ref name="decidedByName"/></column>
+                                        <column><field-ref name="currentText"/><field-ref name="decidedText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not decided yet."
+                                        condition="!decisionList.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Repairs and returns"/>
+                            <box-body>
+                                <label type="p" style="text-caption m-muted" condition="claim.isClaim &amp;&amp; !can.linkWork &amp;&amp; can.linkWorkReason"
+                                        text="A repair: ${can.linkWorkReason}."/>
+                                <label type="p" style="m-muted" condition="!repairList.length &amp;&amp; !returnList.length"
+                                        text="No repair or return is linked. A repair is of the customer's serial; a replacement goes through a return."/>
+                            </box-body>
+                        </container-box>
+                        <section-iterate name="RepairLinks" list="repairList" entry="repair">
+                            <widgets>
+                                <container-box>
+                                    <box-header title="Repair ${repair.assetMaintenanceId} · ${repair.statusText}"/>
+                                    <box-body>
+                                        <label type="p" text="${repair.comments}" condition="repair.comments"/>
+                                        <label type="p" style="text-caption m-muted"
+                                                text="${['started ' + repair.startedText, repair.taskName ? 'task ' + repair.taskWorkEffortId + ' ' + repair.taskStatusText : '',
+                                                    repair.dueText ? 'due ' + repair.dueText : '', repair.assigneeName].filter(Boolean).join(' · ')}"/>
+                                        <container-dialog id="UpdateRepair_${repair.assetMaintenanceId}" button-text="Update repair"
+                                                icon="sym_o_build" title="Update repair ${repair.assetMaintenanceId}" width="480"
+                                                condition="repair.open &amp;&amp; can.updateWork">
+                                            <form-single name="UpdateRepair_${repair.assetMaintenanceId}" transition="updateWork"
+                                                    map="{requestId:requestId, assetMaintenanceId:repair.assetMaintenanceId, statusId:'AsMntCompleted', comments:''}">
+                                                <field name="requestId"><default-field><hidden/></default-field></field>
+                                                <field name="assetMaintenanceId"><default-field><hidden/></default-field></field>
+                                                <field name="statusId">
+                                                    <default-field title="The repair is">
+                                                        <radio>
+                                                            <option key="AsMntInProcess" text="In process"/>
+                                                            <option key="AsMntCompleted" text="Finished"/>
+                                                            <option key="AsMntCancelled" text="Cancelled (not started)"/>
+                                                        </radio>
+                                                    </default-field>
+                                                </field>
+                                                <field name="comments">
+                                                    <default-field title="Result"><text-area rows="3" cols="50"/></default-field>
+                                                </field>
+                                                <field name="submitButton">
+                                                    <default-field title="Update"><submit confirmation="Update repair ${repair.assetMaintenanceId}?"/></default-field>
+                                                </field>
+                                            </form-single>
+                                        </container-dialog>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section-iterate>
+                        <section-iterate name="ClaimReturns" list="returnList" entry="returnRow">
+                            <widgets>
+                                <container style="row items-center q-gutter-x-sm">
+                                    <link url="${returnLink}" text="Return ${returnRow.displayId}" link-type="anchor"
+                                            parameter-map="{returnId:returnRow.returnId}" condition="returnLink"/>
+                                    <label text="${returnRow.statusText}" type="span" style="text-caption m-muted"/>
+                                </container>
+                            </widgets>
+                        </section-iterate>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

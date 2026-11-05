@@ -55,7 +55,79 @@ const ids = {
     substituteProductId: "BOSS_CS_FILTER_PLUS",
     // P9: Retail's return policy, and the Warehouse demo's requested return of Joe Q Public to Retail (BossWarehouseDemoData.xml)
     returnPolicyId: "BOSS_CS_RPOL_RETAIL",
-    warehouseReturnId: "BOSS_WH_RETURN"
+    warehouseReturnId: "BOSS_WH_RETURN",
+    // P11: Retail's warranty claim template (the RqtWarranty type's) and the thermostat's 12-month warranty feature
+    warrantyTemplateFormId: "BOSS_CS_TPL_WARRANTY",
+    warrantyFeatureId: "BOSS_CS_WARRANTY_12"
+}
+// P11: the serial of the thermostat the delivered order shipped to Joe Q Public (its AssetIssuance; load#CustomerServiceDemo
+// reserves one of the two demo serials)
+function deliveredThermostat() {
+    const issuance = Array.from(
+        ec.entity
+            .find("mantle.product.issuance.AssetIssuance")
+            .condition({orderId: ids.deliveredOrderId, productId: ids.serializedProductId})
+            .disableAuthz()
+            .list()
+    )[0]
+    const asset = issuance
+        ? ec.entity.find("mantle.product.asset.Asset").condition({assetId: issuance.assetId}).disableAuthz().one()
+        : null
+    return {assetId: asset?.assetId || null, serialNumber: asset?.serialNumber || null, issuedDate: issuance?.issuedDate || null}
+}
+// P11: a warranty claim made by a spec as the user (mantle.request.WarrantyServices.save#WarrantyClaim), {requestId,
+// claimRevision} or {error}; and its case closed (cancelled through transition#Case) with any open repair cancelled, so no
+// list or Delivered items row shows it open
+function warrantyClaim(user, parameters) {
+    return asUser(
+        user,
+        () => {
+            ec.message.pushErrors()
+            try {
+                const out =
+                    ec.service
+                        .sync()
+                        .name("mantle.request.WarrantyServices.save#WarrantyClaim")
+                        .parameters(
+                            Object.assign({organizationPartyId: ids.organizationId, customerPartyId: ids.customerId}, parameters)
+                        )
+                        .requireNewTransaction(true)
+                        .call() || {}
+                return Object.assign({}, out, {error: ec.message.hasError() ? ec.message.getErrorsString() : ""})
+            } finally {
+                ec.message.clearErrors()
+                ec.message.popErrors()
+            }
+        },
+        false
+    )
+}
+function closeWarrantyClaim(requestId) {
+    if (!requestId) return
+    asUser(
+        "john.doe",
+        () => {
+            for (const link of Array.from(
+                ec.entity
+                    .find("mantle.request.RequestRecord")
+                    .condition({requestId, recordEntityName: "mantle.product.maintenance.AssetMaintenance"})
+                    .disableAuthz()
+                    .list()
+            ))
+                refusal("mantle.request.WarrantyServices.update#WarrantyWork", {
+                    requestId,
+                    assetMaintenanceId: link.recordId,
+                    statusId: "AsMntCancelled"
+                })
+            refusal("mantle.request.SupportCaseServices.transition#Case", {
+                requestId,
+                toStatusId: "ReqCancelled",
+                resolutionEnumId: "RrWontFix",
+                reason: "Spec cleanup"
+            })
+        },
+        false
+    )
 }
 // P10: a proposed change of an order, made by a spec as the user and removed with its lines, parties, decisions and notices
 // (no other spec's lists show it): {requestId, sourceRevision} or {error}.
@@ -260,7 +332,14 @@ function routeFixtures() {
         "Returns/ReturnAuthorization": {parameters: {returnId: ids.warehouseReturnId}, text: ids.warehouseReturnId},
         "Settings/ReturnPolicies": {parameters: {}, text: "Return policies"},
         Approvals: {parameters: {}, text: "Approvals"},
-        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"}
+        "Customers/Customer360/ServiceReturns": {parameters: {customerPartyId: ids.customerId}, text: "Request return"},
+        // P11: the warranty claims, a claim's assessment and the customer's delivered serials
+        "Returns/WarrantyClaims": {parameters: {}, text: "Warranty claims"},
+        "Returns/WarrantyAssessment": {parameters: {requestId: "BOSS_CS_NO_CLAIM"}, text: "Warranty claim not available"},
+        "Customers/Customer360/ServiceDeliveredItems": {
+            parameters: {customerPartyId: ids.customerId},
+            text: "Service demo smart thermostat"
+        }
     }
     const mounts = [
         ["Cases/CaseDetail", "component://mr-boss/screen/Shared/RequestDetail.xml"],
@@ -281,4 +360,19 @@ function routeFixtures() {
     return {routes, mounts}
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell, routeFixtures, orderChange, removeOrderChange})
+;({
+    ids,
+    users,
+    asUser,
+    system,
+    refusal,
+    invoke,
+    page,
+    shell,
+    routeFixtures,
+    orderChange,
+    removeOrderChange,
+    deliveredThermostat,
+    warrantyClaim,
+    closeWarrantyClaim
+})

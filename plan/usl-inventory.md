@@ -1981,3 +1981,21 @@ Mantle services Customer Service P10 added or calls that had no row.
 | order/OrderChangeServices | send#OrderChangeConfirmation | CustomerService/Orders/OrderChangeDetail | CustomerService/Orders/OrderChangeDetail (Send confirmation: the applied change's PDF) (Customer Service P10) |
 | order/OrderChangeServices | find#OrderChanges | CustomerService/Orders/OrderChanges | CustomerService/Orders/OrderChanges (ChangeFind, ChangeList) (Customer Service P10) |
 | shipment/WarehouseTaskServices | reopen#ShipmentPackageForChange |  | (internal: apply#OrderChange's reopen between pack and ship, under ORDER_CHANGE_APPLY; Customer Service P10) |
+
+## Customer Service P11 — Warranty (Nov 5, 2026)
+
+Mantle services Customer Service P11 added or calls that had no row.
+
+| Service XML | Service | Designed in | Implemented in |
+| --- | --- | --- | --- |
+| request/WarrantyServices | find#WarrantyClaims | CustomerService/Returns/WarrantyClaims | CustomerService/Returns/WarrantyClaims (WarrantyFind, WarrantyList; the user's queues and assigned claims) (Customer Service P11) |
+| request/WarrantyServices | get#WarrantyClaim |  | CustomerService/Returns/WarrantyAssessment (the record header, WarrantyEvidence, WarrantyDecision, RepairLinks) (Customer Service P11) |
+| request/WarrantyServices | save#WarrantyClaim | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Record evidence); CustomerService/Cases/NewCase (a warranty claim's serial, sale and fault after create#Case) (Customer Service P11) |
+| request/WarrantyServices | get#WarrantyCoverage | CustomerService/Returns/WarrantyAssessment; Shared/Customer360 | CustomerService/Returns/WarrantyAssessment (Coverage, through get#WarrantyClaim); Shared/Customer360/ServiceDeliveredItems (through find#DeliveredItems) (Customer Service P11) |
+| request/WarrantyServices | decide#WarrantyClaim | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Decide, Record consent) (Customer Service P11) |
+| request/WarrantyServices | link#WarrantyWork | CustomerService/Returns/WarrantyAssessment | CustomerService/Returns/WarrantyAssessment (Add repair: an AssetMaintenance with its WepMaintenance task) (Customer Service P11) |
+| request/WarrantyServices | update#WarrantyWork |  | CustomerService/Returns/WarrantyAssessment (Update repair: in process, finished, cancelled) (Customer Service P11) |
+| request/WarrantyServices | notify#WarrantyWorkFinished |  | (internal: the WarrantyWorkFinished rule on AssetMaintenance; the WarrantyRepairFinished topic; Customer Service P11) |
+| request/WarrantyServices | store#ServiceAgreement |  | (no screen yet: Customer360's ServiceAgreements form is P14's; the demo and Mantle's spec call it; Customer Service P11) |
+| request/WarrantyServices | find#DeliveredItems | Shared/Customer360 | Shared/Customer360/ServiceDeliveredItems (DeliveredItems, crosscut §3.2) (Customer Service P11) |
+| product/EquipmentServices | create#AssetMaintenance | Manufacturing/WorkCenters/Downtime | CustomerService/Returns/WarrantyAssessment (through link#WarrantyWork: AsMntCreated, MntTpWarranty, the sold serial's Asset; Customer Service P11) |

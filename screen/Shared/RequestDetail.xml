@@ -350,9 +350,11 @@ along with this software (see the LICENSE.md file). If not, see
             // impl-customer-service P10 (F49): an order change's lines too, read only, with a link to its OrderChangeDetail
             const purchaseRequest = recordFound && detail.request?.requestTypeEnumId === 'RqtPurchase'
             const orderChangeRequest = recordFound && detail.request?.requestTypeEnumId === 'RqtOrderChange'
-            purchaseRequestShown = purchaseRequest || orderChangeRequest
+            // impl-customer-service P11 (F49): a warranty claim's product line too, read only, with a link to its assessment
+            const warrantyRequest = recordFound && detail.request?.requestTypeEnumId === 'RqtWarranty'
+            purchaseRequestShown = purchaseRequest || orderChangeRequest || warrantyRequest
             const purchasingRequests = purchaseRequest ? ec.resource.script('component://mr-boss/service/ironstone/purchasing/Requests.js') : null
-            const purchaseItemRows = purchaseRequest ? purchasingRequests.itemRows(requestId) : orderChangeRequest
+            const purchaseItemRows = purchaseRequest ? purchasingRequests.itemRows(requestId) : (orderChangeRequest || warrantyRequest)
                 ? Array.from(ec.entity.find('mantle.request.RequestItem').condition('requestId', requestId).disableAuthz().list())
                     .filter((item) => item.statusId !== 'ReqCancelled').map((item) => ({requestItemSeqId: item.requestItemSeqId,
                         productText: item.productId || '', quantityText: item.quantity == null ? '' : String(item.quantity),
@@ -362,6 +364,7 @@ along with this software (see the LICENSE.md file). If not, see
                 : []
             purchaseSourcingUrl = purchaseRequest && !clientView ? purchasingRequests.sourcingUrl(requestId) : null
             orderChangeUrl = orderChangeRequest ? '/qapps/CustomerService/Orders/OrderChangeDetail?requestId=' + encodeURIComponent(requestId) : null
+            warrantyUrl = warrantyRequest ? '/qapps/CustomerService/Returns/WarrantyAssessment?requestId=' + encodeURIComponent(requestId) : null
             const tabKeys = projects ? ['overview', 'conversation', 'work'].concat(pd.itemsShown ? ['items'] : []).concat(['files'])
                     : ['overview', 'conversation', 'tasks'].concat(purchaseRequestShown ? ['items'] : []).concat(['files'])
             tab = tabKeys.includes(tab) ? tab : 'overview'
@@ -971,6 +974,8 @@ along with this software (see the LICENSE.md file). If not, see
                                 icon="sym_o_receipt_long" condition="purchaseSourcingUrl"/>
                         <link url="${orderChangeUrl}" url-type="plain" text="Open the order change" link-type="anchor-button"
                                 icon="sym_o_edit_note" condition="orderChangeUrl"/>
+                        <link url="${warrantyUrl}" url-type="plain" text="Open the warranty assessment" link-type="anchor-button"
+                                icon="sym_o_verified" condition="warrantyUrl"/>
                     </box-toolbar>
                     <box-body-nopad>
                     <form-list name="PurchaseRequestItems" list="itemList" skip-form="true" paginate="false">
