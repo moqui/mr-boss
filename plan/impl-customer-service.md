@@ -2406,6 +2406,37 @@ Design §5 WarrantyClaims and WarrantyAssessment, crosscut §3.2 DeliveredItems;
   - **F-P11-9** Delivered items lists serials and lots only: an issued asset with neither (the demo's filters) is stock, not a
     delivered item, and a claim on it names its product and sale.
 
+**Review Nov 5 (P11).** Checked both diffs against this section, §2, §4, design §5 and crosscut §3.2: the coverage hierarchy
+(the agreement by type, organization, customer, product item, dates and Active status; the sale through AssetIssuance to a
+sales part of the organization to the customer; the PftWarranty term; goodwill), the services' own organization and customer
+checks, F-P11-3 (the claim's RequestRecord rows are written after checks that match Customer Service's own invoice, order and
+asset scope; CaseDetail shows a linked invoice by id, customer and status only, and Shared/RequestDetail still hides a record
+get#RecordLinkInfo refuses), the WarrantyWorkFinished rule (it acts only on a maintenance an RqtWarranty case links; no
+Manufacturing path completes an AssetMaintenance; ProductionDowntime, ManufacturingDowntime and ManufacturingWorkCenters pass),
+WARRANTY_APPROVE and the approver, the revision (F-P11-8), consent before the repair, the demo's RqtWarranty type (Retail only,
+F82; no Mantle spec files an RqtWarranty request outside SupportWarranty; P2's case rule unchanged), P7's templates (the
+type's template is read only where a type row names one: only the warranty demo and spec) and the walk (the usable-when).
+Fixes:
+- R1 (medium) Coverage dates were reckoned in UTC from the issue instant: the ship day and the end now are days in the
+  organization's time zone (its working-hours calendar's, `BusinessTime.scheduleOf`, else the user's; there is no other
+  organization zone), the end the start of the day the term after the ship day, a month kept on its day or the month's last
+  (Jan 31 plus a month is Feb 28, not Mar 3); the texts are days in that zone.
+- R2 (medium) A serial returned (received as a new asset with the same serial number) and sold again to another customer
+  stayed the first customer's: the old asset still traced to its own sale, so the first customer could claim it and Delivered
+  items listed it. A serial's sale is now its latest sale by the organization over every asset of its product with that serial
+  number; it decides the customer (before the asset's owner, which counts only with no sale) and the asset the claim and its
+  repair are on.
+- R3 (low) Delivered items showed another customer's open claim on a serial; it shows the customer's own only, and leaves out
+  a serial sold again to someone else.
+- R4 (low) `notify#WarrantyWorkFinished` runs in the update that completed the repair: its errors are now kept in their own
+  message frame, so a failed notice cannot fail that update.
+- Spec: SupportWarranty gains the organization's zone (a ship half an hour into its day), another organization's serial, the
+  serial sold again, and a decision after an evidence change (stale at the old revision, covered at the new one).
+Left for the lead: evidence changed outside `save#WarrantyClaim` (Shared/RequestDetail's unlink of a claim's asset or order
+record, a RequestItem edited directly) does not move `claimRevision`; NewCase's warranty path refuses the whole case when the
+template's typed serial is not the customer's (the agent clears it and records the serial on WarrantyAssessment), and its
+`customerAssets` choice still lists a serial sold again to another customer (save refuses it).
+
 ### P12 — Knowledge
 
 Design §3 CaseDetail's Knowledge tab, §6 Knowledge, ArticleFeedback and CaseToArticle, §9 KnowledgeSources;
