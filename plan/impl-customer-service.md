@@ -964,14 +964,50 @@ Design §3 CaseDetail's clocks, §7 CaseAnalytics, §9 ServiceLevelPolicies; CS-
     any other automatic message.
   - **F-P4-6** BOSS's settings organization choice (every internal organization for the administrator) can be one Mantle's
     scope refuses (`get#PartyOrganizationInfo`; the administrator's first option ORG_ZIZI_CORP): ServiceLevelPolicies then
-    says the organization's levels are not available. P2's settings saves have the same mismatch. For the lead.
+    says the organization's levels are not available. P2's settings saves have the same mismatch. Fixed in review (R3).
   - **F-P4-7** CaseAnalytics (design §2: `CustomerService/Reports/CaseAnalytics`) made Reports a menu group before P14:
     Reports' placeholder is now `Reports/ReportsHome`.
   - **F-P4-8** F50: P4 seeds `AgrService` and builds no store or expiry for service agreements; a policy's agreement
     condition reads an Agreement of that type between the organization and the customer, active by its dates and, when it
     has a status, AgmStActive. The purchase agreement services still refuse it. P11 builds the store.
   - **F-P4-9** A customer's reply while the case waits for them is recorded (`SetCustomerReply`) but does not resume the
-    clock: design ServiceDefaults' "customer reply before close reopens via policy" is P8's.
+    clock: design ServiceDefaults' "customer reply before close reopens via policy" is P8's. Review: the wait is P4's
+    (a resolved case's reopen stays P8's), fixed (R2).
+
+**Review Nov 5 (P4).** Checked both repos' diffs against this section, §2, design §3 CaseDetail, §7, §9
+ServiceLevelPolicies, D23, AGENTS.md and Practices-App-Dev: business time (the interval functions moved unchanged, the
+production calendar reading them with its own key; due and elapsed across both daylight saving changes in
+America/Chicago, now in BusinessTime; organization holidays by `allDayStart` in the schedule's zone; minutes; pauses);
+the rules (first response only by an outward message the channel accepted, ES_SENT for a mail; a note, an acknowledgement,
+a waiting or failed send none; the customer wait pausing and a hold only by the policy; a reopen's new episode on the
+earlier row, the first breach kept; no re-selection; a correction's event keeping the earlier due; the rules a no-op on a
+request that is not a case; `responseRequiredDate` written by SlaServices only, its own write recognized by the rule);
+idempotency (event keys for intake, responses, replies, work, breach, warning, the pause limit; the scan per episode in
+its own transaction, a failing one named); store#WorkingHours (the user's own unchanged, CalendarSettings passing; another
+party's by calendar edit, a Manager relationship to it, or WORKING_HOURS_EDIT within the user's organizations); access
+(the screens' check#Record before get#CaseSlaHistory and correct#CaseSla; save#Policy SUPPORT_POLICY_EDIT and the
+organization); leanness (BusinessTime 0.3 s, SupportSla 1.7 s; the usable-when is acceptance's CustomerServiceSlaWalk,
+seven features, not rerun as it is unchanged).
+- **R1 (medium, Mantle)** The scan's query took every paused clock, ordered by due date, so paused cases (most with no
+  longest pause, or already recorded) could fill the batch of 200 on every run and the due and warned clocks were never
+  reached. The due and warned clocks come first; the rest of the batch takes paused clocks whose policy has a longest pause,
+  paused that long by the wall clock and not yet recorded for this pause.
+- **R2 (medium, Mantle; F-P4-9)** A customer's reply left a case waiting for the customer paused for good. The reply now
+  ends the wait: the case moves back by its workflow (a move needing no resolution or reason) to the open status it waited
+  from, else In progress, and the status rule resumes the clock, the status event's reason "The customer replied".
+  SupportSla resumes by the reply, and gained the default (a plain request's status, due date and sent mail record
+  nothing) and an acknowledgement that is no response.
+- **R3 (low, BOSS; F-P4-6)** The settings' organization choice and default are the service organizations Mantle's saves
+  take (FacilityScope), so the administrator is no longer offered ORG_ZIZI_CORP; CustomerServiceAccess checks every one
+  offered against find#Policies (it fails without the fix).
+- Left for the lead: Cases' Needs response and SLA risk views read the clock table's request IDs (up to 5000) into an
+  `in`/`not-in` list, which wants a join or subquery once cases number in the thousands; a clock that keeps failing in the
+  scan (named each run) still takes a slot of every batch; a person's hours stored by someone else (partyId a person) go on
+  the person's schedule calendar, not the personal series free/busy reads.
+- Specs run (all pass): Mantle BusinessTime, SupportSla, SupportCases, WorkCenters, ProductionSchedule,
+  ProductionShopFloor, CalendarServices, WorkProjectRequests, CommonsToday, ReturnToResponseBasicFlow; BOSS
+  CustomerServiceAccess, CustomerServiceCases, CalendarSettings, ManufacturingWorkCenters, ManufacturingSchedule. `moqui
+  lint --screens`: 136 flagged sites, as master.
 
 ### P5 — Assignment and saved replies
 
