@@ -2949,6 +2949,33 @@ Design §7; CS-REPORTING, CS-STACK (the dataset). Reads of what the phases befor
     record; a report export appears there as `CustomerService.<report>`.
   - **F-P14-12** AppStructure's placeholder floor is now 45 (ReportsHome built); P15 may lower it too.
 
+**Review Nov 5 (P14).** Checked each measure against its definition (compliance: cancellations apart, open past due in the
+rate, SlsMerged never, the carried copy once; response times: business time on the clock's calendar less its pauses, which
+Sla.js keeps in business minutes; volumes: a merged source cancelled, never in the backlog; returns: an open return requested,
+amounts per currency from ReturnItemBilling's unit amount, withheld as text without the amounts rule); the scope (the area's
+grant, organizations, the reported teams' queues; the same rows in the CSV, whose transition is on the report's screen); the
+formula guard (=, +, -, @, tab, CR; numbers in number columns kept) and audit#Export; no comment on Customer360 or the reports;
+Customer360's Service tab only with appRoot CustomerService, store#ServiceAgreement checking SUPPORT_POLICY_EDIT, the
+organization and the agreement's own organization and customer; the dataset granted to ADMIN, and report queries gated by
+DataDocumentUserGroup; F112's views (no id list; distinct counts are a sub-select) with CustomerServiceCases and SupportSla.
+- R1 (medium, correctness and performance) `get#CaseVolumes` read every request's status changes in the period from the audit
+  log (other organizations', RFQs and purchase requests), capped at 5,000, before filtering by queue: another organization's
+  activity could fill the cap and undercount resolved, reopened and cancelled, over an index-less date scan. Mantle's new view
+  `CaseStatusChange` (EntityAuditLog joined to its Request) filters by the scope's queues, type and channel in the query.
+- R2 (medium, performance) `CaseSlaEpisode` had no index on the dates the reports' cohorts and Home's counts read by period:
+  `CASE_SLA_EP_START`, `CASE_SLA_EP_ACTUAL` and `CASE_SLA_EP_BREACH` (an extend-entity in SupportReportEntities.xml).
+- R3 (medium, access) the shipped SLA-breach alert template's contact point was BOSS_CUSTOMER_SERVICE_MANAGER, so a saved copy
+  would notify every organization's service managers of all organizations' breaches by queue; it is ADMIN, as Mantle's sales
+  alert is (F-P14-3), and a saved copy sets its own.
+- R4 (low, test) CustomerServiceReports computes response times by hand on a spec calendar (Mon-Fri 9-17 Chicago): three clocks
+  across a weekend, with a pause and within a day, and a merged one never timed: median 120, p90 420, mean 190 business minutes,
+  median 480 and p90 3,960 elapsed. The spec is 1.5 s.
+- Left for the lead: CaseVolumes' backlog "open at the as-of time" uses the cases' current status, so an earlier as-of time
+  counts a case resolved since as closed (the statuses at a past time need the audit log, as F-P14-4); a viewer-scoped dataset
+  could use Insights' `contextFilters` on organizationPartyId when admission is built (F-P14-3). Acceptance
+  CustomerServiceReportsWalk was not rerun after R1 (its volumes feature covers it); the new view was checked against the
+  audit log filtered by hand in a throwaway feature.
+
 ### P15 — Support app
 
 The rest of the customer pages, in the PASS Support app P13 started (§2, §4), on CX-PORTALS' capability service.
