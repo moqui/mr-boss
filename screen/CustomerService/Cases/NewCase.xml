@@ -96,6 +96,10 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="caseTemplateFormId" from="templateChoice?.templateFormId || ''"/>
         <set field="caseTemplateOptions" from="templateChoice?.templateOptions || []"/>
         <script>identity.templateFormId = caseTemplateFormId; caseValues.templateFormId = caseTemplateFormId</script>
+        <!-- the template's form as of now without its drafts, whatever the request's parameters say (db_form reads both from the
+            context: dbFormAsOfDate, dbFormIncludeDrafts) -->
+        <set field="dbFormAsOfDate" from="null"/>
+        <set field="dbFormIncludeDrafts" from="false"/>
     </actions>
     <widgets>
         <label text="New case" type="h5"/>

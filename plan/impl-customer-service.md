@@ -1372,10 +1372,9 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
     field, so a response reads the audience it was submitted under; a published field's audience changes only by a successor, so
     an internal answer never becomes customer-visible. The template's organization is `DbForm.ownerPartyId` the same way.
   - **F-P7-2** `create#DbFormFieldSuccessor` copies a fixed list of DbFormField fields, so an extension field (the audience) is not
-    copied; `save#CaseTemplateField` sets it on the successor. Mantle writes a published field's in-place change through the
-    entity rather than the framework's `update#DbFormField`, which declares every non-key field as an in-parameter, so a call
-    with some of them could clear the others (F96: a declared parameter not passed arrives as null); not verified, framework
-    unchanged.
+    copied; `save#CaseTemplateField` sets it on the successor. The suspicion that the framework's `update#DbFormField` (or the
+    entity-auto `update#DbForm`) clears the non-key fields it is not given is false (Review: checked by a call with the title
+    only, the audience, required flag, help, type, order and `ownerPartyId` kept).
   - **F-P7-3** `save#ServiceQueue` (P2) made each row from its parameters, so any queue save dropped the row's `templateFormId`
     (and would drop P5's `assignmentRuleId`); it now keeps the template unless one is given. P5 must carry its rule the same way.
   - **F-P7-4** qvt's browser `require-when` covers text-line, password and date-time only (§7): the demo's serial (a text line)
@@ -1386,6 +1385,29 @@ Design §3 NewCase's CaseDescription, §9 CaseTemplates; CS-TEMPLATES, CS-FORM-E
   - **F-P7-6** A condition on a text or date field by value (equals) is refused (a typed allowlist: values compare only against a
     choice's options), so a condition's value is always one the source offers and can be checked when the source's options
     change.
+- **Review (P7), Nov 5:** checked the audience on every read (the customer's projection and case values at any date, drafts
+  and successors), validate#TemplateValues against evaluate#DbFormDependencies, create#Case's check before any write,
+  NewCase's and CaseDetail's forms as of now and of the response date, the organization on every read, and F-P7-2 (false, see
+  there). Fixes:
+  - R1 (high) A published change could leave the form breaking its own rules with no check: `create#DbFormFieldSuccessor`
+    copies the old field's conditions, so a field made internal from a date kept a customer field depending on it (the server
+    then hid the customer's answer by an internal value), a new kind kept a by-value condition on a field no longer a choice,
+    and ending an option (in place or by End) left a condition comparing it. Now `keepValid`: a successor from a date, an
+    in-place change and an ended option are refused, nothing changed, when they add a problem as of then (TEMPLATE_INVALID),
+    and `validate#CaseTemplate` names a by-value condition on a field that is not a choice (CONDITION_OPERATOR).
+  - R2 (medium) A text value holding `${` was taken, though the allowlist refuses it: now NO_EXPRESSIONS.
+  - R3 (low) A multiple choice submitted as a list (a host List) was read as one text: values are read as lists.
+  - R4 (low) NewCase sets `dbFormAsOfDate` and `dbFormIncludeDrafts` itself: db_form reads them from the context, which holds
+    the request's parameters, so `?dbFormIncludeDrafts=true` rendered a template's drafts.
+  - Left for the lead: (a) framework: any screen extending a DbForm takes `dbFormIncludeDrafts`/`dbFormAsOfDate` from request
+    parameters (a PASS customer page would show drafts and internal drafts); db_form should read them only from actions or an
+    attribute. (b) Marble's Survey screens (`SimpleScreens/Survey/Fields.xml`, `EditSurvey.xml`) edit any DbForm by formId,
+    a case template among them, past Mantle's allowlist (`${` in a label, the audience); they should refuse a form with a
+    purpose other than a survey's. (c) The customer projection (`get#CaseTemplate`, `validate#TemplateValues` customer)
+    checks no organization until P15 adds the contact's path, so any user reads another organization's customer-visible
+    fields. (d) A queue whose template requires a field refuses a create#Case with no values: P6's channel intake must not go
+    through create#Case's template check, or pass `templateValues`. (e) NewCase takes the template of the queue chosen in step
+    one; a different queue chosen in step two with its own template gets that template's required fields refused unasked.
 
 ### P8 — Merge, split and closing
 
