@@ -262,19 +262,31 @@ function findScorecards(p) {
     const scope = scopeOf(p)
     let query = find(SCORECARD).condition("organizationPartyId", "in", scope.organizationPartyIds).orderBy("-evaluatedDate")
     if (!blank(p.supplierPartyId)) query = query.condition("supplierPartyId", String(p.supplierPartyId))
-    if (!blank(p.resultEnumId)) query = query.condition("resultEnumId", String(p.resultEnumId))
-    if (!blank(p.scoreBelow)) query = query.condition("score", "less-than", dec(p.scoreBelow))
+    // the result and score filters apply to the latest evaluation of each supplier (or to every one, view all), so an older
+    // evaluation never stands in for a supplier's latest
+    if (p.view === "all") {
+        if (!blank(p.resultEnumId)) query = query.condition("resultEnumId", String(p.resultEnumId))
+        if (!blank(p.scoreBelow)) query = query.condition("score", "less-than", dec(p.scoreBelow))
+    }
     const found = Array.from(query.limit(readCap + 1).list())
     const omitted = []
     if (found.length > readCap) omitted.push("Only the newest " + readCap + " evaluations are read.")
     const seen = new Set()
-    const list = found.slice(0, readCap).filter(row => {
-        if (p.view === "all") return true
-        const key = row.organizationPartyId + ":" + row.supplierPartyId
-        if (seen.has(key)) return false
-        seen.add(key)
-        return true
-    })
+    const list = found
+        .slice(0, readCap)
+        .filter(row => {
+            if (p.view === "all") return true
+            const key = row.organizationPartyId + ":" + row.supplierPartyId
+            if (seen.has(key)) return false
+            seen.add(key)
+            return true
+        })
+        .filter(
+            row =>
+                p.view === "all" ||
+                ((blank(p.resultEnumId) || row.resultEnumId === String(p.resultEnumId)) &&
+                    (blank(p.scoreBelow) || (row.score != null && dec(row.score).compare(dec(p.scoreBelow)) < 0)))
+        )
     // only the suppliers the user may work with
     const suppliers = {}
     const visible = list.filter(
@@ -528,9 +540,11 @@ const spendColumns = [
 // get#PurchaseSpend: four measures kept apart, never added together: committed (the placed purchase order lines by their
 // placed date, less what was cancelled), received (the receipts at the order's price, by received date), billed (the
 // supplier bills by bill date) and paid (the payments applied to them by applied date), each per group (supplier, product or
-// month) and currency. A measure the user may not read is withheld and named; landed costs are Accounting's.
-function spend(p) {
+// month) and currency. A measure the user may not read is withheld and named; landed costs are Accounting's. only: the
+// measures to read (Home's summary reads committed and billed alone), every one by default.
+function spend(p, only = null) {
     const scope = scopeOf(p)
+    const wanted = measure => !only || only.includes(measure)
     const groupBy = Object.hasOwn(spendGroups, p.groupBy || "") ? p.groupBy : "supplier"
     const period = periodOf(p, 90)
     const omitted = []
@@ -580,28 +594,33 @@ function spend(p) {
         )
     }
     // received: the receipts of the period, at their order line's price
-    let receiptQuery = find(RECEIPT)
-        .condition("receivedDate", "greater-equals", new Date(period.from))
-        .condition("receivedDate", "less-than", new Date(period.thru))
-        .condition("orderId", "is-not-null", null)
-    if (!blank(p.productId)) receiptQuery = receiptQuery.condition("productId", String(p.productId))
-    const receipts = Array.from(receiptQuery.limit(readCap + 1).list())
-    if (receipts.length > readCap) omitted.push("Only " + readCap + " receipts of the period are counted as received.")
-    const receivedLines = orderLines(scope, p, null, {
-        orderIds: unique(receipts.slice(0, readCap).map(row => row.orderId)),
-        withCancelled: true
-    })
-    const lineOf = Object.fromEntries(receivedLines.lines.map(line => [line.item.orderId + ":" + line.item.orderItemSeqId, line]))
-    for (const receipt of receipts.slice(0, readCap)) {
-        const line = lineOf[receipt.orderId + ":" + receipt.orderItemSeqId]
-        if (!line) continue
-        const quantity = dec(receipt.quantityAccepted).add(dec(receipt.quantityRejected))
-        add(
-            keyOf(line.part.vendorPartyId, line.item.productId, receipt.receivedDate),
-            line.part.currencyUomId,
-            "received",
-            quantity.multiply(dec(line.item.unitAmount))
+    const receipts = []
+    if (wanted("received")) {
+        let receiptQuery = find(RECEIPT)
+            .condition("receivedDate", "greater-equals", new Date(period.from))
+            .condition("receivedDate", "less-than", new Date(period.thru))
+            .condition("orderId", "is-not-null", null)
+        if (!blank(p.productId)) receiptQuery = receiptQuery.condition("productId", String(p.productId))
+        receipts.push(...Array.from(receiptQuery.limit(readCap + 1).list()))
+        if (receipts.length > readCap) omitted.push("Only " + readCap + " receipts of the period are counted as received.")
+        const receivedLines = orderLines(scope, p, null, {
+            orderIds: unique(receipts.slice(0, readCap).map(row => row.orderId)),
+            withCancelled: true
+        })
+        const lineOf = Object.fromEntries(
+            receivedLines.lines.map(line => [line.item.orderId + ":" + line.item.orderItemSeqId, line])
         )
+        for (const receipt of receipts.slice(0, readCap)) {
+            const line = lineOf[receipt.orderId + ":" + receipt.orderItemSeqId]
+            if (!line) continue
+            const quantity = dec(receipt.quantityAccepted).add(dec(receipt.quantityRejected))
+            add(
+                keyOf(line.part.vendorPartyId, line.item.productId, receipt.receivedDate),
+                line.part.currencyUomId,
+                "received",
+                quantity.multiply(dec(line.item.unitAmount))
+            )
+        }
     }
     // billed and paid: the supplier bills of the period
     if (!scope.billRead) omitted.push("Billed amounts are withheld.")
@@ -629,7 +648,9 @@ function spend(p) {
             )
         }
     }
-    if (scope.financeRead) {
+    if (!wanted("paid")) {
+        // not asked for
+    } else if (scope.financeRead) {
         if (groupBy === "product" || !blank(p.productId)) omitted.push("Payments are not by product: paid is left out.")
         else {
             let applicationQuery = find("mantle.account.payment.PaymentApplication")
@@ -637,6 +658,8 @@ function spend(p) {
                 .condition("appliedDate", "less-than", new Date(period.thru))
                 .condition("invoiceId", "is-not-null", null)
             const applications = Array.from(applicationQuery.limit(readCap + 1).list())
+            if (applications.length > readCap)
+                omitted.push("Only " + readCap + " payment applications of the period are counted as paid.")
             const invoiceIds = unique(applications.map(row => row.invoiceId))
             const paidBills = {}
             for (const ids of chunks(invoiceIds))
@@ -663,9 +686,9 @@ function spend(p) {
     const products = productNames(productIds)
     const measureShown = {
         committed: scope.priceRead,
-        received: scope.priceRead,
+        received: scope.priceRead && wanted("received"),
         billed: scope.billRead,
-        paid: scope.financeRead && groupBy !== "product" && blank(p.productId)
+        paid: scope.financeRead && groupBy !== "product" && blank(p.productId) && wanted("paid")
     }
     const shownValue = (group, measure, currencyUomId) =>
         measureShown[measure] ? plain(lib.money(group[measure], currencyUomId)) : null
@@ -736,7 +759,8 @@ function spendSummary(p) {
     const scope = scopeOf({})
     const first = new Date(now())
     const fromDay = ec.l10n.format(new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() - 2, 1)), "yyyy-MM-dd")
-    const answer = spend({groupBy: "month", fromDate: fromDay, pageSize: 12})
+    // committed and billed only: Home is opened often, so it reads no receipts or payments
+    const answer = spend({groupBy: "month", fromDate: fromDay, pageSize: 12}, ["committed", "billed"])
     return {
         asOfText: answer.asOfText,
         omittedText: answer.omittedText,
@@ -807,11 +831,12 @@ function commitments(p) {
         "fromPartyId",
         list.filter(row => row.sourceEntityName === INVOICE).map(row => row.sourceId)
     )
-    const requestSupplierOf = row =>
-        row.sourceItemId
-            ? one("mantle.request.RequestItem", {requestId: row.sourceId, requestItemSeqId: row.sourceItemId})?.supplierPartyId ||
-              null
-            : null
+    // a request line's supplier, read per 500 requests
+    const requestSuppliers = {}
+    for (const ids of chunks(unique(list.filter(row => row.sourceEntityName === REQUEST).map(row => row.sourceId))))
+        for (const item of find("mantle.request.RequestItem").condition("requestId", "in", ids).list())
+            requestSuppliers[item.requestId + ":" + item.requestItemSeqId] = item.supplierPartyId || null
+    const requestSupplierOf = row => (row.sourceItemId ? requestSuppliers[row.sourceId + ":" + row.sourceItemId] || null : null)
     const supplierOfRow = row =>
         row.sourceEntityName === ORDER
             ? orderVendors[row.sourceId] || null
@@ -1012,8 +1037,16 @@ function tracker(p) {
             }
             const directLinks = rows("mantle.request.RequestItemOrder", {requestId, requestItemSeqId: item.requestItemSeqId})
             const orderLinks = directLinks.concat(quotes.filter(link => awarded.some(order => order.orderId === link.orderId)))
-            if (!orderLinks.length) trackerRows.push(Object.assign(base, emptyOrderTrace(item.supplierPartyId)))
-            for (const link of orderLinks) trackerRows.push(lineRow(link.orderId, link.orderItemSeqId, base))
+            // the supplier filter holds for a request's rows too: its order lines' supplier, else the line's suggested one
+            const ofSupplier = row => blank(p.supplierPartyId) || row.supplierPartyId === String(p.supplierPartyId)
+            if (!orderLinks.length) {
+                const empty = Object.assign(base, emptyOrderTrace(item.supplierPartyId))
+                if (ofSupplier(empty)) trackerRows.push(empty)
+            }
+            for (const link of orderLinks) {
+                const traced = lineRow(link.orderId, link.orderItemSeqId, base)
+                if (ofSupplier(traced)) trackerRows.push(traced)
+            }
         }
     }
     for (const orderId of orderIds)
@@ -1061,6 +1094,7 @@ function tracker(p) {
 function emptyOrderTrace(supplierPartyId) {
     return {
         orderId: null,
+        supplierPartyId: supplierPartyId || null,
         orderText: "Not ordered yet",
         orderUrl: null,
         supplierName: supplierPartyId ? lib.partyNames([supplierPartyId])[supplierPartyId] || supplierPartyId : "",
@@ -1128,6 +1162,7 @@ function orderLineTrace(scope, orderId, orderItemSeqId) {
     }
     return {
         orderId,
+        supplierPartyId: part?.vendorPartyId || null,
         orderText: "Purchase order " + orderId + ":" + orderItemSeqId + (order ? " (" + statusText(order.statusId) + ")" : ""),
         orderUrl: purchasing.recordUrl("order", orderId),
         supplierName: part?.vendorPartyId ? lib.partyNames([part.vendorPartyId])[part.vendorPartyId] || part.vendorPartyId : "",
@@ -1224,7 +1259,9 @@ function history(p) {
         .condition("entryDate", "greater-equals", new Date(period.from))
         .condition("entryDate", "less-than", new Date(period.thru))
     if (!blank(p.supplierPartyId)) quoteQuery = quoteQuery.condition("vendorPartyId", String(p.supplierPartyId))
-    const quoteParts = Array.from(quoteQuery.limit(1000).list())
+    const quoteParts = Array.from(quoteQuery.limit(1001).list())
+    if (quoteParts.length > 1000) omitted.push("Only 1000 quotes of the period are read.")
+    quoteParts.length = Math.min(quoteParts.length, 1000)
     const quoteLines = []
     for (const ids of chunks(unique(quoteParts.map(part => part.orderId)))) {
         let itemQuery = find("mantle.order.OrderItem")
@@ -1282,24 +1319,33 @@ function history(p) {
             leadDays: null
         })
     }
+    // the lines' billings, billed prices and first receipts, read per 500 orders rather than per line
+    const lineKey = (orderId, orderItemSeqId) => orderId + ":" + orderItemSeqId
+    const billingsOf = {},
+        invoiceItems = {},
+        firstReceipts = {}
+    for (const ids of chunks(unique(lines.map(line => line.item.orderId)))) {
+        const billingRows = Array.from(find("mantle.order.OrderItemBilling").condition("orderId", "in", ids).list())
+        for (const billing of billingRows) (billingsOf[lineKey(billing.orderId, billing.orderItemSeqId)] ??= []).push(billing)
+        for (const invoiceIds of chunks(unique(billingRows.map(billing => billing.invoiceId))))
+            for (const invoiceItem of find("mantle.account.invoice.InvoiceItem").condition("invoiceId", "in", invoiceIds).list())
+                invoiceItems[lineKey(invoiceItem.invoiceId, invoiceItem.invoiceItemSeqId)] = invoiceItem
+        for (const receipt of find(RECEIPT).condition("orderId", "in", ids).orderBy("receivedDate").list())
+            firstReceipts[lineKey(receipt.orderId, receipt.orderItemSeqId)] ??= receipt
+    }
     for (const {item, part} of lines) {
         const uomId = item.quantityUomId || productRows[item.productId]?.amountUomId
-        const billings = rows("mantle.order.OrderItemBilling", {orderId: item.orderId, orderItemSeqId: item.orderItemSeqId})
+        const billings = billingsOf[lineKey(item.orderId, item.orderItemSeqId)] || []
         let billedQuantity = zero(),
             billedAmount = zero()
         for (const billing of billings) {
-            const invoiceItem = one("mantle.account.invoice.InvoiceItem", {
-                invoiceId: billing.invoiceId,
-                invoiceItemSeqId: billing.invoiceItemSeqId
-            })
+            const invoiceItem = invoiceItems[lineKey(billing.invoiceId, billing.invoiceItemSeqId)]
             if (!invoiceItem) continue
             billedQuantity = billedQuantity.add(dec(billing.quantity))
             billedAmount = billedAmount.add(dec(billing.quantity).multiply(dec(invoiceItem.amount)))
         }
         const invoiced = billedQuantity.compare(0) > 0 ? billedAmount.divide(billedQuantity, 6, "HALF_UP") : null
-        const firstReceipt = Array.from(
-            find(RECEIPT, {orderId: item.orderId, orderItemSeqId: item.orderItemSeqId}).orderBy("receivedDate").limit(1).list()
-        )[0]
+        const firstReceipt = firstReceipts[lineKey(item.orderId, item.orderItemSeqId)]
         const leadDays =
             firstReceipt && part.placedDate
                 ? Math.max(0, Math.round((ms(firstReceipt.receivedDate) - ms(part.placedDate)) / dayMs))
@@ -1500,23 +1546,45 @@ function statement(p) {
 // lists' groups.
 function compareCount(userScope) {
     if (!userScope.read || !userScope.capabilities.listRead) return {quoteCompareCount: null}
-    const sourcing = ec.resource.script("component://mr-mantle/service/mantle/order/Sourcing.js")
     const buyers = purchasing.buyerIds(userScope)
-    const rfqs = Array.from(
-        find("mantle.request.RequestAndParty", {requestTypeEnumId: "RqtPurchaseRfq", roleTypeId: "OrgInternal"})
-            .condition("partyId", "in", buyers.length ? buyers : ["_NA_"])
-            .condition("thruDate", "is-null", null)
-            .condition("statusId", "in", ["ReqSubmitted", "ReqReviewed", "ReqInProgress"])
-            .selectField("requestId")
-            .limit(500)
+    if (!buyers.length) return {quoteCompareCount: 0}
+    // a bounded count for Home: the proposed quotes not expired (one read), their RFQs (one read per 500), and those RFQs
+    // still open
+    const at = new Date(now())
+    const factory = ec.entity.conditionFactory
+    const quotes = Array.from(
+        find("mantle.order.OrderHeaderAndPart", {statusId: "OrderProposed"})
+            .condition("customerPartyId", "in", buyers)
+            .condition(
+                factory.makeCondition(
+                    [
+                        factory.makeCondition("validThruDate", "is-null", null),
+                        factory.makeCondition("validThruDate", "greater-than", at)
+                    ],
+                    "or"
+                )
+            )
+            .selectField("orderId")
+            .limit(2000)
             .list()
-    )
-    const ready = unique(rfqs.map(row => row.requestId)).filter(requestId =>
-        sourcing
-            .invitationsOf(requestId)
-            .some(invitation => invitation.order.statusId === "OrderProposed" && !sourcing.expired(invitation.part))
-    )
-    return {quoteCompareCount: ready.length}
+    ).map(row => row.orderId)
+    const rfqIds = new Set()
+    for (const ids of chunks(unique(quotes)))
+        for (const link of find("mantle.request.RequestItemOrder")
+            .condition("orderId", "in", ids)
+            .selectField("requestId")
+            .list())
+            rfqIds.add(link.requestId)
+    let count = 0
+    for (const ids of chunks(Array.from(rfqIds)))
+        count += Array.from(
+            find(REQUEST, {requestTypeEnumId: "RqtPurchaseRfq"})
+                .condition("requestId", "in", ids)
+                .condition("statusId", "in", ["ReqSubmitted", "ReqReviewed", "ReqInProgress"])
+                .selectField("requestId")
+                .list()
+        ).length
+    return {quoteCompareCount: count}
 }
 // Home's BuyerWork sources beyond P3's orders to send: the approvals waiting for the user, the approved requests to source, the
 // RFQs whose responses are due and the acknowledgements overdue, each from its module's Today source (due within a week),
