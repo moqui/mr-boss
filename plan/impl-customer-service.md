@@ -931,6 +931,27 @@ Design §4 and §6's Availability mounts; CS-SHARED. Customer Service's context 
   - **F-P3-9** A shared screen's service (`CatalogServices.get#SharedContext`) is authorized through the mounting root's
     inherited authorization, so a spec calls it as a Customer Service user with authorization off, as Warehouse's do.
 
+**Review Nov 5 (P3).** Checked against §2, design §4 and crosscut §3.2, §3.5–§3.8, §3.16, §3.26: the scoped reads and
+AccessServices on every mount, F30, F74 (orders, invoices and cases of a shared customer by the user's organizations), the
+resend's recipient check (the customer's or a current contact's address only), its operation key, the save#Draft bypass of
+F-P3-1 (the attachment is only the order's own OctOrderConfirmation OrderContent, outside the mailbox's files, so a mailbox
+delete leaves it), F31 and the Customer360 tab conditions in other apps (AccountingReceivables, AccountingCollections,
+ProductsInventory, ProductsSharedContext, WarehouseReports, WarehouseInventory, PurchasingReplenishment,
+ManufacturingMaterials pass), F77 (another app's user keeps a customer's Commons link) and the acceptance walk (the six
+usable-when, passing). Fixes:
+- R1 (high, Mantle) The confirmation as placed: a deleted OrderItem is not audit-logged, and handle#OrderMajorChange deletes
+  and recreates a placed store order's promotion, shipping and tax lines on any change, so the first store could print an
+  order without lines it had when placed. A store order with a line created after placement, or a line number created
+  again, is now refused (ORDER_CHANGED_SINCE_PLACED); valueAt reads the last value at or before the placed time.
+- R2 (high) §2 money: an order's line prices, amounts, total and stored PDF now need PRICE_VIEW, ACCOUNTING_VIEW or
+  RECEIVABLE_VIEW (OrderDetail, OrderResults, Customer360's orders, the confirmation file), withheld otherwise, so the service
+  reader without price read sees none; Mantle's get#OrderConfirmationPrint needs PRICE_VIEW, ACCOUNTING_VIEW or ORDER_APPROVE.
+- R3 (medium) A credit hold's type and reason are withheld on OrderDetail from a user without CUSTOMER_CREDIT_VIEW.
+- Left for the lead: F55's first-resend store cannot rebuild every order (R1 refuses those); storing the confirmation at
+  placement behind a store or organization flag, off by default, would remove the refusal. Customer360's Activities tab
+  (P3's list) is not in the Customer Service context. A resend whose send fails leaves its draft, with the PDF, in the shared
+  mailbox, where a mailbox user could change the recipient outside Mantle's check.
+
 ### P4 — Service levels
 
 Design §3 CaseDetail's clocks, §7 CaseAnalytics, §9 ServiceLevelPolicies; CS-SLA and CS-JOBS.
