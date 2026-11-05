@@ -3401,6 +3401,18 @@ Ten inventory and design Impl entries spot-checked against the screens and servi
   SupplierPortal spec: a held order with a raised line and an added one shows revision 2, line 01 at 10 and no new line.
 Left for the lead: the drop-down checks of the walk have no own-side control.
 
+- **Final suites (Nov 4, on master after P17 merged, run alone):** standalone mr-mantle 1,655 passed, 2 failed (the
+  baseline WorkTimeEntries and WorkTimesheets), 11 skipped; `./moq test-apps` 2,932 server and 14 client features
+  passed, none failed; no spec over 15 s; `moqui lint --screens` clean.
+- **Budgets (the user's agreement at the start: raise by Purchasing's measured share).** Purchasing's regression specs
+  took, in the final apps run: mr-boss 20.3 s server (the Purchasing* specs) and 7.2 s client (PurchasingOrdersWalk);
+  mr-mantle 32.5 s (its seventeen new specs); mr-pass 0.1 s (SupplierPages). The budgets are now mr-boss 245 server
+  (from 220) and 44 client (from 36), and mr-mantle 335 (from 300); mr-pass stays 15. The whole components still run
+  over them in the apps run (mr-mantle 363 s, 267 s standalone; mr-boss 261 s server, 42 s client; mr-pass 16 s): that
+  rest is the other specs' growth over the build (more demo data and SECAs for them to meet) and run-to-run variance
+  (the same mr-mantle specs took 267 s and 363 s in two runs an hour apart), not Purchasing's own specs, so it is left
+  as a warning for the user's call rather than folded into the share.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
