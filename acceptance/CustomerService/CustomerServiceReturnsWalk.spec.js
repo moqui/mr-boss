@@ -92,14 +92,34 @@ spec({
     },
     cleanupSpec() {
         login("john.doe")
-        system(() => {
-            for (const returnId of state.returnIds)
-                ec.service
-                    .sync()
-                    .name(P + "cancel#CustomerReturn")
-                    .parameters({returnId, reason: "Walk cleanup"})
-                    .call()
+        // each step on its own, Retail's flag first: a failure in one leaves the others done
+        const step = (name, action) => {
+            try {
+                system(action)
+            } catch (error) {
+                ec.logger.error("Returns walk cleanup, " + name + ": " + error.message)
+            }
             ec.message.clearErrors()
+        }
+        step("Retail's returnSettlementRequired", () => {
+            if (!state.flagBefore || state.flagBefore === "Y") return
+            const preference = ec.entity
+                .find("mantle.ledger.config.PartyAcctgPreference")
+                .condition("organizationPartyId", ids.organizationId)
+                .one()
+            if ((preference?.returnSettlementRequired || "N") === state.flagBefore) return
+            invoke("mantle.ledger.SetupServices.store#Preferences", {
+                organizationPartyId: ids.organizationId,
+                settings: {returnSettlementRequired: state.flagBefore},
+                changeReason: "Customer Service returns walk done",
+                lastUpdatedStamp: preference?.lastUpdatedStamp || null
+            })
+        })
+        // the walk's returns that have no effect yet (a received or credited one stays, refused quietly)
+        step("the returns", () => {
+            for (const returnId of state.returnIds) refusal(P + "cancel#CustomerReturn", {returnId, reason: "Walk cleanup"})
+        })
+        step("the quality-manager grant", () => {
             for (const row of Array.from(
                 ec.entity
                     .find("moqui.security.UserGroupMember")
@@ -110,20 +130,7 @@ spec({
                     row.set("thruDate", ec.user.nowTimestamp)
                     row.update()
                 }
-            if (state.flagBefore && state.flagBefore !== "Y") {
-                const preference = ec.entity
-                    .find("mantle.ledger.config.PartyAcctgPreference")
-                    .condition("organizationPartyId", ids.organizationId)
-                    .one()
-                invoke("mantle.ledger.SetupServices.store#Preferences", {
-                    organizationPartyId: ids.organizationId,
-                    settings: {returnSettlementRequired: state.flagBefore},
-                    changeReason: "Customer Service returns walk done",
-                    lastUpdatedStamp: preference?.lastUpdatedStamp || null
-                })
-            }
         })
-        ec.message.clearErrors()
         login("john.doe")
         ec.artifactExecution.enableAuthz()
     }
@@ -371,78 +378,87 @@ feature("inspection releases one unit and scraps the other; the agent alone read
     }
 })
 
-feature("two drafts cannot together return more than was shipped; a receiptless credit needs RETURN_CREDIT_APPROVE", {
-    when() {
-        const thermostatLine = rows("mantle.order.OrderItem", {orderId: ids.deliveredOrderId}).find(
-            row => row.productId === ids.serializedProductId
-        ).orderItemSeqId
-        const line = {
-            orderItemSeqId: thermostatLine,
-            quantity: 1,
-            returnReasonEnumId: "RrsnDefective",
-            returnResponseEnumId: "RrspCredit"
+feature(
+    "two drafts cannot together return more than was shipped; with no policy manual review; a receiptless credit needs RETURN_CREDIT_APPROVE",
+    {
+        when() {
+            const thermostatLine = rows("mantle.order.OrderItem", {orderId: ids.deliveredOrderId}).find(
+                row => row.productId === ids.serializedProductId
+            ).orderItemSeqId
+            const line = {
+                orderItemSeqId: thermostatLine,
+                quantity: 1,
+                returnReasonEnumId: "RrsnDefective",
+                returnResponseEnumId: "RrspCredit"
+            }
+            const first = asUser(
+                users.agent,
+                () =>
+                    invoke(P + "submit#CustomerReturn", {
+                        operationKey: key(),
+                        orderId: ids.deliveredOrderId,
+                        lineList: [line],
+                        draft: true
+                    }),
+                false
+            )
+            state.returnIds.push(first.returnId)
+            const second = asUser(
+                users.agent,
+                () =>
+                    refusal(P + "submit#CustomerReturn", {
+                        operationKey: key(),
+                        orderId: ids.deliveredOrderId,
+                        lineList: [line],
+                        draft: true
+                    }),
+                false
+            )
+            asUser(users.agent, () => invoke(P + "submit#CustomerReturn", {operationKey: key(), returnId: first.returnId}), false)
+            asUser(users.returns, () => invoke(P + "authorize#Return", {operationKey: key(), returnId: first.returnId}), false)
+            const preview = asUser(
+                users.returnsReceivables,
+                () =>
+                    refusal("mantle.order.ReturnServices.preview#ReturnSettlement", {
+                        returnId: first.returnId,
+                        receiptless: true,
+                        reason: "Lost by the carrier"
+                    }),
+                false
+            )
+            const settle = asUser(
+                users.returnsReceivables,
+                () => {
+                    const previewed =
+                        ec.service
+                            .sync()
+                            .name("mantle.order.ReturnServices.preview#ReturnSettlement")
+                            .parameters({returnId: first.returnId, receiptless: true, reason: "Lost by the carrier"})
+                            .call() || {}
+                    ec.message.clearErrors()
+                    return refusal("mantle.order.ReturnServices.settle#Return", {
+                        returnId: first.returnId,
+                        receiptless: true,
+                        reason: "Lost by the carrier",
+                        previewVersion: previewed.previewVersion || "none",
+                        operationKey: key()
+                    })
+                },
+                false
+            )
+            // with no policy in effect (before Retail's took effect) the return is a person's review
+            const unpoliced = asUser(
+                users.agent,
+                () => invoke(P + "evaluate#ReturnPolicy", {orderId: ids.deliveredOrderId, evaluateDate: "2025-06-01 00:00:00"}),
+                false
+            )
+            return {first, second, preview, settle, unpoliced, refused: [preview, settle].join(" ")}
+        },
+        then({first, second, unpoliced, refused}) {
+            first.statusId == "ReturnCreated"
+            second.includes("QUANTITY_EXCEEDS_ELIGIBLE")
+            unpoliced.outcome == "ManualReview"
+            refused.includes("FORBIDDEN") || refused.includes("RETURN_CREDIT_APPROVE")
         }
-        const first = asUser(
-            users.agent,
-            () =>
-                invoke(P + "submit#CustomerReturn", {
-                    operationKey: key(),
-                    orderId: ids.deliveredOrderId,
-                    lineList: [line],
-                    draft: true
-                }),
-            false
-        )
-        state.returnIds.push(first.returnId)
-        const second = asUser(
-            users.agent,
-            () =>
-                refusal(P + "submit#CustomerReturn", {
-                    operationKey: key(),
-                    orderId: ids.deliveredOrderId,
-                    lineList: [line],
-                    draft: true
-                }),
-            false
-        )
-        asUser(users.agent, () => invoke(P + "submit#CustomerReturn", {operationKey: key(), returnId: first.returnId}), false)
-        asUser(users.returns, () => invoke(P + "authorize#Return", {operationKey: key(), returnId: first.returnId}), false)
-        const preview = asUser(
-            users.returnsReceivables,
-            () =>
-                refusal("mantle.order.ReturnServices.preview#ReturnSettlement", {
-                    returnId: first.returnId,
-                    receiptless: true,
-                    reason: "Lost by the carrier"
-                }),
-            false
-        )
-        const settle = asUser(
-            users.returnsReceivables,
-            () => {
-                const previewed =
-                    ec.service
-                        .sync()
-                        .name("mantle.order.ReturnServices.preview#ReturnSettlement")
-                        .parameters({returnId: first.returnId, receiptless: true, reason: "Lost by the carrier"})
-                        .call() || {}
-                ec.message.clearErrors()
-                return refusal("mantle.order.ReturnServices.settle#Return", {
-                    returnId: first.returnId,
-                    receiptless: true,
-                    reason: "Lost by the carrier",
-                    previewVersion: previewed.previewVersion || "none",
-                    operationKey: key()
-                })
-            },
-            false
-        )
-        return {first, second, preview, settle}
-    },
-    then({first, second, preview, settle}) {
-        first.statusId == "ReturnCreated"
-        second
-            .includes("QUANTITY_EXCEEDS_ELIGIBLE")(preview + settle)
-            .includes("FORBIDDEN") || (preview + settle).includes("RETURN_CREDIT_APPROVE")
     }
-})
+)
