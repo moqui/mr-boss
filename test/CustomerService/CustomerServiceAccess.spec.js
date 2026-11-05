@@ -428,6 +428,61 @@ feature("a case is its queue's team's and its assignee's; another organization's
     }
 })
 
+// P4: a service level policy is the administrator's to save (SUPPORT_POLICY_EDIT), its list the settings readers' and another
+// organization's refused; a case's clocks are read by the agent of its queue and not by another organization's agent; the
+// settings offer only organizations Mantle's saves take; and ServiceLevelPolicies renders for the administrator (qvt) with the demo policy and New policy
+feature("service levels: the administrator saves a policy and the manager may not; a case's clocks are its organization's", {
+    when() {
+        const problems = []
+        const draft = {
+            organizationPartyId: ids.organizationId,
+            policyName: "Access spec draft",
+            requestCategoryId: ids.supportQueueId,
+            draft: true,
+            targets: [{priorityBandEnumId: "CpbNormal", firstResponseMinutes: 60, resolutionMinutes: 480}]
+        }
+        const sla = "mantle.request.SlaServices."
+        for (const [user, service, parameters, expected] of [
+            [users.admin, "save#Policy", draft, ""],
+            [users.manager, "save#Policy", draft, "PERMISSION_DENIED"],
+            [users.manager, "find#Policies", {organizationPartyId: ids.organizationId}, ""],
+            [users.agent, "find#Policies", {organizationPartyId: ids.otherOrganizationId}, "RECORD_UNAVAILABLE"],
+            [users.agent, "get#CaseSlaHistory", {requestId: ids.thermostatCaseId}, ""],
+            [users.services, "get#CaseSlaHistory", {requestId: ids.thermostatCaseId}, "RECORD_UNAVAILABLE"]
+        ]) {
+            // Mantle's services check their permission and organization themselves (the screens call them after the case's
+            // check, under the screen's authorization)
+            const message = asUser(user, () => refusal(sla + service, parameters), false)
+            if (expected === "" ? message !== "" : !message.includes(expected))
+                problems.push(`${user} ${service}: ${message || "accepted"}, not ${expected || "accepted"}`)
+        }
+        // the settings offer only organizations Mantle's saves take (F-P4-6: not every internal organization)
+        const offered = asUser(
+            users.admin,
+            () =>
+                invoke("ironstone.customerservice.ConfigurationServices.get#ServiceLevelSettings", {appRoot: "CustomerService"})
+                    .organizations || [],
+            false
+        )
+        if (!offered.some(row => row.value === ids.organizationId)) problems.push("the settings do not offer the organization")
+        for (const row of offered) {
+            const message = asUser(users.admin, () => refusal(sla + "find#Policies", {organizationPartyId: row.value}), false)
+            if (message) problems.push(`the settings offer ${row.value}, which Mantle refuses: ${message}`)
+        }
+        const page = asUser(users.admin, () =>
+            lib.page("Settings/ServiceLevelPolicies", {organizationPartyId: ids.organizationId})
+        )
+        return {problems, page}
+    },
+    then({problems, page}) {
+        problems.join("\n") == ""
+        page.status == 200
+        page.errors == []
+        page.output.includes("Retail standard")
+        page.output.includes("Privacy requests")
+        page.output.includes("New policy")
+    }
+})
 // P12: article feedback is the knowledge author's (who reviews it) and the service manager's (who reads it), never an agent's,
 // in the service and on the screen; an article drafted from a case is the knowledge author's, on a case of their organization
 feature(

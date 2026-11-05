@@ -32,6 +32,8 @@ const ids = {
     pickCaseId: "BOSS_CS_CASE_PICK",
     privacyCaseId: "BOSS_CS_CASE_PRIVACY",
     otherCaseId: "BOSS_CS_CASE_OTHER",
+    // P4: Retail's default service level policy (its Privacy queue has its own)
+    slaPolicyId: "BOSS_CS_SLA_RETAIL",
     // P12: the demo articles (load#KnowledgeDemo) as [space, page path]: published for customers in English and Spanish, a
     // draft, and the agents' internal one
     articlePaths: {
@@ -144,6 +146,9 @@ function routeFixtures() {
         "Settings/StatusCategories": {parameters: {}, text: "Status categories"},
         "Settings/ServiceDefaults": {parameters: {}, text: "Service defaults"},
         "Cases/WorkItemDetail": {parameters: {workEffortId: "BOSS_CS_NO_TASK"}, text: "is not available in Customer Service"},
+        // P4: the service levels and one case's measurements
+        "Settings/ServiceLevelPolicies": {parameters: {}, text: "Service levels"},
+        "Reports/CaseAnalytics": {parameters: {requestId: ids.thermostatCaseId}, text: "Events"},
         // P12: Knowledge (Commons Knowledge mounted, its qvue component), the feedback queue, an article from Joe's case and
         // the knowledge sources
         Knowledge: {fullPathOnly: true},

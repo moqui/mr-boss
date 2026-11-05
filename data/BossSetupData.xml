@@ -1814,4 +1814,11 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Customer Service P4: the service level topics Mantle's scan sends (mantle.request.SlaServices.scan#CaseSla) open the
+        case's clocks; the administrator keeps any team's working hours (WORKING_HOURS_EDIT; a team's manager keeps their own
+        team's as its manager, mantle.work.CalendarServices.store#WorkingHours) -->
+    <moqui.security.user.NotificationTopic topic="SupportCaseSlaWarning" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
+    <moqui.security.user.NotificationTopic topic="SupportCaseSlaBreach" linkTemplate="/qapps/CustomerService/Cases/CaseDetail?requestId=${requestId}&amp;tab=sla"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WORKING_HOURS_EDIT"
+            fromDate="0"/>
 </entity-facade-xml>

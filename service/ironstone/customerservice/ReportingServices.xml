@@ -14,7 +14,7 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- Customer Service reports (design-customer-service §3 Home, §7): get#ServiceDashboard, Home's ServiceMetrics. Each
     measure comes from the phase that builds its records (P2 open, overdue and unassigned cases; P4 SLA compliance, first
-    response and resolution; P13 CSAT); until then it is not configured, which Home shows as "Not configured", never as zero.
+    response and resolution, the share of clocks met on time; P13 CSAT); until then it is not configured, which Home shows as "Not configured", never as zero.
     Each phase appends its block; P14 adds the reports. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="ServiceDashboard" allow-remote="false">
@@ -65,6 +65,13 @@ along with this software (see the LICENSE.md file). If not, see
                 const queueText = (caseCounts.queueRows || []).length + ' ' + ec.l10n.localize('queues') + ', ' + ec.l10n.localize('now')
                 for (const measure of measures) if (Object.hasOwn(counted, measure.key))
                     Object.assign(measure, {configured: true, valueText: String(counted[measure.key] ?? 0), denominatorText: queueText})
+            ]]></script>
+            <!-- P4: SLA compliance, first response and resolution over the clocks decided in the period (Cases.js slaMeasures);
+                not configured until one of the user's organizations has a service level policy -->
+            <script><![CDATA[
+                const levels = ec.resource.script('component://mr-boss/service/ironstone/customerservice/Cases.js').execute('slaMeasures', {periodDays: days})
+                if (levels.configured) for (const measure of measures) if (levels[measure.key])
+                    Object.assign(measure, levels[measure.key])
             ]]></script>
             <!-- later phases: each measures its records here, in the user's scope -->
         </actions>

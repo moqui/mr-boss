@@ -91,9 +91,34 @@ const withParty = (roleTypeId, partyIds) =>
             .list()
     ).map(row => row.requestId)
 const inIds = (field, ids) => factory().makeCondition(field, "in", ids.length ? ids : ["_NA_"])
+// P4: the cases' clocks (mantle.request.support.CaseSlaEpisode, written by Mantle's SlaServices): those at risk (a running
+// clock past its warning or due time, or breached), those whose first response still runs, and those with any clock.
+const EPISODE = "mantle.request.support.CaseSlaEpisode"
+function clockCaseIds(kind) {
+    const cf = factory()
+    const now = ec.user.nowTimestamp
+    let query = find(EPISODE)
+    if (kind === "risk")
+        query = query
+            .condition("stateEnumId", "SlsRunning")
+            .condition(
+                cf.makeCondition(
+                    [
+                        cf.makeCondition("warningDate", "less-equals", now),
+                        cf.makeCondition("dueDate", "less-equals", now),
+                        cf.makeCondition("breachedDate", "is-not-null", null)
+                    ],
+                    "or"
+                )
+            )
+    else if (kind === "awaiting")
+        query = query.condition("clockEnumId", "SlcFirstResponse").condition("stateEnumId", "in", ["SlsRunning", "SlsPaused"])
+    return Array.from(query.selectField("requestId").distinct(true).limit(5000).list()).map(row => row.requestId)
+}
 
-// The saved views of design Cases: Assigned to me (the default), New/unassigned, Waiting for customer, Needs response (new
-// and not yet answered), SLA risk (P4: none until service levels), Recently resolved (the last 7 days) and All permitted.
+// The saved views of design Cases: Assigned to me (the default), New/unassigned, Waiting for customer, Needs response (its
+// first response clock running, or new with no clock), SLA risk (a running clock warned, due or breached; P4), Recently
+// resolved (the last 7 days) and All permitted.
 const views = {
     mine: "Assigned to me",
     unassigned: "New/unassigned",
@@ -123,10 +148,24 @@ function viewCondition(view, userScope) {
         }
         case "waiting":
             return factory().makeCondition("statusId", "equals", "ReqWaitingCustomer")
-        case "needsResponse":
-            return factory().makeCondition("statusId", "equals", "ReqSubmitted")
+        case "needsResponse": {
+            const timed = clockCaseIds("any")
+            const untimed = factory().makeCondition("statusId", "equals", "ReqSubmitted")
+            return factory().makeCondition(
+                [
+                    inIds("requestId", clockCaseIds("awaiting")),
+                    timed.length
+                        ? factory().makeCondition([untimed, factory().makeCondition("requestId", "not-in", timed)], "and")
+                        : untimed
+                ],
+                "or"
+            )
+        }
         case "slaRisk":
-            return factory().makeCondition("requestId", "equals", "_NA_")
+            return factory().makeCondition(
+                [inIds("requestId", clockCaseIds("risk")), factory().makeCondition("statusId", "in", openStatuses)],
+                "and"
+            )
         case "resolved":
             return factory().makeCondition(
                 [
@@ -156,6 +195,34 @@ function decorate(list) {
         ? Array.from(find("mantle.request.RequestTag").condition("requestId", "in", ids).condition("thruDate", null).list())
         : []
     const bands = bandRows()
+    // P4: each case's running clocks, the one due first shown (its warning or breach colours it)
+    const clocks = ids.length
+        ? Array.from(
+              find(EPISODE)
+                  .condition("requestId", "in", ids)
+                  .condition("stateEnumId", "in", ["SlsRunning", "SlsPaused"])
+                  .orderBy("dueDate")
+                  .list()
+          )
+        : []
+    const nowMs = Number(ms(ec.user.nowTimestamp))
+    const clockOf = requestId => {
+        const open = clocks.filter(row => row.requestId === requestId)
+        const running = open.find(row => row.stateEnumId === "SlsRunning")
+        if (!running)
+            return open.length
+                ? {slaText: L("Paused"), slaColor: "grey-7", slaRisk: false}
+                : {slaText: "", slaColor: "", slaRisk: false}
+        const due = Number(ms(running.dueDate))
+        const label = running.clockEnumId === "SlcFirstResponse" ? L("Response") : L("Resolution")
+        const breached = !!running.breachedDate || due <= nowMs
+        const warned = running.warningDate && Number(ms(running.warningDate)) <= nowMs
+        return {
+            slaText: label + (breached ? " " + L("overdue since") + " " : " " + L("due") + " ") + textOf(due),
+            slaColor: breached ? "negative" : warned ? "warning" : "positive",
+            slaRisk: breached || !!warned
+        }
+    }
     // the revision Mantle checks (SupportCases.js revisionOf): the request's last change or its assignee's
     const assigneeStamps = {}
     if (ids.length)
@@ -197,6 +264,7 @@ function decorate(list) {
                     .map(tag => cs.enumText(tag.tagEnumId))
                     .join(", "),
                 caseRevision: Math.max(Number(ms(row.lastUpdatedStamp) || 0), assigneeStamps[row.requestId] || 0),
+                ...clockOf(row.requestId),
                 url: "/qapps/CustomerService/Cases/CaseDetail?requestId=" + encodeURIComponent(row.requestId)
             },
             statusFacts(row.caseWorkflowId, row.statusId)
@@ -350,6 +418,26 @@ function queueCounts() {
               ).map(row => row.requestId)
             : []
     )
+    // P4: the open cases with a breached running clock
+    const breached = new Set(
+        Array.from(
+            find(EPISODE)
+                .condition("stateEnumId", "SlsRunning")
+                .condition(
+                    factory().makeCondition(
+                        [
+                            factory().makeCondition("breachedDate", "is-not-null", null),
+                            factory().makeCondition("dueDate", "less-equals", now)
+                        ],
+                        "or"
+                    )
+                )
+                .selectField("requestId")
+                .distinct(true)
+                .limit(5000)
+                .list()
+        ).map(row => row.requestId)
+    )
     const queueRows = queues
         .map(queue => {
             const open = Array.from(
@@ -367,14 +455,21 @@ function queueCounts() {
                 unassignedCount: open.filter(row => !assigned.has(row.requestId)).length,
                 overdueCount: open.filter(row => row.responseRequiredDate && Number(ms(row.responseRequiredDate)) < Number(now))
                     .length,
-                breachedText: L("Not configured"),
+                breachedCount: open.filter(row => breached.has(row.requestId)).length,
+                breachedText: String(open.filter(row => breached.has(row.requestId)).length),
                 url:
                     "/qapps/CustomerService/Cases/Cases?view=all&requestCategoryId=" + encodeURIComponent(queue.requestCategoryId)
             }
         })
         .sort((a, b) => a.queueName.localeCompare(b.queueName))
     const sum = field => queueRows.reduce((total, row) => total + row[field], 0)
-    return {queueRows, openCount: sum("openCount"), unassignedCount: sum("unassignedCount"), overdueCount: sum("overdueCount")}
+    return {
+        queueRows,
+        openCount: sum("openCount"),
+        unassignedCount: sum("unassignedCount"),
+        overdueCount: sum("overdueCount"),
+        breachedCount: sum("breachedCount")
+    }
 }
 
 // ===== find#ServiceCustomers (F30) =====
@@ -749,7 +844,80 @@ function today(p) {
     }
 }
 
-const operations = {findCases, queueCounts, serviceCustomers, prepareCase, caseDetail, applyBatch, today}
+// ===== Home's service level measures (P4, design Home ServiceMetrics) =====
+// Over the user's cases, the clocks decided in the period: met on time, missed (done late), and breached without being done
+// (a running clock past due, or one the case closed without), each clock once; SLA compliance over every clock, first response
+// and resolution apart, with the denominator and the change against the previous period of the same length. Cancelled cases'
+// clocks are left out. Not configured when none of the user's organizations has a policy.
+function slaMeasures(p) {
+    const userScope = cs.required()
+    const days = Math.max(1, Math.min(366, Number(p.periodDays) || 30))
+    const nowMs = Number(ms(ec.user.nowTimestamp))
+    const policies = find("mantle.request.support.ServiceLevelPolicy")
+        .condition("organizationPartyId", "in", cs.vendorIds(userScope).length ? cs.vendorIds(userScope) : ["_NA_"])
+        .condition("fromDate", "is-not-null", null)
+        .count()
+    if (!policies) return {configured: false}
+    const caseIds = Array.from(find(CASE).condition(scopeCondition(userScope)).selectField("requestId").limit(20000).list()).map(
+        row => row.requestId
+    )
+    const tally = (fromMs, thruMs) => {
+        const inPeriod = field =>
+            factory().makeCondition(
+                [
+                    factory().makeCondition(field, "greater-equals", new Date(fromMs)),
+                    factory().makeCondition(field, "less", new Date(thruMs))
+                ],
+                "and"
+            )
+        const done = caseIds.length
+            ? Array.from(
+                  find(EPISODE)
+                      .condition("requestId", "in", caseIds)
+                      .condition("stateEnumId", "in", ["SlsMet", "SlsMissed"])
+                      .condition(inPeriod("actualDate"))
+                      .list()
+              )
+            : []
+        const breached = caseIds.length
+            ? Array.from(
+                  find(EPISODE)
+                      .condition("requestId", "in", caseIds)
+                      .condition("stateEnumId", "in", ["SlsRunning", "SlsPaused", "SlsUnmet"])
+                      .condition(inPeriod("breachedDate"))
+                      .list()
+              )
+            : []
+        const of = clockEnumId => {
+            const met = done.filter(
+                row => row.stateEnumId === "SlsMet" && (!clockEnumId || row.clockEnumId === clockEnumId)
+            ).length
+            const late =
+                done.filter(row => row.stateEnumId === "SlsMissed" && (!clockEnumId || row.clockEnumId === clockEnumId)).length +
+                breached.filter(row => !clockEnumId || row.clockEnumId === clockEnumId).length
+            return {met, total: met + late, percent: met + late ? Math.round((100 * met) / (met + late)) : null}
+        }
+        return {all: of(null), first: of("SlcFirstResponse"), resolution: of("SlcResolution")}
+    }
+    const current = tally(nowMs - days * dayMs, nowMs)
+    const previous = tally(nowMs - 2 * days * dayMs, nowMs - days * dayMs)
+    const measure = key => {
+        const now = current[key],
+            before = previous[key]
+        return {
+            configured: true,
+            valueText: now.percent == null ? L("No clocks decided") : now.percent + "% " + L("on time"),
+            denominatorText: now.met + " " + L("of") + " " + now.total + " " + L("clocks"),
+            changeText:
+                now.percent == null || before.percent == null
+                    ? null
+                    : (now.percent - before.percent >= 0 ? "+" : "") + (now.percent - before.percent) + " " + L("points")
+        }
+    }
+    return {configured: true, slaCompliance: measure("all"), firstResponse: measure("first"), resolution: measure("resolution")}
+}
+
+const operations = {findCases, queueCounts, serviceCustomers, prepareCase, caseDetail, applyBatch, today, slaMeasures}
 ;({
     openStatuses,
     bandRows,

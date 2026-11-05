@@ -12,12 +12,17 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Customer Service (design-customer-service §7): the report catalogue, SLA compliance,
-    response times, case volumes, CSAT results and return analysis (impl-customer-service P14); for the agent, manager and
+<!-- The Reports area of IronStone Customer Service (design-customer-service §7): ReportsHome (the report catalogue, SLA
+    compliance, response times, case volumes, CSAT results and return analysis: impl-customer-service P14) and CaseAnalytics
+    (P4: one case's measurements, opened from CaseDetail's Service level tab, hidden from the menu); for the agent, manager and
     return authorizer (BOSS_CS_REPORTS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_monitoring" menu-image-type="icon">
+    <subscreens default-item="ReportsHome" always-use-full-path="true">
+        <subscreens-item name="CaseAnalytics" location="component://mr-boss/screen/CustomerService/Reports/CaseAnalytics.xml"
+                menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Service reports." type="p"/>
+        <subscreens-panel id="CustomerServiceReportsPanel" type="tab"/>
     </widgets>
 </screen>

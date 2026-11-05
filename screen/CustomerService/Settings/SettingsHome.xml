@@ -33,7 +33,7 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="can" from="customerService.capabilities"/>
         <set field="linkRows" from="(cfg?.readiness || []).map((row) =&gt; Object.assign({}, row, {group: 'Work routing',
                 url: '/qapps/CustomerService/Settings/' + ({queues: 'Queues', teams: 'AgentTeams', types: 'CaseTypes',
-                    defaults: 'ServiceDefaults', statuses: 'StatusCategories'})[row.key] + '?organizationPartyId='
+                    defaults: 'ServiceDefaults', statuses: 'StatusCategories', levels: 'ServiceLevelPolicies'})[row.key] + '?organizationPartyId='
                     + encodeURIComponent(cfg.organizationPartyId), readyText: row.ready ? 'Ready' : 'To do',
                 readyColor: row.ready ? 'positive' : 'warning'}))"/>
     </actions>

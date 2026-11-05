@@ -263,6 +263,9 @@ feature("the settings reads: readiness, the queue tree and the teams, a team's c
         queues.map(row => row.requestCategoryId).includes(ids.privacyQueueId)
         teams.find(row => row.teamPartyId == ids.supportTeamId).canChange == true
         teams.find(row => row.teamPartyId == "BOSS_CS_TEAM_PRIVACY").canChange == false
+        // P4: the Support team's working hours, which its queue's clocks count on
+        teams.find(row => row.teamPartyId == ids.supportTeamId).hoursText == "Mon-Fri 09:00-17:00 (America/Chicago)"
+        settings.readiness.find(row => row.key == "levels").ready
     }
 })
 
@@ -280,6 +283,9 @@ feature("CaseDetail's Customer Service section and NewCase's duplicate warning r
         detail.output.includes("High (3)")
         detail.output.includes("The customer sees: Received")
         detail.output.includes("Recent cases of")
+        // P4: the clocks beside the header and the Service level tab
+        detail.output.includes("First response:")
+        detail.output.includes("Service level")
         newCase.status == 200
         newCase.errors == []
         newCase.output.includes("open case(s)")

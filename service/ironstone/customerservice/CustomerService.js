@@ -265,6 +265,9 @@ const linkPaths = [
     "Settings/CaseTypes",
     "Settings/StatusCategories",
     "Settings/ServiceDefaults",
+    // P4: the service levels and one case's measurements
+    "Settings/ServiceLevelPolicies",
+    "Reports/CaseAnalytics",
     // P12: knowledge, its feedback, an article from a case and the knowledge sources
     "Knowledge/Knowledge",
     "Knowledge/ArticleFeedback",
