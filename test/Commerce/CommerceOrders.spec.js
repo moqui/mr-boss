@@ -107,7 +107,11 @@ feature("the demo store's held order by store scope: the operator reads its hold
             palette:
                 asUser(users.operator, () =>
                     invoke("ironstone.commerce.ContextServices.search#Records", {text: prefix, limit: 10})
-                ).rows || []
+                ).rows || [],
+            // a Commerce reader without COMMERCE_ORDER_VIEW finds no store order in the palette
+            readerPalette:
+                asUser(users.read, () => invoke("ironstone.commerce.ContextServices.search#Records", {text: prefix, limit: 10}))
+                    .rows || []
         }
     },
     then(r) {
@@ -121,6 +125,7 @@ feature("the demo store's held order by store scope: the operator reads its hold
         r.otherLink == null
         r.palette.some(row => row.recordId == orderId && row.recordEntity == "mantle.order.OrderHeader")
         r.palette.some(row => row.url == "/qapps/Commerce/Orders/CartDetail?orderId=" + cartId)
+        r.readerPalette == []
     }
 })
 

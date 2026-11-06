@@ -25,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="commerceReorder">
         <actions>
-            <service-call name="mantle.order.StoreOperationsServices.reorder#StoreOrder" in-map="{orderId:orderId}" out-map="reordered"/>
+            <service-call name="mantle.order.StoreOperationsServices.reorder#StoreOrder" in-map="{orderId:orderId, orderRevision:(orderRevision || null), operationKey:(operationKey || null)}" out-map="reordered"/>
             <if condition="!ec.message.hasError()">
                 <set field="orderId" from="reordered.orderId"/>
                 <script>ec.message.addMessage(reordered.message, 'success')</script>
@@ -74,8 +74,11 @@ along with this software (see the LICENSE.md file). If not, see
                             <container style="row items-center q-gutter-xs m-record-actions">
                                 <container-dialog id="CommerceOrderAgain" button-text="Order again" icon="sym_o_replay" width="560"
                                         title="Order again from order ${orderId}" condition="co.canReorder">
-                                    <form-single name="CommerceOrderAgainForm" transition="commerceReorder" map="{orderId:orderId}">
+                                    <form-single name="CommerceOrderAgainForm" transition="commerceReorder"
+                                            map="{orderId:orderId, orderRevision:co.orderRevision, operationKey:'reorder-' + ec.user.randomString(24)}">
                                         <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
                                         <field name="submitButton"><default-field title="Make the new order"><submit/></default-field></field>
                                     </form-single>
                                     <label type="p" style="text-caption m-muted"

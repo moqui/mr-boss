@@ -1937,7 +1937,46 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
   - **F-P8-8** StoreOperations scopes an order by its store alone (the store's organization), while Commerce.js's
     `check#Record` of an order also needs each part's vendor to be one of the user's organizations: a store order vended by
     another organization would be listed and then refused by the record check (and its record link). None exists in the
-    demo; for the lead, whether Mantle should check the vendor too.
+    demo; for the lead, whether Mantle should check the vendor too. *Review: yes, done (R2).*
+
+**Review Nov 6 (P8).**
+- Checked: `git diff $(git merge-base master com/p8)..com/p8` in mr-mantle, mr-boss and mr-pass against this section,
+  §2, design §6 and §10. Each of the 15 StoreOperations operations takes StoreAdmin.js' scope (COMMERCE_VIEW, the user's
+  organizations, the StoreStaff limit, F51) and all but `get#StoreWorkSummary` COMMERCE_ORDER_VIEW; a store given by the
+  browser goes through `storeOf`; a forged id in `get#StoreOrder`/`get#StoreCart` (an open order as an order and back),
+  `get#StoreReturn` (every source order in scope), `get#StoreRequest` and `add#StoreRequestNote` (the case checked on itself:
+  its store, a store-order link or a store's queue), `get#StoreCustomer` and `reorder#StoreOrder` is RECORD_UNAVAILABLE;
+  `get#StoreCallRecords` keeps to the user's stores whatever parties it is given. The Shared mounts' Commerce branches call
+  only these services (no `check#Record` in front, so Mantle is the only gate there). `find#StoreCustomers` reads only
+  the customers of the stores' orders and signed-in carts; Customer360 shows methods as type and last four, no password,
+  impersonation or gateway data. The Payment hold is shown read only: no Commerce transition releases it and
+  `release#OrderHold` refuses the operator. The internal note is a Comment (SupportPortal leaves Comments out of the
+  customer's view). `find#StoreDeliveries` is scoped and read only (no screen uses it yet). F42: Customer Service's branch
+  keeps its link and falls through only on null; no later branch of `get#RecordLink` takes a sales order. The mr-pass
+  acceptance needs mr-boss lazily and ignores every feature without it.
+- **R1 (medium)** `reorder#StoreOrder` had no operation identity: a double submit of Order again made two open orders.
+  It now takes an `operationKey` (PostingOperation, type StoreReorder; a retry answers the first new order with
+  `alreadyApplied`) and the order's `orderRevision` as OrderDetail showed it (stale: STALE_REVISION naming the current);
+  the form sends both. A line cancelled in full is no longer ordered again, a part-cancelled one carries what was kept.
+- **R2 (medium, F-P8-8)** Mantle now also requires the vendor: an order of the user's stores with a part vended by an
+  organization not theirs is left out of every list, count, customer, return, case and call context and refused as a
+  record, as Commerce.js' record check and Customer Service's order scope do (the shared mounts have no record check in
+  front of Mantle, so without it such an order opened in OrderDetail). StoreOperations gains the case (an order of store A
+  vended by organization B).
+- **R3 (low)** The palette searched store orders and carts, with their customers' names, for every Commerce user, and
+  `get#RecordLink` linked them for a user without COMMERCE_ORDER_VIEW. The order, cart and customer kinds now carry the
+  `orderView` capability, checked in the search and the link; CommerceOrders checks the reader finds none.
+- Specs after the fixes: Mantle StoreOperations 3 of 3 (1.4 s of feature time); BOSS CommerceOrders, CommerceAccess,
+  CommercePromotions, CustomerServiceAccess, CustomerServiceOrders, CustomerServiceReturns, AccountingAccess,
+  AccountingReceivables, Chat, Requests, ProjectRequests, WarehouseReturns, PurchasingReturns, PurchasingRequests,
+  PurchasingOrders, ManufacturingWorkOrders, QuickCreate, TodayPanel: 160 of 160; acceptance mr-pass ShopOrdersInCommerce
+  (with ShopFixtures, ShopOrderScenarios) 12 of 12. Lint: 132 sites as before, none in Commerce. Not run: `./moq test-apps`.
+- For the lead: (1) `heldOrderIds` and `cancelRequestOrderIds` take the first 500 open holds or cancel requests of every
+  store before the store filter, so with many in other stores the Attention filters and Home's Payment holds count could
+  miss some; a view entity joining the order's store would fix it. (2) Customer360 shows the customer's current emails
+  and full addresses to a store operator, as Customer Service does; design §10 says only the methods are masked. (3) Order
+  again needs only COMMERCE_ORDER_VIEW (the worker's decision), so a read-only operator can make open orders. (4) A queue
+  set as a store's checkout support queue brings every case of that queue into the store, including cases not about it.
 
 ### P9 — Reviews
 

@@ -392,6 +392,11 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId)
 }
 
+// Whether the user holds the capability a kind's screen needs (none for most kinds).
+const mayKind = (userScope, kind) => {
+    const capability = recordKinds[kind]?.capability
+    return !capability || !!userScope.capabilities?.[capability]
+}
 // The Commerce screen of a record: its kind's destination, else none.
 function recordUrl(kind, recordId) {
     const definition = recordKinds[kind]
@@ -402,7 +407,7 @@ function recordUrl(kind, recordId) {
 function recordLink(kind, recordId) {
     try {
         const userScope = scope()
-        if (!userScope.read || !recordUrl(kind, recordId)) return null
+        if (!userScope.read || !recordUrl(kind, recordId) || !mayKind(userScope, kind)) return null
         recordOf(userScope, kind, recordId)
         return recordUrl(kind, recordId)
     } catch (error) {
@@ -439,6 +444,8 @@ function search(p) {
         )
     const found = new Map()
     for (const definition of searchFinds) {
+        // a kind behind a capability (store orders and carts: COMMERCE_ORDER_VIEW) is searched only for its holder
+        if (!mayKind(userScope, definition.kind)) continue
         let rowsFound = []
         try {
             rowsFound = Array.from(definition.query(userScope, condition).limit(limit).list())
@@ -754,9 +761,10 @@ function ownerLinks(p) {
 const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope, ownerLinks}
 // ===== P8: orders, carts and customers (design §6, §10) =====
 // The Commerce screens of a store order, a cart and a customer (each checked by recordOf, as every kind)
-Object.assign(recordKinds.order, {destination: "Orders/OrderDetail?orderId="})
-Object.assign(recordKinds.cart, {destination: "Orders/CartDetail?orderId="})
-Object.assign(recordKinds.customer, {destination: "Customers/Customer360?customerPartyId="})
+// (each linked and searched only for a holder of COMMERCE_ORDER_VIEW, whose screens they are; P8 review)
+Object.assign(recordKinds.order, {destination: "Orders/OrderDetail?orderId=", capability: "orderView"})
+Object.assign(recordKinds.cart, {destination: "Orders/CartDetail?orderId=", capability: "orderView"})
+Object.assign(recordKinds.customer, {destination: "Customers/Customer360?customerPartyId=", capability: "orderView"})
 // the palette's store orders and carts: by id or name, of the user's stores only (in the query), each checked again
 const orderSearch = cart => (userScope, condition) => {
     const storeIds = Array.from(storeFind(userScope).selectField("productStoreId").list()).map(row => row.productStoreId)
