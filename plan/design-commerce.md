@@ -203,7 +203,7 @@ cases and returns (X7).
 | StoreGroups | Commerce/Stores/StoreGroups | settings | xml | Maintain dated groups | ProductStoreGroup | own | manager | new C1 | organization, group |
 | Merchandising | Commerce/Merchandising | list | xml | Prepare/publish assortment | ProductStoreProduct + publication | own | merchandiser/publisher | new C1 | store, products |
 | StoreCategories | Commerce/Merchandising/StoreCategories | tree list | qvue | Arrange storefront categories | ProductStoreCategory + ProductCategoryRollup | own | merchandiser | parity C1 | store, category |
-| Product360 | Commerce/Merchandising/Product360 | 360 | xml | Edit merchandising facets and paid access | Product | crosscut §3.5 | domain grants | parity C1 | product, store |
+| Product360 | Commerce/Merchandising/Product360 | 360 | xml | Edit merchandising facets and paid access | Product | crosscut §3.5 | domain grants | parity C1 (paid access C3) | product, store |
 | CategoryDetail | Commerce/Merchandising/CategoryDetail | detail | xml | Edit category identity | ProductCategory | Products §5, made `Shared/CategoryDetail` (Nov 5, impl-commerce F5) | domain grants | parity C1 | category, store |
 | CategoryContent | Commerce/Merchandising/CategoryDetail/Content | editor | xml | Maintain category content | ProductCategoryContent | Products §5 | domain grants | parity C1 | category, store |
 | Documents | Commerce/Merchandising/Documents | list | xml | Find product content | ProductContent | Products §9 | domain grants | parity C1 | product, store |
@@ -212,14 +212,14 @@ cases and returns (X7).
 | PriceLists | Commerce/Merchandising/PriceLists | list | xml | Inspect store price policy | ProductPriceList | Products §7 | price grants | parity C1 | store |
 | PriceListDetail | Commerce/Merchandising/PriceLists/PriceListDetail | detail | xml | Maintain permitted price rules | ProductPriceList | Products §7 | price grants | parity C1 | store, list |
 | PriceExplain | Commerce/Merchandising/PriceExplain | report | xml | Explain a storefront price | pricing projection | Products §7 | price grants | new C1 | store, product, buyer |
-| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C2 | store, product |
+| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C1 (Nov 5, mounted with the catalog screens, impl-commerce P3) | store, product |
 | Themes | Commerce/Website/Themes | list | xml | Find/copy/import themes | proposed PublicTheme | own | designer | new C1 | site, store |
 | ThemeDetail | Commerce/Website/Themes/ThemeDetail | detail | xml | Validate and publish releases | proposed PublicThemeRelease | own | designer/publisher | new C1 | theme, release |
 | ThemeEditor | Commerce/Website/Themes/ThemeEditor | editor | qvue | Compose templates visually | proposed theme draft | own | designer | new C1 | template, section |
 | TemplateEditor | Commerce/Website/Themes/TemplateEditor | editor | qvue | Edit locked template source | versioned resource | framework editor/diff, own workflow | theme developer | new C1 | theme, file, revision |
 | Pages | Commerce/Website/Pages | list | xml | Manage site pages and policies | WikiPage + PublicSitePage (proposed extension) | own; defines `Shared/Pages` | designer/publisher | new C1 | site, filters |
 | PageDetail | Commerce/Website/Pages/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
-| Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicSiteNavigation | own | designer/publisher | new C1 | site, menu |
+| Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicSiteNavigation | own | merchandiser/publisher (Nov 5, as §1.1's `COMMERCE_MERCHANDISE`) | new C1 | site, menu |
 | Orders | Commerce/Orders | list | xml | Work submitted online orders | OrderHeader | own list, shared order reads | order reader | parity C2 | store, filters |
 | OrderDetail | Commerce/Orders/OrderDetail | detail | xml | Work an authorized order | OrderHeader | crosscut §3.6 | domain grants | parity C2 | order, store |
 | Carts | Commerce/Orders/Carts | list | xml | Inspect open/abandoned carts | OrderHeader + proposed StoreCartAccess | own | order reader | new C2 | store, filters |
@@ -240,7 +240,7 @@ cases and returns (X7).
 | IntegrationDetail | Commerce/Integrations/IntegrationDetail | detail | xml | Resolve channel message failures | SystemMessageRemote + SystemMessage | own | channel operator | new C4 | store, remote |
 | ChannelImport | Commerce/Integrations/ChannelImport | wizard | xml | Validate/import channel orders | SystemMessage + import batch | own | channel operator | new C4 | store, batch |
 | Feeds | Commerce/Integrations/Feeds | list | xml | Manage public product feeds | proposed ProductStoreFeed | own | channel operator | new C4 | store, filters |
-| FeedDetail | Commerce/Integrations/Feeds/FeedDetail | detail | xml | Build/inspect a feed | ProductStoreFeed | own | channel operator/publisher | new C4 | feed, build |
+| FeedDetail | Commerce/Integrations/Feeds/FeedDetail | detail | xml | Build/inspect a feed | ProductStoreFeed | own | channel operator (Nov 5: publishing a feed is `COMMERCE_CHANNEL_OPERATE`'s, §1.1) | new C4 | feed, build |
 | OnlineSales | Commerce/Reports/OnlineSales | report | xml | Orders, net sales and top products by store and period | `mantle.sales.SalesReportServices.get#SalesOrderSummary` | own | reader | new C2 | stores, period |
 | CartRecovery | Commerce/Reports/CartRecovery | report | xml | Carts, abandonment, recovery sends and recovered orders | proposed O.get#CartRecoverySummary | own | reader | new C2 | stores, period |
 | PromotionUse | Commerce/Reports/PromotionUse | report | xml | Redemptions and discount totals per promotion and code | proposed P.get#PromotionUseSummary | own | promotion manager | new C2 | stores, period, promotion |
@@ -454,7 +454,7 @@ publication. **Source:** research §3, §11. **Needs:** COM-MERCH.
 | --- | --- | --- | --- | --- | --- | --- |
 | ReviewFind | find | Narrow the queue | store, product, status, date, reporter | product lookup | — | research §3 |
 | Reviews | list | Inspect submitted reviews | product, rating, author display, date, state, replied | review preview | M.find#Reviews | ProductReview |
-| ReviewDecision | single | Moderate selected reviews | review, approve/delete, reason, expected revision | body preview, confirmation | M.moderate#Review | ProductReview statuses; ridgecrest reviews |
+| ReviewDecision | single | Moderate selected reviews | review, approve/delete, reason, expected revision | body and image preview, confirmation | M.moderate#Review | ProductReview statuses; ridgecrest reviews |
 | Reply | single | Publish the store's public reply to one approved review | review, reply text, expected revision | plain-text editor with inline text actions; public preview | proposed M.reply#Review | Odoo `portal_rating` publisher comment (COM-F03) |
 
 Reads use M.find#Reviews; decisions use M.moderate#Review over existing
@@ -468,6 +468,10 @@ complete list; the reply, its actor and time live in the proposed review extensi
 show under the review in Shop, and can be edited or withdrawn by the same permission. A
 post-purchase review request is the proposed `PsetReviewRequest` store email, sent after
 delivery or download through the Comms delivery ledger.
+
+**Images (Nov 5, 2026; impl-commerce §4).** A review may carry a few images, staged and scanned
+through Mantle's shared `PortalMedia.js` (PNG or JPEG), decided with the review and served only
+once it is approved; an author's change of the images returns it to pending.
 
 Submitted reviews start pending. Public projection strips private author IDs/contact details;
 verified-purchase evidence is computed from the actor's qualifying order, not a checkbox.
@@ -702,7 +706,9 @@ method. Each message is a source on the Comms delivery ledger (X8), keyed by car
 window and template, which records the consent snapshot and the outcome; RecoveryHistory reads
 it. Every message carries an unsubscribe link to the PASS Account email preferences page (X15,
 R-COM-W05). Recovery respects consent/suppression, inactivity and send limits. No automatic
-sends until the store enables them. Refresh rechecks eligibility; a successful checkout
+sends until the store enables them. **Consent (Nov 5, 2026; impl-commerce §4):** with no
+checkout opt-in, the consent is the store's "cart reminders" topic, which a signed-in customer
+turns on in the PASS Account email preferences page (Shop §9); a guest's cart is never eligible. Refresh rechecks eligibility; a successful checkout
 suppresses queued recovery. **Needs:** COM-OPS, SHOP-CART.
 
 **One sender per cart (Nov 1, 2026; review R-MKT-R03, X8).** Cart abandonment is one shared trigger
@@ -848,9 +854,11 @@ existing `mantle.product.PromotionServices.apply#OrderPromotions` and its regist
 `apply#Promotion` interface implementations. Price resolution remains separate. Redemption limits
 are committed atomically at checkout, once per order/code; a cart preview does not consume them.
 Mantle counts uses over placed orders only, without a lock, when a code is added and at repricing,
-never at placement, so the proposed `P.check#OrderPromotionLimits` counts them again under a lock
-of the promotion's and code's rows at checkout's freeze and at a store order's placement (Nov 5,
-impl-commerce F18).
+never at placement, and never reads the promotion's `useLimitPerCustomer` or
+`useLimitPerPromotion`; so the proposed `P.check#OrderPromotionLimits` counts every limit field
+again under a lock of the promotion's and code's rows at checkout's freeze and at the placement of
+any store order (Nov 5, impl-commerce F18 and §4: a deliberate change to Mantle's default, with an
+order with no limits and mr-marble's order screens unchanged).
 **Needs:** COM-PROMO, SHOP-CHECKOUT.
 
 ### PromoCodes
@@ -902,7 +910,7 @@ link the owners' screens.
 | PaymentGateways | list, editable rows | Offer approved instruments | instrument, gateway, customer label, availability | choices limited to the store organization's enabled PaymentGatewayOrganization rows; readiness indicators | C.store#StorePaymentGateway | EditProductStore NewPaymentGatewayForm/PaymentGatewayForm |
 | TaxDisplay | single | Bind tax policy and display | approved tax gateway, inclusive/exclusive display, origin | tax preview for a sample address and cart | C.store#StoreTax; existing `mantle.other.TaxServices.simulate#SalesTax` | EditStoreForm tax gateway; Odoo tax display |
 | RecoveryPolicy | single | Configure eligible cart follow-up | enabled, inactivity delay, sender (built-in recovery or a Marketing automation), `PsetCartRecovery` binding, maximum sends, retention | consent/preview status | C.store#CartRecoveryPolicy | Odoo abandonment settings |
-| RecurringPolicy | single | Configure supported renewal offers | product/plan, cadence, price terms, retry intervals/limit, `PsetPaymentRetry` and `PsetSubscriptionRenewal` bindings, cancellation terms | registered plan selection; off-session capability of the chosen gateway | R.store#RecurringOffer | Mantle recurring orders; Shop §10 |
+| RecurringPolicy | single | Configure supported renewal offers | product/plan, cadence, price terms, retry intervals/limit, `PsetPaymentRetry` and `PsetSubscriptionRenewal` bindings, cancellation terms | registered plan selection; off-session capability of the chosen gateway | R.store#RecurringOffer, which also keeps the site's `subscriptionUrl` (Shop §4.3) | Mantle recurring orders; Shop §10 |
 
 Local rate matching is deterministic by explicit priority and effective dates; overlapping rules
 at the same priority are refused. Bands have inclusive lower and exclusive upper bounds; rule
@@ -931,6 +939,12 @@ hosted/tokenized provider capabilities, including recurring/off-session support,
 collecting raw card data; RecurringPolicy accepts an offer only when the store's gateway has the
 off-session capability of the first adapter Shop §8.1 names. Readiness refuses unsupported
 combinations.
+
+**Support queue and mount (Nov 5; impl-commerce F37, F38).** CheckoutPolicy's support queue is
+one of the store organization's offered queues (`SupportAppSetting.queueIds`, or else
+`ServicePolicy.defaultCategoryId`), as `create#CustomerCase` accepts no other. Shop links its
+return, question and cancel requests to the site's Support pages, so readiness for purchase
+requires a Support mount on each of the store's sites targeting the store's organization.
 
 **Recovery sender (Nov 5).** Until Marketing is built, RecoveryPolicy offers built-in recovery
 only; the Marketing automation choice appears with Marketing's cart-abandoned trigger.
@@ -1026,7 +1040,9 @@ revision. **Needs:** COM-FEED, SHOP-CATALOG.
 | PublishFeed | dialog | Activate a complete build | build, publication generation, confirmation | validation summary | I.publish#StoreFeed | new; complete fields here plus expected revision |
 
 The build/publish flow follows Odoo's cached-feed pattern. Destinations are registered
-endpoints, never arbitrary request URLs.
+endpoints, never arbitrary request URLs. One registered destination kind is the store's own Shop
+site: Shop serves the active build at a reserved feed path under its mount, checked against the
+current publication generation (Nov 5, impl-commerce P14; Shop §13.2).
 
 Only the Shop public catalog projection supplies data. A build reports skipped independent
 products and the reason; a fatal build leaves the previous complete artifact active. Withdrawal
@@ -1292,6 +1308,7 @@ Advanced B2B, multi-store promotion programs, POS and a public theme marketplace
 | One recovery sender per cart (Nov 1, 2026; review R-MKT-R03, X8) | Cart abandonment is one shared trigger event; RecoveryPolicy names the sender, built-in recovery or a Marketing automation, and the delivery ledger deduplicates by cart and recipient (§6). |
 | Gift cards and click and collect (Nov 5, 2026; the user's call, impl-commerce §4) | Later, not in the first build, though §17 recommended gift cards in C2. When built: gift cards and store credit as a checkout payment method over the existing financial-account gateway (`FinancialAccountType` GiftCard and CustomerCredit, `PmtGiftCard`, `authorize#FinancialAccountPayment`), a gift-card product that issues an account (no service does today) and Customer Service refunds to store credit, Accounting owning the liability; click and collect as a pickup ship option per store facility over `ShMthPickUp` and ProductStoreFacility, with per-facility availability in Shop, a Warehouse pickup task and a ready-for-pickup notice |
 | Code check (Nov 5, 2026; impl-commerce F1–F36) | Store staff are dated `StoreStaff` ProductStoreParty rows (§1.1); publication is a dated ProductStoreProduct and store text the store's ProductContent (§4); review decisions live in the audit log (§4 Reviews); promotion limits are rechecked under lock at checkout and placement (§7); checkout and recovery policies are dated ProductStoreSetting types (§8); CategoryDetail becomes a shared screen, and Carriers, PaymentMethods and TaxAuthorities are linked, not mounted (§2, §10); readiness serves StoreDetail and Shop's PASS readiness until Admin's registry exists (§3); the store sales summaries answer `COMMERCE_VIEW` for the user's stores (§3). |
+| Plan review (Nov 5, 2026; impl-commerce F37–F45 and §4) | Navigation is the merchandiser's (`COMMERCE_MERCHANDISE`) and feed publication the channel operator's (§2); promotion limits, every limit field, are enforced under lock at any store order's placement, a deliberate change to Mantle's default (§7); recovery consent is the store's "cart reminders" topic (§6); reviews take scanned images (§4); CheckoutPolicy's queue is an offered one and purchase readiness needs the site's Support mount (§8); the Shop-site feed destination (§9); Product360's paid access is C3 and InventoryAvailability C1 (§2) |
 
 ## 17. Open
 
