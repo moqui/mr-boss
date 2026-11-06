@@ -509,6 +509,12 @@ communication records; reviews do not become copied forum posts. Bulk decisions 
 and preserve per-review outcomes. **Source:** research §3 and ridgecrest's different review model.
 **Needs:** COM-MERCH, SHOP-CATALOG.
 
+**Built (Nov 6, 2026; impl-commerce P9).** The proof is the author's own delivered order line (shipment delivered, order
+completed or a download granted), one review per account, store and product; the author's label is chosen at submission.
+A bulk decision posts each selected row with the revision shown and answers per review. The review request is queued on
+the delivery ledger at a Shop line's delivery or first download, once per line, and needs the recipient's marketing email
+consent (impl-commerce F-P9-2).
+
 ## 5. Website authoring
 
 This section is the **one definition of the staff editors**. Shop §12 owns the theme package,
