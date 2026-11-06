@@ -1160,17 +1160,17 @@ COM-PROMO.
   - Mantle's `store#PromoCodeParty` takes any active party that is not another user's private contact; Commerce limits
     the choice to its customers and checks the party with `check#Record` (customer) before the save.
 - Findings (provisional):
-  - **F-P7-1** F18 is partly wrong for the port: `apply#OrderPromotions` and `add#OrderPromoCode` do read the promotion's
+  - **F66** F18 is partly wrong for the port: `apply#OrderPromotions` and `add#OrderPromoCode` do read the promotion's
     `useLimitPerCustomer` and `useLimitPerPromotion` (unlocked, as the code's limits). Design §7 corrected.
-  - **F-P7-2** A promotion with no `sequenceNum` applies after the numbered ones (PostgreSQL orders nulls last), and with
+  - **F67** A promotion with no `sequenceNum` applies after the numbered ones (PostgreSQL orders nulls last), and with
     `itemsWithPromo` false the first promotion takes the units: the demo's PopcNewCustomer (99, no code) takes a new
     customer's units before an unnumbered code promotion of POPC_DEFAULT (the walk sets its promotion's order to 1).
     NewPromotion sets no order; for the lead: default a new promotion's order, or say it in the form.
-  - **F-P7-3** Only `place#Order` counts the limits: a placed order that `handle#OrderMajorChange` reprices (an item added
+  - **F68** Only `place#Order` counts the limits: a placed order that `handle#OrderMajorChange` reprices (an item added
     to a placed order) and an order set to OrderPlaced through `update#OrderStatus` directly are counted unlocked, as before.
-  - **F-P7-4** An EntityFind is used up by `count()`: a second use of the same find (`lib.page(query, p, f, query.count())`)
+  - **F69** An EntityFind is used up by `count()`: a second use of the same find (`lib.page(query, p, f, query.count())`)
     fails "entity find was already used"; the module builds the find twice. For the framework docs or a later fix.
-  - **F-P7-5** Redemptions and Usage name the order without a link until P8 mounts Commerce's OrderDetail.
+  - **F70** Redemptions and Usage name the order without a link until P8 mounts Commerce's OrderDetail.
 
 **Review Nov 5 (P7).** Checked: the diff of mr-mantle and mr-boss against the phase, §2 and §4; `check#OrderPromotionLimits`
 and every caller of `place#Order` in mr-mantle, mr-boss, mr-marble and mr-pass (create#RecurringOrder(s), OrderBulk,
@@ -1196,7 +1196,7 @@ expire not delete, store#PromoCodeParty; the four Shared screens (Commerce's con
   reservations; no other service locks a promotion or code row. A cycle needs one transaction placing several orders
   with different limited promotions (OrderBulk's up to 100 parts, a return's two replacement orders) against another;
   the database's deadlock detection would refuse one. Low.
-- **F-P7-3** judged low: repricing a placed part (handle#OrderMajorChange) counts unlocked as Mantle always did and is
+- **F68** judged low: repricing a placed part (handle#OrderMajorChange) counts unlocked as Mantle always did and is
   staff-only; `update#OrderStatus` to OrderPlaced is reachable only from services (the REST `place` resource maps to
   place#Order; ProjectServices' approve#MilestoneApproval places a project's open or proposed sales orders this way, a
   staff action, unchecked; it could call place#Order instead).
@@ -1527,6 +1527,12 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F63 | P3: on an entity-auto `create#`, a `<field>_changeReason` parameter does not reach the audit row (on `update#` it does) | ProductStoreProduct keeps a `changeReason` field; a framework fix later |
 | F64 | P3: the demo's DEMO_VAR variants are drafts, so none is saleable until a catalog editor activates them | The assortment walk activates three |
 | F65 | P3 review: under Commerce, CategoryDetail's parent and member writes go through Products' services (PRODUCT_CATALOG_EDIT only), so they skip the shared-store check and the site generation; the store narrowing of Prices.js and Taxonomy.js applies under Commerce's mount, not to the same user under Products | P4: under Commerce those CategoryDetail writes go through StoreMerchandisingServices (shared-store check, generation) or are hidden in favour of StoreCategories; a StoreStaff limit under Products is not added (Products is catalog-wide) |
+| F66 | P7: F18 was partly wrong: `apply#OrderPromotions` and `add#OrderPromoCode` already read the promotion's `useLimitPerCustomer` and `useLimitPerPromotion`, without a lock | Design §7 corrected; P7's locked recount at `place#Order` stands |
+| F67 | P7: a promotion with no `sequenceNum` applies after numbered ones (PostgreSQL sorts nulls last) | NewPromotion leaves the order to the editor; a default is for the lead later |
+| F68 | P7: only `place#Order` recounts under the lock; repricing a placed order and `update#OrderStatus` to OrderPlaced (ProjectServices' `approve#MilestoneApproval`) count without it | Low (the review): staff-only paths; `approve#MilestoneApproval` could call `place#Order` (Projects' owner) |
+| F69 | P7: an EntityFind can't be reused after `count()` | The module builds the find twice |
+| F70 | P7: Redemptions and Usage show the order without a link until P8 mounts OrderDetail | P8 |
+| F71 | P7 review: OrderBulk places up to 100 parts in one transaction, so one refused placement rolls back the whole bulk change (as any placement error did before); `generate#PromoCodes` writes its operation record after the codes, so two concurrent submissions with one key both make a batch and an interrupted batch is made again in full; Mantle's `store#PromoCodeParty` accepts any active party (Commerce checks the customer first); the TEST2 feature's discount depends on the database's earlier TEST2 uses | Left as they are for now: OrderBulk's per-part transactions are Mantle's choice, not Commerce's; the code batch's claim-first key needs an EntityLib change (later); Shop and Marketing check their own party; the TEST2 placement assertion is the default's test |
 
 ## 7. Later
 
