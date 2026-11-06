@@ -198,8 +198,8 @@ services are not rows. **Implemented in** is unchanged.
 | PaymentServices | capture#InvoicePayments |  |  |
 | PaymentServices | capture#AppliedPayment |  |  |
 | PaymentServices | capture#SinglePayment |  |  |
-| PaymentServices | release#SinglePayment |  |  |
-| PaymentServices | refund#SinglePayment |  |  |
+| PaymentServices | release#SinglePayment |  | Commerce/Orders/CartDetail (ResolvePlacement: a stuck Shop placement's kept payment, through ShopOperationsServices.resolve#StuckPlacement) (Shop P8) |
+| PaymentServices | refund#SinglePayment |  | Commerce/Orders/CartDetail (ResolvePlacement: a stuck Shop placement's kept payment, through ShopOperationsServices.resolve#StuckPlacement) (Shop P8) |
 | PaymentServices | get#SinglePaymentGatewayDetails |  |  |
 | PaymentServices | poll#PaymentGatewayDetails | Accounting/Payments/GatewayTransactions | — (a scheduled job; Accounting/Payments/PaymentDetail/Gateway looks up one payment through lookup#PaymentGatewayDetails) |
 | PaymentServices | get#PaymentContentLocation |  |  |
@@ -630,7 +630,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | checkRejectedComplete#Order |  |  |
 | OrderServices | complete#OrderPart | Purchasing/Orders/OrderDetail | — Purchasing: close#PurchaseRemainders completes the part (Purchasing P3) |
 | OrderServices | complete#Order | Purchasing/Orders/PurchaseOrders | Purchasing/Orders/PurchaseOrders and Purchasing/Orders/OrderDetail (Close remainder: close#PurchaseRemainders completes the part) (Purchasing P3) |
-| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3) |
+| OrderServices | cancel#Order | Purchasing/Orders/OrderDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail; PASS:Sales/CustomerQuote | Purchasing/Orders/OrderDetail (Cancel order, through PurchaseServices.cancel#PurchaseOrder) (Purchasing P3); Commerce/Orders/CartDetail (ResolvePlacement's refund cancels the cart, through ShopOperationsServices.resolve#StuckPlacement) (Shop P8) |
 | OrderServices | cancel#OrderPart | Purchasing/Orders/OrderDetail | — Purchasing: cancel#PurchaseOrder (Purchasing P3) |
 | OrderServices | cancel#OrderItem | Purchasing/Orders/OrderDetail | Warehouse/Receiving/ReceiptDetail (Finish receipt, close), with an explicit cancelQuantity through OrderServices.close#PurchaseRemainders; flags picked stock above a reduced line (putBackQuantity) for Warehouse/Picking/Pick (PutBack, reverse#Pick, P11); Purchasing/Orders/OrderDetail (Close remainder, through close#PurchaseRemainders) (Purchasing P3); CustomerService/Orders/OrderChangeDetail (ApplyChange: the open remainder or a short pick's, through apply#OrderChange; Customer Service P10) |
 | OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |

@@ -786,6 +786,7 @@ SHOP-CART.
 | CartSummary | display | Explain latest cart state | order, lines, activity, store, totals, checkout phase | price/tax/shipping findings | O.get#StoreCart | existing `mantle.order.OrderInfoServices.get#OrderDisplayInfo`; PopRestStore cart info |
 | RecoveryHistory | list, read | Inspect eligible contact and prior attempts | eligibility reason, consent state, channel, sent time, delivery outcome, redeemed | redacted destination | O.get#CartRecovery; existing `mantle.party.ConsentServices.get#PartyConsentState` | Odoo abandonment follow-up |
 | RecoverCart | dialog | Send one authorized recovery invitation | registered template, verified destination choice, preview, reason | exact-body preview with its unsubscribe link | O.send#CartRecovery; existing `ConsentServices.create#UnsubscribeToken` | Odoo cart recovery; Comms consent |
+| ResolvePlacement | dialog | Resolve a stuck Shop placement (Shop P8, impl-commerce F108) | place again, or refund the kept payment and cancel the cart; reason | shown only for a stuck placement and a holder of `COMMERCE_PLACEMENT_RESOLVE` | `mantle.order.ShopOperationsServices.resolve#StuckPlacement` (operation key; existing `release#SinglePayment` / `refund#SinglePayment`, `cancel#Order`) | design-shop §18.1 "Failed placement after provider success" |
 
 Sending never changes an order or signs a staff member in as the shopper. The invitation carries
 a one-time recovery token of the cart's proposed `StoreCartAccess` (digest and throttle as the
