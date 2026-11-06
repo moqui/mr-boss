@@ -12,10 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Commerce settings (initial-design.md); design-commerce.md decides them. -->
+<!-- The Settings area of IronStone Commerce (design-commerce §8 CheckoutSettings): a store's checkout, recovery and
+    recurring policies, linking Warehouse's Carriers and Accounting's PaymentMethods and TaxAuthorities (impl-commerce P6,
+    P10, P12); for the manager (BOSS_COM_SETTINGS), who keeps them (COMMERCE_STORE_EDIT). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Settings" default-menu-index="6" menu-image="sym_o_settings" menu-image-type="icon">
+        default-menu-title="Settings" default-menu-index="10" menu-image="sym_o_settings" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Commerce settings: shipping, payment and tax." type="p"/>
+        <label text="Placeholder: A store's checkout settings." type="p"/>
     </widgets>
 </screen>

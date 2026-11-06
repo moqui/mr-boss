@@ -44,7 +44,8 @@ along with this software (see the LICENSE.md file). If not, see
                 moqui.resource.GitMergeRequest or moqui.resource.GitRepository (Projects' Code), mantle.work.time.Timesheet (Projects' Time),
                 mantle.product.bom.ProductBom or mantle.work.production.WorkCenter (a run, operation, method, routing or work center
                 opens under Manufacturing for its users), mantle.order.OrderHeader or mantle.party.agreement.Agreement (a purchase
-                order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users)</description></parameter>
+                order, supplier quote or purchase agreement opens under Purchasing for its users; a sales order under Customer Service for its users),
+                mantle.product.store.ProductStore (a store opens under Commerce for its users)</description></parameter>
             <parameter name="id" required="true"/>
             <parameter name="workEffortTypeEnumId"/>
             <parameter name="partyTypeEnumId"/>
@@ -92,6 +93,14 @@ along with this software (see the LICENSE.md file). If not, see
                         return
                     }
                 }
+            }
+            // stores open under Commerce for a user who may work with them there (ironstone.commerce's scope: the root grant,
+            // the store's organization and a store-limited staff member's stores, impl-commerce P1; Home scoped to the store
+            // until P2 builds StoreDetail), else nowhere; a store's orders and carts in P8 (F8, F42)
+            if (ec.user.userId && recordEntityName === 'mantle.product.store.ProductStore') {
+                url = ec.resource.script('component://mr-boss/service/ironstone/commerce/Commerce.js').recordLink('store', id)
+                icon = 'sym_o_storefront'
+                return
             }
             // purchase orders, supplier quotes and purchase agreements open under Purchasing for a user who may work with them
             // there (ironstone.purchasing's scope: the root grant, the buying organization and the supplier,

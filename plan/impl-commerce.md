@@ -263,7 +263,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | partly done Nov 5 (§6 F1–F45); five checks left |
-| P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | — |
+| P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | built Nov 5, 2026 |
 | P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | — |
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability | — |
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | — |
@@ -359,6 +359,162 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
   group; the reader finds POPC_DEFAULT through the palette and not BOSS_COM_DIGITAL; the store-limited member sees only
   POPC_DEFAULT; a forged store ID is refused by `check#Record` and the palette; a Projects client and a PASS public
   account are refused the root and every `ironstone.commerce` service.
+
+**Built Nov 5 (P1).**
+- Mantle (`data/MantleSetupData.xml`, appended): the twelve `COMMERCE_*` `UserPermission` rows of design §1.1
+  (`COMMERCE_VIEW`, `_STORE_EDIT`, `_MERCHANDISE`, `_PUBLISH`, `_THEME_EDIT`, `_THEME_CODE`, `_THEME_PUBLISH`,
+  `_ORDER_VIEW`, `_RECOVERY`, `_PROMOTION_EDIT`, `_CHANNEL_OPERATE`, `_SUBSCRIPTION_MANAGE`), each with its ADMIN grant
+  (F2); the `StoreStaff` RoleType in ProductStoreParty's seed data (`entity/ProductStoreEntities.xml`). No Mantle rule,
+  so no Mantle spec.
+- BOSS access (`data/BossSetupData.xml`, appended but for F3's rows):
+  - the groups `BOSS_COMMERCE` (root user group), `_MANAGER`, `_MERCHANDISER`, `_DESIGNER`, `_THEME_DEVELOPER`,
+    `_PUBLISHER`, `_OPERATOR`, `_CHANNEL_OPERATOR` and `_SUBSCRIPTION_OPERATOR`; `BOSS_COMMERCE_ADMIN` keeps its live
+    authz (F1);
+  - on the `BOSS_COMMERCE` artifact group (a second element of the same id, appended): the `ironstone\.commerce\..*`
+    service pattern and the root authz `BOSS_COMMERCE_ROOT` (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`);
+  - the area groups `BOSS_COM_WEBSITE`, `BOSS_COM_ORDERS` (Orders and Customers), `BOSS_COM_INTEGRATIONS`,
+    `BOSS_COM_REPORTS` and `BOSS_COM_SETTINGS`, each denying the root group (F45), and the record link group
+    `BOSS_COM_RECORD_LINK`;
+  - the `UserGroupPermission` grants of design §1.1's table, with `PRODUCT_CATALOG_VIEW` on the root group and
+    `PRICE_VIEW` on the manager, merchandiser and operator; the administrator holds all twelve and both reads;
+  - the store filter `COMMERCE_STORE` (F50) on every Commerce authz row;
+  - `commerce` in the client deny pattern, its three rows over 255 characters split in two (F3: now ten rows, the
+    longest 253).
+  No authz for the raw Mantle store, order, promotion and site mutators or the `products/stores` REST paths.
+- `ironstone.commerce.ContextServices` (`get#SharedContext`, `setup#StoreScope`, `get#StoreScope`, `check#Record`,
+  `get#Choices`, `search#Records`) over `Commerce.js`, whose tables later phases extend: `capabilityPermissions` (the
+  twelve and the borrowed `catalogView`, `priceView`), `areas` (website, orders, customers, integrations, reports,
+  settings), `recordKinds` (store, site, order, cart, customer; a store opens Home scoped to it until P2's StoreDetail),
+  `searchFinds` (stores), `choiceSources` (stores, organizations) and `linkPaths`. `read` is the root grant with
+  `COMMERCE_VIEW`. A store is in scope by its organization and, for a user with a current StoreStaff row, by that row;
+  `storeIn`, `storeFind` and `get#StoreScope` (storeIds, storeLimited, staffStoreIds) are the scope later phases'
+  services condition on.
+- The root (`screen/Commerce.xml`): always-actions `setup#StoreScope` and `get#SharedContext` with `sharedLinks` (F49);
+  the menu of design §1.2 (Home, Stores, Merchandising, Website, Orders, Customers, Promotions, Integrations, Reports,
+  Settings: the six placeholders renamed and re-indexed, Website, Customers, Promotions and Reports added, each comment
+  naming its phase and groups); the stale grant comment replaced; `<shell-providers>` with the stores palette source and
+  the `commerce` keymap (g e, g s, g m). `PaletteServices.get#RecordLink` gains the Commerce store branch.
+- Home (`Commerce/Home.xml`): HomeScope (the store from `get#Choices`, checked by `check#Record`, and the period of 7, 30
+  or 90 days), the scope and period line, WorkCards and PeriodStrip each "Not configured", visits and conversion left out
+  without tracking; the first-use state (no store in scope) with New store for a holder of `COMMERCE_STORE_EDIT`.
+- Demo: `BossCommerceDemoData.xml` (POPC_DEFAULT's ZIRET_WH facility row, the three ship options of its `_NA_` carrier,
+  the two ship-label settings, the five automatic email types bound to `BOSS_COM_STORE_NOTICE` on the local sink
+  `BOSS_COM_DEMO_MAIL`; `BOSS_COM_DIGITAL` of ORG_ZIZI_SERVICES, no facility, no inventory) and
+  `BossZCommerceDemoData.xml` (commerce.storestaff's StoreStaff row on POPC_DEFAULT, then
+  `ironstone.commerce.DemoServices.load#CommerceDemo`, `Demo.js`, each site in its own transaction: ZIZI_SHOP on
+  `shop.zizi.localhost` and ZIZI_DIGITAL on `digital.zizi.localhost`, state `disabled`, with `account`, `billing` and
+  `support` mounts, Billing and Support targeting the store's organization). BossUsersDemoData's `commerce.*` users:
+  manager, merchandiser, designer, developer, publisher, operator, channel, subscriptions, admin (in
+  `BOSS_COMMERCE_ADMIN` alone), read (the root group alone, no other launcher), storestaff (a manager of Retail and
+  Services limited to POPC_DEFAULT) and services (Ziziwork Services' manager).
+- Specs: `test/Commerce/CommerceSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `shell`) and
+  `CommerceAccess` (7 features, 3.3 s feature time, the slowest the menu at 1.0 s: the context and its refusals, a
+  Projects client and a PASS public account among them; the menu, providers and launcher per group; Home's one qvt render;
+  the capabilities per group; store scope through `get#StoreScope`, choices, the palette and the `COMMERCE_STORE` filter
+  (the fixture `test/screens/CommerceStoreRows.xml`) for the reader, the other organization and the store-limited member;
+  the record check of each kind with another organization's, unassigned and forged ids and a capability on a record;
+  record links, the guarded areas, the REST paths and raw mutators). Acceptance:
+  `acceptance/Commerce/CommerceFoundationWalk` (5 features, every area per user, the palette and Home of the reader, staff
+  member and other organization, forged ids, a Projects client and a PASS public account refused the root and every
+  `ironstone.commerce` service, the demo's state), run once: 5 passed. The mr-boss acceptance suite with it: 430
+  features, 419 passed, 9 failed, 2 skipped; the same nine fail at the commit before P1 on the same runtime (425
+  features, 414 passed), from F-P1-1's older framework tree (AppStructure and TuiRender: Tools/Data/Export.xml not
+  found; six Customer Service and two Purchasing walks).
+- Tests run, all pass (on the runtime of F-P1-1): CommerceAccess (7); ProjectsAccess, AppOrganizationFilters,
+  CustomerServiceAccess (37 features); AccountingAccess, PurchasingAccess, ProductsAccess, ManufacturingAccess,
+  WarehousePolicies, WarehouseReturns, CustomerServiceOrders, CustomerServiceReturns, CustomerServiceOrderChanges,
+  CustomerServiceWarranty, ProductsMethods, ProductsCosts, ManufacturingWorkOrders (123 features); Mantle RestApiTests,
+  ReturnPolicies, OrderToCashTime, ReturnToResponseBasicFlow, OrderToCashBasicFlow, DropShip, SalesReports, Promotions,
+  AssetReservationMultipleThreads, MantleSearch, CarrierServices (118 features, the specs that use POPC_DEFAULT).
+  `moqui lint --screens` (Debug binary): no idiom or hazard site in the Commerce screens (132 sites in all, none
+  Commerce's). Not run: `./moq test-apps` and the budget (F-P1-1).
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1 (Home's period strip and work counts are P8's
+  and P11's; StoreDetail's store parties P2's).
+- P0 findings brought into P1 (numbered by the lead):
+  - **F49** `Commerce.xml` called no app `get#SharedContext` and set no `sharedLinks`, unlike `CustomerService.xml`.
+    P1's root calls `ironstone.commerce.ContextServices.get#SharedContext` in its always-actions, setting `appRoot`
+    and `sharedLinks` as Customer Service's root does.
+  - **F50** The organization filters cannot limit a staff member to some stores of an organization
+    (`MANTLE_USER_ORG_D` filters ProductStore by organization only). P1 adds the `COMMERCE_STORE` EntityFilterSet, a
+    ProductStore row on `productStoreId` in `ec.user.context.commerceStoreIds`, with `applyCond` on that being set, on
+    every Commerce authz row; the root's `setup#StoreScope` sets it from the user's current StoreStaff rows (`_NA_` when
+    they cannot be read) and leaves it unset for a user with none and for a system administrator, so an unlimited user
+    still sees every store of their organizations (CommerceAccess checks both through the fixture). The filters miss
+    child records, orders, reads with authorization disabled, REST and the search indexes, so `check#Record`,
+    `get#Choices` and `search#Records` condition on the scope in the query, and `get#StoreScope` exposes it.
+- Decisions:
+  - The areas by group: Home, Stores, Merchandising and Promotions for every Commerce user; Website for the merchandiser
+    (navigation), designer, theme developer and publisher; Orders and Customers for the store and subscription operators;
+    Integrations for the channel operator; Reports for the manager and the three operators; Settings for the manager; the
+    administrator every area. A later phase that opens an area to another group adds its authz row.
+  - Opening Commerce needs the root grant and `COMMERCE_VIEW`, so a deployment that grants the root alone opens nothing.
+  - A store-limited staff member reaches a site only through one of their stores, which only a Shop mount names (Shop
+    P1), so until then they reach no site; other users reach a site by its mounts' target organizations. A
+    store-limited member reaches a customer only with an order in their stores; others by the customer's owner, as
+    Customer Service (P8 revisits).
+  - The demo's ship options are every method of the `_NA_` carrier (pick up, ground, next day), so POPC_DEFAULT's
+    options are unchanged; the store-limited member is in both demo organizations, so the limit is what keeps
+    BOSS_COM_DIGITAL out.
+- Findings (provisional):
+  - **F-P1-1** The shared binaries (`target/debug/moqui` and `target/release/moqui`) are older than the mr-moqui
+    `runtime/base-component` they run on: they lack `UserSecurityChecks.assertDocumentExpression` (4f8997c0), so every
+    data file with a DataDocument field (the framework's ResourceEntities, Mantle's documents, BossSetupData's drive
+    rows) fails to load, BossUsersDemoData with them, and every BOSS spec fails at sign-in (CustomerServiceAccess: 22 of
+    22 on the com-p1 runtime). The tests above ran on a scratch runtime whose `base-component` and `dev-component` are
+    mr-moqui 1916b57f's, the newest tree the binary matches, with the com-p1 components. A rebuilt binary is needed
+    before `./moq test-apps`, the budget measure and a re-run on the com-p1 runtime.
+  - **F-P1-2** Mantle has no store email templates (the PopRestStore ones were not ported), so the demo's five
+    automatic types are bound to one demo template with the framework's generic body on a local sink; real store
+    notices are Shop's (P6) and P8's.
+  - **F-P1-3** Ending a member's last StoreStaff row widens them to every store of their organizations (§4's rule: a
+    user with no current row works every store). For the lead: keep the rule, or limit a user with any StoreStaff row,
+    current or past (`_NA_` once all have ended).
+
+**Review Nov 5 (P1).** Checked the Mantle and BOSS diffs against this section, §2, §4, design §1.1, §1.2 and §3 Home,
+AGENTS.md and Practices-App-Dev:
+- Services only: no Commerce authz names a Mantle store, order, promotion or site service, an entity-auto mutator or a
+  `mantle.rest.xml` path; the root group's rows are the root screen and `ironstone\.commerce\..*`, whose demo services
+  refuse anyone but data loading and a system administrator. CommerceAccess's manager and administrator are refused the
+  `products/stores` REST verbs, `update#ProductStore` and `clone#ProductStore`.
+- Store scope: every Commerce read (`storeFind`, `storeIn`, `recordOf`, `customerOf`) uses authorization-disabled finds
+  conditioned on the organizations and the staff stores in the query, so the scope does not depend on the
+  `COMMERCE_STORE` filter or on `setup#StoreScope` having run (the palette and record links run outside the root). The
+  filter set applies only while `commerceStoreIds` is in the per-request user context (the root sets it from the current
+  StoreStaff rows, removes it otherwise), so an unlimited user and a system administrator are untouched; the fixture
+  checks both. A forged or foreign store, site, order or customer in `check#Record`, `get#Choices`' `selected`,
+  `search#Records`, `get#RecordLink` or Home's `productStoreId` is refused as missing; staff rows on a store outside the
+  user's organizations limit to nothing (an empty `in` is `1 = 0`), never widen. F-P1-3: the code follows §4 (a user
+  with a current row is limited to those stores, one with none works every store).
+- Groups and grants: the nine groups and design §1.1's table, not nested; the area groups deny `BOSS_COMMERCE` and allow
+  their capability groups with `ALWAYS`, as BOSS_CS_RETURNS (F45); the twelve permissions in MantleSetupData each with
+  its ADMIN grant, `PRODUCT_CATALOG_VIEW` on the root and `PRICE_VIEW` on the manager, merchandiser and operator.
+- F3: the ten client deny rows carry the same 102 verbs as the seven before, `commerce` added, the longest 253
+  characters; ProjectsAccess passes. A Projects client (`PROJECT_CLIENT`) and a PASS account are refused the context and
+  Home.
+- Demo: POPC_DEFAULT's three ship options are the `_NA_` carrier's seeded methods with their sequence (what
+  `get#StoreShippingOptions` answered before through the NA_LOCAL gateway); the PASS sites are `disabled`, each made in
+  its own probe with its failure named. The Mantle commit names nothing of IronStone's; Mantle's edits and BOSS's setup,
+  users and palette edits are appends (the palette's store branch is one more link of the chain), but for F3's rows.
+- Fixes: **R1** (low) CommerceAccess's menu feature rendered the shell for every group (thirteen shells) and the context
+  feature repeated users the capabilities feature already reads; each group's areas are its area capabilities, from the
+  same authorizations, so the menu keeps the reader, the operator and the administrator, the launcher reuses the
+  reader's shell, and the context feature keeps the store-limited and other-organization users and one other app's user
+  (mr-boss c2ce3664). 7 features, 3.0 s, each under 0.6 s.
+- Tests run on the com-p1 runtime with the rebuilt release binary (Nov 5 22:15, F-P1-1 resolved): CommerceAccess,
+  ProjectsAccess, AppOrganizationFilters and CustomerServiceAccess, 44 features, all pass. In the first run, the one that
+  loaded the database, CustomerServiceAccess' "Invite to support" failed once (`RECORD_UNAVAILABLE` for its spec's
+  contact) while the load's background work was still running; it passed in the three runs after, and at master on a
+  runtime of the master components; P1 touches nothing it reads.
+- For the lead:
+  - F-P1-3's widening has a second case: a member whose only StoreStaff row starts in the future works every store of
+    their organizations until it starts. Both are §4's rule; a "limited by any row, current, past or future" rule closes
+    both.
+  - POPC_DEFAULT's five email bindings make every order placed, approved, shipped, delivered or invoiced in that store
+    send an email (render and an SMTP attempt on the local sink) after commit, in the demo and in every BOSS spec that
+    places a POPC_DEFAULT order; measure it in P1's `./moq test-apps` budget run.
+  - `get#StoreScope`'s `storeIds` is unbounded for an administrator with no active organization; a later phase that
+    puts it in an `in` condition should page or condition on the organizations instead.
+  - Not run: `./moq test-apps`, the budget measure and the acceptance CommerceFoundationWalk.
 
 ### P2 — Stores
 

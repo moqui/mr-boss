@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Commerce's demo stores (impl-commerce P1, F17; §4): POPC_DEFAULT, Mantle's store of Ziziwork Retail (ZcaProductDemoData.xml),
+        completed as the demo store, and BOSS_COM_DIGITAL, Ziziwork Services' store of digital items and subscriptions (P6, P12),
+        the other organization's store for isolation. The store-limited staff member's StoreStaff row and the two PASS sites
+        are in BossZCommerceDemoData.xml, after the users. Published products arrive with P3. -->
+
+    <!-- POPC_DEFAULT: its warehouse as a dated store facility (the store's inventoryFacilityId already names ZIRET_WH), the
+        ship options of its local gateway's carrier (every method _NA_ offers, so the store's options are as before), the
+        shipping-label settings, and email bindings for the automatic types, sent from a demo mailbox on a local sink -->
+    <mantle.product.store.ProductStoreFacility productStoreId="POPC_DEFAULT" facilityId="ZIRET_WH" fromDate="1265184000000"
+            sequenceNum="1"/>
+    <mantle.product.store.ProductStoreShipOption productStoreId="POPC_DEFAULT" carrierPartyId="_NA_" shipmentMethodEnumId="ShMthPickUp"
+            sequenceNum="0"/>
+    <mantle.product.store.ProductStoreShipOption productStoreId="POPC_DEFAULT" carrierPartyId="_NA_" shipmentMethodEnumId="ShMthGround"
+            sequenceNum="1"/>
+    <mantle.product.store.ProductStoreShipOption productStoreId="POPC_DEFAULT" carrierPartyId="_NA_" shipmentMethodEnumId="ShMthNextDay"
+            sequenceNum="2"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="POPC_DEFAULT" settingTypeEnumId="PsstShipLabelCompany"
+            fromDate="1265184000000" settingValue="Ziziwork Retail"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="POPC_DEFAULT" settingTypeEnumId="PsstShipLabelName"
+            fromDate="1265184000000" settingValue="Ziziwork Retail Store"/>
+    <moqui.basic.email.EmailServer emailServerId="BOSS_COM_DEMO_MAIL" smtpHost="127.0.0.1" smtpPort="9" smtpStartTls="N" smtpSsl="N"/>
+    <moqui.basic.email.EmailTemplate emailTemplateId="BOSS_COM_STORE_NOTICE" description="Ziziwork Retail Store notice"
+            emailServerId="BOSS_COM_DEMO_MAIL" fromAddress="store@retail.example" subject="Your Ziziwork Retail Store order"
+            bodyScreenLocation="component://framework/screen/ScreenRenderEmail.xml"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetOrderPlaced" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetOrderApproved" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetShipmentShipped" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetShipmentDelivered" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetInvoiceFinalized" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+
+    <!-- BOSS_COM_DIGITAL: Ziziwork Services' digital store, no warehouse (it requires no inventory) and no ship options; its
+        checkout and recurring offers arrive with P6 and P12 -->
+    <mantle.product.store.ProductStore productStoreId="BOSS_COM_DIGITAL" storeName="Ziziwork Digital Store"
+            organizationPartyId="ORG_ZIZI_SERVICES" defaultLocale="en_US" defaultCurrencyUomId="USD" requireInventory="N"
+            reservationOrderEnumId="AsResOrdNoRes"/>
+</entity-facade-xml>

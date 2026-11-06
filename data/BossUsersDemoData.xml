@@ -825,4 +825,131 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_CS_SERVICES" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_CS_SERVICES" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userId="BOSS_CS_SERVICES" fromDate="0"/>
+    <!-- Commerce (impl-commerce P1): a user per group of design-commerce §1.1, each in BOSS_USERS, the root user group
+        BOSS_COMMERCE and their capability group, of Ziziwork Retail (POPC_DEFAULT's organization, BossCommerceDemoData.xml):
+        commerce.manager, .merchandiser, .designer, .developer (theme developer), .publisher, .operator, .channel and
+        .subscriptions; commerce.admin is in BOSS_COMMERCE_ADMIN alone; commerce.read a Commerce reader in the root user group
+        alone, with no other launcher; commerce.storestaff a store manager of Ziziwork Retail and Ziziwork Services whose
+        StoreStaff row (BossZCommerceDemoData.xml) limits them to POPC_DEFAULT; commerce.services Ziziwork Services' store
+        manager, whose BOSS_COM_DIGITAL Retail's users never reach. -->
+    <mantle.party.Party partyId="BOSS_COM_MANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_MANAGER" firstName="Commerce" lastName="Store manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_MANAGER" username="commerce.manager"
+            userFullName="Commerce Store manager" partyId="BOSS_COM_MANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_MANAGER" userId="BOSS_COM_MANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_MERCHANDISER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_MERCHANDISER" firstName="Commerce" lastName="Merchandiser"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_MERCHANDISER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_MERCHANDISER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_MERCHANDISER" username="commerce.merchandiser"
+            userFullName="Commerce Merchandiser" partyId="BOSS_COM_MERCHANDISER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_MERCHANDISER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_MERCHANDISER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_MERCHANDISER" userId="BOSS_COM_MERCHANDISER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_DESIGNER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_DESIGNER" firstName="Commerce" lastName="Designer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_DESIGNER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_DESIGNER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_DESIGNER" username="commerce.designer"
+            userFullName="Commerce Designer" partyId="BOSS_COM_DESIGNER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_DESIGNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_DESIGNER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_DESIGNER" userId="BOSS_COM_DESIGNER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_DEVELOPER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_DEVELOPER" firstName="Commerce" lastName="Theme developer"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_DEVELOPER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_DEVELOPER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_DEVELOPER" username="commerce.developer"
+            userFullName="Commerce Theme developer" partyId="BOSS_COM_DEVELOPER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_DEVELOPER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_DEVELOPER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" userId="BOSS_COM_DEVELOPER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_PUBLISHER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_PUBLISHER" firstName="Commerce" lastName="Publisher"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_PUBLISHER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_PUBLISHER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_PUBLISHER" username="commerce.publisher"
+            userFullName="Commerce Publisher" partyId="BOSS_COM_PUBLISHER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_PUBLISHER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_PUBLISHER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_PUBLISHER" userId="BOSS_COM_PUBLISHER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_OPERATOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_OPERATOR" firstName="Commerce" lastName="Operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_OPERATOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_OPERATOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_OPERATOR" username="commerce.operator"
+            userFullName="Commerce Operator" partyId="BOSS_COM_OPERATOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_OPERATOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_OPERATOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_OPERATOR" userId="BOSS_COM_OPERATOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_CHANNEL" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_CHANNEL" firstName="Commerce" lastName="Channel operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_CHANNEL_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_CHANNEL" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_CHANNEL" username="commerce.channel"
+            userFullName="Commerce Channel operator" partyId="BOSS_COM_CHANNEL"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_CHANNEL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_CHANNEL" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR" userId="BOSS_COM_CHANNEL" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_SUBSCRIPTIONS" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_SUBSCRIPTIONS" firstName="Commerce" lastName="Subscription operator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_SUBSCRIPTIONS_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_SUBSCRIPTIONS" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_SUBSCRIPTIONS" username="commerce.subscriptions"
+            userFullName="Commerce Subscription operator" partyId="BOSS_COM_SUBSCRIPTIONS"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_SUBSCRIPTIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_SUBSCRIPTIONS" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" userId="BOSS_COM_SUBSCRIPTIONS" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_ADMIN" firstName="Commerce" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_ADMIN" username="commerce.admin"
+            userFullName="Commerce Administrator" partyId="BOSS_COM_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_ADMIN" userId="BOSS_COM_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_READ" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_READ" firstName="Commerce" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_READ_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_READ" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_READ" username="commerce.read"
+            userFullName="Commerce Reader" partyId="BOSS_COM_READ"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_READ" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_READ" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_STAFF" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_STAFF" firstName="Commerce" lastName="Store staff"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_STAFF_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_STAFF_ORG2" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_STAFF" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_STAFF" username="commerce.storestaff"
+            userFullName="Commerce Store staff" partyId="BOSS_COM_STAFF"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_STAFF" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_STAFF" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_MANAGER" userId="BOSS_COM_STAFF" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_COM_SERVICES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_COM_SERVICES" firstName="Commerce" lastName="Services manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_COM_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_COM_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_COM_SERVICES" username="commerce.services"
+            userFullName="Commerce Services manager" partyId="BOSS_COM_SERVICES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_COM_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE" userId="BOSS_COM_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_COMMERCE_MANAGER" userId="BOSS_COM_SERVICES" fromDate="0"/>
 </entity-facade-xml>

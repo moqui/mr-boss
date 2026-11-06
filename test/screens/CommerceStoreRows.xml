@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Store-filter test fixture (test/Commerce/CommerceAccess.spec.js, impl-commerce F50): as the Commerce root does, the user's
+    organizations and a store-limited staff member's stores into the user context, then a raw ProductStore find under the
+    fixture's authorization, which carries MANTLE_USER_ORG and COMMERCE_STORE. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="rows" read-only="true">
+        <actions>
+            <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+            <service-call name="ironstone.commerce.ContextServices.setup#StoreScope"/>
+            <entity-find entity-name="mantle.product.store.ProductStore" list="stores">
+                <econdition field-name="productStoreId" operator="in" value="POPC_DEFAULT,BOSS_COM_DIGITAL"/>
+                <order-by field-name="productStoreId"/></entity-find>
+            <script>ec.web.sendJsonResponse({stores: Array.from(stores, row => row.productStoreId),
+                filters: Array.from(ec.artifactExecution.getFindFiltersForUser('mantle.product.store.ProductStore') || [], row => row.entityFilterSetId)})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets><label text="Store-filter test fixture"/></widgets>
+</screen>

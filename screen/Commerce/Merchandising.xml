@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Merchandising section of IronStone Commerce (initial-design.md app table); design-commerce.md
-    decides its screens. -->
+<!-- The Merchandising area of IronStone Commerce (design-commerce §4): a store's assortment and publication, its
+    categories, reviews, price lists and availability, and the shared catalog screens (impl-commerce P3, P9); for every
+    Commerce user, the merchandiser changing them (COMMERCE_MERCHANDISE). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Merchandising" default-menu-index="3" menu-image="sym_o_category" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Merchandising: categories, product content, SEO." type="p"/>
+        <label text="Placeholder: A store's assortment, categories, reviews and prices." type="p"/>
     </widgets>
 </screen>

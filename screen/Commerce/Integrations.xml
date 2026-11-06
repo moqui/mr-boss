@@ -12,11 +12,11 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Channel and marketplace integrations section of IronStone Commerce (initial-design.md app
-    table); design-commerce.md decides its screens. -->
+<!-- The Integrations area of IronStone Commerce (design-commerce §9): channel integrations, channel import and product
+    feeds (impl-commerce P13, P14); for the channel operator (BOSS_COM_INTEGRATIONS). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Channel and marketplace integrations" default-menu-index="5" menu-image="sym_o_fiber_new" menu-image-type="icon">
+        default-menu-title="Integrations" default-menu-index="8" menu-image="sym_o_fiber_new" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Channel and marketplace integrations." type="p"/>
+        <label text="Placeholder: Channel integrations, imports and product feeds." type="p"/>
     </widgets>
 </screen>

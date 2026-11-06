@@ -12,10 +12,114 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Commerce landing page (initial-design.md); design-commerce.md designs it. -->
+<!-- Commerce Home (design-commerce §1.2, §3 Home; style-guide §3.1 Landing): HomeScope, the store selector (the user's stores,
+    ironstone.commerce.ContextServices.get#Choices) and the period, the store checked by check#Record; WorkCards (approval,
+    payment holds, fulfillment, unpaid, carts, reviews, integration errors) and PeriodStrip (orders, net sales and top product
+    for the period against the previous one), each "Not configured" until the phases that measure them (P8 the work, P11 the
+    strip), never zero; visits and conversion stay hidden without Marketing's tracking (impl-commerce §4). The first-use state
+    (no store in the user's scope) links New store for a store manager. RecentOrders arrives with P8. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <parameter name="productStoreId"/>
+    <parameter name="periodDays"/>
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.commerce.ContextServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="hasStores" from="(commerce.storeOptions || []).length &gt; 0"/>
+        <if condition="productStoreId">
+            <service-call name="ironstone.commerce.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'store', recordId:productStoreId}"
+                    out-map="store"
+                    transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="storeFound" from="!!store?.recordId"/>
+        </if>
+        <set field="periodOptions" from="[{value: '7', label: 'Last 7 days'}, {value: '30', label: 'Last 30 days'},
+                {value: '90', label: 'Last 90 days'}]"/>
+        <set field="days" from="['7', '30', '90'].includes(String(periodDays || '')) ? Number(periodDays) : 30"/>
+        <set field="scope" from="{productStoreId: storeFound ? productStoreId : null, periodDays: String(days)}"/>
+        <set field="periodStart" from="new Date(Number(ec.user.nowTimestamp) - days * 86400000)"/>
+        <set field="periodText" from="ec.l10n.format(periodStart, 'd MMM yyyy') + ' – ' + ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy')"/>
+        <set field="scopeText" from="storeFound ? store.label : (commerce.storeLimited ? 'Your stores' : 'All your stores')"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Commerce landing page for e-commerce and channel managers." type="p"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Commerce" type="h5"/></container>
+        </container>
+        <section name="FirstUse" condition="!hasStores">
+            <widgets>
+                <container-box>
+                    <box-header title="No store yet"/>
+                    <box-body>
+                        <label text="No store of your organizations is open to you. A store manager starts one from Stores." type="p"
+                                condition="!can.storeEdit"/>
+                        <label text="Start with a store: its organization, warehouse, checkout and readiness checklist." type="p"
+                                condition="can.storeEdit"/>
+                        <link url="${sharedLinks['Stores']}" text="New store" link-type="anchor-button" btn-type="primary"
+                                icon="sym_o_add" condition="can.storeEdit"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="StoreHome" condition="hasStores">
+            <widgets>
+                <form-single name="HomeScope" transition="." map="scope">
+                    <field name="productStoreId">
+                        <default-field title="Store">
+                            <drop-down allow-empty="true">
+                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                        parameter-map="{choice:'stores', selected:scope.productStoreId}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="periodDays">
+                        <default-field title="Period">
+                            <drop-down allow-empty="false">
+                                <list-options list="periodOptions" key="${value}" text="${label}"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                    <field-layout>
+                        <field-row><field-ref name="productStoreId"/><field-ref name="periodDays"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+                <label text="Store ${productStoreId} is not available to you." type="p" style="text-negative"
+                        condition="productStoreId &amp;&amp; !storeFound"/>
+                <label text="${scopeText}, ${periodText}" type="p" style="text-caption m-muted"/>
+                <container-box>
+                    <box-header title="Work to do"/>
+                    <box-body>
+                        <dashboard min-width="160">
+                            <number-card title="To approve" value="Not configured" icon="sym_o_approval" size="sm"/>
+                            <number-card title="Payment holds" value="Not configured" icon="sym_o_front_hand" size="sm"/>
+                            <number-card title="To fulfill" value="Not configured" icon="sym_o_local_shipping" size="sm"/>
+                            <number-card title="Unpaid" value="Not configured" icon="sym_o_credit_card_off" size="sm"/>
+                            <number-card title="Open carts" value="Not configured" icon="sym_o_shopping_cart" size="sm"/>
+                            <number-card title="Reviews" value="Not configured" icon="sym_o_reviews" size="sm"/>
+                            <number-card title="Integration errors" value="Not configured" icon="sym_o_sync_problem" size="sm"/>
+                        </dashboard>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="This period against the previous one"/>
+                    <box-body>
+                        <dashboard min-width="160">
+                            <number-card title="Orders" value="Not configured" icon="sym_o_receipt_long" size="sm"/>
+                            <number-card title="Net sales" value="Not configured" icon="sym_o_payments" size="sm"/>
+                            <number-card title="Top product" value="Not configured" icon="sym_o_star" size="sm"/>
+                        </dashboard>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
     </widgets>
 </screen>

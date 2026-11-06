@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commerce demo (impl-commerce P1; Demo.js), loaded from data/BossZCommerceDemoData.xml. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="load" noun="CommerceDemo" transaction="ignore" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent Commerce demo sites by fixed ID: ZIZI_SHOP (shop.zizi.localhost) for Ziziwork Retail and
+            ZIZI_DIGITAL (digital.zizi.localhost) for Ziziwork Services, disabled until published, each with Account, Billing
+            and Support mounts. Each site in its own transaction; one that fails is named in errors and the other is made. Only
+            data loading or a system administrator may run it.</description>
+        <out-parameters>
+            <parameter name="complete" type="Boolean"/>
+            <parameter name="errors" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="demoResult" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Demo.js')
+                .execute('load', context)"/>
+            <set field="complete" from="demoResult.complete"/>
+            <set field="errors" from="demoResult.errors"/>
+        </actions>
+    </service>
+    <service verb="run" noun="CommerceDemoStep" authenticate="anonymous-all" allow-remote="false">
+        <description>One Commerce demo site (shop or digital), made once; load#CommerceDemo calls it in a transaction of its
+            own. Only data loading or a system administrator may run it.</description>
+        <in-parameters>
+            <parameter name="step" required="true"/>
+        </in-parameters>
+        <actions>
+            <script>ec.resource.script('component://mr-boss/service/ironstone/commerce/Demo.js').execute('runStep', context)</script>
+        </actions>
+    </service>
+</services>
