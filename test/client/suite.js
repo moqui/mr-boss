@@ -6,7 +6,8 @@ suite(
         "WarehouseReceivingWalk",
         "ManufacturingWorkOrdersWalk",
         "PurchasingOrdersWalk",
-        "CustomerServiceCasesWalk"
+        "CustomerServiceCasesWalk",
+        "CommerceThemesWalk"
     ],
     {
         server: {

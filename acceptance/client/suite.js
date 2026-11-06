@@ -65,7 +65,8 @@ suite(
         "ManufacturingScheduleWalk",
         "ManufacturingChangesWalk",
         "ManufacturingShopFloorWalk",
-        "ManufacturingReportsWalk"
+        "ManufacturingReportsWalk",
+        "ThemeEditorWalk"
     ],
     {
         server: {

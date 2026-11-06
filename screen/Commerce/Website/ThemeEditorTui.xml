@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ThemeEditorTui (design-commerce §5 ThemeEditor's terminal twin; impl-commerce P5): the same draft as forms, also the
+    browser's form view of ThemeEditor. Template: the page template to work on. Sections: its sections in order with Move up
+    and Move down (store#ThemeComposition with the draft revision, which refuses moving or hiding a required section away)
+    and Settings; SectionSettings: the chosen section's settings from its schema, each saved on its own
+    (store#ThemeSettings); ThemeSettings: the global settings. Preview makes a preview address on the site's preview host
+    to open in a browser (create#ThemePreview); Publish opens ThemeDetail, where the publisher publishes. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Theme as forms" default-menu-include="false">
+    <parameter name="themeId" required="true"/>
+    <parameter name="template"/>
+    <parameter name="sectionId"/>
+    <transition name="moveSection">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.get#ThemeComposition" out-map="current" in-map="{themeId:themeId}"/>
+            <script><![CDATA[
+                const found = (current.templates || []).find((t) => t.name === template)
+                const list = (found?.sections || []).slice()
+                const index = list.findIndex((s) => s.id === sectionId)
+                const to = index + (direction === 'up' ? -1 : 1)
+                if (index < 0 || to < 0 || to >= list.length) ec.message.addError('That section cannot move ' + (direction === 'up' ? 'up' : 'down'))
+                else {
+                    const [moved] = list.splice(index, 1)
+                    list.splice(to, 0, moved)
+                    composition = {sections: Object.fromEntries(list.map((s) => [s.id, {type: s.type, settings: s.settings, blocks: s.blocks,
+                        blockOrder: s.blockOrder, disabled: s.disabled}])), order: list.map((s) => s.id)}
+                }
+            ]]></script>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.public.ThemeServices.store#ThemeComposition"
+                        in-map="{themeId:themeId, expectedRevision:expectedRevision, template:template, composition:composition}"/>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/><parameter name="template"/><parameter name="sectionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveSetting">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#ThemeSettings"
+                    in-map="{themeId:themeId, expectedRevision:expectedRevision, template:(scope == 'theme' ? null : template),
+                        sectionId:(scope == 'theme' ? null : sectionId), settings:{[settingId]: (value === '' ? null : value)}}"/>
+        </actions>
+        <default-response url="."><parameter name="themeId"/><parameter name="template"/><parameter name="sectionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="previewLink">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.create#ThemePreview" out-map="made"
+                    in-map="{themeId:themeId, siteId:siteId, pageKind:String(template || 'home').split('.')[0]}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="previewUrl" from="ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').previewUrl(made)"/>
+                <message type="success">Preview until ${made.expireDateText}: ${previewUrl}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/><parameter name="template"/><parameter name="sectionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.public.ThemeServices.get#ThemeComposition" out-map="composition" transaction="force-new"
+                ignore-error="true" in-map="{themeId:themeId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!composition?.theme"/>
+        <if condition="recordFound">
+            <service-call name="mantle.public.ThemeServices.get#ThemeBindings" out-map="bindings" transaction="force-new"
+                    ignore-error="true" in-map="{themeId:themeId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="templates" from="composition.templates || []"/>
+            <set field="template" from="template || (templates.find((t) =&gt; t.name === 'home') || templates[0] || {}).name"/>
+            <set field="chosen" from="templates.find((t) =&gt; t.name === template) || {sections: [], requiredComponents: {}}"/>
+            <set field="requiredIds" from="Object.values(chosen.requiredComponents || {}).flat()"/>
+            <set field="sectionRows" from="chosen.sections.map((s, index) =&gt; ({sectionId: s.id, typeName: (composition.sectionTypes.find((t) =&gt; t.type === s.type) || {}).name || s.type,
+                    stateText: [s.disabled ? 'hidden' : null, requiredIds.includes(s.id) ? 'required' : null].filter(Boolean).join(', '),
+                    first: index === 0, last: index === chosen.sections.length - 1}))"/>
+            <set field="section" from="chosen.sections.find((s) =&gt; s.id === sectionId) || null"/>
+            <set field="sectionType" from="section ? composition.sectionTypes.find((t) =&gt; t.type === section.type) : null"/>
+            <set field="settingRows" from="(sectionType?.settings || []).map((d) =&gt; ({scope: 'section', settingId: d.id, label: d.label || d.id, typeText: d.type,
+                    value: section.settings?.[d.id] == null ? '' : typeof section.settings[d.id] === 'object' ? JSON.stringify(section.settings[d.id]) : String(section.settings[d.id]),
+                    defaultText: d.default == null ? '' : String(d.default)}))"/>
+            <set field="globalRows" from="(composition.globalSettings.definitions || []).map((d) =&gt; ({scope: 'theme', settingId: d.id, label: d.label || d.id, typeText: d.type,
+                    value: composition.globalSettings.values?.[d.id] == null ? '' : String(composition.globalSettings.values[d.id]),
+                    defaultText: d.default == null ? '' : String(d.default)}))"/>
+            <set field="sites" from="bindings?.sites || []"/>
+            <set field="templateValues" from="{themeId:themeId, template:template}"/>
+            <set field="detailUrl" from="sharedLinks['Website/ThemeDetail']"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ThemeNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Theme ${themeId} is not available: it does not exist, or it is not a theme of one of your stores."/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="ThemeForms" condition="recordFound"><widgets>
+            <container style="row items-center q-col-gutter-sm q-mb-sm">
+                <container style="col"><label text="${composition.theme.name}: draft revision ${composition.draftRevision}" type="h5"/></container>
+                <container style="col-auto row q-gutter-sm">
+                    <link url="previewLink" text="Preview" icon="sym_o_visibility" link-type="hidden-form-link" condition="sites.length"
+                            parameter-map="{themeId:themeId, template:template, sectionId:sectionId, siteId:sites[0]?.siteId}"/>
+                    <link url="${detailUrl}" text="Publish" icon="sym_o_public" link-type="anchor-button" parameter-map="{themeId:themeId}"
+                            condition="can.themePublish"/>
+                </container>
+            </container>
+            <form-single name="Template" transition="." map="templateValues">
+                <field name="themeId"><default-field><hidden/></default-field></field>
+                <field name="template">
+                    <default-field title="Page template">
+                        <drop-down allow-empty="false"><list-options list="templates" key="${name}" text="${name}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+                <field-layout><field-row-big><field-ref name="template"/><field-ref name="submitButton"/></field-row-big></field-layout>
+            </form-single>
+            <container-box>
+                <box-header title="Sections of ${template}"/>
+                <box-body-nopad>
+                    <form-list name="Sections" list="sectionRows" skip-form="true" paginate="false">
+                        <field name="sectionId"><default-field title="Section"><display/></default-field></field>
+                        <field name="typeName"><default-field title="Type"><display/></default-field></field>
+                        <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="moveSection" text="Move up" link-type="hidden-form-link" condition="can.themeEdit &amp;&amp; !first"
+                                        parameter-map="{themeId:themeId, template:template, sectionId:sectionId, direction:'up', expectedRevision:composition.draftRevision}"/>
+                                <link url="moveSection" text="Move down" link-type="hidden-form-link" condition="can.themeEdit &amp;&amp; !last"
+                                        parameter-map="{themeId:themeId, template:template, sectionId:sectionId, direction:'down', expectedRevision:composition.draftRevision}"/>
+                                <link url="." text="Settings" link-type="anchor" parameter-map="{themeId:themeId, template:template, sectionId:sectionId}"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="sectionId"/><field-ref name="typeName"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+            <section name="SectionSettings" condition="section">
+                <widgets>
+                    <container-box>
+                        <box-header title="Settings of ${sectionId}"/>
+                        <box-body-nopad>
+                            <form-list name="SectionSettings" list="settingRows" transition="saveSetting" paginate="false">
+                                <field name="themeId"><default-field><hidden default-value="${themeId}"/></default-field></field>
+                                <field name="template"><default-field><hidden default-value="${template}"/></default-field></field>
+                                <field name="sectionId"><default-field><hidden default-value="${sectionId}"/></default-field></field>
+                                <field name="scope"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden default-value="${composition.draftRevision}"/></default-field></field>
+                                <field name="settingId"><default-field><hidden/></default-field></field>
+                                <field name="label"><default-field title="Setting"><display/></default-field></field>
+                                <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                                <field name="value"><default-field title="Value" tooltip="Empty: the default"><text-line size="40"/></default-field></field>
+                                <field name="defaultText"><default-field title="Default"><display/></default-field></field>
+                                <field name="submitButton">
+                                    <conditional-field condition="can.themeEdit" title="Save"><submit/></conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <columns type="mobile">
+                                    <column><field-ref name="label"/><field-ref name="value"/></column>
+                                    <column><field-ref name="submitButton"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets>
+            </section>
+            <container-box>
+                <box-header title="Theme settings"/>
+                <box-body-nopad>
+                    <form-list name="ThemeSettings" list="globalRows" transition="saveSetting" paginate="false">
+                        <field name="themeId"><default-field><hidden default-value="${themeId}"/></default-field></field>
+                        <field name="template"><default-field><hidden default-value="${template}"/></default-field></field>
+                        <field name="scope"><default-field><hidden/></default-field></field>
+                        <field name="expectedRevision"><default-field><hidden default-value="${composition.draftRevision}"/></default-field></field>
+                        <field name="settingId"><default-field><hidden/></default-field></field>
+                                <field name="label"><default-field title="Setting"><display/></default-field></field>
+                        <field name="value"><default-field title="Value" tooltip="Empty: the default"><text-line size="20"/></default-field></field>
+                        <field name="defaultText"><default-field title="Default"><display/></default-field></field>
+                        <field name="submitButton">
+                            <conditional-field condition="can.themeEdit" title="Save"><submit/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="label"/><field-ref name="value"/></column>
+                            <column><field-ref name="submitButton"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

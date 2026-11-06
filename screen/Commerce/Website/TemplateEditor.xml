@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- TemplateEditor (design-commerce §5 TemplateEditor; impl-commerce P5): a theme draft's source files for the theme developer
+    (COMMERCE_THEME_CODE), a .qvue (TemplateEditor.qvue) over the framework's code editor and diff: ThemeFiles (the package's
+    files by folder), Source (a file's text with its base digest; Save), FileSchema (a section's or block's schema, opened
+    beside it), Diagnostics (the adapter's findings with file and line, of the file and of the whole draft after Validate),
+    RevisionDiff (the file in the latest release against the draft) and FileOperation (add, rename or remove a file, with a
+    reason; the files that name it confirmed). Source and schema text are never evaluated here: a <script>, an event
+    handler, an executable URL or an ec name is refused by mantle.public.ThemeServices.store#ThemeFile with its line, and
+    the active release never changes. Its terminal twin is TemplateEditorTui, on the framework text editor. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Template editor" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
+    <parameter name="themeId" required="true"/>
+    <parameter name="path"/>
+    <transition name="files" method="get" read-only="true">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                const out = calls.probe('mantle.public.ThemeServices.get#ThemeDraft', {themeId})
+                ec.web.sendJsonResponse(out.errors ? out : {theme: out.theme, files: out.files, validation: out.validation,
+                    can: {code: !!commerce.capabilities.themeCode, edit: !!commerce.capabilities.themeEdit},
+                    detailUrl: commerce.webBase + '/Website/ThemeDetail?themeId=' + encodeURIComponent(themeId)})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="file" method="get" read-only="true">
+        <actions>
+            <script>ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').send('get#ThemeFile', {themeId, path})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="diff" method="get" read-only="true">
+        <actions>
+            <script>ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').send('get#ThemeHistory', {themeId, path})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveFile" method="post">
+        <actions>
+            <script>ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').send('store#ThemeFile',
+                {themeId, expectedRevision, path, text: fileText, baseDigest: baseDigest || null, versionNote: versionNote || null})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="fileOperation" method="post">
+        <actions>
+            <script>ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').send('change#ThemeFile',
+                {themeId, expectedRevision, operation, path, toPath: toPath || null, confirmDependents: confirmDependents === 'true',
+                    changeReason: changeReason || null})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="validate" method="post">
+        <actions>
+            <script>ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js').send('validate#Theme', {themeId})</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commerce/Website/TemplateEditor.qvue" template="false"/>
+            <text type="tui"><![CDATA[${JSON.stringify([{t:'dynamicContainer',id:'TemplateEditorTui',url:sri.buildUrl('../TemplateEditorTui').addParameters({themeId:themeId, path:path||null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p><a href="TemplateEditorTui?themeId=${themeId}">Open the source as forms</a></p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

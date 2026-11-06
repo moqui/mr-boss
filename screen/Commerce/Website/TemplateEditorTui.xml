@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- TemplateEditorTui (design-commerce §5 TemplateEditor's terminal twin; impl-commerce P5): a theme draft's source as forms,
+    also the browser's form view of TemplateEditor. ThemeFiles: the file to work on; Source: its text in the framework's text
+    editor with Save (store#ThemeFile with the draft revision and the file's base digest, which refuses a <script>, an
+    event handler or an ec name with its line); Diagnostics: the adapter's findings in it; FileOperation: add, rename or
+    remove a file with a reason (change#ThemeFile; the files that name it confirmed). COMMERCE_THEME_CODE, checked by the
+    services. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Source as forms" default-menu-include="false">
+    <parameter name="themeId" required="true"/>
+    <parameter name="path"/>
+    <transition name="saveFile">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#ThemeFile" out-map="saved"
+                    in-map="{themeId:themeId, expectedRevision:expectedRevision, path:path, text:fileText, baseDigest:(baseDigest || null),
+                        versionNote:(versionNote || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved ${path} (draft revision ${saved.draftRevision}).</message></if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/><parameter name="path"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="fileOperation">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.change#ThemeFile" out-map="changed"
+                    in-map="{themeId:themeId, expectedRevision:expectedRevision, operation:operation, path:operationPath, toPath:(toPath || null),
+                        confirmDependents:(confirmDependents == 'Y'), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="path" from="operation == 'remove' ? null : operation == 'rename' ? toPath : operationPath"/>
+                <message type="success">Done: ${operation} ${operationPath}.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/><parameter name="path"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.public.ThemeServices.get#ThemeDraft" out-map="draft" transaction="force-new" ignore-error="true"
+                in-map="{themeId:themeId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!draft?.theme"/>
+        <if condition="recordFound &amp;&amp; path &amp;&amp; can.themeCode">
+            <service-call name="mantle.public.ThemeServices.get#ThemeFile" out-map="file" transaction="force-new" ignore-error="true"
+                    in-map="{themeId:themeId, path:path}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="fileRows" from="(draft?.files || []).map((f) =&gt; ({path: f.path}))"/>
+        <set field="fileValues" from="{themeId:themeId, path:path}"/>
+        <set field="sourceValues" from="{themeId:themeId, path:path, expectedRevision:draft?.theme?.draftRevision, baseDigest:file?.digest,
+                fileText:file?.text || '', versionNote:''}"/>
+        <set field="diagnostics" from="(file?.diagnostics || []).map((d) =&gt; ({where: d.file + (d.line ? ':' + d.line : ''), message: d.message}))"/>
+        <set field="operationValues" from="{themeId:themeId, expectedRevision:draft?.theme?.draftRevision, operation:'add', operationPath:(path || 'sections/'),
+                toPath:'', changeReason:'', confirmDependents:''}"/>
+    </actions>
+    <widgets>
+        <section name="ThemeNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Theme ${themeId} is not available: it does not exist, or it is not a theme of one of your stores."/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="SourceForms" condition="recordFound"><widgets>
+            <label text="${draft.theme.name}: source, draft revision ${draft.theme.draftRevision}" type="h5"/>
+            <label text="Editing theme source needs the theme developer's permission (COMMERCE_THEME_CODE)." type="p" style="text-negative"
+                    condition="!can.themeCode"/>
+            <form-single name="ThemeFiles" transition="." map="fileValues">
+                <field name="themeId"><default-field><hidden/></default-field></field>
+                <field name="path">
+                    <default-field title="File">
+                        <drop-down allow-empty="true"><list-options list="fileRows" key="${path}" text="${path}"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="submitButton"><default-field title="Open"><submit/></default-field></field>
+                <field-layout><field-row-big><field-ref name="path"/><field-ref name="submitButton"/></field-row-big></field-layout>
+            </form-single>
+            <section name="Source" condition="file &amp;&amp; !file.binary &amp;&amp; can.themeCode">
+                <widgets>
+                    <form-single name="Source" transition="saveFile" map="sourceValues">
+                        <field name="themeId"><default-field><hidden/></default-field></field>
+                        <field name="path"><default-field><hidden/></default-field></field>
+                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                        <field name="baseDigest"><default-field><hidden/></default-field></field>
+                        <field name="fileText"><default-field title="${path}"><text-area rows="24" cols="100" editor-type="code"/></default-field></field>
+                        <field name="versionNote"><default-field title="Note"><text-line size="40"/></default-field></field>
+                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                    </form-single>
+                    <section name="Diagnostics" condition="diagnostics.length">
+                        <widgets>
+                            <form-list name="Diagnostics" list="diagnostics" skip-form="true" paginate="false">
+                                <field name="where"><default-field title="File and line"><display/></default-field></field>
+                                <field name="message"><default-field title="Finding"><display/></default-field></field>
+                            </form-list>
+                        </widgets>
+                    </section>
+                </widgets>
+            </section>
+            <section name="FileOperation" condition="can.themeCode">
+                <widgets>
+                    <container-box>
+                        <box-header title="Add, rename or remove a file"/>
+                        <box-body>
+                            <form-single name="FileOperation" transition="fileOperation" map="operationValues">
+                                <field name="themeId"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="operation">
+                                    <default-field title="Change">
+                                        <drop-down allow-empty="false">
+                                            <option key="add" text="Add a file"/>
+                                            <option key="rename" text="Rename the file"/>
+                                            <option key="remove" text="Remove the file"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="operationPath"><default-field title="File"><text-line size="40"/></default-field></field>
+                                <field name="toPath"><default-field title="New path"><text-line size="40"/></default-field></field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="confirmDependents">
+                                    <default-field title=" "><check><option key="Y" text="Go on although other files name it"/></check></default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Apply"><submit confirmation="Change the draft's files?"/></default-field></field>
+                            </form-single>
+                        </box-body>
+                    </container-box>
+                </widgets>
+            </section>
+        </widgets></section>
+    </widgets>
+</screen>

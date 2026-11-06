@@ -626,6 +626,23 @@ interactive components are selected by registered identifier. Validation reports
 syntax and exceeded limits without replacing the current draft or active release. TUI uses the
 framework text editor and the same validate/save operations. **Needs:** COM-THEME, SHOP-THEME.
 
+**As built (Nov 6, impl-commerce P5).** The screens are `Commerce/Website/Themes`, `ThemeDetail`, `ThemeEditor` (.qvue,
+twin `ThemeEditorTui`) and `TemplateEditor` (.qvue, twin `TemplateEditorTui`), one route each. ThemeDetail is one page
+of boxes (Theme, Validation after Validate, Where it is used, Pages and products with their own template, Releases,
+Activity) rather than tabs; Publish is the header's primary action for a store with one Shop site and a row action
+("Publish here") for several; Restore and Export are release-row actions. The authoring services are
+`mantle.public.ThemeServices`' authoring part (`ThemeAuthoring.js`): every save checks the draft revision and is refused
+when the adapter finds an error in the file it changes (`THEME_SOURCE_INVALID` with file and line), so a draft never
+holds a script or an event handler; `get#ThemeComposition` and `get#PreviewHost` were added beside the named ones. A
+section's settings travel with the composition (one save), the global settings with `store#ThemeSettings`. Template
+assignment covers pages (through `store#SitePage`, so F78's publish rule holds) and published products (through
+`store#StoreProduct`); a page's template key must be a page template of the site's active release or of a draft of the
+store's themes (F77), and a live page renders with it when the active release has it. Images and fonts are assets kept
+as bytes (F55). Imports are a `.tar.gz` (or a files map through the service). The preview is ZIZI_SHOP-style: a
+`PshkPreview` host of the site (impl-commerce F54) answering only `/preview/{token}`; the editor frames it and talks to
+it through a MessageChannel port given with the nonce of the frame's URL; the starter's sections carry
+`data-section-id` so a click selects a section.
+
 ### Pages
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |

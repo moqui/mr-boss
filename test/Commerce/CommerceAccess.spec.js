@@ -584,3 +584,40 @@ feature("the administrator works another organization's store in Mantle as in th
         managerStore.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// P5: theme source is the theme developer's (COMMERCE_THEME_CODE): the developer saves a template of the demo store's theme,
+// the designer (COMMERCE_THEME_EDIT) is refused the same save, and another organization's manager cannot even read the theme
+feature("a theme's source is saved by the theme developer, not the designer, nor another organization", {
+    when() {
+        const theme = system(() =>
+            ec.entity.find("mantle.public.PublicTheme").condition({productStoreId: ids.storeId}).orderBy("themeId").disableAuthz().list()[0]
+        )
+        const path = "snippets/price.html.fancy-locked"
+        const read = asUser(users.developer, () => invoke("mantle.public.ThemeServices.get#ThemeFile", {themeId: theme.themeId, path}), false)
+        const save = user =>
+            asUser(
+                user,
+                () =>
+                    refusal("mantle.public.ThemeServices.store#ThemeFile", {
+                        themeId: theme.themeId,
+                        expectedRevision: Number(read.draftRevision),
+                        path,
+                        text: read.text
+                    }),
+                false
+            )
+        const designer = save(users.designer)
+        const developer = save(users.developer)
+        const other = asUser(users.services, () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}), false)
+        const own = asUser(users.manager, () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}), false)
+        return {designer, developer, other, own}
+    },
+    then({designer, developer, other, own}) {
+        designer.includes("PERMISSION_DENIED")
+        designer.includes("COMMERCE_THEME_CODE")
+        developer == ""
+        other.includes("RECORD_UNAVAILABLE")
+        own == ""
+    }
+})
+
