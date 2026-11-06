@@ -2238,6 +2238,10 @@ ShopAccess, ShopReviews, Transport 14 passed; mr-boss CommerceReviews, Consent, 
   PcpMarketingEmail (that service's existing rule for a subscribe).
 - No spec covers an unverified account's own pending choice confirmed after it verifies (R1's own-choice check marks the
   claimed checkout as the account's to exercise `confirmVerified`).
+- **Wave 11 suites again (Nov 6, quiet, after the P9 follow-up merged):** standalone mr-mantle 1,848 passed, 2 failed
+  (the baseline); `./moq test-apps` 3,237 server and 17 client features passed; lint as before. Feature time: server
+  mr-mantle 376.7 of 383 s, mr-boss 263.3 of 264 s (Commerce's specs 19.0 s, 1.1 s more than Wave 10), mr-pass 18.7 of
+  20 s; client mr-boss 53.9 of 57 s, mr-pass 8.3 of 9 s. No budget raised.
 
 ### P10 — Cart recovery
 
