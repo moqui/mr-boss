@@ -1313,22 +1313,22 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
   - Template assignment is the editor's Pages panel (pages); products keep Merchandising's template field, which
     `assign#ThemeTemplate` also serves.
 - Findings (provisional):
-  - **F-P5-1** The preview page's response still gets the framework's session cookie (an anonymous `no-store` answer),
+  - **F86** The preview page's response still gets the framework's session cookie (an anonymous `no-store` answer),
     though the capability is the URL's token; design-shop §12.6 asks for minimal cookies. For the framework, optional: no
     session for a public-site response that declines one (as F42's `public` answers).
-  - **F-P5-2** The framework's own routes (`/apps`, `/qapps`, `/rest`, `/Login`, …, public_site.rs FRAMEWORK_ROUTES)
+  - **F87** The framework's own routes (`/apps`, `/qapps`, `/rest`, `/Login`, …, public_site.rs FRAMEWORK_ROUTES)
     answer on every host, the preview host too, so a BOSS sign-in is possible on the preview origin; the isolation
     rests on the preview host being a name of its own. For the framework, optional: a `<public-site>` attribute that keeps
     the framework routes off a host.
-  - **F-P5-3** A store that has not opened its site yet previews with sample products (ShopCatalog's `shopOf` needs a
+  - **F88** A store that has not opened its site yet previews with sample products (ShopCatalog's `shopOf` needs a
     published site); a staff-authorized catalog read of an unpublished site would show its own products.
-  - **F-P5-4** The adapter marks no section in its output, so selection in the preview needs the theme's sections to
+  - **F89** The adapter marks no section in its output, so selection in the preview needs the theme's sections to
     carry `data-section-id` (the starter's do); for the framework, optional: a marker in preview renders.
-  - **F-P5-5** The preview's address uses the BOSS request's scheme and port (`ThemeCalls.previewUrl`); behind a proxy that
+  - **F90** The preview's address uses the BOSS request's scheme and port (`ThemeCalls.previewUrl`); behind a proxy that
     changes them a property naming the preview origin would be needed.
-  - **F-P5-6** For the lead: the mr-boss client budget (46.8 of 49 s on Nov 6) takes the walk's 8.0 s; a raise needs the
+  - **F91** For the lead: the mr-boss client budget (46.8 of 49 s on Nov 6) takes the walk's 8.0 s; a raise needs the
     user's agreement. mr-pass's specs are 7.8 of 17 s with ShopPreview.
-  - **F-P5-7** Whether the framework writes a Visit row for the anonymous preview request was not checked; nothing in
+  - **F92** Whether the framework writes a Visit row for the anonymous preview request was not checked; nothing in
     the preview path writes one, sends mail or calls a cart, gateway or analytics.
 
 **Review Nov 5 (P5)** (reviewer; branch `com/p5`). Checked: the authoring services' permissions (COMMERCE_THEME_CODE on
@@ -1355,12 +1355,12 @@ ThemeServices only (POST through `moqui.request`, so the session token is checke
 - **R2 (medium, Mantle)** `import#Theme` wrote the package without the adapter's check, so a draft could hold a
   `<script>` or an `onclick` (and an SVG uncleaned) though every other save refuses them. The import now cleans SVGs and
   refuses an error in any file (`THEME_SOURCE_INVALID`, file and line). ThemeAuthoring's import feature has the case.
-- **R3 (low, mr-pass)** ShopPreview.js said the preview records no visit; it now says what F-P5-7 found.
+- **R3 (low, mr-pass)** ShopPreview.js said the preview records no visit; it now says what F92 found.
 - Specs: Mantle ThemeAuthoring (7 features, 3.7 s), ThemeReleases, AccountingPortals, SupplierPortal, StoreAdmin,
   SitePages (52 pass); mr-pass ShopPreview, ShopThemes, ShopAccess, Forum, Portals (26 pass); mr-boss CommerceThemes,
   CommerceAccess, CommerceStores (16 pass); client CommerceThemesWalk 7.9 s.
 - **For the lead:**
-  - **F-P5-7 / F-P5-1 (framework, before the gate's "records no visit" is claimed):** the preview answer sets
+  - **F92 / F86 (framework, before the gate's "records no visit" is claimed):** the preview answer sets
     `moqui.session`; the first request starts no Visit (no cookie came), but the frame's next request (its stylesheet, a
     reload, the next preview in the browser) brings the cookie back and the framework starts a Visit, whose
     `initialRequest` is the `/preview/{token}/...` path, the token in plain text for its 20 minutes. Where BOSS and the
@@ -1368,7 +1368,7 @@ ThemeServices only (POST through `moqui.request`, so the session token is checke
     (boss.example.com, preview.shop.example.com) it is sent. The fix is the framework's: a public-site response that
     declines a session, handled as screen/mod.rs's `cacheable` (no cookie, the session discarded). Not done in the app
     (only `Cache-Control: public, no-store` would reach that path today, a trick).
-  - **F-P5-2 can wait:** framework screen renders carry `frame-ancestors 'none'` and `X-Frame-Options: sameorigin`
+  - **F87 can wait:** framework screen renders carry `frame-ancestors 'none'` and `X-Frame-Options: sameorigin`
     (factory.rs defaults), so `/Login` and `/qapps` on the preview origin cannot be framed, by BOSS or anyone; only the
     preview page names BOSS's origins. What is left is a sign-in on the preview origin, where draft markup still cannot
     run script (the adapter refuses it, the CSP allows only the nonce'd script).
@@ -2072,6 +2072,14 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F83 | P6: Mantle has no record of what a payment gateway can do | `StoreCheckout.js` `gatewayCapabilities` by gateway type, filled by Shop P5 and P7 |
 | F84 | P6: a new setting's audit rows carry no reason (F63) | Its `changeReason` field's audit row shows as "Reason" in History |
 | F85 | P6: the demo store's readiness blocked (no local rate, no Terms page) | The review published a Terms page on ZIZI_SHOP; local rates stay out of the demo (Mantle specs place POPC_DEFAULT orders at zero shipping), so readiness blocks on Local rates only until Shop P5's demo checkout gives a rated store |
+| F86 | P5: the preview response gets the framework's session cookie; with BOSS and the preview host on one registrable domain the frame's next request brings it back and starts a Visit whose `initialRequest` holds the preview token | Framework: a public-site response may decline a session (no cookie, session discarded), as the `cacheable` path does; the preview path declines it (com/fw4) |
+| F87 | P5: the framework's own routes (`/qapps`, `/rest`, `/Login`) answer on the preview host | Later: their default `frame-ancestors 'none'` and X-Frame-Options keep them unframeable (the review) |
+| F88 | P5: an unpublished site previews with sample products, since ShopCatalog's reads need a published site | Kept |
+| F89 | P5: the adapter does not mark sections in its output, so click-to-select needs `data-section-id` in the theme | The starter has it; documented in Themes.md |
+| F90 | P5: the preview address uses the BOSS request's scheme and port | Behind a proxy that changes them, configure the preview host's address (later) |
+| F91 | P5: CommerceThemesWalk adds 8.0 s to mr-boss's client budget (46.8 of 49 s) | The review measured it at 7.6 s of server work it cannot trim; the client budget is raised by it at the gate (the user's agreement) |
+| F92 | P5: does the anonymous preview record a Visit? | Yes, from its second request (F86) |
+| F93 | P5 review: at render the preview token checks the actor's account is enabled, not their theme permission or store scope (a revoked designer's open preview lasts at most 20 minutes); Shop P2's `get#ThemeDraft` with `includeText` returns source text to any `COMMERCE_VIEW` holder | Accepted: twenty minutes at most; theme source holds no secrets |
 
 ## 7. Later
 
