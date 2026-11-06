@@ -689,6 +689,18 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
   makes `BOSS_COM_P2_SECOND` without cleanup, which later specs' store counts will see. (3) F61 stands: binding deletes
   are not audited by the framework. (4) The budget measure and `./moq test-apps` were not run here.
 
+- **Wave 2 suites (Nov 5, on master after P2 and the framework branch merged and the binary rebuilt; Shop P1's and
+  P3's workers ran at the same time):** `./moq test-framework` passed but for one cargo test that passes alone
+  (`chat_tests::the_links_of_a_message_get_text_previews_after_the_commit`, under load; dev-aide 32.8 of 30 s and
+  webroot 46.4 of 44 s client, under load); standalone mr-mantle 1,754 passed, 4 failed (the baseline WorkTimeEntries
+  and WorkTimesheets, and the two below), 13 skipped; `./moq test-apps` 3,096 server features passed and 2 failed, 15
+  client features passed, within every budget (server: mr-mantle 328.8 of 370 s, mr-boss 234.7 of 264 s, mr-pass 13.0 of
+  15 s; client: mr-boss 46.6 of 49 s, mr-pass 4.1 of 6 s); `moqui lint --screens` clean. The two failures,
+  AccountingCollections ("an instalment past due…": `overdueDays` 9, not 10) and SupportCases ("…Today leaves cases
+  out…": the plain case not in Today), reproduce alone after 00:00 UTC (the run was at 05:30 UTC, still Nov 5 locally)
+  and passed in Wave 1 an hour earlier: a date-boundary dependency of the specs or the code (UTC against the local or
+  organization day), not Commerce's; reported to the user.
+
 ### P3 — Assortment and catalog mounts
 
 Design §4 Merchandising, StoreCategories and Product360's merchandising facets, §10's catalog rows; COM-MERCH (the
