@@ -2381,6 +2381,55 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
   - **F-P10-6** The Marketing automation sender is not offered (no Marketing yet, design §8); `OTHER_SENDER` is the reason a
     store set to another sender would show.
 
+**Review Nov 6 (P10)** (`git diff master...com/p10` in mr-mantle, mr-pass and mr-boss). Checked against this section,
+design §6 CartDetail and §8 RecoveryPolicy, design-shop §13.2 and §2. Consent: only an access row's signed-in customer
+(never a guest's or staff's cart) with an account, the latest PcpCartReminder consent on the store's topic list granted
+(`check#CartReminderConsent`; a pending checkout choice is a CLPT_PENDING membership, never a grant) and the account's own
+verified address; the ledger checks the topic again at the hand-off and the build re-runs the whole eligibility (store off,
+template gone, closed, completed, checking out, the shopper back, consent off: suppressed); the mail carries the email
+preferences link; the job reads only stores with PsstRecoveryEnabled true. Dedup: the event key is the cart and its last
+activity, MESSAGE_DELIVERY_EVENT is unique (a concurrent run's second create fails and is named, never sent), the most
+sends count only what reached someone; each cart is queued with `probe` in its own transaction. Token: 48 random
+characters, only its digest kept, spent only by the POST under the order's lock and the access row re-read, bound to the
+row's account (another account NOT_AVAILABLE), the site, store and currency (`usable`), expired, replaced (a resend
+overwrites the digest) or revoked refused; the cart's capability is rotated (the old digest replaced). The Recover page
+keeps `r` in the session and redirects at once; PASS sends `Referrer-Policy: same-origin` and no-store on every page, so
+the token reaches no third party (the first GET's URL is in the server's access log, as any emailed link is). recoverCart
+in Schema/ForumSchema and Routes/PassRoutes (identical) and the three TOKEN_WRITES lists. Staff: `get#`/`send#CartRecovery`
+through StoreOperations' scope (store list and foreign-vendor orders), COMMERCE_RECOVERY for the preview and the send,
+operation key and revision; the preview's link is `LINK-MADE-WHEN-SENT`. F-P10-1: `buildApart` changes only where a
+source's build runs; the three sources (download notice, review request, recovery) read only and make a token at most, and
+the attempt already ran in its own transaction, so no build saw a caller's uncommitted rows before either. F118: both
+fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; PsstCheckoutOptIns is "none" or known ids only
+(StoreTopics.js reads the same form); PsstNewsList a current list of the store's organization, never a topic's list.
+- **R1** (medium) The job took a store's 500 oldest idle signed-in carts in the window (`orderBy lastActivityDate`), every
+  one of which is read whatever its consent or earlier send; once a store had 500 such carts in its seven-day window, the
+  carts newly past the delay were never reached. It now takes the newest first (`-lastActivityDate`).
+- **R2** (minor, spec) CartRecovery had no case of a queued recovery suppressed by the shopper's return or by cart
+  reminders turned off before the send, nor of another organization's operator; the fourth feature now has all three
+  (suppressed with "The shopper came back to the cart" and "No consent for this message"; RECORD_UNAVAILABLE for read and
+  send).
+- **R3** (F-P10-2, spec) mr-pass ShopCheckout's setup removes this ten-minute window's `cart-create` bucket of its
+  requester before making its carts, as AccountingPortals removes its bucket; the throttle is unchanged. The combined
+  run that failed (mr-mantle, mr-pass and mr-boss, 24 specs, 124 features) now passes.
+- Specs (`--nobuild`): Mantle CartRecovery, StoreOperations, ShopCart, StoreAdmin, StoreCheckout, DeliveryLedger,
+  StoreReviews, StoreFulfillment, ShopCustomer, Consent, PassAuthority 61 passed (CartRecovery's fourth feature 0.7 s);
+  mr-pass ShopCart, ShopAccount, ShopAccess, ShopCheckout, Transport 16 passed; mr-boss CommerceRecovery, CommerceOrders,
+  CommerceCheckoutSettings, CommerceAccess, Unsubscribe 25 passed; the combined set above 124 passed. Acceptance not run
+  (unchanged).
+- For the lead:
+  - The job reads every signed-in idle cart of the window again each run (up to 500 a store, each a transaction with the
+    consent, verified-address and ledger reads), most of them already handled; a "handled" mark on the access row (the
+    last window sent) would let the query skip them.
+  - A staff send's operation key covers the cart only: a retry with another reason answers the first send (not a
+    conflict).
+  - The sent mail's rendered body (with the link) is kept in EmailMessage by `send#EmailTemplate`, as the download
+    notice's guest link is; whoever can read EmailMessage can use the link until it is spent or expires, though only
+    from the cart's own signed-in account.
+  - F-P10-3: the framework rotates the session id at a password sign-in and carries its attributes over
+    (`session.rs` `rotate_on_password_login`), so the kept token survives the sign-in; the acceptance walk signs in with
+    `login()`, not through the sign-in page, so that path is not walked.
+
 ### P11 — Reports and Home
 
 Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. Ends stage C2/S2.
