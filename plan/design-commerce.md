@@ -227,7 +227,7 @@ cases and returns (X7).
 | ThemeEditor | Commerce/Website/Themes/ThemeEditor | editor | qvue | Compose templates visually | proposed theme draft | own | designer | new C1 | template, section |
 | TemplateEditor | Commerce/Website/Themes/TemplateEditor | editor | qvue | Edit locked template source | versioned resource | framework editor/diff, own workflow | theme developer | new C1 | theme, file, revision |
 | Pages | Commerce/Website/Pages | list | xml | Manage site pages and policies | WikiPage + PublicSitePage (proposed extension) | own; defines `Shared/Pages` | designer/publisher | new C1 | site, filters |
-| PageDetail | Commerce/Website/Pages/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
+| PageDetail | Commerce/Website/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
 | Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicSiteNavigation | own | merchandiser/publisher (Nov 5, as §1.1's `COMMERCE_MERCHANDISE`) | new C1 | site, menu |
 | Orders | Commerce/Orders | list | xml | Work submitted online orders | OrderHeader | own list, shared order reads | order reader | parity C2 | store, filters |
 | OrderDetail | Commerce/Orders/OrderDetail | detail | xml | Work an authorized order | OrderHeader | crosscut §3.6 | domain grants | parity C2 | order, store |
@@ -530,7 +530,7 @@ operations (MKT-CONTENT, MKT-PUBLIC). Neither mount is authority to publish priv
 
 | App | Mount | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
-| Commerce | `Commerce/Website/Pages[/PageDetail]` | permitted sites with a Shop mount; store pages and policy roles | new, edit, preview, publish, schedule, withdraw, assign template | policy versions accepted at checkout; menu references |
+| Commerce | `Commerce/Website/Pages`, `Commerce/Website/PageDetail` (one route per screen, Nov 6) | permitted sites with a Shop mount; store pages and policy roles | new, edit, preview, publish, schedule, withdraw, assign template | policy versions accepted at checkout; menu references |
 | Marketing | `Marketing/Content/LandingPages[/PageDetail]` | permitted sites; campaign landing pages (no policy roles) | new, edit, preview, publish, schedule, withdraw; campaign link | campaign association and tracking links |
 
 ### Themes
@@ -650,6 +650,21 @@ T.store#SitePage and `publish#SitePage` call the framework's versioned wiki oper
 publish the entire space. Body editing reuses Commons Knowledge editing; the route/publication
 fields above are the full new fields. A page chooses its composition from ThemeEditor rather
 than embedding another page builder in the wiki editor.
+
+**As built (Nov 6, impl-commerce P4).** `PublicSitePage` is keyed by a sequenced `sitePageId`; its role is unique
+within a site when set (the Forum keeps guidelines and about, Commerce's policy roles are delivery, returns, privacy and
+terms). A Commerce page is on the site's Shop mount, its route under the mount's `pages/`. Its body is a page of the
+store's page space (the store's full-page content space, made with `restrictUpdate` when it has none), which only
+`T.store#SitePage` writes, giving the designer the space's update right for the one write, so Commons Knowledge cannot
+change or wiki-publish it. Publishing a version makes it the page's published wiki version and the binding's in one
+transaction, so a visitor's read always finds the binding's exact version published; a version saved since stays a draft.
+A publication from a later date waits in the binding's scheduled fields and the `run_ScheduledSitePublications` job
+revalidates it as its publisher (the grant and the store still theirs, the version and route still valid); a refusal is
+kept on the page and listed by the store's readiness, and the live version stays. PageContent is Commons Knowledge's
+component in a Commerce mode (the bound page alone) with PageDetail's own transitions, its terminal twin a text form
+(PageText). Navigation: a menu is `PublicSiteNavigation` (draft items as JSON, a draft revision) with dated
+`PublicSiteNavigationVersion` snapshots; a redirect is a dated `PublicSiteRedirect` (draft, scheduled, active, failed,
+withdrawn), published like a menu. The live menu feeds the Shop view's `navigation` (the `main` menu).
 
 Policies such as delivery, returns, privacy and terms are named roles with version-pinned content.
 Checkout records the accepted terms version. Scheduled publication is revalidated at execution;

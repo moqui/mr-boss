@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PageText, the terminal twin of PageDetail's Content tab (impl-commerce P4): the page's current text as a form, saved as a
+    new version through mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT; a page saved since it was opened
+    answers that it changed). The live page changes only when the Publication tab publishes a version. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Text" default-menu-include="false">
+    <transition name="saveText">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SitePage" out-map="saved"
+                    in-map="{sitePageId:sitePageId, pageText:(pageText ?? ''), versionNote:(versionNote || null),
+                        baseVersionName:(baseVersionName || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; saved.conflict">
+                <message error="true">${saved.conflictText}; reload to see it before saving again.</message>
+            </if>
+            <if condition="!ec.message.hasError() &amp;&amp; saved.versionName">
+                <message type="success">Saved a new version; publish it to show it on the site.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="sitePageId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="ironstone.commons.KnowledgeServices.get#PageView" out-map="viewOut" transaction="force-new" ignore-error="true"
+                    in-map="{wikiPageId:sitePage.wikiPageId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="textValues" from="{sitePageId:sitePageId, pageText:(viewOut?.page?.text || ''), baseVersionName:(viewOut?.page?.currentVersionName || ''),
+                    versionNote:''}"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="PageTextForm" condition="recordFound">
+            <widgets>
+                <form-single name="PageTextForm" transition="saveText" map="textValues">
+                    <field name="sitePageId"><default-field><hidden/></default-field></field>
+                    <field name="baseVersionName"><default-field><hidden/></default-field></field>
+                    <field name="pageText">
+                        <conditional-field condition="pagesCan.themeEdit" title="Text (Markdown)"><text-area rows="18" cols="80"/></conditional-field>
+                        <default-field title="Text (Markdown)"><display/></default-field>
+                    </field>
+                    <field name="versionNote">
+                        <conditional-field condition="pagesCan.themeEdit" title="Version note"><text-line size="50"/></conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="submitButton">
+                        <conditional-field condition="pagesCan.themeEdit" title="Save a new version"><submit/></conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

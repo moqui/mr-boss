@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PageDetail (design-commerce §5 PageDetail; crosscut §2 Shared/PageDetail, §3.28; style-guide §3.3 Detail; impl-commerce P4):
+    a site page's record header (its route as a key chip, its title, site, locale and policy role, and its publication state
+    as a chip, with the live page's address) and the tabs, each with the page as its context: Content (1: the Commons
+    Knowledge editor on the bound page alone, F53, its terminal twin PageText), Route and SEO (2: PageRoute), Publication
+    (3: PagePublication, publish a version from a date, withdraw, cancel what waits) and History (4: PageHistory). Commerce's
+    context only (ironstone.commerce.ContextServices.get#SharedContext); the page is read and saved through
+    mantle.public.ThemeServices and published through mantle.public.SiteServices.publish#SitePage, which check the
+    permission and the site's store again. A page of a site outside the user's stores is not available. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Page" default-menu-include="false">
+    <parameter name="sitePageId" required="true"/>
+    <!-- the page for the tabs, which the client loads on their own (their actions run without this screen's) -->
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="pagesContext"/>
+        <set field="pagesCan" from="pagesContext.capabilities"/>
+        <set field="sharedLinks" from="pagesContext.sharedLinks"/>
+        <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="pageFound" transaction="force-new" ignore-error="true"
+                in-map="{sitePageId:(sitePageId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="sitePage" from="pageFound?.pages?.[0] || null"/>
+        <set field="recordFound" from="!!sitePage"/>
+    </always-actions>
+    <subscreens default-item="PageContent" always-use-full-path="true"/>
+    <transition name="pages"><default-response url="../Pages"/></transition>
+    <actions>
+        <if condition="recordFound">
+            <set field="captionText" from="[sitePage.siteName, sitePage.locale, sitePage.roleText ? sitePage.roleText + ' policy' : null,
+                    sitePage.templateKey ? 'template ' + sitePage.templateKey : null].filter((part) =&gt; part).join(' · ')"/>
+            <set field="publicationText" from="sitePage.state == 'published' ? 'Version ' + sitePage.versionShort + ' since ' + sitePage.fromDateText
+                    + (sitePage.thruDateText ? ' until ' + sitePage.thruDateText : '') : ''"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="PageNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Page ${sitePageId} is not available: it does not exist, or it is not on a site of one of your stores."/>
+                <link url="pages" text="Back to Pages" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="PageFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.public.PublicSitePage" record-id="${sitePageId}" title="${sitePage.title}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(sitePage.routeText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PageRoute", style: "strong", text: sitePage.routeText})}]]></text>
+                            </render-mode>
+                            <label text="${sitePage.title}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${sitePage.stateColor}" icon="sym_o_public">${
+                                WebUtilities.encodeHtml(sitePage.stateText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PageState", text: sitePage.stateText})}]]></text>
+                            <text type="html">${sitePage.stateText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="${publicationText}" type="span" style="text-caption m-muted" condition="publicationText"/>
+                        <label text="Waiting to publish: ${sitePage.scheduledText}" type="span" style="text-caption q-ml-sm" condition="sitePage.scheduledText"/>
+                        <label text="Not published at its date: ${sitePage.failureText}" type="span" style="text-caption text-negative q-ml-sm"
+                                condition="sitePage.failureText"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <link url="${sitePage.publicUrl}" url-type="plain" text="View the live page" icon="sym_o_open_in_new" link-type="anchor"
+                                target-window="_blank" condition="sitePage.state == 'published' &amp;&amp; sitePage.publicUrl"/>
+                    </container>
+                </container>
+            </container>
+            <subscreens-panel id="PageTabs" type="tab"/>
+        </widgets></section>
+    </widgets>
+</screen>

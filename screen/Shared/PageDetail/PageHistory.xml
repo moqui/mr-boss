@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PageHistory, PageDetail's History tab (design-commerce §5 PageDetail PageHistory; impl-commerce P4): the page's saved
+    versions (newest first, the one on the site and the one waiting marked; compare them in the Content tab's history) and
+    its publication activity from the audit log (route, locale, role, template, version and window changes, who, when and
+    why), from mantle.public.ThemeServices.get#SitePageHistory. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="History" default-menu-index="4">
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.public.ThemeServices.get#SitePageHistory" out-map="historyOut" transaction="force-new" ignore-error="true"
+                    in-map="{sitePageId:sitePageId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="versions" from="(historyOut?.versions || []).map((row) =&gt; Object.assign({}, row,
+                {markText: row.isPublished ? 'On the site' : row.isScheduled ? 'Waiting' : ''}))"/>
+        <set field="activity" from="historyOut?.activity || []"/>
+    </actions>
+    <widgets>
+        <container-box>
+            <box-header title="Versions"/>
+            <box-body-nopad>
+                <form-list name="PageVersions" list="versions" skip-form="true" paginate="false">
+                    <field name="versionShort"><default-field title="Version"><display/></default-field></field>
+                    <field name="dateText"><default-field title="Saved"><display/></default-field></field>
+                    <field name="userText"><default-field title="By"><display/></default-field></field>
+                    <field name="note"><default-field title="Note"><display/></default-field></field>
+                    <field name="markText"><default-field title=""><display style="text-positive"/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="versionShort"/><field-ref name="note"/></column>
+                        <column><field-ref name="dateText"/><field-ref name="markText"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <container-box>
+            <box-header title="Publication activity"/>
+            <box-body-nopad>
+                <form-list name="PageActivity" list="activity" skip-form="true" paginate="false">
+                    <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                    <field name="fieldText"><default-field title="Changed"><display/></default-field></field>
+                    <field name="oldValueText"><default-field title="From"><display/></default-field></field>
+                    <field name="newValueText"><default-field title="To"><display/></default-field></field>
+                    <field name="userText"><default-field title="By"><display/></default-field></field>
+                    <field name="changeReason"><default-field title="Reason"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="fieldText"/><field-ref name="newValueText"/></column>
+                        <column><field-ref name="changedDateText"/><field-ref name="userText"/></column>
+                    </columns>
+                </form-list>
+                <label text="No publication activity yet." type="p" style="text-caption m-muted q-pa-md" condition="!activity.length"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

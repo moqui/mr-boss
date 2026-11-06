@@ -38,15 +38,21 @@ along with this software (see the LICENSE.md file). If not, see
     (ironstone.customerservice.KnowledgeServices.get#KnowledgeContext): the spaces are those of the organization's knowledge
     sources, and with the case the mount was opened for (requestId, named on every request) a banner leads back to it and a
     page has Send to customer (Compose with its published address; a draft or an internal article is refused), Link to case,
-    and Suggest edit for one who may not edit it (a task for the review team; an editor saves a draft and asks for its review). -->
+    and Suggest edit for one who may not edit it (a task for the review team; an editor saves a draft and asks for its review).
+
+    In Commerce (Shared/PageDetail's PageContent tab mounts this component for a site page; impl-commerce P4, F53) setup
+    answers commerce (the page's binding: sitePageId, its wiki page and whether the user may edit it, COMMERCE_THEME_EDIT): the
+    bound page only, with no side pane, Publish, rename, move, duplicate, delete, Request review, editing together or the parts
+    under the page (tags, links, files, Chatter); Save posts to PageContent's savePage, which saves through
+    mantle.public.ThemeServices.store#SitePage, and publishing is the PagePublication tab's. -->
 <template><div class="boss-knowledge">
     <m-screen-context record-entity="moqui.resource.wiki.WikiPage" :record-id="contextRecordId" :title="contextTitle"></m-screen-context>
 
     <template v-if="!subActive">
     <div class="row no-wrap items-start">
         <!-- ===== the side pane: a column from 1024 px, a drawer over the page below ===== -->
-        <div v-if="!wide && sideOpen" class="fixed-full bg-black" style="opacity:.35;z-index:3000" @click="sideOpen = false"></div>
-        <div v-if="wide || sideOpen" :class="wide ? 'col-auto q-pr-md' : 'fixed-left q-pa-md shadow-8 scroll ' + (dark ? 'bg-dark' : 'bg-white')"
+        <div v-if="!wide && sideOpen && !inCommerce" class="fixed-full bg-black" style="opacity:.35;z-index:3000" @click="sideOpen = false"></div>
+        <div v-if="(wide || sideOpen) && !inCommerce" :class="wide ? 'col-auto q-pr-md' : 'fixed-left q-pa-md shadow-8 scroll ' + (dark ? 'bg-dark' : 'bg-white')"
                 :style="wide ? {width: '280px', position: 'sticky', top: '58px', maxHeight: 'calc(100vh - 66px)', overflowY: 'auto'} : {width: 'min(320px, 86vw)', zIndex: 3001}">
             <div class="row items-center no-wrap q-mb-sm">
                 <div v-if="inProject" class="col" style="min-width:0">
@@ -219,7 +225,7 @@ along with this software (see the LICENSE.md file). If not, see
                 <!-- the title row -->
                 <div class="row items-start q-mb-xs" :class="phone ? 'q-col-gutter-y-xs' : 'no-wrap'">
                     <div class="row no-wrap items-start" :class="phone ? 'col-12' : 'col'" style="min-width:0">
-                        <q-btn v-if="!wide" flat dense round icon="menu" class="q-mr-xs" @click="sideOpen = true"><q-tooltip>{{t('Pages')}}</q-tooltip></q-btn>
+                        <q-btn v-if="!wide && !inCommerce" flat dense round icon="menu" class="q-mr-xs" @click="sideOpen = true"><q-tooltip>{{t('Pages')}}</q-tooltip></q-btn>
                         <div class="col" style="min-width:0">
                             <div class="text-caption m-muted ellipsis">
                                 <template v-for="(crumb, index) in page.breadcrumbs" :key="'crumb' + index">
@@ -275,15 +281,15 @@ along with this software (see the LICENSE.md file). If not, see
                                         <q-item v-if="phone" clickable @click="openHistory()"><q-item-section avatar><q-icon name="sym_o_history"></q-icon></q-item-section><q-item-section>{{t('History')}}</q-item-section></q-item>
                                         <q-item v-if="canPublish && !wide" clickable @click="publishCurrent"><q-item-section avatar><q-icon name="sym_o_public"></q-icon></q-item-section><q-item-section>{{t('Publish this version')}}</q-item-section></q-item>
                                         <q-item v-if="canRequestReview && !wide" clickable @click="openRequestReview"><q-item-section avatar><q-icon name="sym_o_rate_review"></q-icon></q-item-section><q-item-section>{{t('Request review')}}</q-item-section></q-item>
-                                        <q-item v-if="space && space.canUpdate && page.wikiSpaceId === spaceId" clickable @click="openNewPage(page.pagePath)"><q-item-section avatar><q-icon name="sym_o_add"></q-icon></q-item-section><q-item-section>{{t('New page under this one')}}</q-item-section></q-item>
-                                        <q-item v-if="canEdit && !page.isRoot && page.wikiPageId" clickable @click="openRename"><q-item-section avatar><q-icon name="sym_o_edit_square"></q-icon></q-item-section><q-item-section>{{t('Rename')}}</q-item-section></q-item>
-                                        <q-item v-if="canEdit && !page.isRoot && page.wikiPageId" clickable @click="openMove"><q-item-section avatar><q-icon name="sym_o_drive_file_move"></q-icon></q-item-section><q-item-section>{{t('Move to…')}}</q-item-section></q-item>
+                                        <q-item v-if="!inCommerce && space && space.canUpdate && page.wikiSpaceId === spaceId" clickable @click="openNewPage(page.pagePath)"><q-item-section avatar><q-icon name="sym_o_add"></q-icon></q-item-section><q-item-section>{{t('New page under this one')}}</q-item-section></q-item>
+                                        <q-item v-if="!inCommerce && canEdit && !page.isRoot && page.wikiPageId" clickable @click="openRename"><q-item-section avatar><q-icon name="sym_o_edit_square"></q-icon></q-item-section><q-item-section>{{t('Rename')}}</q-item-section></q-item>
+                                        <q-item v-if="!inCommerce && canEdit && !page.isRoot && page.wikiPageId" clickable @click="openMove"><q-item-section avatar><q-icon name="sym_o_drive_file_move"></q-icon></q-item-section><q-item-section>{{t('Move to…')}}</q-item-section></q-item>
                                         <q-item v-if="canDuplicate" clickable @click="openDuplicate"><q-item-section avatar><q-icon name="sym_o_content_copy"></q-icon></q-item-section><q-item-section>{{t('Duplicate…')}}</q-item-section></q-item>
                                         <q-item clickable @click="copyLink"><q-item-section avatar><q-icon name="sym_o_link"></q-icon></q-item-section><q-item-section>{{t('Copy link')}}</q-item-section></q-item>
-                                        <q-item v-if="page.wikiPageId && !page.isNotes" clickable @click="toggleWatch"><q-item-section avatar><q-icon :name="page.following ? 'sym_o_visibility_off' : 'sym_o_visibility'"></q-icon></q-item-section>
+                                        <q-item v-if="!inCommerce && page.wikiPageId && !page.isNotes" clickable @click="toggleWatch"><q-item-section avatar><q-icon :name="page.following ? 'sym_o_visibility_off' : 'sym_o_visibility'"></q-icon></q-item-section>
                                             <q-item-section>{{page.following ? t('Stop watching') : t('Watch this page')}}</q-item-section></q-item>
-                                        <q-separator v-if="canEdit && !page.isRoot && page.wikiPageId"></q-separator>
-                                        <q-item v-if="canEdit && !page.isRoot && page.wikiPageId" clickable class="text-negative" @click="confirmDelete"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete')}}</q-item-section></q-item>
+                                        <q-separator v-if="!inCommerce && canEdit && !page.isRoot && page.wikiPageId"></q-separator>
+                                        <q-item v-if="!inCommerce && canEdit && !page.isRoot && page.wikiPageId" clickable class="text-negative" @click="confirmDelete"><q-item-section avatar><q-icon name="sym_o_delete" color="negative"></q-icon></q-item-section><q-item-section>{{t('Delete')}}</q-item-section></q-item>
                                     </q-list>
                                 </q-menu>
                             </q-btn>
@@ -369,7 +375,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </div>
 
                 <!-- under the page -->
-                <div v-if="!editing && page.exists" class="row q-mt-md">
+                <div v-if="!editing && page.exists && !inCommerce" class="row q-mt-md">
                     <div class="col-12 col-md-6">
                         <m-container-box :title="t('Linked from') + (page.backlinks.length ? ' (' + page.backlinks.length + ')' : '')">
                             <q-list v-if="page.backlinks.length" dense>
@@ -453,7 +459,7 @@ along with this software (see the LICENSE.md file). If not, see
                 </div>
 
                 <!-- Chatter: comments, activities and followers of the page (a note has none) -->
-                <div v-if="page.wikiPageId && !page.isNotes && !editing && page.exists" class="q-mt-sm">
+                <div v-if="page.wikiPageId && !page.isNotes && !editing && page.exists && !inCommerce" class="q-mt-sm">
                     <m-chatter id="boss-knowledge-chatter" record-entity="moqui.resource.wiki.WikiPage" :record-id="page.wikiPageId" default-tab="log"></m-chatter>
                 </div>
             </template>
@@ -666,7 +672,8 @@ module.exports = {
             preview: { open: false, src: '', name: '' },
             handledReviewKey: '', handledEditKey: '',
             project: null, linkPageValue: null, setup: { storage: 'repository', repositoryId: null, busy: false },
-            service: null, suggest: { open: false, note: '', busy: false }
+            service: null, suggest: { open: false, note: '', busy: false },
+            commerce: null
         };
     },
     computed: {
@@ -678,10 +685,17 @@ module.exports = {
         pathList() { return this.$root.currentPathList || []; },
         // Commons Knowledge, or a project's Docs tab (ProjectDetail mounts this screen there)
         inProject() { return this.pathList.indexOf('Knowledge') < 0 && this.pathList.indexOf('ProjectDetail') >= 0 && this.pathList.indexOf('Docs') >= 0; },
-        kIndex() { const index = this.pathList.lastIndexOf('Knowledge'); return index >= 0 || !this.inProject ? index : this.pathList.indexOf('Docs'); },
+        kIndex() {
+            const index = this.pathList.lastIndexOf('Knowledge');
+            if (index >= 0) return index;
+            if (this.inCommerce) return this.pathList.indexOf('PageContent');
+            return this.inProject ? this.pathList.indexOf('Docs') : index;
+        },
         projectLinked() { return this.project && this.project.linkedList ? this.project.linkedList : []; },
         // in Customer Service (CustomerService/Knowledge mounts this screen), with the case it was opened for
         inService() { return this.pathList.indexOf('CustomerService') >= 0; },
+        // a Commerce site page (Shared/PageDetail's PageContent tab): the bound page alone, saved through store#SitePage
+        inCommerce() { return this.pathList.indexOf('Knowledge') < 0 && this.pathList.indexOf('PageDetail') >= 0 && this.pathList.indexOf('PageContent') >= 0; },
         serviceActions() { return !!(this.service && this.service.requestId && this.page && this.page.exists && this.page.wikiPageId && !this.page.isNotes && !this.editing); },
         setupOptions() {
             const list = [];
@@ -706,7 +720,7 @@ module.exports = {
             return list;
         },
         // Duplicate: a page the user may view, with text, not a space's home page, into a space the user may add pages to
-        canDuplicate() { return !!(this.page && this.page.exists && !this.page.isRoot && this.page.wikiPageId && !this.page.viewingOld && this.duplicateSpaceOptions.length); },
+        canDuplicate() { return !this.inCommerce && !!(this.page && this.page.exists && !this.page.isRoot && this.page.wikiPageId && !this.page.viewingOld && this.duplicateSpaceOptions.length); },
         duplicateSpaceOptions() {
             const list = this.spaces.filter((space) => space.canUpdate && !space.readOnly).map((space) => ({ value: space.wikiSpaceId, label: space.description }));
             if (this.page && this.page.isNotes && this.me.notesSpaceId && !list.some((item) => item.value === this.me.notesSpaceId))
@@ -714,9 +728,12 @@ module.exports = {
             return list;
         },
         selectedKey() { return this.page && this.page.wikiSpaceId === this.spaceId && this.page.pagePath ? this.page.pagePath : null; },
-        canEdit() { return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.viewingOld); },
-        canPublish() { return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.isPublished && this.page.currentVersionName && !this.page.viewingOld); },
-        canRequestReview() { return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.viewingOld); },
+        canEdit() {
+            if (this.inCommerce) return !!(this.commerce && this.commerce.canEdit && this.page && this.page.exists && !this.page.viewingOld);
+            return !!(this.page && this.page.exists && this.page.canUpdate && !this.page.viewingOld);
+        },
+        canPublish() { return !this.inCommerce && !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.isPublished && this.page.currentVersionName && !this.page.viewingOld); },
+        canRequestReview() { return !this.inCommerce && !!(this.page && this.page.exists && this.page.canUpdate && !this.page.isNotes && this.page.wikiPageId && !this.page.viewingOld); },
         openReviews() { return this.page ? (this.page.reviews || []).filter((review) => review.statusId === 'WprRequested') : []; },
         reviewChipText() { return this.openReviews.map((review) => this.reviewText(review)).join(' · '); },
         missingLinks() {
@@ -739,7 +756,7 @@ module.exports = {
             return parts.join(' · ');
         },
         // co-edited when the page exists and the page has its notification socket; the markdown text otherwise
-        useCoedit() { return this.editing && !this.coeditOff && !!(this.page && this.page.exists && this.page.wikiPageId && this.$root.notificationClient); },
+        useCoedit() { return this.editing && !this.coeditOff && !this.inCommerce && !!(this.page && this.page.exists && this.page.wikiPageId && this.$root.notificationClient); },
         // a co-edited page's changes are kept by the server, so leaving loses nothing
         editDirty() { return this.editing && !this.useCoedit && this.page && this.editText !== this.page.text; },
         editStateText() { return this.saving ? this.t('Saving…') : this.editDirty ? this.t('Not saved yet') : (this.savedAt ? this.t('Saved') + ' ' + this.savedAt : ''); },
@@ -769,6 +786,10 @@ module.exports = {
         url(name) { return this.screenPath + '/' + name; },
         // in a project's Docs tab every request names the project (ProjectDetail's parameter, which fixes the space)
         withProject(params) {
+            if (this.inCommerce) {
+                if (typeof FormData !== 'undefined' && params instanceof FormData) { params.append('sitePageId', this.params.sitePageId || ''); return params; }
+                return Object.assign({ sitePageId: this.params.sitePageId || '' }, params || {});
+            }
             if (this.inService) {
                 if (typeof FormData !== 'undefined' && params instanceof FormData) { params.append('requestId', this.params.requestId || ''); return params; }
                 return Object.assign({ requestId: this.params.requestId || '' }, params || {});
@@ -797,6 +818,12 @@ module.exports = {
         },
         pageUrl(spaceId, path, extra) {
             const query = Object.assign({ wikiSpaceId: spaceId }, path ? { pagePath: path } : {}, extra || {});
+            // in Commerce: the bound page, another version of it; a page of another space opens in Commons Knowledge
+            if (this.inCommerce) {
+                if (this.commerce && (spaceId !== this.commerce.wikiSpaceId || (path || '') !== (this.commerce.pagePath || '')))
+                    return this.$root.linkBasePath + '/Commons/Knowledge?' + moqui.objToSearch(query);
+                return this.linkPath + '?' + moqui.objToSearch(Object.assign({ sitePageId: this.params.sitePageId || '' }, extra || {}));
+            }
             // in a project: its own space here, any other in Commons Knowledge
             if (this.inProject) {
                 if (this.project && spaceId && spaceId !== this.project.wikiSpaceId) return this.$root.linkBasePath + '/Commons/Knowledge?' + moqui.objToSearch(query);
@@ -831,6 +858,8 @@ module.exports = {
                 this.me = json.me || {};
                 this.project = json.project || null;
                 this.service = json.service || null;
+                this.commerce = json.commerce || null;
+                if (this.inCommerce) this.spaceId = this.commerce ? this.commerce.wikiSpaceId : null;
                 if (this.project && this.project.repositoryOptions && !this.project.repositoryOptions.length) this.setup.storage = 'db';
                 else if (this.project && this.project.repositoryOptions && !this.setup.repositoryId) this.setup.repositoryId = this.project.repositoryOptions[0].key;
                 if (this.inProject) this.spaceId = this.project && this.project.canView ? this.project.wikiSpaceId : null;
@@ -847,7 +876,8 @@ module.exports = {
             const key = this.currentKey();
             if (!force && key === this.loadedKey && this.page) { this.afterLoad(); return; }
             const p = this.params;
-            const query = p.wikiPageId ? { wikiPageId: p.wikiPageId } : { wikiSpaceId: p.wikiSpaceId || this.spaceId || '', pagePath: p.pagePath || '' };
+            const query = this.inCommerce ? { wikiPageId: this.commerce ? this.commerce.wikiPageId : '' }
+                : p.wikiPageId ? { wikiPageId: p.wikiPageId } : { wikiSpaceId: p.wikiSpaceId || this.spaceId || '', pagePath: p.pagePath || '' };
             if (p.versionName) query.versionName = p.versionName;
             if (!query.wikiPageId && !query.wikiSpaceId) { this.page = null; return; }
             const seq = ++this.pageSeq;
@@ -866,7 +896,8 @@ module.exports = {
                 this.outline = [];
                 this.pageShown++;
                 if (!page.isNotes && page.wikiSpaceId !== this.spaceId) this.spaceId = page.wikiSpaceId;
-                if (!page.isNotes) this.ensureTree(page.wikiSpaceId).then(() => this.expandTo(page.pagePath));
+                if (this.inCommerce) { /* the bound page alone: no tree */ }
+                else if (!page.isNotes) this.ensureTree(page.wikiSpaceId).then(() => this.expandTo(page.pagePath));
                 else this.ensureTree(this.spaceId);
                 this.afterLoad();
             }, (err) => {
@@ -876,7 +907,7 @@ module.exports = {
                 this.page = null;
                 this.notAvailable = true;
                 if (err && err.status && err.status >= 500) console.info('Knowledge: the page did not load', err.json || err.status);
-                if (this.spaceId) this.ensureTree(this.spaceId);
+                if (this.spaceId && !this.inCommerce) this.ensureTree(this.spaceId);
             });
         },
         // what the URL asks for besides the page: a review's compare, edit
@@ -1415,8 +1446,8 @@ module.exports = {
             return [
                 { keys: 'e', label: this.t('Knowledge: edit the page'), action: 'knowledgeEdit', when: () => when() && !this.editing && this.canEdit, run: () => { this.startEdit(); return true; } },
                 { keys: 'Mod+S', label: this.t('Knowledge: save a new version'), action: 'knowledgeSave', when: () => !this.subActive && this.editing, run: () => this.save(false) },
-                { keys: '/', label: this.t('Knowledge: search pages'), action: 'knowledgeSearch', when, run: () => this.focusSearch() },
-                { keys: 'n', label: this.t('Knowledge: new page'), action: 'knowledgeNew', when: () => when() && !this.editing && !!(this.space && this.space.canUpdate), run: () => this.openNewPage(null) },
+                { keys: '/', label: this.t('Knowledge: search pages'), action: 'knowledgeSearch', when: () => when() && !this.inCommerce, run: () => this.focusSearch() },
+                { keys: 'n', label: this.t('Knowledge: new page'), action: 'knowledgeNew', when: () => when() && !this.editing && !this.inCommerce && !!(this.space && this.space.canUpdate), run: () => this.openNewPage(null) },
                 { keys: 'h', label: this.t('Knowledge: history'), action: 'knowledgeHistory', when: () => when() && !this.editing && !!(this.page && this.page.exists), run: () => { this.openHistory(); return true; } }
             ];
         },

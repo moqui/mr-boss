@@ -15,28 +15,44 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Parents &amp; children" default-menu-index="2">
     <transition name="storeParents">
         <actions>
-            <service-call name="ironstone.products.CategoryServices.store#CategoryParent" in-map="context"/>
+            <!-- under Commerce these change through Store categories (StoreMerchandisingServices: the shared-store check, the
+                site generation; impl-commerce F65) -->
+            <if condition="appRoot == 'Commerce'"><then><message error="true">Under Commerce a category's parents, children and products change in Store categories, which checks the stores that share it.</message></then><else>
+                <service-call name="ironstone.products.CategoryServices.store#CategoryParent" in-map="context"/>
+            </else></if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
     </transition>
     <transition name="storeChildren">
         <actions>
-            <service-call name="ironstone.products.CategoryServices.store#CategoryParent" in-map="{productCategoryId:childProductCategoryId,parentProductCategoryId:productCategoryId,fromDate:fromDate,thruDate:thruDate,sequenceNum:sequenceNum}"/>
+            <!-- under Commerce these change through Store categories (StoreMerchandisingServices: the shared-store check, the
+                site generation; impl-commerce F65) -->
+            <if condition="appRoot == 'Commerce'"><then><message error="true">Under Commerce a category's parents, children and products change in Store categories, which checks the stores that share it.</message></then><else>
+                <service-call name="ironstone.products.CategoryServices.store#CategoryParent" in-map="{productCategoryId:childProductCategoryId,parentProductCategoryId:productCategoryId,fromDate:fromDate,thruDate:thruDate,sequenceNum:sequenceNum}"/>
+            </else></if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
     </transition>
     <transition name="moveParent">
         <actions>
-            <service-call name="ironstone.products.CategoryServices.move#CategoryParent" in-map="context"/>
+            <!-- under Commerce these change through Store categories (StoreMerchandisingServices: the shared-store check, the
+                site generation; impl-commerce F65) -->
+            <if condition="appRoot == 'Commerce'"><then><message error="true">Under Commerce a category's parents, children and products change in Store categories, which checks the stores that share it.</message></then><else>
+                <service-call name="ironstone.products.CategoryServices.move#CategoryParent" in-map="context"/>
+            </else></if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
     </transition>
     <transition name="endParent">
         <actions>
-            <service-call name="ironstone.products.CategoryServices.expire#CategoryParent" in-map="context"/>
+            <!-- under Commerce these change through Store categories (StoreMerchandisingServices: the shared-store check, the
+                site generation; impl-commerce F65) -->
+            <if condition="appRoot == 'Commerce'"><then><message error="true">Under Commerce a category's parents, children and products change in Store categories, which checks the stores that share it.</message></then><else>
+                <service-call name="ironstone.products.CategoryServices.expire#CategoryParent" in-map="context"/>
+            </else></if>
         </actions>
         <default-response url=".">
             <parameter name="productCategoryId"/>
@@ -44,9 +60,13 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
+        <!-- F65: Commerce changes the taxonomy in Store categories, not here -->
+        <set field="canEdit" from="canEdit &amp;&amp; appRoot != 'Commerce'"/>
         <set field="childRows" from="detail ? detail.children.map(row =&gt; Object.assign({},row,{childProductCategoryId:row.productCategoryId})) : []"/>
     </actions>
     <widgets>
+        <label text="Change this category's place and products in Store categories." type="p" style="text-caption m-muted"
+                condition="appRoot == 'Commerce' &amp;&amp; detail?.canEdit"/>
         <section name="Available" condition="recordFound">
             <widgets>
                 <container-box>

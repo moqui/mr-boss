@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PageRoute, PageDetail's Route and SEO tab (design-commerce §5 PageDetail PageRoute; impl-commerce P4): the page's title,
+    route under the Shop's pages/, locale, policy role and theme template, and its SEO title, description and social image,
+    saved through mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT; a taken route or role, a value out of
+    shape and a page changed since it was read are refused). On a published page the change is live at once and the
+    site's generation advances; the key fields are in the audit log (History). A reader sees the values. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Route and SEO" default-menu-index="2">
+    <transition name="saveRoute">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SitePage"
+                    in-map="{sitePageId:sitePageId, title:title, routePath:routePath, locale:locale, pageRole:pageRole, templateKey:templateKey,
+                        seoTitle:seoTitle, seoDescription:seoDescription, socialImageUrl:socialImageUrl, changeReason:(changeReason || null),
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the page's route and SEO.</message></if>
+        </actions>
+        <default-response url="."><parameter name="sitePageId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="routeValues" from="recordFound ? {sitePageId:sitePageId, title:sitePage.title, routePath:sitePage.routePath, locale:(sitePage.locale || ''),
+                pageRole:(sitePage.pageRole || ''), templateKey:(sitePage.templateKey || ''), seoTitle:(sitePage.seoTitle || ''),
+                seoDescription:(sitePage.seoDescription || ''), socialImageUrl:(sitePage.socialImageUrl || ''),
+                expectedLastUpdatedStamp:sitePage.lastUpdatedStamp, changeReason:''} : {}"/>
+        <set field="canEdit" from="recordFound &amp;&amp; pagesCan.themeEdit"/>
+    </actions>
+    <widgets>
+        <section name="RouteForm" condition="recordFound">
+            <widgets>
+                <label text="The page is published: a change here shows on the site at once." type="p" style="text-caption text-warning"
+                        condition="canEdit &amp;&amp; sitePage.state == 'published'"/>
+                <form-single name="PageRouteForm" transition="saveRoute" map="routeValues">
+                    <field name="sitePageId"><default-field><hidden/></default-field></field>
+                    <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                    <field name="title">
+                        <conditional-field condition="canEdit" title="Title"><text-line size="40"/></conditional-field>
+                        <default-field title="Title"><display/></default-field>
+                    </field>
+                    <field name="routePath">
+                        <conditional-field condition="canEdit" title="Route" tooltip="The address under the shop's pages/, such as returns or help/shipping">
+                            <text-line size="30"/>
+                        </conditional-field>
+                        <default-field title="Route"><display/></default-field>
+                    </field>
+                    <field name="locale">
+                        <conditional-field condition="canEdit" title="Locale" tooltip="Empty: every locale without a page of its own">
+                            <drop-down allow-empty="true">
+                                <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field title="Locale"><display/></default-field>
+                    </field>
+                    <field name="pageRole">
+                        <conditional-field condition="canEdit" title="Policy" tooltip="A policy page checkout links to; a site has one of each">
+                            <drop-down allow-empty="true">
+                                <option key="delivery" text="Delivery"/>
+                                <option key="returns" text="Returns"/>
+                                <option key="privacy" text="Privacy"/>
+                                <option key="terms" text="Terms"/>
+                            </drop-down>
+                        </conditional-field>
+                        <default-field title="Policy"><display text="${sitePage.roleText}"/></default-field>
+                    </field>
+                    <field name="templateKey">
+                        <conditional-field condition="canEdit" title="Template" tooltip="The theme's page template; empty for its default">
+                            <text-line size="30"/>
+                        </conditional-field>
+                        <default-field title="Template"><display/></default-field>
+                    </field>
+                    <field name="seoTitle">
+                        <conditional-field condition="canEdit" title="SEO title"><text-line size="60"/></conditional-field>
+                        <default-field title="SEO title"><display/></default-field>
+                    </field>
+                    <field name="seoDescription">
+                        <conditional-field condition="canEdit" title="SEO description"><text-area rows="3" cols="60"/></conditional-field>
+                        <default-field title="SEO description"><display/></default-field>
+                    </field>
+                    <field name="socialImageUrl">
+                        <conditional-field condition="canEdit" title="Social image" tooltip="An https address, or a path of the site">
+                            <text-line size="60"/>
+                        </conditional-field>
+                        <default-field title="Social image"><display/></default-field>
+                    </field>
+                    <field name="changeReason">
+                        <conditional-field condition="canEdit" title="Reason"><text-line size="40"/></conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field name="submitButton">
+                        <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                        <default-field><ignored/></default-field>
+                    </field>
+                    <field-layout>
+                        <field-row><field-ref name="title"/><field-ref name="routePath"/></field-row>
+                        <field-row><field-ref name="locale"/><field-ref name="pageRole"/></field-row>
+                        <field-row><field-ref name="templateKey"/><field-ref name="socialImageUrl"/></field-row>
+                        <field-ref name="seoTitle"/>
+                        <field-ref name="seoDescription"/>
+                        <field-ref name="changeReason"/>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
