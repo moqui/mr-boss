@@ -846,15 +846,15 @@ publication part), with SHOP-CATALOG's resolver core.
     link waits for P9's Reviews.
   - CategoryDetail's route under Products is unchanged (one route per screen); only the file moved.
 - Findings (provisional):
-  - **F-P3-1** The table check never changes a primary key (docs/Run-Deploy.md), so an existing database keeps
+  - **F62** The table check never changes a primary key (docs/Run-Deploy.md), so an existing database keeps
     ProductStoreProduct's old key (store, product) and gains a nullable `fromDate`: reads work (an empty date is open), but a
     second dated row of a product fails on the old key. No data file of any component has ProductStoreProduct rows, so a
     new database is unaffected; an existing one with rows needs the table rebuilt on its new key (copy the rows, drop,
     let the table check create it, reload with `fromDate` set). For the lead: a migration note in the upgrade notes or a
     Mantle migration service.
-  - **F-P3-2** `<field>_changeReason` in an entity-auto `create#` call's parameters does not reach the audit row (an
+  - **F63** `<field>_changeReason` in an entity-auto `create#` call's parameters does not reach the audit row (an
     `update#`'s does, as P2's History relies on); for TX/framework review.
-  - **F-P3-3** The demo's DEMO_VAR variants are drafts (`createVariantProducts`), so none is saleable until a catalog editor
+  - **F64** The demo's DEMO_VAR variants are drafts (`createVariantProducts`), so none is saleable until a catalog editor
     activates them; the walk activates three.
 
 **Review Nov 5 (P3).**
@@ -889,7 +889,7 @@ publication part), with SHOP-CATALOG's resolver core.
   administrator is left out under Commerce while the store's sales price stays. (mr-boss, this commit)
 - **R4 (low)** `get#CategoryStores` answered another organization's category with its stores' count; it now refuses it
   (`CATEGORY_UNAVAILABLE`). (fcff5e90)
-- **F-P3-1, decided:** an upgrade note, mr-mantle `docs/Upgrading.md` (linked from its README), with the key check and the
+- **F62, decided:** an upgrade note, mr-mantle `docs/Upgrading.md` (linked from its README), with the key check and the
   PostgreSQL and MySQL statements that give the old rows a start date and put the key on the three fields. A Mantle
   upgrade service was not built: the framework's `rekey_table` and `table_primary_key` are Rust only, with no service or
   script binding (ChatServices' `migrate#ChatActors` is a Rust service), and a service cannot run DDL.
@@ -907,7 +907,7 @@ publication part), with SHOP-CATALOG's resolver core.
   sellability column, for a large store. (4) Products' writes under Commerce's CategoryDetail (parents, members) go
   through Products' services: they need only `PRODUCT_CATALOG_EDIT`, skip `move#StoreCategory`'s shared-store check and do
   not advance the store's site generation; likewise Taxonomy's and Prices.js' store narrowing holds for the Commerce mount,
-  not for the same user under Products. Decide whether a StoreStaff limit and the generation reach Products. (5) F-P3-2
+  not for the same user under Products. Decide whether a StoreStaff limit and the generation reach Products. (5) F63
   stands. (6) `./moq test-apps` and the budget measure were not run.
 
 ### P4 — Site pages and navigation
@@ -1361,6 +1361,10 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides, noted and left for now (the user's call, §4); the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current |
 | F60 | P2: on a fresh runtime load with mr-moqui d9bcc20d's binary, Customer Service's Support demo step failed once (a held transaction-cache write cancelled, then a duplicate `form_inv_key`), so `dana@joesdist.example.com` had no login; it passed on the rerun | Reported to the user (the TX-Cache work); not Commerce's |
 | F61 | P2: deleting a ship-option or payment-gateway binding writes no audit row (the framework audits creates and updates only) | P6's CheckoutSettings records a binding's removal itself (its reason and user) |
+| F62 | P3: the framework's table check never changes a primary key, so an existing database keeps ProductStoreProduct's (store, product) key with a nullable `fromDate`, and a second dated row of a product fails there; no shipped data file has rows | mr-mantle `docs/Upgrading.md`: the key check and the PostgreSQL and MySQL statements; a framework service exposing `rekey_table` would let Mantle ship it as a setup step (later) |
+| F63 | P3: on an entity-auto `create#`, a `<field>_changeReason` parameter does not reach the audit row (on `update#` it does) | ProductStoreProduct keeps a `changeReason` field; a framework fix later |
+| F64 | P3: the demo's DEMO_VAR variants are drafts, so none is saleable until a catalog editor activates them | The assortment walk activates three |
+| F65 | P3 review: under Commerce, CategoryDetail's parent and member writes go through Products' services (PRODUCT_CATALOG_EDIT only), so they skip the shared-store check and the site generation; the store narrowing of Prices.js and Taxonomy.js applies under Commerce's mount, not to the same user under Products | P4: under Commerce those CategoryDetail writes go through StoreMerchandisingServices (shared-store check, generation) or are hidden in favour of StoreCategories; a StoreStaff limit under Products is not added (Products is catalog-wide) |
 
 ## 7. Later
 
