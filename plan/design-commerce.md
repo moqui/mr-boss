@@ -459,7 +459,7 @@ rows. **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
 
 **As built (Nov 6, impl-commerce P12).** Paid access is a Product360 tab (`Shared/Product360/PaidAccess`)
 over `R.get#ProductPaidAccess` and `R.store#ProductSubscriptionResource`: Commerce edits it
-(`COMMERCE_SUBSCRIPTION_MANAGE`, the product in the assortment of one of the user's stores), Products shows
+(`COMMERCE_SUBSCRIPTION_MANAGE`, the product sold only in stores the user works: PRODUCT_SHARED otherwise, P12 review R2), Products shows
 the rows read only for a digital product. A change ends the row in effect and starts its successor (a row
 not yet started changes in place); one current row per resource (RESOURCE_BOUND); a resource is offered
 only when its init and every named handler service is installed (RESOURCE_UNAVAILABLE); ending one with

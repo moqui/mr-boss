@@ -113,7 +113,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 <form-single name="ChangePaidAccessForm_${subscriptionResourceId}_${fromDate}" transition="savePaidAccess"
                                         map="{productId:productId, subscriptionResourceId:subscriptionResourceId, fromDate:fromDate, change:'Y',
                                             availableTime:values.availableTime, availableTimeUomId:values.availableTimeUomId,
-                                            useCountLimit:values.useCountLimit, useTime:values.useTime, useTimeUomId:values.useTimeUomId}">
+                                            useCountLimit:values.useCountLimit, useTime:values.useTime, useTimeUomId:values.useTimeUomId,
+                                            thruDate:values.thruDate, purchaseFromDate:values.purchaseFromDate, purchaseThruDate:values.purchaseThruDate,
+                                            useRoleTypeId:values.useRoleTypeId}">
                                     <field name="productId"><default-field><hidden/></default-field></field>
                                     <field name="subscriptionResourceId"><default-field><hidden/></default-field></field>
                                     <field name="fromDate"><default-field><hidden/></default-field></field>
@@ -128,6 +130,18 @@ along with this software (see the LICENSE.md file). If not, see
                                     </field>
                                     <field name="useCountLimit"><default-field title="Use limit"><text-line size="4"/></default-field></field>
                                     <field name="useTime"><default-field title="Use time"><text-line size="4"/></default-field></field>
+                                    <!-- the row's other terms carried to its successor (P12 review R4: a change left them empty) -->
+                                    <field name="useTimeUomId">
+                                        <default-field title="Use time unit">
+                                            <drop-down allow-empty="true">
+                                                <option key="TF_hr" text="Hours"/><option key="TF_day" text="Days"/><option key="TF_wk" text="Weeks"/><option key="TF_mon" text="Months"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate"><default-field title="Thru"><date-time/></default-field></field>
+                                    <field name="purchaseFromDate"><default-field title="Sold from"><date-time/></default-field></field>
+                                    <field name="purchaseThruDate"><default-field title="Sold thru"><date-time/></default-field></field>
+                                    <field name="useRoleTypeId"><default-field title="Used by role" tooltip="Empty: the buyer"><text-line size="16"/></default-field></field>
                                     <field name="submitButton"><default-field title="Save for later purchases"><submit/></default-field></field>
                                 </form-single>
                             </container-dialog>
