@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     - choices: the app's drop-downs (ironstone.commerce.ContextServices.get#Choices: stores, organizations).
     - storeOptions: a store form's drop-downs, the values its Mantle save accepts
       (mantle.product.StoreAdminServices.find#StoreOptions: facilities, staff, emailTemplates, orderChecks, documents,
-      wikiSpaces, taxGateways, settingTypes, groupStores), after the root's Commerce check. -->
+      wikiSpaces, taxGateways, settingTypes, groupStores), after the root's Commerce check.
+    - catalogChoices (P3): categories and products of the catalog, in Commerce's catalog context. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="choices" read-only="true">
@@ -34,6 +35,16 @@ along with this software (see the LICENSE.md file). If not, see
                         organizationPartyId:(organizationPartyId || null), typeEnumId:(typeEnumId || null), term:(term || null),
                         selected:(selected || null)}"/>
             <script>ec.web.sendJsonResponse(found?.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- P3: the catalog's categories and products for a Commerce form (Products' search#CatalogChoices in Commerce's catalog
+        context: the user's organizations' records) -->
+    <transition name="catalogChoices" read-only="true">
+        <actions>
+            <service-call name="ironstone.products.CatalogServices.search#CatalogChoices" out-map="found"
+                    in-map="{appRoot:'Commerce', choice:(choice || 'products'), term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found?.rows || [])</script>
         </actions>
         <default-response type="none"/>
     </transition>

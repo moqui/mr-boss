@@ -30,7 +30,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="productId">
                                 <header-field title="Product"/>
                                 <default-field>
-                                    <link url="//Products/Products/Product360" text="${productId}" parameter-map="{productId:productId}" link-type="anchor"/>
+                                    <link url="${sharedLinks['Products/Product360']}" text="${productId}" parameter-map="{productId:productId}" link-type="anchor"/>
                                 </default-field>
                             </field>
                             <field name="fromDate">

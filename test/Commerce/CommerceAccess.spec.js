@@ -461,3 +461,42 @@ feature("a store-limited staff member is refused another store of the same organ
         other.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// P3 (F51, F47): a store-limited staff member is refused another store's assortment of the same organization
+// (mantle.product.StoreMerchandisingServices.find#StoreProducts, as Assortment reads it), and the store choices of the shared
+// price screens under Commerce (Products' get#PriceOptions, F47) list their stores only; the reader of the organization reads
+// and lists the second store, another organization's manager neither. BOSS_COM_P2_SECOND is the P2 case's Retail store.
+feature("a store-limited staff member is refused another store's assortment and store choices; another organization's manager too", {
+    when() {
+        const products = (user, productStoreId) =>
+            asUser(user, () => refusal("mantle.product.StoreMerchandisingServices.find#StoreProducts", {productStoreId}), false)
+        const priceStores = user =>
+            asUser(
+                user,
+                () =>
+                    Array.from(
+                        invoke("ironstone.products.CatalogServices.get#PriceOptions", {appRoot: "Commerce"}).priceOptions?.stores || []
+                    ).map(row => row.value),
+                false
+            )
+        return {
+            reader: products(users.read, "BOSS_COM_P2_SECOND"),
+            staff: products(users.storeStaff, "BOSS_COM_P2_SECOND"),
+            staffOwn: products(users.storeStaff, ids.storeId),
+            other: products(users.services, ids.storeId),
+            readerStores: priceStores(users.read),
+            staffStores: priceStores(users.storeStaff),
+            otherStores: priceStores(users.services)
+        }
+    },
+    then({reader, staff, staffOwn, other, readerStores, staffStores, otherStores}) {
+        reader == ""
+        staff.includes("RECORD_UNAVAILABLE")
+        staffOwn == ""
+        other.includes("RECORD_UNAVAILABLE")
+        readerStores.includes(ids.storeId)
+        readerStores.includes("BOSS_COM_P2_SECOND")
+        staffStores == [ids.storeId]
+        !otherStores.includes(ids.storeId)
+    }
+})

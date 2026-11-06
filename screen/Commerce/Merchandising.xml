@@ -12,12 +12,25 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Merchandising area of IronStone Commerce (design-commerce §4): a store's assortment and publication, its
-    categories, reviews, price lists and availability, and the shared catalog screens (impl-commerce P3, P9); for every
-    Commerce user, the merchandiser changing them (COMMERCE_MERCHANDISE). -->
+<!-- The Merchandising area of IronStone Commerce (design-commerce §4, §10; impl-commerce P3): a store's assortment and its
+    publication (Assortment, with PublishProducts' preview hidden from the menu), its categories (Store categories, a .qvue
+    tree with its terminal twin), and Products' shared catalog screens in Commerce's context
+    (ironstone.products.CatalogServices.get#SharedContext's Commerce branch: the user's stores, catalog and price writes by
+    their own permissions, no cost, margin or method): Documents with DocumentDetail, Price lists with PriceListDetail and
+    Explain price in the menu; Product360, CategoryDetail and InventoryAvailability hidden, opened from rows. Every Commerce
+    user; the merchandiser changes the assortment and categories (COMMERCE_MERCHANDISE), the publisher publishes
+    (COMMERCE_PUBLISH), each checked again in mantle.product.StoreMerchandisingServices. Reviews come with P9. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Merchandising" default-menu-index="3" menu-image="sym_o_category" menu-image-type="icon">
+    <subscreens default-item="Assortment" always-use-full-path="true">
+        <subscreens-item name="Documents" location="component://mr-boss/screen/Commerce/Merchandising/Documents.xml" menu-index="3"/>
+        <subscreens-item name="PriceLists" location="component://mr-boss/screen/Commerce/Merchandising/PriceLists.xml" menu-index="4"/>
+        <subscreens-item name="PriceExplain" location="component://mr-boss/screen/Shared/PriceExplain.xml" menu-title="Explain price" menu-index="5"/>
+        <subscreens-item name="Product360" location="component://mr-boss/screen/Shared/Product360.xml" menu-include="false"/>
+        <subscreens-item name="CategoryDetail" location="component://mr-boss/screen/Shared/CategoryDetail.xml" menu-include="false"/>
+        <subscreens-item name="InventoryAvailability" location="component://mr-boss/screen/Shared/InventoryAvailability.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: A store's assortment, categories, reviews and prices." type="p"/>
+        <subscreens-panel id="CommerceMerchandisingPanel" type="tab"/>
     </widgets>
 </screen>

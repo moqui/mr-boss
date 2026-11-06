@@ -249,7 +249,17 @@ const linkPaths = [
     "Settings",
     // P2: a store's configuration and the store groups (design §3)
     "Stores/StoreDetail",
-    "Stores/StoreGroups"
+    "Stores/StoreGroups",
+    // P3: the assortment, its publication, the store's categories and the shared catalog mounts (design §4, §10)
+    "Merchandising/Assortment",
+    "Merchandising/PublishProducts",
+    "Merchandising/StoreCategories",
+    "Merchandising/Product360",
+    "Merchandising/CategoryDetail",
+    "Merchandising/Documents",
+    "Merchandising/PriceLists",
+    "Merchandising/PriceExplain",
+    "Merchandising/InventoryAvailability"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -462,6 +472,22 @@ const choiceSources = {
             .slice(0, choiceLimit)
         if (selected && !options.some(option => option.value === selected) && ids.includes(selected))
             options.push({value: selected, label: partyName(selected)})
+        return options
+    },
+    // P3: a store's categories (its category roles and below, mantle.product.StoreMerchandisingServices.get#StoreCategories,
+    // which checks the store again), by name or id
+    storeCategories: (userScope, term, selected, p) => {
+        if (!p.productStoreId || !storeIn(userScope, p.productStoreId)) return []
+        const tree =
+            call("mantle.product.StoreMerchandisingServices.get#StoreCategories", {productStoreId: p.productStoreId}).tree || []
+        const needle = term.toLowerCase()
+        const options = Array.from(tree)
+            .filter(node => !needle || (node.categoryName + " " + node.productCategoryId).toLowerCase().includes(needle))
+            .slice(0, choiceLimit)
+            .map(node => ({value: node.productCategoryId, label: node.categoryName}))
+        const chosen = selected ? Array.from(tree).find(node => node.productCategoryId === selected) : null
+        if (chosen && !options.some(option => option.value === selected))
+            options.push({value: chosen.productCategoryId, label: chosen.categoryName})
         return options
     }
 }

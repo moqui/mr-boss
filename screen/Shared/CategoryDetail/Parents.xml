@@ -56,7 +56,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="parentProductCategoryId">
                                 <header-field title="Parent"/>
                                 <default-field>
-                                    <link url="//Products/Categories/CategoryDetail" text="${parentProductCategoryId}" parameter-map="{productCategoryId:parentProductCategoryId}" link-type="anchor"/>
+                                    <link url="${sharedLinks['Categories/CategoryDetail']}" text="${parentProductCategoryId}" parameter-map="{productCategoryId:parentProductCategoryId}" link-type="anchor"/>
                                 </default-field>
                             </field>
                             <field name="fromDate">
@@ -212,7 +212,7 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="childProductCategoryId">
                                 <header-field title="Child"/>
                                 <default-field>
-                                    <link url="//Products/Categories/CategoryDetail" text="${childProductCategoryId}" parameter-map="{productCategoryId:childProductCategoryId}" link-type="anchor"/>
+                                    <link url="${sharedLinks['Categories/CategoryDetail']}" text="${childProductCategoryId}" parameter-map="{productCategoryId:childProductCategoryId}" link-type="anchor"/>
                                 </default-field>
                             </field>
                             <field name="fromDate">

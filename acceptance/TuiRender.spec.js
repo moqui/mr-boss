@@ -52,6 +52,7 @@ const demoParameters = {
     "Products/Prices/PriceHistory": {productId: "BOSS_PRD_OWN"},
     "Products/Products/BulkPrice": {productIds: "BOSS_PRD_OWN"},
     "Product360": {productId: "BOSS_PRD_OWN"},
+    "CategoryDetail": {productCategoryId: "BOSS_PRD_CAT"},
     "Products/Categories/CategoryDetail": {productCategoryId: "BOSS_PRD_CAT"},
     "Insights/Dashboard": {definitionId: "mantle-sales", from: "now-1y", thru: "now"},
     "Commons/QuickCreate": { kind: "task" },

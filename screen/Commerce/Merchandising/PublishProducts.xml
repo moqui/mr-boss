@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PublishProducts (design-commerce §4 PublishProducts; style-guide §3.7 Task; impl-commerce P3): the preview of a publication
+    action on the products chosen on Assortment (mantle.product.StoreMerchandisingServices.preview#Publication: each product
+    allowed or refused with its reason, its readiness findings, the variants a virtual product's row covers, and the sites
+    whose generation the change advances), then the batch (publish#StoreProducts: one reason and effective time, a result per
+    product, keyed by an operation key so a resubmit answers the first result). For a publisher (COMMERCE_PUBLISH), checked
+    again in Mantle. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Review publication" default-menu-include="false">
+    <parameter name="productStoreId" required="true"/>
+    <parameter name="productIds"/>
+    <parameter name="publishAction"/>
+    <transition name="publish">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.publish#StoreProducts" out-map="done"
+                    in-map="{productStoreId:productStoreId, productIds:String(productIds || '').split(',').filter(Boolean),
+                        action:publishAction, fromDate:(fromDate || null), changeReason:changeReason,
+                        expectedLastUpdatedStamps:JSON.parse(expectedStampsJson || '{}'), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="refusedText" from="(done.results || []).filter((row) =&gt; !row.ok).map((row) =&gt; row.productName + ' (' + row.message + ')').join('; ')"/>
+                <message type="success">${done.doneCount} done.</message>
+                <if condition="done.failedCount"><message type="warning">${done.failedCount} not done: ${refusedText}</message></if>
+            </if>
+        </actions>
+        <default-response url="../Assortment"><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="idList" from="String(productIds || '').split(',').filter(Boolean)"/>
+        <set field="publishAction" from="publishAction || 'publish'"/>
+        <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:(productStoreId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="storeFound" from="!!storeRecord?.recordId &amp;&amp; idList.length &gt; 0"/>
+        <if condition="storeFound">
+            <service-call name="mantle.product.StoreMerchandisingServices.preview#Publication" out-map="preview" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId, productIds:idList, action:publishAction}"/>
+        </if>
+        <set field="items" from="(preview?.items || []).map((item) =&gt; Object.assign({}, item, {resultText: item.allowed ? (item.findingsText ? 'Ready, with warnings' : 'Ready') : item.message, resultColor: item.allowed ? (item.findingsText ? 'warning' : 'positive') : 'negative'}))"/>
+        <set field="variants" from="items.flatMap((item) =&gt; (item.variants || []).map((variant) =&gt; Object.assign({virtualName: item.productName}, variant)))"/>
+        <set field="sitesText" from="(preview?.sites || []).map((site) =&gt; site.siteName + ' (generation ' + site.generation + ' to ' + site.nextGeneration + ')').join(', ')"/>
+        <set field="allowedCount" from="items.filter((item) =&gt; item.allowed).length"/>
+        <set field="expectedStampsJson" from="JSON.stringify(Object.fromEntries(items.filter((item) =&gt; item.lastUpdatedStamp != null).map((item) =&gt; [item.productId, item.lastUpdatedStamp])))"/>
+        <set field="actionText" from="({publish:'Publish', withdraw:'Withdraw', exclude:'Exclude', restore:'Restore'})[publishAction] || 'Publish'"/>
+        <set field="publishForm" from="{productStoreId:productStoreId, productIds:idList.join(','), publishAction:publishAction,
+                expectedStampsJson:expectedStampsJson, operationKey:'publish-' + ec.user.randomString(24)}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Review: ${actionText} ${idList.length} products" type="h5"/>
+                <label text="${storeRecord?.label || productStoreId}" type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto"><link url="../Assortment" text="Back to the assortment" link-type="anchor" parameter-map="{productStoreId:productStoreId}"/></container>
+        </container>
+        <section name="NotAvailable" condition="!storeFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Not available"/>
+                    <box-body>
+                        <label text="Choose products of one of your stores on the assortment." type="p"/>
+                        <link url="../Assortment" text="Back to the assortment" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Preview" condition="storeFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Products"/>
+                    <box-body-nopad>
+                        <form-list name="PublicationItems" list="items" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="productId"><default-field title="ID"><display/></default-field></field>
+                            <field name="stateText"><default-field title="Now"><display/></default-field></field>
+                            <field name="resultText">
+                                <default-field title="Result">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${resultColor}">${
+                                            WebUtilities.encodeHtml(resultText || '')}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: resultText || ""})}]]></text>
+                                        <text type="html">${resultText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="findingsText"><default-field title="Findings"><display/></default-field></field>
+                            <field name="coveredCount"><default-field title="Variants covered"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                                <column><field-ref name="resultText"/><field-ref name="findingsText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="Variants" condition="variants.length &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Variants the publication covers"/>
+                            <box-body-nopad>
+                                <form-list name="PublicationVariants" list="variants" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Variant"><display/></default-field></field>
+                                    <field name="productId"><default-field title="ID"><display/></default-field></field>
+                                    <field name="virtualName"><default-field title="Of"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+                <label text="Advances the publication of ${sitesText}, so their pages, search and feeds refresh." type="p" style="text-caption" condition="sitesText"/>
+                <label text="No site sells from this store yet; the change applies when one does." type="p" style="text-caption m-muted" condition="!sitesText"/>
+                <section name="Publish" condition="can.publish &amp;&amp; allowedCount &gt; 0">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${actionText} ${allowedCount} products"/>
+                            <box-body>
+                                <form-single name="PublishForm" transition="publish" map="publishForm">
+                                    <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                    <field name="productIds"><default-field><hidden/></default-field></field>
+                                    <field name="publishAction"><default-field><hidden/></default-field></field>
+                                    <field name="expectedStampsJson"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="fromDate">
+                                        <default-field title="Effective" tooltip="Empty: now; a later time schedules it">
+                                            <date-time type="timestamp"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton">
+                                        <default-field title="${actionText} ${allowedCount} products">
+                                            <submit confirmation="${actionText} ${allowedCount} products in ${storeRecord?.label || productStoreId}?"/>
+                                        </default-field>
+                                    </field>
+                                    <field-layout>
+                                        <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                                <label text="A product marked not ready is left out with its reason; the others are done." type="p" style="text-caption m-muted"
+                                        condition="allowedCount &lt; items.length"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

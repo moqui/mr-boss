@@ -20,6 +20,10 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <!-- Products' own: feature defaults are catalog setup, not a store's (Commerce's mount leaves the tab out) -->
+    <condition>
+        <expression>appRoot != 'Commerce'</expression>
+    </condition>
     <widgets>
         <section name="Available" condition="recordFound">
             <widgets>

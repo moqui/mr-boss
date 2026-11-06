@@ -14,6 +14,9 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Categories" default-menu-index="3" menu-image="sym_o_category" menu-image-type="icon">
-    <subscreens default-item="List"/>
+    <subscreens default-item="List">
+        <!-- the shared category record (impl-commerce P3, F5): Products' context here, Commerce's under Merchandising -->
+        <subscreens-item name="CategoryDetail" location="component://mr-boss/screen/Shared/CategoryDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets><subscreens-active/></widgets>
 </screen>

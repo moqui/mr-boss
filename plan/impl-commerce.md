@@ -265,7 +265,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P0 Checks | all (read) | — | done Nov 5 (§6 F1–F56) |
 | P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | built Nov 5, 2026 |
 | P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | built Nov 5, 2026 |
-| P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability | — |
+| P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability || built Nov 5, 2026 |
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | — |
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | — |
@@ -738,6 +738,112 @@ publication part), with SHOP-CATALOG's resolver core.
   - moving a category shared by two stores names both, a cycle is refused, and the terminal twin's moves give the same
     tree;
   - a merchandiser without `PRICE_EDIT` sees store prices on Product360 and cannot change them.
+
+**Built Nov 5 (P3).**
+- Mantle:
+  - `entity/ProductStoreEntities.xml`: ProductStoreProduct is dated, `fromDate` in its key (default `ec.user.nowTimestamp`,
+    so a data row or `create#` with no date still loads), with `thruDate`, `publicationKindEnumId` (seeded
+    `StorePublicationKind`: `PspkPublished`, `PspkExcluded`; empty means published, the rows made before P3),
+    `templateKey`, `badgeText`, `featuredRank` and `changeReason`, each audit-logged. Its two readers take the current
+    row: ShipmentServices' signature requirement (a `date-filter` find, latest first) and ForumIntegration.js'
+    `productPublic` (a current row that is not an exclusion). StoreAdmin.js exports `saveDated`, `dateOf`, `reason`,
+    `rowDates`, `stateOf` for the store modules.
+  - `service/mantle/product/StoreMerchandisingServices.xml` over `StoreMerchandising.js` (operations table):
+    `get#StorePublication` (the resolver, `anonymous-view`: own row or the virtual's published row without the variant's
+    exclusion, sellable by `check#ProductUsable` Sell, inside the store's current `PsctViewAllow` tree when it has one, an
+    empty one showing nothing, and with `siteId` an enabled `shop` mount; purchasable adds `PsctPurchaseAllow`; each answer
+    with `via`, `reasonCode` and the row's template, badge and rank; a date other than now needs `COMMERCE_VIEW` and the
+    store's scope), `find#StoreProducts`, `store#StoreProduct` (a new dated row; a scheduled one changed in place),
+    `preview#Publication` (allowed or refused per product with its code, readiness findings sellable/price/content/stock as
+    warnings, the variants a virtual covers, the sites and their next generation), `publish#StoreProduct` (one product,
+    caller's transaction) and `publish#StoreProducts` (each product through a probe in its own transaction, one reason, a
+    result per product, `PostingOperation` `StorePublication` so a retry answers the first result, per-product expected
+    revisions), `propose#StorePublication` (a store with no rows; never writes), `find#ProductPublications` (Product360),
+    `get#StoreCategories`, `get#CategoryStores`, `store#StoreCategory` (dated roles; a one-category role ends the other
+    category's row), `move#StoreCategory` (dated rollup move, or in place under the same parent: a sequence, `direction`
+    up/down or `beforeCategoryId`, renumbering the siblings 10, 20, 30), `store#CategoryMembership` (bulk, a result per
+    product). Permissions: `COMMERCE_VIEW` reads, `COMMERCE_MERCHANDISE` changes the assortment details and categories,
+    `COMMERCE_PUBLISH` publishes; store scope through StoreAdmin.js (organization and StoreStaff limit). Every change
+    advances `PublicSite.generation` of the sites whose `PublicSiteApp{app: "shop", targetId: store}` names the store, in
+    the change's transaction. Category changes name the user's stores that show the category (`previewOnly`), need
+    `confirmShared` when more than one does, and are refused when a store the user does not work shows it
+    (`CATEGORY_SHARED_OUTSIDE`: copy the taxonomy instead); cycles (now or by a later rollup) are `CATEGORY_CYCLE`, a past
+    date `VALUE_INVALID`, a later move `DATED_OVERLAP`.
+- BOSS:
+  - Products' shared screens (F4, F5, F46–F48): `SharedContext.js` gains the Commerce branch (tabs Summary, Features,
+    Categories, Identifiers, Documents, Prices for a price reader, Stock at the user's stores' facilities, History; `read`,
+    `priceRead`, `catalogEdit` and `priceEdit` passed through from `get#CatalogAccess`; cost, margin, supplier price,
+    method and stock policy off; Commerce's `sharedLinks`); `get#SharedContext` declares `storeIds`; Prices.js narrows the
+    store choices to them and neither lists nor changes a price of another store; Taxonomy.js (`get#CategoryOptions`,
+    `store#CategoryRow` take `appRoot`) narrows its store choices and identifier stores; Documents.js links the mounting
+    app's DocumentDetail; Shared/Prices.xml hides History and Review bulk change without their routes (F48).
+  - CategoryDetail moved to `screen/Shared/CategoryDetail.xml` with its tabs (`Shared/CategoryDetail/`), mounted at
+    `Products/Categories/CategoryDetail` (route unchanged) and `Commerce/Merchandising/CategoryDetail`; it reads
+    `get#SharedContext` by `appRoot`, its parent, child and product links use `sharedLinks`; under Commerce the header
+    names the user's stores that show the category (`get#CategoryStores`), and Feature defaults and Delete are left out.
+  - `screen/Commerce/Merchandising.xml` (Assortment, Store categories, Documents, Price lists, Explain price; Product360,
+    CategoryDetail and InventoryAvailability hidden) with `Merchandising/Assortment.xml` (AssortmentFind, the list with phone
+    columns, Publish or withdraw on the selection, Storefront details per row, the adoption proposal box),
+    `PublishProducts.xml` (preview, variants covered, sites' generations, the batch with effective time and reason),
+    `StoreCategories.xml` + `StoreCategories.qvue` (the tree with drag onto a category or before a sibling, Move up/down,
+    each move previewed and confirmed when shared; JSON `tree` and `move` transitions answering refusals in `errors`) and
+    `StoreCategoriesTui.xml` (StoreRoots, CategoryTree with parent, sequence, Move up/down and Move, CategoryProducts),
+    `Documents.xml` and `PriceLists.xml` wrappers. Product360 under Commerce shows "Publication in your stores"
+    (`find#ProductPublications`). Commerce.js: `linkPaths` for the Merchandising routes, the `storeCategories` choice;
+    CommerceParts gains `catalogChoices`. Demo: POPC_DEFAULT publishes DEMO_1_1, DEMO_1_2, DEMO_2_1, DEMO_3_1 and
+    DEMO_UNIT (BossCommerceDemoData.xml); DEMO_VAR is left for the walk.
+- Specs: Mantle `test/product/StorePublication` (6 features, 1.7 s: no rows and an old-shaped row; the batch's
+  permission, reason, results, retry and generation, a virtual covering its variants and an exclusion; a future row, a
+  withdrawal and an empty allow category; storefront details as a dated row, stale and unpublished refused; the moves'
+  cycle, past date, outside and shared refusals, a reorder and Move up; membership and a one-category role). BOSS
+  `CommerceAssortment` (3 features, 0.5 s: the batch with a result per product, the shared-category preview naming both
+  stores, Product360's one qvt render under Commerce) and a `CommerceAccess` case (0.4 s: the store-limited member refused
+  BOSS_COM_P2_SECOND's assortment and given only their store in the Commerce price store choices; Services' manager
+  refused). Also run, all pass: Mantle StoreAdmin, OrderToCashBasicFlow, WarehouseShipping, ShipmentPick,
+  CarrierServices, RestApiTests (109 features); BOSS CommerceAccess, ProductsAccess, ProductsDocuments, ProductsTaxonomy,
+  ProductsSharedContext, ProductsPricing, ProductsPriceLists, ProductsFinish, ProductsInventory, CustomerServiceAccess,
+  CustomerServiceOrders, PurchasingAccess, WarehouseAccess, ManufacturingAccess, AccountingAccess, CommerceStores,
+  ProjectsAccess (166 features). Not run: `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommerceAssortmentWalk` (6 features: DEMO_VAR published through PublishProducts with
+  three variants made active, the preview listing every variant, the active ones public by the virtual's row, the drafts
+  not sellable, BOSS_COM_DIGITAL unchanged; one variant excluded and the others public; a move of DEMO_ONE shared with a
+  second store naming both and refused unconfirmed, a cycle refused; the twin's Move down and the tree view's moves giving
+  the same tree; the merchandiser seeing POPC_DEFAULT's price on Product360's Prices without New sales price or bulk change
+  and refused `store#ProductPrice`; every Merchandising screen in qvt and html, StoreCategories in tui, CategoryDetail's
+  stores line), run: 6 passed. Also run:
+  CommerceFoundationWalk, CommerceStoresWalk and ProductsTaxonomyScreens pass; AppStructure and TuiRender failed on
+  `Shared/CategoryDetail` rendered with no category, fixed by its demo parameters in both sweeps (then 21 of 21). PASS
+  Integrations passes (the Forum product link on dated rows); Forum's "PASS and Mantle copies of the operation schema"
+  fails on this workspace only, because its mr-pass is master with Shop P1 and its mr-mantle is com/p3 without it. The
+  whole mr-boss acceptance suite was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites, none in the new or changed screens.
+- Inventories: ss-inventory's Commerce rows of CategoryDetail, CategoryContent, Product360, Documents and the two
+  FindProductStoreCategory forms name their built paths; usl-inventory's price, price-list and slug rows with Commerce
+  paths name the Commerce mounts (the two `generate#UrlSlugFrom*` rows stay unbuilt, as in Products).
+- Decisions:
+  - A row's reason is a `changeReason` field on ProductStoreProduct, audit-logged: the framework's `<field>_changeReason`
+    did not reach the audit row of a create (design §4 updated).
+  - Publishing a product is not blocked by its readiness (sellable, price, content, stock policy are warnings): the
+    resolver intersects sellability, so a draft published early shows once it is active.
+  - A category change that a store the user does not work would see is refused, not confirmed: another organization's or
+    another staff member's store is not theirs to change; copying the taxonomy is the way (design §4 updated). No copy
+    service is built in P3.
+  - Store categories' role and membership forms live in the terminal twin, which the tree view opens; the tree view does
+    moves and reads members.
+  - Product360 under Commerce shows the publication of every store of the user's (first 50), not one fixed store; the review
+    link waits for P9's Reviews.
+  - CategoryDetail's route under Products is unchanged (one route per screen); only the file moved.
+- Findings (provisional):
+  - **F-P3-1** The table check never changes a primary key (docs/Run-Deploy.md), so an existing database keeps
+    ProductStoreProduct's old key (store, product) and gains a nullable `fromDate`: reads work (an empty date is open), but a
+    second dated row of a product fails on the old key. No data file of any component has ProductStoreProduct rows, so a
+    new database is unaffected; an existing one with rows needs the table rebuilt on its new key (copy the rows, drop,
+    let the table check create it, reload with `fromDate` set). For the lead: a migration note in the upgrade notes or a
+    Mantle migration service.
+  - **F-P3-2** `<field>_changeReason` in an entity-auto `create#` call's parameters does not reach the audit row (an
+    `update#`'s does, as P2's History relies on); for TX/framework review.
+  - **F-P3-3** The demo's DEMO_VAR variants are drafts (`createVariantProducts`), so none is saleable until a catalog editor
+    activates them; the walk activates three.
 
 ### P4 — Site pages and navigation
 

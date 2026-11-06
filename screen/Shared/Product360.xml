@@ -158,6 +158,14 @@ along with this software (see the LICENSE.md file). If not, see
                         ' (' + warranty.productFeatureId + ')'
                 ]]></script>
             </if>
+            <!-- Commerce (impl-commerce P3, design-commerce §10): the product's publication in the user's stores, each public or why
+                not (mantle.product.StoreMerchandisingServices, which checks COMMERCE_VIEW and the stores again) -->
+            <if condition="appRoot == 'Commerce'">
+                <service-call name="mantle.product.StoreMerchandisingServices.find#ProductPublications" out-map="publicationFound"
+                        transaction="force-new" ignore-error="true" in-map="{productId:productId}"/>
+                <set field="publications" from="publicationFound?.publications || []"/>
+                <set field="assortmentUrl" from="sharedLinks['Merchandising/Assortment']"/>
+            </if>
             <!-- Purchasing (impl-purchasing P2, crosscut §3.5): whether the product may be bought, with the lifecycle's reason -->
             <if condition="appRoot == 'Purchasing'">
                 <service-call name="mantle.product.ProductServices.check#ProductUsable" out-map="buyingUsable"
@@ -335,6 +343,42 @@ along with this software (see the LICENSE.md file). If not, see
                     <number-card title="Identifiers" value="${keyNumbers.identifiers}" icon="sym_o_barcode" size="sm" link="Identifiers?productId=${productId}" condition="product360Tabs.includes('Identifiers')"/>
                     <number-card title="Documents" value="${keyNumbers.documents}" icon="sym_o_description" size="sm" link="Documents?productId=${productId}" condition="product360Tabs.includes('Documents')"/>
                 </dashboard>
+                <section name="CommercePublication" condition="appRoot == 'Commerce'">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Publication in your stores"/>
+                            <box-body-nopad>
+                                <form-list name="ProductPublications" list="publications" skip-form="true" paginate="false">
+                                    <field name="storeName">
+                                        <default-field title="Store">
+                                            <link url="${assortmentUrl}" text="${storeName}" link-type="anchor"
+                                                    parameter-map="{productStoreId:productStoreId, term:productId}"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="stateText"><default-field title="Publication"><display/></default-field></field>
+                                    <field name="publicText">
+                                        <default-field title="Now">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                                    WebUtilities.encodeHtml(publicText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: publicText})}]]></text>
+                                                <text type="html">${publicText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="badgeText"><default-field title="Badge"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="storeName"/><field-ref name="stateText"/></column>
+                                        <column><field-ref name="publicText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="No store of yours publishes this product. Publish it from the assortment." type="p"
+                                        style="q-pa-md m-muted" condition="!publications.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
                 <subscreens-panel id="ProductTabs" type="tab"/>
             </widgets>
         </section>

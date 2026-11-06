@@ -425,8 +425,8 @@ caches; existing orders retain their private historical description.
 **Publication rows (Nov 5, 2026; impl-commerce §4).** `ProductStoreProduct` today is keyed by store
 and product and holds only a signature requirement. It becomes an effective-dated association, as
 `ProductStoreCategory` is: `fromDate` joins its key, with `thruDate`, the publication kind
-(published, or a variant's exclusion), template key, badge text and featured rank, its key fields
-audit-logged. Publishing starts a row from a date, withdrawal ends it, and a change of template or
+(published, or a variant's exclusion), template key, badge text, featured rank and the change's
+reason, its key fields audit-logged (built in P3; a row with no kind, made before, is published). Publishing starts a row from a date, withdrawal ends it, and a change of template or
 badge is a new row. Store-specific title, description and SEO text are the store's `ProductContent`
 rows, which Mantle already keys by `productStoreId`; there is no override field.
 
@@ -466,7 +466,9 @@ The TUI twin has parent and sequence fields with Move up/down actions.
 
 Store roots are `ProductStoreCategory`; descendants remain `ProductCategoryRollup`, not a second
 public taxonomy. A category may be shared: the preview names all affected stores before a shared
-rollup/membership change. Copy a store taxonomy explicitly if an independent hierarchy is needed.
+rollup/membership change. Copy a store taxonomy explicitly if an independent hierarchy is needed. A change a store the
+user does not work would see is refused, not confirmed (Nov 5, impl-commerce P3). Roles and
+membership forms are in the TUI twin, which the tree view opens; the tree view moves and reorders.
 Cycle and effective-date checks are mandatory. A category editor does not grant product
 publication. **Source:** research §3, §11. **Needs:** COM-MERCH.
 

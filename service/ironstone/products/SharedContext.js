@@ -299,8 +299,79 @@ function customerServiceContext() {
         facilityIds: read ? customerServiceFacilities(organizationPartyIds) : []
     }
 }
+// Commerce's mounts (impl-commerce P3, F4, F46, F47; design-commerce §10): Shared/Product360, CategoryDetail, CategoryContent,
+// Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain and InventoryAvailability under Merchandising. A
+// Commerce user who reads the catalog (PRODUCT_CATALOG_VIEW, every Commerce user) reads the product master with Commerce's
+// tabs: Summary, Features (variants), Categories, Identifiers, Documents, Prices (store prices, for a price reader) and Stock (the user's
+// stores' facilities). Catalog and price writes are the user's own PRODUCT_CATALOG_EDIT and PRICE_EDIT, passed through as
+// Products has them and checked again in Mantle (F46); cost, margin, supplier price, method and stock policy are off whatever
+// the user holds. storeIds are the stores the user works (ironstone.commerce, a store-limited staff member's own), which the
+// store choices of Prices.js and Taxonomy.js are narrowed to (F47).
+const commerceTabs = ["Summary", "Features", "Categories", "Identifiers", "Documents", "Prices", "Stock", "History"]
+const commercePaths = {
+    "": "Merchandising",
+    "Products/Product360": "Merchandising/Product360",
+    "Categories/CategoryDetail": "Merchandising/CategoryDetail",
+    Documents: "Merchandising/Documents",
+    DocumentDetail: "Merchandising/Documents/DocumentDetail",
+    "DocumentDetail/datasheet": "Merchandising/Documents/DocumentDetail/datasheet",
+    "Prices/PriceLists/PriceListDetail": "Merchandising/PriceLists/PriceListDetail",
+    "Prices/PriceExplain": "Merchandising/PriceExplain",
+    "Availability/InventoryAvailability": "Merchandising/InventoryAvailability",
+    "Merchandising/Assortment": "Merchandising/Assortment",
+    "Merchandising/StoreCategories": "Merchandising/StoreCategories"
+}
+function commerceFacilities(storeIds) {
+    if (!storeIds.length) return []
+    const ids = new Set()
+    for (const store of ec.entity
+        .find("mantle.product.store.ProductStore")
+        .condition("productStoreId", "in", storeIds)
+        .disableAuthz()
+        .list())
+        if (store.inventoryFacilityId) ids.add(store.inventoryFacilityId)
+    for (const row of ec.entity
+        .find("mantle.product.store.ProductStoreFacility")
+        .condition("productStoreId", "in", storeIds)
+        .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+        .disableAuthz()
+        .list())
+        ids.add(row.facilityId)
+    return Array.from(ids)
+}
+function commerceContext() {
+    const commerce = ec.resource.script("component://mr-boss/service/ironstone/commerce/Commerce.js")
+    const userScope = commerce.scope()
+    if (!userScope.read) throw new Error("Shared catalog context is not available")
+    const a = call("ironstone.products.CatalogServices.get#CatalogAccess"),
+        source = a.capabilities || {},
+        read = !!source.read
+    const capabilities = {systemAdmin: !!source.systemAdmin, read}
+    for (const name of ["catalogEdit", "priceRead", "priceEdit"]) capabilities[name] = read && !!source[name]
+    for (const name of ["catalogAdmin", "supplierPriceRead", "supplierPriceEdit"]) capabilities[name] = false
+    for (const name of ["costRead", "costEstimate", "costApprove", "methodRead", "methodEdit", "methodApprove", "methodAdmin"])
+        capabilities[name] = false
+    Object.assign(capabilities, {stockPlan: false, stockManage: false, glPost: false, marginRead: false})
+    const storeIds = read ? commerce.storeScope().storeIds : []
+    return {
+        capabilities,
+        appRoot: "Commerce",
+        linkBase: "//Commerce",
+        webBase: "/qapps/Commerce",
+        printBase: "/apps/Commerce",
+        sharedLinks: Object.fromEntries(Object.entries(commercePaths).map(([key, path]) => [key, "//Commerce/" + path])),
+        productTabs: read ? commerceTabs.filter(tab => tab !== "Prices" || capabilities.priceRead) : [],
+        connectionTypes: [],
+        ownerPartyIds: read ? a.ownerPartyIds : [],
+        organizationPartyIds: read ? a.organizationPartyIds : [],
+        activeOrganizationPartyId: read ? a.activeOrganizationPartyId : null,
+        facilityIds: read ? commerceFacilities(storeIds) : [],
+        storeIds
+    }
+}
 function context(p) {
     const appRoot = p.appRoot || ec.context.appRoot || "Products"
+    if (appRoot === "Commerce") return commerceContext()
     if (appRoot === "CustomerService") return customerServiceContext()
     if (appRoot === "Warehouse") return warehouseContext()
     if (appRoot === "Manufacturing") return manufacturingContext()

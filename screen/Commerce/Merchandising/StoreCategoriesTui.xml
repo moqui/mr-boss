@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreCategoriesTui (design-commerce §4 StoreCategories; impl-commerce P3): the terminal twin of StoreCategories, also its
+    form view in the browser. StoreRoots: the store's dated category roles (store#StoreCategory; a one-category role ends the
+    other category's row). CategoryTree: the tree with each category's parent, sequence and member count, Move up, Move down
+    and Move (a parent and a sequence; a category other stores of the user's show needs Change them too), through
+    move#StoreCategory. CategoryProducts: the members of the chosen category, added several at once and ended
+    (store#CategoryMembership). Reads for every Commerce user; changes for the merchandiser, checked again in
+    mantle.product.StoreMerchandisingServices. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Store categories as forms" default-menu-include="false">
+    <parameter name="productStoreId"/>
+    <parameter name="productCategoryId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="catalogChoices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="storeRole">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.store#StoreCategory"
+                    in-map="{productStoreId:productStoreId, productCategoryId:roleCategoryId, storeCategoryTypeEnumId:storeCategoryTypeEnumId,
+                        fromDate:(fromDate || null), sequenceNum:(sequenceNum || null), end:(end == 'true')}"/>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="moveCategory">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.move#StoreCategory"
+                    in-map="{productStoreId:productStoreId, productCategoryId:moveCategoryId, toParentCategoryId:(toParentCategoryId || null),
+                        fromParentCategoryId:(fromParentCategoryId || null), sequenceNum:(sequenceNum || null), direction:(direction || null),
+                        confirmShared:(confirmShared == 'Y' || confirmShared == 'true')}"/>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/><parameter name="productCategoryId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeMembers">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.store#CategoryMembership" out-map="saved"
+                    in-map="{productStoreId:productStoreId, productCategoryId:productCategoryId,
+                        productIds:(Array.isArray(memberProductIds) ? memberProductIds : String(memberProductIds || '').split(',').filter(Boolean)),
+                        fromDate:(fromDate || null), sequenceNum:(sequenceNum || null), end:(end == 'true'),
+                        confirmShared:(confirmShared == 'Y' || confirmShared == 'true')}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; (saved.results || []).some((row) =&gt; !row.ok)">
+                <message type="warning">Not saved: ${(saved.results || []).filter((row) =&gt; !row.ok).map((row) =&gt; row.productId + ' (' + row.message + ')').join('; ')}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/><parameter name="productCategoryId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="productStoreId" from="productStoreId || commerce.storeOptions?.[0]?.value || null"/>
+        <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:(productStoreId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="storeFound" from="!!storeRecord?.recordId"/>
+        <if condition="storeFound">
+            <service-call name="mantle.product.StoreMerchandisingServices.get#StoreCategories" out-map="categories" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId, productCategoryId:(productCategoryId || null)}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="roles" from="categories?.roles || []"/>
+        <set field="tree" from="categories?.tree || []"/>
+        <set field="members" from="categories?.members || []"/>
+        <set field="parentOptions" from="tree.map((node) =&gt; ({value: node.productCategoryId, label: node.label}))"/>
+        <set field="chosen" from="tree.find((node) =&gt; node.productCategoryId === productCategoryId) || null"/>
+        <set field="storeValues" from="{productStoreId:productStoreId}"/>
+        <set field="categoryValues" from="{productStoreId:productStoreId, productCategoryId:productCategoryId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Store categories" type="h5"/></container>
+            <container style="col-auto"><link url="../StoreCategories" text="Tree view" link-type="anchor" parameter-map="{productStoreId:productStoreId}"/></container>
+        </container>
+        <form-single name="StoreChoice" transition="." map="storeValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row><field-ref name="productStoreId"/><field-ref name="submitButton"/></field-row></field-layout>
+        </form-single>
+        <section name="NoStore" condition="!storeFound">
+            <widgets>
+                <label text="Choose one of your stores. A store you do not work is not available." type="p"/>
+            </widgets>
+        </section>
+        <section name="Store" condition="storeFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Roles"/>
+                    <box-toolbar>
+                        <container-dialog id="AddStoreRole" button-text="Add role" icon="sym_o_add" width="640" title="Give a category a store role"
+                                condition="can.merchandise">
+                            <form-single name="AddStoreRoleForm" transition="storeRole" map="storeValues">
+                                <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                <field name="storeCategoryTypeEnumId">
+                                    <default-field title="Role">
+                                        <drop-down allow-empty="false">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="ProductStoreCategoryType"/>
+                                                    <order-by field-name="description"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="roleCategoryId">
+                                    <default-field title="Category">
+                                        <drop-down allow-empty="false">
+                                            <dynamic-options transition="catalogChoices" server-search="true" min-length="0" parameter-map="{choice:'categories'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                                <field name="sequenceNum"><default-field title="Sequence"><text-line size="6"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add role"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="storeCategoryTypeEnumId"/><field-ref name="roleCategoryId"/></field-row>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="sequenceNum"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="StoreRoots" list="roles" skip-form="true" paginate="false">
+                            <field name="typeText"><default-field title="Role"><display/></default-field></field>
+                            <field name="categoryName"><default-field title="Category"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="endRole">
+                                <default-field title="">
+                                    <link url="storeRole" text="End" link-type="hidden-form-link" btn-type="danger" icon="sym_o_event_busy"
+                                            condition="can.merchandise &amp;&amp; stateText === 'Current'"
+                                            confirmation="End the ${typeText} role of ${categoryName}?"
+                                            parameter-map="{productStoreId:productStoreId, roleCategoryId:productCategoryId,
+                                                storeCategoryTypeEnumId:storeCategoryTypeEnumId, end:'true'}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="typeText"/><field-ref name="categoryName"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="endRole"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="Category tree"/>
+                    <box-body-nopad>
+                        <form-list name="CategoryTree" list="tree" skip-form="true" paginate="false">
+                            <field name="label">
+                                <default-field title="Category">
+                                    <link url="." text="${label}" link-type="anchor" parameter-map="{productStoreId:productStoreId, productCategoryId:productCategoryId}"/>
+                                </default-field>
+                            </field>
+                            <field name="parentProductCategoryId"><default-field title="Parent"><display/></default-field></field>
+                            <field name="sequenceNum"><default-field title="Sequence"><display/></default-field></field>
+                            <field name="memberCount"><default-field title="Products"><display/></default-field></field>
+                            <field name="sharedText"><default-field title="Shared"><display text="${shared ? 'Another store' : ''}"/></default-field></field>
+                            <field name="moveActions">
+                                <default-field title="">
+                                    <link url="moveCategory" text="Move up" link-type="hidden-form-link" icon="sym_o_arrow_upward"
+                                            condition="can.merchandise &amp;&amp; !root"
+                                            parameter-map="{productStoreId:productStoreId, moveCategoryId:productCategoryId,
+                                                fromParentCategoryId:parentProductCategoryId, direction:'up'}"/>
+                                    <link url="moveCategory" text="Move down" link-type="hidden-form-link" icon="sym_o_arrow_downward"
+                                            condition="can.merchandise &amp;&amp; !root"
+                                            parameter-map="{productStoreId:productStoreId, moveCategoryId:productCategoryId,
+                                                fromParentCategoryId:parentProductCategoryId, direction:'down'}"/>
+                                    <container-dialog id="MoveCategory_${productCategoryId}" button-text="Move" icon="sym_o_drive_file_move" width="560"
+                                            title="Move ${categoryName}" condition="can.merchandise &amp;&amp; !root">
+                                        <form-single name="MoveCategoryForm_${productCategoryId}" transition="moveCategory"
+                                                map="{productStoreId:productStoreId, moveCategoryId:productCategoryId,
+                                                    fromParentCategoryId:parentProductCategoryId, toParentCategoryId:parentProductCategoryId,
+                                                    sequenceNum:sequenceNum}">
+                                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                            <field name="moveCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="fromParentCategoryId"><default-field><hidden/></default-field></field>
+                                            <field name="toParentCategoryId">
+                                                <default-field title="Parent">
+                                                    <drop-down allow-empty="false"><list-options list="parentOptions" key="${value}" text="${label}"/></drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="sequenceNum"><default-field title="Sequence"><text-line size="6"/></default-field></field>
+                                            <field name="confirmShared">
+                                                <default-field title="Change every store of mine that shows it">
+                                                    <check><option key="Y" text="Yes"/></check>
+                                                </default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Move"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="label"/><field-ref name="parentProductCategoryId"/></column>
+                                <column><field-ref name="sequenceNum"/><field-ref name="moveActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <section name="Members" condition="!!chosen">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Products in ${chosen.categoryName}"/>
+                            <box-toolbar>
+                                <container-dialog id="AddMembers" button-text="Add products" icon="sym_o_add" width="640"
+                                        title="Add products to ${chosen.categoryName}" condition="can.merchandise">
+                                    <form-single name="AddMembersForm" transition="storeMembers" map="categoryValues">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="productCategoryId"><default-field><hidden/></default-field></field>
+                                        <field name="memberProductIds">
+                                            <default-field title="Products">
+                                                <drop-down allow-multiple="true">
+                                                    <dynamic-options transition="catalogChoices" server-search="true" min-length="0" parameter-map="{choice:'products'}"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                                        <field name="sequenceNum"><default-field title="Sequence"><text-line size="6"/></default-field></field>
+                                        <field name="confirmShared">
+                                            <default-field title="Change every store of mine that shows it">
+                                                <check><option key="Y" text="Yes"/></check>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Add products"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body-nopad>
+                                <form-list name="CategoryProducts" list="members" skip-form="true" paginate="false">
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="productId"><default-field title="ID"><display/></default-field></field>
+                                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                                    <field name="sequenceNum"><default-field title="Sequence"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="endMember">
+                                        <default-field title="">
+                                            <link url="storeMembers" text="Remove" link-type="hidden-form-link" btn-type="danger" icon="sym_o_event_busy"
+                                                    condition="can.merchandise &amp;&amp; stateText === 'Current'"
+                                                    confirmation="Remove ${productName} from ${chosen.categoryName}?"
+                                                    parameter-map="{productStoreId:productStoreId, productCategoryId:productCategoryId,
+                                                        memberProductIds:productId, end:'true'}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="endMember"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

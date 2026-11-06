@@ -35,6 +35,8 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="activeOrganizationPartyId"/>
             <parameter name="facilityIds" type="List"><description>Warehouse's mounts: the facilities whose stock the user
                 reads (null for every facility); not set for Products</description></parameter>
+            <parameter name="storeIds" type="List"><description>Commerce's mounts: the stores the user works, which the store
+                choices of prices and categories are narrowed to (impl-commerce F47); not set elsewhere</description></parameter>
         </out-parameters>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/SharedContext.js').execute('context',context))</script>

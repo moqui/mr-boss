@@ -35,6 +35,13 @@ function data(row) {
 // The user's catalog access, read once per operation (execute resets it).
 let accessCache = null
 const access = () => accessCache || (accessCache = call(C + "get#CatalogAccess"))
+// The stores a mounting app limits the store choices to (Commerce's storeIds, impl-commerce F47), or null for every store of
+// the user's organizations (Products).
+function storeIdsFor(p) {
+    if (!p.appRoot || p.appRoot === "Products") return null
+    const ids = call(C + "get#SharedContext", {appRoot: p.appRoot}, true).storeIds
+    return ids ? Array.from(ids) : null
+}
 function record(kind, id, need = "read", quiet = false) {
     const out = call(C + "get#CatalogRecord", {recordEntityName: E[kind], recordId: id, need, checkOnly: true})
     if (!out.record && !quiet) throw new Error("Catalog record is not available for this action")
@@ -647,7 +654,12 @@ function storeRow(p) {
         if (values.productStoreId) {
             const a = access(),
                 store = one("mantle.product.store.ProductStore", {productStoreId: values.productStoreId})
-            if (!store || (!a.capabilities.systemAdmin && !a.ownerPartyIds.includes(store.organizationPartyId)))
+            const storeIds = storeIdsFor(p)
+            if (
+                !store ||
+                (!a.capabilities.systemAdmin && !a.ownerPartyIds.includes(store.organizationPartyId)) ||
+                (storeIds && !storeIds.includes(store.productStoreId))
+            )
                 throw new Error("Store is not available")
         }
         if (values.identTypeEnumId !== "PcitUrlSlug" || !String(values.idValue || "").trim())
@@ -783,8 +795,9 @@ function preview(p) {
     )
     return result
 }
-function options() {
+function options(p) {
     const a = access(),
+        storeIds = storeIdsFor(p),
         catalog = call(C + "get#CatalogOptions").options
     const groups = rows(E.group)
         .filter(row => a.capabilities.systemAdmin || a.ownerPartyIds.includes(row.ownerPartyId || "_NA_"))
@@ -799,6 +812,7 @@ function options() {
             groups,
             stores: rows("mantle.product.store.ProductStore")
                 .filter(row => a.capabilities.systemAdmin || a.ownerPartyIds.includes(row.organizationPartyId))
+                .filter(row => !storeIds || storeIds.includes(row.productStoreId))
                 .map(row => ({value: row.productStoreId, label: row.storeName || row.productStoreId})),
             tags: rows(E.category, {productCategoryTypeEnumId: "PctTag"})
                 .filter(row => a.capabilities.systemAdmin || a.ownerPartyIds.includes(row.ownerPartyId))
