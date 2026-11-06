@@ -32,9 +32,12 @@ feature(
             state.requestId = made.requestId
             const issued = String(thermostat.issuedDate)
             const ship = /^-?\d+$/.test(issued) ? Number(issued) : Date.parse(issued)
-            const end = new Date(ship)
-            end.setUTCMonth(end.getUTCMonth() + 12)
-            const endText = ec.l10n.format(end, "yyyy-MM-dd")
+            // the coverage end is the ship day in the time zone the agent's page shows it in (Retail's calendar has none, so
+            // the user's), plus the 12-month term: a day, not the ship instant plus 12 months in another zone
+            const shipDay = asUser(users.agent, () => ec.l10n.format(new Date(ship), "yyyy-MM-dd"))
+            const [y, m, d] = shipDay.split("-").map(Number)
+            const lastDay = new Date(Date.UTC(y + 1, m, 0)).getUTCDate()
+            const endText = new Date(Date.UTC(y + 1, m - 1, Math.min(d, lastDay))).toISOString().slice(0, 10)
             const assessment = asUser(users.agent, () => lib.page("Returns/WarrantyAssessment", {requestId: made.requestId}))
             const list = asUser(users.agent, () => lib.page("Returns/WarrantyClaims", {customerPartyId: ids.customerId}))
             const delivered = asUser(users.agent, () =>

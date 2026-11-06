@@ -14,7 +14,15 @@ const W = "mantle.request.WarrantyServices."
 const one = (entity, conditions) => system(() => ec.entity.find(entity).condition(conditions).one())
 const rows = (entity, conditions) => system(() => Array.from(ec.entity.find(entity).condition(conditions).list()))
 const msOf = value => (/^-?\d+$/.test(String(value)) ? Number(String(value)) : Date.parse(String(value)))
-const dayText = millis => ec.l10n.format(new Date(millis), "yyyy-MM-dd")
+// the coverage end as the agent's pages show it: the ship day in the agent's time zone (Retail's calendar has none), plus the
+// term in calendar months, the month's last day when it is shorter
+const coverageEnd = (millis, months) => {
+    const [y, m, d] = asUser(users.agent, () => ec.l10n.format(new Date(millis), "yyyy-MM-dd"))
+        .split("-")
+        .map(Number)
+    const lastDay = new Date(Date.UTC(y, m - 1 + months + 1, 0)).getUTCDate()
+    return new Date(Date.UTC(y, m - 1 + months, Math.min(d, lastDay))).toISOString().slice(0, 10)
+}
 const plusMonths = (millis, months) => {
     const date = new Date(millis)
     date.setUTCMonth(date.getUTCMonth() + months)
@@ -90,14 +98,14 @@ feature("a claim from Delivered items shows coverage from the ship date plus the
     then({delivered, made, claim, assessment, read}) {
         delivered.output.includes(state.thermostat.serialNumber)
         delivered.output.includes("New claim")
-        delivered.output.includes(dayText(plusMonths(state.shipMs, 12)))
+        delivered.output.includes(coverageEnd(state.shipMs, 12))
         made.errors == ""
         claim != null
         read.claim.orderId == ids.deliveredOrderId
         read.claim.faultText == "Reads three degrees high since it was installed"
         read.coverage.basisEnumId == "WcbProductWarranty"
         read.coverage.covered == true
-        assessment.output.includes("Coverage until " + dayText(plusMonths(state.shipMs, 12)))
+        assessment.output.includes("Coverage until " + coverageEnd(state.shipMs, 12))
         assessment.output.includes("plus 12 months of 12-month warranty")
         assessment.output.includes(ids.warrantyFeatureId)
     }
@@ -136,7 +144,7 @@ feature("a claim past its coverage is refused as covered, rejected by the agent,
     },
     then({before, covered, agentGoodwill, rejected, afterReject, goodwill, after, page}) {
         before.coverage.covered == false
-        before.coverage.coverageEndText == dayText(plusMonths(state.shipMs, 12))
+        before.coverage.coverageEndText == coverageEnd(state.shipMs, 12)
         covered.errors.includes("NOT_COVERED")
         agentGoodwill.errors.includes("PERMISSION_DENIED")
         rejected.errors == ""
