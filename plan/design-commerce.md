@@ -513,7 +513,7 @@ and preserve per-review outcomes. **Source:** research §3 and ridgecrest's diff
 completed or a download granted), one review per account, store and product; the author's label is chosen at submission.
 A bulk decision posts each selected row with the revision shown and answers per review. The review request is queued on
 the delivery ledger at a Shop line's delivery or first download, once per line, and needs the recipient's marketing email
-consent (impl-commerce F-P9-2).
+consent (impl-commerce F95).
 
 **Review requests are their own opt-in (Nov 6, 2026; impl-commerce §4, F95).** The review request is a solicitation, not a
 transactional notice, and is consented per store, not by marketing email: each store has a "review requests" topic (a
