@@ -264,8 +264,7 @@ feature(
                 const searched = palette(user, "store")
                 if (wrong(searched, own, other, limited)) problems.push(`${user}'s palette: ${searched}`)
                 const rows = filtered(user)
-                if (wrong(rows.stores, own, other, limited))
-                    problems.push(`${user}'s filtered stores: ${rows.stores}`)
+                if (wrong(rows.stores, own, other, limited)) problems.push(`${user}'s filtered stores: ${rows.stores}`)
                 if (rows.filters.includes("COMMERCE_STORE") !== limited)
                     problems.push(`${user}'s store filter applies: ${rows.filters}`)
             }
@@ -466,40 +465,48 @@ feature("a store-limited staff member is refused another store of the same organ
 // (mantle.product.StoreMerchandisingServices.find#StoreProducts, as Assortment reads it), and the store choices of the shared
 // price screens under Commerce (Products' get#PriceOptions, F47) list their stores only; the reader of the organization reads
 // and lists the second store, another organization's manager neither. BOSS_COM_P2_SECOND is the P2 case's Retail store.
-feature("a store-limited staff member is refused another store's assortment and store choices; another organization's manager too", {
-    when() {
-        const products = (user, productStoreId) =>
-            asUser(user, () => refusal("mantle.product.StoreMerchandisingServices.find#StoreProducts", {productStoreId}), false)
-        const priceStores = user =>
-            asUser(
-                user,
-                () =>
-                    Array.from(
-                        invoke("ironstone.products.CatalogServices.get#PriceOptions", {appRoot: "Commerce"}).priceOptions?.stores || []
-                    ).map(row => row.value),
-                false
-            )
-        return {
-            reader: products(users.read, "BOSS_COM_P2_SECOND"),
-            staff: products(users.storeStaff, "BOSS_COM_P2_SECOND"),
-            staffOwn: products(users.storeStaff, ids.storeId),
-            other: products(users.services, ids.storeId),
-            readerStores: priceStores(users.read),
-            staffStores: priceStores(users.storeStaff),
-            otherStores: priceStores(users.services)
+feature(
+    "a store-limited staff member is refused another store's assortment and store choices; another organization's manager too",
+    {
+        when() {
+            const products = (user, productStoreId) =>
+                asUser(
+                    user,
+                    () => refusal("mantle.product.StoreMerchandisingServices.find#StoreProducts", {productStoreId}),
+                    false
+                )
+            const priceStores = user =>
+                asUser(
+                    user,
+                    () =>
+                        Array.from(
+                            invoke("ironstone.products.CatalogServices.get#PriceOptions", {appRoot: "Commerce"}).priceOptions
+                                ?.stores || []
+                        ).map(row => row.value),
+                    false
+                )
+            return {
+                reader: products(users.read, "BOSS_COM_P2_SECOND"),
+                staff: products(users.storeStaff, "BOSS_COM_P2_SECOND"),
+                staffOwn: products(users.storeStaff, ids.storeId),
+                other: products(users.services, ids.storeId),
+                readerStores: priceStores(users.read),
+                staffStores: priceStores(users.storeStaff),
+                otherStores: priceStores(users.services)
+            }
+        },
+        then({reader, staff, staffOwn, other, readerStores, staffStores, otherStores}) {
+            reader == ""
+            staff.includes("RECORD_UNAVAILABLE")
+            staffOwn == ""
+            other.includes("RECORD_UNAVAILABLE")
+            readerStores.includes(ids.storeId)
+            readerStores.includes("BOSS_COM_P2_SECOND")
+            staffStores == [ids.storeId]
+            !otherStores.includes(ids.storeId)
         }
-    },
-    then({reader, staff, staffOwn, other, readerStores, staffStores, otherStores}) {
-        reader == ""
-        staff.includes("RECORD_UNAVAILABLE")
-        staffOwn == ""
-        other.includes("RECORD_UNAVAILABLE")
-        readerStores.includes(ids.storeId)
-        readerStores.includes("BOSS_COM_P2_SECOND")
-        staffStores == [ids.storeId]
-        !otherStores.includes(ids.storeId)
     }
-})
+)
 
 // P4: a page of a site is edited by a holder of COMMERCE_THEME_EDIT in the site's store, not by the reader
 // (mantle.public.ThemeServices.store#SitePage, as PageRoute saves it), nor on another organization's site; a published
@@ -589,11 +596,21 @@ feature("the administrator works another organization's store in Mantle as in th
 // the designer (COMMERCE_THEME_EDIT) is refused the same save, and another organization's manager cannot even read the theme
 feature("a theme's source is saved by the theme developer, not the designer, nor another organization", {
     when() {
-        const theme = system(() =>
-            ec.entity.find("mantle.public.PublicTheme").condition({productStoreId: ids.storeId}).orderBy("themeId").disableAuthz().list()[0]
+        const theme = system(
+            () =>
+                ec.entity
+                    .find("mantle.public.PublicTheme")
+                    .condition({productStoreId: ids.storeId})
+                    .orderBy("themeId")
+                    .disableAuthz()
+                    .list()[0]
         )
         const path = "snippets/price.html.fancy-locked"
-        const read = asUser(users.developer, () => invoke("mantle.public.ThemeServices.get#ThemeFile", {themeId: theme.themeId, path}), false)
+        const read = asUser(
+            users.developer,
+            () => invoke("mantle.public.ThemeServices.get#ThemeFile", {themeId: theme.themeId, path}),
+            false
+        )
         const save = user =>
             asUser(
                 user,
@@ -608,8 +625,16 @@ feature("a theme's source is saved by the theme developer, not the designer, nor
             )
         const designer = save(users.designer)
         const developer = save(users.developer)
-        const other = asUser(users.services, () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}), false)
-        const own = asUser(users.manager, () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}), false)
+        const other = asUser(
+            users.services,
+            () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}),
+            false
+        )
+        const own = asUser(
+            users.manager,
+            () => refusal("mantle.public.ThemeServices.get#ThemeComposition", {themeId: theme.themeId}),
+            false
+        )
         return {designer, developer, other, own}
     },
     then({designer, developer, other, own}) {
@@ -621,3 +646,42 @@ feature("a theme's source is saved by the theme developer, not the designer, nor
     }
 })
 
+// P13: a store's integrations are the channel operator's (COMMERCE_CHANNEL_OPERATE), within their organizations' stores
+feature(
+    "a store's integrations are worked by its channel operator, not the store operator, nor in another organization's store",
+    {
+        when() {
+            const I = "mantle.product.StoreChannelServices."
+            const otherRemoteId = "BOSS_COM13_DIGITAL"
+            system(() =>
+                ec.service
+                    .sync()
+                    .name("create#moqui.service.message.SystemMessageRemote")
+                    .parameters({
+                        systemMessageRemoteId: otherRemoteId,
+                        description: "Digital store channel",
+                        productStoreId: ids.otherStoreId,
+                        storeConnectorId: "ChannelOrders",
+                        systemMessageTypeId: "StoreChannelOrders",
+                        storeDisabled: "Y"
+                    })
+                    .call()
+            )
+            const found = asUser(users.channel, () => invoke(I + "find#StoreIntegrations", {}), false)
+            const listed = Array.from(found.integrations || []).map(row => row.systemMessageRemoteId)
+            const operator = asUser(users.operator, () => refusal(I + "find#StoreIntegrations", {}), false)
+            const other = asUser(
+                users.channel,
+                () => refusal(I + "get#StoreIntegration", {systemMessageRemoteId: otherRemoteId}),
+                false
+            )
+            return {listed, otherRemoteId, operator, other}
+        },
+        then({listed, otherRemoteId, operator, other}) {
+            listed.includes("BOSS_COM_MARKETPLACE")
+            !listed.includes(otherRemoteId)
+            operator.includes("PERMISSION_DENIED")
+            other.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)

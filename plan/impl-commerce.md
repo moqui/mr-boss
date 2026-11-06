@@ -275,7 +275,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | built Nov 6, 2026 |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | built Nov 6, 2026 |
 | P12 Paid access and subscriptions | Mantle, mr-pass, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | built Nov 6, 2026 |
-| P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | — |
+| P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | built Nov 6, 2026 |
 | P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | — |
 | P15 Finish | BOSS | — | — |
 
@@ -2807,6 +2807,121 @@ Design §9 Integrations, IntegrationDetail and ChannelImport; COM-CHANNEL.
 - **Usable when** (design §12.2 scenario 12, its import half): importing a file with a duplicate and a conflicting row
   makes one order for the duplicate, quarantines the conflict, and finishes the other rows; retrying a failed message
   keeps its identity.
+
+**Built Nov 6 (P13)** (branch `com/p13`).
+- Mantle:
+  - `entity/StoreChannelEntities.xml`: `mantle.product.store.StoreChannelConnector` (the registered connectors: message type,
+    kind, direction, mapping version, `managedBy`, disabled); SystemMessageRemote gains `storeConnectorId`,
+    `storeMappingVersion`, `storeMappingJson` (typed parameters, never credentials) and `storeDisabled`, audit-logged;
+    SystemMessage gains `productStoreId`, `contentHash` and `duplicateOfMessageId` with the index of the four dedup keys
+    (store, remote, `docType`, `messageId`); the import format enumeration (`SciCsv`, `SciJson`) and the SystemMessage status
+    `SmsgStaged` with its transitions. `data/StoreChannelSetupData.xml`: the message types `StoreChannelOrders` (receive
+    `receive#ChannelOrders`, consume `consume#ChannelOrder`) and `StoreChannelImport` (its receive refuses a post), and the two
+    connectors `ChannelOrders` and `EdiX12` (the EDI administrator's).
+  - `service/mantle/product/StoreChannelServices.xml` (P13's services at the top, `<!-- Feeds and channel health (P14) below
+    -->` before the end) over `StoreChannels.js` (I): `find#StoreIntegrations`, `get#StoreConnectors`, `get#StoreIntegration`,
+    `store#StoreIntegration` (a new binding stopped with an HMAC signature required; enabled only with an authentication
+    method other than none, credentials set and the mapping complete, CREDENTIALS_REQUIRED, MAPPING_INCOMPLETE; store and
+    connector fixed; EDI_MANAGED), `find#StoreMessages`, `get#StoreMessage` (the canonical fields, mapping findings, order,
+    original, children, EDI documents, errors' first lines; never the text), `retry#StoreMessages` (operationKey on
+    PostingOperation `StoreChannelRetry`, a reason, each item through `retry#StoreMessage` in its own transaction; a conflict
+    CONFLICT_REVIEW), `receive#ChannelOrders` (the receipt kept first, each order its own message: new Received, a matching
+    replay Consumed with `duplicateOfMessageId` and the original's order, a conflict Rejected with a `CONFLICT:` error naming
+    what differs; the API path refuses a stopped or unauthenticated binding), `consume#ChannelOrder` (create#Order and
+    create#OrderItem with the store's organization, currency and facility, the binding's customer and sales channel, the
+    channel's prices, shipping and tax as items, calculations off; place#Order; a message whose order exists answers it),
+    `refuse#ChannelImportPost`, `prepare#ChannelImport` (CSV or JSON, UTF-8, 2 MiB, 500 orders; a Staged batch, the same
+    file answering the staged one), `get#ChannelImport` (the preview while staged, the outcomes once committed) and
+    `commit#ChannelImport` (digest, reason; the orders through `receive#ChannelOrders` with the batch as parent, each consumed
+    in its own transaction; PostingOperation `ChannelImport:{batch}` with the reason; a second commit answers it). Every staff
+    service: COMMERCE_VIEW, COMMERCE_CHANNEL_OPERATE and StoreAdmin.js' scope (F51); RECORD_UNAVAILABLE outside it.
+  - `X12.js`: `storeRetry(op, input)`, `retry#Document`'s and `retry#Receipt`'s work for a caller that checked its own
+    permission and scope (StoreChannels' `retry#StoreMessage` for a store's partner), reachable from scripts only;
+    `execute` keeps EDI_ADMIN.
+  - `StoreOperations.js`/`StoreOperationsServices.xml`: `add#StoreOrderNote` (F111's "Log as note": an internal OrderNote on
+    a store order or cart, COMMERCE_ORDER_VIEW and the scope, as `add#StoreRequestNote`).
+- BOSS:
+  - `screen/Commerce/Integrations.xml` became the area (Integrations, the default; ChannelImport; IntegrationDetail hidden;
+    the line where P14's Feeds go); `Integrations/Integrations.xml` (IntegrationFind, the list with intake, credentials set
+    or not, last success, failures, conflicts and health; NewBinding), `Integrations/IntegrationDetail.xml` (Binding,
+    Mapping, the EDI partner's rejected documents and quarantined interchanges with their retry, MessageFind and Messages,
+    RetryMessages with per-item results, MessageDetail), `Integrations/ChannelImport.xml` (ImportSource, ImportPreview,
+    ImportCommit, ImportResult with the link to retry from IntegrationDetail).
+  - F111: the root's `assist-prompt` "Group these failures by cause" (IntegrationDetail) and `response-action` "Log as note"
+    (`Commerce/Orders/LogNote`, hidden in Orders: the answer's text in `noteText`, filed by `add#StoreOrderNote`);
+    `skill/channel-retry.md`, `skill/aliases.json` (integration, retry), `test/skill-retrieval.json` (+4 cases; recall@3
+    1.00, 14 of 14). The Product360 prompt is P15's.
+  - Commerce.js: the P13 `linkPaths` (appended). Demo (BossCommerceDemoData.xml, appended): the marketplace customer
+    `BOSS_COM_MARKETPLACE` and POPC_DEFAULT's binding of the same id, stopped with no credentials (an import needs none).
+- Specs:
+  - Mantle `test/product/StoreChannels` (3 features, 1.31 s alone: 0.44, 0.53, 0.34): binding, enabling waits for the
+    operator's credentials, never returned; the reader, organization B and the store-limited staff member refused; intake
+    by the four keys (a replay answers the original's order, a conflict with its `items.0.quantity 2 → 3` evidence, the same
+    external ID on another binding a new order, one order per store and ID), a failing order not stopping its receipt, the
+    safe summary (no extra field or text), retry after publishing keeping the message and external ID with a second submit
+    answered and the conflict CONFLICT_REVIEW; a staged CSV previewed (duplicate, conflict, new, error), the same file staged
+    once, an unregistered format and another digest refused, committed once (duplicate, conflict, applied, failed) with its
+    reason; the EDI partner's exceptions with their first line only and its conflict NOT_RETRYABLE.
+  - BOSS `test/Commerce/CommerceChannels` (2 features, 0.71 s alone, 0.37 s in a run of four specs): the channel operator's
+    JSON import into the demo marketplace (new and error, applied and failed ITEM_UNKNOWN) and the one qvt render of
+    IntegrationDetail with its MessageDetail and of ChannelImport's committed batch; Log as note for the store operator,
+    refused the channel operator. CommerceAccess +1 feature (0.11 s): the channel operator lists the demo binding, the store
+    operator is refused PERMISSION_DENIED, another organization's store's binding RECORD_UNAVAILABLE.
+  - Also run, all pass: Mantle StoreChannels, EdiX12, StoreOperations (23 features), AuthorizeNetGateway, ShippoGateway,
+    PayTraceGateway, StorePublication, ShopCheckout (59 features); BOSS CommerceChannels, CommerceAccess, CommerceOrders,
+    CommerceSubscriptions (19 features, 5.9 s); `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
+- Acceptance: `acceptance/Commerce/CommerceChannelsScenario` (5 features), run once: 5 passed. The channel operator binds
+  POPC_DEFAULT, enabled only after the operator's secret; two orders over `receive#IncomingSystemMessage` (the API path)
+  made; a CSV with one of them unchanged, the other changed, a new one and an unsold product: one order for the duplicate,
+  the conflict quarantined with `items.0.quantity 1 → 3`, the new order made, the failing one not stopping the rest; the
+  product published and in PopcAllProducts, the retry keeps the message and external ID and makes its order once (the second
+  submit answered; the item withdrawn again after); Integrations, IntegrationDetail and both ChannelImport steps in qvt
+  with artifact authorization on. The mr-boss acceptance suite as a whole was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new screens.
+- Inventories: no ss-inventory or usl-inventory row is P13's (SimpleScreens has no store integration screen; the tools'
+  SystemMessage screens stay the operator's).
+- Decisions (design §16 row "Integrations and channel import as built"):
+  - A binding is the SystemMessageRemote with the store and a registered connector (StoreChannelConnector rows, each with a
+    handler in StoreChannels.js); its mapping is a version and typed parameters (the customer orders are placed for, the
+    sales channel) in `storeMappingJson`. Credentials, endpoint and authentication are set by the operator in the System
+    tools; Commerce says only "Set" or "Not set".
+  - A new binding starts stopped with HMAC required; enabling needs an authentication method other than none, credentials
+    and a complete mapping; the API intake also refuses a binding whose authentication was later removed. A file import
+    goes through a stopped binding (it needs no endpoint).
+  - Dedup is by SystemMessage's store, remote, `docType` and `messageId` over the canonical order's hash (an order with no
+    currency is in the store's); a replay is kept Consumed as a duplicate answering the original's order, a conflict
+    Rejected with the differing fields in its error, never retried.
+  - A channel order is placed, not approved (the seller's decision), at the channel's prices, with promotions, shipping and
+    tax calculation off and shipping and tax as items; each line's product must be one the store sells now (the publication
+    resolver); no ship-to in mapping version 1.
+  - A batch is a SystemMessage of type StoreChannelImport, Staged until committed (a status of its own so no framework job
+    consumes it); the commit's operation and reason are a PostingOperation `ChannelImport:{batch}`; the file is text read
+    and checked (UTF-8, size, format), not a media file to scan.
+  - EDI: an EDI partner is listed by its EdiConnection's store; Commerce lists its rejected documents and quarantined
+    interchanges and retries them through X12.js' own retry with their identity (`storeRetry`), the channel operator's
+    permission and scope standing for EDI_ADMIN's there; its connection stays the EDI administrator's.
+  - Log as note is an internal OrderNote with COMMERCE_ORDER_VIEW, as P8's case note.
+  - Home's Integration errors card is left to P14's integration card, so the two phases do not change Home together.
+- Findings (provisional):
+  - **F-P13-1** Home's "Integration errors" card is still Not configured: P14 builds Home's integration card, which can
+    count `find#StoreIntegrations`' failures (or a count of StoreChannels' `failedCondition` per store).
+  - **F-P13-2** P11's "intake error spikes" alert is not shipped: it needs a document over the store's channel messages
+    (F140), and a feed on every SystemMessage write would index the gateways' and EDI's messages too. For Insights and the
+    lead.
+  - **F-P13-3** A failed channel order goes back to Received with a fail count (the framework's consume), so
+    `consume#AllReceivedSystemMessages` (paused by default) would retry a business refusal such as ITEM_UNKNOWN up to three
+    times before marking it Error. Harmless (identity kept, never two orders), but a consume service could end a business
+    refusal in Error with `noStatusUpdate`; left as the framework's rule.
+  - **F-P13-4** A replay of a failed original with other content is quarantined as a conflict: a channel that resends a
+    corrected order under the same external ID has to be asked for a new one. A "replace the failed original" action (the
+    original never made an order) would need its own rule and test; later.
+  - **F-P13-5** The framework's SystemMessage statuses have no staged state; Mantle seeds `SmsgStaged` and three transitions
+    for ChannelImport's batches. The framework could own a staged status for batches that wait for a person.
+  - **F-P13-6** Mapping version 1 has no ship-to or buyer: a marketplace order is placed for the binding's customer with
+    no address, so a physical marketplace order needs its address entered by its owner before shipping; a version 2 with
+    an address crosswalk (as EDI's EdiLocation) is for a real channel.
+  - **F-P13-7** `Commerce/Integrations.xml` is no longer a placeholder, so mr-boss's acceptance AppStructure floor of
+    placeholder screens drops from 40 to 39.
 
 ### P14 — Feeds and channel health
 

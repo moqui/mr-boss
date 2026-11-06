@@ -866,6 +866,8 @@ function callContext(p) {
 Object.assign(operations, {operationLinks, callContext})
 // ===== P12: subscriptions (design §6) =====
 linkPaths.push("Customers/Subscriptions", "Customers/SubscriptionDetail")
+// ===== P13: integrations and channel import (design §9) =====
+linkPaths.push("Integrations/Integrations", "Integrations/IntegrationDetail", "Integrations/ChannelImport", "Orders/LogNote")
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Commerce branch: the user's scope, the same refusing a user

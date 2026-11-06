@@ -4,5 +4,7 @@
     "reply": ["respond", "answer", "write back"],
     "customer": ["client", "buyer"],
     "cart": ["basket", "shopping cart", "checkout"],
-    "store": ["shop", "storefront"]
+    "store": ["shop", "storefront"],
+    "integration": ["channel", "marketplace", "connector"],
+    "retry": ["resend", "reprocess", "try again"]
 }
