@@ -317,15 +317,15 @@ feature(
                 if (check("site", ids.otherSiteId) !== "") problems.push("services is refused its own site")
                 if (!check("store", ids.storeId).includes("RECORD_UNAVAILABLE")) problems.push("services reaches Retail's store")
             })
-            // the staff member, of both organizations: their store and its order; not the unassigned store, nor a site with no
-            // store of theirs (Shop P1 binds the sites to their stores)
+            // the staff member, of both organizations: their store, its order and its site (ZIZI_SHOP's Shop mount targets
+            // POPC_DEFAULT, Shop P1); not the unassigned store, nor a site with no store of theirs (ZIZI_DIGITAL's)
             asUser(users.storeStaff, () => {
                 if (check("store", ids.storeId) !== "") problems.push("the staff member is refused their store")
                 if (check("order", ids.storeOrderId) !== "") problems.push("the staff member is refused their store's order")
+                if (check("site", ids.siteId) !== "") problems.push("the staff member is refused their store's site")
                 for (const [recordType, recordId] of [
                     ["store", ids.otherStoreId],
-                    ["site", ids.otherSiteId],
-                    ["site", ids.siteId]
+                    ["site", ids.otherSiteId]
                 ])
                     if (!check(recordType, recordId).includes("RECORD_UNAVAILABLE"))
                         problems.push(`the staff member reaches ${recordType} ${recordId}`)

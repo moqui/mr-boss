@@ -160,9 +160,9 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
         digital == ids.otherOrganizationId
         shop.state == "disabled"
         shop.hosts == ["shop.zizi.localhost"]
-        shop.mounts == ["account:", "billing:ORG_ZIZI_RETAIL", "support:ORG_ZIZI_RETAIL"]
+        shop.mounts == ["account:", "billing:ORG_ZIZI_RETAIL", "shop:POPC_DEFAULT", "support:ORG_ZIZI_RETAIL"]
         digitalSite.state == "disabled"
         digitalSite.hosts == ["digital.zizi.localhost"]
-        digitalSite.mounts == ["account:", "billing:ORG_ZIZI_SERVICES", "support:ORG_ZIZI_SERVICES"]
+        digitalSite.mounts == ["account:", "billing:ORG_ZIZI_SERVICES", "shop:BOSS_COM_DIGITAL", "support:ORG_ZIZI_SERVICES"]
     }
 })

@@ -37,8 +37,9 @@ feature("Stores, StoreGroups and readiness read each user's stores: the organiza
         !services.includes(ids.storeId)
         staff == [ids.storeId]
         demo.organizationName.startsWith("Ziziwork Retail")
-        demo.siteText == "No site"
-        readiness.findings.find(row => row.key == "site").ready == false
+        // ZIZI_SHOP's Shop mount sells from it (Shop P1), so the site check is met
+        demo.siteText == "ZIZI_SHOP"
+        readiness.findings.find(row => row.key == "site").ready == true
         readiness.findings.find(row => row.key == "facility").ready == true
         readiness.findings.find(row => row.key == "orderNotice").ready == true
         groups == []
@@ -65,13 +66,12 @@ feature(
             manager.errors == []
             manager.output.includes("Ziziwork Retail Store")
             manager.output.includes(ids.storeId)
-            manager.output.includes("to fix")
+            manager.output.includes("Ready to sell")
             manager.output.includes("Clone store")
             manager.output.includes("Customer and other party rows")
             managerGeneral.status == 200
             managerGeneral.errors == []
             managerGeneral.output.includes("Readiness")
-            managerGeneral.output.includes("No site sells from this store")
             managerGeneral.output.includes("Open in Warehouse")
             managerGeneral.output.includes("Reason for the change")
             reader.store.productStoreId == ids.storeId

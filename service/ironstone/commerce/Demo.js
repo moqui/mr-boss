@@ -1,7 +1,7 @@
 // Commerce's demo (impl-commerce P1, F17; DemoServices.load#CommerceDemo, run from BossZCommerceDemoData.xml): the two PASS
-// sites of the demo stores, disabled until published (Shop P1 adds their Shop mounts and publication): ZIZI_SHOP on
+// sites of the demo stores, disabled until published, with their Shop mounts (Shop P1): ZIZI_SHOP on
 // shop.zizi.localhost for POPC_DEFAULT's organization, Ziziwork Retail, and ZIZI_DIGITAL on digital.zizi.localhost for
-// BOSS_COM_DIGITAL's, Ziziwork Services, each with Account, Billing and Support mounts (Billing and Support targeting the
+// BOSS_COM_DIGITAL's, Ziziwork Services, each with Shop, Account, Billing and Support mounts (Billing and Support targeting the
 // store's organization, F38). Each site on its own (one that fails is named and the other is made); idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
@@ -11,13 +11,17 @@ const sites = {
         siteId: "ZIZI_SHOP",
         name: "Ziziwork Retail Store",
         hostname: "shop.zizi.localhost",
-        organizationPartyId: "ORG_ZIZI_RETAIL"
+        organizationPartyId: "ORG_ZIZI_RETAIL",
+        productStoreId: "POPC_DEFAULT",
+        shopPath: "/"
     },
     digital: {
         siteId: "ZIZI_DIGITAL",
         name: "Ziziwork Digital Store",
         hostname: "digital.zizi.localhost",
-        organizationPartyId: "ORG_ZIZI_SERVICES"
+        organizationPartyId: "ORG_ZIZI_SERVICES",
+        productStoreId: "BOSS_COM_DIGITAL",
+        shopPath: "/shop"
     }
 }
 
@@ -60,6 +64,12 @@ function ensureSite(site) {
         ["support", site.organizationPartyId]
     ])
         createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: app}, {app, pathPrefix: "/" + app, enabled: "Y", targetId})
+    // the Shop mount (Shop P1, F-SP1-3): ZIZI_SHOP's at its root, ZIZI_DIGITAL's at /shop, each targeting its store
+    createOnce(
+        "mantle.public.PublicSiteApp",
+        {siteId, appMountId: "shop"},
+        {app: "shop", pathPrefix: site.shopPath, enabled: "Y", targetId: site.productStoreId}
+    )
 }
 
 function load() {
