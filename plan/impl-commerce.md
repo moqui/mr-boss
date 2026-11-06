@@ -470,6 +470,52 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
     user with no current row works every store). For the lead: keep the rule, or limit a user with any StoreStaff row,
     current or past (`_NA_` once all have ended).
 
+**Review Nov 5 (P1).** Checked the Mantle and BOSS diffs against this section, §2, §4, design §1.1, §1.2 and §3 Home,
+AGENTS.md and Practices-App-Dev:
+- Services only: no Commerce authz names a Mantle store, order, promotion or site service, an entity-auto mutator or a
+  `mantle.rest.xml` path; the root group's rows are the root screen and `ironstone\.commerce\..*`, whose demo services
+  refuse anyone but data loading and a system administrator. CommerceAccess's manager and administrator are refused the
+  `products/stores` REST verbs, `update#ProductStore` and `clone#ProductStore`.
+- Store scope: every Commerce read (`storeFind`, `storeIn`, `recordOf`, `customerOf`) uses authorization-disabled finds
+  conditioned on the organizations and the staff stores in the query, so the scope does not depend on the
+  `COMMERCE_STORE` filter or on `setup#StoreScope` having run (the palette and record links run outside the root). The
+  filter set applies only while `commerceStoreIds` is in the per-request user context (the root sets it from the current
+  StoreStaff rows, removes it otherwise), so an unlimited user and a system administrator are untouched; the fixture
+  checks both. A forged or foreign store, site, order or customer in `check#Record`, `get#Choices`' `selected`,
+  `search#Records`, `get#RecordLink` or Home's `productStoreId` is refused as missing; staff rows on a store outside the
+  user's organizations limit to nothing (an empty `in` is `1 = 0`), never widen. F-P1-3: the code follows §4 (a user
+  with a current row is limited to those stores, one with none works every store).
+- Groups and grants: the nine groups and design §1.1's table, not nested; the area groups deny `BOSS_COMMERCE` and allow
+  their capability groups with `ALWAYS`, as BOSS_CS_RETURNS (F45); the twelve permissions in MantleSetupData each with
+  its ADMIN grant, `PRODUCT_CATALOG_VIEW` on the root and `PRICE_VIEW` on the manager, merchandiser and operator.
+- F3: the ten client deny rows carry the same 102 verbs as the seven before, `commerce` added, the longest 253
+  characters; ProjectsAccess passes. A Projects client (`PROJECT_CLIENT`) and a PASS account are refused the context and
+  Home.
+- Demo: POPC_DEFAULT's three ship options are the `_NA_` carrier's seeded methods with their sequence (what
+  `get#StoreShippingOptions` answered before through the NA_LOCAL gateway); the PASS sites are `disabled`, each made in
+  its own probe with its failure named. The Mantle commit names nothing of IronStone's; Mantle's edits and BOSS's setup,
+  users and palette edits are appends (the palette's store branch is one more link of the chain), but for F3's rows.
+- Fixes: **R1** (low) CommerceAccess's menu feature rendered the shell for every group (thirteen shells) and the context
+  feature repeated users the capabilities feature already reads; each group's areas are its area capabilities, from the
+  same authorizations, so the menu keeps the reader, the operator and the administrator, the launcher reuses the
+  reader's shell, and the context feature keeps the store-limited and other-organization users and one other app's user
+  (mr-boss c2ce3664). 7 features, 3.0 s, each under 0.6 s.
+- Tests run on the com-p1 runtime with the rebuilt release binary (Nov 5 22:15, F-P1-1 resolved): CommerceAccess,
+  ProjectsAccess, AppOrganizationFilters and CustomerServiceAccess, 44 features, all pass. In the first run, the one that
+  loaded the database, CustomerServiceAccess' "Invite to support" failed once (`RECORD_UNAVAILABLE` for its spec's
+  contact) while the load's background work was still running; it passed in the three runs after, and at master on a
+  runtime of the master components; P1 touches nothing it reads.
+- For the lead:
+  - F-P1-3's widening has a second case: a member whose only StoreStaff row starts in the future works every store of
+    their organizations until it starts. Both are §4's rule; a "limited by any row, current, past or future" rule closes
+    both.
+  - POPC_DEFAULT's five email bindings make every order placed, approved, shipped, delivered or invoiced in that store
+    send an email (render and an SMTP attempt on the local sink) after commit, in the demo and in every BOSS spec that
+    places a POPC_DEFAULT order; measure it in P1's `./moq test-apps` budget run.
+  - `get#StoreScope`'s `storeIds` is unbounded for an administrator with no active organization; a later phase that
+    puts it in an `in` condition should page or condition on the organizations instead.
+  - Not run: `./moq test-apps`, the budget measure and the acceptance CommerceFoundationWalk.
+
 ### P2 — Stores
 
 Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
