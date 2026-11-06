@@ -101,14 +101,15 @@ function periodsOf(p, count) {
     return {interval, label: intervals[interval].label, at, periods}
 }
 // The currencies of the stores' sales in [from, thru): their default currencies, their placed orders' and their issued
-// invoices'; one asked for alone.
+// invoices'; one asked for alone. No store, no currency: Mantle's summaries without productStoreIds would read the
+// organizations' sales (or refuse a reader without ACCOUNTING_VIEW), not the stores'.
 function currenciesOf(scope, p, from, thru) {
+    if (!scope.storeIds.length) return []
     if (!blank(p.currencyUomId)) {
         const currencyUomId = String(p.currencyUomId)
         if (!one("moqui.basic.Uom", {uomId: currencyUomId})) denied("VALUE_INVALID", "Choose a valid currency")
         return [currencyUomId]
     }
-    if (!scope.storeIds.length) return []
     const found = scope.stores.map(store => store.defaultCurrencyUomId)
     const distinct = (entity, dateField, statuses) =>
         Array.from(

@@ -2576,6 +2576,35 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
     (Customer360's ServiceCases without BOSS_CS_CASE_THERMO), mostly the demo's cases and supply as earlier walks leave them.
     Not checked against master. For the lead.
 
+**Review Nov 6 (P11)** (branch `com/p11`).
+- Checked: SalesAnalysis.js `organizations` and the three summaries: an `ACCOUNTING_VIEW` holder takes the old path whatever
+  stores are named, `currencyUomIds` and SalesTopProduct's `productStoreIds` are empty by default, so Accounting's,
+  Sales' and mr-marble's callers (none passes the new parameters; SalesTopProduct is called without stores) get the same
+  answers; a `COMMERCE_VIEW` reader is answered only for stores of their scope, and the summaries filter by
+  `productStoreId` itself (both sales documents index it), so a store-limited staff member never sees another store of the
+  same organization; an organization named must be the stores', empty stores keep Accounting's refusal, costs are nulled
+  without `PRODUCT_COST_VIEW`. F114's views join a hold or change request to its one OrderHeader (the store is the header's),
+  so an order with several parts is one row, kept distinct. StoreReports.js and Reporting.js: every read is in the store
+  scope, amounts per currency (decimals added with their methods, numbers through `toNumber`), the CSV the same rows behind
+  the same service and audited; open carts are not orders; Home and OnlineSales share `totalsOf`. `report/`'s two
+  DataDocuments are ADMIN's only and the alerts notify ADMIN. AppStructure's floor: master has 41 placeholder screens (P8
+  replaced Orders and Customers), the branch 40 (Commerce/Reports.xml), so 40 is the count, not a hidden regression.
+- R1 (minor, Mantle 9181a259): with `maPeriods` the moving-average trim can leave the newest periods out of the summary list
+  while `ordersThis`/`ordersLast`/`ordersPrior` (and the invoices') are still returned, with their costs, to a reader without
+  `PRODUCT_COST_VIEW`; the costs are now nulled on those too. No spec: every spec order is in the current period, one bucket.
+- R2 (minor, BOSS): Reporting.js `currenciesOf` returned the currency asked for even with no store in scope, so the summaries
+  ran with no `productStoreIds`: an `ACCOUNTING_VIEW` holder got the organizations' sales labelled "Stores: none", another
+  reader an error. No store now means no currency and no read.
+- F-P11-1 left: `extended_bounds` would fix "this" for an empty current period, but it changes Accounting's and Sales'
+  default answers (empty buckets, Prior Total and Average, the moving-average length) and the invoice summary's merged
+  histograms; Commerce already matches buckets by their start day.
+- Specs (`--nobuild`): Mantle SalesReportStoreScope, StoreReports, StoreOperations, StorePromotions, CartRecovery,
+  SalesReports, AccountingStatements, MantleSearch 42 of 42; BOSS CommerceReports, CommerceAccess, CommerceOrders,
+  AccountingReporting, AccountingAccess 38 of 38. mr-marble's SalesSummary render is in its acceptance SimpleScreensRender,
+  which cannot run alone (it depends on AccountingActivities); its call passes no new parameter, read rather than run.
+- For the lead: F-P11-1 (bounds on the summaries' date histograms) is Sales'/Accounting's call; F-P11-7's ten acceptance
+  failures were not checked against master here.
+
 ### P12 — Paid access and subscriptions
 
 Design §4 Product360 paid access, §6 Subscriptions and SubscriptionDetail, §8 RecurringPolicy; COM-SUBSCRIPTION, with
