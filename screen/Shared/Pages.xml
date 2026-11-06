@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Pages (design-commerce §5 Pages; crosscut §2 Shared/Pages, §3.28; style-guide §3.2 List; impl-commerce P4): a site's pages,
+    the store and policy pages of the sites the user's stores sell on. PageFind (site, title or route, locale, role and
+    publication state), PageList (title, route under the Shop's pages/, locale, role, template, published version and its
+    window, a scheduled or failed publication) and NewPage (title, route, locale, template and policy role; a designer's,
+    COMMERCE_THEME_EDIT), each row opening PageDetail. Commerce's context only (Marketing mounts it later with its own):
+    ironstone.commerce.ContextServices.get#SharedContext, then mantle.public.ThemeServices.find#SitePages and
+    store#SitePage, which check the permission and the site's store again. The Forum's guidelines and about pages are the
+    site's own (PASS Sites) and are not listed. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Pages" default-menu-index="1">
+    <parameter name="siteId"/>
+    <parameter name="term"/>
+    <parameter name="locale"/>
+    <parameter name="pageRole"/>
+    <parameter name="state"/>
+    <always-actions>
+        <!-- the mounting app's context: Commerce's alone for now (design-commerce §5's per-app table) -->
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="pagesContext"/>
+        <set field="pagesCan" from="pagesContext.capabilities"/>
+        <set field="sharedLinks" from="pagesContext.sharedLinks"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createPage">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SitePage" out-map="created"
+                    in-map="{siteId:siteId, title:title, routePath:routePath, locale:(locale || null), templateKey:(templateKey || null),
+                        pageRole:(pageRole || null), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="sitePageId" from="created.sitePageId"/>
+                <message type="success">Page ${title} is a draft; write it, then publish it.</message>
+            </if>
+        </actions>
+        <default-response url="../PageDetail"><parameter name="sitePageId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.public.ThemeServices.find#SitePages" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{siteId:(siteId || null), term:(term || null), locale:(locale || null), pageRole:(pageRole || null),
+                    state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="foundError" from="ec.message.hasError()"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="pages" from="found?.pages || []"/>
+        <set field="pagesCount" from="found?.pagesCount || 0"/>
+        <set field="pagesPageIndex" from="found?.pagesPageIndex || 0"/>
+        <set field="pagesPageSize" from="found?.pagesPageSize || 20"/>
+        <set field="pagesPageMaxIndex" from="found?.pagesPageMaxIndex || 0"/>
+        <set field="pagesPageRangeLow" from="found?.pagesPageRangeLow || 0"/>
+        <set field="pagesPageRangeHigh" from="found?.pagesPageRangeHigh || 0"/>
+        <set field="findValues" from="{siteId:siteId, term:term, locale:locale, pageRole:pageRole, state:state}"/>
+        <set field="newPageValues" from="{siteId:siteId, title:'', routePath:'', locale:'', templateKey:'', pageRole:''}"/>
+        <set field="pageDetailUrl" from="sharedLinks['Website/PageDetail']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Pages" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewPage" button-text="New page" icon="sym_o_add" type="primary" width="640" title="New page"
+                        condition="pagesCan.themeEdit">
+                    <form-single name="NewPageForm" transition="createPage" map="newPageValues">
+                        <field name="siteId">
+                            <default-field title="Site">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'sites', selected:siteId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                        <field name="routePath">
+                            <default-field title="Route" tooltip="The address under the shop's pages/, such as returns or help/shipping">
+                                <text-line size="30"/>
+                            </default-field>
+                        </field>
+                        <field name="locale">
+                            <default-field title="Locale" tooltip="Empty: every locale without a page of its own">
+                                <drop-down allow-empty="true">
+                                    <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="pageRole">
+                            <default-field title="Policy" tooltip="A policy page checkout links to; a site has one of each">
+                                <drop-down allow-empty="true">
+                                    <option key="delivery" text="Delivery"/>
+                                    <option key="returns" text="Returns"/>
+                                    <option key="privacy" text="Privacy"/>
+                                    <option key="terms" text="Terms"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="templateKey">
+                            <default-field title="Template" tooltip="The theme's page template; empty for its default">
+                                <text-line size="30"/>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create page"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="siteId"/><field-ref name="title"/></field-row>
+                            <field-row><field-ref name="routePath"/><field-ref name="locale"/></field-row>
+                            <field-row><field-ref name="pageRole"/><field-ref name="templateKey"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="PageFind" transition="." map="findValues">
+            <field name="siteId">
+                <default-field title="Site">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'sites', selected:siteId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Title or route"><text-line size="24"/></default-field></field>
+            <field name="locale"><default-field title="Locale"><text-line size="8"/></default-field></field>
+            <field name="pageRole">
+                <default-field title="Policy">
+                    <drop-down allow-empty="true">
+                        <option key="delivery" text="Delivery"/>
+                        <option key="returns" text="Returns"/>
+                        <option key="privacy" text="Privacy"/>
+                        <option key="terms" text="Terms"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="Publication">
+                    <drop-down allow-empty="true">
+                        <option key="published" text="Published"/>
+                        <option key="draft" text="Draft"/>
+                        <option key="scheduled" text="Waiting to publish"/>
+                        <option key="failed" text="Not published at its date"/>
+                        <option key="withdrawn" text="Withdrawn"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="siteId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="locale"/>
+                    <field-ref name="pageRole"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="PageList" list="pages" skip-form="true" select-columns="true">
+                    <field name="title">
+                        <default-field title="Page">
+                            <link url="${pageDetailUrl}" text="${title}" link-type="anchor" parameter-map="{sitePageId:sitePageId}"/>
+                        </default-field>
+                    </field>
+                    <field name="siteName"><default-field title="Site"><display/></default-field></field>
+                    <field name="routeText"><default-field title="Route"><display/></default-field></field>
+                    <field name="locale"><default-field title="Locale"><display/></default-field></field>
+                    <field name="roleText"><default-field title="Policy"><display/></default-field></field>
+                    <field name="templateKey"><default-field title="Template"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="Publication">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                    WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                <text type="html">${stateText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="versionShort"><default-field title="Version"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                    <field name="scheduledText"><default-field title="Waiting"><display/></default-field></field>
+                    <field name="failureText"><default-field title="Not published"><display style="text-negative"/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="routeText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="versionShort"/></column>
+                    </columns>
+                </form-list>
+            </box-body-nopad>
+        </container-box>
+        <label text="No pages match. A page is on a site one of your stores sells on." type="p" style="text-caption m-muted"
+                condition="!pages.length"/>
+    </widgets>
+</screen>

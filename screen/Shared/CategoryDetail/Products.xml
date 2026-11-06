@@ -15,12 +15,22 @@ along with this software (see the LICENSE.md file). If not, see
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Products" default-menu-index="3">
     <transition name="storeProductsRows">
         <actions>
-            <service-call name="ironstone.products.CategoryServices.store#CategoryRow" in-map="Object.assign({},context,{rowKind:'member'})"/>
+            <!-- under Commerce these change through Store categories (StoreMerchandisingServices: the shared-store check, the
+                site generation; impl-commerce F65) -->
+            <if condition="appRoot == 'Commerce'"><then><message error="true">Under Commerce a category's parents, children and products change in Store categories, which checks the stores that share it.</message></then><else>
+                <service-call name="ironstone.products.CategoryServices.store#CategoryRow" in-map="Object.assign({},context,{rowKind:'member'})"/>
+            </else></if>
         </actions>
         <default-response url="."/>
         <error-response url="."/>
     </transition>
+    <actions>
+        <!-- F65: Commerce changes a category's products in Store categories, not here -->
+        <set field="canEdit" from="canEdit &amp;&amp; appRoot != 'Commerce'"/>
+    </actions>
     <widgets>
+        <label text="Change this category's place and products in Store categories." type="p" style="text-caption m-muted"
+                condition="appRoot == 'Commerce' &amp;&amp; detail?.canEdit"/>
         <section name="Available" condition="recordFound">
             <widgets>
                 <container-box>

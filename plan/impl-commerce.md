@@ -266,7 +266,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | built Nov 5, 2026 |
 | P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | built Nov 5, 2026 |
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability || built Nov 5, 2026 |
-| P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | — |
+| P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | built Nov 6, 2026 |
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | — |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
@@ -959,6 +959,175 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   - a menu with a draft product is refused; a redirect onto `/api` or into a loop is refused;
   - a scheduled page whose author lost the publish grant stays unpublished, with a readiness finding.
 
+**Built Nov 6 (P4).**
+- Mantle:
+  - `entity/PublicEntities.xml`: PublicSitePage keyed by a sequenced `sitePageId` (was site and role), the role optional
+    and unique within a site (`PASS_PAGE_ROLE`), with `appMountId`, `routePath`, `locale`, `templateKey`, `title`, SEO
+    (`seoTitle`, `seoDescription`, `socialImageUrl`), the window (`fromDate`, `thruDate`), who published it, the scheduled
+    publication (`scheduledVersionName`, `scheduledFromDate`, `scheduledThruDate`, `scheduledByUserId`), its failure
+    (`failureCode`, `failureMessage`, `failureDate`) and `changeReason`; role, mount, route, locale, template, wiki page,
+    version, window, scheduled version and date and reason audit-logged. `docs/Upgrading.md` gains the key's rebuild
+    (the check, PostgreSQL and MySQL); no shipped data file has rows. Forum.js `publishSitePage` gives a new binding its
+    sequenced key; its `getSitePage`, owner and operator checks are unchanged.
+  - `entity/PublicNavigationEntities.xml` (new): `PublicSiteNavigation` (a site mount's menu by key and locale, its draft
+    items as JSON with stable item ids, `draftRevision`), `PublicSiteNavigationVersion` (a published snapshot from a date:
+    `SitePublicationState` SpsScheduled, SpsActive, SpsFailed, SpsSuperseded, SpsWithdrawn), `PublicSiteRedirect` (an old
+    path of the site, a typed destination of `SiteDestinationType` SdtProduct, SdtCategory, SdtPage, SdtMount, SdtPath,
+    SdtExternal, permanent or temporary, dated, SpsDraft until published; key fields audit-logged).
+  - `service/mantle/public/SitePages.js` (new module beside Shop P2's Themes.js, whose core is untouched) and its services
+    appended to `ThemeServices.xml`: `find#SitePages`, `store#SitePage`, `get#SitePageHistory`, `find#SiteNavigation`,
+    `store#SiteNavigation`, `publish#SiteNavigation`, the job's `run#ScheduledSitePublications` and per item
+    `run#ScheduledSitePublication`. `SiteServices.get#SitePage` dispatches: the Forum's guidelines and about by role to
+    Forum.js as before; a `sitePageId`, a policy role (delivery, returns, privacy, terms) or `appMountId`, `routePath` and
+    `locale` (the locale's page, its language's, the page with no locale) to SitePages.js, live only in its window and only
+    when the page's published wiki version is the binding's; `publish#SitePage` with a `sitePageId` (publish a version now or
+    from a date, withdraw naming the menus that link to it, cancel what waits; the binding's `publicationRevision`, an
+    operation key, PostingOperation `SitePagePublish`) is SitePages.js's, by permission and store. New live reads
+    `SiteServices.get#SiteNavigation` and `resolve#SiteRedirect` (anonymous; a published site). Permissions: `COMMERCE_VIEW`
+    reads, `COMMERCE_THEME_EDIT` edits a page, `COMMERCE_MERCHANDISE` menus and redirects, `COMMERCE_PUBLISH` publishes
+    either; a site is worked through its Shop mount's store in the user's scope (StoreAdmin.js). Every publication,
+    withdrawal and activation advances the site's generation in its transaction.
+  - The store's page space (F52): the store's current PstFull ProductStoreWikiSpace (no locale), made on the first page
+    (`SP<seq>`, `restrictUpdate=Y`, no member) when it has none; one without `restrictUpdate` is refused
+    (`SPACE_NOT_RESTRICTED`). `store#SitePage` writes the wiki (`update#WikiPage`, `set#PublishedVersion`) as the user with
+    a WikiSpaceUser `allowUpdate` row made for that one write and put back after it (F72).
+  - Exact version: publishing makes the version the page's published wiki version and the binding's in one transaction, so
+    every live read finds the binding's version published; a version saved later stays a draft (F74).
+  - Navigation validation: a product public in the store (P3's resolver), a store category, a published page of the site,
+    an enabled app of the site, a plain site path under one of its mounts, an https address; refused: another scheme
+    (`SCHEME_REFUSED`), `/apps`, `/qapps`, `/vapps`, `/rest`, `/rpc` on any host (`PRIVATE_LINK`), a first segment of
+    PublicApps.js `reservedPaths` (moved there from Forum.js `storeMounts`, which now reads it) or `api` (`PATH_RESERVED`),
+    a draft product or page (`DESTINATION_NOT_PUBLIC`), a redirect off the site (`REDIRECT_OFF_SITE`), of another app's path
+    or an old path redirected already (`PATH_RESERVED`, `REDIRECT_TAKEN`), into a loop through the site's redirects
+    (`REDIRECT_LOOP`); a menu has at most 3 levels and 200 items, moved up, down, in and out. Each is checked on save and
+    again on publish; live reads drop an item whose destination is no longer public.
+  - Scheduled publication: the `run_ScheduledSitePublications` ServiceJob (MantleSetupData.xml, every minute) runs each due
+    page, menu version and redirect in its own transaction, signed in as its publisher: `COMMERCE_PUBLISH` and the store
+    still theirs, the version, route and destinations still valid; a refusal is recorded on the item and leaves the live
+    version as it was. StoreAdmin.js readiness gains `sitePublication` (a warning listing each failed one).
+  - ThemeView.js: the view's `navigation` is the site's live `main` menu; the `page` shape gains `socialImageUrl`,
+    `policyRole` and `policyVersion` for Shop P3's Page.
+- BOSS:
+  - `screen/Commerce/Website.xml`: Pages (`Shared/Pages.xml`), Navigation (`Commerce/Website/Navigation.xml`) and
+    PageDetail (`Shared/PageDetail.xml`, hidden), one route each.
+  - `Shared/Pages.xml`: PageFind (site, title or route, locale, policy, state), PageList (phone columns), NewPage
+    (COMMERCE_THEME_EDIT). `Shared/PageDetail.xml`: the record header (route chip, title, site, locale, policy, state chip,
+    live address) and its tabs `PageDetail/PageContent.xml` (Knowledge.qvue in a Commerce mode, its transitions setup,
+    page, history, diff, attachment and savePage serving the bound page only, savePage through `store#SitePage`; its twin
+    `PageText.xml`), `PageRoute.xml`, `PagePublication.xml` (Publish with version, from, until and reason; Withdraw with
+    the menus that link to it confirmed; Cancel what waits) and `PageHistory.xml` (versions; publication activity).
+    Commerce's context only (`ironstone.commerce.ContextServices.get#SharedContext`).
+  - `Commerce/Website/Navigation.xml`: the site and its menus, New menu, Rename, MenuItems with Move up, Move down, In,
+    Out, Edit and Remove, Add item (destination choices by kind), PublishNavigation (each item's check, from date, reason)
+    and Withdraw; Redirects with Add redirect, Publish, Withdraw and Remove a draft.
+  - `Commons/Knowledge.qvue` (F53): the Commerce mode (`inCommerce` on PageDetail's PageContent): the bound page alone, no
+    side pane, tree, search, Publish, rename, move, duplicate, delete, watch, Request review, editing together or the
+    parts under the page; Edit by the binding's `canEdit`; save posts to PageContent's `savePage`.
+  - F65: under Commerce, Shared/CategoryDetail's Parents and Products tabs hide their edits and their transitions refuse,
+    naming Store categories; Products' are unchanged.
+  - Commerce.js (appended): `linkPaths` Website/Pages, Website/PageDetail, Website/Navigation; choices `sites`,
+    `sitePages`, `destinations`. Demo.js: ZIZI_SHOP's published Returns policy page (route `returns`, role `returns`) and
+    its published `main` menu (DEMO_1_1, Returns), each a step of its own.
+- Specs: Mantle `test/public/SitePages` (6 features, 2.5 s: the Forum's guidelines bound and read by role, out of Commerce's
+  reach and its role reserved; a returns page by route, locale and role, its space restricted with no grant left behind,
+  route and role taken, designer and other organization refused; a saved version not live, unknown and stale versions
+  refused, a retry by its key, a withdrawal; a schedule activated by the job as its author, one whose author lost
+  COMMERCE_PUBLISH failed with the old version live and a readiness finding; the navigation refusals; a published menu and
+  redirect live, a referenced page's withdrawal confirmed, the generation +4). BOSS `CommerceSitePages` (3 features,
+  0.3 s: Pages scoped to the user's stores' sites; PagePublication's one qvt render; F65's refusal) and a `CommerceAccess`
+  case (0.16 s: the designer edits ZIZI_SHOP's returns page, the reader is refused, the designer is refused a page on
+  Ziziwork Services' site; the `sites` choice). Also run, all pass: mr-pass Forum, ForumAccess, Operations, Integrations,
+  Portals, SupplierPages, ShopAccess, ShopThemes, Transport (57 features; the Schema/Routes mirrors unchanged); Mantle
+  Mailboxes, PassAuthority, ThemeReleases, StoreAdmin, StorePublication, AccountingPortals, SupportPortal (77 with
+  SitePages); mr-boss Knowledge, KnowledgeReview, Notes, CustomerServiceKnowledge, CustomerServiceAccess, ProjectsAccess,
+  CommerceAssortment, CommerceStores, CommerceAccess, ProductsTaxonomy, ProductsSharedContext, ProductsAccess (108 with
+  CommerceSitePages). Not run: `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommerceSitePagesWalk` (4 features: the designer saves a new returns policy version in
+  PageContent, not live; the publisher schedules it in PagePublication, the job shows it at its date, by role and by route
+  and locale, and the Forum's guidelines page of ZIZI_SHOP reads as before; Navigation refuses a menu item of the draft
+  DEMO_VAR, a redirect onto `/api` and one into a loop; a delivery page scheduled by a publisher who then loses the
+  group stays unpublished with the `sitePublication` finding, then cancelled; every Website screen in qvt and html), run:
+  4 passed. AppStructure, TuiRender and ServerStatic: 22 passed.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new or changed screens.
+- Inventories: usl-inventory's `publish#SitePage` row names Shared/PageDetail/PagePublication and Commerce/Website/PageDetail
+  (`get#SitePage`'s Shop Page row is Shop P3's); ss-inventory has no rows of these screens.
+- Design: design-commerce §5 has the as-built note (key, page space, exact version, schedule, navigation records) and
+  PageDetail's route `Commerce/Website/PageDetail`; crosscut §3.28's row likewise.
+- Decisions:
+  - Pages and PageDetail are sibling routes (`Website/Pages`, `Website/PageDetail`), as Merchandising's CategoryDetail.
+  - A redirect is a draft until a publisher publishes it, as a menu is; a menu's draft items are JSON on its row, its
+    published versions snapshots; live reads re-check destinations.
+  - PageContent has its own transitions rather than guards on Knowledge.xml's thirty (F73).
+  - The demo store has a published returns policy page and main menu, for Shop P3's Page and the walks.
+  - Commerce's policy roles are delivery, returns, privacy and terms; guidelines and about stay the Forum's
+    (`ROLE_RESERVED`).
+- Findings (provisional):
+  - **F72** F52's "as no user with authorization disabled" is not available in a request: the framework has no scope
+    that runs without the user, and `logoutUser` in a web request ends the session. `store#SitePage` gives the user the
+    page space's update right for one write and puts the row back. For the framework, optional: a wiki parameter or
+    `ec.user` scope for a checked internal write.
+  - **F73** Knowledge.xml's write transitions (rename, move, duplicate, drop, delete, publish, restore, reviews, tags,
+    files, follow, links) would each need a Commerce guard; PageContent serves the Commerce mode with its own six
+    transitions, so no other write is reachable from the Commerce mount (F53 said Knowledge.xml).
+  - **F74** The exact-version rule as built: the Forum's path still needs the version to be the wiki's published one
+    beforehand (and its page is dark between the wiki publish and the binding); Commerce's publish does both in one
+    transaction.
+  - **F75** For the lead (mr-pass, read only here): design-shop's existing-records row ("`get#SitePage` serves the
+    guidelines and about roles only") is now out of date; Shop P3's `getShopPage` reads pages through `get#SitePage`'s
+    `appMountId`, `routePath`, `locale` input, the main menu through ThemeView's `navigation`, and redirects through
+    `resolve#SiteRedirect`; the PASS operations for them, and their Schema/Routes mirrors, are Shop P3's.
+  - **F76** ZZW_RETAIL (POPC_DEFAULT's `ProductStore.wikiSpaceId`, Customer Service's knowledge space) has no
+    `restrictUpdate` and is not the store page space; Commerce made POPC_DEFAULT a page space of its own. Shop P3's move of
+    ZZW_RETAIL's pages to the Shop site (F17, F56) should bind them through PublicSitePage pages of the restricted space,
+    or leave them as knowledge articles.
+  - **F77** The template key is checked only for its shape, not against the active release's templates; P5's editors
+    or Shop P3's page render should check it.
+
+**Review Nov 5 (P4).**
+- Checked: `git diff master...com/p4` in mr-mantle and mr-boss against this section, §2 and design §5. F72's grant
+  (`withSpaceUpdate`): the WikiSpaceUser row is made and put back inside the caller's transaction (`store#SitePage`,
+  `publish#SitePage`, the job's item transaction), so it is never committed; a failed wiki write marks the transaction
+  rollback-only (any service error does), so a skipped restore rolls back with it; `get#WikiPageAccess` reads the row
+  without the entity cache and the framework's transaction cache is per thread, so a concurrent request of the same user
+  (Commons Knowledge) never sees it. Kept; the framework allows only no-user internal writes, so no safer mechanism exists
+  without a framework change (F72 stands). The re-key: Forum.js' `getSitePage` and `publishSitePage` find by site and
+  role and give a new binding its key; Forum, ForumAccess, ShopThemes, Mailboxes and PassAuthority pass; Forum.js's
+  reserved list is PublicApps.js `reservedPaths` unchanged. `publish#SitePage`: operation key before the revision check,
+  `REVISION_STALE`, the exact version made the wiki's published one and the binding's in one transaction, the generation
+  on publish now, withdraw and activation only. F73: PageContent mounts only Knowledge.qvue with its own six
+  transitions (no Knowledge.xml under Commerce); the space's `restrictUpdate` keeps Commons Knowledge's writes out. F65,
+  the live reads (published site, active versions only, destinations re-checked), store scope through StoreAdmin.js on
+  pages, menus, redirects and the `sites`, `sitePages` and `destinations` choices.
+- **R1 (high)** A menu's category item, and a redirect to a category, were checked through `get#StoreCategories`
+  (`COMMERCE_VIEW`): an anonymous `get#SiteNavigation`, and so ThemeView's navigation on every Shop page, failed on the
+  error message the refusal left. The check reads the store's tree directly (StoreMerchandising.js exports `storeTree`,
+  appended), and each live item's check keeps its errors in their own frame. SitePages' menu now has a category item
+  read anonymously. (mr-mantle e42c6380)
+- **R2 (medium)** A scheduled publication refused with an error message (an author who can no longer sign in:
+  `internalLoginUser` adds one) was never recorded, as the failure write does not run beside an error: the item was
+  retried every minute with no readiness finding. The refusal clears the messages first, and the job records the failure
+  in its own transaction when the item's could not commit. SitePages has the disabled author's scheduled redirect.
+  (e42c6380)
+- **R3 (medium)** A redirect draft saved with a from date, or a failed scheduled one, could not be published once that
+  date had passed (`VALUE_INVALID`, a past start); a passed date is now. A failed menu version was never cleared, so its
+  readiness finding stayed after the menu was published again; publishing a menu now ends it. (e42c6380)
+- **R4 (low)** The `destinations` choice labelled any product id given as `selected` with its name; only one the store
+  has. (mr-boss 9f4c949a)
+- **R5 (low)** ThemeView's `navigation` shape dropped a menu's third level; the WikiSpaceUser row's `allowUpdate` is put
+  back exactly (an empty one stayed `N`). (e42c6380)
+- For the lead:
+  - `store#SitePage` changes a published page's route, role, title, SEO and template live with `COMMERCE_THEME_EDIT`
+    alone (the generation advanced, `publicationRevision` not, the stamp check optional): confirm, or make those of a
+    published page wait for `COMMERCE_PUBLISH`.
+  - The store page space is `restrictView N`: every Commons Knowledge user reads the pages' drafts and versions.
+  - The job records a refusal that rolled its transaction back (R2) whatever its cause, so a transient one (a lock
+    timeout) also needs the publisher to publish again; scheduled menus and redirects are not refused when their window
+    ended before they started (pages are, `WINDOW_PASSED`).
+  - `docs/Upgrading.md`'s MySQL `CREATE UNIQUE INDEX PASS_PAGE_ROLE` fails if the table check made the index already.
+- Specs after the fixes: Mantle SitePages 7 passed (2.6 s), ThemeReleases, StoreAdmin, StorePublication 18, Mailboxes
+  and PassAuthority 28; BOSS CommerceSitePages, CommerceAccess, CommerceAssortment 17, Knowledge and
+  CustomerServiceKnowledge 25; PASS Forum, ForumAccess, ShopThemes 31. No screen changed; acceptance not rerun.
+
 - **Wave 4 suites (Nov 6, on master after Shop P2, P7 and the F60 fix merged; P4's worker ran at the same time):**
   standalone mr-mantle 1,777 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped;
   `./moq test-apps` 3,134 server features and 15 client features passed, none failed; within every budget (server:
@@ -1541,6 +1710,13 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F69 | P7: an EntityFind can't be reused after `count()` | The module builds the find twice |
 | F70 | P7: Redemptions and Usage show the order without a link until P8 mounts OrderDetail | P8 |
 | F71 | P7 review: OrderBulk places up to 100 parts in one transaction, so one refused placement rolls back the whole bulk change (as any placement error did before); `generate#PromoCodes` writes its operation record after the codes, so two concurrent submissions with one key both make a batch and an interrupted batch is made again in full; Mantle's `store#PromoCodeParty` accepts any active party (Commerce checks the customer first); the TEST2 feature's discount depends on the database's earlier TEST2 uses | Left as they are for now: OrderBulk's per-part transactions are Mantle's choice, not Commerce's; the code batch's claim-first key needs an EntityLib change (later); Shop and Marketing check their own party; the TEST2 placement assertion is the default's test |
+| F72 | P4: F52's "write as no user with authz off" is not possible in a web request (no run-as-nobody scope; `logoutUser` ends the session) | `store#SitePage` grants the user a WikiSpaceUser `allowUpdate` row for the one write and restores it, inside the caller's transaction (the review found it safe); a framework internal-write scope would replace it |
+| F73 | P4: the Commerce mode's server side is PageContent's own six transitions, not guards on Knowledge.xml's write transitions | Knowledge.xml is not mounted under Commerce (the review checked) |
+| F74 | P4: Commerce's publish makes the version the wiki's published version and the binding's in one transaction; the Forum path still leaves its page dark between the wiki publish and the binding | The Forum's own (later) |
+| F75 | P4: design-shop's row saying `get#SitePage` serves only the guidelines and about roles is stale; the PASS operations for pages, navigation and redirects are Shop's | Shop P3 updates design-shop and adds the operations |
+| F76 | P4: ZZW_RETAIL is not restricted and is not the store's page space, so Commerce made POPC_DEFAULT a page space of its own | Shop P3 serves the store's page space; ZZW_RETAIL's move (F17, F56) is re-planned there |
+| F77 | P4: a page's template key is checked for its shape only, not against the theme's templates | P5 checks it against the draft's and the active release's templates |
+| F78 | P4 review: `store#SitePage` makes a published page's route, role, title, SEO and template changes live at once with `COMMERCE_THEME_EDIT`; the store page space is `restrictView N`; scheduled menus and redirects are not refused when their window ended before they start; the MySQL `PASS_PAGE_ROLE` step fails if the index exists | A follow-up (com/p4fix): such changes to a published page wait for `COMMERCE_PUBLISH`; menus and redirects take pages' `WINDOW_PASSED`; Upgrading.md's MySQL step made conditional. Drafts readable by BOSS users through Commons is accepted (internal readers only) |
 
 ## 7. Later
 

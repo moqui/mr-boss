@@ -264,7 +264,11 @@ const linkPaths = [
     "Promotions/Promotions",
     "Promotions/PromotionDetail",
     "Promotions/PromoCodes",
-    "Promotions/PromoCodeDetail"
+    "Promotions/PromoCodeDetail",
+    // P4: a site's pages and navigation (design §5)
+    "Website/Pages",
+    "Website/PageDetail",
+    "Website/Navigation"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -523,6 +527,91 @@ const choiceSources = {
             .filter(partyId => !!customerOf(userScope, partyId))
             .slice(0, choiceLimit + 1)
             .map(partyId => ({value: partyId, label: partyName(partyId)}))
+    },
+    // P4: the sites the user's stores sell on (a Shop mount targeting a store in scope), by name or id
+    sites: (userScope, term, selected) => {
+        const storeIds = Array.from(storeFind(userScope).selectField("productStoreId").list()).map(row => row.productStoreId)
+        const siteIds = storeIds.length
+            ? Array.from(
+                  new Set(
+                      Array.from(
+                          find("mantle.public.PublicSiteApp")
+                              .condition("app", "shop")
+                              .condition("targetId", "in", storeIds)
+                              .list()
+                      ).map(row => row.siteId)
+                  )
+              )
+            : []
+        const needle = term.toLowerCase()
+        const options = (
+            siteIds.length ? Array.from(find("mantle.public.PublicSite").condition("siteId", "in", siteIds).list()) : []
+        )
+            .map(site => ({value: site.siteId, label: site.name || site.siteId}))
+            .filter(option => !needle || (option.label + " " + option.value).toLowerCase().includes(needle))
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .slice(0, choiceLimit)
+        return selected && !options.some(option => option.value === selected) && siteIds.includes(selected)
+            ? options.concat([{value: selected, label: one("mantle.public.PublicSite", {siteId: selected})?.name || selected}])
+            : options
+    },
+    // P4: a site's published pages, for a menu item's destination (mantle.public.ThemeServices.find#SitePages checks the
+    // site's store again)
+    sitePages: (userScope, term, selected, p) => {
+        if (!p.siteId) return []
+        const found = call("mantle.public.ThemeServices.find#SitePages", {
+            siteId: p.siteId,
+            term: term || null,
+            state: "published",
+            pageSize: choiceLimit
+        })
+        const options = Array.from(found.pages || []).map(page => ({
+            value: page.sitePageId,
+            label: page.title + " (" + page.routeText + ")"
+        }))
+        if (selected && !options.some(option => option.value === selected)) {
+            const chosen = Array.from(call("mantle.public.ThemeServices.find#SitePages", {sitePageId: selected}).pages || [])[0]
+            if (chosen && chosen.siteId === p.siteId)
+                options.push({value: chosen.sitePageId, label: chosen.title + " (" + chosen.routeText + ")"})
+        }
+        return options
+    },
+    // P4: a menu item's or redirect's destination on a site of the user's stores, by its kind: the store's published products,
+    // its categories, the site's published pages or its apps (paths and other websites are typed, not chosen)
+    destinations: (userScope, term, selected, p) => {
+        const mount = p.siteId ? rows("mantle.public.PublicSiteApp", {siteId: p.siteId, app: "shop"})[0] : null
+        if (!mount?.targetId || !storeIn(userScope, mount.targetId)) return []
+        const type = p.destinationTypeEnumId
+        if (type === "SdtProduct") {
+            const found = call("mantle.product.StoreMerchandisingServices.find#StoreProducts", {
+                productStoreId: mount.targetId,
+                term: term || null,
+                publicationState: "published",
+                pageSize: choiceLimit
+            })
+            const options = Array.from(found.products || []).map(row => ({
+                value: row.productId,
+                label: row.productName + " (" + row.productId + ")"
+            }))
+            // the selected product's label only when the store has it (a forged id names nothing)
+            if (
+                selected &&
+                !options.some(option => option.value === selected) &&
+                rows("mantle.product.store.ProductStoreProduct", {productStoreId: mount.targetId, productId: selected}).length
+            ) {
+                const product = one("mantle.product.Product", {productId: selected})
+                if (product) options.push({value: selected, label: (product.productName || selected) + " (" + selected + ")"})
+            }
+            return options
+        }
+        if (type === "SdtCategory")
+            return choiceSources.storeCategories(userScope, term, selected, {productStoreId: mount.targetId})
+        if (type === "SdtPage") return choiceSources.sitePages(userScope, term, selected, p)
+        if (type === "SdtMount")
+            return rows("mantle.public.PublicSiteApp", {siteId: p.siteId})
+                .filter(row => row.enabled === "Y")
+                .map(row => ({value: row.appMountId, label: row.app + " (" + row.pathPrefix + ")"}))
+        return []
     }
 }
 function choices(p) {

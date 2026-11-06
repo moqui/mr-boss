@@ -2099,7 +2099,7 @@ returns, not their own intake (X7).
 
 | App | Tabs or panes shown | Filters fixed | Action set | Emphasis |
 | --- | --- | --- | --- | --- |
-| Commerce (`Commerce/Website/Pages`, `PageDetail`) | Pages by site and mount; content, template, route, locale, window and publication | authorized sites and stores | author, assign a template, publish and unpublish by designer and publisher grants | store and policy pages |
+| Commerce (`Commerce/Website/Pages`, `Commerce/Website/PageDetail`) | Pages by site and mount; content, template, route, locale, window and publication | authorized sites and stores | author, assign a template, publish and unpublish by designer and publisher grants | store and policy pages |
 | Marketing (`Marketing/Content/LandingPages`, `PageDetail`) | Pages of permitted sites with a campaign link; page body, SEO, route and window | permitted sites; campaign when opened from one | create, edit, preview, request review, publish with the content grant; no theme edits | storeless campaign pages that convert |
 
 ### 3.29 Marketing shared surfaces

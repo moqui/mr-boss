@@ -1881,7 +1881,7 @@ and had no row. Section counts above remain historical; these rows add no implem
 | ledger/LedgerReportServices | run#InvoiceReconciliation | Accounting/Reports/InvoiceReconciliation; Insights/Dashboard; Insights/Panels/PanelDetail; Insights/ReportBuilder/Analysis; Insights/ManagementDigest |  |
 | product/AssetRecordServices | update#AssetMetadata | Maintenance/Equipment/EquipmentDetail |  |
 | public/SiteServices | get#SitePage | PASS:Shop/Page |  |
-| public/SiteServices | publish#SitePage | Shared/PageDetail; Commerce/Website/Pages/PageDetail; Marketing/Content/LandingPages/PageDetail |  |
+| public/SiteServices | publish#SitePage | Shared/PageDetail; Commerce/Website/Pages/PageDetail; Marketing/Content/LandingPages/PageDetail | Shared/PageDetail/PagePublication (Publish, Withdraw, Cancel); Commerce/Website/PageDetail (Commerce P4) |
 
 ## Purchasing P16 — Supplier portal (Nov 4, 2026)
 

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PagePublication, PageDetail's Publication tab (design-commerce §5 PageDetail PagePublication; impl-commerce P4): what the
+    site shows now (the exact version, its window, who published it), a publication waiting for its date or one that failed
+    at it, and the publisher's actions (COMMERCE_PUBLISH): Publish a version (now or from a date, until a date, with a
+    reason; the page's address, the menus that link to it and the site's next generation said first), Withdraw (naming the
+    menus that link to it, which must be confirmed) and Cancel what waits. Each goes through
+    mantle.public.SiteServices.publish#SitePage with the page's publication revision and an operation key; a scheduled one is
+    revalidated as its publisher at its date (the publication job), and a refusal there leaves the live version as it is. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Publication" default-menu-index="3">
+    <transition name="publishPage">
+        <actions>
+            <service-call name="mantle.public.SiteServices.publish#SitePage" out-map="published"
+                    in-map="{input:{sitePageId:sitePageId, publishAction:(publishAction || 'publish'), versionName:(versionName || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), expectedRevision:expectedRevision,
+                        confirmReferences:(confirmReferences == 'Y'), changeReason:(changeReason || null), operationKey:operationKey}}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${published.result.state == 'scheduled' ? 'The version waits for its date; it is checked again then.'
+                    : published.result.state == 'published' ? 'Published: the site shows this version.'
+                    : published.result.state == 'withdrawn' ? 'Withdrawn: the site no longer shows the page.' : 'Nothing waits to publish now.'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="sitePageId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.public.ThemeServices.get#SitePageHistory" out-map="historyOut" transaction="force-new" ignore-error="true"
+                    in-map="{sitePageId:sitePageId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="versions" from="historyOut?.versions || []"/>
+            <set field="references" from="sitePage.menuReferences || []"/>
+            <set field="referencesText" from="references.map((ref) =&gt; ref.name).join(', ')"/>
+            <set field="canPublish" from="pagesCan.publish"/>
+            <set field="publishValues" from="{sitePageId:sitePageId, publishAction:'publish', versionName:(historyOut?.currentVersionName || ''),
+                    expectedRevision:sitePage.publicationRevision, operationKey:'page-' + ec.user.randomString(24), changeReason:''}"/>
+            <set field="withdrawValues" from="{sitePageId:sitePageId, publishAction:'withdraw', expectedRevision:sitePage.publicationRevision,
+                    operationKey:'page-' + ec.user.randomString(24), confirmReferences:'', changeReason:''}"/>
+            <set field="liveText" from="sitePage.state == 'published' ? 'Version ' + sitePage.versionShort + ', from ' + sitePage.fromDateText
+                    + (sitePage.thruDateText ? ' until ' + sitePage.thruDateText : '') + (sitePage.publishedText ? '; published by ' + sitePage.publishedText : '')
+                    : sitePage.state == 'withdrawn' ? 'Withdrawn on ' + sitePage.thruDateText : 'Not published yet'"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="Publication" condition="recordFound">
+            <widgets>
+                <container-box>
+                    <box-header title="On the site"/>
+                    <box-toolbar>
+                        <container-dialog id="PublishPage" button-text="Publish" icon="sym_o_public" type="primary" width="640"
+                                title="Publish ${sitePage.title}" condition="canPublish">
+                            <label type="p" text="Shows at ${sitePage.publicUrl || sitePage.routeText}. The site's caches move to its next generation."/>
+                            <label type="p" style="text-caption" text="Menus that link to it: ${referencesText}" condition="referencesText"/>
+                            <form-single name="PublishPageForm" transition="publishPage" map="publishValues">
+                                <field name="sitePageId"><default-field><hidden/></default-field></field>
+                                <field name="publishAction"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="versionName">
+                                    <default-field title="Version">
+                                        <drop-down allow-empty="false">
+                                            <list-options list="versions" key="${versionName}"
+                                                    text="${versionShort} · ${dateText} ${userText}${note ? ' · ' + note : ''}${isPublished ? ' (on the site)' : ''}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="Empty: until withdrawn"><date-time type="timestamp"/></default-field></field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Publish"><submit confirmation="Publish this version of ${sitePage.title}?"/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="versionName"/>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="changeReason"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="WithdrawPage" button-text="Withdraw" icon="sym_o_unpublished" width="560"
+                                title="Withdraw ${sitePage.title}" condition="canPublish &amp;&amp; sitePage.state == 'published'">
+                            <label type="p" text="The site stops showing the page now."/>
+                            <label type="p" style="text-warning" text="These menus link to it and lose the link: ${referencesText}" condition="referencesText"/>
+                            <form-single name="WithdrawPageForm" transition="publishPage" map="withdrawValues">
+                                <field name="sitePageId"><default-field><hidden/></default-field></field>
+                                <field name="publishAction"><default-field><hidden/></default-field></field>
+                                <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="confirmReferences">
+                                    <conditional-field condition="referencesText" title=" ">
+                                        <check><option key="Y" text="Withdraw it although menus link to it"/></check>
+                                    </conditional-field>
+                                    <default-field><ignored/></default-field>
+                                </field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Withdraw"><submit type="danger" confirmation="Withdraw ${sitePage.title} from the site?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="${liveText}" type="p"/>
+                    </box-body>
+                </container-box>
+                <section name="Waiting" condition="sitePage.scheduledText || sitePage.failureText">
+                    <widgets>
+                    <container-box type="warning">
+                        <box-header title="${sitePage.failureText ? 'Not published at its date' : 'Waiting to publish'}"/>
+                        <box-toolbar>
+                            <link url="publishPage" text="Cancel" icon="sym_o_cancel" link-type="hidden-form-link" condition="canPublish"
+                                    confirmation="Cancel the publication that waits for its date?"
+                                    parameter-map="{sitePageId:sitePageId, publishAction:'cancel', expectedRevision:sitePage.publicationRevision,
+                                        operationKey:'page-' + ec.user.randomString(24)}"/>
+                        </box-toolbar>
+                        <box-body>
+                            <label text="${sitePage.scheduledText}" type="p" condition="sitePage.scheduledText"/>
+                            <label text="${sitePage.failureText}. The site still shows what it showed; publish again, or cancel." type="p"
+                                    style="text-negative" condition="sitePage.failureText"/>
+                        </box-body>
+                    </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

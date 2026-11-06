@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PageContent, PageDetail's Content tab (design-commerce §5 PageDetail PageContent; impl-commerce P4, F29, F53): the page's
+    text in the Commons Knowledge editor (Commons/Knowledge.qvue in its Commerce mode: the bound page alone, no side pane,
+    Publish, rename, move, delete or Request review). Its transitions serve only that page: setup answers the page's
+    binding (commerce), page, history, diff and attachment read the bound wiki page through
+    ironstone.commons.KnowledgeServices (the wiki's view rule), and savePage saves a new version through
+    mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT and the site's store; the page space's restrictUpdate keeps
+    every other writer out, F52). The live page changes only when the Publication tab publishes a version. The terminal and
+    the plain browser view are PageText, a form of the same save. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Content" default-menu-index="1" render-modes="vue,qvue,qvt,html,tui" server-static="vue,qvue">
+    <transition name="setup" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const page = ec.context.get('sitePage')
+            const wiki = page && page.wikiPageId ? ec.entity.find('moqui.resource.wiki.WikiPage').condition('wikiPageId', page.wikiPageId).disableAuthz().one() : null
+            const space = wiki ? ec.entity.find('moqui.resource.wiki.WikiSpace').condition('wikiSpaceId', wiki.wikiSpaceId).disableAuthz().one() : null
+            if (!page || !wiki || !space) { ec.web.sendJsonResponse({spaceList: [], recentList: [], reviewCount: 0, me: {}, commerce: null}); return }
+            const can = ec.context.get('pagesCan') || {}
+            ec.web.sendJsonResponse({spaceList: [{wikiSpaceId: space.wikiSpaceId, description: space.description || space.wikiSpaceId, canUpdate: false,
+                    readOnly: false}], defaultWikiSpaceId: space.wikiSpaceId, recentList: [], reviewCount: 0, me: {},
+                commerce: {sitePageId: page.sitePageId, wikiPageId: wiki.wikiPageId, wikiSpaceId: wiki.wikiSpaceId, pagePath: wiki.pagePath || '',
+                    title: page.title, canEdit: !!can.themeEdit}})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- the bound page, or a version of it; the wiki's update right is not this editor's (canUpdate false): Commerce's is -->
+    <transition name="page" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const bound = ec.context.get('sitePage')
+            if (!bound || !bound.wikiPageId) { ec.web.sendJsonResponse({}); return }
+            const out = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#PageView').parameters({wikiPageId: bound.wikiPageId,
+                versionName: versionName || null}).call()
+            if (ec.message.hasError() || !out.page) { ec.web.sendJsonResponse({}); return }
+            const page = Object.assign({}, out.page, {canUpdate: false, title: out.page.title || bound.title})
+            ec.web.sendJsonResponse({page: page, failedParts: out.failedParts})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="history" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const bound = ec.context.get('sitePage')
+            if (!bound || !bound.wikiPageId) { ec.web.sendJsonResponse({}); return }
+            const out = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#History').parameters({wikiPageId: bound.wikiPageId}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {versionList: out.versionList, historyList: out.historyList,
+                currentVersionName: out.currentVersionName, publishedVersionName: out.publishedVersionName, storage: out.storage,
+                canRestore: false, canPublish: false})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="diff" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const bound = ec.context.get('sitePage')
+            if (!bound || !bound.wikiPageId) { ec.web.sendJsonResponse({}); return }
+            const out = ec.service.sync().name('ironstone.commons.KnowledgeServices.get#VersionDiff').parameters({wikiPageId: bound.wikiPageId,
+                fromVersionName: fromVersionName || null, toVersionName: toVersionName || null}).call()
+            ec.web.sendJsonResponse(ec.message.hasError() ? {} : {fromVersionName: out.fromVersionName, toVersionName: out.toVersionName,
+                fromShort: out.fromShort, toShort: out.toShort, html: out.html, stats: out.stats})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="attachment" method="get" read-only="true">
+        <actions><script><![CDATA[
+            const bound = ec.context.get('sitePage')
+            const out = bound && bound.wikiPageId ? ec.service.sync().name('ironstone.commons.KnowledgeServices.get#Attachment').parameters({
+                wikiPageId: bound.wikiPageId, filename: filename || ''}).call() : null
+            if (!out || ec.message.hasError()) ec.web.sendJsonResponse({})
+            else ec.web.sendResourceResponse(out.location, String(inline) === 'true' && out.inlineAllowed)
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- a new version of the page's text, through store#SitePage -->
+    <transition name="savePage">
+        <actions><script><![CDATA[
+            const out = ec.service.sync().name('mantle.public.ThemeServices.store#SitePage').parameters({sitePageId: sitePageId || '',
+                pageText: pageText ?? '', versionNote: versionNote || null, baseVersionName: baseVersionName || null,
+                force: String(force) === 'true'}).call()
+            if (ec.message.hasError()) { ec.web.sendJsonResponse({}); return }
+            const short = (name) => String(name).length > 12 ? String(name).substring(0, 10) : name
+            const message = out.conflict ? null : out.versionName ? ec.resource.expand('Saved as version ${name}; publish it to show it on the site', '',
+                {name: short(out.versionName)}) : ec.l10n.localize('No changes to save')
+            ec.web.sendJsonResponse({versionName: out.versionName, currentVersionName: out.currentVersionName, conflict: !!out.conflict,
+                conflictText: out.conflictText, savedText: ec.l10n.format(ec.user.nowTimestamp, 'h:mm a'),
+                messageInfos: message ? [{type: 'success', message: message}] : []})
+        ]]></script></actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commons/Knowledge.qvue" template="false"/>
+            <text type="tui"><![CDATA[${JSON.stringify([{t: "dynamicContainer", id: "PageText", url: sri.buildUrl("../PageText")
+                .addParameters({sitePageId: sitePageId || null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p><a href="PageText?sitePageId=${sitePageId || ''}">Edit the page's text as a form</a></p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

@@ -1,0 +1,473 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Navigation (design-commerce §5 Navigation; impl-commerce P4): a site's menus and redirects. The site (one of the sites the
+    user's stores sell on) and its menus by key and locale; for the menu chosen, MenuEdit (its name), MenuItems (its draft's
+    items in tree order, each with its destination checked now, and the keyboard tree controls Move up, Move down, In and
+    Out, Edit and Remove; Add item) and PublishNavigation (the draft's items as checked now, the site and the generation,
+    from a date with a reason; Withdraw); Redirects (old path, typed destination, permanent or temporary, dates, state;
+    Add redirect, Publish, Withdraw, Remove a draft). A destination is a product public in the store, a store category, a
+    published page, an app of the site, a path of the site or an https address; a draft product or page, another scheme, a
+    private BOSS address, a reserved path, a loop and a redirect off the site are refused by
+    mantle.public.ThemeServices.store#SiteNavigation and again by publish#SiteNavigation. The merchandiser edits
+    (COMMERCE_MERCHANDISE), the publisher publishes (COMMERCE_PUBLISH); each service checks the site's store again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Navigation" default-menu-index="2">
+    <parameter name="siteId"/>
+    <parameter name="navigationId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createMenu">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation" out-map="saved"
+                    in-map="{siteId:siteId, menuKey:menuKey, locale:(locale || null), name:(name || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="navigationId" from="saved.navigationId"/>
+                <message type="success">Menu ${menuKey} made; add its items, then publish it.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveMenu">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation"
+                    in-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, name:name}"/>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveItem">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation"
+                    in-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision,
+                        item:{itemId:(itemId || null), parentItemId:(parentItemId || null), label:label, destinationTypeEnumId:destinationTypeEnumId,
+                            destinationValue:(['SdtPath', 'SdtExternal'].includes(destinationTypeEnumId) ? destinationText : destinationValue),
+                            visible:(visible || 'Y')}}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved ${label} in the menu's draft.</message></if>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeItem">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation"
+                    in-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, removeItemId:itemId}"/>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="moveItem">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation"
+                    in-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, moveItemId:itemId, direction:direction}"/>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishNavigation">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.publish#SiteNavigation" out-map="published"
+                    in-map="{siteId:siteId, navigationId:(redirectId ? null : navigationId), redirectId:(redirectId || null),
+                        publishAction:(publishAction || 'publish'), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        expectedRevision:expectedRevision, changeReason:(changeReason || null), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${published.state == 'scheduled' ? 'It waits for its date; it is checked again then.'
+                    : published.state == 'withdrawn' ? 'Withdrawn from the site.' : 'Published: the site shows it now.'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveRedirect">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation"
+                    in-map="{siteId:siteId, redirect:{redirectId:(redirectId || null), expectedRevision:(expectedRevision ?? null), oldPath:oldPath,
+                        destinationTypeEnumId:destinationTypeEnumId,
+                        destinationValue:(['SdtPath', 'SdtExternal'].includes(destinationTypeEnumId) ? destinationText : destinationValue),
+                        permanent:(permanent || 'Y'), fromDate:(fromDate || null), thruDate:(thruDate || null), changeReason:(changeReason || null)}}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the redirect of ${oldPath} as a draft; publish it to use it.</message></if>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeRedirect">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#SiteNavigation" in-map="{siteId:siteId, removeRedirectId:redirectId}"/>
+        </actions>
+        <default-response url="."><parameter name="siteId"/><parameter name="navigationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.public.ThemeServices.find#SiteNavigation" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{siteId:(siteId || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="siteId" from="found?.siteId || null"/>
+        <set field="siteFound" from="!!siteId"/>
+        <set field="menus" from="found?.menus || []"/>
+        <set field="redirects" from="found?.redirects || []"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="canPublish" from="!!found?.canPublish"/>
+        <set field="menu" from="menus.find((row) =&gt; row.navigationId == navigationId) || menus[0] || null"/>
+        <set field="navigationId" from="menu?.navigationId || null"/>
+        <set field="items" from="(menu?.items || []).map((row) =&gt; Object.assign({}, row, {siteId:siteId, navigationId:navigationId,
+                expectedRevision:menu.draftRevision, destinationText:(['SdtPath', 'SdtExternal'].includes(row.destinationTypeEnumId) ? row.destinationValue : ''),
+                checkText:(row.problem ? String(row.problem).replace(/^[A-Z_]+: /, '') : 'Shows')}))"/>
+        <set field="itemProblems" from="items.filter((row) =&gt; row.problem).length"/>
+        <set field="menuStateText" from="!menu ? '' : [menu.active ? 'On the site since ' + menu.active.fromDateText : 'Not published',
+                menu.scheduled ? 'a version waits from ' + menu.scheduled.fromDateText : null,
+                menu.failed ? 'not published at its date: ' + menu.failed.failureText : null,
+                menu.unpublishedChanges &amp;&amp; menu.active ? 'the draft has changes' : null].filter(Boolean).join('; ')"/>
+        <set field="redirectRows" from="redirects.map((row) =&gt; Object.assign({}, row, {siteId:siteId, navigationId:navigationId,
+                destinationText:(['SdtPath', 'SdtExternal'].includes(row.destinationTypeEnumId) ? row.destinationValue : '')}))"/>
+        <set field="siteValues" from="{siteId:siteId}"/>
+        <set field="publishMenuValues" from="{siteId:siteId, navigationId:navigationId, expectedRevision:menu?.draftRevision,
+                operationKey:'menu-' + ec.user.randomString(24), changeReason:''}"/>
+        <set field="withdrawMenuValues" from="{siteId:siteId, navigationId:navigationId, publishAction:'withdraw', expectedRevision:menu?.draftRevision,
+                operationKey:'menu-' + ec.user.randomString(24), changeReason:''}"/>
+        <set field="newItemValues" from="{siteId:siteId, navigationId:navigationId, expectedRevision:menu?.draftRevision, visible:'Y',
+                destinationTypeEnumId:'SdtProduct'}"/>
+        <set field="newRedirectValues" from="{siteId:siteId, navigationId:navigationId, permanent:'Y', destinationTypeEnumId:'SdtPath'}"/>
+        <set field="parentOptions" from="items.filter((row) =&gt; row.depth &lt; 3).map((row) =&gt; ({itemId:row.itemId, label:row.indentedLabel}))"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Navigation" type="h5"/></container>
+        </container>
+        <form-single name="NavigationSite" transition="." map="siteValues">
+            <field name="siteId">
+                <default-field title="Site">
+                    <drop-down allow-empty="false" submit-on-select="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'sites', selected:siteId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+        </form-single>
+        <section name="NoSite" condition="!siteFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="No site"/>
+                    <box-body><label text="None of your stores sells on a site yet. A site operator mounts the shop for a store." type="p"/></box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Site" condition="siteFound">
+            <widgets>
+                <!-- the site's menus -->
+                <container style="row items-center q-col-gutter-sm q-mb-sm">
+                    <container style="col">
+                        <section-iterate name="MenuLinks" list="menus" entry="menuLink">
+                            <widgets>
+                                <link url="." text="${menuLink.name}${menuLink.locale ? ' (' + menuLink.locale + ')' : ''}" link-type="anchor-button"
+                                        btn-type="${menuLink.navigationId == navigationId ? 'primary' : 'default'}"
+                                        parameter-map="{siteId:siteId, navigationId:menuLink.navigationId}"/>
+                            </widgets>
+                        </section-iterate>
+                        <label text="The site has no menus yet." type="span" style="text-caption m-muted" condition="!menus.length"/>
+                    </container>
+                    <container style="col-auto">
+                        <container-dialog id="NewMenu" button-text="New menu" icon="sym_o_add" width="560" title="New menu" condition="canEdit">
+                            <form-single name="NewMenuForm" transition="createMenu" map="siteValues">
+                                <field name="siteId"><default-field><hidden/></default-field></field>
+                                <field name="menuKey">
+                                    <default-field title="Key" tooltip="How the theme names it: main, footer"><text-line size="20"/></default-field>
+                                </field>
+                                <field name="name"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                <field name="locale">
+                                    <default-field title="Locale" tooltip="Empty: every locale without a menu of its own">
+                                        <drop-down allow-empty="true">
+                                            <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton"><default-field title="Make menu"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+
+                <section name="Menu" condition="menu">
+                    <widgets>
+                        <container-box>
+                            <box-header title="${menu.name} (${menu.menuKey}${menu.locale ? ', ' + menu.locale : ''})"/>
+                            <box-toolbar>
+                                <container-dialog id="PublishMenu" button-text="Publish" icon="sym_o_public" type="primary" width="760"
+                                        title="Publish ${menu.name}" condition="canPublish">
+                                    <label type="p" text="The site shows these items; each is checked again as it publishes, and the site's caches move to its next generation."/>
+                                    <label type="p" style="text-negative" text="${itemProblems} items cannot be shown: fix or remove them first."
+                                            condition="itemProblems"/>
+                                    <form-list name="PublishMenuItems" list="items" skip-form="true" paginate="false">
+                                        <field name="indentedLabel"><default-field title="Item"><display/></default-field></field>
+                                        <field name="url"><default-field title="Goes to"><display/></default-field></field>
+                                        <field name="checkText"><default-field title="Check"><display/></default-field></field>
+                                        <columns type="mobile">
+                                            <column><field-ref name="indentedLabel"/></column>
+                                            <column><field-ref name="checkText"/></column>
+                                        </columns>
+                                    </form-list>
+                                    <form-single name="PublishMenuForm" transition="publishNavigation" map="publishMenuValues">
+                                        <field name="siteId"><default-field><hidden/></default-field></field>
+                                        <field name="navigationId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Empty: now"><date-time type="timestamp"/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Publish"><submit confirmation="Publish ${menu.name}?"/></default-field></field>
+                                        <field-layout><field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row><field-ref name="submitButton"/></field-layout>
+                                    </form-single>
+                                </container-dialog>
+                                <button-menu text="More" icon="more_horiz" condition="canEdit || (canPublish &amp;&amp; menu.active)">
+                                    <container-dialog id="RenameMenu" button-text="Rename" icon="sym_o_edit" width="480" title="Rename ${menu.name}" condition="canEdit">
+                                        <form-single name="RenameMenuForm" transition="saveMenu"
+                                                map="{siteId:siteId, navigationId:navigationId, expectedRevision:menu.draftRevision, name:menu.name}">
+                                            <field name="siteId"><default-field><hidden/></default-field></field>
+                                            <field name="navigationId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="name"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="publishNavigation" text="Withdraw from the site" icon="sym_o_unpublished" link-type="hidden-form-link" btn-type="danger"
+                                            condition="canPublish &amp;&amp; menu.active" confirmation="Withdraw ${menu.name} from the site now?"
+                                            parameter-map="withdrawMenuValues"/>
+                                </button-menu>
+                            </box-toolbar>
+                            <box-body>
+                                <label text="${menuStateText}" type="p" style="text-caption"/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="MenuItems" list="items" skip-form="true" paginate="false">
+                                    <field name="indentedLabel"><default-field title="Item"><display/></default-field></field>
+                                    <field name="destinationTypeText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="url"><default-field title="Goes to"><display/></default-field></field>
+                                    <field name="checkText">
+                                        <default-field title="Check">
+                                            <render-mode>
+                                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${problem ? 'negative' : 'positive'}">${
+                                                    WebUtilities.encodeHtml(checkText)}</q-chip>]]></text>
+                                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: checkText})}]]></text>
+                                                <text type="html">${checkText}</text>
+                                            </render-mode>
+                                        </default-field>
+                                    </field>
+                                    <field name="visible"><default-field title="Shown"><display text="${visible == 'N' ? 'Hidden' : 'Shown'}"/></default-field></field>
+                                    <field name="rowActions">
+                                        <default-field title="">
+                                            <link url="moveItem" text="" icon="sym_o_arrow_upward" tooltip="Move up" link-type="hidden-form-link" condition="canEdit"
+                                                    parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'up'}"/>
+                                            <link url="moveItem" text="" icon="sym_o_arrow_downward" tooltip="Move down" link-type="hidden-form-link" condition="canEdit"
+                                                    parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'down'}"/>
+                                            <link url="moveItem" text="" icon="sym_o_format_indent_increase" tooltip="In, under the item above" link-type="hidden-form-link"
+                                                    condition="canEdit" parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'in'}"/>
+                                            <link url="moveItem" text="" icon="sym_o_format_indent_decrease" tooltip="Out, beside its parent" link-type="hidden-form-link"
+                                                    condition="canEdit &amp;&amp; parentItemId" parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, direction:'out'}"/>
+                                            <container-dialog id="EditItem_${itemId}" button-text="Edit" icon="sym_o_edit" width="640" title="Edit ${label}" condition="canEdit">
+                                                <form-single name="EditItemForm_${itemId}" transition="saveItem"
+                                                        map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId, label:label,
+                                                            destinationTypeEnumId:destinationTypeEnumId, destinationValue:destinationValue, destinationText:destinationText,
+                                                            visible:visible, parentItemId:parentItemId}">
+                                                    <field name="siteId"><default-field><hidden/></default-field></field>
+                                                    <field name="navigationId"><default-field><hidden/></default-field></field>
+                                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                                    <field name="itemId"><default-field><hidden/></default-field></field>
+                                                    <field name="parentItemId"><default-field><hidden/></default-field></field>
+                                                    <field name="label"><default-field title="Label"><text-line size="30"/></default-field></field>
+                                                    <field name="destinationTypeEnumId">
+                                                        <default-field title="Goes to">
+                                                            <drop-down allow-empty="false">
+                                                                <entity-options key="${enumId}" text="${description}">
+                                                                    <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                        <econdition field-name="enumTypeId" value="SiteDestinationType"/>
+                                                                        <order-by field-name="sequenceNum"/>
+                                                                    </entity-find>
+                                                                </entity-options>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="destinationValue">
+                                                        <default-field title="Destination" tooltip="A product, category, page or app of the site">
+                                                            <drop-down allow-empty="true">
+                                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                        parameter-map="{choice:'destinations', siteId:siteId, selected:destinationValue}">
+                                                                    <depends-on field="destinationTypeEnumId"/>
+                                                                </dynamic-options>
+                                                            </drop-down>
+                                                        </default-field>
+                                                    </field>
+                                                    <field name="destinationText">
+                                                        <default-field title="Path or address" tooltip="A path of the site (/sale) or an https address"><text-line size="40"/></default-field>
+                                                    </field>
+                                                    <field name="visible"><default-field title="Shown"><drop-down allow-empty="false"><option key="Y" text="Shown"/><option key="N" text="Hidden"/></drop-down></default-field></field>
+                                                    <field name="submitButton"><default-field title="Save item"><submit/></default-field></field>
+                                                    <field-layout>
+                                                        <field-row><field-ref name="label"/><field-ref name="visible"/></field-row>
+                                                        <field-row><field-ref name="destinationTypeEnumId"/><field-ref name="destinationValue"/></field-row>
+                                                        <field-ref name="destinationText"/>
+                                                        <field-ref name="submitButton"/>
+                                                    </field-layout>
+                                                </form-single>
+                                            </container-dialog>
+                                            <link url="removeItem" text="" icon="sym_o_delete" tooltip="Remove, with the items under it" link-type="hidden-form-link"
+                                                    btn-type="danger" condition="canEdit" confirmation="Remove ${label} and the items under it from the draft?"
+                                                    parameter-map="{siteId:siteId, navigationId:navigationId, expectedRevision:expectedRevision, itemId:itemId}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="indentedLabel"/><field-ref name="url"/></column>
+                                        <column><field-ref name="checkText"/><field-ref name="rowActions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label text="The menu has no items yet." type="p" style="text-caption m-muted q-pa-md" condition="!items.length"/>
+                            </box-body-nopad>
+                            <box-body>
+                                <container-dialog id="AddItem" button-text="Add item" icon="sym_o_add" width="640" title="Add an item to ${menu.name}" condition="canEdit">
+                                    <form-single name="AddItemForm" transition="saveItem" map="newItemValues">
+                                        <field name="siteId"><default-field><hidden/></default-field></field>
+                                        <field name="navigationId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="label"><default-field title="Label"><text-line size="30"/></default-field></field>
+                                        <field name="parentItemId">
+                                            <default-field title="Under" tooltip="Empty: at the top">
+                                                <drop-down allow-empty="true"><list-options list="parentOptions" key="${itemId}" text="${label}"/></drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="destinationTypeEnumId">
+                                            <default-field title="Goes to">
+                                                <drop-down allow-empty="false">
+                                                    <entity-options key="${enumId}" text="${description}">
+                                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                            <econdition field-name="enumTypeId" value="SiteDestinationType"/>
+                                                            <order-by field-name="sequenceNum"/>
+                                                        </entity-find>
+                                                    </entity-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="destinationValue">
+                                            <default-field title="Destination" tooltip="A product, category, page or app of the site">
+                                                <drop-down allow-empty="true">
+                                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                            parameter-map="{choice:'destinations', siteId:siteId}">
+                                                        <depends-on field="destinationTypeEnumId"/>
+                                                    </dynamic-options>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="destinationText">
+                                            <default-field title="Path or address" tooltip="A path of the site (/sale) or an https address"><text-line size="40"/></default-field>
+                                        </field>
+                                        <field name="visible"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add item"><submit/></default-field></field>
+                                        <field-layout>
+                                            <field-row><field-ref name="label"/><field-ref name="parentItemId"/></field-row>
+                                            <field-row><field-ref name="destinationTypeEnumId"/><field-ref name="destinationValue"/></field-row>
+                                            <field-ref name="destinationText"/>
+                                            <field-ref name="submitButton"/>
+                                        </field-layout>
+                                    </form-single>
+                                </container-dialog>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+
+                <!-- the site's redirects -->
+                <container-box>
+                    <box-header title="Redirects"/>
+                    <box-toolbar>
+                        <container-dialog id="AddRedirect" button-text="Add redirect" icon="sym_o_add" width="640" title="Redirect an old path" condition="canEdit">
+                            <form-single name="AddRedirectForm" transition="saveRedirect" map="newRedirectValues">
+                                <field name="siteId"><default-field><hidden/></default-field></field>
+                                <field name="navigationId"><default-field><hidden/></default-field></field>
+                                <field name="oldPath"><default-field title="Old path" tooltip="The path visitors used, such as /old-sale"><text-line size="40"/></default-field></field>
+                                <field name="destinationTypeEnumId">
+                                    <default-field title="Goes to">
+                                        <drop-down allow-empty="false">
+                                            <entity-options key="${enumId}" text="${description}">
+                                                <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                    <econdition field-name="enumTypeId" value="SiteDestinationType"/>
+                                                    <econdition field-name="enumId" operator="not-equals" value="SdtExternal"/>
+                                                    <order-by field-name="sequenceNum"/>
+                                                </entity-find>
+                                            </entity-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="destinationValue">
+                                    <default-field title="Destination" tooltip="A product, category, page or app of the site">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                    parameter-map="{choice:'destinations', siteId:siteId}">
+                                                <depends-on field="destinationTypeEnumId"/>
+                                            </dynamic-options>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="destinationText"><default-field title="Path" tooltip="A path of the site, such as /sale"><text-line size="40"/></default-field></field>
+                                <field name="permanent">
+                                    <default-field title="Kind">
+                                        <drop-down allow-empty="false"><option key="Y" text="Permanent (301)"/><option key="N" text="Temporary (302)"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty: when published"><date-time type="timestamp"/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="Empty: until withdrawn"><date-time type="timestamp"/></default-field></field>
+                                <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save draft"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-row><field-ref name="oldPath"/><field-ref name="permanent"/></field-row>
+                                    <field-row><field-ref name="destinationTypeEnumId"/><field-ref name="destinationValue"/></field-row>
+                                    <field-ref name="destinationText"/>
+                                    <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                    <field-ref name="changeReason"/>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Redirects" list="redirectRows" skip-form="true" paginate="false">
+                            <field name="oldPath"><default-field title="Old path"><display/></default-field></field>
+                            <field name="destinationTypeText"><default-field title="Goes to"><display/></default-field></field>
+                            <field name="destinationValue"><default-field title="Destination"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Until"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="failureText"><default-field title="Not published"><display style="text-negative"/></default-field></field>
+                            <field name="rowActions">
+                                <default-field title="">
+                                    <link url="publishNavigation" text="Publish" icon="sym_o_public" link-type="hidden-form-link"
+                                            condition="canPublish &amp;&amp; ['SpsDraft', 'SpsFailed'].includes(state)" confirmation="Publish the redirect of ${oldPath}?"
+                                            parameter-map="{siteId:siteId, navigationId:navigationId, redirectId:redirectId, expectedRevision:revision,
+                                                operationKey:'redirect-' + ec.user.randomString(24)}"/>
+                                    <link url="publishNavigation" text="Withdraw" icon="sym_o_unpublished" link-type="hidden-form-link" btn-type="danger"
+                                            condition="canPublish &amp;&amp; ['SpsActive', 'SpsScheduled'].includes(state)" confirmation="Withdraw the redirect of ${oldPath}?"
+                                            parameter-map="{siteId:siteId, navigationId:navigationId, redirectId:redirectId, publishAction:'withdraw',
+                                                expectedRevision:revision, operationKey:'redirect-' + ec.user.randomString(24)}"/>
+                                    <link url="removeRedirect" text="" icon="sym_o_delete" tooltip="Remove the draft" link-type="hidden-form-link" btn-type="danger"
+                                            condition="canEdit &amp;&amp; ['SpsDraft', 'SpsFailed'].includes(state)" confirmation="Remove the draft redirect of ${oldPath}?"
+                                            parameter-map="{siteId:siteId, navigationId:navigationId, redirectId:redirectId}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="oldPath"/><field-ref name="destinationValue"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                        <label text="No redirects yet." type="p" style="text-caption m-muted q-pa-md" condition="!redirectRows.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

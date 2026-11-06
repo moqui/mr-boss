@@ -500,3 +500,54 @@ feature("a store-limited staff member is refused another store's assortment and 
         !otherStores.includes(ids.storeId)
     }
 })
+
+// P4: a page of a site is edited by a holder of COMMERCE_THEME_EDIT in the site's store (the designer), not by the reader
+// (mantle.public.ThemeServices.store#SitePage, as PageRoute saves it), nor on another organization's site; the `sites`
+// choice lists the sites of the user's stores only. The page is the demo's returns policy page of ZIZI_SHOP.
+feature("a site page is edited by the designer of the site's store, not by the reader or another organization", {
+    when() {
+        const page = system(() =>
+            ec.entity
+                .find("mantle.public.PublicSitePage")
+                .condition({siteId: ids.siteId, pageRole: "returns"})
+                .disableAuthz()
+                .one()
+        )
+        const edit = user =>
+            asUser(
+                user,
+                () =>
+                    refusal("mantle.public.ThemeServices.store#SitePage", {
+                        sitePageId: page.sitePageId,
+                        seoDescription: "Returns within 30 days"
+                    }),
+                false
+            )
+        const sites = user => asUser(user, () => values(invoke(context + "get#Choices", {choice: "sites"})), false)
+        return {
+            designer: edit(users.designer),
+            reader: edit(users.read),
+            // the designer on Ziziwork Services' site (BOSS_COM_DIGITAL's): not one of their stores
+            other: asUser(
+                users.designer,
+                () =>
+                    refusal("mantle.public.ThemeServices.store#SitePage", {
+                        siteId: ids.otherSiteId,
+                        title: "Access spec page",
+                        routePath: "access-spec"
+                    }),
+                false
+            ),
+            designerSites: sites(users.designer),
+            otherSites: sites(users.services)
+        }
+    },
+    then({designer, reader, other, designerSites, otherSites}) {
+        designer == ""
+        reader.includes("PERMISSION_DENIED")
+        other.includes("RECORD_UNAVAILABLE")
+        designerSites.includes(ids.siteId)
+        !designerSites.includes(ids.otherSiteId)
+        !otherSites.includes(ids.siteId)
+    }
+})
