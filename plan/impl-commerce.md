@@ -1300,7 +1300,7 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   the manager's rates for US Continental and Canada through `saveRate`, the simulator quoting 6.00 and 14.00 and nothing for
   Japan, the local rates' finding ready; TEST_DECLINE refused through `savePayment` and TEST_APPROVE kept; Services' manager
   Not available; CheckoutSettings in qvt and html), run: 4 passed; it ends its rates in cleanup. Also run: AppStructure
-  (its placeholder floor 45 → 43, F-P6-4), CommerceFoundationWalk, CommerceStoresWalk, TuiRender: pass. The whole mr-boss
+  (its placeholder floor 45 → 43, F82), CommerceFoundationWalk, CommerceStoresWalk, TuiRender: pass. The whole mr-boss
   acceptance suite was not run.
 - Lint: `moqui lint --screens` (release binary), 132 sites, none in the Commerce screens.
 - Inventories: ss-inventory's six EditProductStore ship option, shipping gateway and payment gateway rows name their forms;
@@ -1319,23 +1319,23 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
     Accounting read a Commerce manager need not hold.
   - The simulator takes a sample address's geos (country, state) or a contact mech id, as get#PostalAddressGeoIdSet reads them.
 - Findings (provisional):
-  - **F-P6-1** `calculate#OrderShipping` sums a part's missing total as 0 (`copsOut.shippingTotal ?? 0`) and
+  - **F79** `calculate#OrderShipping` sums a part's missing total as 0 (`copsOut.shippingTotal ?? 0`) and
     `get#StoreShippingOptions` lists an unrated option without a total, so a store with rates and an address no rate serves
     gets no shipping charge on an order placed from the order screens (a warning message only). Shop P5 must quote through
     `get#OrderShippingRatesBulk` and refuse a part with no quote.
-  - **F-P6-2** An order item's creation already runs the part's shipping calculation (Mantle's ECA), so the local rule runs
+  - **F80** An order item's creation already runs the part's shipping calculation (Mantle's ECA), so the local rule runs
     on each cart change; for a store with no rates it is one read of the store's rates.
-  - **F-P6-3** A Commerce administrator's store choices (Commerce.js: every organization) include stores Mantle's StoreAdmin
+  - **F81** A Commerce administrator's store choices (Commerce.js: every organization) include stores Mantle's StoreAdmin
     scope refuses (FacilityScope's organizations: BOSS_ACCT_STORE for commerce.admin); StoreDetail fails for them the same
     way. CheckoutSettings shows Not available; the two scopes should agree.
-  - **F-P6-4** AppStructure's placeholder floor (45) was one above master's count after P4 and P7 each replaced a
+  - **F82** AppStructure's placeholder floor (45) was one above master's count after P4 and P7 each replaced a
     placeholder on their own branch (44); with Settings it is 43.
-  - **F-P6-5** Mantle has no record of a payment gateway's capabilities; StoreCheckout.js `gatewayCapabilities` (by gateway
+  - **F83** Mantle has no record of a payment gateway's capabilities; StoreCheckout.js `gatewayCapabilities` (by gateway
     type: the test gateway hosted when its authorize service is `hostedPending`, Authorize.Net saved methods) is the place
     Shop P5 and P7 set theirs.
-  - **F-P6-6** A created setting's audit rows carry no reason (F63), so its reason is the audit row of its `changeReason`
+  - **F84** A created setting's audit rows carry no reason (F63), so its reason is the audit row of its `changeReason`
     field (History's "Reason"); an update's rows carry it.
-  - **F-P6-7** The demo store's readiness now blocks (no local rate; ZIZI_SHOP has no Terms page): Shop P5's demo checkout
+  - **F85** The demo store's readiness now blocks (no local rate; ZIZI_SHOP has no Terms page): Shop P5's demo checkout
     needs a store Mantle's specs do not place at zero, or those specs a store of their own.
 
 **Review Nov 6 (P6).**
@@ -1343,8 +1343,8 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   StoreCheckout operation takes StoreAdmin.js' scope (`COMMERCE_VIEW`/`COMMERCE_STORE_EDIT`, the store's organization, the
   StoreStaff limit) before reading or writing; a forged rate id of another store is refused like a missing one. F20: the
   local gateway rates by the store's rules only for a store with a rate in effect now or later, a store with none keeps the
-  zero (CarrierServices, OrderToCashBasicFlow, WarehouseShipping and the new StoreShippingRates pass). F-P6-1 confirmed:
-  a rated store's unserved address gets no shipping item and a warning only, at placement from the order screens. F-P6-2
+  zero (CarrierServices, OrderToCashBasicFlow, WarehouseShipping and the new StoreShippingRates pass). F79 confirmed:
+  a rated store's unserved address gets no shipping item and a warning only, at placement from the order screens. F80
   confirmed: the order item ECA runs the rule on every cart change. Payment gateways: only the organization's enabled,
   current PaymentGatewayOrganization rows, in the save and its choices; shipping gateways: the local one or one with a
   ShippingGatewayCarrier row. F61: each removal writes an EntityAuditLog row with the user and reason. F37/F38 readiness: the
@@ -1353,20 +1353,20 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   and authority names a sale shows. Setting types are validated by kind (choices, geos, the offered queue, a current store
   facility); the carrier account is masked, gateway configuration never returned. Mantle defaults kept
   (`get#OrderShippingRatesBulk` drops only a method marked `rateUnavailable`).
-- **R1 (medium, F-P6-3)** Commerce.js offered a Commerce administrator (MANTLE_ACTIVE_ORG grant, no active organization)
+- **R1 (medium, F81)** Commerce.js offered a Commerce administrator (MANTLE_ACTIVE_ORG grant, no active organization)
   every organization's stores while Mantle's StoreAdmin scope kept them to their own organizations, so StoreDetail and
   CheckoutSettings failed for another organization's store. As Warehouse's FACILITY_ALL_ORGANIZATIONS for its
   administrator: Mantle seeds `COMMERCE_ALL_ORGANIZATIONS` (ADMIN's) and StoreAdmin.js widens on it to every organization,
   or the active one; BOSS grants it to BOSS_COMMERCE_ADMIN; Commerce.js widens only for a MANTLE_ACTIVE_ORG grant held with
   it, so its choices never exceed Mantle's. CommerceAccess gains one case (the administrator offered and served
   BOSS_COM_DIGITAL, the manager neither); design §1.1 says so.
-- **R2 (low, F-P6-2)** `get#StoreShippingRateLocal` read the ProductStore before the rates; a store with no rates now costs
+- **R2 (low, F80)** `get#StoreShippingRateLocal` read the ProductStore before the rates; a store with no rates now costs
   the one indexed read of its rates (PS_SHIP_RATE_STORE), and a rated store's matching reuses the rows read.
 - **R3 (low)** `simulate#StoreShipping` took a `contactMechId` and answered its geos: a Commerce reader could read the
   country, state and postal code of any party's address. It takes a sample address's geos only (nothing used the id).
 - **R4 (low)** Warehouse's rate shopping (Shipping.js, local rules) listed an unserved method of a rated store as a
   "Local rules" row with no total; it now leaves it out, as `get#OrderShippingRatesBulk` does.
-- **R5 (F-P6-7)** The Commerce demo publishes ZIZI_SHOP's Terms of sale page (Demo.js, its own `terms` step, through
+- **R5 (F85)** The Commerce demo publishes ZIZI_SHOP's Terms of sale page (Demo.js, its own `terms` step, through
   `ThemeServices.store#SitePage` and `SiteServices.publish#SitePage` as P4's returns page). No demo local rates, so the demo
   store's readiness now blocks on Local rates alone (StoreDetail "1 thing to fix"; CommerceStores expects it, the walk's
   first feature finds the Terms page ready and its last the strip).
@@ -1376,7 +1376,7 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   acceptance CommerceCheckoutWalk (4), CommerceStoresWalk, CommerceFoundationWalk, CommerceSitePagesWalk: 18 passed. Not run:
   the whole mr-boss acceptance suite, `./moq test-apps`, lint (no screen changed).
 - Commits: mr-mantle ca5b6c05; mr-boss this note's commit.
-- For the lead: (1) F-P6-1 stands: placement from the order screens with a rated store and an unserved address places the
+- For the lead: (1) F79 stands: placement from the order screens with a rated store and an unserved address places the
   order with no shipping charge (a warning); refusing it is a Mantle placement rule (Shop P5 or P8). (2) The same
   administrator mismatch likely exists in Customer Service and Purchasing (their app scopes widen on MANTLE_ACTIVE_ORG, their
   Mantle services keep to member organizations); Purchasing F185 records it as intended there. (3) The owner links' holder
@@ -1886,6 +1886,13 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F76 | P4: ZZW_RETAIL is not restricted and is not the store's page space, so Commerce made POPC_DEFAULT a page space of its own | Shop P3 serves the store's page space; ZZW_RETAIL's move (F17, F56) is re-planned there |
 | F77 | P4: a page's template key is checked for its shape only, not against the theme's templates | P5 checks it against the draft's and the active release's templates |
 | F78 | P4 review: `store#SitePage` makes a published page's route, role, title, SEO and template changes live at once with `COMMERCE_THEME_EDIT`; the store page space is `restrictView N`; scheduled menus and redirects are not refused when their window ended before they start; the MySQL `PASS_PAGE_ROLE` step fails if the index exists | Resolved Nov 6 (com/p4fix, P4's Follow-up): a published or scheduled page's binding change needs `COMMERCE_PUBLISH` and the expected `publicationRevision`, which advances (refused rather than held: the binding has no draft fields); scheduled menus and redirects refused `WINDOW_PASSED` (and the job's scheduled-menu key read fixed for PostgreSQL); Upgrading.md's MySQL index step conditional, PostgreSQL's `IF NOT EXISTS` noted. Drafts readable by BOSS users through Commons is accepted (internal readers only) |
+| F79 | P6: `calculate#OrderShipping` treats a part with no total as 0 and `get#StoreShippingOptions` lists a method with no rate, so a rated store's order placed from the order screens to an unserved address gets no shipping charge, only a warning | Shop P5 quotes through the bulk service and refuses a part with no quote; a Mantle placement rule for staff order entry is later |
+| F80 | P6: creating an order item runs the part's shipping calculation (a Mantle ECA), so the local rule runs on every cart change | One indexed read for an unrated store (the review) |
+| F81 | P6: the Commerce administrator's store choices included stores Mantle's scope refused | Fixed in the review: `COMMERCE_ALL_ORGANIZATIONS` (ADMIN, BOSS_COMMERCE_ADMIN) widens Mantle's scope as FACILITY_ALL_ORGANIZATIONS does Warehouse's; BOSS widens only with it; design §1.1. Customer Service's and Purchasing's scopes may have the same mismatch (Purchasing F185 records it as intended) |
+| F82 | P6: AppStructure's placeholder floor was above master's count once P4 and P7 each replaced one on their branches | Lowered to 43 |
+| F83 | P6: Mantle has no record of what a payment gateway can do | `StoreCheckout.js` `gatewayCapabilities` by gateway type, filled by Shop P5 and P7 |
+| F84 | P6: a new setting's audit rows carry no reason (F63) | Its `changeReason` field's audit row shows as "Reason" in History |
+| F85 | P6: the demo store's readiness blocked (no local rate, no Terms page) | The review published a Terms page on ZIZI_SHOP; local rates stay out of the demo (Mantle specs place POPC_DEFAULT orders at zero shipping), so readiness blocks on Local rates only until Shop P5's demo checkout gives a rated store |
 
 ## 7. Later
 
