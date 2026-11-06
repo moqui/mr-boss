@@ -959,6 +959,14 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   - a menu with a draft product is refused; a redirect onto `/api` or into a loop is refused;
   - a scheduled page whose author lost the publish grant stays unpublished, with a readiness finding.
 
+- **Wave 4 suites (Nov 6, on master after Shop P2, P7 and the F60 fix merged; P4's worker ran at the same time):**
+  standalone mr-mantle 1,777 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped;
+  `./moq test-apps` 3,134 server features and 15 client features passed, none failed; within every budget (server:
+  mr-mantle 337.5 of 370 s, mr-boss 240.4 of 264 s, mr-pass 14.8 of 15 s; client: mr-boss 46.8 of 49 s, mr-pass 4.2 of
+  6 s); `moqui lint --screens` clean. Shares so far: Commerce's BOSS specs 5.3 s, Shop's mr-pass specs 1.8 s, the new
+  Mantle specs (StoreAdmin, StorePublication, StorePromotions, ThemeReleases) 9.8 s. mr-pass's budget raised by Shop's
+  share to 17 s (the user's agreement, §4).
+
 ### P5 — Theme editors and preview
 
 Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with Shop P2's engine and releases
