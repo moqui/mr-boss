@@ -48,6 +48,9 @@ spec({
                 .condition("organizationPartyId", ids.organizationId)
                 .one()
             state.flagBefore = preference?.returnSettlementRequired || "N"
+            // Retail inherits its preferences from Corporate: a row made here is removed in cleanupSpec, so Retail inherits
+            // again (the walks after this one, Purchasing's, read its currency and Corporate's flags through it)
+            state.preferenceMade = !preference
             if (state.flagBefore !== "Y")
                 invoke("mantle.ledger.SetupServices.store#Preferences", {
                     organizationPartyId: ids.organizationId,
@@ -102,6 +105,10 @@ spec({
             ec.message.clearErrors()
         }
         step("Retail's returnSettlementRequired", () => {
+            if (state.preferenceMade) {
+                invoke("delete#mantle.ledger.config.PartyAcctgPreference", {organizationPartyId: ids.organizationId})
+                return
+            }
             if (!state.flagBefore || state.flagBefore === "Y") return
             const preference = ec.entity
                 .find("mantle.ledger.config.PartyAcctgPreference")

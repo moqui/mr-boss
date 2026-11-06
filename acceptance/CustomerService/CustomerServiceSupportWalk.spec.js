@@ -42,9 +42,10 @@ const demoCase = () => rows("mantle.request.Request", {requestName: "Order of fi
 feature("the JoeDist contact sees and replies on its own case; its administrator sees the customer's; Joe sees only his own", {
     when() {
         const own = demoCase()
-        const asContact = page(contact, S + "find#CustomerCases", {})
-        const asAdministrator = page(administrator, S + "find#CustomerCases", {})
-        const asJoe = page(joe, S + "find#CustomerCases", {})
+        // the most rows a page gives: the walks before this one add cases of Joe's, newer than the demo's
+        const asContact = page(contact, S + "find#CustomerCases", {limit: 100})
+        const asAdministrator = page(administrator, S + "find#CustomerCases", {limit: 100})
+        const asJoe = page(joe, S + "find#CustomerCases", {limit: 100})
         const reply = page(contact, S + "reply#CustomerCase", {
             requestId: own,
             body: "Any news on the missing box?",

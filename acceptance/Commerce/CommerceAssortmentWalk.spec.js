@@ -49,24 +49,26 @@ const rootOrder = productStoreId =>
     )
 const walk = {}
 
+// the store's publisher publishes, withdraws or restores products of the store (the walk's reset and cleanup)
+const publisher = (action, productIds) =>
+    asUser(
+        users.publisher,
+        () =>
+            invoke(M + "publish#StoreProducts", {
+                productStoreId: ids.storeId,
+                productIds,
+                action,
+                changeReason: "Walk reset",
+                operationKey: "walk-reset-" + action + "-" + Date.now()
+            }),
+        false
+    )
+
 spec({
     stepwise: true,
     setupSpec() {
         login("john.doe")
         // a rerun starts from an unpublished virtual product with no variant excluded
-        const publisher = (action, productIds) =>
-            asUser(
-                users.publisher,
-                () =>
-                    invoke(M + "publish#StoreProducts", {
-                        productStoreId: ids.storeId,
-                        productIds,
-                        action,
-                        changeReason: "Walk reset",
-                        operationKey: "walk-reset-" + action + "-" + Date.now()
-                    }),
-                false
-            )
         publisher("restore", variantIds())
         publisher("withdraw", [virtualId])
         // a second Retail store that shows Demo Category One, so the category is shared
@@ -95,6 +97,8 @@ spec({
         ec.message.clearErrors()
     },
     cleanupSpec() {
+        // the virtual product unpublished again: the walks after this one (SitePagesWalk) take it as a draft product
+        publisher("withdraw", [virtualId])
         asUser(
             users.merchandiser,
             () =>

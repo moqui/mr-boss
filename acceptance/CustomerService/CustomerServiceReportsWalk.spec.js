@@ -3,7 +3,7 @@
 // due in it, and never counts the clocks a merge ended, while the kept case carries the source's; a merged case's intake stays
 // in the volumes and it is not counted again in the backlog; response times give median and p90 in business and elapsed time
 // with their counts; return analysis shows its amounts per currency and an open return as requested; a manager of the Support
-// team sees only its queue where the administrator sees Privacy's too, and the export has the same rows. The rules are
+// team sees only its queues where the administrator sees Privacy's too, and the export has the same rows. The rules are
 // CustomerServiceReports' (regression).
 // Run: ./moq accept mr-boss --spec CustomerServiceReportsWalk
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
@@ -171,15 +171,20 @@ feature("return analysis: amounts per currency, an open return counted as reques
     }
 })
 
-feature("a manager of the Support team sees only its queue, the administrator Privacy's too; the export has the same rows", {
+feature("a manager of the Support team sees only its queues, the administrator Privacy's too; the export has the same rows", {
     when() {
         const managerRows = report(users.manager, "get#CaseVolumes", {groupBy: "queue"})
         const managerCsv = report(users.manager, "get#CaseVolumes", {groupBy: "queue", output: "csv"})
         const adminRows = report(users.admin, "get#CaseVolumes", {groupBy: "queue"})
-        return {managerRows, managerCsv, adminRows}
+        // the Support team's queues: the demo's Support queue and those a walk before this one adds (AssignmentWalk's)
+        const teamQueues = rows("mantle.request.support.ServiceQueue", {responsibleTeamPartyId: ids.supportTeamId}).map(
+            row => row.requestCategoryId
+        )
+        return {managerRows, managerCsv, adminRows, teamQueues}
     },
-    then({managerRows, managerCsv, adminRows}) {
-        managerRows.groupRows.every(row => row.groupKey == ids.supportQueueId)
+    then({managerRows, managerCsv, adminRows, teamQueues}) {
+        managerRows.groupRows.some(row => row.groupKey == ids.supportQueueId)
+        managerRows.groupRows.every(row => teamQueues.includes(row.groupKey))
         !managerRows.groupRows.some(row => row.groupKey == ids.privacyQueueId)
         adminRows.groupRows.some(row => row.groupKey == ids.privacyQueueId)
         // the export: the same group rows and the total, after its frame

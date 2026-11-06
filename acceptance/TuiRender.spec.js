@@ -209,7 +209,14 @@ feature("every Commons, Comms, Insights, Products, Accounting, Warehouse, Manufa
             // a Customer Service twin shows its demo record's text too (P16)
             const customerService = key.startsWith("CustomerService/") ? customerServiceFixtures.routes[key.substring("CustomerService/".length)] : null
             const customerServiceText = customerService && !customerService.fullPathOnly ? customerService.tuiText || customerService.text : null
-            if (customerServiceText && !got.output.includes(customerServiceText)) failures.push(`${key}: no ${JSON.stringify(customerServiceText)}`)
+            // Customer360's Cases tab lists the customer's 20 newest cases: after the Customer Service walks Joe's demo
+            // case is past them, so the tab shows one of his cases
+            if (key === "CustomerService/Customers/Customer360/ServiceCases") {
+                const caseIds = Array.from(
+                    ec.entity.find("mantle.request.RequestParty").condition({partyId: customerService.parameters.customerPartyId, roleTypeId: "Customer"}).list()
+                ).map(row => row.requestId)
+                if (!caseIds.some(id => got.output.includes(id))) failures.push(`${key}: none of the customer's cases`)
+            } else if (customerServiceText && !got.output.includes(customerServiceText)) failures.push(`${key}: no ${JSON.stringify(customerServiceText)}`)
         }
         // every Warehouse route fixture is a screen rendered here
         for (const path of Object.keys(warehouseFixtures.routes))
