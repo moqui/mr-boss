@@ -116,6 +116,10 @@ const operations = {load, runStep}
 ;({
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Customer Service feedback demonstration operation " + op)
-        return asDemoAdministrator(() => operations[op](parameters || {}))
+        if (op !== "load") return asDemoAdministrator(() => operations[op](parameters || {}))
+        // load logs in no one: a login or logout inside the data file's transaction holds john.doe's UserAccount row until
+        // the file commits, and each step's own login (a new transaction) would wait on it until its deadline
+        if (ec.user.userId && !lib.access.systemAdmin()) throw new Error("Demo loading requires system administration")
+        return operations.load()
     }
 })
