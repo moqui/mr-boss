@@ -2849,7 +2849,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F109 | P8: `resolve#Delivery` stays unscoped; Commerce has a store-scoped read-only view of delivery exceptions | Comms (a store-scoped review) |
 | F110 | P8: Shop F86 (a guest's first digital order waits for approval) left for Sales; a store turns the approval checks off | Sales |
 | F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | P13 (integrations), P9's prompt at P15 |
-| F112 | P8: RecurringTemplate bases are not left out of Orders until Shop P7 marks them | Shop P7 |
+| F112 | P8: RecurringTemplate bases are not left out of Orders until Shop P7 marks them | Resolved by Shop P7 (`withoutRecurringBases`) |
 | F113 | P8: Mantle scoped a store order by its store alone, Commerce.js also by the vendor | Fixed in the review (R2): Mantle requires the vendor too |
 | F114 | P8 review: `heldOrderIds` and `cancelRequestOrderIds` take the first 500 open holds or cancel requests of all stores before the store filter | P11 (a view joining the order's store) |
 | F115 | P8 review: Customer360 shows a customer's current emails and addresses to a store operator, as Customer Service does; design §10 masks only payment methods | Accepted |
@@ -2876,7 +2876,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F136 | Wave 12: CheckoutSettings joined a ship option's decimal markup to text with `+`, which the framework's decimal refuses (valueOf); it failed only after CarrierServices gave POPC_DEFAULT a markup | Fixed: `String()` of each amount |
 | F137 | P11: the sales summaries' `ordersThis`/`ordersLast` are wrong when the current period has no sales (the date histogram has no bounds) | Sales and Accounting (bounds change their default answers); Commerce matches buckets by start day |
 | F138 | P11: without `currencyUomIds` the summaries still add amounts across currencies, as before (Accounting's and mr-marble's sales screens) | Accounting (later) |
-| F139 | P11: the sales index has no RecurringTemplate marker, so once Shop P7 makes bases, Online sales and Home would count them | Shop P7: the marker on the sales documents or summaries, with a default test |
+| F139 | P11: the sales index has no RecurringTemplate marker, so once Shop P7 makes bases, Online sales and Home would count them | Resolved by Shop P7 (`MantleSalesOrderItem.orderPurposeEnumId`) |
 | F140 | P11: each dataset is one document type, so the store operations dataset ships as checkouts and payment attempts; datasets ADMIN-only until Insights applies a store scope | Insights (later) |
 | F141 | P11: cart recovery's eligibility is not historical ("signed in") | Accepted |
 | F142 | P11: Insights' catalogue registration (Z10), the graph views and further ReportScope choices not built | Later |

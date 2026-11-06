@@ -99,7 +99,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- Shop P7: BOSS_COM_DIGITAL's paid access: a month of ZIZI_DIGITAL members' access (Monthly membership, BOSS_COM_PAID_MONTH,
         a ProductSubscriptionResource of BOSS_COM_PAID_ACCESS, whose Forum handlers write source-bound PublicAccessGrant rows
-        for the site; ZIZI_DIGITAL has no Forum mount yet, so the binding is the site's, F-SP7-6), published in the store; the
+        for the site; ZIZI_DIGITAL has no Forum mount yet, so the binding is the site's, Shop F107), published in the store; the
         store's card gateway, the BOSS_COM_HOSTED kind, which also renews a kept card off-session; the renewal notices on the
         demo mailbox; and the store's digital checkout (no address, new-customer or card-name holds, no terms page yet). The
         monthly offer is the demo service's (store#RecurringOffer, which also sets the site's subscription address). -->
