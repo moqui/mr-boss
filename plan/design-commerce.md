@@ -792,6 +792,24 @@ only to a signed-in buyer whose account email is verified, Shop P6 review R2's r
 cart is never eligible. Refresh rechecks eligibility; a successful checkout
 suppresses queued recovery. **Needs:** COM-OPS, SHOP-CART.
 
+**As built (Nov 6, 2026; impl-commerce P10).** RecoveryHistory and RecoverCart read and send through
+`O.get#CartRecovery` and `O.send#CartRecovery` (`COMMERCE_RECOVERY`, a reason, an operation key and
+the cart's revision). A cart is eligible when the store's recovery is on with a current
+`PsetCartRecovery` email, the cart is a signed-in account's (never a guest's or staff's), open, not in
+a live or completed checkout and not empty, the account holds the store's cart reminders topic with
+its own email verified, it is idle past the delay and within the window, and it is under the most
+sends; otherwise its reason is named. The abandonment event is the cart and its last activity
+(`cartRecovery:{orderId}:{activity}` on the delivery ledger, source `MdsrcCartRecovery`), so one
+visit to the cart is one mail at most; the `run_CartRecovery` job raises it every ten minutes for
+the stores that turned recovery on, each cart in its own transaction. Each attempt checks the cart
+again (closed, completed, checking out or the shopper back suppresses it) and makes a new one-time
+token for the link of that message; the token's digest is the cart's StoreCartAccess
+`recoveryTokenDigest` until the window ends (`recoveryExpireDate`). The link is Shop's Recover page
+(design-shop §13.2): it asks a visitor to sign in, since the cart is an account's, and the shopper's
+Open my cart spends the token. The preview renders the template's exact body with the link shown
+as made at the send. The consent read is the topic's (`check#CartReminderConsent`), not
+`get#PartyConsentState`.
+
 **One sender per cart (Nov 1, 2026; review R-MKT-R03, X8).** Cart abandonment is one shared trigger
 event, raised once per cart and inactivity window when the store's RecoveryPolicy delay passes.
 Commerce's built-in recovery and a Marketing automation with the cart-abandoned trigger
@@ -1062,6 +1080,18 @@ StoreCheckout.js by gateway type, which Shop P5 and P7 extend; they inform, and 
 a binding the organization no longer enables. Readiness adds Payments, Delivery (a warning), Local
 rates, Terms page, Support queue and Support pages, each fixed in CheckoutSettings (the Terms page and
 Support pages on the store's sites).
+
+**As built (Nov 6, impl-commerce P10).** RecoveryPolicy's fields are the setting types
+`PsstRecoveryEnabled` (false until a store turns it on: nothing is sent before), `PsstRecoveryDelay`
+(minutes, 15 to 30 days, an hour by default, which is also Carts' abandonment), `PsstRecoverySender`
+(`builtin`, the only choice until Marketing), `PsstRecoveryMaxSends` (1 to 5, one by default) and
+`PsstRecoveryRetention` (the recovery window in days, 7 by default: a cart idle longer is not
+reminded, and a link stops working at its end), saved by `C.store#CartRecoveryPolicy` with
+`COMMERCE_STORE_EDIT`. The `PsetCartRecovery` binding is shown and edited with the store's emails
+(StoreDetail). Beside them the form edits the checkout's optional emails, `PsstCheckoutOptIns`
+(none, or some of review requests, cart reminders and news) and `PsstNewsList` (a current list of
+the store's organization), which before were set only by data (impl-commerce F118). A clone leaves
+out `PsstRecoveryEnabled` and `PsstNewsList`.
 
 **Source:** research §9, §11; Shop §§6–10. **Needs:** COM-CHECKOUT, COM-OPS, SHOP-CHECKOUT,
 SHOP-PAYMENT, SHOP-SUBSCRIPTION.
@@ -1420,6 +1450,7 @@ Advanced B2B, multi-store promotion programs, POS and a public theme marketplace
 | Code check (Nov 5, 2026; impl-commerce F1–F36) | Store staff are dated `StoreStaff` ProductStoreParty rows (§1.1); publication is a dated ProductStoreProduct and store text the store's ProductContent (§4); review decisions live in the audit log (§4 Reviews); promotion limits are rechecked under lock at checkout and placement (§7); checkout and recovery policies are dated ProductStoreSetting types (§8); CategoryDetail becomes a shared screen, and Carriers, PaymentMethods and TaxAuthorities are linked, not mounted (§2, §10); readiness serves StoreDetail and Shop's PASS readiness until Admin's registry exists (§3); the store sales summaries answer `COMMERCE_VIEW` for the user's stores (§3). |
 | Plan review (Nov 5, 2026; impl-commerce F37–F45 and §4) | Navigation is the merchandiser's (`COMMERCE_MERCHANDISE`) and feed publication the channel operator's (§2); promotion limits, every limit field, are enforced under lock at any store order's placement, a deliberate change to Mantle's default (§7); recovery consent is the store's "cart reminders" topic (§6); reviews take scanned images (§4); CheckoutPolicy's queue is an offered one and purchase readiness needs the site's Support mount (§8); the Shop-site feed destination (§9); Product360's paid access is C3 and InventoryAvailability C1 (§2) |
 | Orders, carts and customers as built (Nov 6, 2026; impl-commerce P8) | The detail screens sit flat under their area (`Commerce/Orders/CartDetail`, `Orders/ReturnDetail`, `Customers/RequestDetail`, §2 changed), as P7's promotion screens. Orders' Attention filter adds stuck Shop placements (a placementPending checkout refused ORDER_CHANGED or past its tries: still an open order, opened as a cart, read only) and orders whose notice on the delivery ledger was not delivered; Unpaid is the computed payment state (held, paid, authorized, promised, no charge, unpaid). A cart is abandoned an hour after its last shopper activity with no live checkout until P10's RecoveryPolicy sets the store's delay; a cart staff made (Order again) has no shopper activity. Requests are cases by the case's store, linked to a store order or in the store's checkout support queue; a product link alone does not make a case the store's, as a product is not one store's. Customer360 in Commerce is one page, not tabs. Order again needs `COMMERCE_ORDER_VIEW` and makes an open order only (nothing placed or charged). A delivery exception is read in Commerce; its resolution stays `MESSAGE_DELIVERY_REVIEW`'s |
+| Cart recovery as built (Nov 6, 2026; impl-commerce P10) | RecoveryPolicy is five dated settings (on, delay, sender, most sends, window) with the checkout's optional emails and news list beside them (§8, F118); nothing is sent until a store turns it on. Only a signed-in account's cart with the store's cart reminders topic and a verified email is reminded, once per visit to the cart (the event is the cart and its last activity) and at most the policy's sends; a completed checkout or the shopper's return suppresses a queued one. The link's one-time token is the cart access row's, made at each send and spent by the cart's own signed-in account on Shop's Recover page, which rotates the cart's capability into that session and reprices it (§6) |
 
 ## 17. Open
 

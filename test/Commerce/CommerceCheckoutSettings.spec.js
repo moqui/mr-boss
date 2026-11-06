@@ -84,6 +84,11 @@ feature("CheckoutSettings shows the readiness strip and each group of the demo s
         result.output.includes("Enabled for the organization")
         result.output.includes("Simulator")
         result.output.includes("Preview tax")
+        // P10: the cart recovery policy, off until the store turns it on, with the store's recovery email (F118's opt-ins beside it)
+        result.output.includes("Cart recovery")
+        result.output.includes("Off: nothing is sent")
+        result.output.includes("Change recovery")
+        result.output.includes("Checkout's optional emails")
         !result.output.includes("Not available")
     }
 })

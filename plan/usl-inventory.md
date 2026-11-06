@@ -836,7 +836,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | findOrCreate#ChatCommunicationEvent |  | Comms/Chat |
 | CommunicationServices | create#RecordFromChatMessage |  | Comms/Chat |
 | ConsentServices | store#PartyConsent | Marketing/Audiences/Consent/ConsentDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List |
-| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/CartDetail | Comms/Consent/Contact |
+| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/CartDetail | Comms/Consent/Contact; — for Commerce/Orders/CartDetail#RecoveryHistory (P10 reads the store's cart reminders topic through mantle.public.AccountHubServices.check#CartReminderConsent, in mantle.order.StoreOperationsServices.get#CartRecovery) |
 | ConsentServices | get#PartyConsentHistory | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Comms/Consent/Contact |
 | ConsentServices | find#Consents | Marketing/Audiences/Consent | Comms/Consent/List |
 | ConsentServices | subscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact |

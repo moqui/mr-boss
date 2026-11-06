@@ -130,7 +130,7 @@ feature("the demo store's held order by store scope: the operator reads its hold
 })
 
 // OrderDetail under Commerce and CartDetail, each rendered once (qvt): the held order's header, its Payment hold banner read
-// only and Order again; the cart's summary, activity and empty recovery history
+// only and Order again; the cart's summary, activity and recovery history (P10: none sent, the store's recovery off)
 feature("OrderDetail's Commerce branch shows the Payment hold read only with Order again, and CartDetail the cart", {
     when() {
         return asUser(users.operator, () => ({
@@ -151,5 +151,8 @@ feature("OrderDetail's Commerce branch shows the Payment hold read only with Ord
         r.cart.output.includes("Cart summary")
         r.cart.output.includes("Commerce spec item")
         r.cart.output.includes("No recovery sent")
+        // P10: the recovery history with its reason (the demo store's recovery is off)
+        r.cart.output.includes("Recovery history")
+        r.cart.output.includes("Recovery is off for this store")
     }
 })

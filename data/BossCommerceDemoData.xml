@@ -91,4 +91,9 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="1265184000000" isEnabled="Y"/>
     <mantle.product.store.ProductStorePaymentGateway productStoreId="POPC_DEFAULT" paymentInstrumentEnumId="PiCreditCard"
             paymentGatewayConfigId="BOSS_COM_HOSTED"/>
+
+    <!-- P10: POPC_DEFAULT's cart recovery email (PsetCartRecovery) on the demo mailbox; its recovery stays off (nothing is sent
+        until a store enables it, CheckoutSettings' Cart recovery). Joe Q Public's cart reminders are the demo service's. -->
+    <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetCartRecovery" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
 </entity-facade-xml>
