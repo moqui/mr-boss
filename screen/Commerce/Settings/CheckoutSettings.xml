@@ -174,7 +174,7 @@ along with this software (see the LICENSE.md file). If not, see
                     .filter((field) =&gt; policy[field + 'Next'] != null).map((field) =&gt; field + ' changes to ' + policy[field + 'Next'] + ' from ' + policy[field + 'NextText'])"/>
             <set field="shipOptions" from="settings.shipOptions.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId,
                     rowKey:(row.carrierPartyId + '_' + row.shipmentMethodEnumId).replace(/[^A-Za-z0-9_]/g, '_'),
-                    markupText:[row.markupPercent != null ? row.markupPercent + '%' : null, row.markupAmount != null ? '+' + row.markupAmount : null].filter(Boolean).join(' ') || 'None'}))"/>
+                    markupText:[row.markupPercent != null ? String(row.markupPercent) + '%' : null, row.markupAmount != null ? '+' + String(row.markupAmount) : null].filter(Boolean).join(' ') || 'None'}))"/>
             <set field="shippingGateways" from="settings.shippingGateways.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId,
                     rowKey:String(row.carrierPartyId).replace(/[^A-Za-z0-9_]/g, '_'), kindText:row.local ? 'Local rates' : 'Carrier rates'}))"/>
             <set field="rates" from="settings.rates.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId}))"/>

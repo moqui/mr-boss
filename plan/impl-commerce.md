@@ -2429,6 +2429,11 @@ fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; Pss
   - F129: the framework rotates the session id at a password sign-in and carries its attributes over
     (`session.rs` `rotate_on_password_login`), so the kept token survives the sign-in; the acceptance walk signs in with
     `login()`, not through the sign-in page, so that path is not walked.
+- **Wave 12 suites (Nov 6, on master after Commerce P10 merged and the framework's performance rounds 16–20 pulled and
+  built):** standalone mr-mantle 1,852 passed, 2 failed (the baseline); `./moq test-apps` 3,242 of 3,243 server features
+  (CommerceCheckoutSettings' render, F136, fixed and checked with CarrierServices before it) and 17 client features
+  passed; lint as before. Feature time: server mr-mantle 373.5 of 383 s, mr-boss 251.2 of 264 s, mr-pass 17.3 of 20 s;
+  client mr-boss 52.2 of 57 s, mr-pass 8.4 of 9 s.
 
 ### P11 — Reports and Home
 
@@ -2714,6 +2719,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F133 | P10 review: each job run re-reads every signed-in idle cart in the window (up to 500 a store, newest first), most already handled | P15: a "last window sent" mark on the access row |
 | F134 | P10 review: a staff send's operation key covers only the cart, so a retry with another reason gets the first answer | Accepted |
 | F135 | P10 review: the rendered recovery mail, link included, is kept in EmailMessage (as the download notice's guest link is); usable only signed in as the cart's account | Accepted |
+| F136 | Wave 12: CheckoutSettings joined a ship option's decimal markup to text with `+`, which the framework's decimal refuses (valueOf); it failed only after CarrierServices gave POPC_DEFAULT a markup | Fixed: `String()` of each amount |
 
 ## 7. Later
 
