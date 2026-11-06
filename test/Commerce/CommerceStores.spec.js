@@ -66,8 +66,8 @@ feature(
             manager.errors == []
             manager.output.includes("Ziziwork Retail Store")
             manager.output.includes(ids.storeId)
-            // P6: the demo store's local gateway has no rate and its site no Terms page, which block a purchase
-            manager.output.includes("things to fix")
+            // P6: the demo store's local gateway has no rate, which blocks a purchase (its site's Terms page is the demo's)
+            manager.output.includes("1 thing to fix")
             manager.output.includes("Clone store")
             manager.output.includes("Customer and other party rows")
             managerGeneral.status == 200

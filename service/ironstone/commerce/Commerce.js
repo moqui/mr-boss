@@ -81,10 +81,11 @@ function screenGrants(location, authzRows) {
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     return {found: grants.length > 0, allowed}
 }
-// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's),
-// reaches every organization (the active one when there is one); any other grant is limited to the user's organizations,
-// so a grant set up without filters fails closed. The root grant also needs COMMERCE_VIEW, so a deployment that gives the
-// root and not the read opens nothing. A Projects client contact (PROJECT_CLIENT) never opens Commerce, and a PASS public
+// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's) held
+// with COMMERCE_ALL_ORGANIZATIONS (Mantle's store scope widens on it, so the choices here are never stores Mantle refuses;
+// P6 review, F-P6-3), reaches every organization (the active one when there is one); any other grant is limited to the
+// user's organizations, so a grant set up without filters fails closed. The root grant also needs COMMERCE_VIEW, so a
+// deployment that gives the root and not the read opens nothing. A Projects client contact (PROJECT_CLIENT) never opens Commerce, and a PASS public
 // account holds no BOSS group.
 function rootGrants() {
     const none = {read: false, unrestricted: false, authzRows: []}
@@ -99,7 +100,8 @@ function rootGrants() {
         rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).some(
             row => row.entityFilterSetId === "MANTLE_ACTIVE_ORG"
         )
-    return {read: true, unrestricted: root.allowed.some(row => activeOrg(row.artifactAuthzId)), authzRows}
+    const unrestricted = root.allowed.some(row => activeOrg(row.artifactAuthzId)) && access.has("COMMERCE_ALL_ORGANIZATIONS")
+    return {read: true, unrestricted, authzRows}
 }
 function areaGrant(grants, area) {
     if (!grants.read) return false

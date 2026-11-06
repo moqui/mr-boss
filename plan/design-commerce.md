@@ -76,6 +76,10 @@ those stores of their organizations; a user with none works every store of their
 Because the rows are the limit itself, a store-limited staff member does not change store staff rows (P2 review): ending
 or dating their own would widen them to every store, and adding one to a manager would limit the manager.
 Mantle seeds the `COMMERCE_*` permissions, none of which exists yet (impl-commerce F2).
+The Commerce administrator (Nov 6, 2026; P6 review, impl-commerce F-P6-3) works every organization's stores with no
+active organization, and the active one's with one, in its choices and in Mantle's store services alike: Mantle widens
+its store scope for `COMMERCE_ALL_ORGANIZATIONS` (ADMIN's, and BOSS_COMMERCE_ADMIN's in BOSS), and Commerce.js offers every
+organization only to a user whose root grant has the active organization filter and who holds that permission.
 
 **Areas by group (Nov 5, 2026; impl-commerce P1).** Home, Stores, Merchandising and Promotions open for every Commerce
 user; Website for the merchandiser, designer, theme developer and publisher; Orders and Customers for the store and

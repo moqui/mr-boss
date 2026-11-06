@@ -551,3 +551,28 @@ feature("a site page is edited by the designer of the site's store, not by the r
         !otherSites.includes(ids.siteId)
     }
 })
+
+// P6 review (F-P6-3): the administrator's store choices and Mantle's store scope agree: with no active organization the
+// administrator (COMMERCE_ALL_ORGANIZATIONS) is offered and works another organization's store; the manager neither
+feature("the administrator works another organization's store in Mantle as in their choices; the manager neither", {
+    when() {
+        const offered = user =>
+            asUser(user, () =>
+                values(invoke(context + "get#Choices", {choice: "stores", term: "zzz-none", selected: ids.otherStoreId}))
+            )
+        const store = user =>
+            asUser(user, () => refusal("mantle.product.StoreAdminServices.get#Store", {productStoreId: ids.otherStoreId}), false)
+        return {
+            adminOffered: offered(users.admin),
+            adminStore: store(users.admin),
+            managerOffered: offered(users.manager),
+            managerStore: store(users.manager)
+        }
+    },
+    then({adminOffered, adminStore, managerOffered, managerStore}) {
+        adminOffered.includes(ids.otherStoreId)
+        adminStore == ""
+        !managerOffered.includes(ids.otherStoreId)
+        managerStore.includes("RECORD_UNAVAILABLE")
+    }
+})
