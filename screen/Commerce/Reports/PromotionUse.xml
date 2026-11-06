@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PromotionUse (design-commerce §3 PromotionUse; impl-commerce P11, COM-REPORTS): ReportScope (store, promotion, period,
+    currency) and the placed uses of the stores' promotions in the period (ironstone.commerce.ReportingServices.get#PromotionUse
+    over mantle.product.StorePromotionServices.get#PromotionUseSummary): per promotion, code and currency the orders, uses,
+    discount, the net sales of those orders and the uses left of a total limit, each opening PromotionDetail; in total per
+    currency (an order once). The export holds the same rows. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotion use" default-menu-index="4">
+    <parameter name="productStoreId"/>
+    <parameter name="storePromotionId"/>
+    <parameter name="interval"/>
+    <parameter name="periodDate"/>
+    <parameter name="currencyUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="promotionOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.commerce.ReportingServices.get#PromotionUse" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{productStoreId:productStoreId || null, storePromotionId:storePromotionId || null, interval:interval || 'M', periodDate:periodDate || null, currencyUomId:currencyUomId || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.commerce.ReportingServices.get#PromotionUse" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot})" transaction="force-new" ignore-error="true"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOfText"/>
+        <set field="useRows" from="answer?.rows || []"/>
+        <set field="useTotals" from="answer?.totalRows || []"/>
+        <set field="intervalOptions" from="[{value:'d', label:'Day'}, {value:'w', label:'Week'}, {value:'M', label:'Month'},
+                {value:'q', label:'Quarter'}, {value:'y', label:'Year'}]"/>
+        <set field="currencyOptions" from="Array.from(new Set((answer?.currencies || []).concat(currencyUomId ? [currencyUomId] : []))).map(value => ({value, label:value}))"/>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Promotion use" type="h5"/>
+                <label text="The promotion uses of orders placed in the period; an open cart's promotion is no use." type="p"
+                        style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <link url="${sharedLinks['Reports']}" text="All reports" icon="arrow_back" link-type="anchor-button"/>
+            </container>
+        </container>
+        <form-single name="ReportScope" transition="." map="options">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="interval">
+                <default-field title="Period">
+                    <drop-down allow-empty="false">
+                        <list-options list="intervalOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="periodDate">
+                <default-field title="Holding the day" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency" tooltip="Every currency, each apart, when empty">
+                    <drop-down allow-empty="true">
+                        <list-options list="currencyOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="storePromotionId">
+                <default-field title="Promotion">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="promotionOptions" server-search="true" min-length="0"
+                                parameter-map="{choice:'promotions', productStoreId:productStoreId, selected:storePromotionId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="productStoreId"/><field-ref name="storePromotionId"/><field-ref name="currencyUomId"/></field-row-big>
+                <field-row-big><field-ref name="interval"/><field-ref name="periodDate"/></field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <section-include name="ReportFrame" location="component://mr-boss/template/CommerceReportParts.xml"/>
+        <section-include name="ReportMissing" location="component://mr-boss/template/CommerceReportParts.xml"/>
+        <section name="UseSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="By promotion and code"/>
+                    <box-body-nopad>
+                        <label text="No promotion was used in this period." type="p" style="q-pa-md m-muted" condition="!useRows.length"/>
+                        <form-list name="PromotionUses" list="useRows" skip-form="true" paginate="false">
+                            <field name="promotionName">
+                                <default-field title="Promotion">
+                                    <link url="${sharedLinks['Promotions/PromotionDetail']}" text="${promotionName}" link-type="anchor"
+                                            parameter-map="{storePromotionId:storePromotionId}"/>
+                                </default-field>
+                            </field>
+                            <field name="promoCode"><default-field title="Code"><display/></default-field></field>
+                            <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="useCount" align="right"><default-field title="Uses"><display/></default-field></field>
+                            <field name="discountText" align="right"><default-field title="Discount"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Net sales of those orders"><display/></default-field></field>
+                            <field name="usesLeftText"><default-field title="Uses left"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="promotionName"/><field-ref name="promoCode"/></column>
+                                <column><field-ref name="useCount"/><field-ref name="discountText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box>
+                    <box-header title="In total"/>
+                    <box-body-nopad>
+                        <form-list name="PromotionTotals" list="useTotals" skip-form="true" paginate="false">
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="useCount" align="right"><default-field title="Uses"><display/></default-field></field>
+                            <field name="discountText" align="right"><default-field title="Discount"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Net sales of those orders"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="currencyUomId"/><field-ref name="orderCount"/></column>
+                                <column><field-ref name="discountText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

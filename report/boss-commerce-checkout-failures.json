@@ -1,0 +1,64 @@
+{
+  "id": "boss-commerce-checkout-failures",
+  "type": "alert",
+  "title": "Checkout failures",
+  "body": {
+    "description": "Fires when store checkouts failed in the last hour (a payment declined, a placement refused), by store. It reads every organization's checkouts, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "query": {
+      "datasetId": "boss-commerce-checkouts",
+      "from": "now-1h",
+      "thru": "now",
+      "queryString": "failureCode:*",
+      "aggregations": [
+        {
+          "id": "store",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "productStoreId",
+            "size": 50
+          }
+        },
+        {
+          "id": "checkouts",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "checkoutId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "checkouts",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 300,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "commerce",
+      "severity": "warning"
+    },
+    "contactPoints": [
+      {
+        "id": "administrators",
+        "type": "notification",
+        "topic": "ReportAlert",
+        "userGroupId": "ADMIN",
+        "groupWaitSeconds": 0,
+        "repeatSeconds": 3600
+      }
+    ]
+  }
+}

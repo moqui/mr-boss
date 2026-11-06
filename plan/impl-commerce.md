@@ -273,7 +273,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | built Nov 6, 2026 |
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026; follow-up (review requests topic, checkout opt-ins) built Nov 6 |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | built Nov 6, 2026 |
-| P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
+| P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | built Nov 6, 2026 |
 | P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
 | P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | — |
 | P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | — |
@@ -2456,6 +2456,116 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   answers unchanged); BOSS `CommerceReports` (open carts and bases never counted; the report and Home agree).
 - **Usable when** (design §12.2 scenario 15): OnlineSales for POPC_DEFAULT agrees with `get#SalesOrderSummary` and
   `get#SalesInvoiceSummary` for the same window; the reader sees only their stores; the CSV has the same rows.
+
+**Built Nov 6 (P11)** (branch `com/p11`).
+- Mantle:
+  - **Store-scoped sales reads (F21, X11; a Mantle default change):** `sales/SalesAnalysis.js` `organizations` takes the
+    `productStoreIds`: a user without `ACCOUNTING_VIEW` who holds `COMMERCE_VIEW` is answered for stores all in their store
+    scope (StoreAdmin.js `scope`/`storeOf`: their organizations' stores, a store-limited staff member's own; one outside
+    RECORD_UNAVAILABLE; none at all keeps Accounting's refusal), read as the stores' organizations (an organization named
+    must be one of them, ORGANIZATION_DENIED), with `costWithheld` unless `PRODUCT_COST_VIEW`. A holder of
+    `ACCOUNTING_VIEW` takes the old path whatever stores they name. `SalesReportServices` `get#SalesOrderSummary`,
+    `get#SalesInvoiceSummary` and `get#SalesTopProduct` pass the stores to it, null the cost fields when withheld (never
+    zero), and gain an optional `currencyUomIds` filter (empty: every currency, as before); `get#SalesTopProduct` gains
+    `productStoreIds`. `get#InvoicesByCustomerClass` is unchanged.
+  - **F114 fixed:** `entity/StoreOperationsViewEntities.xml` `mantle.order.StoreOrderHoldView` (a hold reason with its
+    order's store) and `mantle.request.StoreOrderChangeView` (an order change request with its order's store);
+    StoreOperations.js `heldOrderIds` and `cancelRequestOrderIds` put the store in the query, so the first 500 are the
+    stores' own (Home's Payment holds count and the Attention filters).
+  - **F112 hook:** StoreOperations.js `withoutRecurringBases(query)`, called by the order worklist's `orderQuery` and the
+    cart report's order read; a no-op until Shop P7 marks a base (see F-P11-3 for the sales index).
+  - `service/mantle/order/StoreReports.js` (new) behind `StoreOperationsServices.get#CartRecoverySummary` and
+    `StorePromotionServices.get#PromotionUseSummary` (both COMMERCE_VIEW and StoreOperations.js' scope, F51 and F113; a
+    period of at most two years, PERIOD_INVALID): the recovery funnel of the stores' Shop carts opened in the period (by
+    store and currency: opened, placed, abandoned, signed in, sends with a suppressed one left out, delivered, recovered by
+    F130's reading and its value; at most 5,000 carts, `truncated`), and promotion use by promotion, code and currency
+    (orders, uses, discount, the orders' net sales as get#SalesOrderSummary's netSales, the uses left of a promotion's or
+    code's total limit); totals one row per currency.
+  - `docs/AccountingImplementation.md`: the summaries' Commerce reader and `currencyUomIds`.
+- BOSS:
+  - `service/ironstone/commerce/ReportingServices.xml` over `Reporting.js` (new): `get#ReportCatalogue` (Online sales, Cart
+    recovery, Promotion use in Insights' catalog contract, for a user of Reports), `get#OnlineSales`, `get#CartRecovery`,
+    `get#PromotionUse` (the Reports area's grant, PERMISSION_DENIED without it) and `get#HomePeriod` (every Commerce user):
+    the scope (the user's stores, one asked for in it, at most 25 named as left out), a calendar period holding a day against
+    the one before (OnlineSales the last 3 to 24), the currencies (the stores' defaults and their orders' and invoices' in the
+    window, or the one asked for), each summary read per currency (and per store when there are several), never added
+    across currencies; Home's strip and OnlineSales' totals are one function (`totalsOf`). Each answer has its as-of time,
+    period, zone, filters and what it left out; output csv is the same rows, formula-like text guarded, audited through
+    `audit#Export` (kind commerce, `Commerce.<Report>`).
+  - Screens: `screen/Commerce/Reports.xml` (the area: ReportsHome, the default, OnlineSales, CartRecovery, PromotionUse),
+    `Reports/ReportsHome.xml` (the catalogue), `Reports/OnlineSales.xml` (ReportScope; the totals by period with their
+    change, by store when several, the top products), `Reports/CartRecovery.xml` (the funnel), `Reports/PromotionUse.xml`
+    (by promotion and code, each opening PromotionDetail; the totals), each with exportCsv; `template/CommerceReportParts.xml`
+    (ReportFrame, ReportMissing). Home: the period is Today, This week, This month (default), This quarter or This year;
+    PeriodStrip per currency (Orders, Net sales with their change, Top product, and the period before in words), each card
+    opening OnlineSales for a user of Reports; a strip that cannot be read says so and the work cards still count; visits and
+    conversion stay hidden.
+  - Commerce.js (appended): `linkPaths` Reports/OnlineSales, Reports/CartRecovery, Reports/PromotionUse.
+  - `report/` (F22, design §1.4): datasets `boss-commerce-checkouts` (Shop checkouts) and `boss-commerce-payment-attempts`
+    (store payment attempts), the dashboard `boss-commerce-store-operations` (orders by store and day from Mantle's
+    `mantle-sales-orders`, checkouts by state and day, checkout failures by store, payment attempts by phase) and the alert
+    templates `boss-commerce-checkout-failures` and `boss-commerce-payment-unresolved`; `data/BossCommerceReportData.xml`
+    (new: the DataDocuments BossStoreCheckout and BossStorePaymentAttempt, the BossCommerceOperations feed, ADMIN only as
+    Customer Service's and Mantle's sales datasets are).
+- Specs (all `--nobuild`):
+  - Mantle `test/sales/SalesReportStoreScope` (3 features, 0.68 s): spec-local organizations, stores, users and orders indexed
+    by the feed; a COMMERCE_VIEW reader's summaries of store A1 (two currencies; USD alone; A1 and A2), costs withheld and kept
+    for PRODUCT_COST_VIEW, the top product; refused another organization's store, a mix of in and out, the staff member's
+    second store, another organization's reader, no store (ACCESS_DENIED as before) and another vendor; ACCOUNTING_VIEW
+    unchanged: a store of no Commerce scope answered empty (its organization's orders only), the organization's three orders,
+    the same periods, counts and net sales as the store reader's with costs kept.
+  - Mantle `test/order/StoreReports` (3 features, 0.36 s): the funnel (five USD carts of A1 and an EUR one: placed 1,
+    abandoned 3, signed in 2, sends 2 with the suppressed one out, delivered 2, recovered 1 and its value; an open cart's
+    promotion line no use), promotion use (one order, one use, discount 2, net sales 18, uses left 4 and 2), the scope and
+    period refusals.
+  - BOSS `test/Commerce/CommerceReports` (3 features, 0.64 s): a placed order, an open cart and an invoice of POPC_DEFAULT in
+    May 2004: OnlineSales counts the order and not the cart (1 order, 2 items, net 20, invoiced 20, the top product), Home's
+    strip has the same totals for the manager and the reader (the reader's without Reports), the CSV's row; the reader refused
+    the reports and given no catalogue, another organization's manager refused the store, CartRecovery's CSV and PromotionUse
+    answer, the five definitions and their two documents; ReportsHome, OnlineSales, CartRecovery and PromotionUse rendered
+    once each (qvt). No CommerceAccess case: the rule is Mantle's permission and scope (SalesReportStoreScope). Home's one
+    render stays CommerceAccess's (unchanged, passing).
+  - Also run, all pass: Mantle SalesReportStoreScope, StoreReports, SalesReports, MantleSearch, AccountingStatements,
+    StoreOperations, StorePromotions, CartRecovery, StoreAdmin, Promotions (54 features, 12.0 s); BOSS CommerceReports,
+    CommerceAccess, CommerceOrders, CommercePromotions, CommerceRecovery, CommerceStores, AccountingReporting,
+    AccountingAccess, CustomerServiceReports (46 features, 19.1 s). Not run: `./moq test-apps` (the brief).
+- Acceptance: `acceptance/Commerce/CommerceReportsScenario` (mr-boss, 6 features, stepwise): a placed order and its invoice of
+  POPC_DEFAULT this month indexed; OnlineSales (six months, USD) equal period by period to john.doe's
+  `get#SalesOrderSummary` and `get#SalesInvoiceSummary` for the same store, organization and currency (orders, gross, net,
+  net invoiced); Home's strip the same totals, Home rendered; the store-limited staff member's totals POPC_DEFAULT's and
+  another store refused, Services' manager reading only the digital store and refused POPC_DEFAULT in Commerce and in Mantle;
+  the CSV's rows; the four Reports screens in qvt. Run: 6 of 6 passed.
+- Lint: `moqui lint --screens` (release binary) 132 flagged sites as before, none in Commerce's screens or templates.
+- Inventories: usl-inventory's get#SalesOrderSummary, get#SalesInvoiceSummary and get#SalesTopProduct name Commerce/Home and
+  Commerce/Reports/OnlineSales; ss-inventory has no report row.
+- Decisions (design §16 row "Reports and Home as built"):
+  - The period is a calendar period against the one before, as Mantle's summaries bucket them (`dateFormat` yyyy-MM-dd, the
+    buckets matched by their start day); Home's "last 7/30/90 days" became Today to This year. No store-group filter yet.
+  - Net sales on Home is Accounting's net invoiced (`get#SalesInvoiceSummary`'s netSales); OnlineSales shows the orders' net
+    sales beside it.
+  - A Commerce reader's sales read is the stores' organizations, so an ACCOUNTING_VIEW holder takes Accounting's path only;
+    a holder of both reads as Accounting does (unchanged).
+  - CartRecovery's "eligible" is "signed in" (an abandoned cart of a signed-in customer, the only kind a reminder may reach):
+    consent and the verified address are per send and not historical (F-P11-5).
+  - The Reports' services need the area's grant; Home's strip only COMMERCE_VIEW, as Mantle answers it (F21).
+  - Routed items: F114 fixed (above); F112 the hook above and F-P11-3; F130 read as P10's RecoveryHistory reads it.
+- Findings (provisional):
+  - **F-P11-1** Mantle's sales summaries take ordersThis/ordersLast (and invoicesThis/Last) as the newest buckets that have
+    sales: the date histogram has no bounds, so with no sale in the current period "this" is an earlier one. Commerce matches
+    the buckets by their start day instead; Sales' and Accounting's screens read the out-parameters. For Sales/Accounting.
+  - **F-P11-2** Without `currencyUomIds` the summaries add every currency's amounts (Accounting's and mr-marble's sales
+    screens); the filter now exists for a per-currency read. For Accounting.
+  - **F-P11-3** F112's other half: the sales index (MantleSalesOrderItem and its order part document) has no RecurringTemplate
+    marker either, so once Shop P7 makes bases OnlineSales and Home would count them as placed orders. Shop P7 should add the
+    marker to the sales documents (or a condition in the summaries) with its default test, beside `withoutRecurringBases`.
+  - **F-P11-4** A dataset is one document type, so design §1.4's one store operations dataset is shipped as checkouts and
+    payment attempts beside Mantle's sales orders; carts, recovery sends and promotion use (and P13/P14's messages and
+    feeds) need documents of their own. The datasets read every organization's rows and are ADMIN's until Insights'
+    admission applies a store scope.
+  - **F-P11-5** CartRecovery's eligibility is not historical (consent and verification are read at each send), so the report
+    shows signed-in abandoned carts, not the job's eligibility at the time.
+  - **F-P11-6** Not built from design §3: Insights' registration of the catalogue (Z10; Insights has no catalog yet), the
+    reports' graph views and ReportScope's store-group and free compare-period choices.
 
 ### P12 — Paid access and subscriptions
 

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Commerce's reports (impl-commerce P11, COM-REPORTS; design-commerce §1.2, §3; Reporting.js): the report catalogue, Online
+    sales (the owners' metrics, Mantle's SalesReportServices filtered to the user's stores, F21), Cart recovery and Promotion
+    use (Mantle's StoreReports.js), and Home's period strip, which reads the same totals as Online sales. Each over the
+    report scope (the Reports area's grant but for Home's strip; the user's stores, one asked for in it), a calendar period
+    against the one before in the user's zone, amounts per currency (never summed across currencies), its as-of time and
+    what it left out; with output csv the same rows, the export audited. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="ReportParameters" type="interface">
+        <description>The filters Commerce's reports share (ReportScope): the store (one of the user's; empty, every one of theirs,
+            at most 25), the period (interval d, w, M, q or y, a calendar day, week, month, quarter or year; M by default) holding
+            periodDate (yyyy-MM-dd, today by default), the currency (empty, each currency apart), and output csv for the
+            export.</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="productStoreId"/>
+            <parameter name="interval"/>
+            <parameter name="periodDate"/>
+            <parameter name="currencyUomId"/>
+            <parameter name="output"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="ReportCatalogue" allow-remote="false">
+        <description>The reports Commerce owns for a user of its Reports area (design §3), each in Insights' catalog contract
+            (entry id, owner app, title, description, route, parameters, export); none for another Commerce user. Refuses a
+            user without Commerce.</description>
+        <in-parameters><parameter name="appRoot"/></in-parameters>
+        <out-parameters><parameter name="reports" type="List"/></out-parameters>
+        <actions>
+            <set field="out" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('catalogue', context)"/>
+            <set field="reports" from="out.reports"/>
+        </actions>
+    </service>
+    <service verb="get" noun="OnlineSales" allow-remote="false">
+        <description>Online sales (design §3 OnlineSales) of the stores over the last periodCount periods (6 by default, at most
+            24): per store, period and currency (a store alone: its rows are the totals), and the totals of these stores per
+            currency with the change against the period before, each the owners' metrics (orders, items, gross, discounts, net
+            sales of the placed orders; net invoiced of the issued invoices); the period's top products per currency. Refuses
+            PERMISSION_DENIED (no Reports), RECORD_UNAVAILABLE (a store not the user's) and PERIOD_INVALID.</description>
+        <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
+        <in-parameters><parameter name="periodCount" type="Integer"/></in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('onlineSales', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="HomePeriod" allow-remote="false">
+        <description>Home's period strip (design §1.2, §3 Home PeriodStrip): the chosen period's orders and net invoiced of the
+            user's stores (or one) against the period before, per currency, and its top product; the same totals Online sales
+            shows for the same stores and period. Every Commerce user's; RECORD_UNAVAILABLE for a store not theirs. Visits and
+            conversion are left out until Marketing's tracking exists.</description>
+        <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
+        <out-parameters><parameter name="period" type="Map"/></out-parameters>
+        <actions>
+            <set field="period" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('homePeriod', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CartRecovery" allow-remote="false">
+        <description>Cart recovery (design §3 CartRecovery) of the stores' carts opened in the period, per store and currency
+            and in total per currency (Mantle's get#CartRecoverySummary). Refuses as get#OnlineSales.</description>
+        <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('cartRecovery', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="PromotionUse" allow-remote="false">
+        <description>Promotion use (design §3 PromotionUse) placed in the period, per promotion, code and currency and in total
+            per currency (Mantle's get#PromotionUseSummary), of one promotion when given. Refuses as get#OnlineSales, and a
+            promotion not of the user's stores RECORD_UNAVAILABLE.</description>
+        <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
+        <in-parameters><parameter name="storePromotionId"/></in-parameters>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('promotionUse', context)"/>
+        </actions>
+    </service>
+</services>

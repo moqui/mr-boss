@@ -1,0 +1,64 @@
+{
+  "id": "boss-commerce-payment-unresolved",
+  "type": "alert",
+  "title": "Long-unresolved payment attempts",
+  "body": {
+    "description": "Fires when store payment attempts started a day to an hour ago are still authorizing or pending at the provider, by store. It reads every organization's attempts, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "query": {
+      "datasetId": "boss-commerce-payment-attempts",
+      "from": "now-1d",
+      "thru": "now-1h",
+      "queryString": "phase:(authorizing OR pending)",
+      "aggregations": [
+        {
+          "id": "store",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "productStoreId",
+            "size": 50
+          }
+        },
+        {
+          "id": "attempts",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "paymentId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "attempts",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 900,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "commerce",
+      "severity": "warning"
+    },
+    "contactPoints": [
+      {
+        "id": "administrators",
+        "type": "notification",
+        "topic": "ReportAlert",
+        "userGroupId": "ADMIN",
+        "groupWaitSeconds": 0,
+        "repeatSeconds": 3600
+      }
+    ]
+  }
+}

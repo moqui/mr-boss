@@ -1,0 +1,34 @@
+{
+  "id": "boss-commerce-checkouts",
+  "type": "dataset",
+  "title": "Store checkouts",
+  "body": {
+    "documentType": "BossStoreCheckout",
+    "timeField": "createdDate",
+    "signal": "business",
+    "fieldDefaults": {
+      "productStoreId": {
+        "lookup": {
+          "entityName": "mantle.product.store.ProductStore",
+          "keyField": "productStoreId",
+          "displayField": "storeName"
+        }
+      },
+      "currencyUomId": {
+        "lookup": {
+          "entityName": "moqui.basic.Uom",
+          "keyField": "uomId",
+          "displayField": "description"
+        }
+      },
+      "statusId": {
+        "statusTypeId": "StoreCheckout"
+      },
+      "dueAmount": {
+        "unit": "USD",
+        "unitField": "currencyUomId",
+        "decimals": 2
+      }
+    }
+  }
+}

@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OnlineSales (design-commerce §3 OnlineSales; impl-commerce P11, COM-REPORTS): ReportScope (store, period: a calendar day,
+    week, month, quarter or year holding a chosen day, the periods shown, currency) and the owners' metrics filtered to the
+    user's stores (ironstone.commerce.ReportingServices.get#OnlineSales over mantle.sales.SalesReportServices'
+    get#SalesOrderSummary, get#SalesInvoiceSummary and get#SalesTopProduct with productStoreIds, F21): the totals of these
+    stores per currency and period with the change against the period before (Home's strip reads the same), each store's
+    rows when there are several, and the period's top products; never summed across currencies. Open carts are never
+    orders. The export holds the same rows. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Online sales" default-menu-index="2">
+    <parameter name="productStoreId"/>
+    <parameter name="interval"/>
+    <parameter name="periodDate"/>
+    <parameter name="periodCount"/>
+    <parameter name="currencyUomId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="exportCsv" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.commerce.ReportingServices.get#OnlineSales" out-map="exported"
+                    in-map="Object.assign({}, options, {appRoot:appRoot, output:'csv'})"/>
+            <script>ec.web.sendTextResponse(exported.answer.csvText, 'text/csv', exported.answer.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <always-actions>
+        <set field="options" from="{productStoreId:productStoreId || null, interval:interval || 'M', periodDate:periodDate || null, periodCount:periodCount || '6', currencyUomId:currencyUomId || null}"/>
+    </always-actions>
+    <actions>
+        <service-call name="ironstone.commerce.ReportingServices.get#OnlineSales" out-map="found"
+                in-map="Object.assign({}, options, {appRoot:appRoot})" transaction="force-new" ignore-error="true"/>
+        <set field="reportError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="answer" from="found?.answer || null"/>
+        <set field="reportFound" from="!!answer?.asOfText"/>
+        <set field="totalRows" from="answer?.totalRows || []"/>
+        <set field="storeRows" from="answer?.rows || []"/>
+        <set field="severalStores" from="!!answer?.severalStores"/>
+        <set field="topProducts" from="answer?.topProducts || []"/>
+        <set field="countOptions" from="['3', '6', '12', '24'].map(value => ({value, label:value}))"/>
+        <set field="intervalOptions" from="[{value:'d', label:'Day'}, {value:'w', label:'Week'}, {value:'M', label:'Month'},
+                {value:'q', label:'Quarter'}, {value:'y', label:'Year'}]"/>
+        <set field="currencyOptions" from="Array.from(new Set((answer?.currencies || []).concat(currencyUomId ? [currencyUomId] : []))).map(value => ({value, label:value}))"/>
+        <set field="exportParameters" from="options"/>
+    </actions>
+    <widgets>
+        <container style="m-record-header">
+            <container style="m-record-title">
+                <label text="Online sales" type="h5"/>
+                <label text="Orders placed (an open cart is no order) and net sales invoiced, as Sales and Accounting count them, for your stores."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="m-record-actions">
+                <link url="${sharedLinks['Reports']}" text="All reports" icon="arrow_back" link-type="anchor-button"/>
+            </container>
+        </container>
+        <form-single name="ReportScope" transition="." map="options">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="interval">
+                <default-field title="Period">
+                    <drop-down allow-empty="false">
+                        <list-options list="intervalOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="periodDate">
+                <default-field title="Holding the day" tooltip="Today when empty"><date-time type="date"/></default-field>
+            </field>
+            <field name="currencyUomId">
+                <default-field title="Currency" tooltip="Every currency, each apart, when empty">
+                    <drop-down allow-empty="true">
+                        <list-options list="currencyOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="periodCount">
+                <default-field title="Periods shown">
+                    <drop-down allow-empty="false">
+                        <list-options list="countOptions" key="${value}" text="${label}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submit"><default-field title=""><submit text="Show report" type="primary"/></default-field></field>
+            <field-layout>
+                <field-row-big><field-ref name="productStoreId"/><field-ref name="currencyUomId"/></field-row-big>
+                <field-row-big><field-ref name="interval"/><field-ref name="periodDate"/><field-ref name="periodCount"/></field-row-big>
+                <field-ref name="submit"/>
+            </field-layout>
+        </form-single>
+        <section-include name="ReportFrame" location="component://mr-boss/template/CommerceReportParts.xml"/>
+        <section-include name="ReportMissing" location="component://mr-boss/template/CommerceReportParts.xml"/>
+        <section name="SalesTotalSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="${severalStores ? 'All these stores' : 'By period'}"/>
+                    <box-body-nopad>
+                        <label text="No sales in these periods." type="p" style="q-pa-md m-muted" condition="!totalRows.length"/>
+                        <form-list name="SalesTotals" list="totalRows" skip-form="true" paginate="false">
+                            <field name="periodText"><default-field title="${answer.intervalLabel}"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="orderChangeText" align="right"><default-field title="Change"><display/></default-field></field>
+                            <field name="itemCount" align="right"><default-field title="Items"><display/></default-field></field>
+                            <field name="grossText" align="right"><default-field title="Gross"><display/></default-field></field>
+                            <field name="discountText" align="right"><default-field title="Discounts"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Net sales"><display/></default-field></field>
+                            <field name="invoicedText" align="right"><default-field title="Net invoiced"><display/></default-field></field>
+                            <field name="netChangeText" align="right"><default-field title="Change"><display/></default-field></field>
+                            <field name="averageText" align="right"><default-field title="Average order"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="periodText"/><field-ref name="orderCount"/></column>
+                                <column><field-ref name="netText"/><field-ref name="invoicedText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SalesStoreSection" condition="severalStores">
+            <widgets>
+                <container-box>
+                    <box-header title="By store"/>
+                    <box-body-nopad>
+                        <label text="No store sold in these periods." type="p" style="q-pa-md m-muted" condition="!storeRows.length"/>
+                        <form-list name="SalesByStore" list="storeRows" skip-form="true" paginate="false">
+                            <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                            <field name="periodText"><default-field title="${answer.intervalLabel}"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                            <field name="itemCount" align="right"><default-field title="Items"><display/></default-field></field>
+                            <field name="grossText" align="right"><default-field title="Gross"><display/></default-field></field>
+                            <field name="discountText" align="right"><default-field title="Discounts"><display/></default-field></field>
+                            <field name="netText" align="right"><default-field title="Net sales"><display/></default-field></field>
+                            <field name="invoicedText" align="right"><default-field title="Net invoiced"><display/></default-field></field>
+                            <field name="averageText" align="right"><default-field title="Average order"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="storeName"/><field-ref name="periodText"/></column>
+                                <column><field-ref name="orderCount"/><field-ref name="netText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="TopProductSection" condition="reportFound">
+            <widgets>
+                <container-box>
+                    <box-header title="Top products this ${answer.intervalLabel.toLowerCase()}"/>
+                    <box-body-nopad>
+                        <label text="No product sold this period." type="p" style="q-pa-md m-muted" condition="!topProducts.length"/>
+                        <form-list name="TopProducts" list="topProducts" skip-form="true" paginate="false">
+                            <field name="pseudoId"><default-field title="Product"><display/></default-field></field>
+                            <field name="productName"><default-field title="Name"><display/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency"><display/></default-field></field>
+                            <field name="quantity" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="salesText" align="right"><default-field title="Sales"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/></column>
+                                <column><field-ref name="salesText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
