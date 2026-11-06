@@ -1841,7 +1841,7 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
     `replyDate`), the proof and reply audit-logged with the status, an index by store, product and status; the status
     transition PrvwApproved to PrvwPending ("Review Edited"); `mantle.product.ProductReviewImage` (review, sequence, digest
     with a unique index, location, name, type, size). `data/StoreReviewsSetupData.xml`: the ledger source
-    `MdsrcReviewRequest`. The demo's two reviews renamed DEMO_REVIEW_1 and _2 (F-P9-1).
+    `MdsrcReviewRequest`. The demo's two reviews renamed DEMO_REVIEW_1 and _2 (F94).
   - `service/mantle/product/StoreReviews.js` behind `StoreMerchandisingServices` `find#Reviews`, `get#Review`,
     `get#ReviewImage` (staff, any state) with COMMERCE_VIEW, `moderate#Review` (approve or delete; `reviews`, the list rows'
     `selectionKeys` (productReviewId@revision) or one review, each at its expected revision in its own transaction through
@@ -1863,7 +1863,7 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   - The request (`service/StoreReviews.secas.xml`): ShipmentDeliveredRequestReviews (a shipment to ShipDelivered) and
     DownloadFirstRequestReview (a grant's first download) call `queue#ReviewRequests`, which queues one delivery per line
     (`reviewRequest:{order}:{line}`) only for a Shop order (a completed StoreCheckout) of a store with a current
-    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F-P9-2); the build suppresses it once
+    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F95); the build suppresses it once
     the buyer reviewed the product, the line was cancelled or returned, or the product is no longer public.
   - Shop's operations in Schema/Routes and their Mantle mirrors (identical), `Contracts.d.ts` and PassAuthority's DOWNLOADS:
     `getProductReviews` (GET), `submitProductReview` (POST, its `file`), `getShopReviewImage` (a GET download). None is a
@@ -1898,23 +1898,23 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   an image's digest is the sha-256 of the review, its sequence and the file's base64, so the same photo twice has two
   addresses; staff see a pending review's photos through Reviews' own transition; the proof refusals (PURCHASE_REQUIRED,
   VERIFY_REQUIRED) are Unprocessable so a page shows their text; an edit keeps the store's reply, shown again on
-  re-approval (F-P9-5); SubmitReview is a PASS-shell page, not a theme component (a theme has no form).
+  re-approval (F98); SubmitReview is a PASS-shell page, not a theme component (a theme has no form).
 - Findings (provisional):
-  - **F-P9-1** The demo's ProductReview rows used ids 100001 and 100002, which the sequence hands out next, so the second
+  - **F94** The demo's ProductReview rows used ids 100001 and 100002, which the sequence hands out next, so the second
     review made on a demo database failed on its key; renamed DEMO_REVIEW_1 and _2.
-  - **F-P9-2** The review request is a solicitation, so the ledger sends it only with a granted PcpMarketingEmail, which
+  - **F95** The review request is a solicitation, so the ledger sends it only with a granted PcpMarketingEmail, which
     Shop never collects (no checkout opt-in, §4): on the demo no request goes out. For the lead: a store "review requests"
     topic on Email preferences as cart reminders have, or treat it as transactional with the preferences link it carries.
-  - **F-P9-3** PASS's facade and transports take one `file` an operation, so up to three photos are three calls; and a
+  - **F96** PASS's facade and transports take one `file` an operation, so up to three photos are three calls; and a
     FileItem in a service's parameter map loses its methods in process, so the specs add a photo through StoreReviews.js
     as the service does.
-  - **F-P9-4** The request is queued at delivery or first download and sent within the job's two minutes; the ledger's
+  - **F97** The request is queued at delivery or first download and sent within the job's two minutes; the ledger's
     `queue#Delivery` has no not-before date, so a store's "days after delivery" waits for one.
-  - **F-P9-5** An author's edit keeps the store's reply, which shows again under the new text when it is re-approved; the
+  - **F98** An author's edit keeps the store's reply, which shows again under the new text when it is re-approved; the
     merchandiser may withdraw it first.
-  - **F-P9-6** Reviews reach a theme as `product.reviews`; the starter's product section renders them, but a release
+  - **F99** Reviews reach a theme as `product.reviews`; the starter's product section renders them, but a release
     published before P9 (from the old starter) shows none until republished.
-  - **F-P9-7** For a signed-in visitor, each product page view reads their qualifying lines to offer the write link (up to
+  - **F100** For a signed-in visitor, each product page view reads their qualifying lines to offer the write link (up to
     200 orders); a session cache would spare it. (Review R1: the lines of the product are read first, in one query.)
 
 **Review Nov 6 (P9).** Checked `git diff master...com/p9` in mr-mantle, mr-pass and mr-boss against this section, design
@@ -1931,7 +1931,7 @@ transaction with a result per review. The SECAs are tx-commit rules, which the f
 transaction of their own, so a failure cannot undo a delivery or a download; one line's failure is logged and the rest go
 on. Mantle defaults: the new fields are nullable, the one new transition only widens the flow; no other ProductReview
 caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema/Routes mirrors identical.
-- **R1** (minor, F-P9-7) `qualifyingItems` reads the account's lines of the product and its variants in one query before
+- **R1** (minor, F100) `qualifyingItems` reads the account's lines of the product and its variants in one query before
   any order, and stops at the first qualifying line for the proof and the write link: a signed-in visitor who never bought
   the product costs two queries a product page.
 - **R2** (minor) The Review page (`get#Reviews`, the review request's link) did not claim the account's guest purchases, so
@@ -2217,6 +2217,18 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F91 | P5: CommerceThemesWalk adds 8.0 s to mr-boss's client budget (46.8 of 49 s) | The review measured it at 7.6 s of server work it cannot trim; the client budget is raised by it at the gate (the user's agreement) |
 | F92 | P5: does the anonymous preview record a Visit? | Yes, from its second request; fixed with F86 |
 | F93 | P5 review: at render the preview token checks the actor's account is enabled, not their theme permission or store scope (a revoked designer's open preview lasts at most 20 minutes); Shop P2's `get#ThemeDraft` with `includeText` returns source text to any `COMMERCE_VIEW` holder | Accepted: twenty minutes at most; theme source holds no secrets |
+| F94 | P9: the demo's ProductReview ids were the sequence's next values, so a second new review failed on a demo database | Renamed DEMO_REVIEW_1 and _2 |
+| F95 | P9: the review request is a solicitation, sent only with a granted PcpMarketingEmail, which Shop never collects, so the demo sends none | For the user: a per-store review-requests topic on Email preferences (as cart reminders), or transactional |
+| F96 | P9: PASS's facade takes one file per operation, so three photos are three calls | Accepted |
+| F97 | P9: the review request is sent within the ledger job's two minutes of delivery; the ledger has no not-before date for "days after delivery" | Later (the ledger's not-before) |
+| F98 | P9: an author's edit keeps the store's reply, which shows again on re-approval | Accepted |
+| F99 | P9: theme releases published from the old starter show no reviews until republished | Accepted |
+| F100 | P9: each product page view for a signed-in visitor read their qualifying orders | Fixed in the review (R1): one query of the product's lines |
+| F101 | P9 review: a review staff deleted does not count toward one review per account, store and product, so the author may write another | Accepted (pending, throttled); P15 if deletion should be final |
+| F102 | P9 review: a decision or reply without an expected revision is not checked for staleness (the screens always send one) | P15: required |
+| F103 | P9 review: two simultaneous first submissions can make two reviews (no unique key on account, store and product) | P15 |
+| F104 | P9 review: the download SECA (DownloadFirstRequestReview) and `get#Reviews`' claim have no spec of their own | P15 |
+| F105 | P9 review: removing a photo deletes its file before the transaction commits | P15 |
 
 ## 7. Later
 
