@@ -118,7 +118,8 @@ feature("Send to customer: Compose for Joe with the published address; a draft a
     then({prepared, published, draft, internal, reader}) {
         published == ""
         prepared.to == "joe@public.com"
-        prepared.url.includes("/popc/content/help/Thermostat reads the wrong temperature?ver=")
+        // the Support app's article page on the demo Shop site (impl-shop P3, F56)
+        prepared.url.includes("/support/CustomerArticle?wikiPageId=")
         prepared.composeUrl.startsWith("/qapps/Comms/Inbox/Compose?to=joe%40public.com")
         prepared.composeUrl.includes("recordId=" + ids.thermostatCaseId)
         draft.includes("ARTICLE_NOT_PUBLISHED")
