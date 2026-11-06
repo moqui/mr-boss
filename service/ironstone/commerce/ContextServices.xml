@@ -169,4 +169,19 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="rows" from="found.rows"/>
         </actions>
     </service>
+
+    <!-- P6 (F6): the owners' screens CheckoutSettings links, for a user who may open them -->
+    <service verb="get" noun="OwnerLinks" allow-remote="false">
+        <description>The addresses of the other apps' editors CheckoutSettings links rather than mounts (Warehouse's Carriers,
+            Accounting's PaymentMethods and TaxAuthorities), each null when the user may not open it; organizationPartyId is
+            passed on to them. Refuses a user without Commerce.</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <in-parameters><parameter name="organizationPartyId"/></in-parameters>
+        <out-parameters><parameter name="links" type="Map"/></out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('ownerLinks', context)"/>
+            <set field="links" from="found.links"/>
+        </actions>
+    </service>
 </services>

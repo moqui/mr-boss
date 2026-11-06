@@ -81,10 +81,11 @@ function screenGrants(location, authzRows) {
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     return {found: grants.length > 0, allowed}
 }
-// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's),
-// reaches every organization (the active one when there is one); any other grant is limited to the user's organizations,
-// so a grant set up without filters fails closed. The root grant also needs COMMERCE_VIEW, so a deployment that gives the
-// root and not the read opens nothing. A Projects client contact (PROJECT_CLIENT) never opens Commerce, and a PASS public
+// Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's) held
+// with COMMERCE_ALL_ORGANIZATIONS (Mantle's store scope widens on it, so the choices here are never stores Mantle refuses;
+// P6 review, F-P6-3), reaches every organization (the active one when there is one); any other grant is limited to the
+// user's organizations, so a grant set up without filters fails closed. The root grant also needs COMMERCE_VIEW, so a
+// deployment that gives the root and not the read opens nothing. A Projects client contact (PROJECT_CLIENT) never opens Commerce, and a PASS public
 // account holds no BOSS group.
 function rootGrants() {
     const none = {read: false, unrestricted: false, authzRows: []}
@@ -99,7 +100,8 @@ function rootGrants() {
         rows("moqui.security.ArtifactAuthzFilter", {artifactAuthzId: authzId}).some(
             row => row.entityFilterSetId === "MANTLE_ACTIVE_ORG"
         )
-    return {read: true, unrestricted: root.allowed.some(row => activeOrg(row.artifactAuthzId)), authzRows}
+    const unrestricted = root.allowed.some(row => activeOrg(row.artifactAuthzId)) && access.has("COMMERCE_ALL_ORGANIZATIONS")
+    return {read: true, unrestricted, authzRows}
 }
 function areaGrant(grants, area) {
     if (!grants.read) return false
@@ -268,7 +270,9 @@ const linkPaths = [
     // P4: a site's pages and navigation (design §5)
     "Website/Pages",
     "Website/PageDetail",
-    "Website/Navigation"
+    "Website/Navigation",
+    // P6: a store's checkout settings (design §8)
+    "Settings/CheckoutSettings"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -650,7 +654,43 @@ function setupStoreScope() {
     return {storeLimited: !!storeIds}
 }
 
-const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope}
+// ===== owners' screens (P6, F6) =====
+// The other apps' editors CheckoutSettings links rather than mounts, each by its screen path under mr-boss/screen and its
+// address: Warehouse's Carriers and Accounting's PaymentMethods and TaxAuthorities.
+const ownerScreens = {
+    carriers: {path: "Warehouse/Locations/Carriers", url: "/qapps/Warehouse/Locations/Carriers"},
+    paymentMethods: {path: "Accounting/Settings/PaymentMethods", url: "/qapps/Accounting/Settings/PaymentMethods"},
+    taxAuthorities: {path: "Accounting/Tax/TaxAuthorities", url: "/qapps/Accounting/Tax/TaxAuthorities"}
+}
+// Whether the user may open a screen: its app root allowed to one of their groups, and each level below it allowed where a
+// group's authorization names it (ALWAYS over DENY over ALLOW), read directly as screenGrants does; a system administrator
+// opens every one; a Projects client contact none.
+function mayOpenScreen(path) {
+    if (!ec.user.userId || ec.user.hasPermission("PROJECT_CLIENT")) return false
+    if (access.systemAdmin()) return true
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    if (!groupIds.length) return false
+    const authzRows = screenAuthz(groupIds)
+    const parts = path.split("/")
+    for (let depth = 1; depth <= parts.length; depth++) {
+        const found = screenGrants("component://mr-boss/screen/" + parts.slice(0, depth).join("/") + ".xml", authzRows)
+        if (depth === 1 && !found.allowed.length) return false
+        if (depth > 1 && found.found && !found.allowed.length) return false
+    }
+    return true
+}
+// ownerLinks: the owners' screens the user may open, each its address (with the organization when given), else null.
+function ownerLinks(p) {
+    required()
+    const query = p.organizationPartyId ? "?organizationPartyId=" + encodeURIComponent(p.organizationPartyId) : ""
+    return {
+        links: Object.fromEntries(
+            Object.entries(ownerScreens).map(([key, screen]) => [key, mayOpenScreen(screen.path) ? screen.url + query : null])
+        )
+    }
+}
+
+const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope, ownerLinks}
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Commerce branch: the user's scope, the same refusing a user

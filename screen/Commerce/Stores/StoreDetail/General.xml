@@ -44,12 +44,13 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="general" from="generalOut.store"/>
             <set field="canEdit" from="!!generalOut.canEdit"/>
-            <!-- each finding's fix: the tab of its section -->
+            <!-- each finding's fix: the tab of its section; a checkout one (P6) CheckoutSettings, for a user who opens Settings -->
             <set field="fixTabs" from="{general:'General', sites:'Sites', facilities:'Facilities', emails:'Emails', settings:'Settings', staff:'Staff'}"/>
             <set field="findings" from="(readyOut?.findings || []).map((row) =&gt; Object.assign({}, row,
                     {stateText: row.ready ? 'Ready' : row.severity == 'warning' ? 'Check' : 'To fix',
                      stateColor: row.ready ? 'positive' : row.severity == 'warning' ? 'warning' : 'negative',
-                     fixUrl: fixTabs[row.fix] ? storeTabUrl + fixTabs[row.fix] + '?productStoreId=' + encodeURIComponent(productStoreId) : ''}))"/>
+                     fixUrl: fixTabs[row.fix] ? storeTabUrl + fixTabs[row.fix] + '?productStoreId=' + encodeURIComponent(productStoreId)
+                        : row.fix == 'checkout' &amp;&amp; storeCan.settings ? (commerce.webBase || '/qapps/Commerce') + '/Settings/CheckoutSettings?productStoreId=' + encodeURIComponent(productStoreId) : ''}))"/>
             <set field="generalValues" from="Object.assign({}, general, {expectedLastUpdatedStamp: general.lastUpdatedStamp, changeReason: ''})"/>
             <set field="reservationUrl" from="'/qapps/Warehouse/Settings/ReservationPolicies/StoreReservation?productStoreId=' + encodeURIComponent(productStoreId)"/>
         </if>

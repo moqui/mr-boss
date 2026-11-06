@@ -682,12 +682,12 @@ is unchanged.
 | --- | --- | --- | --- |
 | EditProductStore | CloneProductStoreForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail#CloneStoreForm |
 | EditProductStore | EditStoreForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/General#StoreGeneral |
-| EditProductStore | NewShippingOptionForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | ShipOptionsForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | NewShippingGatewayForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | ShippingGatewaysForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | NewPaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | PaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
+| EditProductStore | NewShippingOptionForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#AddShipOptionForm |
+| EditProductStore | ShipOptionsForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#ShipOptions |
+| EditProductStore | NewShippingGatewayForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#AddShipGatewayForm |
+| EditProductStore | ShippingGatewaysForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#ShippingGateways |
+| EditProductStore | NewPaymentGatewayForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#AddPaymentGatewayForm |
+| EditProductStore | PaymentGatewayForm | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#PaymentGateways |
 | EditProductStore | NewStoreDataDocumentForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/SearchContent#SetSearchDocumentForm |
 | EditProductStore | StoreDataDocumentForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/SearchContent#SearchDocuments |
 | FindProductStore | NewStoreForm | Commerce/Stores | Commerce/Stores/Stores#NewStoreForm |

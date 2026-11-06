@@ -1,0 +1,672 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CheckoutSettings (design-commerce §8; impl-commerce P6, COM-CHECKOUT): a store's checkout, with its readiness strip (what
+    still blocks a purchase, from mantle.product.StoreAdminServices.check#StoreReadiness) and the groups CheckoutPolicy (dated
+    settings: guest or account, destinations, stock disclosure, terms, the purchase contact's phone, the support queue among
+    the organization's offered queues), ShippingOptions, ShippingGateways (approved ones only), LocalRates with the simulator,
+    PaymentGateways (only the organization's enabled gateways) and TaxDisplay with the tax preview. RecoveryPolicy is P10's,
+    RecurringPolicy P12's. The store is checked by ironstone.commerce.ContextServices.check#Record, then read and saved through
+    mantle.product.StoreAdminServices (COMMERCE_VIEW reads, COMMERCE_STORE_EDIT changes, the store's scope). The carriers,
+    payment methods and tax authorities the choices come from are their owners' editors (F6): linked for a user who may open
+    them (ContextServices.get#OwnerLinks), never mounted. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Checkout" default-menu-index="1">
+    <parameter name="productStoreId"/>
+    <parameter name="simCountryGeoId"/>
+    <parameter name="simStateGeoId"/>
+    <parameter name="simAmount"/>
+    <parameter name="simWeight"/>
+    <parameter name="taxGeoId"/>
+    <parameter name="taxAmount"/>
+    <parameter name="taxShipping"/>
+
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="checkoutOptions" read-only="true">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.find#CheckoutOptions" out-map="found"
+                    in-map="{productStoreId:productStoreId, choice:choice, carrierPartyId:(carrierPartyId || null), term:(term || null),
+                        selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found?.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="savePolicy">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#CheckoutPolicy" out-map="saved"
+                    in-map="{productStoreId:productStoreId, accountMode:accountMode, destinations:(destinations ?? ''),
+                        stockDisclosure:stockDisclosure, termsRequired:termsRequired, contactPhone:contactPhone,
+                        supportQueueId:(supportQueueId ?? ''), fromDate:(fromDate || null), changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the checkout policy (${saved.changed.length} changed)</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveShipOption">
+        <actions>
+            <set field="parts" from="String(carrierAndMethod || (carrierPartyId + ':' + shipmentMethodEnumId)).split(':')"/>
+            <service-call name="mantle.product.StoreAdminServices.store#ShippingOption"
+                    in-map="{productStoreId:productStoreId, carrierPartyId:parts[0], shipmentMethodEnumId:parts[1], sequenceNum:(sequenceNum || null),
+                        markupPercent:(markupPercent || null), markupAmount:(markupAmount || null), remove:(remove == 'Y'),
+                        changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Removed' : 'Saved'} the ship option</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveShipGateway">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreShippingGateway"
+                    in-map="{productStoreId:productStoreId, carrierPartyId:carrierPartyId, shippingGatewayConfigId:(shippingGatewayConfigId || null),
+                        billingType:(billingType || null), billingAccount:(billingAccount || null), billingZip:(billingZip || null),
+                        billingCountry:(billingCountry || null), insurancePercent:(insurancePercent || null), remove:(remove == 'Y'),
+                        changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Removed' : 'Saved'} the shipping gateway</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveRate">
+        <actions>
+            <set field="parts" from="carrierAndMethod ? String(carrierAndMethod).split(':') : [null, null]"/>
+            <set field="rateIn" from="{productStoreId:productStoreId, shippingRateId:(shippingRateId || null), end:(end == 'Y'),
+                    changeReason:(changeReason || null), fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <if condition="end != 'Y'">
+                <script>Object.assign(rateIn, {geoId:geoId, fromWeight:(fromWeight ?? null), thruWeight:(thruWeight ?? null),
+                    weightUomId:(weightUomId || null), fromAmount:(fromAmount ?? null), thruAmount:(thruAmount ?? null), shippingAmount:shippingAmount,
+                    currencyUomId:(currencyUomId || null), priority:(priority ?? null), description:(description ?? null)})
+                if (!shippingRateId) Object.assign(rateIn, {carrierPartyId:parts[0], shipmentMethodEnumId:parts[1]})</script>
+            </if>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreShippingRate" in-map="rateIn"/>
+            <if condition="!ec.message.hasError()"><message type="success">${end == 'Y' ? 'Ended' : 'Saved'} the local rate</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="savePayment">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StorePaymentGateway"
+                    in-map="{productStoreId:productStoreId, paymentInstrumentEnumId:paymentInstrumentEnumId,
+                        paymentGatewayConfigId:(paymentGatewayConfigId || null), remove:(remove == 'Y'), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${remove == 'Y' ? 'Removed' : 'Saved'} the payment gateway</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveTax">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreTax" out-map="saved"
+                    in-map="{productStoreId:productStoreId, taxGatewayConfigId:(taxGatewayConfigId ?? ''), taxDisplay:taxDisplay,
+                        taxOriginFacilityId:(taxOriginFacilityId ?? ''), fromDate:(fromDate || null), changeReason:changeReason,
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the store's tax (${saved.changed.length} changed)</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="productStoreId" from="productStoreId || (commerce.storeOptions || [])[0]?.value || null"/>
+        <if condition="productStoreId">
+            <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="recordFound" from="!!storeRecord?.recordId"/>
+        <set field="scopeValues" from="{productStoreId:productStoreId}"/>
+        <!-- Mantle checks the store's scope again (its organizations: a Commerce administrator's choices may hold a store of an
+            organization Mantle's scope does not give them), and a store it refuses is not available here either -->
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#CheckoutSettings" out-map="settings" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="recordFound" from="!!settings?.store"/>
+        </if>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.check#StoreReadiness" out-map="readyOut" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <service-call name="ironstone.commerce.ContextServices.get#OwnerLinks" out-map="owners" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, organizationPartyId:settings.store.organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="canEdit" from="!!settings.canEdit"/>
+            <set field="ownerLinks" from="owners?.links || {}"/>
+            <set field="currency" from="settings.store.defaultCurrencyUomId"/>
+            <!-- the readiness strip: what a purchase needs, each finding not ready first -->
+            <set field="checkoutAreas" from="['payments', 'delivery', 'tax', 'support']"/>
+            <set field="checkoutKeys" from="['payments', 'delivery', 'localRates', 'tax', 'terms', 'supportQueue', 'supportMount']"/>
+            <set field="findings" from="(readyOut?.findings || []).filter((row) =&gt; checkoutKeys.includes(row.key)).map((row) =&gt;
+                    Object.assign({}, row, {stateText: row.ready ? 'Ready' : row.severity == 'warning' ? 'Check' : 'Blocks checkout',
+                        stateColor: row.ready ? 'positive' : row.severity == 'warning' ? 'warning' : 'negative'}))
+                    .sort((a, b) =&gt; Number(a.ready) - Number(b.ready))"/>
+            <set field="blockers" from="findings.filter((row) =&gt; !row.ready &amp;&amp; row.severity == 'blocking').length"/>
+            <set field="readinessText" from="!readyOut ? 'Readiness not checked' : blockers ? blockers + (blockers == 1 ? ' thing blocks' : ' things block') + ' checkout' : 'Checkout is ready'"/>
+            <set field="readinessColor" from="!readyOut ? 'grey-7' : blockers ? 'negative' : 'positive'"/>
+            <set field="policy" from="settings.policy"/>
+            <set field="policyValues" from="{productStoreId:productStoreId, accountMode:policy.accountMode, destinations:policy.destinations,
+                    stockDisclosure:policy.stockDisclosure, termsRequired:policy.termsRequired, contactPhone:policy.contactPhone,
+                    supportQueueId:policy.supportQueueId, changeReason:''}"/>
+            <set field="policyNotes" from="['accountMode', 'stockDisclosure', 'termsRequired', 'contactPhone', 'supportQueueId', 'destinations']
+                    .filter((field) =&gt; policy[field + 'Next'] != null).map((field) =&gt; field + ' changes to ' + policy[field + 'Next'] + ' from ' + policy[field + 'NextText'])"/>
+            <set field="shipOptions" from="settings.shipOptions.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId,
+                    rowKey:(row.carrierPartyId + '_' + row.shipmentMethodEnumId).replace(/[^A-Za-z0-9_]/g, '_'),
+                    markupText:[row.markupPercent != null ? row.markupPercent + '%' : null, row.markupAmount != null ? '+' + row.markupAmount : null].filter(Boolean).join(' ') || 'None'}))"/>
+            <set field="shippingGateways" from="settings.shippingGateways.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId,
+                    rowKey:String(row.carrierPartyId).replace(/[^A-Za-z0-9_]/g, '_'), kindText:row.local ? 'Local rates' : 'Carrier rates'}))"/>
+            <set field="rates" from="settings.rates.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId}))"/>
+            <set field="paymentGateways" from="settings.paymentGateways.map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId}))"/>
+            <set field="tax" from="settings.tax"/>
+            <set field="taxValues" from="{productStoreId:productStoreId, taxGatewayConfigId:tax.taxGatewayConfigId, taxDisplay:tax.taxDisplay,
+                    taxOriginFacilityId:tax.taxOriginFacilityId, expectedLastUpdatedStamp:tax.lastUpdatedStamp, changeReason:''}"/>
+            <set field="newRateValues" from="{productStoreId:productStoreId, currencyUomId:currency, weightUomId:'WT_lb', priority:'10'}"/>
+            <set field="newShipGatewayValues" from="{productStoreId:productStoreId}"/>
+            <set field="newPaymentValues" from="{productStoreId:productStoreId}"/>
+            <set field="newShipOptionValues" from="{productStoreId:productStoreId}"/>
+            <!-- the simulator: a sample cart to a sample address, when one is asked for -->
+            <set field="simValues" from="{productStoreId:productStoreId, simCountryGeoId:simCountryGeoId, simStateGeoId:simStateGeoId,
+                    simAmount:(simAmount || '50'), simWeight:(simWeight || '2')}"/>
+            <if condition="simCountryGeoId">
+                <service-call name="mantle.product.StoreAdminServices.simulate#StoreShipping" out-map="simOut" transaction="force-new"
+                        ignore-error="true" in-map="{productStoreId:productStoreId, countryGeoId:simCountryGeoId,
+                            stateProvinceGeoId:(simStateGeoId || null), amount:(simAmount || '50'), weight:(simWeight || '2'), weightUomId:'WT_lb'}"/>
+                <set field="simError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^.*?[A-Z_]+: /, '') : ''"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="quotes" from="(simOut?.quotes || []).map((row) =&gt; Object.assign({}, row, {quoteText: row.available ? (row.amountText || 'Quoted by the carrier') : 'No delivery'}))"/>
+            <!-- the tax preview: a sample sale to a destination, when one is asked for -->
+            <set field="taxPreviewValues" from="{productStoreId:productStoreId, taxGeoId:taxGeoId, taxAmount:(taxAmount || '100'), taxShipping:taxShipping}"/>
+            <if condition="taxGeoId">
+                <service-call name="mantle.product.StoreAdminServices.preview#StoreTax" out-map="taxOut" transaction="force-new"
+                        ignore-error="true" in-map="{productStoreId:productStoreId, destinationGeoId:taxGeoId, amount:(taxAmount || '100'),
+                            shippingAmount:(taxShipping || null)}"/>
+                <set field="taxError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^.*?[A-Z_]+: /, '') : ''"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
+            <set field="taxRows" from="taxOut?.rows || []"/>
+        </if>
+    </actions>
+
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Checkout settings" type="h5"/></container>
+        </container>
+        <form-single name="CheckoutStore" transition="." map="scopeValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="false" submit-on-select="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+        </form-single>
+
+        <section name="CheckoutNoStore" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="${productStoreId ? 'Store ' + productStoreId + ' is not available: it does not exist, or it is not one of your stores.' : 'No store of yours to set up.'}"/>
+            </box-body></container-box>
+        </widgets></section>
+
+        <section name="CheckoutFound" condition="recordFound"><widgets>
+            <!-- the readiness strip -->
+            <container-box>
+                <box-header title="Readiness for purchase"/>
+                <box-toolbar>
+                    <render-mode>
+                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColor}" icon="sym_o_checklist">${
+                            WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "CheckoutReadiness", text: readinessText})}]]></text>
+                        <text type="html">${readinessText}</text>
+                    </render-mode>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="CheckoutReadiness" list="findings" skip-form="true" paginate="false">
+                        <field name="label"><default-field title="Check"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="message"><default-field title="Finding"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="label"/><field-ref name="message"/></column>
+                            <column><field-ref name="stateText"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- CheckoutPolicy -->
+            <container-box>
+                <box-header title="Checkout policy"/>
+                <box-toolbar>
+                    <container-dialog id="ChangePolicy" button-text="Change policy" icon="sym_o_edit" width="640" title="Change the checkout policy"
+                            condition="canEdit">
+                        <form-single name="CheckoutPolicyForm" transition="savePolicy" map="policyValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="accountMode"><default-field title="Checkout as">
+                                <drop-down allow-empty="false"><option key="either" text="Guest or account"/><option key="account" text="Account only"/>
+                                    <option key="guest" text="Guest only"/></drop-down></default-field></field>
+                            <field name="destinations"><default-field title="Destinations" tooltip="Country or zone ids, comma separated; empty for anywhere the rates deliver">
+                                <text-line size="40"/></default-field></field>
+                            <field name="stockDisclosure"><default-field title="Stock disclosure">
+                                <drop-down allow-empty="false"><option key="availability" text="Availability bands"/>
+                                    <option key="backorder" text="Availability, backorder disclosed"/><option key="hidden" text="Hidden"/></drop-down></default-field></field>
+                            <field name="termsRequired"><default-field title="Terms page" tooltip="The site's published Terms page (a policy page)">
+                                <drop-down allow-empty="false"><option key="true" text="Buyers accept it"/><option key="false" text="Not asked"/></drop-down></default-field></field>
+                            <field name="contactPhone"><default-field title="Purchase contact phone">
+                                <drop-down allow-empty="false"><option key="optional" text="Optional"/><option key="required" text="Required"/>
+                                    <option key="hidden" text="Not asked"/></drop-down></default-field></field>
+                            <field name="supportQueueId"><default-field title="Support queue" tooltip="One the organization offers its customers">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                            parameter-map="{choice:'supportQueues', productStoreId:productStoreId, selected:policyValues.supportQueueId}"/>
+                                </drop-down></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason for the change"><text-line size="50"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save policy"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body>
+                    <form-single name="CheckoutPolicyView" map="policy">
+                        <field name="accountModeText"><default-field title="Checkout as"><display/></default-field></field>
+                        <field name="destinationsText"><default-field title="Destinations"><display/></default-field></field>
+                        <field name="stockDisclosureText"><default-field title="Stock disclosure"><display/></default-field></field>
+                        <field name="termsRequiredText"><default-field title="Terms page"><display/></default-field></field>
+                        <field name="contactPhoneText"><default-field title="Purchase contact phone"><display/></default-field></field>
+                        <field name="supportQueueIdText"><default-field title="Support queue"><display/></default-field></field>
+                    </form-single>
+                    <section-iterate name="PolicyNotes" list="policyNotes" entry="policyNote"><widgets>
+                        <label type="p" style="text-caption m-muted" text="${policyNote}"/>
+                    </widgets></section-iterate>
+                </box-body>
+            </container-box>
+
+            <!-- ShippingOptions -->
+            <container-box>
+                <box-header title="Ship options"/>
+                <box-toolbar>
+                    <link url="${ownerLinks.carriers}" url-type="plain" text="Carriers in Warehouse" icon="sym_o_open_in_new" link-type="anchor"
+                            condition="ownerLinks.carriers"/>
+                    <container-dialog id="AddShipOption" button-text="Add option" icon="sym_o_add" width="560" title="Offer a ship option" condition="canEdit">
+                        <form-single name="AddShipOptionForm" transition="saveShipOption" map="newShipOptionValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="carrierAndMethod"><default-field title="Carrier and method">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                        parameter-map="{choice:'shipMethods', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="sequenceNum"><default-field title="Order"><text-line size="4" input-type="number"/></default-field></field>
+                            <field name="markupPercent"><default-field title="Markup %"><text-line size="6"/></default-field></field>
+                            <field name="markupAmount"><default-field title="Markup amount"><text-line size="8"/></default-field></field>
+                            <field name="submitButton"><default-field title="Add option"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="ShipOptions" list="shipOptions" skip-form="true" paginate="false">
+                        <field name="carrierText"><default-field title="Carrier"><display/></default-field></field>
+                        <field name="methodText"><default-field title="Method"><display/></default-field></field>
+                        <field name="sequenceNum"><default-field title="Order"><display/></default-field></field>
+                        <field name="markupText"><default-field title="Markup"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="RemoveShipOption_${rowKey}" button-text="Remove" icon="sym_o_delete" width="480"
+                                        title="Stop offering ${carrierText}, ${methodText}" condition="canEdit">
+                                    <form-single name="RemoveShipOptionForm_${rowKey}" transition="saveShipOption"
+                                            map="{productStoreId:productStoreId, carrierPartyId:carrierPartyId, shipmentMethodEnumId:shipmentMethodEnumId, remove:'Y'}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="carrierPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="shipmentMethodEnumId"><default-field><hidden/></default-field></field>
+                                        <field name="remove"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Remove"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="carrierText"/><field-ref name="methodText"/></column>
+                            <column><field-ref name="markupText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!shipOptions.length"
+                            text="No ship option of its own: the store offers every method of each carrier it has a gateway for."/>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- ShippingGateways -->
+            <container-box>
+                <box-header title="Shipping gateways"/>
+                <box-toolbar>
+                    <container-dialog id="AddShipGateway" button-text="Set gateway" icon="sym_o_add" width="640" title="Set a carrier's gateway" condition="canEdit">
+                        <form-single name="AddShipGatewayForm" transition="saveShipGateway" map="newShipGatewayValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="carrierPartyId"><default-field title="Carrier">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'carriers', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="shippingGatewayConfigId"><default-field title="Gateway" tooltip="Only gateways approved for the carrier">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'shippingGateways', productStoreId:productStoreId}">
+                                    <depends-on field="carrierPartyId"/></dynamic-options></drop-down></default-field></field>
+                            <field name="billingType"><default-field title="Billing">
+                                <drop-down allow-empty="true"><option key="SENDER" text="Sender"/><option key="RECIPIENT" text="Recipient"/>
+                                    <option key="THIRD_PARTY" text="Third party"/></drop-down></default-field></field>
+                            <field name="billingAccount"><default-field title="Carrier account"><text-line size="20"/></default-field></field>
+                            <field name="billingZip"><default-field title="Account postal code"><text-line size="10"/></default-field></field>
+                            <field name="billingCountry"><default-field title="Account country" tooltip="Two-letter code"><text-line size="2"/></default-field></field>
+                            <field name="insurancePercent"><default-field title="Insurance %"><text-line size="6"/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason" tooltip="Needed when it replaces the carrier's gateway"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save gateway"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="ShippingGateways" list="shippingGateways" skip-form="true" paginate="false">
+                        <field name="carrierText"><default-field title="Carrier"><display/></default-field></field>
+                        <field name="gatewayText"><default-field title="Gateway"><display/></default-field></field>
+                        <field name="kindText"><default-field title="Rates"><display/></default-field></field>
+                        <field name="billingAccountText"><default-field title="Carrier account"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="RemoveShipGateway_${rowKey}" button-text="Remove" icon="sym_o_delete" width="480"
+                                        title="Remove ${carrierText}'s gateway" condition="canEdit">
+                                    <form-single name="RemoveShipGatewayForm_${rowKey}" transition="saveShipGateway"
+                                            map="{productStoreId:productStoreId, carrierPartyId:carrierPartyId, remove:'Y'}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="carrierPartyId"><default-field><hidden/></default-field></field>
+                                        <field name="remove"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Remove"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="carrierText"/><field-ref name="gatewayText"/></column>
+                            <column><field-ref name="kindText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!shippingGateways.length"
+                            text="No shipping gateway: the store delivers nothing. A store of digital items only needs none."/>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- LocalRates with the simulator -->
+            <container-box>
+                <box-header title="Local rates"/>
+                <box-toolbar>
+                    <container-dialog id="AddRate" button-text="Add rate" icon="sym_o_add" width="720" title="Add a local rate" condition="canEdit">
+                        <form-single name="AddRateForm" transition="saveRate" map="newRateValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="geoId"><default-field title="Zone" tooltip="A country, state or zone (a geo group)">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                        parameter-map="{choice:'geos', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="carrierAndMethod"><default-field title="Method" tooltip="Empty for every method">
+                                <drop-down allow-empty="true"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                        parameter-map="{choice:'shipMethods', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="fromWeight"><default-field title="Weight from"><text-line size="6"/></default-field></field>
+                            <field name="thruWeight"><default-field title="Weight below"><text-line size="6"/></default-field></field>
+                            <field name="weightUomId"><default-field title="Unit">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'weightUoms', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="fromAmount"><default-field title="Value from"><text-line size="8"/></default-field></field>
+                            <field name="thruAmount"><default-field title="Value below"><text-line size="8"/></default-field></field>
+                            <field name="shippingAmount"><default-field title="Charge"><text-line size="8"/></default-field></field>
+                            <field name="currencyUomId"><default-field title="Currency">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                        parameter-map="{choice:'currencies', productStoreId:productStoreId, selected:currency}"/></drop-down></default-field></field>
+                            <field name="priority"><default-field title="Priority" tooltip="The lowest number wins"><text-line size="4" input-type="number"/></default-field></field>
+                            <field name="description"><default-field title="Name"><text-line size="30"/></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add rate"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="geoId"/><field-ref name="carrierAndMethod"/></field-row>
+                                <field-row><field-ref name="fromWeight"/><field-ref name="thruWeight"/><field-ref name="weightUomId"/></field-row>
+                                <field-row><field-ref name="fromAmount"/><field-ref name="thruAmount"/></field-row>
+                                <field-row><field-ref name="shippingAmount"/><field-ref name="currencyUomId"/><field-ref name="priority"/></field-row>
+                                <field-ref name="description"/>
+                                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="LocalRates" list="rates" skip-form="true" paginate="false">
+                        <field name="zoneText"><default-field title="Zone"><display/></default-field></field>
+                        <field name="methodText"><default-field title="Method"><display/></default-field></field>
+                        <field name="bandText"><default-field title="Bands"><display/></default-field></field>
+                        <field name="amountText"><default-field title="Charge"><display/></default-field></field>
+                        <field name="priority"><default-field title="Priority"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="ChangeRate_${shippingRateId}" button-text="Change" icon="sym_o_edit" width="560"
+                                        title="Change ${zoneText} at ${amountText}" condition="canEdit &amp;&amp; !ended">
+                                    <form-single name="ChangeRateForm_${shippingRateId}" transition="saveRate"
+                                            map="{productStoreId:productStoreId, shippingRateId:shippingRateId, geoId:geoId, shippingAmount:shippingAmount,
+                                                priority:priority, fromWeight:fromWeight, thruWeight:thruWeight, weightUomId:weightUomId, fromAmount:fromAmount,
+                                                thruAmount:thruAmount, currencyUomId:currencyUomId, description:description}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="shippingRateId"><default-field><hidden/></default-field></field>
+                                        <field name="geoId"><default-field><hidden/></default-field></field>
+                                        <field name="fromWeight"><default-field><hidden/></default-field></field>
+                                        <field name="thruWeight"><default-field><hidden/></default-field></field>
+                                        <field name="weightUomId"><default-field><hidden/></default-field></field>
+                                        <field name="fromAmount"><default-field><hidden/></default-field></field>
+                                        <field name="thruAmount"><default-field><hidden/></default-field></field>
+                                        <field name="currencyUomId"><default-field><hidden/></default-field></field>
+                                        <field name="description"><default-field><hidden/></default-field></field>
+                                        <field name="shippingAmount"><default-field title="Charge"><text-line size="8"/></default-field></field>
+                                        <field name="priority"><default-field title="Priority"><text-line size="4" input-type="number"/></default-field></field>
+                                        <field name="fromDate"><default-field title="From" tooltip="Empty: now; a rate in effect ends there"><date-time/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save rate"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <container-dialog id="EndRate_${shippingRateId}" button-text="End" icon="sym_o_block" width="480"
+                                        title="End ${zoneText} at ${amountText}" condition="canEdit &amp;&amp; !ended">
+                                    <form-single name="EndRateForm_${shippingRateId}" transition="saveRate"
+                                            map="{productStoreId:productStoreId, shippingRateId:shippingRateId, end:'Y'}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="shippingRateId"><default-field><hidden/></default-field></field>
+                                        <field name="end"><default-field><hidden/></default-field></field>
+                                        <field name="thruDate"><default-field title="Through" tooltip="Empty ends it now"><date-time/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="End rate"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="zoneText"/><field-ref name="methodText"/><field-ref name="bandText"/></column>
+                            <column><field-ref name="amountText"/><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!rates.length"
+                            text="No local rate: a carrier on the local gateway charges nothing, so readiness blocks checkout until rates are added."/>
+                </box-body-nopad>
+                <box-body>
+                    <label text="Simulator" type="h6"/>
+                    <form-single name="RateSimulator" transition="." map="simValues">
+                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                        <field name="simCountryGeoId"><default-field title="Country">
+                            <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                    parameter-map="{choice:'geos', productStoreId:productStoreId, selected:simValues.simCountryGeoId}"/></drop-down></default-field></field>
+                        <field name="simStateGeoId"><default-field title="State or province" tooltip="Its geo id, such as USA_TX">
+                            <text-line size="10"/></default-field></field>
+                        <field name="simAmount"><default-field title="Cart value"><text-line size="8"/></default-field></field>
+                        <field name="simWeight"><default-field title="Weight (lb)"><text-line size="6"/></default-field></field>
+                        <field name="submitButton"><default-field title="Quote"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="simCountryGeoId"/><field-ref name="simStateGeoId"/></field-row>
+                            <field-row><field-ref name="simAmount"/><field-ref name="simWeight"/><field-ref name="submitButton"/></field-row>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-negative" condition="simError" text="${simError}"/>
+                </box-body>
+                <box-body-nopad>
+                    <form-list name="SimulatedQuotes" list="quotes" skip-form="true" paginate="false">
+                        <field name="label"><default-field title="Option"><display/></default-field></field>
+                        <field name="quoteText"><default-field title="Quote"><display/></default-field></field>
+                        <field name="ruleText"><default-field title="Rule"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="label"/><field-ref name="ruleText"/></column>
+                            <column><field-ref name="quoteText"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- PaymentGateways -->
+            <container-box>
+                <box-header title="Payment gateways"/>
+                <box-toolbar>
+                    <link url="${ownerLinks.paymentMethods}" url-type="plain" text="Payment methods in Accounting" icon="sym_o_open_in_new"
+                            link-type="anchor" condition="ownerLinks.paymentMethods"/>
+                    <container-dialog id="AddPaymentGateway" button-text="Set gateway" icon="sym_o_add" width="560" title="Take an instrument's payments"
+                            condition="canEdit">
+                        <form-single name="AddPaymentGatewayForm" transition="savePayment" map="newPaymentValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="paymentInstrumentEnumId"><default-field title="Instrument">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'paymentInstruments', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="paymentGatewayConfigId"><default-field title="Gateway" tooltip="Only the organization's enabled gateways">
+                                <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'paymentGateways', productStoreId:productStoreId}"/></drop-down></default-field></field>
+                            <field name="changeReason"><default-field title="Reason" tooltip="Needed when it replaces the instrument's gateway"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save gateway"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="PaymentGateways" list="paymentGateways" skip-form="true" paginate="false">
+                        <field name="instrumentText"><default-field title="Instrument"><display/></default-field></field>
+                        <field name="gatewayText"><default-field title="Gateway"><display/></default-field></field>
+                        <field name="capabilitiesText"><default-field title="Capabilities"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${enabled ? 'positive' : 'negative'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="RemovePayment_${paymentInstrumentEnumId}" button-text="Remove" icon="sym_o_delete" width="480"
+                                        title="Stop taking ${instrumentText}" condition="canEdit">
+                                    <form-single name="RemovePaymentForm_${paymentInstrumentEnumId}" transition="savePayment"
+                                            map="{productStoreId:productStoreId, paymentInstrumentEnumId:paymentInstrumentEnumId, remove:'Y'}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="paymentInstrumentEnumId"><default-field><hidden/></default-field></field>
+                                        <field name="remove"><default-field><hidden/></default-field></field>
+                                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Remove"><submit type="danger"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="instrumentText"/><field-ref name="gatewayText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!paymentGateways.length" text="No payment gateway: the store takes no payment."/>
+                </box-body-nopad>
+            </container-box>
+
+            <!-- TaxDisplay with its preview -->
+            <container-box>
+                <box-header title="Tax"/>
+                <box-toolbar>
+                    <link url="${ownerLinks.taxAuthorities}" url-type="plain" text="Tax authorities in Accounting" icon="sym_o_open_in_new"
+                            link-type="anchor" condition="ownerLinks.taxAuthorities"/>
+                    <container-dialog id="ChangeTax" button-text="Change tax" icon="sym_o_edit" width="560" title="Change the store's tax" condition="canEdit">
+                        <form-single name="StoreTaxForm" transition="saveTax" map="taxValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                            <field name="taxGatewayConfigId"><default-field title="Tax gateway">
+                                <drop-down allow-empty="true"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'taxGateways', productStoreId:productStoreId, selected:taxValues.taxGatewayConfigId}"/></drop-down></default-field></field>
+                            <field name="taxDisplay"><default-field title="Prices shown">
+                                <drop-down allow-empty="false"><option key="exclusive" text="Excluding tax"/><option key="inclusive" text="Including tax"/></drop-down>
+                            </default-field></field>
+                            <field name="taxOriginFacilityId"><default-field title="Origin" tooltip="One of the store's fulfillment facilities">
+                                <drop-down allow-empty="true"><dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                        parameter-map="{choice:'storeFacilities', productStoreId:productStoreId, selected:taxValues.taxOriginFacilityId}"/></drop-down></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now (display and origin)"><date-time/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason for the change"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save tax"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body>
+                    <form-single name="StoreTaxView" map="tax">
+                        <field name="taxGatewayText"><default-field title="Tax gateway"><display/></default-field></field>
+                        <field name="taxDisplayText"><default-field title="Prices shown"><display/></default-field></field>
+                        <field name="taxOriginText"><default-field title="Origin"><display/></default-field></field>
+                    </form-single>
+                    <label text="Preview" type="h6"/>
+                    <form-single name="TaxPreview" transition="." map="taxPreviewValues">
+                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                        <field name="taxGeoId"><default-field title="Destination">
+                            <drop-down allow-empty="false"><dynamic-options transition="checkoutOptions" server-search="true" min-length="0"
+                                    parameter-map="{choice:'geos', productStoreId:productStoreId, selected:taxPreviewValues.taxGeoId}"/></drop-down></default-field></field>
+                        <field name="taxAmount"><default-field title="Sale amount"><text-line size="8"/></default-field></field>
+                        <field name="taxShipping"><default-field title="Shipping"><text-line size="8"/></default-field></field>
+                        <field name="submitButton"><default-field title="Preview tax"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="taxGeoId"/><field-ref name="taxAmount"/><field-ref name="taxShipping"/><field-ref name="submitButton"/></field-row>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-negative" condition="taxError" text="${taxError}"/>
+                    <label type="p" condition="taxOut &amp;&amp; taxOut.reasonCode != 'OK'" text="${taxOut?.message}"/>
+                    <label type="p" condition="taxOut &amp;&amp; taxOut.reasonCode == 'OK'" text="${taxOut?.displayText}${taxOut?.message ? ' (' + taxOut.message + ')' : ''}"/>
+                </box-body>
+                <box-body-nopad>
+                    <form-list name="TaxPreviewRows" list="taxRows" skip-form="true" paginate="false">
+                        <field name="itemText"><default-field title="Line"><display/></default-field></field>
+                        <field name="authorityName"><default-field title="Authority"><display/></default-field></field>
+                        <field name="taxPercentage"><default-field title="Rate %"><display/></default-field></field>
+                        <field name="taxableAmount"><default-field title="Base"><display currency-unit-field="currency"/></default-field></field>
+                        <field name="taxAmount"><default-field title="Tax"><display currency-unit-field="currency"/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="authorityName"/><field-ref name="itemText"/></column>
+                            <column><field-ref name="taxAmount"/></column>
+                        </columns>
+                    </form-list>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

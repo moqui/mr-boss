@@ -2,8 +2,9 @@
 // sites of the demo stores, disabled until published, with their Shop mounts (Shop P1): ZIZI_SHOP on
 // shop.zizi.localhost for POPC_DEFAULT's organization, Ziziwork Retail, and ZIZI_DIGITAL on digital.zizi.localhost for
 // BOSS_COM_DIGITAL's, Ziziwork Services, each with Shop, Account, Billing and Support mounts (Billing and Support targeting the
-// store's organization, F38); and (P4) ZIZI_SHOP's published returns policy page and main menu. Each site, and the pages, on
-// its own (one that fails is named and the rest are made); idempotent.
+// store's organization, F38); (P4) ZIZI_SHOP's published returns policy page and main menu; and (P6 review) its published
+// terms policy page, which checkout readiness asks of each Shop site. Each site, and each page, on its own (one that fails
+// is named and the rest are made); idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
 
@@ -79,14 +80,16 @@ const demoPage = {siteId: "ZIZI_SHOP", title: "Returns policy", routePath: "retu
 const demoPageText =
     "# Returns policy\n\nReturn an item within 30 days of delivery for a refund to your original payment.\n\n" +
     "Start a return from your order in your account, or ask us through Support.\n"
-function ensurePages() {
+// P6 review (F-P6-7): ZIZI_SHOP's terms policy page, published the same way, so the demo store's Terms page readiness holds
+const termsPage = {siteId: "ZIZI_SHOP", title: "Terms of sale", routePath: "terms", pageRole: "terms"}
+const termsPageText =
+    "# Terms of sale\n\nPrices are in US dollars and include the shipping shown at checkout; tax is added where it applies.\n\n" +
+    "An order is accepted when it ships. See the Returns policy for returns and refunds.\n"
+function ensurePages(page = demoPage, pageText = demoPageText) {
     const S = "mantle.public."
-    const page = lib.rows(S + "PublicSitePage", {siteId: demoPage.siteId, pageRole: demoPage.pageRole})[0]
-    if (!page) {
-        const created = call(
-            S + "ThemeServices.store#SitePage",
-            Object.assign({pageText: demoPageText, changeReason: "Demo"}, demoPage)
-        )
+    const found = lib.rows(S + "PublicSitePage", {siteId: page.siteId, pageRole: page.pageRole})[0]
+    if (!found) {
+        const created = call(S + "ThemeServices.store#SitePage", Object.assign({pageText, changeReason: "Demo"}, page))
         call(S + "SiteServices.publish#SitePage", {
             input: {
                 sitePageId: created.sitePageId,
@@ -126,7 +129,7 @@ function ensureMenu() {
 
 function load() {
     const errors = []
-    for (const name of Object.keys(sites).concat(["pages", "menu"])) {
+    for (const name of Object.keys(sites).concat(["pages", "menu", "terms"])) {
         try {
             lib.probe("ironstone.commerce.DemoServices.run#CommerceDemoStep", {step: name})
         } catch (error) {
@@ -137,8 +140,9 @@ function load() {
     return {complete: errors.length === 0, errors}
 }
 function runStep(p) {
-    if (p.step === "pages" || p.step === "menu") {
+    if (p.step === "pages" || p.step === "menu" || p.step === "terms") {
         if (p.step === "pages") ensurePages()
+        else if (p.step === "terms") ensurePages(termsPage, termsPageText)
         else ensureMenu()
         return {}
     }

@@ -66,13 +66,16 @@ feature(
             manager.errors == []
             manager.output.includes("Ziziwork Retail Store")
             manager.output.includes(ids.storeId)
-            manager.output.includes("Ready to sell")
+            // P6: the demo store's local gateway has no rate, which blocks a purchase (its site's Terms page is the demo's)
+            manager.output.includes("1 thing to fix")
             manager.output.includes("Clone store")
             manager.output.includes("Customer and other party rows")
             managerGeneral.status == 200
             managerGeneral.errors == []
             managerGeneral.output.includes("Readiness")
             managerGeneral.output.includes("Open in Warehouse")
+            // a checkout finding's fix opens CheckoutSettings for the manager (P6)
+            managerGeneral.output.includes("Settings/CheckoutSettings?productStoreId=" + ids.storeId)
             managerGeneral.output.includes("Reason for the change")
             reader.store.productStoreId == ids.storeId
             reader.canEdit == false

@@ -66,4 +66,15 @@ along with this software (see the LICENSE.md file). If not, see
             publicationKindEnumId="PspkPublished" changeReason="Demo assortment"/>
     <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_UNIT" fromDate="1265184000000"
             publicationKindEnumId="PspkPublished" changeReason="Demo assortment" badgeText="Best seller" featuredRank="2"/>
+
+    <!-- P6: POPC_DEFAULT's checkout. Its card gateway TEST_APPROVE enabled for Ziziwork Retail (PaymentGatewayOrganization, Z4),
+        and TEST_DECLINE bound to the organization but disabled, the gateway a store may not take; the support queue its
+        customers' requests go to (Customer Service's Support queue, one Retail offers, F37). Its local rates are the walk's:
+        Mantle's specs place POPC_DEFAULT orders on the local gateway's default (zero). -->
+    <mantle.account.method.PaymentGatewayOrganization organizationPartyId="ORG_ZIZI_RETAIL" paymentGatewayConfigId="TEST_APPROVE"
+            fromDate="1265184000000" isEnabled="Y"/>
+    <mantle.account.method.PaymentGatewayOrganization organizationPartyId="ORG_ZIZI_RETAIL" paymentGatewayConfigId="TEST_DECLINE"
+            fromDate="1265184000000" isEnabled="N"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="POPC_DEFAULT" settingTypeEnumId="PsstCheckoutSupportQueue"
+            fromDate="1265184000000" settingValue="BOSS_CS_Q_SUPPORT" changeReason="Demo checkout"/>
 </entity-facade-xml>
