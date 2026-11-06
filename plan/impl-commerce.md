@@ -267,7 +267,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | built Nov 5, 2026 |
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability || built Nov 5, 2026 |
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | built Nov 6, 2026 |
-| P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
+| P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | built Nov 6, 2026 |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
@@ -1209,6 +1209,178 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
 - **Built (framework), Nov 5, 2026** (mr-moqui b502417e; F55): a response that sets its own CSP with `frame-ancestors`
   gets no conf `X-Frame-Options`; the desktop shell's `frame-src` lists the origins in `moqui_shell_frame_origins`
   (https, or http on localhost, no path), else stays `'none'`. No routing change was needed (F54).
+
+**Built Nov 6 (P5)** (mr-mantle, mr-pass, mr-boss; branch `com/p5`).
+- Mantle:
+  - `entity/PublicThemeAuthoringEntities.xml` (new): `PublicSiteHost.hostKindEnumId` (`PublicSiteHostKind`: PshkLive,
+    PshkPreview; empty is live), `PublicTheme.description`, and `PublicThemePreview` (a preview: theme, site, mount, user,
+    page kind, target, locale, the draft revision, an expiry 20 minutes on, and only the SHA-256 of its token, unique).
+  - `service/mantle/public/ThemeAuthoring.js` (new) and its services appended to `ThemeServices.xml`: `find#Themes`,
+    `import#Theme`, `store#ThemeDraft`, `get#ThemeComposition` (added: what the editors read), `store#ThemeComposition`,
+    `store#ThemeSettings`, `get#ThemeAssets`, `store#ThemeAsset`, `get#`/`store#ThemeTranslations`, `assign#ThemeTemplate`,
+    `get#`/`store#`/`change#ThemeFile` (`COMMERCE_THEME_CODE`, now checked), `get#ThemeBindings`, `get#ThemeHistory`,
+    `create#ThemePreview`, and the anonymous `get#PreviewHost` and `get#ThemePreviewPage` PASS calls in process. Every save
+    takes `expectedRevision` (`REVISION_STALE`) and goes through `checkedSave`: the adapter checks the package with the
+    change and an error in a changed file refuses it (`THEME_SOURCE_INVALID`, `file:line message`), the draft unchanged.
+    Composition: stable ids, known section types (`UNKNOWN_SECTION`), a kept id keeps its type, the order names each once,
+    and a section that placed a required component on its page (purchase, cart, checkout, search) is never removed or
+    hidden (`REQUIRED_COMPONENT`, also for removing its file). Settings by schema (`UNKNOWN_SETTING`; null restores the
+    default). Imports: a files map or a `.tar.gz` (`extractArchive`), refusing Liquid (`ENGINE_UNSUPPORTED`), scripts and
+    other kinds (`FILE_KIND_REFUSED`), outside paths and bounds. Translations are `locales/<locale>.json` with fallback,
+    no source permission. File operations add only the package's text kinds, keep `theme.json`, the settings and each
+    page kind's template, and name dependents (`HAS_DEPENDENTS` unless confirmed).
+  - Themes.js (Shop P2's core, F55): images and fonts under `assets/` (png, jpg, gif, webp, woff2) are package files
+    kept as bytes (`putBytes`, versions read as streams), their package text the base64 of the bytes, digested as text,
+    so releases, `getShopThemeFiles` and remote verification carry them unchanged; an upload's (and an import's) leading
+    bytes must be its type's (`ASSET_TYPE_MISMATCH`), at most 384 KB, and clean by `pass_scanner_service`
+    (`SCANNER_UNAVAILABLE` without one). Exports `compositionOf`, `sampleView`, `packageLimits` and the path tests.
+  - F77: SitePages.js `templateOf` accepts a page's template key only when it names a page template of the site's active
+    release or a draft of the store's themes (`TEMPLATE_UNKNOWN`); ShopCatalog's page view carries the key and ThemeView's
+    `getShopPage` answers `template` when the active release has it (so the live page renders with it), the key never in
+    the theme's view.
+  - F54: PublicApps.js `pageUrl` and `sitesFor`, StoreAdmin.js readiness and `getStoreSites`, and Forum.js readiness
+    skip preview hosts; `store#Mounts` binds one with `{hostname, preview: true}` (`hostKindEnumId`), never canonical
+    (`PREVIEW_NOT_CANONICAL`).
+- mr-pass:
+  - `screen/ShopPreview.xml` (a Pass.xml subscreen) and `screen/Shop/ShopPreview.js`: on a site's preview host
+    (`get#PreviewHost`, on the authority only: with `pass_backend_url` there is none) `resolve#Route` answers only
+    `/preview/{token}` and `/preview/{token}/asset/{path}`, every other path Not Found, and Pass.xml skips `getSiteInfo`
+    and the shell (so an unpublished site previews). The page renders the draft through `ec.resource.theme.render` with
+    ShopTheme.js's trusted components, the token's view and its template; headers `no-store`, `X-Robots-Tag: noindex,
+    nofollow`, `Referrer-Policy: no-referrer`, and a CSP with a nonce'd script, `connect-src 'none'`, `form-action 'none'`
+    and `frame-ancestors` the origins of the new `pass_preview_frame_origins` (none: `'none'`). Its script takes one
+    MessageChannel port from an allowed parent origin with the URL's nonce, answers `ready`, sends `{type: "select",
+    sectionId}` on a click and shows the editor's highlight; links and forms do nothing. Assets are the draft's, no-store.
+  - ShopTheme.js: `sendAsset` serves the binary types as bytes; `renderView` passes the page's `template`. The starter's
+    sections carry `data-section-id="${section.id}"`. `Contracts.d.ts` ShopPage gains `template`. Test conf: ZIZI_SHOP's
+    preview host `preview.shop.zizi.localhost` (mount `/`) and `pass_preview_frame_origins` `http://localhost:* http://127.0.0.1:*`.
+    `docs/Deployment.md` gains the preview host's setup.
+- BOSS:
+  - `screen/Commerce/Website/Themes.xml` (ThemeFind, ThemeList with phone columns, NewTheme from a starter or a store
+    release, ImportTheme of a `.tar.gz`), `ThemeDetail.xml` (record header with Edit theme, Edit source, Validate and the
+    publisher's one primary Publish; ThemeIdentity, Validation after Validate, Where it is used with Publish here, the
+    pages and products with their own template, Releases with Restore and Export, Activity; publish and restore with
+    the active revision seen and an operation key), `ThemeEditor.xml` + `ThemeEditor.qvue` (template, Phone/Desktop,
+    Undo/Redo, Save, the outline with drag, Move up/down and Alt+Up/Down, Duplicate, Hide, Remove, Add a section; the
+    framed preview and its channel; Section, Theme (contrast feedback), Assets with upload, Texts and Pages (template
+    assignment) panels; an unsaved-change warning), its twin `ThemeEditorTui.xml` (template, sections with Move up/down,
+    a section's and the theme's settings, Preview link, Publish), `TemplateEditor.xml` + `TemplateEditor.qvue` (files by
+    folder, the code editor with base digest, Save, Open its schema, Rename, Remove, Add file, Validate, findings with
+    file and line, the release-to-draft diff) and its twin `TemplateEditorTui.xml` (the framework text editor). The JSON
+    transitions call ThemeServices through `ThemeCalls.js` (probe in its own transaction, refusal in `errors`; the
+    preview's address from the request's scheme and port). Website.xml lists Themes third.
+  - Commerce.js (appended): `linkPaths` Website/Themes, ThemeDetail, ThemeEditor, TemplateEditor; choices `themes`,
+    `themeStarters`, `storeReleases`, `themeSites`; get#Choices takes `themeId`. Demo.js: steps `theme` (POPC_DEFAULT's
+    draft "Ziziwork Retail theme" from `mr-pass/starter`) and `preview` (ZIZI_SHOP's preview host).
+- Specs: Mantle `test/public/ThemeAuthoring` (6 features, 4.7 s: a stale revision refused with nothing changed, a move
+  and settings saved, an unknown setting and another organization refused; a `<script>` and an `onclick` refused at
+  their lines, the designer refused source, a developer's edit with its history and diff; a checkout section neither
+  removed nor hidden nor its file removed, Liquid and a script file refused on import; a PNG of JPEG bytes refused, no
+  scanner refused, an SVG cleaned, a release with an image exported with no secret; F77's unknown and known page
+  template, assignment; a preview without a preview host refused, its token's page answered only on the site's preview
+  host with a synthetic cart, a forged token and another host refused). mr-pass `test/Shop/ShopPreview` (3 features,
+  1.4 s: routes on the preview and live hosts; the page, its markers, nonce'd script and headers; a PNG uploaded through
+  the test scanner served as bytes by the preview and, published, by the live asset route). BOSS `CommerceThemes`
+  (2 features, 2.5 s: ThemeDetail's one qvt render as the designer, the four theme choices with a selected value not on
+  the page and none for another organization; ThemeEditorTui and TemplateEditorTui once in tui with a move through the
+  twin) and a `CommerceAccess` case (0.6 s: the developer saves a template, the designer is refused
+  `COMMERCE_THEME_CODE`, another organization's manager cannot read the theme). Client: `test/client/Commerce/CommerceThemesWalk`
+  in `suite.js` (1 feature, 8.0 s: from Themes the designer moves the home hero and saves, previews at phone width on
+  `preview.shop.zizi.localhost` until the frame answers the channel; the publisher validates and publishes). Also run,
+  all pass: Mantle ThemeReleases, SitePages, ShopCatalog, StoreAdmin, StorePublication, PassAuthority, SupportPortal,
+  AccountingPortals (67 with ThemeAuthoring); mr-pass ShopThemes, ShopCatalog, ShopAccess, Forum, ForumAccess,
+  Integrations, Transport, Portals, SupportAccess, SupplierPages, Operations (65 with ShopPreview); mr-boss CommerceAccess,
+  CommerceSitePages, CommerceStores, CommerceAssortment, CustomerServiceKnowledge (28 with CommerceThemes). Not run:
+  `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/client/Commerce/ThemeEditorWalk` (in `acceptance/client/suite.js`; 3 features: a dragged section
+  and the same move by Alt+Down agree and the saved draft has it; the preview answers neither a wrong nonce in the
+  editor's frame nor a page of the live shop's origin with the right nonce, and its host answers the preview with
+  no-store, noindex, no referrer, `frame-ancestors` the BOSS origins and no X-Frame-Options, `/`, `/account/Login` and a
+  forged token Not Found; the developer's `onclick` in a section refused in TemplateEditor at its file and line, then a
+  clean edit saved). Run once: 3 passed.
+- Lint: `moqui lint --screens` (release binary) 132 sites as before, none in the new or changed screens.
+- Inventories: no ss-inventory or usl-inventory row is of these screens or services (all new).
+- Design: design-commerce §5 has the as-built note; design-shop §12.6 (the preview host) and §12.7 (binary assets).
+- Decisions:
+  - The preview render is not a PASS operation (§2: no authoring or preview operation in the registry): PASS calls
+    `get#PreviewHost` and `get#ThemePreviewPage` in process, and only on the authority's runtime.
+  - The preview always shows the current saved draft (the token binds the theme, not a revision); a site that is not
+    published previews with the sample view (ShopCatalog's reads need a published site).
+  - A section's settings are saved with the template's composition (one revision, one save); ThemeEditor's Save writes
+    the composition, then the global settings.
+  - ThemeDetail is one page of boxes; publish and restore act on the store's one Shop site from the header and per site
+    from Where it is used.
+  - Template assignment is the editor's Pages panel (pages); products keep Merchandising's template field, which
+    `assign#ThemeTemplate` also serves.
+- Findings (provisional):
+  - **F-P5-1** The preview page's response still gets the framework's session cookie (an anonymous `no-store` answer),
+    though the capability is the URL's token; design-shop §12.6 asks for minimal cookies. For the framework, optional: no
+    session for a public-site response that declines one (as F42's `public` answers).
+  - **F-P5-2** The framework's own routes (`/apps`, `/qapps`, `/rest`, `/Login`, …, public_site.rs FRAMEWORK_ROUTES)
+    answer on every host, the preview host too, so a BOSS sign-in is possible on the preview origin; the isolation
+    rests on the preview host being a name of its own. For the framework, optional: a `<public-site>` attribute that keeps
+    the framework routes off a host.
+  - **F-P5-3** A store that has not opened its site yet previews with sample products (ShopCatalog's `shopOf` needs a
+    published site); a staff-authorized catalog read of an unpublished site would show its own products.
+  - **F-P5-4** The adapter marks no section in its output, so selection in the preview needs the theme's sections to
+    carry `data-section-id` (the starter's do); for the framework, optional: a marker in preview renders.
+  - **F-P5-5** The preview's address uses the BOSS request's scheme and port (`ThemeCalls.previewUrl`); behind a proxy that
+    changes them a property naming the preview origin would be needed.
+  - **F-P5-6** For the lead: the mr-boss client budget (46.8 of 49 s on Nov 6) takes the walk's 8.0 s; a raise needs the
+    user's agreement. mr-pass's specs are 7.8 of 17 s with ShopPreview.
+  - **F-P5-7** Whether the framework writes a Visit row for the anonymous preview request was not checked; nothing in
+    the preview path writes one, sends mail or calls a cart, gateway or analytics.
+
+**Review Nov 5 (P5)** (reviewer; branch `com/p5`). Checked: the authoring services' permissions (COMMERCE_THEME_CODE on
+`get#`/`store#`/`change#ThemeFile` and file text in `get#ThemeHistory`, COMMERCE_THEME_EDIT on the rest, the store's
+scope through `themeOf`/`storeOf`), `expectedRevision` on every save and `checkedSave`'s file-and-line refusal, the
+required components, import's path, kind, size and Liquid checks (archive entries re-checked against the package path
+pattern, `..` refused, the upload staged on the server, never a caller's location), the binary assets (signatures with
+WEBP's second tag, 384 KB, the scanner, bytes served with their type and nosniff, an SVG cleaned when stored and when
+served, no HTML or script type in either type table), F77 (`templateOf` against the active release and the store's
+drafts), readiness, `pageUrl`, `sitesFor` and `getStoreSites` skipping preview hosts; the preview: only `/preview/{token}`
+and its assets route on a preview host, the token only as SHA-256, 20 minutes, its site, mount and theme bound and the
+host checked on each read, so a token of store A's draft cannot show on store B's site or host; the CSP (nonce'd script,
+`connect-src`/`form-action`/`base-uri` none, `frame-ancestors` from `pass_preview_frame_origins`, which only mr-pass's
+test conf sets, so production frames nothing until an operator names BOSS's origin), no-store, noindex, no-referrer;
+the MessageChannel on both sides (target origin, `e.source` the parent, origin list, URL nonce, one port, section ids
+matched against the outline); no mail, cart, payment or analytics call. The editors' JSON transitions and TUI twins call
+ThemeServices only (POST through `moqui.request`, so the session token is checked), no `v-html`. All `allow-remote="false"`.
+- **R1 (high, Mantle)** `store#Mounts` with `{hostname, preview: true}` never worked: Forum.js's input check allowed only
+  `hostname` and `canonical` in a host, so it refused with "Invalid configuration fields"; and once accepted, a save
+  that did not name `preview` (every existing caller) would have turned a preview host live. `preview` is now an allowed
+  boolean; a host named without it keeps its kind (new: live); PREVIEW_NOT_CANONICAL is checked on that kind. New
+  ThemeAuthoring feature (0.2 s): canonical preview refused with no row, a live and a preview host bound, a re-save
+  without `preview` keeps PshkPreview, `pageUrl` the live host, the Shop mount kept.
+- **R2 (medium, Mantle)** `import#Theme` wrote the package without the adapter's check, so a draft could hold a
+  `<script>` or an `onclick` (and an SVG uncleaned) though every other save refuses them. The import now cleans SVGs and
+  refuses an error in any file (`THEME_SOURCE_INVALID`, file and line). ThemeAuthoring's import feature has the case.
+- **R3 (low, mr-pass)** ShopPreview.js said the preview records no visit; it now says what F-P5-7 found.
+- Specs: Mantle ThemeAuthoring (7 features, 3.7 s), ThemeReleases, AccountingPortals, SupplierPortal, StoreAdmin,
+  SitePages (52 pass); mr-pass ShopPreview, ShopThemes, ShopAccess, Forum, Portals (26 pass); mr-boss CommerceThemes,
+  CommerceAccess, CommerceStores (16 pass); client CommerceThemesWalk 7.9 s.
+- **For the lead:**
+  - **F-P5-7 / F-P5-1 (framework, before the gate's "records no visit" is claimed):** the preview answer sets
+    `moqui.session`; the first request starts no Visit (no cookie came), but the frame's next request (its stylesheet, a
+    reload, the next preview in the browser) brings the cookie back and the framework starts a Visit, whose
+    `initialRequest` is the `/preview/{token}/...` path, the token in plain text for its 20 minutes. Where BOSS and the
+    preview host are on different sites SameSite=Lax keeps the cookie out of the frame; on one registrable domain
+    (boss.example.com, preview.shop.example.com) it is sent. The fix is the framework's: a public-site response that
+    declines a session, handled as screen/mod.rs's `cacheable` (no cookie, the session discarded). Not done in the app
+    (only `Cache-Control: public, no-store` would reach that path today, a trick).
+  - **F-P5-2 can wait:** framework screen renders carry `frame-ancestors 'none'` and `X-Frame-Options: sameorigin`
+    (factory.rs defaults), so `/Login` and `/qapps` on the preview origin cannot be framed, by BOSS or anyone; only the
+    preview page names BOSS's origins. What is left is a sign-in on the preview origin, where draft markup still cannot
+    run script (the adapter refuses it, the CSP allows only the nonce'd script).
+  - The token checks that its actor's account is enabled, not that the actor still has a theme permission or the store;
+    a revoked designer's open preview lasts until it expires (at most 20 minutes). Acceptable as the design's
+    short-lived capability.
+  - Shop P2's `get#ThemeDraft` with `includeText` answers every source file's text to COMMERCE_VIEW, beside P5's
+    COMMERCE_THEME_CODE on `get#ThemeFile` and file text in `get#ThemeHistory`. Theme source holds no secret; decide
+    whether `includeText` should need COMMERCE_THEME_CODE.
+  - CommerceThemesWalk (7.9 s) has no trim that keeps the golden path: Themes to ThemeDetail to Edit theme 2.5 s, Save
+    1.1 s, Phone, Preview and the channel 0.9 s, the publisher's ThemeDetail with Validate 1.2 s, Publish and Confirm
+    1.5 s; the time is the server's save, validate and publish. The client budget needs its 8 s.
 
 ### P6 — Checkout settings
 

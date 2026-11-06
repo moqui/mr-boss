@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ThemeEditor (design-commerce §5 ThemeEditor; impl-commerce P5): a theme draft's visual editor, a .qvue (ThemeEditor.qvue)
+    with the page template and device width at the top, the section outline at the left (drag, or Move up and Move down
+    from the keyboard; add, duplicate, hide and remove; undo and redo within the draft; an explicit Save and a warning
+    before leaving with unsaved changes), the framed preview in the middle (the draft on the site's preview host, which
+    the editor talks to only through a MessageChannel with the nonce of the preview's URL; a click on a section in it
+    selects that section), and at the right the settings of the selected section or of the theme, generated from their
+    schemas, the assets (UploadAsset), the translations and the template of a page (TemplateAssignment). Its terminal twin
+    is ThemeEditorTui, also the browser's form view. The JSON transitions below call mantle.public.ThemeServices
+    (ThemeCalls.js), which checks COMMERCE_THEME_EDIT, the store and the draft revision on every save; publishing stays on
+    ThemeDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Theme editor" default-menu-include="false" render-modes="vue,qvue,tui" server-static="vue,qvue">
+    <parameter name="themeId" required="true"/>
+    <transition name="editorData" method="get" read-only="true">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                const out = calls.probe('mantle.public.ThemeServices.get#ThemeComposition', {themeId})
+                if (!out.errors) {
+                    const bindings = calls.probe('mantle.public.ThemeServices.get#ThemeBindings', {themeId})
+                    const assets = calls.probe('mantle.public.ThemeServices.get#ThemeAssets', {themeId})
+                    const translations = calls.probe('mantle.public.ThemeServices.get#ThemeTranslations', {themeId, locale: locale || null})
+                    const sites = bindings.sites || []
+                    // the pages of the theme's first site, for TemplateAssignment (find#SitePages checks the site's store)
+                    const sitePages = sites.length ? calls.probe('mantle.public.ThemeServices.find#SitePages', {siteId: sites[0].siteId, pageSize: 100}) : {}
+                    Object.assign(out, {sites, sitePages: sitePages.pages || [],
+                        assets: assets.assets || [], translations, can: {edit: !!commerce.capabilities.themeEdit,
+                        code: !!commerce.capabilities.themeCode, publish: !!commerce.capabilities.themePublish},
+                        detailUrl: commerce.webBase + '/Website/ThemeDetail?themeId=' + encodeURIComponent(themeId),
+                        sourceUrl: commerce.webBase + '/Website/TemplateEditor?themeId=' + encodeURIComponent(themeId)})
+                }
+                ec.web.sendJsonResponse(out)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveComposition" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                calls.send('store#ThemeComposition', {themeId, expectedRevision, template, composition: calls.json(compositionJson) || {}})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveSettings" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                calls.send('store#ThemeSettings', {themeId, expectedRevision, template: template || null, sectionId: sectionId || null,
+                    blockId: blockId || null, settings: calls.json(settingsJson) || {}})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="saveTranslations" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                calls.send('store#ThemeTranslations', {themeId, expectedRevision, locale, entries: calls.json(entriesJson) || {}})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="uploadAsset" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                calls.send('store#ThemeAsset', {themeId, expectedRevision, path: assetPath,
+                    assetFile: (assetFile && Number(assetFile.size) > 0) ? assetFile : null})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="assignTemplate" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                calls.send('assign#ThemeTemplate', {themeId, targetKind: 'page', sitePageId, templateKey: templateKey || '',
+                    expectedRevision: publicationRevision === '' || publicationRevision == null ? null : publicationRevision})
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="preview" method="post">
+        <actions>
+            <script><![CDATA[
+                const calls = ec.resource.script('component://mr-boss/screen/Commerce/Website/ThemeCalls.js')
+                const made = calls.probe('mantle.public.ThemeServices.create#ThemePreview', {themeId, siteId, pageKind: pageKind || 'home',
+                    targetId: targetId || null, locale: locale || null})
+                if (!made.errors) made.previewUrl = calls.previewUrl(made)
+                ec.web.sendJsonResponse(made)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commerce/Website/ThemeEditor.qvue" template="false"/>
+            <text type="tui"><![CDATA[${JSON.stringify([{t:'dynamicContainer',id:'ThemeEditorTui',url:sri.buildUrl('../ThemeEditorTui').addParameters({themeId:themeId}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p><a href="ThemeEditorTui?themeId=${themeId}">Open the theme as forms</a></p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>

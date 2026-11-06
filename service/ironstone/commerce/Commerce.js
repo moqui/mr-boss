@@ -272,7 +272,12 @@ const linkPaths = [
     "Website/PageDetail",
     "Website/Navigation",
     // P6: a store's checkout settings (design §8)
-    "Settings/CheckoutSettings"
+    "Settings/CheckoutSettings",
+    // P5: the themes and their editors (design §5)
+    "Website/Themes",
+    "Website/ThemeDetail",
+    "Website/ThemeEditor",
+    "Website/TemplateEditor"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -618,6 +623,61 @@ const choiceSources = {
         return []
     }
 }
+// P5: the starter themes a new theme copies (a component's theme/{name}, Themes.js create#ThemeDraft)
+const themeStarters = [{value: "mr-pass/starter", label: "IronStone Starter"}]
+// P5: a theme of the user's stores (through mantle.public.ThemeServices, which checks the store again), or null
+function themeOf(themeId) {
+    if (!themeId) return null
+    try {
+        return call("mantle.public.ThemeServices.get#ThemeComposition", {themeId}).theme || null
+    } catch (error) {
+        ec.message.clearErrors()
+        return null
+    }
+}
+Object.assign(choiceSources, {
+    // P5: the user's stores' themes, by name
+    themes: (userScope, term, selected, p) => {
+        const found = call("mantle.public.ThemeServices.find#Themes", {
+            productStoreId: p.productStoreId || null,
+            term: term || null
+        })
+        const options = Array.from(found.themes || [])
+            .slice(0, choiceLimit)
+            .map(row => ({value: row.themeId, label: row.name + " · " + row.storeName}))
+        if (selected && !options.some(option => option.value === selected)) {
+            const theme = themeOf(selected)
+            if (theme) options.push({value: theme.themeId, label: theme.name})
+        }
+        return options
+    },
+    themeStarters: (userScope, term) =>
+        themeStarters.filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase())),
+    // P5: the releases of the user's stores' themes (a store's, when given), newest first, to copy as a new theme
+    storeReleases: (userScope, term, selected, p) => {
+        const themes = Array.from(
+            call("mantle.public.ThemeServices.find#Themes", {productStoreId: p.productStoreId || null}).themes || []
+        )
+        // each theme's releases through get#ThemeHistory (the theme's store checked again), the first ten themes
+        return themes
+            .slice(0, 10)
+            .flatMap(row =>
+                Array.from(call("mantle.public.ThemeServices.get#ThemeHistory", {themeId: row.themeId}).releases || []).map(
+                    release => ({value: release.releaseId, label: row.name + " release " + release.releaseSeq})
+                )
+            )
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+            .slice(0, choiceLimit)
+    },
+    // P5: the sites that sell a theme's store (get#ThemeBindings)
+    themeSites: (userScope, term, selected, p) => {
+        if (!p.themeId) return []
+        const sites = Array.from(call("mantle.public.ThemeServices.get#ThemeBindings", {themeId: p.themeId}).sites || [])
+        return sites
+            .map(site => ({value: site.siteId, label: site.siteName}))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()))
+    }
+})
 function choices(p) {
     const userScope = required()
     if (!Object.hasOwn(choiceSources, p.choice)) throw new Error("Unknown Commerce choice " + p.choice)

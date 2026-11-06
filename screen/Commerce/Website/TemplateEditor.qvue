@@ -1,0 +1,184 @@
+<template><div class="q-pa-sm" data-template-editor>
+    <div class="row items-center q-col-gutter-sm q-mb-sm">
+        <div class="col-12 col-md">
+            <div class="text-h5">{{theme.name || 'Theme'}} source</div>
+            <div class="text-caption m-muted">Draft revision {{theme.draftRevision}} · the live site keeps its release until a publisher publishes</div>
+        </div>
+        <div class="col-auto row q-gutter-xs">
+            <q-btn outline no-caps icon="sym_o_rule" label="Validate" :disable="busy" @click="validate"></q-btn>
+            <q-btn v-if="can.code" outline no-caps icon="sym_o_note_add" label="Add file" :disable="busy" @click="openOperation('add')"></q-btn>
+            <q-btn flat no-caps label="Theme record" :href="detailUrl" type="a"></q-btn>
+            <q-btn flat no-caps label="As forms" @click="openTwin"></q-btn>
+        </div>
+    </div>
+    <p v-if="!can.code && loaded" class="text-negative" role="alert">Editing theme source needs the theme developer's permission (COMMERCE_THEME_CODE).</p>
+    <p v-if="error" role="alert" class="text-negative" data-editor-error>{{error}}</p>
+    <div class="row q-col-gutter-md">
+        <div class="col-12 col-md-3">
+            <m-container-box title="Files">
+                <q-list dense data-theme-files>
+                    <template v-for="group in groups" :key="group.folder">
+                        <q-item-label header class="q-py-xs">{{group.folder || 'Theme'}}</q-item-label>
+                        <q-item v-for="file in group.files" :key="file.path" clickable dense :active="file.path === path" :data-path="file.path" @click="open(file.path)">
+                            <q-item-section><q-item-label class="text-mono">{{file.path.split('/').pop()}}</q-item-label></q-item-section>
+                        </q-item>
+                    </template>
+                </q-list>
+            </m-container-box>
+        </div>
+        <div class="col-12 col-md-9">
+            <m-container-box :title="path || 'Choose a file'">
+                <template v-if="path && can.code">
+                    <q-tabs v-model="tab" dense no-caps align="left" class="q-mb-sm">
+                        <q-tab name="source" label="Source"></q-tab>
+                        <q-tab name="changes" label="Changes since the release"></q-tab>
+                    </q-tabs>
+                    <div v-if="tab === 'source'">
+                        <p v-if="binary" class="text-caption">An image or font: replace it from the theme editor's Assets.</p>
+                        <template v-else>
+                            <m-text-area v-model="text" name="fileText" editor-type="code" :language="languageOf(path)" label="Source"></m-text-area>
+                            <div class="row items-center q-gutter-sm q-mt-sm">
+                                <q-input dense outlined v-model="versionNote" label="Note (optional)" style="min-width:16rem"></q-input>
+                                <q-btn unelevated no-caps color="primary" icon="sym_o_save" label="Save" :disable="busy || text === savedText" @click="save"></q-btn>
+                                <q-btn v-if="schemaPath" flat no-caps label="Open its schema" @click="open(schemaPath)"></q-btn>
+                                <q-btn flat no-caps label="Rename" :disable="busy" @click="openOperation('rename')"></q-btn>
+                                <q-btn flat no-caps color="negative" label="Remove" :disable="busy" @click="openOperation('remove')"></q-btn>
+                            </div>
+                        </template>
+                    </div>
+                    <div v-if="tab === 'changes'">
+                        <p class="text-caption">{{diff.baseReleaseSeq ? 'Release ' + diff.baseReleaseSeq + ' (left) and the draft (right).' : 'Not in a release yet: the draft is all new.'}}</p>
+                        <m-diff-view v-if="diffReady" :original="diff.baseText || ''" :modified="diff.draftText || ''" :file-name="path" height="28rem"></m-diff-view>
+                        <pre v-else class="text-mono" style="white-space:pre-wrap">{{diff.unifiedDiff}}</pre>
+                    </div>
+                </template>
+                <p v-else-if="!path" class="text-caption">Choose a file to edit. Templates, sections, blocks and snippets are locked templates: no scripts, event handlers or other executable markup.</p>
+            </m-container-box>
+            <m-container-box v-if="findings.length" title="Findings" data-diagnostics>
+                <q-list dense separator>
+                    <q-item v-for="(finding, index) in findings" :key="index" clickable @click="finding.file && open(finding.file)">
+                        <q-item-section avatar><q-icon :name="finding.severity === 'error' ? 'sym_o_error' : 'sym_o_warning'" :color="finding.severity === 'error' ? 'negative' : 'warning'"></q-icon></q-item-section>
+                        <q-item-section>
+                            <q-item-label class="text-mono">{{finding.file}}{{finding.line ? ':' + finding.line : ''}}</q-item-label>
+                            <q-item-label caption>{{finding.message}}</q-item-label>
+                        </q-item-section>
+                    </q-item>
+                </q-list>
+            </m-container-box>
+        </div>
+    </div>
+    <q-dialog v-model="operation.open">
+        <q-card style="min-width:28rem">
+            <q-card-section><div class="text-h6">{{operation.kind === 'add' ? 'Add a file' : operation.kind === 'rename' ? 'Rename ' + path : 'Remove ' + path}}</div></q-card-section>
+            <q-card-section class="q-gutter-sm">
+                <q-input v-if="operation.kind === 'add'" dense outlined v-model="operation.path" label="Path" hint="sections/, blocks/, snippets/, templates/, layouts/, locales/ or assets/ (.css, .svg)"></q-input>
+                <q-input v-if="operation.kind === 'rename'" dense outlined v-model="operation.toPath" label="New path"></q-input>
+                <q-input dense outlined v-model="operation.reason" label="Reason"></q-input>
+                <p v-if="operation.dependents" class="text-warning">{{operation.dependents}}</p>
+            </q-card-section>
+            <q-card-actions align="right">
+                <q-btn flat no-caps label="Cancel" v-close-popup></q-btn>
+                <q-btn unelevated no-caps :color="operation.kind === 'remove' ? 'negative' : 'primary'" :label="operation.dependents ? 'Go on anyway' : (operation.kind === 'add' ? 'Add' : operation.kind === 'rename' ? 'Rename' : 'Remove')"
+                        :disable="busy || !operation.reason" @click="runOperation"></q-btn>
+            </q-card-actions>
+        </q-card>
+    </q-dialog>
+</div></template>
+<script>
+module.exports = {
+    data() {
+        return {theme: {}, files: [], can: {}, detailUrl: '', path: '', text: '', savedText: '', baseDigest: '', binary: false, schemaPath: '',
+            versionNote: '', fileFindings: [], draftFindings: [], diff: {}, diffReady: false, tab: 'source', busy: false, error: '', loaded: false,
+            operation: {open: false, kind: '', path: '', toPath: '', reason: '', dependents: ''}};
+    },
+    computed: {
+        screenPath() { return this.$root.basePath + '/' + this.$root.currentPathList.join('/'); },
+        themeId() { return this.$root.currentParameters?.themeId || ''; },
+        groups() {
+            const byFolder = {};
+            for (const file of this.files) { const folder = file.path.includes('/') ? file.path.slice(0, file.path.lastIndexOf('/')) : ''; (byFolder[folder] = byFolder[folder] || []).push(file); }
+            return Object.keys(byFolder).sort().map(folder => ({folder, files: byFolder[folder]}));
+        },
+        findings() { return this.fileFindings.concat(this.draftFindings.filter(d => !this.fileFindings.some(f => f.file === d.file && f.line === d.line && f.message === d.message))); }
+    },
+    watch: { tab(tab) { if (tab === 'changes') this.loadDiff(); } },
+    methods: {
+        async request(name, params, post) {
+            const r = await moqui.request(this.screenPath + '/' + name, {method: post ? 'POST' : 'GET', params});
+            const out = r.json || {};
+            if (out.errors) throw new Error(typeof out.errors === 'string' ? out.errors : JSON.stringify(out.errors));
+            return out;
+        },
+        languageOf(path) { return path.endsWith('.json') ? 'json' : path.endsWith('.css') ? 'css' : path.endsWith('.svg') ? 'xml' : 'html'; },
+        // a refusal's "file:line message" parts as findings
+        findingsOf(message) {
+            return String(message).replace(/^[A-Z_]+:\s*/, '').split(/;\s+/).map(part => {
+                const match = /^([A-Za-z0-9_./-]+):(\d+) (.*)$/.exec(part.trim());
+                return match ? {severity: 'error', file: match[1], line: Number(match[2]), message: match[3]} : {severity: 'error', file: '', line: 0, message: part};
+            });
+        },
+        async loadFiles() {
+            const out = await this.request('files', {themeId: this.themeId});
+            Object.assign(this, {theme: out.theme || {}, files: out.files || [], can: out.can || {}, detailUrl: out.detailUrl, loaded: true});
+        },
+        async open(path) {
+            if (this.text !== this.savedText && this.path && !(await moqui.confirmAction('Leave ' + this.path + ' without saving it?', document.activeElement))) return;
+            this.busy = true; this.error = '';
+            try {
+                const out = await this.request('file', {themeId: this.themeId, path});
+                Object.assign(this, {path: out.path, text: out.text || '', savedText: out.text || '', baseDigest: out.digest, binary: !!out.binary, schemaPath: out.schemaPath || '',
+                    fileFindings: out.diagnostics || [], tab: 'source', diff: {}});
+                this.theme.draftRevision = out.draftRevision;
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        async save() {
+            this.busy = true; this.error = '';
+            try {
+                const out = await this.request('saveFile', {themeId: this.themeId, expectedRevision: this.theme.draftRevision, path: this.path, fileText: this.text,
+                    baseDigest: this.baseDigest, versionNote: this.versionNote}, true);
+                Object.assign(this, {savedText: this.text, baseDigest: out.digest, fileFindings: out.diagnostics || [], versionNote: ''});
+                this.theme.draftRevision = out.draftRevision; moqui.notifyMessages('Saved ' + this.path + ' (draft revision ' + out.draftRevision + ').');
+            } catch (e) { this.error = String(e.message || e); this.fileFindings = this.findingsOf(this.error); } finally { this.busy = false; }
+        },
+        async validate() {
+            this.busy = true; this.error = '';
+            try {
+                const out = await this.request('validate', {themeId: this.themeId}, true);
+                this.draftFindings = out.diagnostics || [];
+                moqui.notifyMessages(out.ok ? 'The draft validates; a publisher can publish it.' : 'The draft has ' + this.draftFindings.filter(d => d.severity === 'error').length + ' errors to fix.');
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        async loadDiff() {
+            if (!this.path) return;
+            try {
+                const out = await this.request('diff', {themeId: this.themeId, path: this.path});
+                this.diff = out.diff || {};
+                if (!this.diffReady) moqui.loadScript('/js/WebrootCode.js', null, () => !!(moqui.codeEditor && moqui.codeEditor.components)).then(() => { this.diffReady = true; }, () => {});
+            } catch (e) { this.error = String(e.message || e); }
+        },
+        openOperation(kind) { this.operation = {open: true, kind, path: kind === 'add' ? 'sections/' : this.path, toPath: kind === 'rename' ? this.path : '', reason: '', dependents: ''}; },
+        async runOperation() {
+            this.busy = true; this.error = '';
+            try {
+                const op = this.operation;
+                const out = await this.request('fileOperation', {themeId: this.themeId, expectedRevision: this.theme.draftRevision, operation: op.kind, path: op.path,
+                    toPath: op.toPath, changeReason: op.reason, confirmDependents: op.dependents ? 'true' : 'false'}, true);
+                this.operation.open = false; this.theme.draftRevision = out.draftRevision;
+                moqui.notifyMessages(op.kind === 'add' ? 'Added ' + op.path + '.' : op.kind === 'rename' ? 'Renamed to ' + op.toPath + '.' : 'Removed ' + op.path + '.');
+                await this.loadFiles();
+                this.savedText = this.text;
+                if (op.kind === 'remove') { this.path = ''; this.text = ''; this.savedText = ''; } else await this.open(op.kind === 'add' ? op.path : op.toPath);
+            } catch (e) {
+                const message = String(e.message || e);
+                if (message.startsWith('HAS_DEPENDENTS')) this.operation.dependents = message.replace(/^HAS_DEPENDENTS:\s*/, '');
+                else { this.error = message; this.fileFindings = this.findingsOf(message); }
+            } finally { this.busy = false; }
+        },
+        openTwin() { this.$root.setUrl(this.$root.linkBasePath + '/' + this.$root.currentPathList.slice(0, -1).concat('TemplateEditorTui').join('/') + '?themeId=' + encodeURIComponent(this.themeId) + (this.path ? '&path=' + encodeURIComponent(this.path) : '')); }
+    },
+    async mounted() {
+        try { await this.loadFiles(); const path = this.$root.currentParameters?.path; if (path && this.can.code) await this.open(path); }
+        catch (e) { this.error = String(e.message || e); }
+    }
+};
+</script>

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Themes (design-commerce §5 Themes; style-guide §3.2 List; impl-commerce P5): the themes of the user's stores. ThemeFind
+    (store, name, live or draft), ThemeList (name, store, engine, the draft's validation state as a chip, where it is live
+    and its latest release; phone columns) and the designer's dialogs (COMMERCE_THEME_EDIT): NewTheme (a copy of a starter
+    or of a release of the store's) and ImportTheme (a package's files, a .tar.gz, as a draft: never validated or published
+    here; a Liquid package is refused as an unsupported engine). Each row opens ThemeDetail. Through
+    mantle.public.ThemeServices (find#Themes, create#ThemeDraft, import#Theme), which check the permission and the store. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Themes" default-menu-index="3">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="state"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createTheme">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.create#ThemeDraft" out-map="created"
+                    in-map="{productStoreId:productStoreId, name:(name || null), starter:(sourceKind == 'release' ? null : (starter || null)),
+                        releaseId:(sourceKind == 'release' ? (releaseId || null) : null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="themeId" from="created.themeId"/>
+                <message type="success">Theme ${created.name} is a draft of ${created.fileCount} files; arrange it, then publish it.</message>
+            </if>
+        </actions>
+        <default-response url="../ThemeDetail"><parameter name="themeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="importTheme">
+        <actions>
+            <script><![CDATA[
+                // the package is staged under the runtime's temporary files for the import to read, then removed
+                staged = null
+                if (packageFile && Number(packageFile.size) > 0) {
+                    if (!/\.(tar\.gz|tgz)$/i.test(String(packageFile.name || ''))) ec.message.addError('Upload the theme as a .tar.gz package')
+                    else {
+                        staged = 'runtime://tmp/theme-upload/' + ec.user.randomString(24) + '.tar.gz'
+                        packageFile.write(staged)
+                    }
+                } else ec.message.addError('Choose the theme package to import')
+            ]]></script>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.public.ThemeServices.import#Theme" out-map="imported"
+                        in-map="{productStoreId:productStoreId, name:(name || null), packageFile:staged}"/>
+            </if>
+            <script>if (staged) { try { ec.resource.getLocationReference(staged).delete() } catch (e) { ec.logger.warn('Theme upload ' + staged + ' not removed') } }</script>
+            <if condition="!ec.message.hasError()">
+                <set field="themeId" from="imported.themeId"/>
+                <message type="success">Imported ${imported.name} as a draft of ${imported.fileCount} files; validate it before publishing.</message>
+            </if>
+        </actions>
+        <default-response url="../ThemeDetail"><parameter name="themeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.public.ThemeServices.find#Themes" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:(term || null), state:(state || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="themes" from="(found?.themes || []).map((row) =&gt; Object.assign({}, row, {validationColor:
+                row.validation == 'valid' ? 'positive' : row.validation == 'invalid' ? 'negative' : 'warning'}))"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, state:state}"/>
+        <set field="newValues" from="{productStoreId:(productStoreId || commerce.storeOptions?.[0]?.value || ''), name:'', sourceKind:'starter',
+                starter:'mr-pass/starter', releaseId:''}"/>
+        <set field="detailUrl" from="sharedLinks['Website/ThemeDetail']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Themes" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="ImportTheme" button-text="Import theme" icon="sym_o_upload" width="600" title="Import a theme package"
+                        condition="can.themeEdit">
+                    <label type="p" style="text-caption" text="A .tar.gz of a js-fancy theme: theme.json, layouts, templates, sections, snippets, settings, locales and assets. It becomes a draft; nothing is published. Liquid themes and scripts are refused."/>
+                    <form-single name="ImportThemeForm" transition="importTheme" map="newValues">
+                        <field name="productStoreId">
+                            <default-field title="Store">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'stores', selected:productStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="name"><default-field title="Name" tooltip="Empty: the package's name"><text-line size="40"/></default-field></field>
+                        <field name="packageFile"><default-field title="Package"><file/></default-field></field>
+                        <field name="submitButton"><default-field title="Import as a draft"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+                <container-dialog id="NewTheme" button-text="New theme" icon="sym_o_add" type="primary" width="600" title="New theme"
+                        condition="can.themeEdit">
+                    <form-single name="NewThemeForm" transition="createTheme" map="newValues">
+                        <field name="productStoreId">
+                            <default-field title="Store">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'stores', selected:productStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="name"><default-field title="Name" tooltip="Empty: the copied theme's name"><text-line size="40"/></default-field></field>
+                        <field name="sourceKind">
+                            <default-field title="Copy">
+                                <radio>
+                                    <option key="starter" text="A starter theme"/>
+                                    <option key="release" text="A release of this store's"/>
+                                </radio>
+                            </default-field>
+                        </field>
+                        <field name="starter">
+                            <default-field title="Starter">
+                                <drop-down allow-empty="false">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'themeStarters', selected:starter}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="releaseId">
+                            <default-field title="Release">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-on="productStoreId"
+                                            parameter-map="{choice:'storeReleases', productStoreId:productStoreId, selected:releaseId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create theme"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="productStoreId"/><field-ref name="name"/></field-row>
+                            <field-ref name="sourceKind"/>
+                            <field-row><field-ref name="starter"/><field-ref name="releaseId"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="ThemeFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Name"><text-line size="24"/></default-field></field>
+            <field name="state">
+                <default-field title="Shown">
+                    <drop-down allow-empty="true">
+                        <option key="live" text="Live on a site"/>
+                        <option key="draft" text="Not live"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <section name="ThemesFound" condition="themes.length">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="ThemeList" list="themes" skip-form="true" paginate="false">
+                            <field name="name">
+                                <default-field title="Theme">
+                                    <link url="${detailUrl}" text="${name}" link-type="anchor" parameter-map="{themeId:themeId}"/>
+                                </default-field>
+                            </field>
+                            <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                            <field name="engine"><default-field title="Engine"><display/></default-field></field>
+                            <field name="validationText">
+                                <default-field title="Draft">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${validationColor}">${
+                                            WebUtilities.encodeHtml(validationText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: validationText})}]]></text>
+                                        <text type="html">${validationText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="liveText"><default-field title="Live"><display/></default-field></field>
+                            <field name="latestReleaseSeq"><default-field title="Latest release"><display/></default-field></field>
+                            <field name="latestReleaseDateText"><default-field title="Released"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="name"/><field-ref name="storeName"/></column>
+                                <column><field-ref name="validationText"/><field-ref name="liveText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <label text="No themes yet. Start one with New theme, from the starter or a release." type="p" style="text-caption m-muted"
+                condition="!themes.length"/>
+    </widgets>
+</screen>

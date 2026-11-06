@@ -1,0 +1,342 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ThemeDetail (design-commerce §5 ThemeDetail; style-guide §3.3 Detail; impl-commerce P5): a theme's record header (its
+    name, store, engine and view API, the draft's revision and validation state as a chip, where it is live) with its
+    actions: Edit theme (ThemeEditor) for the designer, Edit source (TemplateEditor) for the theme developer, Validate, and
+    the publisher's Publish (one primary action, COMMERCE_THEME_PUBLISH). Sections: ThemeIdentity (name and description;
+    the engine stays the package's), Validation (each finding with its file and line, shown after Validate), Where it is used
+    (Bindings: each site's active release, Publish here, and the pages and products with an alternate template), Releases
+    (immutable: sequence, author, date, digests; Restore through the same gate, Export its manifest and files) and Activity
+    (the sites' activations). Publish confirms the site, store and validated draft and switches the site's release
+    atomically (publish#Theme); Restore makes an earlier release active again (restore#ThemeRelease); each with the active
+    revision the user saw and an operation key. Every Mantle service checks the permission and the store again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Theme" default-menu-include="false">
+    <parameter name="themeId" required="true"/>
+    <parameter name="validate"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="themes"><default-response url="../Themes"/></transition>
+    <transition name="saveIdentity">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.store#ThemeDraft"
+                    in-map="{themeId:themeId, expectedRevision:expectedRevision, name:name, description:(description || null)}"/>
+        </actions>
+        <default-response url="."><parameter name="themeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishTheme">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.publish#Theme" out-map="published"
+                    in-map="{themeId:themeId, siteId:siteId, validationDigest:validationDigest, expectedActiveRevision:expectedActiveRevision,
+                        operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Published: the site shows release ${published.revision} of its theme now.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="restoreRelease">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.restore#ThemeRelease" out-map="restored"
+                    in-map="{siteId:siteId, releaseId:releaseId, expectedActiveRevision:expectedActiveRevision, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Restored: the site shows the earlier release again; products withdrawn since stay withdrawn.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="themeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="exportRelease" read-only="true">
+        <actions>
+            <service-call name="mantle.public.ThemeServices.export#ThemeRelease" out-map="exported"
+                    in-map="{releaseId:releaseId, includeFiles:true}"/>
+            <script>if (!ec.message.hasError()) ec.web.sendTextResponse(JSON.stringify({manifestDigest: exported.manifestDigest,
+                manifest: exported.manifest, files: exported.files}, null, 2), 'application/json', 'theme-release-' + releaseId + '.json')</script>
+        </actions>
+        <default-response type="none"/>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.public.ThemeServices.get#ThemeDraft" out-map="draft" transaction="force-new" ignore-error="true"
+                in-map="{themeId:themeId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!draft?.theme"/>
+        <if condition="recordFound">
+            <service-call name="mantle.public.ThemeServices.get#ThemeComposition" out-map="composition" transaction="force-new"
+                    ignore-error="true" in-map="{themeId:themeId}"/>
+            <service-call name="mantle.public.ThemeServices.get#ThemeBindings" out-map="bindings" transaction="force-new"
+                    ignore-error="true" in-map="{themeId:themeId}"/>
+            <service-call name="mantle.public.ThemeServices.get#ThemeHistory" out-map="history" transaction="force-new"
+                    ignore-error="true" in-map="{themeId:themeId}"/>
+            <if condition="validate == 'Y' &amp;&amp; (can.themeEdit || can.themePublish)">
+                <service-call name="mantle.public.ThemeServices.validate#Theme" out-map="validated" transaction="force-new"
+                        ignore-error="true" in-map="{themeId:themeId}"/>
+                <service-call name="mantle.public.ThemeServices.get#ThemeDraft" out-map="draft" transaction="force-new" ignore-error="true"
+                        in-map="{themeId:themeId}"/>
+            </if>
+            <script>ec.message.clearErrors()</script>
+            <set field="theme" from="Object.assign({}, draft.theme, {description: composition?.theme?.description || ''})"/>
+            <set field="validation" from="draft.validation"/>
+            <set field="validationText" from="!validation.validationDigest ? 'Not validated' : !validation.current ? 'Changed since validation'
+                    : validation.ok ? 'Valid' : 'Invalid'"/>
+            <set field="validationColor" from="validation.current &amp;&amp; validation.ok ? 'positive' : validation.current ? 'negative' : 'warning'"/>
+            <set field="diagnostics" from="(validated?.diagnostics || []).map((d) =&gt; ({severityText: d.severity == 'error' ? 'Error' : 'Warning',
+                    where: d.file + (d.line ? ':' + d.line : ''), pageKind: d.pageKind || '', message: d.message, code: d.code}))"/>
+            <set field="sites" from="bindings?.sites || []"/>
+            <set field="resources" from="bindings?.resources || []"/>
+            <set field="releases" from="history?.releases || []"/>
+            <set field="activations" from="history?.activations || []"/>
+            <set field="liveText" from="sites.filter((site) =&gt; site.thisTheme).map((site) =&gt; site.siteName).join(', ')"/>
+            <set field="canPublish" from="can.themePublish &amp;&amp; validation.current &amp;&amp; validation.ok"/>
+            <set field="publishSite" from="sites.length == 1 ? sites[0] : null"/>
+            <set field="captionText" from="[composition?.theme?.engine || theme.engine, 'view API 1', 'draft revision ' + theme.draftRevision,
+                    theme.starterKey ? 'from ' + theme.starterKey : null].filter((part) =&gt; part).join(' · ')"/>
+            <set field="storeName" from="(commerce.storeOptions || []).find((option) =&gt; option.value == theme.productStoreId)?.label?.split(' · ')[0]
+                    || theme.productStoreId"/>
+            <set field="identityValues" from="{themeId:themeId, expectedRevision:theme.draftRevision, name:theme.name, description:theme.description}"/>
+            <set field="publishValues" from="{themeId:themeId, siteId:publishSite?.siteId, validationDigest:validation.validationDigest,
+                    expectedActiveRevision:publishSite?.activeRevision || 0, operationKey:'theme-' + ec.user.randomString(24)}"/>
+            <set field="editorUrl" from="sharedLinks['Website/ThemeEditor']"/>
+            <set field="sourceUrl" from="sharedLinks['Website/TemplateEditor']"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ThemeNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Theme ${themeId} is not available: it does not exist, or it is not a theme of one of your stores."/>
+                <link url="themes" text="Back to Themes" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+        <section name="ThemeFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.public.PublicTheme" record-id="${themeId}" title="${theme.name}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm">${WebUtilities.encodeHtml(storeName)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ThemeStore", style: "strong", text: storeName})}]]></text>
+                            </render-mode>
+                            <label text="${theme.name}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${validationColor}" icon="sym_o_rule">${
+                                WebUtilities.encodeHtml(validationText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "ThemeValidation", text: validationText})}]]></text>
+                            <text type="html">${validationText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="Live on ${liveText}" type="span" style="text-caption" condition="liveText"/>
+                        <label text="Not live on a site" type="span" style="text-caption m-muted" condition="!liveText"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                        <link url="${editorUrl}" text="Edit theme" icon="sym_o_palette" link-type="anchor-button" parameter-map="{themeId:themeId}"
+                                condition="can.themeEdit"/>
+                        <link url="${sourceUrl}" text="Edit source" icon="sym_o_code" link-type="anchor-button" parameter-map="{themeId:themeId}"
+                                condition="can.themeCode"/>
+                        <link url="." text="Validate" icon="sym_o_rule" link-type="anchor-button" parameter-map="{themeId:themeId, validate:'Y'}"
+                                condition="can.themeEdit || can.themePublish"/>
+                        <container-dialog id="PublishTheme" button-text="Publish" icon="sym_o_public" type="primary" width="600"
+                                title="Publish ${theme.name}" condition="canPublish &amp;&amp; publishSite">
+                            <label type="p" text="${publishSite?.siteName} switches to this draft now, as a new release of the theme, for every page of its shop. ${publishSite?.activeText}."/>
+                            <label type="p" style="text-caption" text="The pages and products shown stay what is published for ${storeName}; publishing the theme publishes no product or page."/>
+                            <form-single name="PublishThemeForm" transition="publishTheme" map="publishValues">
+                                <field name="themeId"><default-field><hidden/></default-field></field>
+                                <field name="siteId"><default-field><hidden/></default-field></field>
+                                <field name="validationDigest"><default-field><hidden/></default-field></field>
+                                <field name="expectedActiveRevision"><default-field><hidden/></default-field></field>
+                                <field name="operationKey"><default-field><hidden/></default-field></field>
+                                <field name="submitButton">
+                                    <default-field title="Publish to ${publishSite?.siteName}">
+                                        <submit confirmation="Publish ${theme.name} to ${publishSite?.siteName} now?"/></default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </container>
+                </container>
+                <label text="Validate the draft before publishing it." type="p" style="text-caption text-warning q-mb-none"
+                        condition="can.themePublish &amp;&amp; !canPublish"/>
+            </container>
+
+            <container-box>
+                <box-header title="Theme"/>
+                <box-body>
+                    <form-single name="ThemeIdentity" transition="saveIdentity" map="identityValues">
+                        <field name="themeId"><default-field><hidden/></default-field></field>
+                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                        <field name="name">
+                            <conditional-field condition="can.themeEdit" title="Name"><text-line size="40"/></conditional-field>
+                            <default-field title="Name"><display/></default-field>
+                        </field>
+                        <field name="description">
+                            <conditional-field condition="can.themeEdit" title="Description"><text-line size="60"/></conditional-field>
+                            <default-field title="Description"><display/></default-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="can.themeEdit" title="Save"><submit/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="name"/><field-ref name="description"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+
+            <section name="Validation" condition="validated">
+                <widgets>
+                    <container-box>
+                        <box-header title="${validated?.ok ? 'The draft validates: ready to publish' : 'Fix these before publishing'}"/>
+                        <box-body-nopad>
+                            <form-list name="Diagnostics" list="diagnostics" skip-form="true" paginate="false">
+                                <field name="severityText"><default-field title="Kind"><display/></default-field></field>
+                                <field name="where"><default-field title="File and line"><display style="text-mono"/></default-field></field>
+                                <field name="pageKind"><default-field title="Page"><display/></default-field></field>
+                                <field name="message"><default-field title="Finding"><display/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="where"/><field-ref name="severityText"/></column>
+                                    <column><field-ref name="message"/></column>
+                                </columns>
+                            </form-list>
+                            <label text="No findings." type="p" style="q-pa-md" condition="!diagnostics.length"/>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets>
+            </section>
+
+            <container-box>
+                <box-header title="Where it is used"/>
+                <box-body-nopad>
+                    <form-list name="Bindings" list="sites" skip-form="true" paginate="false">
+                        <field name="siteName"><default-field title="Site"><display/></default-field></field>
+                        <field name="pathPrefix"><default-field title="Shop at"><display/></default-field></field>
+                        <field name="activeText"><default-field title="Shows"><display/></default-field></field>
+                        <field name="publishHere">
+                            <conditional-field condition="canPublish &amp;&amp; sites.length &gt; 1" title="">
+                                <container-dialog id="PublishTheme_${siteId}" button-text="Publish here" icon="sym_o_public" width="560"
+                                        title="Publish ${theme.name} to ${siteName}">
+                                    <label type="p" text="${siteName} switches to this draft now. ${activeText}."/>
+                                    <form-single name="PublishSite_${siteId}" transition="publishTheme"
+                                            map="{themeId:themeId, siteId:siteId, validationDigest:validation.validationDigest,
+                                                expectedActiveRevision:activeRevision, operationKey:'theme-' + ec.user.randomString(24)}">
+                                        <field name="themeId"><default-field><hidden/></default-field></field>
+                                        <field name="siteId"><default-field><hidden/></default-field></field>
+                                        <field name="validationDigest"><default-field><hidden/></default-field></field>
+                                        <field name="expectedActiveRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Publish"><submit confirmation="Publish ${theme.name} to ${siteName} now?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </conditional-field>
+                            <default-field title=""><display text=""/></default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="siteName"/><field-ref name="pathPrefix"/></column>
+                            <column><field-ref name="activeText"/><field-ref name="publishHere"/></column>
+                        </columns>
+                    </form-list>
+                    <label text="No site sells ${storeName} yet; a site operator mounts the Shop on one." type="p" style="q-pa-md m-muted"
+                            condition="!sites.length"/>
+                </box-body-nopad>
+            </container-box>
+            <section name="AlternateTemplates" condition="resources.length">
+                <widgets>
+                    <container-box>
+                        <box-header title="Pages and products with their own template"/>
+                        <box-body-nopad>
+                            <form-list name="TemplateBindings" list="resources" skip-form="true" paginate="false">
+                                <field name="pageKind"><default-field title="Kind"><display/></default-field></field>
+                                <field name="resourceText"><default-field title="Page or product"><display/></default-field></field>
+                                <field name="templateKey"><default-field title="Template"><display style="text-mono"/></default-field></field>
+                                <field name="inDraft"><default-field title="In this draft"><display text="${inDraft ? 'Yes' : 'No: the default shows'}"/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="resourceText"/><field-ref name="pageKind"/></column>
+                                    <column><field-ref name="templateKey"/><field-ref name="inDraft"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets>
+            </section>
+
+            <container-box>
+                <box-header title="Releases"/>
+                <box-body-nopad>
+                    <form-list name="Releases" list="releases" skip-form="true" paginate="false">
+                        <field name="releaseSeq"><default-field title="Release"><display/></default-field></field>
+                        <field name="createdDateText"><default-field title="Published"><display/></default-field></field>
+                        <field name="createdByName"><default-field title="By"><display/></default-field></field>
+                        <field name="engineText"><default-field title="Engine"><display/></default-field></field>
+                        <field name="manifestDigest"><default-field title="Manifest"><display text="${manifestDigest.slice(0, 12)}" style="text-mono"/></default-field></field>
+                        <field name="activeText"><default-field title="Active on"><display text="${activeSiteIds.join(', ')}"/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="exportRelease" text="Export" icon="sym_o_download" link-type="anchor" parameter-map="{releaseId:releaseId}"
+                                        condition="can.themeEdit || can.themePublish"/>
+                                <container-dialog id="RestoreRelease_${releaseId}" button-text="Restore" icon="sym_o_history" width="560"
+                                        title="Restore release ${releaseSeq}" condition="can.themePublish &amp;&amp; publishSite &amp;&amp; !activeSiteIds.includes(publishSite.siteId)">
+                                    <label type="p" text="${publishSite?.siteName} shows release ${releaseSeq} again, its look as published ${createdDateText}. Products and pages withdrawn since stay withdrawn."/>
+                                    <form-single name="RestoreForm_${releaseId}" transition="restoreRelease"
+                                            map="{themeId:themeId, siteId:publishSite?.siteId, releaseId:releaseId,
+                                                expectedActiveRevision:publishSite?.activeRevision || 0, operationKey:'theme-' + ec.user.randomString(24)}">
+                                        <field name="themeId"><default-field><hidden/></default-field></field>
+                                        <field name="siteId"><default-field><hidden/></default-field></field>
+                                        <field name="releaseId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedActiveRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Restore"><submit confirmation="Restore release ${releaseSeq} on ${publishSite?.siteName}?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="releaseSeq"/><field-ref name="createdDateText"/></column>
+                            <column><field-ref name="activeText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label text="Not published yet." type="p" style="q-pa-md m-muted" condition="!releases.length"/>
+                </box-body-nopad>
+            </container-box>
+            <section name="Activity" condition="activations.length">
+                <widgets>
+                    <container-box>
+                        <box-header title="Activity"/>
+                        <box-body-nopad>
+                            <form-list name="Activations" list="activations" skip-form="true" paginate="false">
+                                <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                                <field name="siteId"><default-field title="Site"><display/></default-field></field>
+                                <field name="releaseText"><default-field title="Shows"><display/></default-field></field>
+                                <field name="changedByName"><default-field title="By"><display/></default-field></field>
+                                <columns type="mobile">
+                                    <column><field-ref name="releaseText"/><field-ref name="siteId"/></column>
+                                    <column><field-ref name="changedDateText"/><field-ref name="changedByName"/></column>
+                                </columns>
+                            </form-list>
+                        </box-body-nopad>
+                    </container-box>
+                </widgets>
+            </section>
+        </widgets></section>
+    </widgets>
+</screen>

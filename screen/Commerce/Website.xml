@@ -12,8 +12,8 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Website area of IronStone Commerce (design-commerce §5): a site's pages and navigation (impl-commerce P4) and, with
-    P5, its themes and their editors; for the merchandiser (navigation), designer, theme developer and publisher
+<!-- The Website area of IronStone Commerce (design-commerce §5): a site's pages and navigation (impl-commerce P4) and its
+    themes with their record (ThemeDetail) and editors (ThemeEditor, TemplateEditor and their terminal twins; P5); for the merchandiser (navigation), designer, theme developer and publisher
     (BOSS_COM_WEBSITE). Pages is Shared/Pages and PageDetail Shared/PageDetail in Commerce's context (the sites of the user's
     stores), Navigation the site's menus and redirects; each Mantle service (mantle.public.ThemeServices, SiteServices'
     publish#SitePage) checks the permission and the site's store again. -->
@@ -23,6 +23,13 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Pages" location="component://mr-boss/screen/Shared/Pages.xml" menu-title="Pages" menu-index="1"/>
         <subscreens-item name="Navigation" location="component://mr-boss/screen/Commerce/Website/Navigation.xml" menu-index="2"/>
         <subscreens-item name="PageDetail" location="component://mr-boss/screen/Shared/PageDetail.xml" menu-include="false"/>
+        <!-- P5: the store's themes, a theme's record and its editors -->
+        <subscreens-item name="Themes" location="component://mr-boss/screen/Commerce/Website/Themes.xml" menu-index="3"/>
+        <subscreens-item name="ThemeDetail" location="component://mr-boss/screen/Commerce/Website/ThemeDetail.xml" menu-include="false"/>
+        <subscreens-item name="ThemeEditor" location="component://mr-boss/screen/Commerce/Website/ThemeEditor.xml" menu-include="false"/>
+        <subscreens-item name="ThemeEditorTui" location="component://mr-boss/screen/Commerce/Website/ThemeEditorTui.xml" menu-include="false"/>
+        <subscreens-item name="TemplateEditor" location="component://mr-boss/screen/Commerce/Website/TemplateEditor.xml" menu-include="false"/>
+        <subscreens-item name="TemplateEditorTui" location="component://mr-boss/screen/Commerce/Website/TemplateEditorTui.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="CommerceWebsitePanel" type="tab"/>

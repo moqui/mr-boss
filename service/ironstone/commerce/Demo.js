@@ -3,8 +3,9 @@
 // shop.zizi.localhost for POPC_DEFAULT's organization, Ziziwork Retail, and ZIZI_DIGITAL on digital.zizi.localhost for
 // BOSS_COM_DIGITAL's, Ziziwork Services, each with Shop, Account, Billing and Support mounts (Billing and Support targeting the
 // store's organization, F38); (P4) ZIZI_SHOP's published returns policy page and main menu; and (P6 review) its published
-// terms policy page, which checkout readiness asks of each Shop site. Each site, and each page, on its own (one that fails
-// is named and the rest are made); idempotent.
+// terms policy page, which checkout readiness asks of each Shop site; (P5) POPC_DEFAULT's theme draft copied from the
+// starter and ZIZI_SHOP's theme preview host, preview.shop.zizi.localhost (PshkPreview, never canonical). Each site, and
+// each page, on its own (one that fails is named and the rest are made); idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
 
@@ -127,9 +128,23 @@ function ensureMenu() {
     })
 }
 
+// P5: the demo store's theme draft (Commerce's designer edits it) and ZIZI_SHOP's preview host (its ThemeEditor's preview)
+const demoTheme = {productStoreId: "POPC_DEFAULT", starter: "mr-pass/starter", name: "Ziziwork Retail theme"}
+const previewHost = {hostname: "preview.shop.zizi.localhost", siteId: "ZIZI_SHOP"}
+function ensureTheme() {
+    if (lib.rows("mantle.public.PublicTheme", {productStoreId: demoTheme.productStoreId}).length) return
+    call("mantle.public.ThemeServices.create#ThemeDraft", demoTheme)
+}
+function ensurePreviewHost() {
+    createOnce(
+        "mantle.public.PublicSiteHost",
+        {hostname: previewHost.hostname},
+        {siteId: previewHost.siteId, canonical: "N", hostKindEnumId: "PshkPreview"}
+    )
+}
 function load() {
     const errors = []
-    for (const name of Object.keys(sites).concat(["pages", "menu", "terms"])) {
+    for (const name of Object.keys(sites).concat(["pages", "menu", "terms", "theme", "preview"])) {
         try {
             lib.probe("ironstone.commerce.DemoServices.run#CommerceDemoStep", {step: name})
         } catch (error) {
@@ -140,6 +155,8 @@ function load() {
     return {complete: errors.length === 0, errors}
 }
 function runStep(p) {
+    if (p.step === "theme") return ensureTheme() || {}
+    if (p.step === "preview") return ensurePreviewHost() || {}
     if (p.step === "pages" || p.step === "menu" || p.step === "terms") {
         if (p.step === "pages") ensurePages()
         else if (p.step === "terms") ensurePages(termsPage, termsPageText)
@@ -154,6 +171,8 @@ function runStep(p) {
 const operations = {load, runStep}
 ;({
     sites,
+    demoTheme,
+    previewHost,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Commerce demo operation " + op)
         return asDemoAdministrator(() => operations[op](parameters || {}))

@@ -1,0 +1,303 @@
+<template><div class="q-pa-sm" data-theme-editor>
+    <div class="row items-center q-col-gutter-sm q-mb-sm">
+        <div class="col-12 col-md">
+            <div class="text-h5">{{theme.name || 'Theme'}}</div>
+            <div class="text-caption m-muted">Draft revision {{draftRevision}}<span v-if="dirty"> · unsaved changes</span></div>
+        </div>
+        <div class="col-6 col-md-2"><q-select dense outlined emit-value map-options v-model="templateName" label="Page template" :options="templateOptions" @update:model-value="templateChanged"></q-select></div>
+        <div class="col-6 col-md-auto">
+            <q-btn-toggle v-model="width" no-caps dense unelevated toggle-color="primary" aria-label="Device width"
+                    :options="[{label: 'Phone', value: 'phone', icon: 'sym_o_smartphone'}, {label: 'Desktop', value: 'desktop', icon: 'sym_o_desktop_windows'}]"></q-btn-toggle>
+        </div>
+        <div class="col-auto row q-gutter-xs">
+            <q-btn flat dense round icon="sym_o_undo" aria-label="Undo" :disable="!undoStack.length || busy" @click="undo"><q-tooltip>Undo</q-tooltip></q-btn>
+            <q-btn flat dense round icon="sym_o_redo" aria-label="Redo" :disable="!redoStack.length || busy" @click="redo"><q-tooltip>Redo</q-tooltip></q-btn>
+            <q-btn outline no-caps icon="sym_o_visibility" label="Preview" :disable="busy || !sites.length" @click="openPreview"></q-btn>
+            <q-btn unelevated no-caps color="primary" icon="sym_o_save" label="Save" :disable="busy || !dirty || !can.edit" @click="save"></q-btn>
+            <q-btn flat no-caps label="Theme record" :href="detailUrl" type="a"></q-btn>
+            <q-btn v-if="can.code" flat no-caps label="Edit source" :href="sourceUrl" type="a"></q-btn>
+            <q-btn flat no-caps label="As forms" @click="openTwin"></q-btn>
+        </div>
+    </div>
+    <p v-if="error" role="alert" class="text-negative" data-editor-error>{{error}}</p>
+    <div class="row q-col-gutter-md">
+        <div class="col-12 col-md-3">
+            <m-container-box title="Sections">
+                <p class="text-caption">Drag a section to move it, or use Move up and Move down. Required sections place the purchase, cart, checkout or search and stay on their page.</p>
+                <q-list dense bordered separator data-section-outline>
+                    <q-item v-for="(section, index) in sections" :key="section.id" clickable :active="section.id === selectedId" :draggable="can.edit"
+                            :data-section-id="section.id" tabindex="0" @click="select(section.id)" @dragstart="dragStart(index, $event)" @dragover.prevent
+                            @drop.prevent="drop(index)" @keydown.alt.up.prevent="move(index, -1)" @keydown.alt.down.prevent="move(index, 1)">
+                        <q-item-section avatar><q-icon :name="placesRequired(section) ? 'sym_o_lock' : 'sym_o_drag_indicator'"></q-icon></q-item-section>
+                        <q-item-section>
+                            <q-item-label :class="section.disabled ? 'm-muted' : ''">{{typeName(section.type)}}</q-item-label>
+                            <q-item-label caption>{{section.id}}<span v-if="section.disabled"> · hidden</span><span v-if="placesRequired(section)"> · required</span></q-item-label>
+                        </q-item-section>
+                        <q-item-section side v-if="can.edit">
+                            <div class="row no-wrap">
+                                <q-btn flat dense round size="sm" icon="sym_o_arrow_upward" aria-label="Move up" :disable="index === 0" @click.stop="move(index, -1)"><q-tooltip>Move up</q-tooltip></q-btn>
+                                <q-btn flat dense round size="sm" icon="sym_o_arrow_downward" aria-label="Move down" :disable="index === sections.length - 1" @click.stop="move(index, 1)"><q-tooltip>Move down</q-tooltip></q-btn>
+                                <q-btn flat dense round size="sm" icon="sym_o_more_vert" aria-label="More">
+                                    <q-menu><q-list dense>
+                                        <q-item clickable v-close-popup @click="duplicate(index)"><q-item-section>Duplicate</q-item-section></q-item>
+                                        <q-item clickable v-close-popup :disable="placesRequired(section)" @click="toggleHidden(index)"><q-item-section>{{section.disabled ? 'Show' : 'Hide'}}</q-item-section></q-item>
+                                        <q-item clickable v-close-popup :disable="placesRequired(section)" @click="remove(index)"><q-item-section>Remove</q-item-section></q-item>
+                                    </q-list></q-menu>
+                                </q-btn>
+                            </div>
+                        </q-item-section>
+                    </q-item>
+                </q-list>
+                <div v-if="can.edit" class="row items-end q-col-gutter-sm q-mt-sm">
+                    <div class="col"><q-select dense outlined emit-value map-options v-model="newSectionType" label="Add a section" :options="addableTypes"></q-select></div>
+                    <div class="col-auto"><q-btn flat no-caps icon="sym_o_add" label="Add" :disable="!newSectionType" @click="addSection"></q-btn></div>
+                </div>
+            </m-container-box>
+        </div>
+        <div class="col-12 col-md-6">
+            <m-container-box :title="previewTitle">
+                <p v-if="!sites.length" class="text-caption">No site sells this theme's store yet, so there is nothing to preview it on.</p>
+                <p v-else-if="!previewSrc" class="text-caption">Save, then Preview to see the draft as the shop shows it. The preview is never live and sends nothing.</p>
+                <div class="row justify-center" style="overflow:auto">
+                    <iframe v-if="previewSrc" ref="frame" :src="previewSrc" title="Theme preview" data-theme-preview :style="frameStyle"
+                            referrerpolicy="no-referrer" @load="frameLoaded"></iframe>
+                </div>
+                <p v-if="previewSrc" class="text-caption q-mt-sm">{{previewState}}</p>
+            </m-container-box>
+        </div>
+        <div class="col-12 col-md-3">
+            <q-tabs v-model="tab" dense no-caps align="left" class="q-mb-sm">
+                <q-tab name="section" label="Section"></q-tab>
+                <q-tab name="theme" label="Theme"></q-tab>
+                <q-tab name="assets" label="Assets"></q-tab>
+                <q-tab name="text" label="Texts"></q-tab>
+                <q-tab name="pages" label="Pages"></q-tab>
+            </q-tabs>
+            <div v-if="tab === 'section'">
+                <p v-if="!selected" class="text-caption">Choose a section to change its settings.</p>
+                <div v-else data-section-settings>
+                    <div class="text-subtitle2">{{typeName(selected.type)}} <span class="text-caption">{{selected.id}}</span></div>
+                    <p v-if="!selectedDefinitions.length" class="text-caption">This section has no settings.</p>
+                    <div v-for="definition in selectedDefinitions" :key="definition.id" class="q-mb-sm">
+                        <q-toggle v-if="definition.type === 'boolean'" :label="definition.label || definition.id" :disable="!can.edit"
+                                :model-value="!!sectionValue(definition)" @update:model-value="setSection(definition, $event)"></q-toggle>
+                        <q-select v-else-if="definition.type === 'enum'" dense outlined emit-value map-options :label="definition.label || definition.id" :disable="!can.edit"
+                                :options="(definition.options || []).map(o => typeof o === 'object' ? {label: o.label || o.value, value: o.value} : {label: String(o), value: o})"
+                                :model-value="sectionValue(definition)" @update:model-value="setSection(definition, $event)"></q-select>
+                        <q-input v-else dense outlined stack-label :label="definition.label || definition.id" :disable="!can.edit"
+                                :type="definition.type === 'multilineText' || definition.type === 'richText' ? 'textarea' : definition.type === 'number' ? 'number' : 'text'"
+                                :maxlength="definition.maxLength" :hint="definitionHint(definition)" :model-value="displayValue(sectionValue(definition))"
+                                @update:model-value="setSection(definition, $event)">
+                            <template v-if="definition.type === 'color'" v-slot:append><span :style="{display:'inline-block',width:'1.2rem',height:'1.2rem',borderRadius:'50%',background:sectionValue(definition) || 'transparent'}"></span></template>
+                        </q-input>
+                    </div>
+                </div>
+            </div>
+            <div v-if="tab === 'theme'" data-theme-settings>
+                <p v-if="!globalDefinitions.length" class="text-caption">This theme has no global settings.</p>
+                <div v-for="definition in globalDefinitions" :key="definition.id" class="q-mb-sm">
+                    <q-input dense outlined stack-label :label="definition.label || definition.id" :disable="!can.edit" :hint="definitionHint(definition)"
+                            :model-value="displayValue(globalValues[definition.id] ?? definition.default)" @update:model-value="setGlobal(definition, $event)">
+                        <template v-if="definition.type === 'color'" v-slot:append><span :style="{display:'inline-block',width:'1.2rem',height:'1.2rem',borderRadius:'50%',background:globalValues[definition.id] || definition.default}"></span></template>
+                    </q-input>
+                    <div v-if="definition.type === 'color' && contrastText(globalValues[definition.id] || definition.default)" class="text-caption text-warning">{{contrastText(globalValues[definition.id] || definition.default)}}</div>
+                </div>
+            </div>
+            <div v-if="tab === 'assets'">
+                <q-list dense separator>
+                    <q-item v-for="asset in assets" :key="asset.path"><q-item-section>
+                        <q-item-label class="text-mono">{{asset.path}}</q-item-label>
+                        <q-item-label caption>{{asset.contentType}} · {{asset.size}} bytes<span v-if="asset.references.length"> · used by {{asset.references.join(', ')}}</span></q-item-label>
+                    </q-item-section></q-item>
+                </q-list>
+                <div v-if="can.edit" class="q-mt-sm">
+                    <div class="text-subtitle2">Add or replace an asset</div>
+                    <q-input dense outlined v-model="uploadPath" label="Path under assets/" hint="A .css, .svg, .png, .jpg, .gif, .webp or .woff2 file"></q-input>
+                    <input type="file" ref="uploadInput" aria-label="Asset file" class="q-my-sm" @change="uploadChosen">
+                    <q-btn flat no-caps icon="sym_o_upload" label="Upload" :disable="busy || !uploadPath || !uploadFile" @click="upload"></q-btn>
+                </div>
+            </div>
+            <div v-if="tab === 'text'">
+                <q-select dense outlined emit-value map-options v-model="locale" label="Locale" :options="localeOptions" @update:model-value="loadTexts"></q-select>
+                <p v-if="!translations.entries.length" class="text-caption">This theme has no texts by locale yet; its texts are in its templates and settings.</p>
+                <div v-for="entry in translations.entries" :key="entry.key" class="q-mb-sm">
+                    <q-input dense outlined stack-label :label="entry.key" :disable="!can.edit" v-model="textEdits[entry.key]"
+                            :hint="entry.usesFallback && entry.fallbackText ? 'Shows ' + translations.fallbackLocale + ': ' + entry.fallbackText : ''"></q-input>
+                </div>
+                <q-btn v-if="can.edit && translations.entries.length" flat no-caps icon="sym_o_save" label="Save texts" :disable="busy" @click="saveTexts"></q-btn>
+            </div>
+            <div v-if="tab === 'pages'">
+                <p class="text-caption">A page shows its page kind's template unless it names another of the theme's page templates.</p>
+                <q-list dense separator>
+                    <q-item v-for="page in sitePages" :key="page.sitePageId"><q-item-section>
+                        <q-item-label>{{page.title}}</q-item-label>
+                        <q-item-label caption>{{page.routeText}}</q-item-label>
+                        <q-select dense outlined emit-value map-options label="Template" :disable="!can.edit || busy" :options="pageTemplateOptions"
+                                :model-value="page.templateKey || ''" @update:model-value="assign(page, $event)"></q-select>
+                    </q-item-section></q-item>
+                </q-list>
+            </div>
+        </div>
+    </div>
+</div></template>
+<script>
+module.exports = {
+    data() {
+        return {theme: {}, draftRevision: 0, templates: [], sectionTypes: [], blockTypes: [], globalDefinitions: [], globalValues: {},
+            savedGlobal: '{}', templateName: '', sections: [], savedSections: '[]', selectedId: '', newSectionType: '', undoStack: [], redoStack: [],
+            width: 'desktop', sites: [], sitePages: [], assets: [], translations: {entries: [], locales: []}, textEdits: {}, locale: '',
+            can: {}, detailUrl: '', sourceUrl: '', busy: false, error: '', tab: 'section', dragged: -1,
+            previewSrc: '', previewOrigin: '', nonce: '', port: null, previewState: '', uploadPath: '', uploadFile: null};
+    },
+    computed: {
+        screenPath() { return this.$root.basePath + '/' + this.$root.currentPathList.join('/'); },
+        themeId() { return this.$root.currentParameters?.themeId || ''; },
+        templateOptions() { return this.templates.map(t => ({value: t.name, label: t.name})); },
+        template() { return this.templates.find(t => t.name === this.templateName) || null; },
+        pageKind() { return String(this.templateName || 'home').split('.')[0]; },
+        selected() { return this.sections.find(s => s.id === this.selectedId) || null; },
+        selectedDefinitions() { const type = this.selected && this.sectionTypes.find(t => t.type === this.selected.type); return type ? type.settings : []; },
+        addableTypes() { return this.sectionTypes.filter(t => !t.allowedPageKinds || t.allowedPageKinds.includes(this.pageKind)).map(t => ({value: t.type, label: t.name})); },
+        dirty() { return JSON.stringify(this.sections) !== this.savedSections || JSON.stringify(this.globalValues) !== this.savedGlobal; },
+        frameStyle() { return {width: this.width === 'phone' ? '390px' : '100%', height: '640px', border: '1px solid rgba(0,0,0,.12)', background: '#fff'}; },
+        previewTitle() { return 'Preview' + (this.sites.length ? ' on ' + this.sites[0].siteName : '') + (this.width === 'phone' ? ' at phone width' : ''); },
+        localeOptions() { return (this.translations.locales || []).map(l => ({value: l, label: l})); },
+        pageTemplateOptions() { return [{value: '', label: 'The default page template'}].concat(this.templates.filter(t => t.pageKind === 'page' && t.name !== 'page').map(t => ({value: t.name, label: t.name}))); }
+    },
+    methods: {
+        async request(name, params, post) {
+            const r = await moqui.request(this.screenPath + '/' + name, {method: post ? 'POST' : 'GET', params});
+            const out = r.json || {};
+            if (out.errors) throw new Error(typeof out.errors === 'string' ? out.errors : JSON.stringify(out.errors));
+            return out;
+        },
+        async load(keepTemplate) {
+            this.busy = true; this.error = '';
+            try {
+                const out = await this.request('editorData', {themeId: this.themeId, locale: this.locale || ''});
+                Object.assign(this, {theme: out.theme || {}, draftRevision: out.draftRevision, templates: out.templates || [], sectionTypes: out.sectionTypes || [],
+                    blockTypes: out.blockTypes || [], globalDefinitions: out.globalSettings?.definitions || [], sites: out.sites || [], sitePages: out.sitePages || [],
+                    assets: out.assets || [], translations: out.translations || {entries: [], locales: []}, can: out.can || {}, detailUrl: out.detailUrl, sourceUrl: out.sourceUrl});
+                this.globalValues = Object.assign({}, out.globalSettings?.values || {}); this.savedGlobal = JSON.stringify(this.globalValues);
+                this.locale = this.translations.locale || '';
+                this.textEdits = Object.fromEntries((this.translations.entries || []).map(e => [e.key, e.text]));
+                if (!keepTemplate || !this.template) this.templateName = (this.templates.find(t => t.name === 'home') || this.templates[0] || {}).name || '';
+                this.useTemplate();
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        useTemplate() {
+            this.sections = JSON.parse(JSON.stringify(this.template ? this.template.sections : []));
+            this.savedSections = JSON.stringify(this.sections); this.undoStack = []; this.redoStack = [];
+            if (!this.sections.some(s => s.id === this.selectedId)) this.selectedId = this.sections[0]?.id || '';
+        },
+        async templateChanged(name) {
+            if (JSON.stringify(this.sections) !== this.savedSections && !(await moqui.confirmAction('Leave ' + (this.template?.name || '') + ' without saving its changes?', document.activeElement))) return;
+            this.useTemplate(); if (this.previewSrc) this.openPreview();
+        },
+        typeName(type) { return (this.sectionTypes.find(t => t.type === type) || {}).name || type; },
+        placesRequired(section) { const type = this.sectionTypes.find(t => t.type === section.type); return !!(section.required || (type && type.places.some(c => (this.template?.requiredComponents?.[c] || []).length))); },
+        remember() { this.undoStack.push(JSON.stringify(this.sections)); if (this.undoStack.length > 50) this.undoStack.shift(); this.redoStack = []; },
+        undo() { if (!this.undoStack.length) return; this.redoStack.push(JSON.stringify(this.sections)); this.sections = JSON.parse(this.undoStack.pop()); },
+        redo() { if (!this.redoStack.length) return; this.undoStack.push(JSON.stringify(this.sections)); this.sections = JSON.parse(this.redoStack.pop()); },
+        select(id) { this.selectedId = id; this.tab = 'section'; if (this.port) this.port.postMessage({type: 'highlight', sectionId: id}); },
+        move(index, step) {
+            const to = index + step; if (to < 0 || to >= this.sections.length) return;
+            this.remember(); const list = this.sections.slice(); const [moved] = list.splice(index, 1); list.splice(to, 0, moved); this.sections = list;
+            this.$nextTick(() => { const item = this.$el.querySelector('[data-section-outline] [data-section-id="' + moved.id + '"]'); if (item) item.focus(); });
+        },
+        dragStart(index, event) { this.dragged = index; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', this.sections[index].id); },
+        drop(index) { const from = this.dragged; this.dragged = -1; if (from < 0 || from === index) return; this.remember(); const list = this.sections.slice(); const [moved] = list.splice(from, 1); list.splice(index, 0, moved); this.sections = list; },
+        uniqueId(type) { let n = 1; while (this.sections.some(s => s.id === type + '-' + n)) n++; return type + '-' + n; },
+        duplicate(index) { this.remember(); const copy = JSON.parse(JSON.stringify(this.sections[index])); copy.id = this.uniqueId(copy.type); delete copy.required; this.sections.splice(index + 1, 0, copy); },
+        toggleHidden(index) { this.remember(); this.sections[index].disabled = !this.sections[index].disabled; },
+        remove(index) { this.remember(); const [gone] = this.sections.splice(index, 1); if (gone.id === this.selectedId) this.selectedId = ''; },
+        addSection() { this.remember(); const id = this.uniqueId(this.newSectionType); this.sections.push({id, type: this.newSectionType, settings: {}, blocks: {}, blockOrder: [], disabled: false}); this.selectedId = id; this.newSectionType = ''; },
+        sectionValue(definition) { const value = this.selected?.settings?.[definition.id]; return value === undefined ? definition.default : value; },
+        displayValue(value) { return value == null ? '' : typeof value === 'object' ? (value.$richText ?? JSON.stringify(value)) : String(value); },
+        coerce(definition, value) { if (definition.type === 'number') return value === '' || value == null ? null : Number(value); if (definition.type === 'boolean') return !!value; return value === '' ? null : value; },
+        setSection(definition, value) { this.remember(); const settings = Object.assign({}, this.selected.settings || {}); const v = this.coerce(definition, value); if (v == null) delete settings[definition.id]; else settings[definition.id] = v; this.selected.settings = settings; },
+        setGlobal(definition, value) { const values = Object.assign({}, this.globalValues); const v = this.coerce(definition, value); if (v == null) delete values[definition.id]; else values[definition.id] = v; this.globalValues = values; },
+        definitionHint(definition) { return definition.type === 'color' ? 'A color such as #1f5c7a' : definition.type === 'image' ? 'An assets/ path of the theme' : ''; },
+        // a color's contrast with white text, as WCAG's ratio: below 4.5 is said
+        contrastText(color) {
+            const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color || '')); if (!match) return '';
+            const hex = match[1].length === 3 ? match[1].split('').map(c => c + c).join('') : match[1];
+            const lum = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+            const l = 0.2126 * lum[0] + 0.7152 * lum[1] + 0.0722 * lum[2]; const ratio = 1.05 / (l + 0.05);
+            return ratio < 4.5 ? 'White text on it has a contrast of ' + ratio.toFixed(1) + ':1, under 4.5:1' : '';
+        },
+        composition() { return {sections: Object.fromEntries(this.sections.map(s => [s.id, {type: s.type, settings: s.settings || {}, blocks: s.blocks || {}, blockOrder: s.blockOrder || [], disabled: !!s.disabled}])), order: this.sections.map(s => s.id)}; },
+        async save() {
+            this.busy = true; this.error = '';
+            try {
+                if (JSON.stringify(this.sections) !== this.savedSections) {
+                    const out = await this.request('saveComposition', {themeId: this.themeId, expectedRevision: this.draftRevision, template: this.templateName, compositionJson: JSON.stringify(this.composition())}, true);
+                    this.draftRevision = out.draftRevision; this.savedSections = JSON.stringify(this.sections);
+                }
+                if (JSON.stringify(this.globalValues) !== this.savedGlobal) {
+                    const saved = JSON.parse(this.savedGlobal); const changes = {};
+                    for (const key of new Set(Object.keys(saved).concat(Object.keys(this.globalValues)))) if (JSON.stringify(saved[key]) !== JSON.stringify(this.globalValues[key])) changes[key] = this.globalValues[key] ?? null;
+                    const out = await this.request('saveSettings', {themeId: this.themeId, expectedRevision: this.draftRevision, settingsJson: JSON.stringify(changes)}, true);
+                    this.draftRevision = out.draftRevision; this.savedGlobal = JSON.stringify(this.globalValues);
+                }
+                moqui.notifyMessages('Saved the draft (revision ' + this.draftRevision + ').');
+                await this.load(true);
+                if (this.previewSrc) this.reloadPreview();
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        async openPreview() {
+            if (!this.sites.length) return;
+            this.busy = true; this.error = '';
+            try {
+                const out = await this.request('preview', {themeId: this.themeId, siteId: this.sites[0].siteId, pageKind: this.pageKind}, true);
+                const bytes = new Uint8Array(16); crypto.getRandomValues(bytes); this.nonce = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+                this.previewOrigin = new URL(out.previewUrl).origin; this.port = null; this.previewState = 'Loading the preview...';
+                this.previewSrc = out.previewUrl + '?n=' + this.nonce;
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        reloadPreview() { const src = this.previewSrc; this.port = null; this.previewSrc = ''; this.$nextTick(() => { this.previewSrc = src; }); },
+        // the preview's channel: a port given only to the frame's origin with the URL's nonce; its messages carry section ids only
+        frameLoaded() {
+            const frame = this.$refs.frame; if (!frame || !frame.contentWindow || !this.previewOrigin) return;
+            const channel = new MessageChannel();
+            channel.port1.onmessage = (event) => {
+                const data = event.data || {};
+                if (data.type === 'ready') { this.port = channel.port1; this.previewState = 'Showing the saved draft. Click a section in it to choose it.'; if (this.selectedId) channel.port1.postMessage({type: 'highlight', sectionId: this.selectedId}); }
+                else if (data.type === 'select' && typeof data.sectionId === 'string' && this.sections.some(s => s.id === data.sectionId)) this.select(data.sectionId);
+            };
+            frame.contentWindow.postMessage({type: 'moqui-theme-preview', nonce: this.nonce}, this.previewOrigin, [channel.port2]);
+        },
+        uploadChosen(event) { this.uploadFile = event.target.files && event.target.files[0] || null; if (this.uploadFile && !this.uploadPath) this.uploadPath = this.uploadFile.name; },
+        async upload() {
+            this.busy = true; this.error = '';
+            try {
+                const data = new FormData(); data.append('themeId', this.themeId); data.append('expectedRevision', String(this.draftRevision));
+                data.append('assetPath', this.uploadPath); data.append('assetFile', this.uploadFile);
+                const out = await this.request('uploadAsset', data, true);
+                moqui.notifyMessages((out.replaced ? 'Replaced ' : 'Added ') + out.path + '.'); this.uploadFile = null; this.uploadPath = ''; if (this.$refs.uploadInput) this.$refs.uploadInput.value = '';
+                await this.load(true);
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        async loadTexts() { await this.load(true); },
+        async saveTexts() {
+            this.busy = true; this.error = '';
+            try {
+                const changes = {}; for (const entry of this.translations.entries) if ((this.textEdits[entry.key] || '') !== (entry.text || '')) changes[entry.key] = this.textEdits[entry.key] || null;
+                await this.request('saveTranslations', {themeId: this.themeId, expectedRevision: this.draftRevision, locale: this.locale, entriesJson: JSON.stringify(changes)}, true);
+                moqui.notifyMessages('Saved the ' + this.locale + ' texts.'); await this.load(true);
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        async assign(page, templateKey) {
+            this.busy = true; this.error = '';
+            try {
+                await this.request('assignTemplate', {themeId: this.themeId, sitePageId: page.sitePageId, templateKey, publicationRevision: page.publicationRevision}, true);
+                moqui.notifyMessages(page.title + ' shows ' + (templateKey || 'the default page template') + '.'); await this.load(true);
+            } catch (e) { this.error = String(e.message || e); } finally { this.busy = false; }
+        },
+        openTwin() { this.$root.setUrl(this.$root.linkBasePath + '/' + this.$root.currentPathList.slice(0, -1).concat('ThemeEditorTui').join('/') + '?themeId=' + encodeURIComponent(this.themeId)); },
+        beforeUnload(event) { if (this.dirty) { event.preventDefault(); event.returnValue = ''; } }
+    },
+    mounted() { window.addEventListener('beforeunload', this.beforeUnload); this.load(false); },
+    beforeUnmount() { window.removeEventListener('beforeunload', this.beforeUnload); }
+};
+</script>
