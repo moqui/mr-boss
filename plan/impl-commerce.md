@@ -2610,6 +2610,10 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   server and 17 client features passed; lint as before. Feature time: server mr-mantle 371.6 of 383 s, mr-boss 246.7 of
   264 s, mr-pass 17.4 of 20 s; client mr-boss 52.2 of 57 s, mr-pass 8.1 of 9 s. Stage C2/S2 is done; mr-boss's
   acceptance failures (F143) are being fixed apart.
+- **Wave 14 suites (Nov 6, on master after Shop P7 merged, nothing else running):** standalone mr-mantle 1,868 passed,
+  2 failed (the baseline); `./moq test-apps` 3,264 server and 17 client features passed; lint as before. Feature time:
+  server mr-mantle 365.8 of 383 s, mr-boss 246.4 of 264 s, mr-pass 17.4 of 20 s; client mr-boss 51.7 of 57 s, mr-pass
+  8.3 of 9 s.
 
 ### P12 — Paid access and subscriptions
 
