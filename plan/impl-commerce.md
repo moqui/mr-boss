@@ -910,6 +910,17 @@ publication part), with SHOP-CATALOG's resolver core.
   not for the same user under Products. Decide whether a StoreStaff limit and the generation reach Products. (5) F63
   stands. (6) `./moq test-apps` and the budget measure were not run.
 
+- **Wave 3 suites (Nov 6, on master after P3, Shop P1 and the framework's root-mount fix merged, the binary rebuilt;
+  Shop P2's and P7's workers ran at the same time):** standalone mr-mantle 1,765 passed, 2 failed (the baseline
+  WorkTimeEntries and WorkTimesheets), 11 skipped — W2's AccountingCollections and SupportCases pass again once the
+  local date rolled over; `./moq test-apps` 3,111 server features passed and 5 failed, 15 client features passed,
+  within every budget (server: mr-mantle 365.2 of 370 s, mr-boss 239.8 of 264 s, mr-pass 13.9 of 15 s; client: mr-boss
+  46.0 of 49 s, mr-pass 4.1 of 6 s); `moqui lint --screens` clean. All five failures (AccountingPayables' portal demo,
+  CommerceAccess' context, CustomerServiceAccess' Invite to support and feedback, CustomerServiceFeedback) are F60: the
+  demo load's `create#FormInvitation` hit a duplicate `form_inv_key`, so Customer Service's feedback demo and
+  `dana@joesdist.example.com` were not made. It recurs on most fresh loads since mr-moqui's TX-Cache P4–P6; diagnosed
+  separately and reported to the user. mr-mantle is at 365.2 of 370 s: Shop P2's and P7's specs will need a raise.
+
 ### P4 — Site pages and navigation
 
 Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page part, SHOP-CONTENT.
