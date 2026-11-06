@@ -1160,6 +1160,13 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   Mantle specs (StoreAdmin, StorePublication, StorePromotions, ThemeReleases) 9.8 s. mr-pass's budget raised by Shop's
   share to 17 s (the user's agreement, §4).
 
+- **Waves 5–6 suites (Nov 6, on master after P4, its F78 follow-up, P6 and Shop P3 merged; P5's and Shop P4's workers
+  ran at the same time):** standalone mr-mantle 1,798 passed, 2 failed (the baseline WorkTimeEntries and
+  WorkTimesheets), 11 skipped; `./moq test-apps` 3,165 server features and 15 client features passed, none failed;
+  `moqui lint --screens` clean. Under the two workers' load the feature times doubled (mr-mantle 576.1 s, mr-boss 388.6
+  s, mr-pass 25.0 s server; client within budget), so the run fails its budget check on load alone; the budgets are
+  measured on a quiet run (the gate C1/S1 run after P5) before any is raised.
+
 ### P5 — Theme editors and preview
 
 Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with Shop P2's engine and releases
