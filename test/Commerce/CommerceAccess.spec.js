@@ -501,10 +501,11 @@ feature("a store-limited staff member is refused another store's assortment and 
     }
 })
 
-// P4: a page of a site is edited by a holder of COMMERCE_THEME_EDIT in the site's store (the designer), not by the reader
-// (mantle.public.ThemeServices.store#SitePage, as PageRoute saves it), nor on another organization's site; the `sites`
-// choice lists the sites of the user's stores only. The page is the demo's returns policy page of ZIZI_SHOP.
-feature("a site page is edited by the designer of the site's store, not by the reader or another organization", {
+// P4: a page of a site is edited by a holder of COMMERCE_THEME_EDIT in the site's store, not by the reader
+// (mantle.public.ThemeServices.store#SitePage, as PageRoute saves it), nor on another organization's site; a published
+// page's values also need COMMERCE_PUBLISH (F78: the administrator, not the designer); the `sites` choice lists the sites
+// of the user's stores only. The page is the demo's returns policy page of ZIZI_SHOP, published.
+feature("a published page is edited by its store's editor and publisher, not the designer, reader or another organization", {
     when() {
         const page = system(() =>
             ec.entity
@@ -513,13 +514,17 @@ feature("a site page is edited by the designer of the site's store, not by the r
                 .disableAuthz()
                 .one()
         )
+        // a value other than the page's, so each run is a change
+        const seoDescription =
+            page.seoDescription == "Returns within 30 days" ? "Returns within thirty days" : "Returns within 30 days"
         const edit = user =>
             asUser(
                 user,
                 () =>
                     refusal("mantle.public.ThemeServices.store#SitePage", {
                         sitePageId: page.sitePageId,
-                        seoDescription: "Returns within 30 days"
+                        seoDescription,
+                        expectedRevision: page.publicationRevision || 0
                     }),
                 false
             )
@@ -527,6 +532,7 @@ feature("a site page is edited by the designer of the site's store, not by the r
         return {
             designer: edit(users.designer),
             reader: edit(users.read),
+            admin: edit(users.admin),
             // the designer on Ziziwork Services' site (BOSS_COM_DIGITAL's): not one of their stores
             other: asUser(
                 users.designer,
@@ -542,9 +548,11 @@ feature("a site page is edited by the designer of the site's store, not by the r
             otherSites: sites(users.services)
         }
     },
-    then({designer, reader, other, designerSites, otherSites}) {
-        designer == ""
+    then({designer, reader, admin, other, designerSites, otherSites}) {
+        designer.includes("PERMISSION_DENIED")
+        designer.includes("COMMERCE_PUBLISH")
         reader.includes("PERMISSION_DENIED")
+        admin == ""
         other.includes("RECORD_UNAVAILABLE")
         designerSites.includes(ids.siteId)
         !designerSites.includes(ids.otherSiteId)
