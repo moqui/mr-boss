@@ -1,0 +1,64 @@
+{
+  "id": "boss-commerce-feed-build-failures",
+  "type": "alert",
+  "title": "Feed build failures",
+  "body": {
+    "description": "Fires when a store's product feed build failed in the last day (its site not published, no canonical host, the projection unreadable), by store; what was published stays served. It reads every organization's builds, so it notifies administrators; save a copy, then set the threshold and contact points.",
+    "query": {
+      "datasetId": "boss-commerce-feed-builds",
+      "from": "now-1d",
+      "thru": "now",
+      "queryString": "buildStatusEnumId:PsfbFailed",
+      "aggregations": [
+        {
+          "id": "store",
+          "type": "terms",
+          "role": "split-rows",
+          "params": {
+            "field": "productStoreId",
+            "size": 50
+          }
+        },
+        {
+          "id": "builds",
+          "type": "cardinality",
+          "role": "metric",
+          "params": {
+            "field": "feedBuildId"
+          }
+        }
+      ],
+      "transformations": [
+        {
+          "type": "organize",
+          "hide": [
+            "count"
+          ]
+        }
+      ]
+    },
+    "field": "builds",
+    "reduce": "last",
+    "condition": {
+      "type": "above",
+      "threshold": 0
+    },
+    "intervalSeconds": 3600,
+    "pendingSeconds": 0,
+    "keepFiringSeconds": 0,
+    "labels": {
+      "team": "commerce",
+      "severity": "warning"
+    },
+    "contactPoints": [
+      {
+        "id": "administrators",
+        "type": "notification",
+        "topic": "ReportAlert",
+        "userGroupId": "ADMIN",
+        "groupWaitSeconds": 0,
+        "repeatSeconds": 3600
+      }
+    ]
+  }
+}

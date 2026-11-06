@@ -88,4 +88,16 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('promotionUse', context)"/>
         </actions>
     </service>
+    <!-- impl-commerce P14: channel health -->
+    <service verb="get" noun="ChannelHealth" allow-remote="false">
+        <description>Channel health (design §3 ChannelHealth) of the stores for the period: channel messages by store, remote and
+            message type (received, processed, failed, retried, last success) and the stores' current feeds (last complete
+            build, rows, skips, failed builds in the period, blocked by a withdrawal), from Mantle's get#ChannelHealth, which
+            needs COMMERCE_CHANNEL_OPERATE (PERMISSION_DENIED without it or without Reports). Refuses as get#OnlineSales.</description>
+        <implements service="ironstone.commerce.ReportingServices.define#ReportParameters"/>
+        <out-parameters><parameter name="answer" type="Map"/></out-parameters>
+        <actions>
+            <set field="answer" from="ec.resource.script('component://mr-boss/service/ironstone/commerce/Reporting.js').execute('channelHealth', context)"/>
+        </actions>
+    </service>
 </services>

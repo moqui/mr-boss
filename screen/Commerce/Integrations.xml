@@ -13,10 +13,15 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Integrations area of IronStone Commerce (design-commerce §9): channel integrations, channel import and product
-    feeds (impl-commerce P13, P14); for the channel operator (BOSS_COM_INTEGRATIONS). -->
+    feeds (impl-commerce P13, P14); for the channel operator (BOSS_COM_INTEGRATIONS). P14: Feeds (the default until P13's
+    Integrations list) and FeedDetail. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Integrations" default-menu-index="8" menu-image="sym_o_fiber_new" menu-image-type="icon">
+    <subscreens default-item="Feeds" always-use-full-path="true">
+        <subscreens-item name="Feeds" location="component://mr-boss/screen/Commerce/Integrations/Feeds.xml" menu-title="Feeds" menu-index="5"/>
+        <subscreens-item name="FeedDetail" location="component://mr-boss/screen/Commerce/Integrations/FeedDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Channel integrations, imports and product feeds." type="p"/>
+        <subscreens-panel id="CommerceIntegrationsPanel" type="tab"/>
     </widgets>
 </screen>

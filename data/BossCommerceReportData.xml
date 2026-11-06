@@ -19,7 +19,7 @@ along with this software (see the LICENSE.md file). If not, see
     report/boss-commerce-payment-attempts.json read, with Mantle's sales orders dataset (mantle-sales-orders), in the Store
     operations dashboard (report/boss-commerce-store-operations.json) and the alert templates for checkout failures
     (boss-commerce-checkout-failures) and long-unresolved payment attempts (boss-commerce-payment-unresolved). Feed build
-    failures (P14) and intake error spikes (P13) come with their records. The datasets read every organization's records,
+    failures (P14, BossStoreFeedBuild below) and intake error spikes (P13) come with their records. The datasets read every organization's records,
     so until Insights' admission applies the store scope they are granted to ADMIN only, as Customer Service's and Mantle's
     sales datasets are; Commerce's own Reports screens read through the store-scoped services. -->
 <entity-facade-xml type="seed-initial">
@@ -64,4 +64,31 @@ along with this software (see the LICENSE.md file). If not, see
     </moqui.entity.feed.DataFeed>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreCheckout" userGroupId="ADMIN"/>
     <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStorePaymentAttempt" userGroupId="ADMIN"/>
+    <!-- impl-commerce P14: the stores' product feed builds (mantle.product.store.ProductStoreFeedBuild, metadata only, never the
+        artifact) as BossStoreFeedBuild, indexed by its own feed as each build is written, which
+        report/boss-commerce-feed-builds.json reads and the alert template boss-commerce-feed-build-failures fires on; ADMIN
+        only, as the datasets above -->
+    <dataDocuments dataDocumentId="BossStoreFeedBuild" indexName="boss_commerce" documentName="Store Feed Build"
+            primaryEntityName="mantle.product.store.ProductStoreFeedBuild" documentTitle="${feedBuildId}">
+        <fields fieldSeqId="01" fieldPath="feedBuildId"/>
+        <fields fieldSeqId="02" fieldPath="productStoreFeedId"/>
+        <fields fieldSeqId="03" fieldPath="productStoreId"/>
+        <fields fieldSeqId="04" fieldPath="siteId"/>
+        <fields fieldSeqId="05" fieldPath="buildStatusEnumId"/>
+        <fields fieldSeqId="06" fieldPath="formatEnumId"/>
+        <fields fieldSeqId="07" fieldPath="generation"/>
+        <fields fieldSeqId="08" fieldPath="startedDate"/>
+        <fields fieldSeqId="09" fieldPath="completedDate"/>
+        <fields fieldSeqId="10" fieldPath="scheduled"/>
+        <fields fieldSeqId="11" fieldPath="rowCount"/>
+        <fields fieldSeqId="12" fieldPath="skipCount"/>
+        <fields fieldSeqId="13" fieldPath="errorCount"/>
+        <fields fieldSeqId="14" fieldPath="failureCode"/>
+    </dataDocuments>
+    <moqui.entity.feed.DataFeed dataFeedId="BossCommerceFeedBuilds" dataFeedTypeEnumId="DTFDTP_RT_PUSH"
+            feedName="Commerce store feed builds" feedReceiveServiceName="org.moqui.search.SearchServices.index#DataDocuments"
+            feedDeleteServiceName="org.moqui.search.SearchServices.delete#DataDocument">
+        <documents dataDocumentId="BossStoreFeedBuild"/>
+    </moqui.entity.feed.DataFeed>
+    <moqui.entity.document.DataDocumentUserGroup dataDocumentId="BossStoreFeedBuild" userGroupId="ADMIN"/>
 </entity-facade-xml>

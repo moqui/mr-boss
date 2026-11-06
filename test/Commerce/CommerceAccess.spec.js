@@ -621,3 +621,23 @@ feature("a theme's source is saved by the theme developer, not the designer, nor
     }
 })
 
+
+// P14: product feeds are the channel operator's (COMMERCE_CHANNEL_OPERATE): the channel operator lists the demo store's feeds,
+// the merchandiser is refused, and the channel operator is refused another organization's store
+feature("a store's feeds are the channel operator's, not the merchandiser's, nor of another organization's store", {
+    when() {
+        const find = (user, productStoreId) =>
+            asUser(user, () => refusal("mantle.product.StoreChannelServices.find#StoreFeeds", {productStoreId}), false)
+        return {
+            channel: find(users.channel, ids.storeId),
+            merchandiser: find(users.merchandiser, ids.storeId),
+            other: find(users.channel, ids.otherStoreId)
+        }
+    },
+    then({channel, merchandiser, other}) {
+        channel == ""
+        merchandiser.includes("PERMISSION_DENIED")
+        merchandiser.includes("COMMERCE_CHANNEL_OPERATE")
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})
