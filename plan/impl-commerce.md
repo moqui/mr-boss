@@ -690,6 +690,10 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
     the earlier release brings back its look but not a product withdrawn since;
   - the preview neither sends mail nor records a visit, and its page refuses to be framed by another origin.
 
+- **Built (framework), Nov 5, 2026** (mr-moqui b502417e; F55): a response that sets its own CSP with `frame-ancestors`
+  gets no conf `X-Frame-Options`; the desktop shell's `frame-src` lists the origins in `moqui_shell_frame_origins`
+  (https, or http on localhost, no path), else stays `'none'`. No routing change was needed (F54).
+
 ### P6 — Checkout settings
 
 Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
