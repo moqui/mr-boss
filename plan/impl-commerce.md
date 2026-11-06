@@ -3309,7 +3309,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F105 | P9 review: removing a photo deletes its file before the transaction commits | P15 |
 | F106 | P8: `dependsOn` does not order a run (specs run in component load order, then by file name), so a mr-boss spec cannot depend on mr-pass specs | Framework; the P8 acceptance lives in mr-pass and sorts after ShopOrderScenarios |
 | F107 | P8: no Accounting screen releases a Payment hold (`release#OrderHold` is a service only) | Accounting (later) |
-| F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations) |
+| F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations). Done in Shop P8 (`resolve#StuckPlacement`, CartDetail) |
 | F109 | P8: `resolve#Delivery` stays unscoped; Commerce has a store-scoped read-only view of delivery exceptions | Comms (a store-scoped review) |
 | F110 | P8: Shop F86 (a guest's first digital order waits for approval) left for Sales; a store turns the approval checks off | Sales |
 | F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | P13 (integrations), P9's prompt at P15 |
