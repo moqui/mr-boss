@@ -641,3 +641,29 @@ feature("a store's feeds are the channel operator's, not the merchandiser's, nor
         other.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// Shop P8 (impl-commerce F108): resolving a stuck placement is the administrator's (COMMERCE_PLACEMENT_RESOLVE), not the store
+// operator's, who reads it; the administrator passes the permission and meets Mantle's cart check (another organization's
+// store and the resolution itself are Mantle's ShopOperations spec)
+feature("a stuck placement is resolved by the administrator, not the store operator", {
+    when() {
+        const resolve = user =>
+            asUser(
+                user,
+                () =>
+                    refusal("mantle.order.ShopOperationsServices.resolve#StuckPlacement", {
+                        orderId: "BOSS_NO_SUCH_CART",
+                        action: "retry",
+                        reason: "Access spec",
+                        operationKey: "access-resolve-" + user
+                    }),
+                false
+            )
+        return {operator: resolve(users.operator), admin: resolve(users.admin)}
+    },
+    then({operator, admin}) {
+        operator.includes("PERMISSION_DENIED")
+        operator.includes("COMMERCE_PLACEMENT_RESOLVE")
+        admin.includes("RECORD_UNAVAILABLE")
+    }
+})
