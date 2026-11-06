@@ -2931,15 +2931,15 @@ Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 w
   IntegrationDetail once it exists (`sharedLinks['Integrations/IntegrationDetail']`); P13's intake error spikes alert
   appends its own DataDocument to `BossCommerceReportData.xml` as this phase did.
 - Findings (provisional):
-  - **F-P14-1** ShopCatalog.js `publishedIds` stops at 2,000 candidates (`limits.candidates`), so a feed of a larger store
+  - **F150** ShopCatalog.js `publishedIds` stops at 2,000 candidates (`limits.candidates`), so a feed of a larger store
     lists at most its first 2,000 published products (the feed's own row bound is 5,000); a feed needs a paged candidate
     read of the publication rows.
-  - **F-P14-2** Every publication change of a store's sites (pages, menus, themes as well as products) advances the
+  - **F151** Every publication change of a store's sites (pages, menus, themes as well as products) advances the
     generation, so a served feed is re-resolved once per generation change (cached per node). A record of each withdrawal's
     generation would let serving check only the products withdrawn after the build.
-  - **F-P14-3** Prices and stock do not advance the generation (impl-shop P3 R5), so a served feed keeps its build's prices
+  - **F152** Prices and stock do not advance the generation (impl-shop P3 R5), so a served feed keeps its build's prices
     and availability until the next build; a scheduled feed bounds it.
-  - **F-P14-4** The demo has no feed: the demo Shop sites are disabled until published (Shop P1), so a demo feed of
+  - **F153** The demo has no feed: the demo Shop sites are disabled until published (Shop P1), so a demo feed of
     POPC_DEFAULT could not build on a fresh load; the walk makes its own site.
 
 **Review Nov 6 (P14)** (branch `com/p14`). Checked against the phase, design-commerce §9 and §3 ChannelHealth, design-shop
@@ -2963,11 +2963,11 @@ in the writers, screens or Reporting.js); the Built note.
   or ended after the build started (four one-row reads per serve), keyed by that instant. Spec: StoreFeeds' last feature
   ends the mug's row without a generation change and the feed is refused (fails without the fix); it also checks the
   site unpublished (NOT_AVAILABLE) and another site's key (FEED_UNAVAILABLE).
-- **R3 (medium, F-P14-1 contained)** The build pages the store's publication rows itself (`candidatesOf`: ShopCatalog.js
+- **R3 (medium, F150 contained)** The build pages the store's publication rows itself (`candidatesOf`: ShopCatalog.js
   `publishedIds`' rule, 1,000 rows a read, at most 50,000 candidates, the category tree applied as it reads) instead of
   Shop's 2,000-candidate list; past the 5,000-row bound the rest are ROW_LIMIT skips without being projected. The
   `publishedIds` and `publicOf` exports, which nothing then used, are taken back out (ShopCatalog.js only adds `cards`,
-  `contentTexts`, `plainText`). F-P14-1 can close.
+  `contentTexts`, `plainText`). F150 can close.
 - **R4 (medium, job)** run#StoreFeeds held one transaction for the whole run: each feed's schedule stamp and failure
   record locked that feed's row until the last feed was built (a staff edit or publish waited up to the 30-minute
   timeout), and a rollback at the end lost every failure record. The job is now `transaction="ignore"`; each build stays
@@ -3200,6 +3200,14 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F147 | P12: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal, allow-remote false) | Accepted |
 | F148 | P12 review: `run#Renewals` limits its due batch (100) before leaving out contracts with an in-flight occurrence, so many in-flight renewals can delay newly due ones to the nightly hand-off | P15: filter in the query |
 | F149 | P12 review: a concurrent double submit of one retry key gets a duplicate-key error instead of `alreadyApplied` (every `lib.operation` caller does) | Accepted (one charge either way) |
+| F150 | P14: ShopCatalog's candidates stopped at 2,000, so a feed listed at most 2,000 products | Fixed in the review (R3): the build pages the store's publication rows (5,000-row feed limit, the rest ROW_LIMIT skips) |
+| F151 | P14: every publication change (pages, menus, themes) advances the generation, so a served feed is re-resolved on each | Later: each withdrawal's generation recorded |
+| F152 | P14: price and stock changes don't advance the generation, so a feed keeps its build's prices until the next build | Accepted (scheduled builds) |
+| F153 | P14: no demo feed (the demo Shop sites are disabled until published) | Accepted |
+| F154 | P14 review: `store#StoreFeed` checks only that a category exists, so a feed may name another organization's category (its rows are still the store's published products) | P15 |
+| F155 | P14 review: `find#StoreFeeds` reads at most 200 feeds before filtering and paging | Accepted |
+| F156 | P14 review: an allow-list category membership scheduled for later takes effect without a generation change, outside R2's check | P15 |
+| F157 | P14 review: a remote frontend receives the whole feed artifact in one answer (up to 5,000 rows) | Later (streamed) |
 
 ## 7. Later
 
