@@ -244,21 +244,27 @@ feature(
                     if (result.errorMessages.length) throw new Error(result.errorMessages.join(" | "))
                     return JSON.parse(result.output)
                 })
-            for (const [user, own, limited] of [
-                [users.read, [ids.storeId], false],
-                [users.services, [ids.otherStoreId], false],
+            // an unlimited user's scope is every store of their organizations, which other specs may add to in a full run:
+            // it must hold the demo store and never the other organization's; a store-limited one's is exactly theirs
+            const wrong = (list, own, other, limited) =>
+                limited
+                    ? JSON.stringify([...(list || [])].sort()) !== JSON.stringify(own)
+                    : !own.every(id => (list || []).includes(id)) || (list || []).includes(other)
+            for (const [user, own, other, limited] of [
+                [users.read, [ids.storeId], ids.otherStoreId, false],
+                [users.services, [ids.otherStoreId], ids.storeId, false],
                 // a member of both organizations, assigned POPC_DEFAULT only
-                [users.storeStaff, [ids.storeId], true]
+                [users.storeStaff, [ids.storeId], ids.otherStoreId, true]
             ]) {
                 const found = scope(user)
-                if (JSON.stringify(found.storeIds) !== JSON.stringify(own)) problems.push(`${user}'s stores: ${found.storeIds}`)
+                if (wrong(found.storeIds, own, other, limited)) problems.push(`${user}'s stores: ${found.storeIds}`)
                 if (found.storeLimited !== limited) problems.push(`${user} limited: ${found.storeLimited}`)
                 const offered = choices(user, {term: "ziziwork"})
-                if (JSON.stringify(offered) !== JSON.stringify(own)) problems.push(`${user} is offered ${offered}`)
+                if (wrong(offered, own, other, limited)) problems.push(`${user} is offered ${offered}`)
                 const searched = palette(user, "store")
-                if (JSON.stringify(searched.sort()) !== JSON.stringify(own)) problems.push(`${user}'s palette: ${searched}`)
+                if (wrong(searched, own, other, limited)) problems.push(`${user}'s palette: ${searched}`)
                 const rows = filtered(user)
-                if (JSON.stringify(rows.stores) !== JSON.stringify(own))
+                if (wrong(rows.stores, own, other, limited))
                     problems.push(`${user}'s filtered stores: ${rows.stores}`)
                 if (rows.filters.includes("COMMERCE_STORE") !== limited)
                     problems.push(`${user}'s store filter applies: ${rows.filters}`)
