@@ -2778,6 +2778,12 @@ ProductSubscriptionResource callers unchanged); no `valueOf` or float money in t
   starve newly due ones until the nightly hand-off (low; filter in the query or page past them); a concurrent double submit
   of one retry key runs the coordinator twice (still one charge) and the second answers a duplicate-key error rather than
   alreadyApplied, as every `lib.operation` caller does.
+- **Wave 15 suites, gate C3/S3 (Nov 6, on master after Commerce P12 merged, nothing else running):** standalone
+  mr-mantle 1,874 passed, 2 failed (the baseline); `./moq test-apps` 3,271 of 3,272 server features (Commons Contacts
+  read joe.developer's names from the paged "all" list, which the later apps' contacts had filled; each name is now its
+  own search) and 17 client features passed; lint as before. Feature time: server mr-mantle 379.7 of 383 s, mr-boss
+  256.8 of 264 s, mr-pass 18.7 of 20 s; client mr-boss 51.6 of 57 s, mr-pass 8.4 of 9 s. mr-mantle's budget raised by
+  the share since Wave 10 (9.9 s) to 393 s (§4). Stage C3/S3 is done.
 
 ### P13 — Integrations and channel import
 
