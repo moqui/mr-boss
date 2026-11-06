@@ -243,7 +243,8 @@ feature("another user's personal contact is never available to john.doe: the rec
 feature("as Joe Developer: his own personal contact shows, john.doe's never do, and a directory party is read only", {
     when() {
         return as("joe.developer", () => {
-            const all = rowsOf(list({ scope: "all" }).output)
+            // each name found by its own search: the "all" list is paged, and the later apps' contacts fill its first page
+            const all = ["Sam", "Mary", "Robin", "Tom"].flatMap((text) => rowsOf(list({ scope: "all", text }).output))
             const sam = detail(SAM)
             const mary = detail(MARY)
             const people = ((shellJson("shellSearch", { text: "Mary", groups: "People", limit: "20" }).groups || []).find((group) => group.group === "People")
