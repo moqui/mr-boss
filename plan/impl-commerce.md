@@ -2299,7 +2299,7 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
     `settingsOf` and `storeSettings` and a `newsLists` option source; ShopCart.js exports `reprice`, `usable`, `answer`;
     StoreOperations.js exports `scope`, `storeOrder`, `deliveryRow`, names MdsrcCartRecovery's order in `deliveryOrders`, and
     takes a cart's abandonment from the store's delay (`CartRecovery.delayOf`, once a store a call; an hour by default).
-  - Changed rule: MessageDeliveries.js runs a source's build in a transaction of its own (F-P10-1); DeliveryLedger unchanged.
+  - Changed rule: MessageDeliveries.js runs a source's build in a transaction of its own (F127); DeliveryLedger unchanged.
   - Records: `entity/CartRecoveryEntities.xml` (StoreCartAccess `recoveryExpireDate`); `data/CartRecoverySetupData.xml` (the
     five setting types, the ledger source MdsrcCartRecovery), `data/CartRecoveryJobData.xml` (run_CartRecovery).
   - Shop's `recoverCart` in ForumSchema.js and PassRoutes.js (identical to PASS's), PassApi.js' and PassAuthority.js'
@@ -2334,7 +2334,7 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
   - Also run, all pass: Mantle StoreOperations, ShopCart, StoreAdmin, StoreCheckout, StoreReviews, StoreFulfillment,
     DeliveryLedger, ShopCheckout, ShopCustomer, PassAuthority, Consent; mr-pass ShopCart, ShopAccount, ShopAccess, ShopCheckout,
     Transport; mr-boss CommerceAccess, CommerceStores, CommerceCheckoutSettings, CommerceOrders, CommerceRecovery, Unsubscribe
-    (124 features; mr-pass ShopCheckout's page feature fails only in that one combined run, F-P10-2, and passes with its own
+    (124 features; mr-pass ShopCheckout's page feature fails only in that one combined run, F128, and passes with its own
     component's specs). Not run: `./moq test-apps` (the brief).
 - Acceptance: `acceptance/Commerce/CommerceRecoveryScenario` (mr-boss, 3 features, stepwise, run once: 3 passed): a new verified
   shopper turns on POPC_DEFAULT's cart reminders through `storeEmailPreferences` and adds to a cart on a spec site; a guest adds
@@ -2356,7 +2356,7 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
   - The recovery link needs the cart's own signed-in account (the cart is never a guest's, and Shop P4's capability of an
     account cart reaches only that account): a visitor signs in first, and the token is spent only by the Open my cart post, so
     a mail scanner's GET spends nothing. "A fresh session" is a new capability kept in the PASS session; the HTTP session itself
-    is not renewed (F-P10-3).
+    is not renewed (F129).
   - A staff send needs the same eligibility as the job's (recovery on, consent, verified email, idle past the delay); it only
     sends earlier than the next job run.
   - A site without a Shop or email preferences page fails the send (the ledger's failed, an exception) rather than suppressing
@@ -2365,20 +2365,20 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
   - F118 done: CheckoutSettings' Cart recovery box edits PsstCheckoutOptIns (a text of none or the ids) and PsstNewsList (a
     drop-down of the organization's lists), with the store edit permission and scope.
 - Findings (provisional):
-  - **F-P10-1** The delivery ledger ran a source's build in the attempt's own transaction, so a build that threw left the
+  - **F127** The delivery ledger ran a source's build in the attempt's own transaction, so a build that threw left the
     transaction rollback-only: the "message could not be made" failure was never recorded and the delivery stayed queued, tried
     again every two minutes. The build now runs in a transaction of its own (a token or link it makes commits even when the
     send then fails, which is harmless). It changes only the failure path of every source.
-  - **F-P10-2** Shop P4's cart-creation throttle (30 a requester in ten minutes) is reached when many cart-making specs of mr-mantle
+  - **F128** Shop P4's cart-creation throttle (30 a requester in ten minutes) is reached when many cart-making specs of mr-mantle
     and mr-pass run in one process: mr-pass ShopCheckout's page feature then renders nothing (RATE_LIMITED). Not P10's (its specs
     make carts as rows); per-component or worker runs pass. For the lead: reset the throttles between specs, or a test property.
-  - **F-P10-3** Rotating the cart capability does not renew the HTTP session id (no PASS call for it); the old capability is dead,
+  - **F129** Rotating the cart capability does not renew the HTTP session id (no PASS call for it); the old capability is dead,
     which is what the cart's access needs.
-  - **F-P10-4** The ledger keeps no "redeemed" fact: RecoveryHistory derives it from StoreCartAccess `recoveryUsedDate` after the
+  - **F130** The ledger keeps no "redeemed" fact: RecoveryHistory derives it from StoreCartAccess `recoveryUsedDate` after the
     latest send. P11's CartRecovery report (recovered orders) needs the same reading, or a recovery fact of its own.
-  - **F-P10-5** RecoveryPolicy's retention is the recovery window (eligibility and link life), not a purge of the ledger's rows;
+  - **F131** RecoveryPolicy's retention is the recovery window (eligibility and link life), not a purge of the ledger's rows;
     the sends' retention is Comms' ledger's and the privacy provider's (design §6).
-  - **F-P10-6** The Marketing automation sender is not offered (no Marketing yet, design §8); `OTHER_SENDER` is the reason a
+  - **F132** The Marketing automation sender is not offered (no Marketing yet, design §8); `OTHER_SENDER` is the reason a
     store set to another sender would show.
 
 **Review Nov 6 (P10)** (`git diff master...com/p10` in mr-mantle, mr-pass and mr-boss). Checked against this section,
@@ -2397,7 +2397,7 @@ keeps `r` in the session and redirects at once; PASS sends `Referrer-Policy: sam
 the token reaches no third party (the first GET's URL is in the server's access log, as any emailed link is). recoverCart
 in Schema/ForumSchema and Routes/PassRoutes (identical) and the three TOKEN_WRITES lists. Staff: `get#`/`send#CartRecovery`
 through StoreOperations' scope (store list and foreign-vendor orders), COMMERCE_RECOVERY for the preview and the send,
-operation key and revision; the preview's link is `LINK-MADE-WHEN-SENT`. F-P10-1: `buildApart` changes only where a
+operation key and revision; the preview's link is `LINK-MADE-WHEN-SENT`. F127: `buildApart` changes only where a
 source's build runs; the three sources (download notice, review request, recovery) read only and make a token at most, and
 the attempt already ran in its own transaction, so no build saw a caller's uncommitted rows before either. F118: both
 fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; PsstCheckoutOptIns is "none" or known ids only
@@ -2409,7 +2409,7 @@ fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; Pss
   reminders turned off before the send, nor of another organization's operator; the fourth feature now has all three
   (suppressed with "The shopper came back to the cart" and "No consent for this message"; RECORD_UNAVAILABLE for read and
   send).
-- **R3** (F-P10-2, spec) mr-pass ShopCheckout's setup removes this ten-minute window's `cart-create` bucket of its
+- **R3** (F128, spec) mr-pass ShopCheckout's setup removes this ten-minute window's `cart-create` bucket of its
   requester before making its carts, as AccountingPortals removes its bucket; the throttle is unchanged. The combined
   run that failed (mr-mantle, mr-pass and mr-boss, 24 specs, 124 features) now passes.
 - Specs (`--nobuild`): Mantle CartRecovery, StoreOperations, ShopCart, StoreAdmin, StoreCheckout, DeliveryLedger,
@@ -2426,7 +2426,7 @@ fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; Pss
   - The sent mail's rendered body (with the link) is kept in EmailMessage by `send#EmailTemplate`, as the download
     notice's guest link is; whoever can read EmailMessage can use the link until it is spent or expires, though only
     from the cart's own signed-in account.
-  - F-P10-3: the framework rotates the session id at a password sign-in and carries its attributes over
+  - F129: the framework rotates the session id at a password sign-in and carries its attributes over
     (`session.rs` `rotate_on_password_login`), so the kept token survives the sign-in; the acceptance walk signs in with
     `login()`, not through the sign-in page, so that path is not walked.
 
@@ -2705,6 +2705,15 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F124 | P9 follow-up review: a pending topic saved unchecked on the preferences page does not end the choice, and a pending news choice cannot be withdrawn there | P15: a decline action |
 | F125 | P9 follow-up review: `recordCheckout`'s last StoreCheckout update runs in the placement transaction, so a database error there fails the step (the job retries) | Accepted |
 | F126 | P9 follow-up review: no spec of an unverified account's own pending choice confirmed once the account verifies | P15 |
+| F127 | P10: the delivery ledger ran a source's build in the attempt's transaction, so a build that threw left the delivery queued and retried every two minutes | Fixed: builds run in their own transaction |
+| F128 | P10: the cart-creation throttle (30 per requester per 10 minutes) tripped when many cart-making specs ran in one process | Fixed in the review (R3): ShopCheckout's setup clears its own requester's bucket; the throttle unchanged |
+| F129 | P10: "a fresh session" is a new cart capability kept in the PASS session; the HTTP session id is renewed only at a password sign-in, which carries the token over | Accepted; the sign-in page's path untested (the walk uses `login()`) |
+| F130 | P10: the ledger keeps no "redeemed" fact; it is read from `recoveryUsedDate` after the latest send | P11's CartRecovery report reads the same |
+| F131 | P10: the retention setting does not purge ledger rows | Comms and the privacy provider |
+| F132 | P10: the Marketing automation sender is not offered | Marketing (later) |
+| F133 | P10 review: each job run re-reads every signed-in idle cart in the window (up to 500 a store, newest first), most already handled | P15: a "last window sent" mark on the access row |
+| F134 | P10 review: a staff send's operation key covers only the cart, so a retry with another reason gets the first answer | Accepted |
+| F135 | P10 review: the rendered recovery mail, link included, is kept in EmailMessage (as the download notice's guest link is); usable only signed in as the cart's account | Accepted |
 
 ## 7. Later
 
