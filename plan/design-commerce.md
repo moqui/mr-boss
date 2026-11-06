@@ -242,7 +242,7 @@ cases and returns (X7).
 | Customers | Commerce/Customers | list | xml | Find customers of permitted stores | PartyDetail | own scoped list | order reader | new C2 | store, filters |
 | Customer360 | Commerce/Customers/Customer360 | 360 | xml | Inspect store relationships | Party | crosscut §3.2 | domain grants | parity C2 | customer, store |
 | Subscriptions | Commerce/Customers/Subscriptions | list | xml | Monitor recurring contracts | Subscription + proposed StoreRecurringContract | own | order reader | new C3 | store, filters |
-| SubscriptionDetail | Commerce/Customers/Subscriptions/SubscriptionDetail | detail | xml | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
+| SubscriptionDetail | Commerce/Customers/SubscriptionDetail | detail | xml | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
 | Requests | Commerce/Customers/Requests | list | xml | Follow customer cases about store orders and products | Request | own store-filtered view of Customer Service cases | case readers | new C2 | store, filters |
 | RequestDetail | Commerce/Customers/RequestDetail | detail | xml | Read a store case and open it in Customer Service | Request | Projects §6 / crosscut §3.11 | case readers | parity C2 | request |
 | Promotions | Commerce/Promotions/Promotions (the area's default) | list | xml | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
@@ -456,6 +456,16 @@ applies to purchases made after it; existing Subscriptions keep their source ter
 resource with live subscriptions is refused and names the count. **Source:** research §3;
 `mantle.product.SubscriptionServices.fulfill#ProductSubscriptionResource`, which reads these
 rows. **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
+
+**As built (Nov 6, impl-commerce P12).** Paid access is a Product360 tab (`Shared/Product360/PaidAccess`)
+over `R.get#ProductPaidAccess` and `R.store#ProductSubscriptionResource`: Commerce edits it
+(`COMMERCE_SUBSCRIPTION_MANAGE`, the product in the assortment of one of the user's stores), Products shows
+the rows read only for a digital product. A change ends the row in effect and starts its successor (a row
+not yet started changes in place); one current row per resource (RESOURCE_BOUND); a resource is offered
+only when its init and every named handler service is installed (RESOURCE_UNAVAILABLE); ending one with
+live subscriptions is refused naming the count (SUBSCRIPTIONS_LIVE). ResourceUse is `R.find#StoreSubscriptions`
+with the product, for an order reader. PASS SiteDetail is on the site's own host, not a BOSS route, so the
+pane names its subscription binding rather than linking it.
 
 ### StoreCategories
 
@@ -900,6 +910,18 @@ payment-attempt notices (`PsetPaymentRetry`); Accounting's Dunning excludes the 
 renewal still in retry (R-SC-03). Staff never enter a customer's card in this screen.
 **Needs:** COM-SUBSCRIPTION, SHOP-SUBSCRIPTION.
 
+**As built (Nov 6, impl-commerce P12).** Subscriptions and SubscriptionDetail are under Customers
+(`Commerce/Customers/Subscriptions`, `Customers/SubscriptionDetail`), for the store and subscription
+operators. `R.find#StoreSubscriptions` and `R.get#StoreSubscription` need `COMMERCE_ORDER_VIEW` (or
+`COMMERCE_SUBSCRIPTION_MANAGE`) and the store scope; the store is optional. The detail shows the method as
+type and last four and whether the consent is recorded, never its evidence, provider profile or gateway.
+`R.cancel#RecurringContract` takes the revision shown and keeps the paid term (RENEWAL_IN_PROGRESS while a
+payment is in flight); `R.retry#Renewal` takes an operation key (a double submit answers the first result),
+resumes the same occurrence through Shop's coordinator, and is refused while a payment is unresolved
+(PAYMENT_UNRESOLVED) or with no recorded consent (CONSENT_REQUIRED). A refund of an automatic contract's
+latest term ends its renewal (design-shop §10.2 as built). Customer360 lists the customer's subscriptions.
+Storeless native Subscription rows for Sales' mount are not listed yet (impl-commerce F-P12-2).
+
 ### Requests
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1092,6 +1114,15 @@ reminded, and a link stops working at its end), saved by `C.store#CartRecoveryPo
 (none, or some of review requests, cart reminders and news) and `PsstNewsList` (a current list of
 the store's organization), which before were set only by data (impl-commerce F118). A clone leaves
 out `PsstRecoveryEnabled` and `PsstNewsList`.
+
+**As built (Nov 6, impl-commerce P12).** RecurringPolicy is CheckoutSettings' Subscription offers group over
+`R.find#RecurringOffers` (`COMMERCE_VIEW`, the store) and Shop P7's `R.store#RecurringOffer` (`COMMERCE_STORE_EDIT`):
+the store's offers, current first; New offer (a paid-access product of the assortment, name, price, automatic
+renewal or a prepaid term, terms version, retry days), Change (a new offer row, contracts keep theirs) and End;
+whether the store's gateway charges a kept card off-session, its `PsetPaymentRetry` and `PsetSubscriptionRenewal`
+emails (set in the store's emails) and the subscriptions readiness (each Shop site's address, an outside one
+named). Cancellation terms are the offer's terms version; the cancellation rule itself is fixed (end of the
+paid term).
 
 **Source:** research §9, §11; Shop §§6–10. **Needs:** COM-CHECKOUT, COM-OPS, SHOP-CHECKOUT,
 SHOP-PAYMENT, SHOP-SUBSCRIPTION.

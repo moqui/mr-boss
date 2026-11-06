@@ -19,7 +19,9 @@ const productTabs = [
     "Stock",
     "BOM",
     "Costs",
-    "Packaging"
+    "Packaging",
+    // Commerce P12 (X16): what a purchase grants, read only here (Commerce's Product360 edits it)
+    "PaidAccess"
 ]
 const paths = [
     "Categories/CategoryDetail",
@@ -302,12 +304,13 @@ function customerServiceContext() {
 // Commerce's mounts (impl-commerce P3, F4, F46, F47; design-commerce §10): Shared/Product360, CategoryDetail, CategoryContent,
 // Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain and InventoryAvailability under Merchandising. A
 // Commerce user who reads the catalog (PRODUCT_CATALOG_VIEW, every Commerce user) reads the product master with Commerce's
-// tabs: Summary, Features (variants), Categories, Identifiers, Documents, Prices (store prices, for a price reader) and Stock (the user's
-// stores' facilities). Catalog and price writes are the user's own PRODUCT_CATALOG_EDIT and PRICE_EDIT, passed through as
+// tabs: Summary, Features (variants), Categories, Identifiers, Documents, Prices (store prices, for a price reader), Stock (the user's
+// stores' facilities), History and Paid access (P12, X16: its one editor). Catalog and price writes are the user's own
+// PRODUCT_CATALOG_EDIT and PRICE_EDIT, passed through as
 // Products has them and checked again in Mantle (F46); cost, margin, supplier price, method and stock policy are off whatever
 // the user holds. storeIds are the stores the user works (ironstone.commerce, a store-limited staff member's own), which the
 // store choices of Prices.js and Taxonomy.js are narrowed to (F47).
-const commerceTabs = ["Summary", "Features", "Categories", "Identifiers", "Documents", "Prices", "Stock", "History"]
+const commerceTabs = ["Summary", "Features", "Categories", "Identifiers", "Documents", "Prices", "Stock", "History", "PaidAccess"]
 const commercePaths = {
     "": "Merchandising",
     "Products/Product360": "Merchandising/Product360",
@@ -321,7 +324,9 @@ const commercePaths = {
     "Merchandising/Assortment": "Merchandising/Assortment",
     "Merchandising/StoreCategories": "Merchandising/StoreCategories",
     // Commerce P9: Product360's link to the product's reviews
-    "Merchandising/Reviews": "Merchandising/Reviews"
+    "Merchandising/Reviews": "Merchandising/Reviews",
+    // Commerce P12: Paid access's ResourceUse opens a contract
+    "Customers/SubscriptionDetail": "Customers/SubscriptionDetail"
 }
 function commerceFacilities(storeIds) {
     if (!storeIds.length) return []

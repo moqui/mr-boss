@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- SubscriptionDetail (design-commerce §6 SubscriptionDetail; style-guide §3.3 Detail; impl-commerce P12, COM-SUBSCRIPTION):
+    one recurring contract of the user's stores (mantle.product.ShopSubscriptionServices.get#StoreSubscription): Contract
+    (the customer and store, the accepted plan, price and terms, its first order and recurring base, paid-through, next
+    renewal, cancel-at; the method masked and whether the customer's off-session consent is recorded), Renewals (each
+    period's order, payment, attempts, outcome and next retry) and Access (each paid term's grant: from, thru, revoked). For a
+    subscription operator (COMMERCE_SUBSCRIPTION_MANAGE): CancelRenewal (cancel#RecurringContract at the revision shown, the
+    paid term kept) and RetryRenewal (retry#Renewal through the coordinator, keyed by an operation so a double submit charges
+    once; refused while a payment is unresolved). Staff never enter a card or revoke access by hand: a refund is Accounting's
+    and revokes the term it paid for. A missing contract and one outside the scope are "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Subscription" default-menu-include="false">
+    <parameter name="contractId" required="true"/>
+    <transition name="cancelRenewal">
+        <actions>
+            <service-call name="mantle.product.ShopSubscriptionServices.cancel#RecurringContract"
+                    in-map="{contractId:contractId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Renewal cancelled; access lasts to the end of the paid term</message></if>
+        </actions>
+        <default-response url="."><parameter name="contractId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="retryRenewal">
+        <actions>
+            <service-call name="mantle.product.ShopSubscriptionServices.retry#Renewal" out-map="retried"
+                    in-map="{contractId:contractId, occurrenceId:(occurrenceId || null), operationKey:(operationKey || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()"><script>ec.message.addMessage(retried.message, 'success')</script></if>
+        </actions>
+        <default-response url="."><parameter name="contractId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.ShopSubscriptionServices.get#StoreSubscription" in-map="{contractId:contractId}" out-map="found"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="sc" from="found?.subscription || null"/>
+        <set field="renewals" from="found?.renewals || []"/>
+        <set field="accessRows" from="found?.access || []"/>
+        <set field="retryRow" from="renewals.find(row => row.retryable) || null"/>
+        <set field="contractView" from="sc ? Object.assign({}, sc, {
+                priceLine: sc.amountText + ' · ' + sc.planText + (sc.termsVersion ? ' · terms ' + sc.termsVersion : ''),
+                cancelLine: sc.cancelText ? sc.cancelText + (sc.cancelAtText ? ' · access until ' + sc.cancelAtText : '') : ''}) : null"/>
+    </actions>
+    <widgets>
+        <section name="SubscriptionMissing" condition="!sc">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Subscription not available"/>
+                    <box-body>
+                        <label type="p" text="Subscription ${contractId} is not available: it does not exist, or it is not of a store you work."/>
+                        <link url="${sharedLinks['Customers/Subscriptions']}" text="Back to subscriptions" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="SubscriptionFound" condition="sc">
+            <widgets>
+                <context record-entity="mantle.product.subscription.StoreRecurringContract" record-id="${contractId}" title="Subscription ${contractId} · ${sc.customerName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="${sc.offerName}" type="h5"/>
+                                <link url="${sharedLinks['Customers/Customer360']}" text="${sc.customerName}" link-type="anchor"
+                                        parameter-map="{customerPartyId:sc.customerPartyId}"/>
+                            </container>
+                            <label text="${[contractId, sc.storeName, sc.billingText, sc.accessText].filter(Boolean).join(' · ')}" type="p"
+                                    style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <container-dialog id="RetryRenewal" button-text="Retry renewal" icon="sym_o_replay" width="560"
+                                    title="Try renewal ${retryRow?.periodText} again" condition="sc.canRetry &amp;&amp; retryRow">
+                                <label type="p" text="Now: ${retryRow?.stateText}${retryRow?.failureText ? ' · ' + retryRow.failureText : ''} · ${retryRow?.attemptCount} attempts"/>
+                                <label type="p" style="text-caption m-muted"
+                                        text="The same renewal is charged once, with the card the customer agreed to (${sc.methodText}). Nothing is charged while a payment is still being processed."/>
+                                <form-single name="RetryRenewalForm" transition="retryRenewal"
+                                        map="{contractId:contractId, occurrenceId:retryRow?.occurrenceId, operationKey:'renew-' + ec.user.randomString(24)}">
+                                    <field name="contractId"><default-field><hidden/></default-field></field>
+                                    <field name="occurrenceId"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Retry renewal"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <container-dialog id="CancelRenewal" button-text="Cancel renewal" icon="sym_o_event_busy" width="560"
+                                    title="Cancel the renewal of ${sc.offerName}" condition="sc.canCancel">
+                                <label type="p" text="Paid through ${sc.paidThroughText}: the customer keeps access until then, and nothing more is charged. No refund is made; a refund is Accounting's."/>
+                                <form-single name="CancelRenewalForm" transition="cancelRenewal" map="{contractId:contractId, expectedRevision:sc.revision}">
+                                    <field name="contractId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Cancel renewal"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+                <label type="p" style="text-caption m-muted" condition="sc.inFlight" text="A renewal payment is being processed: cancel and retry wait until it settles."/>
+                <container-row>
+                    <row-col md="5">
+                        <container-box>
+                            <box-header title="Contract"/>
+                            <box-body>
+                                <form-single name="Contract" map="contractView">
+                                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                                    <field name="productName"><default-field title="Product"><display/></default-field></field>
+                                    <field name="priceLine"><default-field title="Plan"><display/></default-field></field>
+                                    <field name="billingText"><default-field title="Billing"><display/></default-field></field>
+                                    <field name="accessText"><default-field title="Access"><display/></default-field></field>
+                                    <field name="paidThroughText"><default-field title="Paid through"><display/></default-field></field>
+                                    <field name="nextChargeText"><default-field title="Next charge"><display/></default-field></field>
+                                    <field name="cancelLine"><default-field title="Cancelled"><display/></default-field></field>
+                                    <field name="methodText"><default-field title="Card"><display/></default-field></field>
+                                    <field name="consentText"><default-field title="Renewal consent"><display/></default-field></field>
+                                    <field name="createdText"><default-field title="Since"><display/></default-field></field>
+                                    <field name="originOrderId">
+                                        <default-field title="First order">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${originOrderId}" link-type="anchor"
+                                                    parameter-map="{orderId:originOrderId}" condition="originOrderId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="baseOrderId"><default-field title="Renewal template"><display/></default-field></field>
+                                </form-single>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="7">
+                        <container-box>
+                            <box-header title="Renewals · ${renewals.length}"/>
+                            <box-body-nopad>
+                                <form-list name="Renewals" list="renewals" skip-form="true" paginate="false">
+                                    <field name="periodText"><default-field title="Period from"><display/></default-field></field>
+                                    <field name="orderId">
+                                        <default-field title="Order">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor" style="text-mono"
+                                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                                    <field name="attemptCount" align="right"><default-field title="Attempts"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="Outcome"><display/></default-field></field>
+                                    <field name="nextRetryText"><default-field title="Next retry"><display/></default-field></field>
+                                    <field name="failureText"><default-field title="Why"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="periodText"/><field-ref name="orderId"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="nextRetryText"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No renewal yet." condition="!renewals.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Access · ${accessRows.length}"/>
+                            <box-body-nopad>
+                                <form-list name="Access" list="accessRows" skip-form="true" paginate="false">
+                                    <field name="resourceText"><default-field title="Resource"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Thru"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="orderId">
+                                        <default-field title="Paid by">
+                                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor" style="text-mono"
+                                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                                        </default-field>
+                                    </field>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="No paid term yet." condition="!accessRows.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     The header (name, stores, PASS account state) with the customer's orders, carts, returns and cases in Commerce's lists
     and Open in Customer Service; the key numbers; its account (verified email, self access), current addresses and payment
     methods (type and last four only), and its orders, carts, cases and returns in those stores, each opening Commerce's
-    detail. Order again is on a past order's OrderDetail. No password editing or impersonation; subscriptions are P12's. -->
+    detail, and (P12) its subscriptions in those stores, billing and access apart, each opening SubscriptionDetail. Order again
+    is on a past order's OrderDetail. No password editing or impersonation. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <widgets>
         <section name="CommerceCustomer" condition="appRoot == 'Commerce'">
@@ -158,6 +159,23 @@ along with this software (see the LICENSE.md file). If not, see
                                             <field name="statusText"><default-field title="Status"><display/></default-field></field>
                                         </form-list>
                                         <label type="p" style="m-muted q-pa-sm q-mb-none" text="No return." condition="!commerceCustomer.returns.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Subscriptions · ${(commerceCustomer.subscriptions || []).length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceCustomerSubscriptions" list="commerceCustomer.subscriptions" skip-form="true" paginate="false">
+                                            <field name="contractId">
+                                                <default-field title="Subscription">
+                                                    <link url="${sharedLinks['Customers/SubscriptionDetail']}" text="${productName}" link-type="anchor"
+                                                            parameter-map="{contractId:contractId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="billingText"><default-field title="Billing"><display/></default-field></field>
+                                            <field name="accessText"><default-field title="Access"><display/></default-field></field>
+                                            <field name="paidThroughText"><default-field title="Paid through"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No subscription." condition="!(commerceCustomer.subscriptions || []).length"/>
                                     </box-body-nopad>
                                 </container-box>
                             </row-col>

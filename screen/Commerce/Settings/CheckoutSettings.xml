@@ -18,8 +18,11 @@ along with this software (see the LICENSE.md file). If not, see
     the organization's offered queues), ShippingOptions, ShippingGateways (approved ones only), LocalRates with the simulator,
     PaymentGateways (only the organization's enabled gateways), TaxDisplay with the tax preview, and (P10) RecoveryPolicy (dated
     settings: on or off, the inactivity delay, the sender, the most sends a cart, the recovery window; the PsetCartRecovery
-    binding shown, edited with StoreDetail's emails) with the checkout's optional emails and news list (F118). RecurringPolicy
-    is P12's. The store is checked by ironstone.commerce.ContextServices.check#Record, then read and saved through
+    binding shown, edited with StoreDetail's emails) with the checkout's optional emails and news list (F118), and (P12)
+    RecurringPolicy (the store's subscription offers through mantle.product.ShopSubscriptionServices.store#RecurringOffer: a
+    paid-access product's fixed plan, automatic renewal only with an off-session gateway, retry days, terms version; a change
+    ends the offer and starts the next, so contracts keep what they accepted; the renewal notices shown; the site's
+    subscription address kept by the offer, an outside one named by readiness). The store is checked by ironstone.commerce.ContextServices.check#Record, then read and saved through
     mantle.product.StoreAdminServices (COMMERCE_VIEW reads, COMMERCE_STORE_EDIT changes, the store's scope). The carriers,
     payment methods and tax authorities the choices come from are their owners' editors (F6): linked for a user who may open
     them (ContextServices.get#OwnerLinks), never mounted. -->
@@ -129,6 +132,18 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
 
+    <transition name="saveOffer">
+        <actions>
+            <service-call name="mantle.product.ShopSubscriptionServices.store#RecurringOffer" out-map="saved"
+                    in-map="{productStoreId:productStoreId, offerId:(offerId || null), productId:(productId || null), offerName:(offerName ?? null),
+                        priceAmount:(priceAmount || null), autoRenew:(autoRenew || null), termsVersion:(termsVersion ?? null),
+                        retryDays:(retryDays || null), fromDate:(fromDate || null), ended:(ended || null), expectedRevision:(expectedRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${ended == 'Y' ? 'Ended' : 'Saved'} the subscription offer</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
     <actions>
         <set field="can" from="commerce.capabilities"/>
         <set field="productStoreId" from="productStoreId || (commerce.storeOptions || [])[0]?.value || null"/>
@@ -213,6 +228,15 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="recoveryView" from="recoveryOut?.view || {}"/>
             <set field="recoveryValues" from="Object.assign({productStoreId:productStoreId, changeReason:''}, recoveryOut?.values || {})"/>
+            <!-- P12: RecurringPolicy, the store's subscription offers -->
+            <service-call name="mantle.product.ShopSubscriptionServices.find#RecurringOffers" out-map="recurring" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="offers" from="(recurring?.offers || []).map((row) =&gt; Object.assign({}, row, {productStoreId:productStoreId}))"/>
+            <set field="offerProducts" from="recurring?.productOptions || []"/>
+            <set field="newOfferValues" from="{productStoreId:productStoreId, autoRenew:(recurring?.offSession ? 'Y' : 'N'), termsVersion:'1', retryDays:'1,3,7'}"/>
+            <set field="recurringView" from="{offSessionText:(recurring?.offSession ? 'Yes: a kept card is charged for renewals' : 'No: only prepaid terms can be offered'),
+                    retryNoticeText:recurring?.retryNoticeText, renewalNoticeText:recurring?.renewalNoticeText, readinessText:recurring?.readinessText}"/>
         </if>
     </actions>
 
@@ -734,6 +758,80 @@ along with this software (see the LICENSE.md file). If not, see
                     <label type="p" style="text-caption m-muted q-mb-none"
                             text="Only a signed-in customer who turned on this store's cart reminders, with a verified email, is reminded; a guest's cart never is. One reminder per visit to the cart, and none once it checks out."/>
                 </box-body>
+            </container-box>
+
+            <!-- RecurringPolicy (P12): the store's subscription offers -->
+            <container-box>
+                <box-header title="Subscription offers · ${offers.length}"/>
+                <box-toolbar>
+                    <container-dialog id="NewOffer" button-text="New offer" icon="sym_o_add" width="640" title="Offer a subscription"
+                            condition="canEdit &amp;&amp; offerProducts.length">
+                        <form-single name="NewOfferForm" transition="saveOffer" map="newOfferValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="productId"><default-field title="Paid-access product" tooltip="A product of the assortment that grants paid access (Product360's Paid access)">
+                                <drop-down allow-empty="false"><list-options list="offerProducts" key="${value}" text="${label}"/></drop-down></default-field></field>
+                            <field name="offerName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                            <field name="priceAmount"><default-field title="Price" tooltip="The product's catalog price: a buyer is refused an offer that differs"><text-line size="10"/></default-field></field>
+                            <field name="autoRenew"><default-field title="Renewal">
+                                <drop-down allow-empty="false"><option key="Y" text="Renews automatically (needs consent and an off-session gateway)"/><option key="N" text="Prepaid term, renewed by buying again"/></drop-down>
+                            </default-field></field>
+                            <field name="termsVersion"><default-field title="Terms version"><text-line size="8"/></default-field></field>
+                            <field name="retryDays"><default-field title="Retry days" tooltip="Days after a failed renewal charge it is tried again, in order"><text-line size="10"/></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Save offer"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body>
+                    <form-single name="RecurringPolicyView" map="recurringView">
+                        <field name="offSessionText"><default-field title="Renews a kept card"><display/></default-field></field>
+                        <field name="retryNoticeText"><default-field title="Payment retry email" tooltip="The store's Payment Retry email, set in the store's emails"><display/></default-field></field>
+                        <field name="renewalNoticeText"><default-field title="Renewal email" tooltip="The store's Subscription Renewal email, set in the store's emails"><display/></default-field></field>
+                        <field name="readinessText"><default-field title="Subscription address"><display/></default-field></field>
+                    </form-single>
+                </box-body>
+                <box-body-nopad>
+                    <form-list name="Offers" list="offers" skip-form="true" paginate="false">
+                        <field name="offerName"><default-field title="Offer"><display text="${offerName} · ${productName}"/></default-field></field>
+                        <field name="priceText"><default-field title="Price"><display text="${priceText} every ${termText}"/></default-field></field>
+                        <field name="renewText"><default-field title="Renewal"><display/></default-field></field>
+                        <field name="retryDays"><default-field title="Retry days"><display/></default-field></field>
+                        <field name="termsVersion"><default-field title="Terms"><display/></default-field></field>
+                        <field name="fromText"><default-field title="From"><display text="${fromText}${thruText ? ' to ' + thruText : ''}"/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="ChangeOffer_${offerId}" button-text="Change" icon="sym_o_edit" width="560"
+                                        title="Change ${offerName}: a new offer starts, contracts keep theirs" condition="canEdit &amp;&amp; current">
+                                    <form-single name="ChangeOfferForm_${offerId}" transition="saveOffer"
+                                            map="{productStoreId:productStoreId, offerId:offerId, expectedRevision:revision, offerName:offerName,
+                                                priceAmount:priceAmount, autoRenew:autoRenew, termsVersion:termsVersion, retryDays:retryDays}">
+                                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="offerId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="offerName"><default-field title="Name"><text-line size="30"/></default-field></field>
+                                        <field name="priceAmount"><default-field title="Price"><text-line size="10"/></default-field></field>
+                                        <field name="autoRenew"><default-field title="Renewal">
+                                            <drop-down allow-empty="false"><option key="Y" text="Renews automatically"/><option key="N" text="Prepaid term"/></drop-down>
+                                        </default-field></field>
+                                        <field name="termsVersion"><default-field title="Terms version"><text-line size="8"/></default-field></field>
+                                        <field name="retryDays"><default-field title="Retry days"><text-line size="10"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Save offer"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                                <link url="saveOffer" text="End" link-type="hidden-form" btn-type="danger" icon="sym_o_block" condition="canEdit &amp;&amp; current"
+                                        confirmation="End ${offerName}? No one can subscribe to it; current subscriptions keep renewing on their accepted terms."
+                                        parameter-map="{productStoreId:productStoreId, offerId:offerId, expectedRevision:revision, ended:'Y'}"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="offerName"/><field-ref name="priceText"/></column>
+                            <column><field-ref name="renewText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!offers.length" text="No subscription offer: Shop sells paid access only as prepaid purchases."/>
+                    <label type="p" style="q-pa-md m-muted" condition="canEdit &amp;&amp; !offerProducts.length"
+                            text="No product of this store's assortment grants paid access yet: bind one in Product360's Paid access."/>
+                </box-body-nopad>
             </container-box>
         </widgets></section>
     </widgets>
