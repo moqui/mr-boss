@@ -13,14 +13,17 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Customers area of IronStone Commerce (design-commerce §6 Customers, Subscriptions, Requests; impl-commerce P8, P12):
-    the customers of a store (the default) and its customer cases, for the store and subscription operators
-    (BOSS_COM_ORDERS). Each list reads mantle.order.StoreOperationsServices (COMMERCE_ORDER_VIEW and the store scope);
-    Customer360 and RequestDetail are the shared screens in Commerce's context, opened from rows. Subscriptions are P12's. -->
+    the customers of a store (the default), its recurring contracts (P12) and its customer cases, for the store and
+    subscription operators (BOSS_COM_ORDERS). Each list reads mantle.order.StoreOperationsServices or, for subscriptions,
+    mantle.product.ShopSubscriptionServices' staff part (COMMERCE_ORDER_VIEW and the store scope); Customer360 and
+    RequestDetail are the shared screens in Commerce's context, SubscriptionDetail Commerce's own, opened from rows. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Customers" default-menu-index="6" menu-image="sym_o_group" menu-image-type="icon">
     <subscreens default-item="Customers" always-use-full-path="true">
         <subscreens-item name="Customers" location="component://mr-boss/screen/Commerce/Customers/Customers.xml" menu-title="Customers" menu-index="1"/>
+        <subscreens-item name="Subscriptions" location="component://mr-boss/screen/Commerce/Customers/Subscriptions.xml" menu-title="Subscriptions" menu-index="2"/>
         <subscreens-item name="Requests" location="component://mr-boss/screen/Commerce/Customers/Requests.xml" menu-title="Requests" menu-index="3"/>
+        <subscreens-item name="SubscriptionDetail" location="component://mr-boss/screen/Commerce/Customers/SubscriptionDetail.xml" menu-include="false"/>
         <subscreens-item name="Customer360" location="component://mr-boss/screen/Shared/Customer360.xml" menu-include="false"/>
         <subscreens-item name="RequestDetail" location="component://mr-boss/screen/Shared/RequestDetail.xml" menu-include="false"/>
     </subscreens>

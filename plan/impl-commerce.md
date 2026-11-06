@@ -274,7 +274,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026; follow-up (review requests topic, checkout opt-ins) built Nov 6 |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | built Nov 6, 2026 |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | built Nov 6, 2026 |
-| P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
+| P12 Paid access and subscriptions | Mantle, mr-pass, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | built Nov 6, 2026 |
 | P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | — |
 | P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | — |
 | P15 Finish | BOSS | — | — |
@@ -2635,6 +2635,149 @@ Shop P7's records and coordinator. Ends stage C3/S3.
 - **Usable when** (design §12.2 scenarios 11 and 14): a subscription operator cancels a contract's renewal and the paid
   term stays; a retry resumes the failed occurrence and makes no second charge; a refund of one paid-access item revokes
   that source grant only.
+
+**Built Nov 6 (P12)** (branch `com/p12`).
+- Mantle:
+  - `service/mantle/product/StoreSubscriptions.js` (new) and its services appended to `ShopSubscriptionServices.xml` (R):
+    `find#StoreSubscriptions` (the store optional; by customer, product, resource, contract state and next renewal; billing
+    and access apart, the latest renewal's outcome; at most 500 candidates, `truncated`), `get#StoreSubscription`
+    (Contract, Renewals, Access; the method as type and last four, the consent recorded or why not; no evidence, provider
+    profile or gateway), `cancel#RecurringContract` (at the revision, STALE_REVISION naming the current one; the paid term
+    kept; RENEWAL_IN_PROGRESS while a payment is in flight), `retry#Renewal` (a PostingOperation `StoreRenewalRetry`: a
+    double submit answers the first result; PAYMENT_UNRESOLVED while a payment is in flight, CONSENT_REQUIRED, NOTHING_TO_RETRY,
+    NOT_RENEWING; then the coordinator's reopen and resume of that occurrence, each step in its own transaction, the call
+    holding no lock), `get#ProductPaidAccess` (PRODUCT_CATALOG_VIEW or COMMERCE_VIEW; the rows with each resource's handler
+    services read only, canEdit, the installed resources), `store#ProductSubscriptionResource` (add, change: the row in effect
+    ended and its successor started, a row not yet started changed in place; end; RESOURCE_UNAVAILABLE for a resource whose
+    init or any named handler is not an installed service, RESOURCE_BOUND, SUBSCRIPTIONS_LIVE naming the count) and
+    `find#RecurringOffers` (RecurringPolicy's read: offers, off-session capability, the two notice emails, the subscriptions
+    readiness, the paid-access products of the assortment). Reads COMMERCE_ORDER_VIEW or COMMERCE_SUBSCRIPTION_MANAGE, actions
+    COMMERCE_SUBSCRIPTION_MANAGE, every one COMMERCE_VIEW and StoreAdmin.js' store scope (RECORD_UNAVAILABLE outside it; a
+    product is the user's when it is in the assortment of one of their stores).
+  - `ShopSubscriptions.js`: `stopRenewal` (cancel's core, now shared by cancel#Subscription, the staff cancel and the refund
+    rule); Shop F112: `revokeLine` ends an automatic contract's renewal when the refund drops its paid-through (cancel-at the
+    new paid-through, waiting occurrences closed, the base unscheduled; a renewal whose payment is in flight is left to
+    settle); Shop F113: `run#Renewals` also claims each active contract whose renewal is due and whose period has no
+    occurrence (`claimDue`, the one claim of `dispatch#Renewal`: the contract's lock and unique period, so the nightly
+    hand-off and the job make one occurrence); `resumeWaiting` takes one occurrence; the staff module's helpers exported.
+  - `ShopCustomer.js` (Shop F114): a card's end bumps each renewing contract's revision as it clears the consent.
+  - `StoreOperations.js`: `get#StoreCustomer`'s subscriptions (Customer360) from StoreSubscriptions.js, failing alone.
+- BOSS:
+  - `screen/Commerce/Customers.xml`: Subscriptions (menu) and SubscriptionDetail (hidden);
+    `Customers/Subscriptions.xml` (SubscriptionFind, the list with billing and access chips) and
+    `Customers/SubscriptionDetail.xml` (Contract, Renewals, Access; CancelRenewal at the revision shown, RetryRenewal with
+    its operation key, each only when the service says it may, and a note while a payment is in flight).
+  - `screen/Shared/Product360/PaidAccess.xml` (PaidAccess with Add access, Change and End in Commerce; handlers read only;
+    ResourceUse in Commerce) and its `subscreens-item` in Shared/Product360.xml; SharedContext.js gives Commerce the
+    `PaidAccess` tab and the SubscriptionDetail link, and Products the tab read only (shown for a digital product).
+  - `Settings/CheckoutSettings.xml`: Subscription offers (RecurringPolicy): New offer, Change, End through
+    `store#RecurringOffer`, the off-session capability, the notice emails and the subscription address's readiness.
+  - `template/CommerceCustomer360.xml`: the customer's subscriptions; Commerce.js `linkPaths` gains the two screens.
+- Specs (all `--nobuild`):
+  - Mantle `test/product/ShopSubscriptions` (11 features, 4.4 s; P12's 4 new features 1.46 s: the hourly job claims a due
+    renewal, one occurrence and one declined charge with the nightly hand-off at once (F113), then the staff retry: refused
+    while a payment is unresolved and for the reader, one charge, the same key answering alreadyApplied, NOTHING_TO_RETRY
+    after; a refund of the latest term ends the renewal at the new paid-through and nothing is claimed again (F112); staff
+    reads with the method masked (no CIM id, evidence or card number in the answer), the reader lists, another
+    organization's operator and a store-limited member of the other store refused, a card's end bumping the revision (F114),
+    the stale revision and the reader refused, the cancel keeping the paid term and unscheduling the base; paid access:
+    installed resources only, RESOURCE_BOUND, a change starting a successor with existing subscriptions unchanged, the end
+    refused SUBSCRIPTIONS_LIVE naming 5, Products' reader read only, the reader and the other organization refused).
+  - BOSS `test/Commerce/CommerceSubscriptions` (2 features, 0.92 s: the operator's store-scoped list and detail, the retry
+    refused PAYMENT_UNRESOLVED and the cancel RENEWAL_IN_PROGRESS while a payment is with the provider, the reader
+    PERMISSION_DENIED, another organization's contract RECORD_UNAVAILABLE, the Services manager's retry PERMISSION_DENIED;
+    the pane's handlers read only for the Services manager (no editor, no resources offered) and the Retail operator
+    refused editing Services' product; Product360's Paid access tab and SubscriptionDetail each rendered once in qvt).
+  - Also run, all pass: Mantle ShopCustomer, StoreOperations, StoreFulfillment, DunningRenewalExclusion,
+    PaymentAttemptPurpose, Subscriptions, StoreAdmin, ShopCheckout (36); BOSS CommerceCheckoutSettings (its CheckoutSettings
+    render now with RecurringPolicy), CommerceOrders, CommerceAccess, CommerceAssortment, CommerceStores, CommerceReports,
+    CommerceRecovery, ProductsSharedContext, ProductsAccess, ProductsTools (59). Not run: `./moq test-apps` and the budget
+    measure; the new feature time (Mantle about 1.5 s, BOSS 0.9 s) fits both budgets (365.8 + 1.5 of 383 s, 246.4 + 0.9 of
+    264 s), so no raise is asked.
+- Acceptance (usable when, design §12.2 scenarios 11 and 14): mr-pass `acceptance/ShopSubscriptionsInCommerce` (4 features
+  on ZIZI_DIGITAL's demo offer, as ShopOrdersInCommerce needs mr-boss and ignores every feature without it; a spec-local
+  subscription operator of Ziziwork Services, as the demo one works Retail): a verified buyer subscribes and the operator
+  finds the contract, with Subscriptions, SubscriptionDetail and Customer360 opening for the operator in qvt; a declined
+  renewal started by the hourly job is retried by the operator, one charge, the same key answering alreadyApplied; the
+  operator cancels and the paid term stays; a refund of the first term revokes that source grant only (the renewed term's
+  grant stays). `./moq accept mr-pass --spec ShopFixtures,ShopSubscriptionsInCommerce`: 7 of 7. Then `./moq accept mr-pass` once: server suite 40 features, 37 passed, 3 ignored (as before), 0 failed; client suite 41 of 41.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new or changed screens.
+- Inventories: no ss-inventory or usl-inventory row is designed for P12's screens (the staff services are new; the
+  SubscriptionServices rows have no Commerce design path), so none changed.
+- Design: design-commerce §2 (SubscriptionDetail's flat path), §4, §6 and §8 as-built notes; design-shop §10.2's as-built
+  note (F112–F114).
+- Decisions:
+  - Shop F112 (the lead's decision): a refund of an automatic contract's latest term (its paid-through drops) ends the
+    renewal at the new paid-through date, waiting renewals closed and the base unscheduled; a refund of an earlier term
+    changes nothing else. The buyer starts again by subscribing (a new contract with its own consent); no staff restart is
+    built, since staff never enter a card and the old consent belonged to the refunded term's contract.
+  - Shop F113: the hourly job claims only active contracts whose period has no occurrence (a past-due one already has its
+    period's), so an exhausted renewal never fills the job's batch.
+  - retry#Renewal needs a recorded consent and refuses while any renewal payment is in flight or placed (the job looks it
+    up); its operation is recorded only once it ran, so a refused retry may be sent again with the same key.
+  - Paid access: a product is the user's when it is in the assortment of one of their stores (so a store-limited member
+    edits only their stores' products); a change ends the row in effect at once (later purchases take the new terms).
+    Products shows the tab only for a digital product.
+  - Subscriptions is a Customers tab, SubscriptionDetail flat beside it, as P8's details are.
+  - The P12 acceptance lives in mr-pass beside the Shop subscription scenarios, as P8's did (F106).
+  - Shop F107 left for P15: binding the demo's access to a Forum paid category needs a Forum mount on ZIZI_DIGITAL (which
+    changes CommerceFoundationWalk's expected mounts), a category made through the Forum's staff services on a site with no
+    owner, `qualifyingSources` for subscriptions, the buyer's site membership and ShopSubscriptionScenarios' grant
+    assertions; none of it is P12's rule work, and the site-bound grant already proves the source-bound revocation.
+  - Shop F111's Commerce part is P12's editors (built); its ProductDetail subscribe action and trusted Vue enhancement are
+    Shop's, Insights' exclusions Insights'.
+  - No upstream fix: F112–F114 are Shop P7's own code.
+- Findings (provisional):
+  - **F-P12-1** A refund of a contract's latest term while a renewal payment is already with the provider leaves that
+    renewal to settle: it activates and the contract's cancel-at moves to its end, so a refunded buyer can be charged once
+    more in that window. Closing it needs the refund to wait for or void the in-flight attempt (Accounting's coordinator).
+  - **F-P12-2** `find#StoreSubscriptions` lists store contracts only; the storeless Subscription rows of native sales orders
+    for Sales' mount (design §6's Sales context) wait for Sales.
+  - **F-P12-3** PASS SiteDetail's subscription binding is on each site's own host, not a BOSS route, so the Paid access pane
+    names it instead of linking it.
+  - **F-P12-4** Shop F114's second half stays: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal,
+    allow-remote false), as the P7 review noted.
+
+**Review Nov 6 (P12)** (branch `com/p12`). Checked against the phase, design-commerce §4/§6/§8 and impl-commerce §2: the
+money paths (`retry#Renewal` through Shop P7's reopen and advance only, its PostingOperation answering a double submit,
+PAYMENT_UNRESOLVED while a payment is with the provider, the coordinator's one charge per attempt; cancel at the revision,
+the paid term kept, RENEWAL_IN_PROGRESS in flight; the shared `stopRenewal` taking the contract then its occurrences as the
+steps do); F112 (refund), F113 (`claimDue` is the one claim, under the contract's lock and unique period) and F114; the
+store scope and permissions of every new service, forged contract and product ids, Customer360's subscriptions (behind
+get#StoreCustomer's COMMERCE_ORDER_VIEW); restricted values (the method as type and last four; no CIM id, evidence or
+gateway); the paid-access editor (installed handlers only, successor rows, SUBSCRIPTIONS_LIVE; `activate` and the existing
+ProductSubscriptionResource callers unchanged); no `valueOf` or float money in the new JS or screens; the Built note.
+- **R1 (high, money)** F112 missed a refund of a past-due contract's only term: with every term revoked the paid-through
+  moves to now, which is after the old paid-through, so the contract was not seen as dropped and kept renewing; the nightly
+  hand-off then claimed a new period from the refund's time (a second charge of a refunded buyer) besides the waiting retry.
+  `revokeLine` now counts any drop of what is still paid (nothing paid included). Spec: ShopSubscriptions "P12 review:
+  refunding a past-due contract's only term ends its renewal; no new period is claimed (R1)" (fails without the fix).
+- **R2 (medium, scope)** A product's paid access is the product's own, so a store-limited member (or another
+  organization's operator) whose store also sells a product could change what another store's later buyers get.
+  `productOf` now needs the product sold (current or coming, not excluded) only in stores the user works: PRODUCT_SHARED
+  otherwise; get#ProductPaidAccess's canEdit follows. Spec: "P12 review: a product also sold in a store outside the user's
+  scope is not theirs to edit (R2)".
+- **R3 (low)** `store#ProductSubscriptionResource` with ended or change and no row failed with a script error (a null row);
+  now RECORD_UNAVAILABLE (in the R2 feature).
+- **R4 (medium, data)** PaidAccess's Change form posted only the access time and use limit and time: the successor row lost
+  its thru date, sold-from/thru window and use role, and a change with a use time failed (its unit was never posted). The
+  form now carries every term of the row. Checked by a one-off editor render (Commerce admin, qvt, no errors), not kept:
+  the pane already renders once in CommerceSubscriptions.
+- **R5 (low)** A change read the time twice, ending the row in effect and starting its successor a moment apart (a purchase
+  in between found no paid access; the worker's paid-access feature failed about one run in six); one instant now.
+- F-P12-1 re-checked and kept (not contained): once the provider approves a renewal asked before the refund, `applyStep`
+  places it and `activate` gives that paid term (cancel-at moves to its end; nothing renews after). The buyer pays once more
+  and gets the term paid for; stopping it needs a release (authorized) or refund (captured) of that payment from the
+  coordinator, a gateway call outside the step's locks: Accounting's.
+- Specs (`--nobuild`): Mantle ShopSubscriptions 13/13, five runs in a row (the review features 0.06 s and 0.15 s) with ShopCustomer,
+  StoreOperations, StoreFulfillment, DunningRenewalExclusion, PaymentAttemptPurpose, Subscriptions, StoreAdmin, ShopCheckout:
+  49/49; BOSS CommerceSubscriptions, CommerceCheckoutSettings, CommerceOrders, CommerceAccess, ProductsSharedContext,
+  ProductsAccess 30/30; PASS ShopSubscriptions, ShopAccess 6/6. Acceptance not rerun (unchanged).
+- For the lead: F-P12-1 as above; `run#Renewals`' due-contract batch is limited before contracts whose period already has an
+  occurrence are filtered out, so more than `limits.batch` active contracts with a renewal in flight (held placements) would
+  starve newly due ones until the nightly hand-off (low; filter in the query or page past them); a concurrent double submit
+  of one retry key runs the coordinator twice (still one charge) and the second answers a duplicate-key error rather than
+  alreadyApplied, as every `lib.operation` caller does.
 
 ### P13 — Integrations and channel import
 

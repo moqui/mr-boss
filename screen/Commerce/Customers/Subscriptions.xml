@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Subscriptions (design-commerce §6 Subscriptions; style-guide §3.2 List; impl-commerce P12, COM-SUBSCRIPTION):
+    SubscriptionFind (store, customer, product, resource, state, next renewal period) and the recurring contracts of the
+    user's stores (mantle.product.ShopSubscriptionServices.find#StoreSubscriptions: COMMERCE_ORDER_VIEW and the store scope),
+    each with its customer, plan, paid-through, next charge and amount, billing and access as separate badges, and the
+    latest renewal's outcome. A contract's recurring base is its schedule, never an order here. A row opens
+    SubscriptionDetail, where a subscription operator cancels or retries. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Subscriptions" default-menu-index="2">
+    <parameter name="productStoreId"/>
+    <parameter name="customerPartyId"/>
+    <parameter name="productId"/>
+    <parameter name="subscriptionResourceId"/>
+    <parameter name="stateEnumId"/>
+    <parameter name="renewalFromDate"/>
+    <parameter name="renewalThruDate"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.product.ShopSubscriptionServices.find#StoreSubscriptions" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), customerPartyId:(customerPartyId || null), productId:(productId || null),
+                    subscriptionResourceId:(subscriptionResourceId || null), stateEnumId:(stateEnumId || null),
+                    renewalFromDate:(renewalFromDate || null), renewalThruDate:(renewalThruDate || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="subscriptions" from="found?.subscriptions || []"/>
+        <set field="subscriptionsCount" from="found?.subscriptionsCount || 0"/>
+        <set field="subscriptionsPageIndex" from="found?.subscriptionsPageIndex || 0"/>
+        <set field="subscriptionsPageSize" from="found?.subscriptionsPageSize || 20"/>
+        <set field="subscriptionsPageMaxIndex" from="found?.subscriptionsPageMaxIndex || 0"/>
+        <set field="subscriptionsPageRangeLow" from="found?.subscriptionsPageRangeLow || 0"/>
+        <set field="subscriptionsPageRangeHigh" from="found?.subscriptionsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || customerPartyId || productId || subscriptionResourceId || stateEnumId || renewalFromDate || renewalThruDate)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, customerPartyId:customerPartyId, productId:productId,
+                subscriptionResourceId:subscriptionResourceId, stateEnumId:stateEnumId, renewalFromDate:renewalFromDate, renewalThruDate:renewalThruDate}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Subscriptions" type="h5"/></container>
+        </container>
+        <form-single name="SubscriptionFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="customerPartyId"><default-field title="Customer ID"><text-line size="14"/></default-field></field>
+            <field name="productId"><default-field title="Product ID"><text-line size="14"/></default-field></field>
+            <field name="subscriptionResourceId"><default-field title="Resource ID"><text-line size="14"/></default-field></field>
+            <field name="stateEnumId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="StoreContractState"/>
+                                <order-by field-name="sequenceNum"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="renewalFromDate"><default-field title="Renews from"><date-time type="date"/></default-field></field>
+            <field name="renewalThruDate"><default-field title="Renews before"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="stateEnumId"/>
+                    <field-ref name="customerPartyId"/>
+                    <field-ref name="productId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+                <field-row-big>
+                    <field-ref name="subscriptionResourceId"/>
+                    <field-ref name="renewalFromDate"/>
+                    <field-ref name="renewalThruDate"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <label type="p" style="text-caption m-muted" condition="found?.truncated" text="Only the newest 500 contracts are listed; narrow the find."/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SubscriptionList" list="subscriptions" skip-form="true">
+                    <field name="contractId">
+                        <default-field title="Contract">
+                            <link url="${sharedLinks['Customers/SubscriptionDetail']}" text="${contractId}" link-type="anchor"
+                                    style="text-mono" parameter-map="{contractId:contractId}"/>
+                        </default-field>
+                    </field>
+                    <field name="customerName">
+                        <default-field title="Customer">
+                            <link url="${sharedLinks['Customers/Customer360']}" text="${customerName}" link-type="anchor"
+                                    parameter-map="{customerPartyId:customerPartyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productName"><default-field title="Product"><display text="${productName} · ${planText}"/></default-field></field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="paidThroughText"><default-field title="Paid through"><display/></default-field></field>
+                    <field name="nextChargeText"><default-field title="Next charge"><display text="${nextChargeText ? nextChargeText + ' · ' + amountText : '—'}"/></default-field></field>
+                    <field name="billingText">
+                        <default-field title="Billing">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${actionNeeded || billingState == 'ScsPastDue' ? 'negative' : billingState == 'ScsActive' ? 'positive' : 'grey-8'}">${
+                                    WebUtilities.encodeHtml(billingText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: billingText})}]]></text>
+                                <text type="html">${billingText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="accessText">
+                        <default-field title="Access">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${hasAccess ? 'positive' : 'grey-8'}">${
+                                    WebUtilities.encodeHtml(accessText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: accessText})}]]></text>
+                                <text type="html">${accessText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <field name="outcomeText"><default-field title="Last renewal"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="contractId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="billingText"/><field-ref name="accessText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!subscriptions.length &amp;&amp; filtered" text="No subscription matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!subscriptions.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No customer has subscribed in your stores yet."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

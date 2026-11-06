@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Product360's Paid access tab (design-commerce §4 Product360 paid access, X16; impl-commerce P12, COM-SUBSCRIPTION): what
+    a purchase of the product grants (PaidAccess: its ProductSubscriptionResource rows, each resource's handler services
+    read only, mantle.product.ShopSubscriptionServices.get#ProductPaidAccess) and, in Commerce, who holds access from it
+    (ResourceUse: the contracts of the user's stores for the product, find#StoreSubscriptions, billing and access apart).
+    Commerce is the one editor (store#ProductSubscriptionResource, COMMERCE_SUBSCRIPTION_MANAGE for a product of the user's
+    stores): Add access, Change (the row in effect ends and its successor starts, so later purchases take it) and End
+    (refused while live subscriptions use it, naming the count); only resources whose handlers their component installed.
+    Products shows the rows read only. A site's or Forum category's resource is bound by the site operator in PASS
+    SiteDetail's subscription binding, never here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Paid access" default-menu-index="21">
+    <condition>
+        <!-- Products shows it for a digital product only (the one kind Shop sells as paid access) -->
+        <expression>Array.isArray(product360Tabs) &amp;&amp; product360Tabs.includes('PaidAccess') &amp;&amp; (appRoot == 'Commerce' || product?.productTypeEnumId == 'PtDigital')</expression>
+    </condition>
+    <transition name="savePaidAccess">
+        <actions>
+            <service-call name="mantle.product.ShopSubscriptionServices.store#ProductSubscriptionResource"
+                    in-map="{productId:productId, subscriptionResourceId:subscriptionResourceId, fromDate:(fromDate || null),
+                        newFromDate:(newFromDate || null), change:(change || null), ended:(ended || null), thruDate:(thruDate || null),
+                        purchaseFromDate:(purchaseFromDate || null), purchaseThruDate:(purchaseThruDate || null),
+                        availableTime:(availableTime || null), availableTimeUomId:(availableTimeUomId || null),
+                        useCountLimit:(useCountLimit || null), useTime:(useTime || null), useTimeUomId:(useTimeUomId || null),
+                        useRoleTypeId:(useRoleTypeId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${ended == 'Y' ? 'Ended' : 'Saved'} the paid access; later purchases take it</message></if>
+        </actions>
+        <default-response url="."><parameter name="productId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.ShopSubscriptionServices.get#ProductPaidAccess" in-map="{productId:productId}" out-map="paid"
+                transaction="force-new" ignore-error="true"/>
+        <set field="paidFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="paidTerms" from="paid?.terms || []"/>
+        <set field="paidEdit" from="appRoot == 'Commerce' &amp;&amp; !!paid?.canEdit"/>
+        <set field="resourceOptions" from="paid?.resourceOptions || []"/>
+        <if condition="appRoot == 'Commerce'">
+            <service-call name="mantle.product.ShopSubscriptionServices.find#StoreSubscriptions" in-map="{productId:productId, pageSize:20}"
+                    out-map="usage" transaction="force-new" ignore-error="true"/>
+            <set field="usageFailure" from="ec.message.hasError()"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="usageRows" from="usage?.subscriptions || []"/>
+    </actions>
+    <widgets>
+        <label type="p" style="text-negative" condition="paidFailure" text="Paid access is not available: ${paidFailure}"/>
+        <container-box>
+            <box-header title="Paid access · ${paidTerms.length}"/>
+            <box-toolbar>
+                <container-dialog id="AddPaidAccess" button-text="Add access" icon="sym_o_add" width="640" title="Grant paid access with ${paid?.productName}"
+                        condition="paidEdit">
+                    <form-single name="AddPaidAccessForm" transition="savePaidAccess" map="{productId:productId, availableTime:1, availableTimeUomId:'TF_mon'}">
+                        <field name="productId"><default-field><hidden/></default-field></field>
+                        <field name="subscriptionResourceId">
+                            <default-field title="Resource" tooltip="Only resources whose handlers their component installed">
+                                <drop-down allow-empty="false"><list-options list="resourceOptions" key="${value}" text="${label}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="availableTime"><default-field title="Access time"><text-line size="4"/></default-field></field>
+                        <field name="availableTimeUomId">
+                            <default-field title="Unit">
+                                <drop-down allow-empty="false">
+                                    <option key="TF_day" text="Days"/><option key="TF_wk" text="Weeks"/><option key="TF_mon" text="Months"/><option key="TF_yr" text="Years"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="newFromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                        <field name="thruDate"><default-field title="Thru"><date-time/></default-field></field>
+                        <field name="purchaseFromDate"><default-field title="Sold from"><date-time/></default-field></field>
+                        <field name="purchaseThruDate"><default-field title="Sold thru"><date-time/></default-field></field>
+                        <field name="useCountLimit"><default-field title="Use limit"><text-line size="4"/></default-field></field>
+                        <field name="useTime"><default-field title="Use time"><text-line size="4"/></default-field></field>
+                        <field name="useTimeUomId">
+                            <default-field title="Use time unit">
+                                <drop-down allow-empty="true">
+                                    <option key="TF_hr" text="Hours"/><option key="TF_day" text="Days"/><option key="TF_wk" text="Weeks"/><option key="TF_mon" text="Months"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="useRoleTypeId"><default-field title="Used by role" tooltip="Empty: the buyer"><text-line size="16"/></default-field></field>
+                        <field name="submitButton"><default-field title="Add access"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </box-toolbar>
+            <box-body-nopad>
+                <form-list name="PaidAccess" list="paidTerms" skip-form="true" paginate="false">
+                    <field name="resourceText"><default-field title="Resource"><display/></default-field></field>
+                    <field name="availableText"><default-field title="Access time"><display/></default-field></field>
+                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruText"><default-field title="Thru"><display/></default-field></field>
+                    <field name="purchaseText"><default-field title="Sold"><display/></default-field></field>
+                    <field name="useText"><default-field title="Use"><display/></default-field></field>
+                    <field name="handlersText"><default-field title="Handlers (read only)"><display style="text-caption text-mono"/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="ChangePaidAccess_${subscriptionResourceId}_${fromDate}" button-text="Change" icon="sym_o_edit" width="560"
+                                    title="Change ${resourceText} for later purchases" condition="paidEdit &amp;&amp; current">
+                                <form-single name="ChangePaidAccessForm_${subscriptionResourceId}_${fromDate}" transition="savePaidAccess"
+                                        map="{productId:productId, subscriptionResourceId:subscriptionResourceId, fromDate:fromDate, change:'Y',
+                                            availableTime:values.availableTime, availableTimeUomId:values.availableTimeUomId,
+                                            useCountLimit:values.useCountLimit, useTime:values.useTime, useTimeUomId:values.useTimeUomId,
+                                            thruDate:values.thruDate, purchaseFromDate:values.purchaseFromDate, purchaseThruDate:values.purchaseThruDate,
+                                            useRoleTypeId:values.useRoleTypeId}">
+                                    <field name="productId"><default-field><hidden/></default-field></field>
+                                    <field name="subscriptionResourceId"><default-field><hidden/></default-field></field>
+                                    <field name="fromDate"><default-field><hidden/></default-field></field>
+                                    <field name="change"><default-field><hidden/></default-field></field>
+                                    <field name="availableTime"><default-field title="Access time"><text-line size="4"/></default-field></field>
+                                    <field name="availableTimeUomId">
+                                        <default-field title="Unit">
+                                            <drop-down allow-empty="false">
+                                                <option key="TF_day" text="Days"/><option key="TF_wk" text="Weeks"/><option key="TF_mon" text="Months"/><option key="TF_yr" text="Years"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="useCountLimit"><default-field title="Use limit"><text-line size="4"/></default-field></field>
+                                    <field name="useTime"><default-field title="Use time"><text-line size="4"/></default-field></field>
+                                    <!-- the row's other terms carried to its successor (P12 review R4: a change left them empty) -->
+                                    <field name="useTimeUomId">
+                                        <default-field title="Use time unit">
+                                            <drop-down allow-empty="true">
+                                                <option key="TF_hr" text="Hours"/><option key="TF_day" text="Days"/><option key="TF_wk" text="Weeks"/><option key="TF_mon" text="Months"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="thruDate"><default-field title="Thru"><date-time/></default-field></field>
+                                    <field name="purchaseFromDate"><default-field title="Sold from"><date-time/></default-field></field>
+                                    <field name="purchaseThruDate"><default-field title="Sold thru"><date-time/></default-field></field>
+                                    <field name="useRoleTypeId"><default-field title="Used by role" tooltip="Empty: the buyer"><text-line size="16"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save for later purchases"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="savePaidAccess" text="End" link-type="hidden-form" btn-type="danger" icon="sym_o_block" condition="paidEdit &amp;&amp; current"
+                                    confirmation="Stop granting ${resourceText} with later purchases? Refused while live subscriptions use it."
+                                    parameter-map="{productId:productId, subscriptionResourceId:subscriptionResourceId, fromDate:fromDate, ended:'Y'}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="resourceText"/><field-ref name="availableText"/></column>
+                        <column><field-ref name="fromText"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!paidTerms.length &amp;&amp; !paidFailure" text="A purchase of this product grants no paid access."/>
+                <label type="p" style="q-pa-md text-caption m-muted q-mb-none"
+                        text="Handlers come from the component that implements a resource. A site's or Forum category's access is bound to its resource by the site operator in PASS SiteDetail's subscription binding."/>
+            </box-body-nopad>
+        </container-box>
+        <section name="ResourceUse" condition="appRoot == 'Commerce'">
+            <widgets>
+                <container-box>
+                    <box-header title="Who holds access from this product · ${usage?.subscriptionsCount || 0}"/>
+                    <box-body-nopad>
+                        <form-list name="ResourceUse" list="usageRows" skip-form="true" paginate="false">
+                            <field name="customerName">
+                                <default-field title="Subscriber">
+                                    <link url="${sharedLinks['Customers/SubscriptionDetail'] || ''}" text="${customerName}" link-type="anchor"
+                                            parameter-map="{contractId:contractId}" condition="sharedLinks['Customers/SubscriptionDetail']"/>
+                                </default-field>
+                            </field>
+                            <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                            <field name="paidThroughText"><default-field title="Paid through"><display/></default-field></field>
+                            <field name="billingText"><default-field title="Billing"><display/></default-field></field>
+                            <field name="accessText"><default-field title="Access"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="usageFailure" text="Who holds access is shown to a store or subscription operator."/>
+                        <label type="p" style="q-pa-md m-muted" condition="!usageFailure &amp;&amp; !usageRows.length" text="No one in your stores holds access from this product."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
