@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's General tab (design-commerce §3 StoreDetail General and Readiness; impl-commerce P2): Readiness, the store's
+    findings (mantle.product.StoreAdminServices.check#StoreReadiness, read only), each not ready with its fix, the tab that
+    fixes it; General, the store's channel policy (name, organization, currency, locale, channel, approval delay, tax
+    gateway, the order defaults, the email domain), saved by store#Store for a store manager with a reason for a policy
+    change (audit-logged, the History tab); and the reservation group read only, Warehouse's StoreReservation being its one
+    editor (F7, X16). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="General" default-menu-index="1">
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveStore">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#Store"
+                    in-map="{productStoreId:productStoreId, expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null), storeName:storeName,
+                        organizationPartyId:organizationPartyId, defaultCurrencyUomId:defaultCurrencyUomId, defaultLocale:defaultLocale,
+                        defaultSalesChannelEnumId:defaultSalesChannelEnumId, autoApproveDelay:autoApproveDelay,
+                        taxGatewayConfigId:taxGatewayConfigId, requireCustomerRole:requireCustomerRole,
+                        defaultDisablePromotions:defaultDisablePromotions, defaultDisableShippingCalc:defaultDisableShippingCalc,
+                        defaultDisableTaxCalc:defaultDisableTaxCalc, storeDomain:storeDomain, changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the store ${storeName}</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="generalOut" in-map="{productStoreId:productStoreId}"/>
+            <service-call name="mantle.product.StoreAdminServices.check#StoreReadiness" out-map="readyOut" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="general" from="generalOut.store"/>
+            <set field="canEdit" from="!!generalOut.canEdit"/>
+            <!-- each finding's fix: the tab of its section -->
+            <set field="fixTabs" from="{general:'General', sites:'Sites', facilities:'Facilities', emails:'Emails', settings:'Settings', staff:'Staff'}"/>
+            <set field="findings" from="(readyOut?.findings || []).map((row) =&gt; Object.assign({}, row,
+                    {stateText: row.ready ? 'Ready' : row.severity == 'warning' ? 'Check' : 'To fix',
+                     stateColor: row.ready ? 'positive' : row.severity == 'warning' ? 'warning' : 'negative',
+                     fixUrl: fixTabs[row.fix] ? storeTabUrl + fixTabs[row.fix] + '?productStoreId=' + encodeURIComponent(productStoreId) : ''}))"/>
+            <set field="generalValues" from="Object.assign({}, general, {expectedLastUpdatedStamp: general.lastUpdatedStamp, changeReason: ''})"/>
+            <set field="reservationUrl" from="'/qapps/Warehouse/Settings/ReservationPolicies/StoreReservation?productStoreId=' + encodeURIComponent(productStoreId)"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="GeneralFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Readiness"/>
+                <box-body-nopad>
+                    <form-list name="Readiness" list="findings" skip-form="true" paginate="false">
+                        <field name="label"><default-field title="Check"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="message"><default-field title="Finding"><display/></default-field></field>
+                        <field name="fixUrl">
+                            <default-field title="">
+                                <link url="${fixUrl}" url-type="plain" text="Fix" icon="sym_o_build" link-type="anchor"
+                                        condition="!ready &amp;&amp; fixUrl"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="label"/><field-ref name="message"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="fixUrl"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!findings.length" text="Readiness could not be checked."/>
+                </box-body-nopad>
+            </container-box>
+
+            <container-box>
+                <box-header title="General"/>
+                <box-body>
+                    <form-single name="StoreGeneral" transition="saveStore" map="generalValues">
+                        <field name="productStoreId"><default-field><hidden/></default-field></field>
+                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                        <field name="storeName">
+                            <conditional-field condition="canEdit" title="Name"><text-line size="40"/></conditional-field>
+                            <default-field title="Name"><display/></default-field>
+                        </field>
+                        <field name="organizationPartyId">
+                            <conditional-field condition="canEdit" title="Organization">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:general.organizationPartyId}"/>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Organization"><display text="${general.organizationName}"/></default-field>
+                        </field>
+                        <field name="defaultCurrencyUomId">
+                            <conditional-field condition="canEdit" title="Currency">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Currency"><display text="${general.currencyText}"/></default-field>
+                        </field>
+                        <field name="defaultLocale">
+                            <conditional-field condition="canEdit" title="Language and region">
+                                <drop-down allow-empty="true">
+                                    <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Language and region"><display/></default-field>
+                        </field>
+                        <field name="defaultSalesChannelEnumId">
+                            <conditional-field condition="canEdit" title="Sales channel">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                            <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Sales channel"><display text="${general.channelText}"/></default-field>
+                        </field>
+                        <field name="autoApproveDelay">
+                            <conditional-field condition="canEdit" title="Approval delay (minutes)" tooltip="0 approves at once">
+                                <text-line size="6" input-type="number"/>
+                            </conditional-field>
+                            <default-field title="Approval delay (minutes)"><display/></default-field>
+                        </field>
+                        <field name="taxGatewayConfigId">
+                            <conditional-field condition="canEdit" title="Tax gateway">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                            parameter-map="{choice:'taxGateways', productStoreId:productStoreId, selected:general.taxGatewayConfigId}"/>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Tax gateway"><display text="${general.taxGatewayText}"/></default-field>
+                        </field>
+                        <field name="requireCustomerRole">
+                            <conditional-field condition="canEdit" title="Customers need the customer role">
+                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                            </conditional-field>
+                            <default-field title="Customers need the customer role"><display/></default-field>
+                        </field>
+                        <field name="defaultDisablePromotions">
+                            <conditional-field condition="canEdit" title="Promotions off by default">
+                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                            </conditional-field>
+                            <default-field title="Promotions off by default"><display/></default-field>
+                        </field>
+                        <field name="defaultDisableShippingCalc">
+                            <conditional-field condition="canEdit" title="Shipping calculation off by default">
+                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                            </conditional-field>
+                            <default-field title="Shipping calculation off by default"><display/></default-field>
+                        </field>
+                        <field name="defaultDisableTaxCalc">
+                            <conditional-field condition="canEdit" title="Tax calculation off by default">
+                                <drop-down allow-empty="true"><option key="Y" text="Yes"/><option key="N" text="No"/></drop-down>
+                            </conditional-field>
+                            <default-field title="Tax calculation off by default"><display/></default-field>
+                        </field>
+                        <field name="storeDomain">
+                            <conditional-field condition="canEdit" title="Email domain" tooltip="The host its emails link to, such as shop.example.com">
+                                <text-line size="30"/>
+                            </conditional-field>
+                            <default-field title="Email domain"><display/></default-field>
+                        </field>
+                        <field name="changeReason">
+                            <conditional-field condition="canEdit" title="Reason for the change"
+                                    tooltip="Needed for a change of organization, currency, locale, channel, approval delay or tax gateway">
+                                <text-line size="50"/>
+                            </conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="storeName"/><field-ref name="organizationPartyId"/></field-row>
+                            <field-row><field-ref name="defaultCurrencyUomId"/><field-ref name="defaultLocale"/></field-row>
+                            <field-row><field-ref name="defaultSalesChannelEnumId"/><field-ref name="autoApproveDelay"/></field-row>
+                            <field-row><field-ref name="taxGatewayConfigId"/><field-ref name="storeDomain"/></field-row>
+                            <field-row><field-ref name="requireCustomerRole"/><field-ref name="defaultDisablePromotions"/></field-row>
+                            <field-row><field-ref name="defaultDisableShippingCalc"/><field-ref name="defaultDisableTaxCalc"/></field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Reservation"/>
+                <box-toolbar>
+                    <link url="${reservationUrl}" url-type="plain" text="Open in Warehouse" icon="sym_o_open_in_new" link-type="anchor"/>
+                </box-toolbar>
+                <box-body>
+                    <label type="p" style="text-caption m-muted" text="Warehouse sets how this store's orders reserve stock."/>
+                    <form-single name="StoreReservationView" map="general">
+                        <field name="inventoryFacilityText"><default-field title="Inventory facility"><display/></default-field></field>
+                        <field name="reservationOrderText"><default-field title="Reservation order"><display/></default-field></field>
+                        <field name="reservationAutoText"><default-field title="Reserves"><display/></default-field></field>
+                        <field name="requireInventory"><default-field title="Require inventory"><display/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="inventoryFacilityText"/><field-ref name="reservationOrderText"/></field-row>
+                            <field-row><field-ref name="reservationAutoText"/><field-ref name="requireInventory"/></field-row>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

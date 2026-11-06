@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's History tab (design-commerce §3 StoreDetail History; impl-commerce P2, F15): the audit log of the store's
+    fields (its policy fields with the user and reason) and of its ship-option and payment-gateway bindings, the latest 100
+    (mantle.product.StoreAdminServices.get#Store include history), read only. The dated child rows keep their own ended rows
+    on their tabs. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="History" default-menu-index="9">
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['history']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="history" from="tabOut.history || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="HistoryFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Changes"/>
+                <box-body-nopad>
+                    <form-list name="StoreHistory" list="history" skip-form="true" paginate="false">
+                        <field name="changedDateText"><default-field title="When"><display/></default-field></field>
+                        <field name="fieldText"><default-field title="What"><display/></default-field></field>
+                        <field name="oldValueText"><default-field title="Was"><display/></default-field></field>
+                        <field name="newValueText"><default-field title="Now"><display/></default-field></field>
+                        <field name="userText"><default-field title="By"><display/></default-field></field>
+                        <field name="changeReason"><default-field title="Reason"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="fieldText"/><field-ref name="changedDateText"/></column>
+                            <column><field-ref name="newValueText"/><field-ref name="userText"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!history.length" text="No change of this store is recorded yet."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

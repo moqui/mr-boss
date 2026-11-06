@@ -361,7 +361,7 @@ feature(
                         }).url || null,
                     enabled
                 )
-            const home = id => "/qapps/Commerce/Home?productStoreId=" + id
+            const home = id => "/qapps/Commerce/Stores/StoreDetail?productStoreId=" + id
             if (link(users.read, ids.storeId) !== home(ids.storeId)) problems.push("the reader's store link")
             if (link(users.read, ids.otherStoreId) !== null) problems.push("the reader links the other store")
             if (link(users.services, ids.otherStoreId) !== home(ids.otherStoreId)) problems.push("services' store link")
@@ -414,3 +414,44 @@ feature(
         }
     }
 )
+
+// P2 (F51): a store-limited staff member is refused another store of their own organization in StoreDetail's reads, as
+// in the record check; a reader of the organization (no assignment) reads it, and another organization's manager is refused
+// it. Mantle's get#Store is the read StoreDetail makes after check#Record.
+feature("a store-limited staff member is refused another store of the same organization; another organization's manager too", {
+    given() {
+        system(() => {
+            if (!ec.entity.find("mantle.product.store.ProductStore").condition("productStoreId", "BOSS_COM_P2_SECOND").one())
+                ec.service
+                    .sync()
+                    .name("create#mantle.product.store.ProductStore")
+                    .parameters({
+                        productStoreId: "BOSS_COM_P2_SECOND",
+                        storeName: "Retail second store",
+                        organizationPartyId: ids.organizationId
+                    })
+                    .call()
+        })
+    },
+    when() {
+        const read = (user, productStoreId) =>
+            asUser(user, () => refusal("mantle.product.StoreAdminServices.get#Store", {productStoreId}), false)
+        const checked = (user, recordId) => asUser(user, () => refusal(context + "check#Record", {recordType: "store", recordId}))
+        return {
+            reader: read(users.read, "BOSS_COM_P2_SECOND"),
+            readerCheck: checked(users.read, "BOSS_COM_P2_SECOND"),
+            staff: read(users.storeStaff, "BOSS_COM_P2_SECOND"),
+            staffCheck: checked(users.storeStaff, "BOSS_COM_P2_SECOND"),
+            staffOwn: read(users.storeStaff, ids.storeId),
+            other: read(users.services, "BOSS_COM_P2_SECOND")
+        }
+    },
+    then({reader, readerCheck, staff, staffCheck, staffOwn, other}) {
+        reader == ""
+        readerCheck == ""
+        staff.includes("RECORD_UNAVAILABLE")
+        staffCheck.includes("RECORD_UNAVAILABLE")
+        staffOwn == ""
+        other.includes("RECORD_UNAVAILABLE")
+    }
+})

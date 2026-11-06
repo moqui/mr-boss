@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Facilities tab (design-commerce §3 Facilities; impl-commerce P2): the facilities that fulfill the store's
+    orders, dated, by priority (mantle.product.StoreAdminServices.store#StoreFacility: a facility of the store's organization
+    from a date, ending the row it replaces; End). A store of digital items only needs none. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Facilities" default-menu-index="3">
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveFacility">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreFacility"
+                    in-map="{productStoreId:productStoreId, facilityId:facilityId, sequenceNum:(sequenceNum || null), fromDate:(fromDate || null), thruDate:(thruDate || null), end:(end == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the facility ${facilityId}</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['facilities']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="facilities" from="tabOut.facilities || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="FacilitiesFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Fulfillment facilities"/>
+                <box-toolbar>
+                    <container-dialog id="AddStoreFacility" button-text="Add facility" icon="sym_o_add" width="560" title="Add a facility"
+                            condition="canEdit">
+                        <form-single name="AddStoreFacilityForm" transition="saveFacility">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="facilityId">
+                                <default-field title="Facility">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'facilities', productStoreId:productStoreId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sequenceNum"><default-field title="Priority"><text-line size="4" input-type="number"/></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add facility"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="StoreFacilities" list="facilities" skip-form="true" paginate="false">
+                        <field name="facilityName"><default-field title="Facility"><display/></default-field></field>
+                        <field name="sequenceNum"><default-field title="Priority"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveFacility" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreId:productStoreId, facilityId:facilityId, fromDate:fromDate, end:'Y'}"
+                                        confirmation="End ${facilityName} for this store?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="facilityName"/><field-ref name="fromDateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!facilities.length"
+                            text="No facility fulfills this store's orders. Add one, unless it sells digital items only."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

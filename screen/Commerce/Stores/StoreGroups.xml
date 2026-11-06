@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreGroups (design-commerce §3 StoreGroups; style-guide §3.9 Settings; impl-commerce P2): GroupList, the store groups of the
+    user's organizations (mantle.product.StoreAdminServices.find#StoreGroups) with New group for a store manager; a chosen
+    group's GroupEdit (description and type), Members (its organization's stores, dated) and Parties (staff of the
+    organization, dated), each saved by store#StoreGroup. Groups select stores for reports and bulk work; they share no
+    settings, carts, currency totals or promotions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Store groups" default-menu-index="2">
+    <parameter name="productStoreGroupId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveGroup">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreGroup" out-map="saved"
+                    in-map="{productStoreGroupId:(productStoreGroupId || null), organizationPartyId:(organizationPartyId || null),
+                        description:description, storeGroupTypeEnumId:(storeGroupTypeEnumId || null),
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="productStoreGroupId" from="saved.productStoreGroupId"/>
+                <message type="success">Saved the group ${description}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreGroupId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveMember">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreGroup"
+                    in-map="{productStoreGroupId:productStoreGroupId, memberStoreId:memberStoreId, sequenceNum:(sequenceNum || null),
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), end:(end == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the group's store</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreGroupId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveParty">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreGroup"
+                    in-map="{productStoreGroupId:productStoreGroupId, partyId:partyId, roleTypeId:'StoreStaff',
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), end:(end == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the group's staff member</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreGroupId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.product.StoreAdminServices.find#StoreGroups" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{productStoreGroupId:(productStoreGroupId || null)}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="groups" from="found?.groups || []"/>
+        <set field="group" from="found?.group || null"/>
+        <set field="canEdit" from="!!found?.canEdit"/>
+        <set field="canStart" from="canEdit &amp;&amp; !commerce.storeLimited"/>
+        <set field="newGroup" from="{organizationPartyId:(commerce.activeOrganizationPartyId || (commerce.organizationPartyIds || [])[0] || null)}"/>
+        <set field="groupValues" from="group ? {productStoreGroupId: group.productStoreGroupId, description: group.description,
+                storeGroupTypeEnumId: group.storeGroupTypeEnumId, expectedLastUpdatedStamp: group.lastUpdatedStamp} : {}"/>
+        <set field="members" from="group?.members || []"/>
+        <set field="parties" from="group?.parties || []"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Store groups" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewStoreGroup" button-text="New group" icon="sym_o_add" type="primary" width="560" title="New store group"
+                        condition="canStart">
+                    <form-single name="NewStoreGroupForm" transition="saveGroup" map="newGroup">
+                        <field name="description"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="organizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:newGroup.organizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="storeGroupTypeEnumId">
+                            <default-field title="Kind">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                            <econdition field-name="enumTypeId" value="ProductStoreGroupType"/>
+                                            <order-by field-name="sequenceNum"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Create group"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="GroupList" list="groups" skip-form="true" paginate="false">
+                    <field name="description">
+                        <default-field title="Group">
+                            <link url="." text="${description}" link-type="anchor" parameter-map="{productStoreGroupId:productStoreGroupId}"/>
+                        </default-field>
+                    </field>
+                    <field name="typeText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="memberCount"><default-field title="Stores"><display format="#,##0"/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="organizationName"/></column>
+                        <column><field-ref name="memberCount"/><field-ref name="typeText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!groups.length"
+                        text="No store group yet. A group gathers stores for reports and work done on several at once."/>
+            </box-body-nopad>
+        </container-box>
+        <label type="p" style="text-negative" condition="productStoreGroupId &amp;&amp; !group"
+                text="Store group ${productStoreGroupId} is not available to you."/>
+
+        <section name="GroupChosen" condition="group"><widgets>
+            <container-box>
+                <box-header title="${group.description}"/>
+                <box-body>
+                    <form-single name="GroupEdit" transition="saveGroup" map="groupValues">
+                        <field name="productStoreGroupId"><default-field><hidden/></default-field></field>
+                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                        <field name="description">
+                            <conditional-field condition="canEdit" title="Name"><text-line size="40"/></conditional-field>
+                            <default-field title="Name"><display/></default-field>
+                        </field>
+                        <field name="storeGroupTypeEnumId">
+                            <conditional-field condition="canEdit" title="Kind">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                            <econdition field-name="enumTypeId" value="ProductStoreGroupType"/>
+                                            <order-by field-name="sequenceNum"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </conditional-field>
+                            <default-field title="Kind"><display text="${group.typeText}"/></default-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                            <default-field><ignored/></default-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="description"/><field-ref name="storeGroupTypeEnumId"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted" text="Of ${group.organizationName}"/>
+                </box-body>
+            </container-box>
+            <container-box>
+                <box-header title="Stores"/>
+                <box-toolbar>
+                    <container-dialog id="AddGroupStore" button-text="Add store" icon="sym_o_add" width="560" title="Add a store to ${group.description}"
+                            condition="canEdit">
+                        <form-single name="AddGroupStoreForm" transition="saveMember" map="{productStoreGroupId:group.productStoreGroupId}">
+                            <field name="productStoreGroupId"><default-field><hidden/></default-field></field>
+                            <field name="memberStoreId">
+                                <default-field title="Store">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'groupStores', productStoreGroupId:group.productStoreGroupId,
+                                                    organizationPartyId:group.organizationPartyId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add store"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="Members" list="members" skip-form="true" paginate="false">
+                        <field name="storeName">
+                            <default-field title="Store">
+                                <link url="../StoreDetail" text="${storeName}" link-type="anchor" parameter-map="{productStoreId:productStoreId}"/>
+                            </default-field>
+                        </field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveMember" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreGroupId:group.productStoreGroupId, memberStoreId:productStoreId, fromDate:fromDate, end:'Y'}"
+                                        confirmation="Take ${storeName} out of ${group.description}?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="storeName"/><field-ref name="fromDateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!members.length" text="No store is in this group."/>
+                </box-body-nopad>
+            </container-box>
+            <container-box>
+                <box-header title="Staff"/>
+                <box-toolbar>
+                    <container-dialog id="AddGroupParty" button-text="Add staff member" icon="sym_o_person_add" width="560"
+                            title="Add a staff member to ${group.description}" condition="canEdit">
+                        <form-single name="AddGroupPartyForm" transition="saveParty" map="{productStoreGroupId:group.productStoreGroupId}">
+                            <field name="productStoreGroupId"><default-field><hidden/></default-field></field>
+                            <field name="partyId">
+                                <default-field title="Person">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'staff', productStoreGroupId:group.productStoreGroupId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add staff member"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="Parties" list="parties" skip-form="true" paginate="false">
+                        <field name="partyName"><default-field title="Person"><display/></default-field></field>
+                        <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="stateText"><default-field title="State"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveParty" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreGroupId:group.productStoreGroupId, partyId:partyId, fromDate:fromDate, end:'Y'}"
+                                        confirmation="End ${partyName} in ${group.description}?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="partyName"/><field-ref name="fromDateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!parties.length" text="No staff member is named for this group."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

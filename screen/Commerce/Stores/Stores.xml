@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Stores (design-commerce §3 Stores; style-guide §3.2 List; impl-commerce P2): StoreFind (name, organization, channel,
+    group), the store list (mantle.product.StoreAdminServices.find#Stores: the user's stores, each with its organization,
+    channel, locale and currency and the sites that sell from it) and NewStore for a store manager (store#Store: a store of
+    one of the user's organizations, its currency and locale from the organization unless chosen, no site mount; a facility
+    bound from now when one is chosen). A store-limited staff member does not start stores. Home's first-use state opens
+    NewStore here (_openDialog=NewStore). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Stores" default-menu-index="1">
+    <parameter name="term"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="salesChannelEnumId"/>
+    <parameter name="productStoreGroupId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createStore">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#Store" out-map="saved"
+                    in-map="{storeName:storeName, organizationPartyId:newOrganizationPartyId,
+                        defaultSalesChannelEnumId:(defaultSalesChannelEnumId || null),
+                        defaultCurrencyUomId:(defaultCurrencyUomId || null), defaultLocale:(defaultLocale || null),
+                        facilityId:(facilityId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="productStoreId" from="saved.productStoreId"/>
+                <message type="success">Started the store ${storeName}. Its readiness says what it needs before it sells.</message>
+            </if>
+        </actions>
+        <default-response url="../StoreDetail"><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <service-call name="mantle.product.StoreAdminServices.find#Stores" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{term:term, organizationPartyId:(organizationPartyId || null), salesChannelEnumId:(salesChannelEnumId || null),
+                    productStoreGroupId:(productStoreGroupId || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="stores" from="found?.stores || []"/>
+        <set field="storesCount" from="found?.storesCount || 0"/>
+        <set field="storesPageIndex" from="found?.storesPageIndex || 0"/>
+        <set field="storesPageSize" from="found?.storesPageSize || 20"/>
+        <set field="storesPageMaxIndex" from="found?.storesPageMaxIndex || 0"/>
+        <set field="storesPageRangeLow" from="found?.storesPageRangeLow || 0"/>
+        <set field="storesPageRangeHigh" from="found?.storesPageRangeHigh || 0"/>
+        <service-call name="mantle.product.StoreAdminServices.find#StoreGroups" out-map="groupsFound" transaction="force-new"
+                ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="groupOptions" from="(groupsFound?.groups || []).map((row) =&gt; ({value: row.productStoreGroupId, label: row.description}))"/>
+        <set field="canStart" from="can.storeEdit &amp;&amp; !commerce.storeLimited"/>
+        <set field="filtered" from="!!(term || organizationPartyId || salesChannelEnumId || productStoreGroupId)"/>
+        <set field="findValues" from="{term:term, organizationPartyId:organizationPartyId, salesChannelEnumId:salesChannelEnumId,
+                productStoreGroupId:productStoreGroupId}"/>
+        <set field="newStore" from="{newOrganizationPartyId:(commerce.activeOrganizationPartyId || (commerce.organizationPartyIds || [])[0] || null),
+                defaultSalesChannelEnumId:'ScWeb'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Stores" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewStore" button-text="New store" icon="sym_o_add" type="primary" width="720" title="New store"
+                        condition="canStart">
+                    <form-single name="NewStoreForm" transition="createStore" map="newStore">
+                        <field name="storeName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="newOrganizationPartyId">
+                            <default-field title="Organization">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'organizations', selected:newStore.newOrganizationPartyId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="defaultSalesChannelEnumId">
+                            <default-field title="Sales channel">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                            <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="defaultCurrencyUomId">
+                            <default-field title="Currency" tooltip="Empty takes the organization's base currency">
+                                <drop-down allow-empty="true">
+                                    <entity-options key="${uomId}" text="${description} (${uomId})">
+                                        <entity-find entity-name="moqui.basic.Uom" cache="true">
+                                            <econdition field-name="uomTypeEnumId" value="UT_CURRENCY_MEASURE"/>
+                                            <order-by field-name="description"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="defaultLocale">
+                            <default-field title="Language and region" tooltip="Empty takes the organization's document language">
+                                <drop-down allow-empty="true">
+                                    <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="facilityId">
+                            <default-field title="Fulfillment facility" tooltip="One of the organization's; a digital store needs none">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="storeOptions" server-search="true" min-length="0" depends-optional="true"
+                                            parameter-map="{choice:'facilities'}">
+                                        <depends-on field="newOrganizationPartyId" parameter="organizationPartyId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Start the store"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="storeName"/><field-ref name="newOrganizationPartyId"/></field-row>
+                            <field-row><field-ref name="defaultSalesChannelEnumId"/><field-ref name="facilityId"/></field-row>
+                            <field-row><field-ref name="defaultCurrencyUomId"/><field-ref name="defaultLocale"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted"
+                            text="The store starts with no site and no payment or shipping setup; its readiness lists what it needs."/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="StoreFind" transition="." map="findValues">
+            <field name="term"><default-field title="Name or ID"><text-line size="24"/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'organizations', selected:organizationPartyId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="salesChannelEnumId">
+                <default-field title="Channel">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="SalesChannel"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productStoreGroupId">
+                <default-field title="Group">
+                    <drop-down allow-empty="true"><list-options list="groupOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="term"/>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="salesChannelEnumId"/>
+                    <field-ref name="productStoreGroupId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="StoreList" list="stores" skip-form="true">
+                    <field name="storeName">
+                        <default-field title="Store">
+                            <link url="../StoreDetail" text="${storeName}" link-type="anchor" parameter-map="{productStoreId:productStoreId}"/>
+                        </default-field>
+                    </field>
+                    <field name="productStoreId"><default-field title="ID"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="channelText"><default-field title="Channel"><display/></default-field></field>
+                    <field name="localeCurrencyText"><default-field title="Locale and currency"><display/></default-field></field>
+                    <field name="siteText">
+                        <default-field title="Sites">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${siteColor}">${
+                                    WebUtilities.encodeHtml(siteText)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: siteText})}]]></text>
+                                <text type="html">${siteText}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="storeName"/><field-ref name="organizationName"/></column>
+                        <column><field-ref name="siteText"/><field-ref name="localeCurrencyText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!stores.length &amp;&amp; filtered" text="No store matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!stores.length &amp;&amp; !filtered &amp;&amp; canStart"
+                        text="No store yet. Start one with New store: its organization, a facility, then its checkout and site."/>
+                <label type="p" style="q-pa-md m-muted" condition="!stores.length &amp;&amp; !filtered &amp;&amp; !canStart"
+                        text="No store of your organizations is open to you."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

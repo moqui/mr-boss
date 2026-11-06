@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Staff tab (design-commerce §3 Staff; impl-commerce P2): the store's staff, dated StoreStaff rows
+    (mantle.product.StoreAdminServices.store#StoreParty: a person who works for the store's organization, from a date; End).
+    A current row limits that person to their stores and grants no permission (impl-commerce §4). Customers' party rows are
+    never listed or written here. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Staff" default-menu-index="4">
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveStaff">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreParty"
+                    in-map="{productStoreId:productStoreId, partyId:partyId, roleTypeId:'StoreStaff', fromDate:(fromDate || null), thruDate:(thruDate || null), end:(end == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the staff member</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['staff']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="staff" from="tabOut.staff || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="StaffFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Store staff"/>
+                <box-toolbar>
+                    <container-dialog id="AddStoreStaff" button-text="Add staff member" icon="sym_o_person_add" width="560"
+                            title="Add a staff member" condition="canEdit">
+                        <form-single name="AddStoreStaffForm" transition="saveStaff">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="partyId">
+                                <default-field title="Person">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'staff', productStoreId:productStoreId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add staff member"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="text-caption m-muted" text="A staff member then works only the stores they are assigned."/>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="StoreStaff" list="staff" skip-form="true" paginate="false">
+                        <field name="partyName"><default-field title="Person"><display/></default-field></field>
+                        <field name="roleText"><default-field title="Role"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveStaff" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreId:productStoreId, partyId:partyId, fromDate:fromDate, end:'Y'}"
+                                        confirmation="End ${partyName} as staff of this store?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="partyName"/><field-ref name="fromDateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!staff.length"
+                            text="No one is assigned to this store; everyone of its organization with Commerce works it."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

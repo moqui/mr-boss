@@ -977,7 +977,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | PromotionServices | apply#FlatDiscount |  |  |
 | StoreServices | create#StoreShippingOption | Commerce/Settings/CheckoutSettings |  |
 | StoreServices | get#StoreShippingOptions | PASS:Shop/Checkout |  |
-| StoreServices | clone#ProductStore | Commerce/Stores/StoreDetail |  |
+| StoreServices | clone#ProductStore | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail#CloneStoreForm (through mantle.product.StoreAdminServices.clone#Store) |
 | StoreServices | format#UrlSlug | PRD-TAXONOMY; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers (guarded preview before store) |
 | StoreServices | generate#UrlSlugFromProductName | Products/Products/Product360; Shared/Product360; Commerce/Merchandising/Product360 |  |
 | StoreServices | generate#UrlSlugFromCategoryName | Products/Categories/CategoryDetail; Commerce/Merchandising/CategoryDetail |  |

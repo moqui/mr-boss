@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail (design-commerce §3 StoreDetail; style-guide §3.3 Detail; impl-commerce P2), which the palette and record links
+    of a store open: the record header (the store's id as a key chip, its name, the organization, channel, currency and locale,
+    and its readiness as a chip) with the More menu (Clone store, for a store manager not limited to stores; Store groups),
+    and the tabs, each with the store as its context: General (1: readiness with each finding's fix, the store's fields, the
+    reservation group read only linking Warehouse's StoreReservation), Sites (2, read only), Facilities (3), Staff (4),
+    Emails (5), Order checks (6), Search and content (7), Settings (8) and History (9). The store is checked by
+    ironstone.commerce.ContextServices.check#Record (another organization's, an unassigned one for a store-limited staff
+    member, and a forged id are not available alike), then read and saved through mantle.product.StoreAdminServices, which
+    checks the permission and the store's organization again. A reader sees the same tabs without their actions. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Store" default-menu-include="false">
+    <parameter name="productStoreId" required="true"/>
+
+    <!-- the store for the tabs, which the client loads on their own (their actions run without this screen's) -->
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:(productStoreId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!storeRecord?.recordId"/>
+        <set field="storeCan" from="commerce.capabilities"/>
+        <set field="storeTabUrl" from="(commerce.webBase || '/qapps/Commerce') + '/Stores/StoreDetail/'"/>
+    </always-actions>
+
+    <subscreens default-item="General" always-use-full-path="true"/>
+
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="stores"><default-response url="../Stores"/></transition>
+    <transition name="cloneStore">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.clone#Store" out-map="cloned"
+                    in-map="{baseProductStoreId:productStoreId, storeName:cloneStoreName, organizationPartyId:(cloneOrganizationPartyId || null),
+                        copyCategories:(copyCategories == 'Y'), copyEmails:(copyEmails == 'Y'), copyFacilities:(copyFacilities == 'Y'),
+                        copyStaff:(copyStaff == 'Y'), copySettings:(copySettings == 'Y'), approveReferences:(approveReferences == 'Y'),
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="productStoreId" from="cloned.productStoreId"/>
+                <message type="success">Cloned as ${cloneStoreName}. It is unpublished, with no site; its readiness says what it needs.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="storeOut" in-map="{productStoreId:productStoreId}"/>
+            <service-call name="mantle.product.StoreAdminServices.check#StoreReadiness" out-map="readinessOut" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="store" from="storeOut.store"/>
+            <set field="toFix" from="(readinessOut?.findings || []).filter((row) =&gt; !row.ready &amp;&amp; row.severity == 'blocking').length"/>
+            <set field="readinessText" from="!readinessOut ? 'Readiness not checked' : toFix ? toFix + (toFix == 1 ? ' thing' : ' things') + ' to fix' : 'Ready to sell'"/>
+            <set field="readinessColor" from="!readinessOut ? 'grey-7' : toFix ? 'warning' : 'positive'"/>
+            <set field="captionText" from="[store.organizationName, store.channelText, store.defaultCurrencyUomId, store.defaultLocale]
+                    .filter((part) =&gt; part).join(' · ')"/>
+            <set field="canClone" from="storeCan.storeEdit &amp;&amp; !commerce.storeLimited"/>
+            <if condition="canClone">
+                <service-call name="mantle.product.StoreAdminServices.clone#Store" out-map="clonePreview" transaction="force-new"
+                        ignore-error="true" in-map="{baseProductStoreId:productStoreId, preview:true}"/>
+                <script>ec.message.clearErrors()</script>
+                <set field="cloneSections" from="clonePreview?.sections || []"/>
+                <set field="cloneReferences" from="clonePreview?.references || []"/>
+                <set field="cloneValues" from="{cloneStoreName: store.storeName + ' (copy)', cloneOrganizationPartyId: store.organizationPartyId,
+                        copyCategories:'Y', copyEmails:'Y', copyFacilities:'Y', copyStaff:'Y', copySettings:'Y',
+                        expectedLastUpdatedStamp: store.lastUpdatedStamp, operationKey: 'clone-' + ec.user.randomString(24)}"/>
+            </if>
+        </if>
+    </actions>
+
+    <widgets>
+        <section name="StoreNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Store ${productStoreId} is not available: it does not exist, or it is not one of your stores."/>
+                <link url="stores" text="Back to Stores" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+
+        <section name="StoreFound" condition="recordFound"><widgets>
+            <!-- the record for the shell: Chatter, Assist -->
+            <context record-entity="mantle.product.store.ProductStore" record-id="${productStoreId}" title="${store.storeName}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(productStoreId)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "StoreKey", style: "strong", text: productStoreId})}]]></text>
+                            </render-mode>
+                            <label text="${store.storeName}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${readinessColor}" icon="sym_o_checklist">${
+                                WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "StoreReadiness", text: readinessText})}]]></text>
+                            <text type="html">${readinessText}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="Changed ${store.lastUpdatedText}" type="span" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <button-menu text="More" icon="more_horiz">
+                            <container-dialog id="CloneStore" button-text="Clone store" icon="sym_o_content_copy" width="760"
+                                    title="Clone ${store.storeName}" condition="canClone">
+                                <label type="p" style="text-caption m-muted"
+                                        text="The clone starts unpublished, with no site, customers, promotions, gateways or credentials."/>
+                                <form-list name="CloneSections" list="cloneSections" skip-form="true" paginate="false">
+                                    <field name="label"><default-field title="Section"><display/></default-field></field>
+                                    <field name="copied"><default-field title="Copied"><display/></default-field></field>
+                                    <field name="leftOut"><default-field title="Left out"><display/></default-field></field>
+                                    <field name="note"><default-field title=""><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="label"/><field-ref name="note"/></column>
+                                        <column><field-ref name="copied"/><field-ref name="leftOut"/></column>
+                                    </columns>
+                                </form-list>
+                                <section name="CloneReferences" condition="cloneReferences.length"><widgets>
+                                    <label type="p" style="q-mt-md q-mb-xs text-weight-medium" text="It carries these, which you approve"/>
+                                    <form-list name="CloneReferenceList" list="cloneReferences" skip-form="true" paginate="false">
+                                        <field name="kind"><default-field title="Kind"><display/></default-field></field>
+                                        <field name="name"><default-field title="Name"><display/></default-field></field>
+                                        <columns type="mobile">
+                                            <column><field-ref name="name"/></column>
+                                            <column><field-ref name="kind"/></column>
+                                        </columns>
+                                    </form-list>
+                                </widgets></section>
+                                <form-single name="CloneStoreForm" transition="cloneStore" map="cloneValues">
+                                    <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                    <field name="operationKey"><default-field><hidden/></default-field></field>
+                                    <field name="cloneStoreName"><default-field title="Name of the clone"><text-line size="40"/></default-field></field>
+                                    <field name="cloneOrganizationPartyId">
+                                        <default-field title="Organization">
+                                            <drop-down>
+                                                <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                        parameter-map="{choice:'organizations', selected:store.organizationPartyId}"/>
+                                            </drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="copyCategories"><default-field title=" "><check><option key="Y" text="Categories"/></check></default-field></field>
+                                    <field name="copyFacilities"><default-field title=" "><check><option key="Y" text="Facilities"/></check></default-field></field>
+                                    <field name="copyStaff"><default-field title=" "><check><option key="Y" text="Staff"/></check></default-field></field>
+                                    <field name="copyEmails"><default-field title=" "><check><option key="Y" text="Emails"/></check></default-field></field>
+                                    <field name="copySettings"><default-field title=" "><check><option key="Y" text="Settings"/></check></default-field></field>
+                                    <field name="approveReferences">
+                                        <default-field title=" "><check><option key="Y" text="I approve the facilities, staff and gateways it carries"/></check></default-field>
+                                    </field>
+                                    <field name="submitButton"><default-field title="Clone"><submit confirmation="Clone ${store.storeName}?"/></default-field></field>
+                                    <field-layout>
+                                        <field-row><field-ref name="cloneStoreName"/><field-ref name="cloneOrganizationPartyId"/></field-row>
+                                        <field-row-big>
+                                            <field-ref name="copyCategories"/>
+                                            <field-ref name="copyFacilities"/>
+                                            <field-ref name="copyStaff"/>
+                                            <field-ref name="copyEmails"/>
+                                            <field-ref name="copySettings"/>
+                                        </field-row-big>
+                                        <field-ref name="approveReferences"/>
+                                        <field-ref name="submitButton"/>
+                                    </field-layout>
+                                </form-single>
+                            </container-dialog>
+                            <link url="${sharedLinks['Stores/StoreGroups']}" text="Store groups" icon="sym_o_workspaces" link-type="anchor"/>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+            <subscreens-panel id="StoreTabs" type="tab"/>
+        </widgets></section>
+    </widgets>
+</screen>

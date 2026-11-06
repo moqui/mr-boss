@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Order checks tab (design-commerce §3 OrderChecks; impl-commerce P2): the checks the store runs before it
+    approves an order, in sequence, dated (mantle.product.StoreAdminServices.store#StoreApproval: a registered OrderValidate
+    service only, never a service name typed in; End). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Order checks" default-menu-index="6">
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="addCheck">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreApproval"
+                    in-map="{productStoreId:productStoreId, serviceRegisterId:serviceRegisterId, sequenceNum:(sequenceNum || null), fromDate:(fromDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Added the order check</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endCheck">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreApproval"
+                    in-map="{productStoreId:productStoreId, storeApproveId:storeApproveId, end:true}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Ended the order check</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['approvals']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="approvals" from="tabOut.approvals || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ChecksFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Checks before approval"/>
+                <box-toolbar>
+                    <container-dialog id="AddOrderCheck" button-text="Add check" icon="sym_o_add" width="560" title="Add an order check"
+                            condition="canEdit">
+                        <form-single name="AddOrderCheckForm" transition="addCheck">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="serviceRegisterId">
+                                <default-field title="Check">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'orderChecks', productStoreId:productStoreId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="sequenceNum"><default-field title="Order"><text-line size="4" input-type="number"/></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add check"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="OrderCheckList" list="approvals" skip-form="true" paginate="false">
+                        <field name="checkText"><default-field title="Check"><display/></default-field></field>
+                        <field name="sequenceNum"><default-field title="Order"><display/></default-field></field>
+                        <field name="parametersText"><default-field title="Parameters"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="endCheck" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreId:productStoreId, storeApproveId:storeApproveId}"
+                                        confirmation="End the check ${checkText}?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="checkText"/><field-ref name="fromDateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!approvals.length"
+                            text="No check runs before this store's orders are approved."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>
