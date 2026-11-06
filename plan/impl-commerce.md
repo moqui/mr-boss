@@ -2473,7 +2473,7 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
     StoreOperations.js `heldOrderIds` and `cancelRequestOrderIds` put the store in the query, so the first 500 are the
     stores' own (Home's Payment holds count and the Attention filters).
   - **F112 hook:** StoreOperations.js `withoutRecurringBases(query)`, called by the order worklist's `orderQuery` and the
-    cart report's order read; a no-op until Shop P7 marks a base (see F-P11-3 for the sales index).
+    cart report's order read; a no-op until Shop P7 marks a base (see F139 for the sales index).
   - `service/mantle/order/StoreReports.js` (new) behind `StoreOperationsServices.get#CartRecoverySummary` and
     `StorePromotionServices.get#PromotionUseSummary` (both COMMERCE_VIEW and StoreOperations.js' scope, F51 and F113; a
     period of at most two years, PERIOD_INVALID): the recovery funnel of the stores' Shop carts opened in the period (by
@@ -2537,7 +2537,7 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   the CSV's rows; the four Reports screens in qvt. Run: 6 of 6 passed. Then `./moq accept mr-boss` once: server 467
   features, 452 passed, 11 failed, 4 skipped; client 169 of 169. AppStructure's placeholder floor (43) no longer held once
   P8's Orders and Customers and P11's Reports replaced theirs: now 40, and AppStructure passes. The other ten failures are
-  not P11's code (F-P11-7).
+  not P11's code (F143).
 - Lint: `moqui lint --screens` (release binary) 132 flagged sites as before, none in Commerce's screens or templates.
 - Inventories: usl-inventory's get#SalesOrderSummary, get#SalesInvoiceSummary and get#SalesTopProduct name Commerce/Home and
   Commerce/Reports/OnlineSales; ss-inventory has no report row.
@@ -2549,27 +2549,27 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   - A Commerce reader's sales read is the stores' organizations, so an ACCOUNTING_VIEW holder takes Accounting's path only;
     a holder of both reads as Accounting does (unchanged).
   - CartRecovery's "eligible" is "signed in" (an abandoned cart of a signed-in customer, the only kind a reminder may reach):
-    consent and the verified address are per send and not historical (F-P11-5).
+    consent and the verified address are per send and not historical (F141).
   - The Reports' services need the area's grant; Home's strip only COMMERCE_VIEW, as Mantle answers it (F21).
-  - Routed items: F114 fixed (above); F112 the hook above and F-P11-3; F130 read as P10's RecoveryHistory reads it.
+  - Routed items: F114 fixed (above); F112 the hook above and F139; F130 read as P10's RecoveryHistory reads it.
 - Findings (provisional):
-  - **F-P11-1** Mantle's sales summaries take ordersThis/ordersLast (and invoicesThis/Last) as the newest buckets that have
+  - **F137** Mantle's sales summaries take ordersThis/ordersLast (and invoicesThis/Last) as the newest buckets that have
     sales: the date histogram has no bounds, so with no sale in the current period "this" is an earlier one. Commerce matches
     the buckets by their start day instead; Sales' and Accounting's screens read the out-parameters. For Sales/Accounting.
-  - **F-P11-2** Without `currencyUomIds` the summaries add every currency's amounts (Accounting's and mr-marble's sales
+  - **F138** Without `currencyUomIds` the summaries add every currency's amounts (Accounting's and mr-marble's sales
     screens); the filter now exists for a per-currency read. For Accounting.
-  - **F-P11-3** F112's other half: the sales index (MantleSalesOrderItem and its order part document) has no RecurringTemplate
+  - **F139** F112's other half: the sales index (MantleSalesOrderItem and its order part document) has no RecurringTemplate
     marker either, so once Shop P7 makes bases OnlineSales and Home would count them as placed orders. Shop P7 should add the
     marker to the sales documents (or a condition in the summaries) with its default test, beside `withoutRecurringBases`.
-  - **F-P11-4** A dataset is one document type, so design §1.4's one store operations dataset is shipped as checkouts and
+  - **F140** A dataset is one document type, so design §1.4's one store operations dataset is shipped as checkouts and
     payment attempts beside Mantle's sales orders; carts, recovery sends and promotion use (and P13/P14's messages and
     feeds) need documents of their own. The datasets read every organization's rows and are ADMIN's until Insights'
     admission applies a store scope.
-  - **F-P11-5** CartRecovery's eligibility is not historical (consent and verification are read at each send), so the report
+  - **F141** CartRecovery's eligibility is not historical (consent and verification are read at each send), so the report
     shows signed-in abandoned carts, not the job's eligibility at the time.
-  - **F-P11-6** Not built from design §3: Insights' registration of the catalogue (Z10; Insights has no catalog yet), the
+  - **F142** Not built from design §3: Insights' registration of the catalogue (Z10; Insights has no catalog yet), the
     reports' graph views and ReportScope's store-group and free compare-period choices.
-  - **F-P11-7** `./moq accept mr-boss` on this branch fails ten features outside P11's code: CommerceFoundationWalk (the demo
+  - **F143** `./moq accept mr-boss` on this branch fails ten features outside P11's code: CommerceFoundationWalk (the demo
     store has 6 emails, not 5: P10's PsetCartRecovery email), CommerceSitePagesWalk (a draft product's menu item is not
     refused DESTINATION_NOT_PUBLIC), CustomerServiceCasesWalk, CustomerServiceKnowledgeWalk, CustomerServiceReportsWalk,
     CustomerServiceSupportWalk (2), PurchasingReplenishmentRoutesWalk, PurchasingReplenishmentWalk and TuiRender
@@ -2595,14 +2595,14 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
 - R2 (minor, BOSS): Reporting.js `currenciesOf` returned the currency asked for even with no store in scope, so the summaries
   ran with no `productStoreIds`: an `ACCOUNTING_VIEW` holder got the organizations' sales labelled "Stores: none", another
   reader an error. No store now means no currency and no read.
-- F-P11-1 left: `extended_bounds` would fix "this" for an empty current period, but it changes Accounting's and Sales'
+- F137 left: `extended_bounds` would fix "this" for an empty current period, but it changes Accounting's and Sales'
   default answers (empty buckets, Prior Total and Average, the moving-average length) and the invoice summary's merged
   histograms; Commerce already matches buckets by their start day.
 - Specs (`--nobuild`): Mantle SalesReportStoreScope, StoreReports, StoreOperations, StorePromotions, CartRecovery,
   SalesReports, AccountingStatements, MantleSearch 42 of 42; BOSS CommerceReports, CommerceAccess, CommerceOrders,
   AccountingReporting, AccountingAccess 38 of 38. mr-marble's SalesSummary render is in its acceptance SimpleScreensRender,
   which cannot run alone (it depends on AccountingActivities); its call passes no new parameter, read rather than run.
-- For the lead: F-P11-1 (bounds on the summaries' date histograms) is Sales'/Accounting's call; F-P11-7's ten acceptance
+- For the lead: F137 (bounds on the summaries' date histograms) is Sales'/Accounting's call; F143's ten acceptance
   failures were not checked against master here.
 
 ### P12 — Paid access and subscriptions
@@ -2868,6 +2868,13 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F134 | P10 review: a staff send's operation key covers only the cart, so a retry with another reason gets the first answer | Accepted |
 | F135 | P10 review: the rendered recovery mail, link included, is kept in EmailMessage (as the download notice's guest link is); usable only signed in as the cart's account | Accepted |
 | F136 | Wave 12: CheckoutSettings joined a ship option's decimal markup to text with `+`, which the framework's decimal refuses (valueOf); it failed only after CarrierServices gave POPC_DEFAULT a markup | Fixed: `String()` of each amount |
+| F137 | P11: the sales summaries' `ordersThis`/`ordersLast` are wrong when the current period has no sales (the date histogram has no bounds) | Sales and Accounting (bounds change their default answers); Commerce matches buckets by start day |
+| F138 | P11: without `currencyUomIds` the summaries still add amounts across currencies, as before (Accounting's and mr-marble's sales screens) | Accounting (later) |
+| F139 | P11: the sales index has no RecurringTemplate marker, so once Shop P7 makes bases, Online sales and Home would count them | Shop P7: the marker on the sales documents or summaries, with a default test |
+| F140 | P11: each dataset is one document type, so the store operations dataset ships as checkouts and payment attempts; datasets ADMIN-only until Insights applies a store scope | Insights (later) |
+| F141 | P11: cart recovery's eligibility is not historical ("signed in") | Accepted |
+| F142 | P11: Insights' catalogue registration (Z10), the graph views and further ReportScope choices not built | Later |
+| F143 | P11: ten mr-boss acceptance failures outside P11 (CommerceFoundationWalk, CommerceSitePagesWalk, four Customer Service walks, two Purchasing replenishment walks, TuiRender) | Being fixed on `com/accfix` |
 
 ## 7. Later
 
