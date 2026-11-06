@@ -277,7 +277,9 @@ const linkPaths = [
     "Website/Themes",
     "Website/ThemeDetail",
     "Website/ThemeEditor",
-    "Website/TemplateEditor"
+    "Website/TemplateEditor",
+    // P9: the store's reviews (design §4 Reviews)
+    "Merchandising/Reviews"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -392,6 +394,11 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId)
 }
 
+// Whether the user holds the capability a kind's screen needs (none for most kinds).
+const mayKind = (userScope, kind) => {
+    const capability = recordKinds[kind]?.capability
+    return !capability || !!userScope.capabilities?.[capability]
+}
 // The Commerce screen of a record: its kind's destination, else none.
 function recordUrl(kind, recordId) {
     const definition = recordKinds[kind]
@@ -402,7 +409,7 @@ function recordUrl(kind, recordId) {
 function recordLink(kind, recordId) {
     try {
         const userScope = scope()
-        if (!userScope.read || !recordUrl(kind, recordId)) return null
+        if (!userScope.read || !recordUrl(kind, recordId) || !mayKind(userScope, kind)) return null
         recordOf(userScope, kind, recordId)
         return recordUrl(kind, recordId)
     } catch (error) {
@@ -439,6 +446,8 @@ function search(p) {
         )
     const found = new Map()
     for (const definition of searchFinds) {
+        // a kind behind a capability (store orders and carts: COMMERCE_ORDER_VIEW) is searched only for its holder
+        if (!mayKind(userScope, definition.kind)) continue
         let rowsFound = []
         try {
             rowsFound = Array.from(definition.query(userScope, condition).limit(limit).list())
@@ -456,7 +465,7 @@ function search(p) {
                         title: (record.label && record.label !== recordId ? record.label + " · " : "") + recordId,
                         subtitle: [record.kindName, record.detail].filter(Boolean).join(" · "),
                         icon: recordKinds[definition.kind].icon,
-                        recordEntity: "mantle.product.store.ProductStore",
+                        recordEntity: definition.recordEntity || "mantle.product.store.ProductStore",
                         recordId,
                         url
                     })
@@ -752,6 +761,105 @@ function ownerLinks(p) {
 }
 
 const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope, ownerLinks}
+// ===== P8: orders, carts and customers (design §6, §10) =====
+// The Commerce screens of a store order, a cart and a customer (each checked by recordOf, as every kind)
+// (each linked and searched only for a holder of COMMERCE_ORDER_VIEW, whose screens they are; P8 review)
+Object.assign(recordKinds.order, {destination: "Orders/OrderDetail?orderId=", capability: "orderView"})
+Object.assign(recordKinds.cart, {destination: "Orders/CartDetail?orderId=", capability: "orderView"})
+Object.assign(recordKinds.customer, {destination: "Customers/Customer360?customerPartyId=", capability: "orderView"})
+// the palette's store orders and carts: by id or name, of the user's stores only (in the query), each checked again
+const orderSearch = cart => (userScope, condition) => {
+    const storeIds = Array.from(storeFind(userScope).selectField("productStoreId").list()).map(row => row.productStoreId)
+    let query = find("mantle.order.OrderHeader")
+        .condition("productStoreId", "in", storeIds)
+        .condition(condition(["orderId", "orderName"]))
+        .selectField("orderId")
+        .orderBy("-entryDate")
+    query = cart ? query.condition("statusId", "OrderOpen") : query.condition("statusId", "!=", "OrderOpen")
+    return query
+}
+searchFinds.push(
+    {kind: "order", query: orderSearch(false), idField: "orderId", recordEntity: "mantle.order.OrderHeader"},
+    {kind: "cart", query: orderSearch(true), idField: "orderId", recordEntity: "mantle.order.OrderHeader"}
+)
+linkPaths.push(
+    "Orders/Orders",
+    "Orders/OrderDetail",
+    "Orders/Carts",
+    "Orders/CartDetail",
+    "Orders/Returns",
+    "Orders/ReturnDetail",
+    "Customers/Customers",
+    "Customers/Customer360",
+    "Customers/Requests",
+    "Customers/RequestDetail"
+)
+// The owners' screens a Commerce order, return, customer or case links to (design §6: each worked there, never in
+// Commerce), each the address prefix of its record when the user may open the screen, else null.
+const operationScreens = {
+    caseDetail: {path: "CustomerService/Cases/CaseDetail", url: "/qapps/CustomerService/Cases/CaseDetail?requestId="},
+    orderChange: {
+        path: "CustomerService/Orders/OrderChangeDetail",
+        url: "/qapps/CustomerService/Orders/OrderChangeDetail?requestId="
+    },
+    serviceOrder: {path: "CustomerService/Orders/OrderDetail", url: "/qapps/CustomerService/Orders/OrderDetail?orderId="},
+    serviceReturn: {path: "CustomerService/Returns/ReturnDetail", url: "/qapps/CustomerService/Returns/ReturnDetail?returnId="},
+    serviceCustomer: {
+        path: "CustomerService/Customers/Customer360",
+        url: "/qapps/CustomerService/Customers/Customer360?customerPartyId="
+    },
+    accountingOrder: {path: "Accounting/Records/OrderDetail", url: "/qapps/Accounting/Records/OrderDetail?orderId="},
+    accountingReturn: {path: "Accounting/Records/ReturnDetail", url: "/qapps/Accounting/Records/ReturnDetail?returnId="}
+}
+function operationLinks() {
+    required()
+    return {
+        links: Object.fromEntries(
+            Object.entries(operationScreens).map(([key, screen]) => [key, mayOpenScreen(screen.path) ? screen.url : null])
+        )
+    }
+}
+// get#CallContext (Comms' ring bar and call, design §1.4): the caller's open store orders and carts in the user's stores,
+// the caller found by the number's last seven digits among current telephone numbers (as Customer Service's provider);
+// nothing for a user without the order read.
+function callContext(p) {
+    const recordList = []
+    const digits = String(p.number || "").replace(/\D/g, "")
+    if (digits.length < 7 || !ec.user.userId) return {contactList: [], recordList}
+    const userScope = scope()
+    if (!userScope.read || !userScope.capabilities.orderView) return {contactList: [], recordList}
+    const factory = ec.entity.conditionFactory
+    const last7 = digits.slice(-7)
+    const written = [last7, ...["-", " ", "."].map(separator => last7.slice(0, 3) + separator + last7.slice(3))]
+    const partyIds = Array.from(
+        new Set(
+            Array.from(
+                find("mantle.party.contact.PartyContactMechTelecomNumber")
+                    .condition(
+                        factory.makeCondition(
+                            written.map(form => factory.makeCondition("contactNumber", "like", "%" + form + "%")),
+                            "or"
+                        )
+                    )
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .limit(60)
+                    .list()
+            ).map(row => row.partyId)
+        )
+    )
+    if (!partyIds.length) return {contactList: [], recordList}
+    const found = call("mantle.order.StoreOperationsServices.get#StoreCallRecords", {partyIds})
+    for (const record of Array.from(found.records || [])) {
+        const kind = record.cart ? "cart" : "order"
+        recordList.push({
+            title: (record.cart ? "Cart " : "Store order ") + record.orderId + " · " + record.storeName,
+            status: record.statusText,
+            url: recordUrl(kind, record.orderId)
+        })
+    }
+    return {contactList: [], recordList}
+}
+Object.assign(operations, {operationLinks, callContext})
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Commerce branch: the user's scope, the same refusing a user

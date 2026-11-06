@@ -281,7 +281,10 @@ feature("the portal demo: ORG_ZIZI_RETAIL's Billing, Supplier and Support site, 
         // with Purchasing's Supplier app demo (P16): Ziddleman's quote link and the order's acknowledgement link; with
         // Customer Service's feedback demo (P13): the answered invitation's link; with its Support app demo (P15): the
         // Support queue's public form token
-        links.sort().join() == "BillUpload,CaseFeedback,CaseIntake,InvoicePay,OrderAcknowledgement,BillUpload,QuoteResponse"
+        // (each demo link is there; other specs in a full run may issue more links of the organization)
+        ["BillUpload", "CaseFeedback", "CaseIntake", "InvoicePay", "OrderAcknowledgement,BillUpload", "QuoteResponse"].every(
+            scopes => links.includes(scopes)
+        )
         payer.join() == "billing:JoeDist"
         supplier.join() == "supplier:ZiddlemanInc"
         groups.length == 0

@@ -6,6 +6,10 @@
         {"query": "write back to the customer about the late filters", "expect": ["case-reply"]},
         {"query": "summarize this case for me", "page": "/qapps/CustomerService/Cases/CaseDetail", "expect": ["case-summary"]},
         {"query": "give me a recap of the ticket before I hand it over", "expect": ["case-summary"]},
-        {"query": "what happened on case 100234", "expect": ["case-summary"]}
+        {"query": "what happened on case 100234", "expect": ["case-summary"]},
+        {"query": "why is this store not ready to go live", "page": "/qapps/Commerce/Stores/StoreDetail", "expect": ["store-readiness"]},
+        {"query": "explain the readiness findings of the shop", "expect": ["store-readiness"]},
+        {"query": "why did this cart not convert", "page": "/qapps/Commerce/Orders/CartDetail", "expect": ["cart-recovery"]},
+        {"query": "is this customer's basket abandoned or stuck at checkout", "expect": ["cart-recovery"]}
     ]
 }

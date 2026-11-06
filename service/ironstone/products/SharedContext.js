@@ -319,7 +319,9 @@ const commercePaths = {
     "Prices/PriceExplain": "Merchandising/PriceExplain",
     "Availability/InventoryAvailability": "Merchandising/InventoryAvailability",
     "Merchandising/Assortment": "Merchandising/Assortment",
-    "Merchandising/StoreCategories": "Merchandising/StoreCategories"
+    "Merchandising/StoreCategories": "Merchandising/StoreCategories",
+    // Commerce P9: Product360's link to the product's reviews
+    "Merchandising/Reviews": "Merchandising/Reviews"
 }
 function commerceFacilities(storeIds) {
     if (!storeIds.length) return []

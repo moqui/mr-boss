@@ -270,8 +270,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | built Nov 6, 2026 |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
-| P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
-| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | — |
+| P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | built Nov 6, 2026 |
+| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026 |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
 | P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
@@ -1750,6 +1750,18 @@ expire not delete, store#PromoCodeParty; the four Shared screens (Commerce's con
   - The TEST2 feature's discount assertion depends on how many TEST2 uses the database already holds (its code allows 5
     in all); its placement assertion is the one that always tests the unchanged default.
 
+- **Wave 9 suites (Nov 6, on master after Shop P5 and the framework's session decline merged; Shop P6's worker ran at
+  the same time):** standalone mr-mantle 1,825 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,204
+  server features passed and 1 failed (AccountingPayables' portal demo compared ORG_ZIZI_RETAIL's links exactly, and a
+  full run issues one more acknowledgement link; it now checks each demo link is there), 17 client features passed;
+  `moqui lint --screens` clean. Feature time: server mr-mantle 357.2 of 370 s, mr-boss 246.8 of 264 s, mr-pass 18.2 of
+  17 s; client mr-boss 52.9 of 57 s, mr-pass 8.2 of 6 s (ShopCheckoutWalk 3.9 s). mr-pass's budgets raised by Shop's
+  share to 20 s and 9 s (the user's agreement, §4).
+- **Wave 10 suites (Nov 6, on master after Shop P6 merged, nothing else running):** standalone mr-mantle 1,840 passed,
+  2 failed (the baseline), 11 skipped; `./moq test-apps` 3,223 server and 17 client features passed; `moqui lint --screens`
+  as before. Feature time: server mr-mantle 369.8 of 370 s, mr-boss 248.2 of 264 s, mr-pass 18.1 of 20 s; client mr-boss
+  53.3 of 57 s, mr-pass 8.1 of 9 s. mr-mantle's budget raised by Shop P5–P6's share (12.6 s) to 383 s (§4).
+
 ### P8 — Orders, carts and customers
 
 Design §6 Orders, Carts, CartDetail (without recovery), Returns, Customers and Requests, and §10's order, return,
@@ -1792,6 +1804,180 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
   - a capture failed after placement shows the `OhtPayment` hold, which a Commerce operator cannot release;
   - Order again on a past order makes a new open order at today's prices.
 
+**Built Nov 6 (P8).**
+- Mantle:
+  - `service/mantle/order/StoreOperationsServices.xml` over one module `StoreOperations.js` (O): `find#StoreOrders`
+    (submitted orders of the user's stores or one, never OrderOpen; by number, name or external reference, customer,
+    status, placed dates; an Attention filter `paymentHold`, `hold`, `cancelRequest`, `notice` and `stuck`; a payment
+    filter over the computed state, at most 500 candidates, `truncated` says so), each row with its store, channel,
+    customer, placed date, status, total, computed payment state (held when an OhtPayment hold is open; paid by its
+    invoices or captured payments; authorized; promised; no charge; unpaid), fulfillment state (shipments and the digital
+    lines' StoreItemFulfillment: "Downloads ready", "held", "revoked", "pending") and badges (holds, the Payment hold,
+    a cancellation proposal); `get#StoreOrder` (OrderDetail's Commerce branch: header, open holds, items, payments,
+    shipments, invoices, open order changes, cases, returns, the order's notices on the delivery ledger with the address
+    masked, its Shop checkout; an open order refused, it is a cart); `reorder#StoreOrder` (Order again, F43:
+    `clone#Order` with `copyPayment` false and product items only, each part back to OrderOpen, promotion lines dropped,
+    `recalc#OrderPartItemAmounts` then `handle#OrderMajorChange`; nothing placed or charged); `find#StoreCarts` and
+    `get#StoreCart` (OrderOpen store orders by the shopper's activity, StoreCartAccess.lastActivityDate; states active,
+    abandoned, checking out, placement waiting, made by staff; a guest shows "Guest"; recovery empty until P10);
+    `find#StoreReturns` and `get#StoreReturn` (ReturnHeaders by their lines' source orders' store, Requested first; read
+    only); `find#StoreCustomers` and `get#StoreCustomer` (parties with an order or a signed-in cart in the user's stores,
+    never a directory; the PASS account's state as ExternalAccess.selfOf reads it, current addresses, payment methods as
+    type and last four, orders, carts, cases, returns; subscriptions empty until P12); `find#StoreRequests`,
+    `get#StoreRequest` and `add#StoreRequestNote` (cases, a CaseProfile, by `Request.productStoreId`, linked to a store
+    order by RequestRecord, or in a store's checkout support queue; open by default; the conversation; an internal note
+    through `add#RequestComment`); `find#StoreDeliveries` (the store's delivery-ledger notices, exceptions by default,
+    read only, F91); `get#StoreWorkSummary` (Home: to approve, payment holds, to fulfill, unpaid, open carts, stuck
+    placements, notice exceptions, each count failing alone; the recent orders for an order reader); `get#StoreCallRecords`
+    (the call context's open store orders and carts of given parties). Each checks COMMERCE_VIEW, COMMERCE_ORDER_VIEW for
+    the order, cart, return, customer and case reads, and StoreAdmin.js's scope (F51: a store-limited member is refused
+    another store of the same organization in every one); a missing record and one outside it are RECORD_UNAVAILABLE.
+  - `entity/StoreOperationsViewEntities.xml`: `mantle.order.return.StoreReturnItemView` (a return's lines with their source
+    order's store) and `mantle.request.StoreRequestOrderView` (a request linked to an order, with its store), so the store's
+    returns and cases are found in the query. No Mantle rule changed, so no default to test.
+- BOSS:
+  - Areas: `screen/Commerce/Orders.xml` (Orders, the default; Carts; Returns; OrderDetail, CartDetail and ReturnDetail
+    hidden) and `screen/Commerce/Customers.xml` (Customers, the default; Requests; Customer360 and RequestDetail hidden);
+    `Orders/Orders.xml` (OrderFind with Attention and Payment, the list with badges; a stuck placement opens CartDetail),
+    `Orders/Carts.xml`, `Orders/CartDetail.xml` (CartSummary, the checkout box with a stuck placement's banner, an empty
+    RecoveryHistory), `Orders/Returns.xml`, `Customers/Customers.xml`, `Customers/Requests.xml`.
+  - Shared screens' Commerce branches (each reading the Mantle service and `get#OperationLinks`): `template/CommerceOrderDetail.xml`
+    (the Payment hold banner read only with Accounting's order, other holds, cancellation proposals linking Customer
+    Service's OrderChangeDetail, the cards, items, payments, shipments, invoices, cases, returns and notices; Order again
+    through `commerceReorder`, which opens the new cart), `CommerceReturnDetail.xml` (read only, Open in Customer Service and
+    in Accounting), `CommerceCustomer360.xml` (one page, no tabs; the Accounting tabs' prompts and actions now leave Commerce
+    out), `CommerceRequestDetail.xml` (read only, Internal note, Open in Customer Service); Shared/OrderDetail,
+    ReturnDetail, Customer360 and RequestDetail include them.
+  - Commerce.js (appended but the palette's `recordEntity`, now per find): the order, cart and customer record kinds' screens;
+    the palette's store orders and carts (`searchFinds`); the ten `linkPaths`; `operationLinks` (Customer Service's
+    CaseDetail, OrderChangeDetail, OrderDetail, ReturnDetail and Customer360, Accounting's OrderDetail and ReturnDetail, each
+    for a user who may open it); `callContext`. ContextServices: `get#OperationLinks`, `get#CallContext`.
+  - `PaletteServices.get#RecordLink` (F8, F42): Customer Service's sales-order branch returns only with a link, so a store
+    order or cart opens OrderDetail or CartDetail under Commerce for a user who works its store; Customer Service's users
+    keep their link.
+  - The root: `call-context` (`boss.commerce`), the Assist prompts of design §1.4 for StoreDetail, CartDetail and OrderDetail,
+    keys g o, g c, g u. Home: WorkCards from `get#StoreWorkSummary` (a dash for a count that failed; each opening the scoped
+    list for an order reader), Placements waiting and Notices not delivered added, Reviews and Integration errors still Not
+    configured (P9, P13), RecentOrders. F70: PromotionDetail's Redemptions and PromoCodeDetail's Usage link the order for a
+    user of the Orders area.
+  - `skill/store-readiness.md` and `skill/cart-recovery.md`, `skill/aliases.json` (cart, store), `test/skill-retrieval.json`
+    (+4 cases; recall@3 1.00, 10 of 10).
+- mr-pass: `acceptance/ShopOrdersInCommerce.spec.js` and its README line (below).
+- Specs:
+  - Mantle `test/order/StoreOperations` (3 features, 1.1 s alone, 1.6 s under load): orders leave out carts, carry the Payment hold and the cancel
+    request, list a stuck placement (ORDER_CHANGED), keep to the scope (the reader PERMISSION_DENIED, the other
+    organization's operator, the store-limited member refused the second store, F51), the work counts; carts abandoned and
+    stuck, returns and cases by their orders' store (a case of no store left out), an internal note, customers no directory
+    (a Customer-role party of the organization with no order refused); Order again open at today's price (10, the clone kept
+    20) with no payment, another organization's and a cart refused.
+  - BOSS `test/Commerce/CommerceOrders` (2 features, 0.6 s): the demo store's held order (the operator reads the hold,
+    `release#OrderHold` refused PAYMENT_HOLD_RELEASE; the reader refused; another organization's order RECORD_UNAVAILABLE);
+    `get#RecordLink` under Commerce for the operator, under Customer Service for its order desk, none for the other
+    organization; the palette's order and cart; OrderDetail's Commerce branch and CartDetail each rendered once (qvt). No
+    CommerceAccess case: the rule is Mantle's permission and scope.
+  - Also run, all pass: Mantle StoreOperations; BOSS CommerceOrders, CommercePromotions, CommerceAccess, CommerceStores,
+    CommerceCheckoutSettings and the specs reading the shared screens, the palette and the shell (Accounting*, Chat, Chatter,
+    ClientBilling, CommonsSettings, CommsHome, CustomerService* (9), Manufacturing* (4), Notifications, ProductsAccess,
+    ProjectRequests, ProjectsAccess, Purchasing* (4), QuickCreate, Requests, TodayPanel, Warehouse* (4),
+    AppOrganizationFilters): 338 features, 71.8 s; `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
+- Acceptance: mr-pass `acceptance/ShopOrdersInCommerce` (5 features, dependsOn ShopFixtures and ShopOrderScenarios; every
+  feature ignored without mr-boss, so PASS stands alone): physical and digital-only Shop orders placed through a page's
+  calls and approved, with ShopOrderScenarios' mixed order, in Orders with their payment and fulfillment (the digital
+  "Downloads ready", the mixed "Shipped · Downloads revoked" after that spec's refund) and in Warehouse's and Accounting's
+  OrderDetail; the question in Requests, the return in Returns (Requested), the cancel request's badge, the owners' links for
+  a user who opens Customer Service and none for the operator, RequestDetail and ReturnDetail read only, the operator
+  refused `authorize#Return`; a capture declined after placement (ZIZI_SHOP_CAPFAIL) held, listed and shown, the operator
+  refused the release; Order again posted from OrderDetail, the new open order at `get#ProductPrice`'s price with no payment,
+  CartDetail "Made by staff"; Home, Orders, Carts, Returns, Customers, Requests and Customer360 in qvt and Orders in html.
+  `./moq accept mr-pass --spec ShopOrdersInCommerce`, run: 12 features (with its two fixtures), 12 passed; then
+  `./moq accept mr-pass` once: server suite 32 features, 29 passed, 3 ignored (as before), 0 failed; client suite 41 of 41.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new screens or templates.
+- Inventories: usl-inventory's clone#Order names Commerce/Orders/OrderDetail's Order again; the Designed-in paths
+  `Commerce/Orders/Carts/CartDetail`, `Orders/Returns/ReturnDetail` and `Customers/Requests/RequestDetail` became the flat
+  built paths (design §2 changed). ss-inventory has no Commerce order row. The other usl rows naming Commerce/Orders/OrderDetail
+  (place, approve, hold, release, cancel, the item mutators) stay unimplemented in Commerce: its OrderDetail is read only and
+  those actions are the owners' screens' (design §10).
+- Decisions (design §16 row "Orders, carts and customers as built"):
+  - The detail screens are flat under their areas, as P7's.
+  - A stuck Shop placement is an open order with its payment kept: it is listed by Orders' Attention filter and opens
+    CartDetail, never OrderDetail; Commerce shows it read only.
+  - A cart is abandoned an hour after its last shopper activity with no live checkout until P10's RecoveryPolicy sets the
+    store's delay; a staff-made cart has no shopper activity and is never abandoned.
+  - A case is the store's by its store, a link to a store order or the store's support queue; a product link alone is not
+    (a product belongs to no one store), so design §6's "or products" is left out.
+  - Order again needs COMMERCE_ORDER_VIEW (the subscription operator's too) and makes an open order only; whoever places it
+    places it through the order's owner.
+  - Customer360 in Commerce is one page, not tabs; its Accounting tabs stay Accounting's.
+  - The P8 acceptance lives in mr-pass beside the Shop scenarios it reads (F106), not in `acceptance/Commerce/`.
+  - Routed items: F8, F42, F43, F51 and F70 done as above. impl-shop F85: stuck placements listed (Orders' Attention, Home's
+    Placements waiting, CartDetail's banner) and the OhtPayment hold shown read only. F91: a store-scoped review, read only
+    (`find#StoreDeliveries`, OrderDetail's Notices, Orders' "Notice not delivered", Home's count); resolving stays
+    `resolve#Delivery`'s MESSAGE_DELIVERY_REVIEW, which no Commerce group gets until Comms scopes it by store (F109).
+    F86: no store default for digital-only orders here (F110).
+- Findings (provisional):
+  - **F106** `dependsOn` does not order a run: the named specs are added, but the run keeps component load order and then
+    file names, so a spec named before its dependency runs first (mr-boss's specs run before mr-pass's, and in mr-pass
+    `CommerceOrderScenarios` ran before ShopFixtures). The walk was renamed to sort after ShopOrderScenarios. For the
+    framework: run a spec's dependsOn first, as the help says.
+  - **F107** No Accounting screen releases a Payment hold: `release#OrderHold` with PAYMENT_HOLD_RELEASE is reachable only as a
+    service (ShopPaymentScenarios calls it); Commerce links Accounting's OrderDetail, which shows no release. For Accounting.
+  - **F108** A stuck placement has no resolution screen anywhere: its payment is kept and the order open, and nothing
+    places it again or refunds it but the services. For Accounting and Shop (impl-shop F85's remainder).
+  - **F109** F91: `resolve#Delivery` stays unscoped; a store-scoped resolve (or Comms' review screen) is needed before a
+    Commerce group may resolve its notices.
+  - **F110** F86 left for Sales: a store already turns PsstOrdApproveNewCust and PsstOrdApproveAddrMissing off in
+    StoreDetail's approval checks; a default that skips them only for an all-digital order would be a new
+    `check#OrderPreApprove` condition with its default test, Sales' approval policy rather than Commerce's. The acceptance
+    approves the demo store's Shop orders by hand, as ShopOrderScenarios does.
+  - **F111** Not built from the phase text: the "Log as note" response-action (no Commerce screen takes a note on an order or
+    cart; a case takes one in RequestDetail), the IntegrationDetail and Product360 prompts (P13, P9) and the channel-retry
+    skill (P13, no IntegrationDetail yet).
+  - **F112** RecurringTemplate bases are not left out of Orders yet: `orderPurposeEnumId` does not exist until Shop P7 marks
+    them; `find#StoreOrders` is where the condition goes.
+  - **F113** StoreOperations scopes an order by its store alone (the store's organization), while Commerce.js's
+    `check#Record` of an order also needs each part's vendor to be one of the user's organizations: a store order vended by
+    another organization would be listed and then refused by the record check (and its record link). None exists in the
+    demo; for the lead, whether Mantle should check the vendor too. *Review: yes, done (R2).*
+
+**Review Nov 6 (P8).**
+- Checked: `git diff $(git merge-base master com/p8)..com/p8` in mr-mantle, mr-boss and mr-pass against this section,
+  §2, design §6 and §10. Each of the 15 StoreOperations operations takes StoreAdmin.js' scope (COMMERCE_VIEW, the user's
+  organizations, the StoreStaff limit, F51) and all but `get#StoreWorkSummary` COMMERCE_ORDER_VIEW; a store given by the
+  browser goes through `storeOf`; a forged id in `get#StoreOrder`/`get#StoreCart` (an open order as an order and back),
+  `get#StoreReturn` (every source order in scope), `get#StoreRequest` and `add#StoreRequestNote` (the case checked on itself:
+  its store, a store-order link or a store's queue), `get#StoreCustomer` and `reorder#StoreOrder` is RECORD_UNAVAILABLE;
+  `get#StoreCallRecords` keeps to the user's stores whatever parties it is given. The Shared mounts' Commerce branches call
+  only these services (no `check#Record` in front, so Mantle is the only gate there). `find#StoreCustomers` reads only
+  the customers of the stores' orders and signed-in carts; Customer360 shows methods as type and last four, no password,
+  impersonation or gateway data. The Payment hold is shown read only: no Commerce transition releases it and
+  `release#OrderHold` refuses the operator. The internal note is a Comment (SupportPortal leaves Comments out of the
+  customer's view). `find#StoreDeliveries` is scoped and read only (no screen uses it yet). F42: Customer Service's branch
+  keeps its link and falls through only on null; no later branch of `get#RecordLink` takes a sales order. The mr-pass
+  acceptance needs mr-boss lazily and ignores every feature without it.
+- **R1 (medium)** `reorder#StoreOrder` had no operation identity: a double submit of Order again made two open orders.
+  It now takes an `operationKey` (PostingOperation, type StoreReorder; a retry answers the first new order with
+  `alreadyApplied`) and the order's `orderRevision` as OrderDetail showed it (stale: STALE_REVISION naming the current);
+  the form sends both. A line cancelled in full is no longer ordered again, a part-cancelled one carries what was kept.
+- **R2 (medium, F113)** Mantle now also requires the vendor: an order of the user's stores with a part vended by an
+  organization not theirs is left out of every list, count, customer, return, case and call context and refused as a
+  record, as Commerce.js' record check and Customer Service's order scope do (the shared mounts have no record check in
+  front of Mantle, so without it such an order opened in OrderDetail). StoreOperations gains the case (an order of store A
+  vended by organization B).
+- **R3 (low)** The palette searched store orders and carts, with their customers' names, for every Commerce user, and
+  `get#RecordLink` linked them for a user without COMMERCE_ORDER_VIEW. The order, cart and customer kinds now carry the
+  `orderView` capability, checked in the search and the link; CommerceOrders checks the reader finds none.
+- Specs after the fixes: Mantle StoreOperations 3 of 3 (1.4 s of feature time); BOSS CommerceOrders, CommerceAccess,
+  CommercePromotions, CustomerServiceAccess, CustomerServiceOrders, CustomerServiceReturns, AccountingAccess,
+  AccountingReceivables, Chat, Requests, ProjectRequests, WarehouseReturns, PurchasingReturns, PurchasingRequests,
+  PurchasingOrders, ManufacturingWorkOrders, QuickCreate, TodayPanel: 160 of 160; acceptance mr-pass ShopOrdersInCommerce
+  (with ShopFixtures, ShopOrderScenarios) 12 of 12. Lint: 132 sites as before, none in Commerce. Not run: `./moq test-apps`.
+- For the lead: (1) `heldOrderIds` and `cancelRequestOrderIds` take the first 500 open holds or cancel requests of every
+  store before the store filter, so with many in other stores the Attention filters and Home's Payment holds count could
+  miss some; a view entity joining the order's store would fix it. (2) Customer360 shows the customer's current emails
+  and full addresses to a store operator, as Customer Service does; design §10 says only the methods are masked. (3) Order
+  again needs only COMMERCE_ORDER_VIEW (the worker's decision), so a read-only operator can make open orders. (4) A queue
+  set as a store's checkout support queue brings every case of that queue into the store, including cases not about it.
+
 ### P9 — Reviews
 
 Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitReview; COM-MERCH's review part, SHOP-SUPPORT.
@@ -1821,6 +2007,127 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   reviews a delivered item with a photo; the merchandiser approves it and replies; the public page shows the reply and
   the photo and no private identity; the buyer's edit returns it to pending and out of the average; deciding another
   review leaves this one alone.
+
+**Built Nov 6 (P9)** (branch `com/p9`).
+- Mantle:
+  - Records (`entity/StoreReviewEntities.xml`, F19, F41): ProductReview extended with the purchase proof (`orderId`,
+    `orderItemSeqId`), the author's public label (`displayName`) and the store's reply (`replyText`, `replyUserId`,
+    `replyDate`), the proof and reply audit-logged with the status, an index by store, product and status; the status
+    transition PrvwApproved to PrvwPending ("Review Edited"); `mantle.product.ProductReviewImage` (review, sequence, digest
+    with a unique index, location, name, type, size). `data/StoreReviewsSetupData.xml`: the ledger source
+    `MdsrcReviewRequest`. The demo's two reviews renamed DEMO_REVIEW_1 and _2 (F94).
+  - `service/mantle/product/StoreReviews.js` behind `StoreMerchandisingServices` `find#Reviews`, `get#Review`,
+    `get#ReviewImage` (staff, any state) with COMMERCE_VIEW, `moderate#Review` (approve or delete; `reviews`, the list rows'
+    `selectionKeys` (productReviewId@revision) or one review, each at its expected revision in its own transaction through
+    the internal `decide#Review`, a result per review; a delete needs its reason, which goes to the status's audit log) and
+    `reply#Review` (an approved review's plain-text reply at its revision, or `withdraw`) with COMMERCE_MERCHANDISE, all in
+    the store scope (StoreAdmin.js); `queue#ReviewRequests` and `build#ReviewRequest`; and `ShopCatalogServices` `get#Reviews`
+    (getProductReviews), `submit#Review` (submitProductReview) and `get#ReviewImage` (getShopReviewImage). Every decision,
+    reply and edit of an approved review advances the store's site generations. ShopCatalog.js' product view carries
+    `product.reviews` (the first five, the summary, the visitor's own review's state and the write link), appended to
+    ThemeView.js' product shape.
+  - The proof: a signed-in account with its email verified (the self relationship, after Shop P6's claim of its email's
+    guest purchases), and its own order line of the product or of a variant of it: an order of the store whose parts are all
+    the account's (ShopCustomer.js `ownOrder`), approved, sent or completed, the line not cancelled, delivered (its shipment
+    delivered, the order completed, or a current download grant). One review per account, store and product; a second is
+    ALREADY_REVIEWED; an edit at the expected revision returns an approved review to pending. Photos: PNG or JPEG only, one a
+    call, up to three, staged and scanned through PortalMedia.js and kept under the content root
+    (`productReview/{store}/{review}/{seq}`); one refused (type, size, no scanner, scan) is named in `imageRefused` and the
+    text kept.
+  - The request (`service/StoreReviews.secas.xml`): ShipmentDeliveredRequestReviews (a shipment to ShipDelivered) and
+    DownloadFirstRequestReview (a grant's first download) call `queue#ReviewRequests`, which queues one delivery per line
+    (`reviewRequest:{order}:{line}`) only for a Shop order (a completed StoreCheckout) of a store with a current
+    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F95); the build suppresses it once
+    the buyer reviewed the product, the line was cancelled or returned, or the product is no longer public.
+  - Shop's operations in Schema/Routes and their Mantle mirrors (identical), `Contracts.d.ts` and PassAuthority's DOWNLOADS:
+    `getProductReviews` (GET), `submitProductReview` (POST, its `file`), `getShopReviewImage` (a GET download). None is a
+    token write.
+- mr-pass: `screen/Shop/Review.xml` with `Shop/ShopReviews.js` (Review?productId=: the approved reviews a page at a time and,
+  for the buyer, SubmitReview with up to three photos posted one a call at the review's new revision, or the change of
+  their own); `Shop.xml`'s media route serves a review image by `reviewImage`; ProductDetail's PublicReviews in the PASS shell
+  (`Catalog.html.fancy`) and in the starter theme's `product-main` section; ShopAccount.js exports its page helpers.
+- BOSS: `Commerce/Merchandising/Reviews.xml` (ReviewFind; Reviews with the bulk decision on selected rows, ReviewDecision with
+  the text and photos, Reply and Withdraw reply), `linkPaths` "Merchandising/Reviews", Products' Commerce paths and
+  Shared/Product360's Reviews link under Commerce.
+- Specs (all `--nobuild`): Mantle `test/product/StoreReviews` (4 features, 0.9 s: no proof and a visitor refused, a PDF and an
+  unscanned PNG refused with the text kept, a second review refused; only approved public and in the summary, a pending
+  review's image not served and the approved one's served, the reader refused a decision, a stale decision named, the reply
+  and the author's label without the account; the edit back to pending, out of the average, its image no longer served, a
+  stale edit refused; the request queued once by the delivered shipment's SECA, suppressed without consent, its build's
+  review link, suppressed once reviewed, an order Shop did not place queuing none); mr-pass `test/Shop/ShopReviews` (2
+  features, 0.2 s: a scanned photo kept, local and remote reads alike, the photo served by digest only once approved, the
+  product page's one shell render with the review, reply and photo and no account; the Review page's one render with the
+  change form; the routes); BOSS `CommerceReviews` (2 features, 0.1 s: a bulk decision with a result per review, approved,
+  stale and another organization's store's; Reviews' one qvt render). Also run, all pass: Mantle ShopCatalog,
+  StoreFulfillment, DeliveryLedger, ShopCustomer, StorePublication, ThemeAuthoring, ThemeReleases, PassAuthority; mr-pass
+  Transport, ShopAccess, ShopCatalog, ShopAccount, ShopThemes, ShopPreview, ShopCart; mr-boss CommerceAccess,
+  CommerceAssortment, ProductsAccess. Not run: `./moq test-apps` (the brief: no whole suites).
+- Acceptance: `acceptance/Commerce/CommerceReviewsScenario` (mr-boss, 3 features: the usable-when on POPC_DEFAULT's
+  DEMO_1_1 through a spec site, the Shop operations and the Reviews transitions as commerce.merchandiser, with the reader
+  refused), run once: 3 passed.
+- Lint: `moqui lint --screens` 132 flagged sites as before, none in Reviews, Review or ShopReviews.
+- Inventories: no ss-inventory or usl-inventory row (SimpleScreens has no review screen, mantle-usl no review service).
+- Decisions: a review is one per account, store and product, its proof found from the account's own delivered line and kept
+  through edits; the author's label is chosen and stored at submission ("A customer" otherwise, and for the demo's reviews);
+  an image's digest is the sha-256 of the review, its sequence and the file's base64, so the same photo twice has two
+  addresses; staff see a pending review's photos through Reviews' own transition; the proof refusals (PURCHASE_REQUIRED,
+  VERIFY_REQUIRED) are Unprocessable so a page shows their text; an edit keeps the store's reply, shown again on
+  re-approval (F98); SubmitReview is a PASS-shell page, not a theme component (a theme has no form).
+- Findings (provisional):
+  - **F94** The demo's ProductReview rows used ids 100001 and 100002, which the sequence hands out next, so the second
+    review made on a demo database failed on its key; renamed DEMO_REVIEW_1 and _2.
+  - **F95** The review request is a solicitation, so the ledger sends it only with a granted PcpMarketingEmail, which
+    Shop never collects (no checkout opt-in, §4): on the demo no request goes out. For the lead: a store "review requests"
+    topic on Email preferences as cart reminders have, or treat it as transactional with the preferences link it carries.
+  - **F96** PASS's facade and transports take one `file` an operation, so up to three photos are three calls; and a
+    FileItem in a service's parameter map loses its methods in process, so the specs add a photo through StoreReviews.js
+    as the service does.
+  - **F97** The request is queued at delivery or first download and sent within the job's two minutes; the ledger's
+    `queue#Delivery` has no not-before date, so a store's "days after delivery" waits for one.
+  - **F98** An author's edit keeps the store's reply, which shows again under the new text when it is re-approved; the
+    merchandiser may withdraw it first.
+  - **F99** Reviews reach a theme as `product.reviews`; the starter's product section renders them, but a release
+    published before P9 (from the old starter) shows none until republished.
+  - **F100** For a signed-in visitor, each product page view reads their qualifying lines to offer the write link (up to
+    200 orders); a session cache would spare it. (Review R1: the lines of the product are read first, in one query.)
+
+**Review Nov 6 (P9).** Checked `git diff master...com/p9` in mr-mantle, mr-pass and mr-boss against this section, design
+§4 Reviews, design-shop §5 and §2. The proof is found from the session's account only (selfParty, OrderPart customer and
+vendor, ShopCustomer `ownOrder`); no party, order or line id is taken from the request, and an edit needs the account's own
+review at its revision. Public reads carry approved reviews only, the stored label, the reply's text and date (no reply
+user), `verifiedPurchase` and image URLs by digest; `get#ReviewImage` rechecks the review's status (Approved only, so an
+image cached from before an edit or a delete is refused), its store against the routed store and its product's
+publication; the media route is no-store; the remote read cache keeps only anonymous answers, keyed by the generation that
+every decision, reply and edit of an approved review advances. Images: PNG or JPEG before staging, PortalMedia's size,
+sniff and scan, a refusal named with the text kept, staging removed on every path. Staff: every service through
+`stores.scope` and `reviewOf` (another organization's store and a forged id refused alike), decisions each in its own
+transaction with a result per review. The SECAs are tx-commit rules, which the framework runs after the commit in a
+transaction of their own, so a failure cannot undo a delivery or a download; one line's failure is logged and the rest go
+on. Mantle defaults: the new fields are nullable, the one new transition only widens the flow; no other ProductReview
+caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema/Routes mirrors identical.
+- **R1** (minor, F100) `qualifyingItems` reads the account's lines of the product and its variants in one query before
+  any order, and stops at the first qualifying line for the proof and the write link: a signed-in visitor who never bought
+  the product costs two queries a product page.
+- **R2** (minor) The Review page (`get#Reviews`, the review request's link) did not claim the account's guest purchases, so
+  a guest buyer who then made an account was told to wait for their order although `submit#Review` (which claims) would
+  accept it; it now claims first, as the account pages do. The product page's view does not claim (kept cheap).
+- Specs (`--nobuild`): Mantle StoreReviews, ShopCatalog, StoreFulfillment, DeliveryLedger, PassAuthority, ShopCustomer 26
+  passed; mr-pass ShopReviews, ShopAccess, ShopCatalog, ShopAccount, Transport 13 passed; mr-boss CommerceReviews,
+  CommerceAccess 14 passed. Acceptance not run (unchanged).
+- For the lead:
+  - A review staff deleted does not count for "one review per account, store and product": the author may write a new one
+    (pending, throttled). Count deleted reviews too if a deletion should be final.
+  - A decision or reply without an expected revision is not stale-checked (the screens always send it); require it if
+    every caller should.
+  - Two simultaneous first submissions could make two reviews (no unique key on account, store and product).
+  - The download SECA (DownloadFirstRequestReview) and R2's claim have no spec of their own (the shipment SECA and Shop
+    P6's claim have).
+  - Removing a photo deletes its file before the transaction commits; a later failure leaves the row without its file.
+- **Wave 11 suites (Nov 6, on master after Commerce P8 and P9 merged; the P9 follow-up's worker ran at the same
+  time):** standalone mr-mantle 1,847 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,236 server and 17
+  client features passed; `moqui lint --screens` as before. Feature time under load: server mr-mantle 399.0 of 383 s,
+  mr-boss 290.5 of 264 s (P8 and P9 add about 3 s and 1 s alone; the rest is the concurrent worker, as Shop P6's run
+  showed); client mr-boss 53.4 of 57 s, mr-pass 8.2 of 9 s. Budgets measured again at the next quiet run.
 
 ### P10 — Cart recovery
 
@@ -2089,6 +2396,30 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F91 | P5: CommerceThemesWalk adds 8.0 s to mr-boss's client budget (46.8 of 49 s) | The review measured it at 7.6 s of server work it cannot trim; the client budget is raised by it at the gate (the user's agreement) |
 | F92 | P5: does the anonymous preview record a Visit? | Yes, from its second request; fixed with F86 |
 | F93 | P5 review: at render the preview token checks the actor's account is enabled, not their theme permission or store scope (a revoked designer's open preview lasts at most 20 minutes); Shop P2's `get#ThemeDraft` with `includeText` returns source text to any `COMMERCE_VIEW` holder | Accepted: twenty minutes at most; theme source holds no secrets |
+| F94 | P9: the demo's ProductReview ids were the sequence's next values, so a second new review failed on a demo database | Renamed DEMO_REVIEW_1 and _2 |
+| F95 | P9: the review request is a solicitation, sent only with a granted PcpMarketingEmail, which Shop never collects, so the demo sends none | For the user: a per-store review-requests topic on Email preferences (as cart reminders), or transactional |
+| F96 | P9: PASS's facade takes one file per operation, so three photos are three calls | Accepted |
+| F97 | P9: the review request is sent within the ledger job's two minutes of delivery; the ledger has no not-before date for "days after delivery" | Later (the ledger's not-before) |
+| F98 | P9: an author's edit keeps the store's reply, which shows again on re-approval | Accepted |
+| F99 | P9: theme releases published from the old starter show no reviews until republished | Accepted |
+| F100 | P9: each product page view for a signed-in visitor read their qualifying orders | Fixed in the review (R1): one query of the product's lines |
+| F101 | P9 review: a review staff deleted does not count toward one review per account, store and product, so the author may write another | Accepted (pending, throttled); P15 if deletion should be final |
+| F102 | P9 review: a decision or reply without an expected revision is not checked for staleness (the screens always send one) | P15: required |
+| F103 | P9 review: two simultaneous first submissions can make two reviews (no unique key on account, store and product) | P15 |
+| F104 | P9 review: the download SECA (DownloadFirstRequestReview) and `get#Reviews`' claim have no spec of their own | P15 |
+| F105 | P9 review: removing a photo deletes its file before the transaction commits | P15 |
+| F106 | P8: `dependsOn` does not order a run (specs run in component load order, then by file name), so a mr-boss spec cannot depend on mr-pass specs | Framework; the P8 acceptance lives in mr-pass and sorts after ShopOrderScenarios |
+| F107 | P8: no Accounting screen releases a Payment hold (`release#OrderHold` is a service only) | Accounting (later) |
+| F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations) |
+| F109 | P8: `resolve#Delivery` stays unscoped; Commerce has a store-scoped read-only view of delivery exceptions | Comms (a store-scoped review) |
+| F110 | P8: Shop F86 (a guest's first digital order waits for approval) left for Sales; a store turns the approval checks off | Sales |
+| F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | P13 (integrations), P9's prompt at P15 |
+| F112 | P8: RecurringTemplate bases are not left out of Orders until Shop P7 marks them | Shop P7 |
+| F113 | P8: Mantle scoped a store order by its store alone, Commerce.js also by the vendor | Fixed in the review (R2): Mantle requires the vendor too |
+| F114 | P8 review: `heldOrderIds` and `cancelRequestOrderIds` take the first 500 open holds or cancel requests of all stores before the store filter | P11 (a view joining the order's store) |
+| F115 | P8 review: Customer360 shows a customer's current emails and addresses to a store operator, as Customer Service does; design §10 masks only payment methods | Accepted |
+| F116 | P8 review: Order again needs only COMMERCE_ORDER_VIEW, so a read-only operator can make open orders | Accepted (nothing placed or charged) |
+| F117 | P8 review: a store's checkout support queue brings every case of that queue into the store's cases | Accepted; a store's own queue is the deployment's choice |
 
 ## 7. Later
 
