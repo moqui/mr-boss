@@ -2604,6 +2604,12 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   which cannot run alone (it depends on AccountingActivities); its call passes no new parameter, read rather than run.
 - For the lead: F137 (bounds on the summaries' date histograms) is Sales'/Accounting's call; F143's ten acceptance
   failures were not checked against master here.
+- **Wave 13 suites, gate C2/S2 (Nov 6, on master after Commerce P11 merged; the acceptance fix worker ran at the same
+  time):** standalone mr-mantle 1,857 passed, 3 failed: the baseline two and ThemeAuthoring's forged preview token, which
+  equalled the real one when that ended in "Q" (one run in 62; the spec now picks another letter); `./moq test-apps` 3,252
+  server and 17 client features passed; lint as before. Feature time: server mr-mantle 371.6 of 383 s, mr-boss 246.7 of
+  264 s, mr-pass 17.4 of 20 s; client mr-boss 52.2 of 57 s, mr-pass 8.1 of 9 s. Stage C2/S2 is done; mr-boss's
+  acceptance failures (F143) are being fixed apart.
 
 ### P12 — Paid access and subscriptions
 
