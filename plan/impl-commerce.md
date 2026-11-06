@@ -636,7 +636,8 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
     has no organization field); members are its organization's stores; a store-limited member edits only a group whose
     members are all theirs (design §3 StoreGroups updated).
   - The Mantle services apply the StoreStaff limit too, not only ContextServices, so the rule holds without BOSS.
-  - A store-limited staff member does not start stores, groups or clones (`STORE_LIMITED`): they could not see them.
+  - A store-limited staff member does not start stores, groups or clones (`STORE_LIMITED`): they could not see them; nor
+    assign store staff (review R1).
   - TypedSettings writes only the `settingTypes` table's types (template, content and URL locations are shown, not set);
     OrderChecks' parameters come from `ServiceRegister.configParameters` (OrderManualApprove takes none).
   - The clone copies the target organization's facilities and its people's staff rows only; another organization's are
@@ -652,6 +653,33 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
     failed; it passed on the next run. For the lead / TX-Cache: a data-load race, not Commerce's.
   - **F-P2-2** A delete of a ship-option or payment-gateway binding writes no audit row (the framework audits create and
     update only); CheckoutSettings (P6) records its removals itself.
+
+**Review Nov 5 (P2).**
+- Checked: `git diff master...com/p2` in mr-mantle and mr-boss against this section, design §3 and §2: every StoreAdmin
+  operation checks `COMMERCE_VIEW`/`COMMERCE_STORE_EDIT`, the store's organization (FacilityScope's own organizations;
+  `FACILITY_ALL_ORGANIZATIONS` does not widen) and the StoreStaff limit; a missing and a foreign store refused alike; the
+  options and group reads scoped by the same query; store#Store's partial update leaves unsent fields alone, the policy
+  reason and stale revision; dated replacement; clone#Store over `clone#ProductStore` with copyParties/Products/
+  Facilities/Settings off, the approval, the base revision and the `PostingOperation` retry (answered before the stale
+  check); the audit fields, seeds and Mantle defaults (`clone#ProductStore`'s own defaults unchanged); readiness's failure
+  tolerance. The anonymous PASS form of `check#StoreReadiness` (`allow-remote="false"`, so only server code reaches it;
+  Forum's `check#Readiness` passes only an enabled mount's own target) answers `{name, ready}` per blocking check, no
+  message, field or id, as Portal's and Support's app readiness do for any target: nothing beyond whether a store id
+  exists and its six booleans. Mantle stands without BOSS: StoreAdmin 7/7 on a runtime with mr-mantle only.
+- **R1 (high)** A store-limited staff member could end or date their own StoreStaff row through `store#StoreParty` (the
+  End link on Staff), which removed their limit and opened every store of the organization; or end a colleague's, or add
+  a row to a manager and limit them. `store#StoreParty` now refuses a store-limited member (`STORE_LIMITED`), Staff hides
+  its add and End for them, StoreAdmin's store-limited feature checks the refusal, and design §1.1 says why.
+- **R2 (low)** CommerceStores rendered StoreDetail and its General tab twice each in qvt (manager and reader), against
+  AGENTS.md's one render per screen per mode; it now renders each once, the manager's, and reads the reader's
+  `get#Store` (`canEdit` false). The merchandiser's page stays in CommerceStoresWalk.
+- Specs after the fixes (binary of 23:13): Mantle StoreAdmin 7 passed (2.6 s; also 7 passed, 2.9 s, on the Mantle-only
+  runtime); BOSS CommerceStores 2 and CommerceAccess 8 passed (4.1 s). Lint: no Commerce screen flagged. Acceptance not
+  rerun (unchanged).
+- For the lead: (1) a change of a store's organization (no orders yet) keeps its facility and staff rows of the old
+  organization; P6 or a later phase may end them or refuse the change while they exist. (2) CommerceAccess's P2 case
+  makes `BOSS_COM_P2_SECOND` without cleanup, which later specs' store counts will see. (3) F-P2-2 stands: binding deletes
+  are not audited by the framework. (4) The budget measure and `./moq test-apps` were not run here.
 
 ### P3 — Assortment and catalog mounts
 

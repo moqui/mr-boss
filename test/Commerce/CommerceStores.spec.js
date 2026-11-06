@@ -1,8 +1,8 @@
 // Commerce stores (impl-commerce P2; design-commerce §3 Stores, StoreDetail, StoreGroups): the reads by scope Stores and
 // StoreGroups make (mantle.product.StoreAdminServices.find#Stores, find#StoreGroups, check#StoreReadiness) for the reader,
-// the other organization's manager and the store-limited staff member; and StoreDetail's one qvt render, its record header,
-// tabs, readiness and the reservation group read only, with the manager's Clone and Save and the reader's same page
-// without them. The store rules themselves are Mantle's (StoreAdmin); the access case of a store-limited member refused
+// the other organization's manager and the store-limited staff member; and StoreDetail's one qvt render, the manager's: its
+// record header, tabs, readiness and the reservation group read only, with Clone and Save (the reader's get#Store says it
+// cannot edit). The store rules themselves are Mantle's (StoreAdmin); the access case of a store-limited member refused
 // another store of the organization is CommerceAccess's. Run: ./moq test mr-boss --spec Commerce/CommerceStores
 const lib = ec.resource.script("component://mr-boss/test/Commerce/CommerceSpecLib.js")
 const {ids, users, asUser, invoke} = lib
@@ -46,22 +46,21 @@ feature("Stores, StoreGroups and readiness read each user's stores: the organiza
 })
 
 // StoreDetail's header and its General tab, each its own level in qvt (the shell loads a tab as its own request), each
-// rendered once per user: the manager's with Clone and Save, the reader's without
+// rendered once (AGENTS.md: one render per screen per mode), as the manager with Clone and Save; the reader's page without
+// them follows from get#Store's canEdit and the capabilities, read without a second render
 feature(
     "StoreDetail shows the store's header and General its readiness and reservation read only; Clone and Save for the manager",
     {
         when() {
-            const header = user => asUser(user, () => lib.page("Stores/StoreDetail", {productStoreId: ids.storeId}))
-            const general = user =>
-                asUser(user, () => lib.page("Stores/StoreDetail/General", {productStoreId: ids.storeId, lastStandalone: "1"}))
             return {
-                manager: header(users.manager),
-                reader: header(users.read),
-                managerGeneral: general(users.manager),
-                readerGeneral: general(users.read)
+                manager: asUser(users.manager, () => lib.page("Stores/StoreDetail", {productStoreId: ids.storeId})),
+                managerGeneral: asUser(users.manager, () =>
+                    lib.page("Stores/StoreDetail/General", {productStoreId: ids.storeId, lastStandalone: "1"})
+                ),
+                reader: read(users.read, "get#Store", {productStoreId: ids.storeId})
             }
         },
-        then({manager, reader, managerGeneral, readerGeneral}) {
+        then({manager, managerGeneral, reader}) {
             manager.status == 200
             manager.errors == []
             manager.output.includes("Ziziwork Retail Store")
@@ -69,20 +68,14 @@ feature(
             manager.output.includes("to fix")
             manager.output.includes("Clone store")
             manager.output.includes("Customer and other party rows")
-            reader.status == 200
-            reader.errors == []
-            reader.output.includes("Ziziwork Retail Store")
-            !reader.output.includes("Clone store")
             managerGeneral.status == 200
             managerGeneral.errors == []
             managerGeneral.output.includes("Readiness")
             managerGeneral.output.includes("No site sells from this store")
             managerGeneral.output.includes("Open in Warehouse")
             managerGeneral.output.includes("Reason for the change")
-            readerGeneral.status == 200
-            readerGeneral.errors == []
-            readerGeneral.output.includes("Readiness")
-            !readerGeneral.output.includes("Reason for the change")
+            reader.store.productStoreId == ids.storeId
+            reader.canEdit == false
         }
     }
 )

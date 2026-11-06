@@ -32,7 +32,8 @@ along with this software (see the LICENSE.md file). If not, see
         <if condition="recordFound">
             <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
                     in-map="{productStoreId:productStoreId, include:['staff']}"/>
-            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <!-- a store-limited member's own limit is these rows (StoreAdmin: STORE_LIMITED) -->
+            <set field="canEdit" from="!!tabOut.canEdit &amp;&amp; !commerce?.storeLimited"/>
             <set field="staff" from="tabOut.staff || []"/>
         </if>
     </actions>

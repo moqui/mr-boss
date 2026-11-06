@@ -73,6 +73,8 @@ may assign narrower permission sets. Publishing is not implied by editing.
 **Store-limited staff (Nov 5, 2026; impl-commerce §4).** A store's staff are dated
 `ProductStoreParty` rows in the proposed `StoreStaff` role. A user with a current one works only
 those stores of their organizations; a user with none works every store of their organizations.
+Because the rows are the limit itself, a store-limited staff member does not change store staff rows (P2 review): ending
+or dating their own would widen them to every store, and adding one to a manager would limit the manager.
 Mantle seeds the `COMMERCE_*` permissions, none of which exists yet (impl-commerce F2).
 
 **Areas by group (Nov 5, 2026; impl-commerce P1).** Home, Stores, Merchandising and Promotions open for every Commerce
