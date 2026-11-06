@@ -365,4 +365,8 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.user.NotificationTopic topic="ProductionCostReview"
             linkTemplate="/qapps/Accounting/Inventory/ProductionCostClose?workEffortId=${workEffortId}&amp;organizationPartyId=${organizationPartyId}"/>
     <moqui.security.user.NotificationTopic topic="PaymentValidation" linkTemplate="/qapps/Accounting/Payments/PaymentDetail?paymentId=${paymentId}&amp;organizationPartyId=${organizationPartyId}"/>
+    <!-- mr-pass impl-shop P5 (X4, F15; design-accounting treasury): the payment operator releases an order's Payment hold
+        (OrderHoldType OhtPayment: a capture that failed, or an amount or account mismatch after placement), which Commerce
+        shows; Mantle seeds PAYMENT_HOLD_RELEASE with its ADMIN grant -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_HOLD_RELEASE" fromDate="0"/>
 </entity-facade-xml>
