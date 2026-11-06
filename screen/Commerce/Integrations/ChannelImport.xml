@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ChannelImport (design-commerce §9 ChannelImport; style-guide §3.9 Wizard; impl-commerce P13): channel orders imported
+    from a file through the same connector path as the API's intake. ImportSource: an integration that imports, a registered
+    format (CSV, one row per order line; JSON, as the API takes it) and the file, read and kept as a staged batch
+    (mantle.product.StoreChannelServices prepare#ChannelImport; no order is made). ImportPreview: each order's predicted
+    outcome (a new order, a duplicate of one received before, a conflict and what differs, or the finding it will fail
+    with; get#ChannelImport). ImportCommit: the batch as previewed (its digest) committed with a reason (commit#ChannelImport:
+    each order its own message and transaction, a failing one not stopping the rest; committing again answers the outcome).
+    ImportResult: each order's outcome, order and error; failed ones are retried from IntegrationDetail. Admin §11 registers
+    this wizard as an import target when Admin is built (impl-commerce §7). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Channel import" default-menu-index="2">
+    <parameter name="systemMessageId"/>
+    <parameter name="systemMessageRemoteId"/>
+    <transition name="prepare">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.prepare#ChannelImport" out-map="prepared"
+                    in-map="{systemMessageRemoteId:systemMessageRemoteId, formatEnumId:formatEnumId, importFile:importFile,
+                        importText:(importText || null), fileName:(fileName || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="systemMessageId" from="prepared.batch.systemMessageId"/>
+                <message type="info">Staged ${prepared.countsText}: review the preview, then commit</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="systemMessageId"/></default-response>
+        <error-response url="."><parameter name="systemMessageRemoteId"/></error-response>
+    </transition>
+    <transition name="commit">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.commit#ChannelImport" out-map="committed"
+                    in-map="{systemMessageId:systemMessageId, digest:digest, reason:reason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${committed.message}</message></if>
+        </actions>
+        <default-response url="."><parameter name="systemMessageId"/></default-response>
+        <error-response url="."><parameter name="systemMessageId"/></error-response>
+    </transition>
+    <actions>
+        <if condition="systemMessageId"><then>
+            <service-call name="mantle.product.StoreChannelServices.get#ChannelImport" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{systemMessageId:systemMessageId}"/>
+        </then><else>
+            <service-call name="mantle.product.StoreChannelServices.find#StoreIntegrations" out-map="integrationsFound" transaction="force-new"
+                    ignore-error="true" in-map="{connectorId:'ChannelOrders'}"/>
+        </else></if>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="batch" from="found?.batch || null"/>
+        <set field="rows" from="found?.rows || []"/>
+        <set field="countsText" from="found?.countsText || ''"/>
+        <set field="bindingOptions" from="(integrationsFound?.integrations || []).map((row) =&gt; ({value: row.systemMessageRemoteId, label: row.description + ' · ' + row.storeName}))"/>
+        <set field="sourceValues" from="{systemMessageRemoteId:(systemMessageRemoteId || bindingOptions[0]?.value || null), formatEnumId:'SciCsv'}"/>
+        <set field="commitValues" from="{systemMessageId:systemMessageId, digest:batch?.digest}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Channel import" type="h5"/></container>
+            <container style="col-auto" condition="batch">
+                <link url="." text="New import" link-type="anchor-button" icon="sym_o_upload_file"/>
+            </container>
+        </container>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+
+        <section name="ImportSource" condition="!systemMessageId">
+            <widgets>
+                <container-box>
+                    <box-header title="1. Source"/>
+                    <box-body>
+                        <form-single name="ImportSource" transition="prepare" map="sourceValues" condition="bindingOptions.length">
+                            <field name="systemMessageRemoteId">
+                                <default-field title="Integration">
+                                    <drop-down><list-options list="bindingOptions" key="${value}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="formatEnumId">
+                                <default-field title="Format">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="StoreChannelImportFormat"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="importFile"><default-field title="File"><file accept=".csv,.json,text/csv,application/json"/></default-field></field>
+                            <field name="submitButton"><default-field title="Read the file"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="m-muted" condition="!bindingOptions.length"
+                                text="None of your stores has a channel order integration; New integration on Integrations binds one."/>
+                        <label type="p" style="text-caption m-muted"
+                                text="CSV: one row per order line with the columns externalId, lineId, productId, quantity and unitAmount, and optionally currencyUomId, placedDate, shippingAmount, taxAmount and note. JSON: {&quot;orders&quot;: [...]} as the API takes it. At most 2 MiB and 500 orders; nothing is made until the batch is committed."/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+
+        <section name="ImportBatch" condition="batch">
+            <widgets>
+                <container style="m-record-header q-mb-md">
+                    <label text="Batch ${batch.systemMessageId}: ${batch.fileName || 'import'}" type="h6"/>
+                    <label type="div" style="m-muted"
+                            text="${batch.integrationName} · ${batch.storeName} · ${batch.formatText} · ${batch.statusText} · prepared ${batch.preparedText}${batch.committedText ? ' · committed ' + batch.committedText + (batch.committedBy ? ' by ' + batch.committedBy : '') : ''}"/>
+                    <label type="div" condition="batch.reason" text="Reason: ${batch.reason}"/>
+                    <label type="div" text="${countsText}"/>
+                </container>
+                <container-box>
+                    <box-header title="${batch.staged ? '2. Preview' : 'Result'}"/>
+                    <box-body-nopad>
+                        <form-list name="ImportRows" list="rows" skip-form="true">
+                            <field name="rowKey"><default-field title="External ID"><display/></default-field></field>
+                            <field name="outcomeText">
+                                <default-field title="Outcome">
+                                    <label text="${outcomeText}" type="span"
+                                            style="${outcome == 'error' || outcome == 'failed' ? 'text-negative' : outcome == 'conflict' ? 'text-warning' : ''}"/>
+                                </default-field>
+                            </field>
+                            <field name="orderId">
+                                <default-field title="Order">
+                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor" condition="orderId &amp;&amp; commerce.capabilities.orderView"
+                                            parameter-map="{orderId:orderId}"/>
+                                    <label text="${orderId || ''}" type="span" condition="!commerce.capabilities.orderView"/>
+                                </default-field>
+                            </field>
+                            <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="rowKey"/><field-ref name="outcomeText"/></column>
+                                <column><field-ref name="orderId"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <container-box condition="batch.staged">
+                    <box-header title="3. Commit"/>
+                    <box-body>
+                        <form-single name="ImportCommit" transition="commit" map="commitValues">
+                            <field name="systemMessageId"><default-field><hidden/></default-field></field>
+                            <field name="digest"><default-field><hidden/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Commit the batch">
+                                    <submit confirmation="Commit the batch? Each order is received as the API receives it: duplicates answer their original, conflicts are quarantined, the rest are made."/>
+                                </default-field>
+                            </field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container condition="!batch.staged">
+                    <link url="${sharedLinks['Integrations/IntegrationDetail']}" text="Open the integration to retry failed orders" link-type="anchor"
+                            parameter-map="{systemMessageRemoteId:batch.systemMessageRemoteId, state:'failed'}"/>
+                </container>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- LogNote (design-commerce §1.4 "Log as note"; impl-commerce P13, F111): the root's response-action opens it in the shell's
+    quick-create frame from an Assist answer on a store order's or cart's page (OrderDetail, CartDetail), with the page's
+    record (entityName mantle.order.OrderHeader, recordId) and the answer's text in noteText. The user reads and edits the
+    text, then files it as an internal note on the order (mantle.order.StoreOperationsServices.add#StoreOrderNote: OrderNote,
+    internal, never sent to the customer; COMMERCE_ORDER_VIEW and the order's store scope). Nothing is filed until the user
+    submits. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Log as note" default-menu-include="false">
+    <parameter name="entityName"/>
+    <parameter name="recordId"/>
+    <parameter name="orderId"/>
+    <transition name="logNote">
+        <actions>
+            <service-call name="mantle.order.StoreOperationsServices.add#StoreOrderNote" out-map="logged"
+                    in-map="{orderId:orderId, noteText:noteText}"/>
+            <if condition="!ec.message.hasError()"><message type="success">${logged.message}</message></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."><parameter name="orderId"/></error-response>
+    </transition>
+    <actions>
+        <set field="noteOrderId" from="orderId || (entityName == 'mantle.order.OrderHeader' ? recordId : null)"/>
+        <set field="noteValues" from="{orderId:noteOrderId, noteText:''}"/>
+    </actions>
+    <widgets>
+        <label text="Log as note" type="h6"/>
+        <section name="NoOrder" condition="!noteOrderId">
+            <widgets><label type="p" style="m-muted" text="Open a store order or cart to log a note on it."/></widgets>
+        </section>
+        <form-single name="LogNoteForm" transition="logNote" map="noteValues" condition="noteOrderId">
+            <field name="orderId"><default-field title="Order or cart"><display/></default-field></field>
+            <field name="noteText">
+                <default-field title="Note" tooltip="An internal note on the order, never sent to the customer">
+                    <text-area rows="8" cols="60"/>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Log the note"><submit/></default-field></field>
+        </form-single>
+    </widgets>
+</screen>

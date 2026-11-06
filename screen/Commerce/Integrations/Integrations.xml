@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Integrations (design-commerce §9 Integrations; style-guide §3.2 List; impl-commerce P13): IntegrationFind (store,
+    connector, enabled, health) and the integrations of the user's stores (mantle.product.StoreChannelServices
+    find#StoreIntegrations): each binding of a registered connector with its store, whether its intake is on, whether the
+    operator has set its credentials (never what they are), its last success, failures and conflicts, and its health; an
+    EDI trading partner is listed with its exceptions. NewBinding binds a store to a registered connector
+    (store#StoreIntegration): the binding starts with its intake stopped until the operator has set its credentials in the
+    System tools. A row opens IntegrationDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Integrations" default-menu-index="1">
+    <parameter name="productStoreId"/>
+    <parameter name="connectorId"/>
+    <parameter name="enabled"/>
+    <parameter name="health"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createBinding">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.store#StoreIntegration" out-map="saved"
+                    in-map="{productStoreId:newProductStoreId, connectorId:newConnectorId, description:description,
+                        customerPartyId:(customerPartyId || null), salesChannelEnumId:(salesChannelEnumId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="systemMessageRemoteId" from="saved.systemMessageRemoteId"/>
+                <message type="success">${saved.message}</message>
+            </if>
+        </actions>
+        <default-response url="../IntegrationDetail"><parameter name="systemMessageRemoteId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.StoreChannelServices.find#StoreIntegrations" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{productStoreId:(productStoreId || null), connectorId:(connectorId || null),
+                    enabled:(enabled || null), health:(health || null)}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="integrations" from="found?.integrations || []"/>
+        <service-call name="mantle.product.StoreChannelServices.get#StoreConnectors" out-map="connectorsFound" transaction="force-new"
+                ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="connectorOptions" from="connectorsFound?.connectors || []"/>
+        <set field="filtered" from="!!(productStoreId || connectorId || enabled || health)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, connectorId:connectorId, enabled:enabled, health:health}"/>
+        <set field="newBinding" from="{newProductStoreId:(productStoreId || (commerce.storeOptions || [])[0]?.value || null),
+                newConnectorId:(connectorOptions[0]?.value || null)}"/>
+        <set field="canBind" from="!failure &amp;&amp; connectorOptions.length &gt; 0"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Integrations" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewBinding" button-text="New integration" icon="sym_o_add" type="primary" width="640"
+                        title="New integration" condition="canBind">
+                    <form-single name="NewBindingForm" transition="createBinding" map="newBinding">
+                        <field name="newProductStoreId">
+                            <default-field title="Store">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'stores', selected:newBinding.newProductStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="newConnectorId">
+                            <default-field title="Connector">
+                                <drop-down><list-options list="connectorOptions" key="${value}" text="${label}"/></drop-down>
+                            </default-field>
+                        </field>
+                        <field name="description"><default-field title="Name"><text-line size="36"/></default-field></field>
+                        <field name="customerPartyId">
+                            <default-field title="Customer" tooltip="The party the channel's orders are placed for, such as the marketplace">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'customers'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="submitButton"><default-field title="Bind the connector"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="newProductStoreId"/><field-ref name="newConnectorId"/></field-row>
+                            <field-row><field-ref name="description"/><field-ref name="customerPartyId"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted"
+                            text="The integration starts with its intake stopped: the operator sets its endpoint authentication and credentials in the System tools, then it is enabled here. An EDI trading partner is set up by the EDI administrator."/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="IntegrationFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="connectorId">
+                <default-field title="Connector">
+                    <drop-down allow-empty="true">
+                        <list-options list="connectorOptions" key="${value}" text="${label}"/>
+                        <option key="EdiX12" text="EDI trading partner (X12)"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="enabled">
+                <default-field title="Intake">
+                    <drop-down allow-empty="true"><option key="Y" text="On"/><option key="N" text="Stopped"/></drop-down>
+                </default-field>
+            </field>
+            <field name="health">
+                <default-field title="Health">
+                    <drop-down allow-empty="true">
+                        <option key="failing" text="Failures to resolve"/><option key="conflicts" text="Conflicts to review"/>
+                        <option key="credentials" text="Credentials not set"/><option key="disabled" text="Stopped"/>
+                        <option key="ok" text="Working"/><option key="idle" text="No messages yet"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="connectorId"/>
+                    <field-ref name="enabled"/>
+                    <field-ref name="health"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="IntegrationList" list="integrations" skip-form="true">
+                    <field name="description">
+                        <default-field title="Integration">
+                            <link url="${sharedLinks['Integrations/IntegrationDetail']}" text="${description}" link-type="anchor"
+                                    parameter-map="{systemMessageRemoteId:systemMessageRemoteId}"/>
+                            <label text="${connectorText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="intakeText">
+                        <default-field title="Intake">
+                            <label text="${enabled ? 'On' : 'Stopped'}" type="div"/>
+                            <label text="Credentials: ${credentialsText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="lastSuccessText"><default-field title="Last success"><display/></default-field></field>
+                    <field name="failureCount" align="right">
+                        <default-field title="Failures">
+                            <label text="${failureCount + exceptionCount}" type="span" style="${failureCount + exceptionCount ? 'text-negative' : ''}"/>
+                        </default-field>
+                    </field>
+                    <field name="conflictCount" align="right"><default-field title="Conflicts"><display/></default-field></field>
+                    <field name="healthText">
+                        <default-field title="Health">
+                            <label text="${healthText}" type="span"
+                                    style="${healthKey == 'failing' ? 'text-negative' : healthKey == 'ok' ? 'text-positive' : healthKey == 'idle' ? '' : 'text-warning'}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="description"/><field-ref name="storeName"/></column>
+                        <column><field-ref name="healthText"/><field-ref name="failureCount"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!integrations.length &amp;&amp; filtered" text="No integration matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!integrations.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="Your stores have no integrations yet. New integration binds a store to a registered connector."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

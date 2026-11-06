@@ -26,6 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
         <subscreens-item name="CartDetail" location="component://mr-boss/screen/Commerce/Orders/CartDetail.xml" menu-include="false"/>
         <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml" menu-include="false"/>
+        <!-- P13 (F111): an Assist answer logged as an internal note on the page's store order or cart -->
+        <subscreens-item name="LogNote" location="component://mr-boss/screen/Commerce/Orders/LogNote.xml" menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="CommerceOrdersPanel" type="tab"/>

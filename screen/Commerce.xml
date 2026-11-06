@@ -62,6 +62,12 @@ along with this software (see the LICENSE.md file). If not, see
                 entity="mantle.order.OrderHeader" sequence="20"/>
         <assist-prompt label="Payment and fulfillment" text="Summarize payment and fulfillment" screen="Commerce/Orders/OrderDetail"
                 entity="mantle.order.OrderHeader" sequence="30"/>
+        <!-- P13: IntegrationDetail's prompt (design §1.4) and "Log as note", which files an Assist answer as an internal note on
+            the page's store order or cart (impl-commerce F111; Commerce/Orders/LogNote, add#StoreOrderNote) -->
+        <assist-prompt label="Failures by cause" text="Group these failures by cause" screen="Commerce/Integrations/IntegrationDetail"
+                entity="moqui.service.message.SystemMessageRemote" sequence="40"/>
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Commerce/Orders/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="50"/>
         <keymap scope="commerce">
             <key keys="g e" label="Commerce home" screen="Commerce/Home"/>
             <key keys="g s" label="Stores" screen="Commerce/Stores"/>

@@ -12,12 +12,18 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Integrations area of IronStone Commerce (design-commerce §9): channel integrations, channel import and product
-    feeds (impl-commerce P13, P14); for the channel operator (BOSS_COM_INTEGRATIONS). P14: Feeds (the default until P13's
-    Integrations list) and FeedDetail. -->
+<!-- The Integrations area of IronStone Commerce (design-commerce §9): a store's channel integrations (the default),
+    IntegrationDetail and ChannelImport (impl-commerce P13), and the product feeds (P14), for the channel operator
+    (BOSS_COM_INTEGRATIONS). Each screen reads mantle.product.StoreChannelServices, which checks COMMERCE_CHANNEL_OPERATE and
+    the store scope again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Integrations" default-menu-index="8" menu-image="sym_o_fiber_new" menu-image-type="icon">
-    <subscreens default-item="Feeds" always-use-full-path="true">
+    <subscreens default-item="Integrations" always-use-full-path="true">
+        <!-- P13: the integrations, one integration's binding, messages and retry, and channel import -->
+        <subscreens-item name="Integrations" location="component://mr-boss/screen/Commerce/Integrations/Integrations.xml" menu-title="Integrations" menu-index="1"/>
+        <subscreens-item name="ChannelImport" location="component://mr-boss/screen/Commerce/Integrations/ChannelImport.xml" menu-title="Channel import" menu-index="2"/>
+        <subscreens-item name="IntegrationDetail" location="component://mr-boss/screen/Commerce/Integrations/IntegrationDetail.xml" menu-include="false"/>
+        <!-- P14: the feeds below -->
         <subscreens-item name="Feeds" location="component://mr-boss/screen/Commerce/Integrations/Feeds.xml" menu-title="Feeds" menu-index="5"/>
         <subscreens-item name="FeedDetail" location="component://mr-boss/screen/Commerce/Integrations/FeedDetail.xml" menu-include="false"/>
     </subscreens>

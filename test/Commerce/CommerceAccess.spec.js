@@ -641,3 +641,43 @@ feature("a store's feeds are the channel operator's, not the merchandiser's, nor
         other.includes("RECORD_UNAVAILABLE")
     }
 })
+
+// P13: a store's integrations are the channel operator's (COMMERCE_CHANNEL_OPERATE), within their organizations' stores
+feature(
+    "a store's integrations are worked by its channel operator, not the store operator, nor in another organization's store",
+    {
+        when() {
+            const I = "mantle.product.StoreChannelServices."
+            const otherRemoteId = "BOSS_COM13_DIGITAL"
+            system(() =>
+                ec.service
+                    .sync()
+                    .name("create#moqui.service.message.SystemMessageRemote")
+                    .parameters({
+                        systemMessageRemoteId: otherRemoteId,
+                        description: "Digital store channel",
+                        productStoreId: ids.otherStoreId,
+                        storeConnectorId: "ChannelOrders",
+                        systemMessageTypeId: "StoreChannelOrders",
+                        storeDisabled: "Y"
+                    })
+                    .call()
+            )
+            const found = asUser(users.channel, () => invoke(I + "find#StoreIntegrations", {}), false)
+            const listed = Array.from(found.integrations || []).map(row => row.systemMessageRemoteId)
+            const operator = asUser(users.operator, () => refusal(I + "find#StoreIntegrations", {}), false)
+            const other = asUser(
+                users.channel,
+                () => refusal(I + "get#StoreIntegration", {systemMessageRemoteId: otherRemoteId}),
+                false
+            )
+            return {listed, otherRemoteId, operator, other}
+        },
+        then({listed, otherRemoteId, operator, other}) {
+            listed.includes("BOSS_COM_MARKETPLACE")
+            !listed.includes(otherRemoteId)
+            operator.includes("PERMISSION_DENIED")
+            other.includes("RECORD_UNAVAILABLE")
+        }
+    }
+)
