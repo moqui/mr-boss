@@ -635,7 +635,7 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
   POPC_DEFAULT; the tax gateway change in History with user and reason; every Stores screen and StoreDetail tab in qvt and
   html for the manager), run once: 5 passed. CommerceFoundationWalk (its palette URL now StoreDetail's): 5 passed on its
   second run; the first failed at the PASS account's sign-in because the Customer Service Support demo's contacts were not
-  made during that runtime's load (F-P2-1). The whole mr-boss acceptance suite was not run.
+  made during that runtime's load (F60). The whole mr-boss acceptance suite was not run.
 - Lint: `moqui lint --screens` (release binary), 132 sites, none in the Commerce screens.
 - Inventories: ss-inventory's 15 Stores/StoreDetail ProductStore rows (clone, store, data documents, emails, facilities,
   parties, settings) name their built forms; usl-inventory's `clone#ProductStore` names CloneStoreForm.
@@ -655,11 +655,11 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
   - The store module is one script module with XML service shells, as P1's ContextServices, for the shared scope,
     dated replacement and clone plan; each service sets its declared out-parameters.
 - Findings (provisional):
-  - **F-P2-1** On a fresh runtime load with the binary of mr-moqui d9bcc20d, `ironstone.customerservice.DemoServices`'s
+  - **F60** On a fresh runtime load with the binary of mr-moqui d9bcc20d, `ironstone.customerservice.DemoServices`'s
     Support step failed once ("canceling statement due to user request" from a held transaction-cache write, then a
     duplicate `form_inv_key`), so `dana@joesdist.example.com` had no login and CommerceFoundationWalk's outsider feature
     failed; it passed on the next run. For the lead / TX-Cache: a data-load race, not Commerce's.
-  - **F-P2-2** A delete of a ship-option or payment-gateway binding writes no audit row (the framework audits create and
+  - **F61** A delete of a ship-option or payment-gateway binding writes no audit row (the framework audits create and
     update only); CheckoutSettings (P6) records its removals itself.
 
 **Review Nov 5 (P2).**
@@ -686,7 +686,7 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
   rerun (unchanged).
 - For the lead: (1) a change of a store's organization (no orders yet) keeps its facility and staff rows of the old
   organization; P6 or a later phase may end them or refuse the change while they exist. (2) CommerceAccess's P2 case
-  makes `BOSS_COM_P2_SECOND` without cleanup, which later specs' store counts will see. (3) F-P2-2 stands: binding deletes
+  makes `BOSS_COM_P2_SECOND` without cleanup, which later specs' store counts will see. (3) F61 stands: binding deletes
   are not audited by the framework. (4) The budget measure and `./moq test-apps` were not run here.
 
 ### P3 — Assortment and catalog mounts
@@ -1188,6 +1188,8 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F57 | P1: the shared binaries were older than base-component (no `UserSecurityChecks.assertDocumentExpression`, mr-moqui 4f8997c0), so data files with DataDocument fields failed to load and every BOSS spec failed at sign-in | The lead rebuilt `target/release/moqui` (Nov 5, from mr-moqui fff2e5f6); P1's specs rerun on it |
 | F58 | P1: Mantle has no store email templates (the PopRestStore ones were not ported) | The demo binds POPC_DEFAULT's five automatic types to one demo template on the local sink; real templates come with Shop's notices |
 | F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides, noted and left for now (the user's call, §4); the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current |
+| F60 | P2: on a fresh runtime load with mr-moqui d9bcc20d's binary, Customer Service's Support demo step failed once (a held transaction-cache write cancelled, then a duplicate `form_inv_key`), so `dana@joesdist.example.com` had no login; it passed on the rerun | Reported to the user (the TX-Cache work); not Commerce's |
+| F61 | P2: deleting a ship-option or payment-gateway binding writes no audit row (the framework audits creates and updates only) | P6's CheckoutSettings records a binding's removal itself (its reason and user) |
 
 ## 7. Later
 
