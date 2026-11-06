@@ -14,6 +14,10 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <entity-facade-xml type="seed-initial">
     <!-- Groups precede the authorization rows that reference them. -->
+    <!-- Every BOSS app requires a UserGroup (impl-drawers-commons.md R29, design-crosscut.md §1.4): ALL_USERS, which every account
+        holds, PASS and e-commerce public accounts too, grants no app. BOSS_USERS is the group of every internal BOSS user and opens
+        Commons, Comms and the Records drive; each other app is opened by its own root user groups. A public account holds no BOSS group. -->
+    <moqui.security.UserGroup userGroupId="BOSS_USERS" description="IronStone BOSS users"/>
     <moqui.security.UserGroup userGroupId="BOSS_COMMONS_ADMIN" description="Commons administrator"/>
     <moqui.security.UserGroup userGroupId="BOSS_COMMS_ADMIN" description="Comms administrator"/>
     <moqui.security.UserGroup userGroupId="BOSS_SALES_ADMIN" description="Sales administrator"/>
@@ -96,12 +100,15 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" description="Return authorizer"/>
     <moqui.security.UserGroup userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" description="Service knowledge author"/>
 
-    <!-- Ordinary users carry MANTLE_USER_ORG and private-contact filters. App administrators carry
-        MANTLE_ACTIVE_ORG and private-contact filters; framework ADMIN records retain their grants.
-        Every service still verifies its own owner, organization and action capability. -->
+    <!-- Commons and Comms are opened by the BOSS users group (every internal user), not ALL_USERS. Ordinary users carry
+        MANTLE_USER_ORG and private-contact filters. App administrators and framework ADMIN carry MANTLE_ACTIVE_ORG and
+        private-contact filters. Every service still verifies its own owner, organization and action capability. -->
     <artifactGroups artifactGroupId="BOSS_COMMONS" description="IronStone Commons App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Commons.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_COMMONS_ALL_USERS" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+        <authz artifactAuthzId="BOSS_COMMONS_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COMMONS_USERS" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_COMMONS_APPADMIN" userGroupId="BOSS_COMMONS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
@@ -109,7 +116,10 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <artifactGroups artifactGroupId="BOSS_COMMS" description="IronStone Comms App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Comms.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
-        <authz artifactAuthzId="BOSS_COMMS_ALL_USERS" userGroupId="ALL_USERS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
+        <authz artifactAuthzId="BOSS_COMMS_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_COMMS_USERS" userGroupId="BOSS_USERS" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
         <authz artifactAuthzId="BOSS_COMMS_APPADMIN" userGroupId="BOSS_COMMS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
@@ -453,7 +463,8 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_PROJECTS_CLIENT_DELETE" userGroupId="BOSS_PROJECT_CLIENT" authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_DELETE"/>
     </artifactGroups>
     <!-- Commons and Comms are denied the client contacts (design-projects.md §1.1, §16): Projects and the public pages are their
-        whole BOSS, the tray's tabs being Commons and Comms screens -->
+        whole BOSS, the tray's tabs being Commons and Comms screens. A client contact holds no BOSS_USERS, so these denies are a
+        second guard, and the rule for an account that is both a client contact and an internal user's. -->
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_COMMONS_CLIENT" userGroupId="BOSS_PROJECT_CLIENT" artifactGroupId="BOSS_COMMONS"
             authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
     <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_COMMS_CLIENT" userGroupId="BOSS_PROJECT_CLIENT" artifactGroupId="BOSS_COMMS"
@@ -606,8 +617,8 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- Files (design-drawers-commons.md §9 Records, impl-drawers-commons.md M8, R25): the Records drive, a view over the record
         attachment folders Mantle's save#*ContentFile services write under the mantle.content.root preference (the default
-        dbresource://mantle/content; a deployment that moves the root changes rootLocation too). Every user may view it (the
-        ALL_USERS member row), and FileServices (get#DriveAccess, through the STRT_RECORD_VISIBLE_SERVICE hook above) lets a user
+        dbresource://mantle/content; a deployment that moves the root changes rootLocation too). Every internal user may view it (the
+        BOSS_USERS member row), and FileServices (get#DriveAccess, through the STRT_RECORD_VISIBLE_SERVICE hook above) lets a user
         into a record's folder only when the record is one the user may see (R5, R28), so the drive shows each user only their
         records; it is read only (files are added from a record's Files panel). The folders are mapped explicitly, since they
         follow no naming rule: CommunicationEvent is capitalised, a work effort of any type (task, project, event) is under work,
@@ -617,7 +628,7 @@ along with this software (see the LICENSE.md file). If not, see
         each space's own root, not here. -->
     <moqui.resource.ResourceDrive driveId="BOSS_RECORDS" driveName="Records" driveKindEnumId="RdkRecords" rootLocation="dbresource://mantle/content"
             description="The files of records: parties, orders, requests, tasks and events, messages and more"/>
-    <moqui.resource.ResourceDriveMember driveMemberId="BOSS_RECORDS_ALL_USERS" driveId="BOSS_RECORDS" userGroupId="ALL_USERS"
+    <moqui.resource.ResourceDriveMember driveMemberId="BOSS_RECORDS_USERS" driveId="BOSS_RECORDS" userGroupId="BOSS_USERS"
             permissionEnumId="RdpView" fromDate="1767225600000"/>
     <moqui.resource.ResourceDriveRecordFolder driveId="BOSS_RECORDS" folderPath="party" recordEntityName="mantle.party.Party" idField="partyId"
             label="People and organizations" sequenceNum="10"/>

@@ -42,6 +42,12 @@ spec({
                 row.setFields({ userId: DND_USER, username: "boss.test.chat.dnd", userFullName: "Dnd Spec", timeZone: "UTC" }, true, null, null)
                 row.create()
             }
+            // Comms is opened by BOSS_USERS, not ALL_USERS
+            if (ec.entity.find("moqui.security.UserGroupMember").condition("userGroupId", "BOSS_USERS").condition("userId", DND_USER).count() == 0) {
+                const member = ec.entity.makeValue("moqui.security.UserGroupMember")
+                member.setFields({ userGroupId: "BOSS_USERS", userId: DND_USER, fromDate: ec.user.nowTimestamp }, true, null, null)
+                member.create()
+            }
         })
     },
     cleanupSpec() {

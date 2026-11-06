@@ -41,6 +41,12 @@ spec({
                 user.setFields({ userId: "commsHomeNobody", username: "commsHomeNobody", userFullName: "No Party" }, true, null, null)
                 user.create()
             }
+            // Comms is opened by BOSS_USERS, not ALL_USERS
+            if (ec.entity.find("moqui.security.UserGroupMember").condition("userGroupId", "BOSS_USERS").condition("userId", "commsHomeNobody").count() == 0) {
+                const member = ec.entity.makeValue("moqui.security.UserGroupMember")
+                member.setFields({ userGroupId: "BOSS_USERS", userId: "commsHomeNobody", fromDate: ec.user.nowTimestamp }, true, null, null)
+                member.create()
+            }
         })
         login("john.doe")
     },
@@ -233,6 +239,10 @@ feature("the call-context provider pops the caller's party and open requests for
         login("joe.developer")
         const asJoe = ask("+15550198877")
         const otherNumber = ask("+15550198866")
+        // an ordinary user of Ziziwork (BOSS_USERS' own-organization filter); john.doe is an ADMIN, whose ALWAYS row on the Comms
+        // root sees every organization until one is active, as on every BOSS root, but still no one else's personal contact
+        login("bob.developer")
+        const asBob = ask("+15550198877")
         login("john.doe")
         sys(() => {
             ec.entity.find("mantle.request.RequestParty").condition("requestId", CTXREQ).deleteAll()
@@ -246,15 +256,17 @@ feature("the call-context provider pops the caller's party and open requests for
             ec.entity.find("mantle.party.Party").condition("partyId", "in", [CTXOWN, CTXORG]).deleteAll()
         })
         const lists = (r) => ({ contactList: Array.from(r.contactList || []), recordList: Array.from(r.recordList || []) })
-        return { john: lists(boss(asJohn)), joe: lists(boss(asJoe)), joeAll: asJoe, other: lists(boss(otherNumber)) }
+        return { john: lists(boss(asJohn)), joe: lists(boss(asJoe)), bob: lists(boss(asBob)), joeAll: asJoe, other: lists(boss(otherNumber)) }
     },
-    then({ john, joe, joeAll, other }) {
+    then({ john, joe, bob, joeAll, other }) {
         !Array.from(joeAll.failedParts || []).some((f) => f.sourceId == "boss.parties")
         joe.contactList.length == 1
         joe.contactList[0].name == "Cal Ctxtest"
         joe.contactList[0].url == "/qapps/Commons/Contacts/ContactDetail?partyId=" + CTXOWN
         joe.recordList.some((r) => r.title == "Ctxtest broken widget" && String(r.url).includes(CTXREQ))
-        !john.contactList.some((c) => String(c.name).includes("Ctxtest"))
+        !bob.contactList.some((c) => String(c.name).includes("Ctxtest"))
+        john.contactList.some((c) => c.name == "Ann Ctxtest")
+        !john.contactList.some((c) => c.name == "Cal Ctxtest")
         other.contactList.length == 0
     }
 })

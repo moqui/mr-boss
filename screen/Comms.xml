@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- IronStone Comms, the channels people talk through: root of the app (design-drawers-commons.md §2.2), opening on the
-    Inbox. Authorized for ALL_USERS by BOSS_COMMS in data/BossSetupData.xml. -->
+    Inbox. Authorized for BOSS_USERS (every internal user, not ALL_USERS) and ADMIN by BOSS_COMMS in data/BossSetupData.xml. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Comms" menu-image="sym_o_forum" menu-image-type="icon">
 

@@ -131,9 +131,13 @@ feature("the recipient search never offers another organization's party, by name
             store("mantle.party.contact.PartyContactMech", { partyId: RCPTOTHER, contactMechId: RCPTOTHER, contactMechPurposeId: "EmailPrimary",
                 fromDate: new Date(Date.now() - 60000) })
         })
+        // as an ordinary user (BOSS_USERS' own-organization filter): john.doe is an ADMIN, whose ALWAYS row on the Comms root sees
+        // every organization until one is active, as on every BOSS root
+        login("joe.developer")
         const byName = post("recipients", { term: "Rcpttest", mode: "email" })
         const byAddress = post("recipients", { term: "ann.rcpttest", mode: "email" })
         const own = post("recipients", { term: "bob", mode: "email" })
+        login("john.doe")
         sys(() => {
             ec.entity.find("mantle.party.contact.PartyContactMech").condition("partyId", RCPTOTHER).deleteAll()
             ec.entity.find("mantle.party.contact.ContactMech").condition("contactMechId", RCPTOTHER).deleteAll()

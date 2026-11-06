@@ -177,7 +177,8 @@ function user(username, groups, root = "BOSS_MANUFACTURING") {
         currentPassword: "16ac58bbfa332c1c55bd98b53e60720bfa90d394",
         passwordHashType: "SHA"
     })
-    for (const userGroupId of (root ? [root] : []).concat(groups))
+    // every internal user is in BOSS_USERS (Commons and Comms)
+    for (const userGroupId of ["BOSS_USERS"].concat(root ? [root] : [], groups))
         store("moqui.security.UserGroupMember", {userId: partyId, userGroupId, fromDate: since})
     store("mantle.party.PartyRelationship", {
         partyRelationshipId: partyId + "_ORG",

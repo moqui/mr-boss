@@ -20,7 +20,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     - The records drive (driveKindEnumId RdkRecords, BOSS_RECORDS in data/BossSetupData.xml): a view over the record
       attachment folders Mantle writes under mantle.content.root, mapped by its ResourceDriveRecordFolder rows (R25). Every
-      user may view the drive (an ALL_USERS member row); FileServices (get#DriveAccess, for every caller) lets a user only
+      internal user may view the drive (a BOSS_USERS member row); FileServices (get#DriveAccess, for every caller) lets a user only
       into the mapped folders and the folders of records the user may see, as the theme's STRT_RECORD_VISIBLE_SERVICE hook
       answers (Mantle's get#RecordLinkInfo with checkOnly, under the user's filters, as R5 and R28 have it), and its lists
       (a folder, recent, favorites, search, the trash, a zip) leave the others out. Here: the records' titles and links, a

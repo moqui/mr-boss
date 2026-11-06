@@ -13,7 +13,7 @@ The suite chrome every IronStone app runs in (the header, the Assist drawer, the
 and the palette), and the two shared apps that feed it: **IronStone Commons** (contacts,
 calendar and schedules, tasks and requests assigned, files, notes and knowledge, account and
 preferences) and **IronStone Comms** (email, chat, calls, Chatter on every record, consent).
-The audience is everyone who signs in: in a large organization every employee has Commons and
+The audience is every internal user: in a large organization every employee has Commons and
 Comms beside their role apps; in a small business or a home they may be the whole system. The
 design therefore borrows the patterns people already know from Gmail, Outlook, Google Calendar,
 Google Drive, OneDrive, Google Contacts, Slack and Teams as much as from the open-source
@@ -274,8 +274,10 @@ still recorded and the badges still count.
 
 ## 2. App shells: Commons and Comms
 
-Both roots are mounted under the apps root by `MoquiConf.xml` and authorized for `ALL_USERS`:
-everyone who signs in has them; a deployment narrows that with its own authz. They replaced the
+Both roots are mounted under the apps root by `MoquiConf.xml` and authorized for `BOSS_USERS`
+("IronStone BOSS users"), the group every internal user is a member of, with framework `ADMIN` and each app's
+`_ADMIN` group: a public account (PASS, e-commerce) holds only `ALL_USERS` and no BOSS group, so it opens neither,
+and `ALL_USERS` grants no BOSS app (crosscut §1.4; impl-drawers-commons R29). They replaced the
 former `boss.xml` root and the `Base/User` copies of My Account (design-doc-guide §10). Each
 root's `always-actions` set `appRoot` and call `mantle.party.PartyServices.setup#UserOrganizationInfo`
 as `boss.xml` did.
@@ -2333,7 +2335,7 @@ bare `entity-find`.
 | A suite key map with Gmail-compatible mail defaults, Slack-compatible chat defaults, a `?` overlay and user overrides | The Inbox and Chat scopes close the gaps named in §1.7 and §12; inside a rich-text editor Ctrl+K is "insert link" and the palette is the Search button; compatible sets rather than a BOSS set so no one relearns |
 | Today's Snooze hides an item for the user only (`WorkEffortParty.snoozedThruDate`); Reschedule, a separate action, changes the due date | Snoozing a shared project task must not move its date for everyone; Microsoft To Do's My Day keeps the same split |
 | QuickSearch, Search and QuickLookup retire into the palette; `Commons/Search` remains only as the "more" page for records | `Base/QuickSearch`, `Base/Search` and `Base/QuickLookup` go when the palette lands; `template/SearchTransitions.xml` is retired except as the Sales report lookups (`screen/Sales.xml`, `Sales/Reports/SalesSummary.xml` and `SalesAnalysis.xml`) |
-| Commons and Comms are authorized for `ALL_USERS` | A deployment narrows with its own authz; role-limited screens (Duplicates, Spaces, Review, Consent) check their own groups |
+| Commons and Comms are authorized for `BOSS_USERS`, the group of every internal user, not `ALL_USERS` | Decided Nov 5, 2026 (the user's call; impl-drawers-commons R29): every BOSS app requires a UserGroup, as Moqui's and Marble's roots do, and a public account holds no BOSS group; role-limited screens (Duplicates, Spaces, Review, Consent) check their own groups. First decided Oct 18 for `ALL_USERS`, on the assumption that everyone who signs in is staff |
 | Contact books are new `ContactBook` records; groups are labels inside a book; a personal contact is a `Party` in a personal book with no role, hidden from the directory and the duplicate scan, and from every other user everywhere through `Party.privateOwnerUserId`, a filter in the organization filter sets and explicit conditions in the party finds, search and lookups (§6) | Answers the research question; CardDAV maps one book to one address book; "Link to a directory party" merges a personal contact into the directory when wanted |
 | Calendars are a new `Calendar` collection over `WorkEffort` events, with `CalendarShare` and `CalendarSubscription`; recurrence is an RRULE on `WorkEffortRecurrence` with instance overrides by `WorkEffortAssoc` `WeatRecurrenceInstance`; reminders are `WorkEffortReminder`; working hours are `WetAvailable` work efforts; the grid shows the toggled calendars plus every event where the user is a `WorkEffortParty` | Answers the research question; nothing is added to `WorkEffort` itself except through the new child entities; an event another app schedules with a user shows without a `CalendarWorkEffort` row |
 | RSVP uses `WorkEffortParty` statuses (`WeptOffered`, `WeptAssigned`, `WeptDeclined`, new `WeptTentative`); meeting-room booking uses `WorkEffortFacility` with a new status; equipment uses `WorkEffortAssetAssign` statuses; policies and approval live in Maintenance | initial-design's split; without a policy a booking is assigned at once; Maintenance's policies are opt-in per resource |

@@ -41,7 +41,8 @@ Done Oct 18, 2026, before any code:
 
 ## 3. Review findings and resolutions
 
-Each finding was verified in the code. Each resolution is now part of the design. R28 was found during the build.
+Each finding was verified in the code. Each resolution is now part of the design. R28 was found during the build, R29
+after it (Nov 5, from Customer Service P16).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -73,6 +74,7 @@ Each finding was verified in the code. Each resolution is now part of the design
 | R26 | §1.2 Inbox count, §12 mailboxes delivered to the Inbox: count and unread are per row (R15). | `get#ShellCounts.messages` counts an internal message once per user: internal messages and Inbox-delivered posts on that user's rows. Changed Oct 19 (§5 M2): the header has separate Mail, Messages and Notifications counts. |
 | R27 | §19: the shell changes every `/qapps` user (MarbleERP, SimpleScreens, tools). | Every new header element hides when its theme value or provider is empty. Without BOSS a deployment gains only the launcher, the palette (Recent, Screens, Saved finds, Actions) and icons. |
 | R28 | Found building M3, Oct 19: Request, WorkEffort and CommunicationEvent have no entity filter, OrderHeader's is on OrderPart, and WikiPage is a `moqui.*` entity, so R5's "find the record under the user's filters" let any app user read those records' Chatter by id; universal search also found restricted wiki pages and notes. | `get#RecordLinkInfo` applies per-user rules under an organization filter (a work effort or request by its parties and organizations, a message by its parties, mailbox or the record it is filed on, an order by its parts' parties, a wiki page by the wiki's own view rule; ADMIN and explicit entity authz see all; no active organization means all the user's organizations) and offers `checkOnly`; search uses the same rules (mr-mantle b5b2e64, eed058a). |
+| R29 | Found Nov 5, 2026 (impl-customer-service F216): Commons and Comms were the only BOSS app roots granted to `ALL_USERS`, which every account holds, so a PASS public account (a Support contact, with no group) opened both, saw their launcher tiles and read its own request in Commons Requests; the Records drive's member row was `ALL_USERS` too. Every other BOSS root is granted to `ADMIN`, its `_ADMIN` group and its own root user groups, as Marble ERP's roots are (ADMIN and MarbleErpAdmin). How it came about: Oct 18 (mr-boss `c16c9158`) design §2 and its decision row said both roots are for `ALL_USERS`, "everyone who signs in", on the assumption that signed in means staff, and `c4940895` seeded `BOSS_COMMONS_ALL_USERS` and `BOSS_COMMS_ALL_USERS`; Oct 21–22 (`28c592ac`, `a7b28612`) Projects clients got accounts and, instead of the grant being revisited, it became ALLOW with `BOSS_PROJECT_CLIENT` deny rows (impl-projects F3); Oct 27 (mr-pass `26e1a62`, design-forum §5.1: a public account has only `ALL_USERS`, an internal one another group; mr-moqui `9d682c63`, the framework's group-less registration in `org/moqui/public/Account.js`) public accounts began to exist and §5.1's definition was not applied back to Commons and Comms; Oct 28 (`dcf21aa3`, `88adf7a8`) Billing, Supplier and Support contacts became group-less PASS accounts, so no group remained to deny; Oct 31 (mr-moqui `c5fd370b`) basic-comms copied the pattern. initial-design ("gated by authz at its root screen", "apps map to user groups") and design-crosscut §5 / D5 had said otherwise throughout. | Decided Nov 5 (the user's call; §8): every BOSS app requires a UserGroup and `ALL_USERS` grants none (design-crosscut §1.4). The group `BOSS_USERS` ("IronStone BOSS users"), every internal user a member, has the ALLOW rows on Commons and Comms (`BOSS_COMMONS_USERS`, `BOSS_COMMS_USERS`, with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`) and the Records drive member row; both roots gain the `ADMIN` ALWAYS row every other root has. Every internal demo user is a member; project clients, PASS accounts and system accounts are not. The `BOSS_PROJECT_CLIENT` denies stay as a second guard. basic-comms does the same with `BASIC_COMMS_USERS`. Admin's provisioning adds the group (design-admin §4.1) |
 
 ## 4. Ground rules
 
@@ -122,7 +124,7 @@ Each finding was verified in the code. Each resolution is now part of the design
   only where Mantle already keys the record by that party (OrderPart's vendor and customer, an owner, a filer) or the
   ledger summarizes by it (a cost centre), and the plan says so.
 - **Organization filters** (added Oct 28, 2026, for every BOSS root). An app's ordinary user groups, and Commons' and
-  Comms' `ALL_USERS`, take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, so a user always works within their own
+  Comms' `BOSS_USERS` (R29), take `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, so a user always works within their own
   organizations: `filterOrgIds` is the active organization when one is set, or else every organization they belong to
   with its direct children. Each app has an admin group, `BOSS_<APP>_ADMIN`, with `AUTHZT_ALWAYS` and `AUTHZA_ALL` on its
   root and `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`: every organization until one is made active. Framework
@@ -716,6 +718,15 @@ plans/Remaining-Work.md.
   mr-boss (378).
 
 **Decided**
+- Every BOSS app requires a UserGroup (Nov 5, 2026, the user's call; R29). Commons, Comms and the Records drive are
+  granted to `BOSS_USERS`, the group of every internal user, not `ALL_USERS`, and both roots have the `ADMIN` ALWAYS row;
+  a public account (PASS, e-commerce) holds no BOSS group, so it opens no BOSS app. This reverses the Oct 18 decision
+  (design §2 and §20, "everyone who signs in"), which assumed that everyone who signs in is staff. The disconnect:
+  Oct 18 the `ALL_USERS` grants (`c16c9158`, `c4940895`); Oct 21–22 Projects clients, denied by group instead of the
+  grant being narrowed (`28c592ac`, `a7b28612`, impl-projects F3); Oct 27 public accounts with no group (mr-pass
+  `26e1a62`, design-forum §5.1; mr-moqui `9d682c63`); Oct 28 Billing, Supplier and Support contacts as group-less PASS
+  accounts (`dcf21aa3`, `88adf7a8`), leaving no group to deny; Oct 31 basic-comms copying the pattern (mr-moqui
+  `c5fd370b`); Nov 5 found by Customer Service P16 (impl-customer-service F216).
 - view-calendar `range-find` stays opt-in (Tasks and the gallery Views screen set it). A calendar view paints the list's current page. With `range-find="true"`, and only while that view is showing, the client GETs `{screen}/actions/{form}` once (twice when the calendar has an end field) with `{field}_from`, `{field}_thru` and `pageNoLimit=true` for the dates on screen. Making that the default would fire the request for every form-list that has a view-calendar, including a list whose actions ignore the range or honor `pageNoLimit` without it. It does not add a request to Calendar.qvue or to the table and board.
 
 **Built after the save point** (Oct 19–21; commits are named in each repo's log)

@@ -627,7 +627,7 @@ Shop renewals and Marketing event registration start the same coordinator with t
 | PayInvoice | single | Start hosted or tokenized payment | invoice, amount due, allowed payment method, payer confirmation, request identity | — | `mantle.account.PortalServices.start#InvoicePayment` | Odoo payment portal; Frappe payments checkout |
 | PaymentResult | display | Show confirmed payment or pending gateway result | attempt id, amount, gateway state, receipt, next action | — | `mantle.account.PortalServices.get#PaymentResult` | Frappe payments success/failed/cancel pages |
 
-**Actions:** The page is separate from the internal Accounting app grant: a public account holds only `ALL_USERS`, no BOSS group, and the page runs no Accounting always-actions. A record-scoped token or authenticated customer relationship grants view; a gateway-confirmed result grants payment settlement. The gateway's return comes back to a registered local path of the app. Redirect return parameters never mark paid. Keep pending visible and let retry resume the existing attempt.
+**Actions:** The page is separate from the internal Accounting app grant: a public account holds only `ALL_USERS`, no BOSS group (so it opens no BOSS app, crosscut §1.4), and the page runs no Accounting always-actions. A record-scoped token or authenticated customer relationship grants view; a gateway-confirmed result grants payment settlement. The gateway's return comes back to a registered local path of the app. Redirect return parameters never mark paid. Keep pending visible and let retry resume the existing attempt.
 
 **States:** Expired/revoked/foreign token returns unavailable without disclosing invoice existence. No Chatter, cost, internal time rates, bank secrets or unrelated party navigation.
 

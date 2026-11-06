@@ -229,6 +229,8 @@ Account-wide login/email changes, factor resets and credential revocation on an 
 
 Direct account creation remains for explicitly authorized service accounts and exceptional administration; it is not the default hire path.
 
+**The BOSS users group.** Every BOSS app requires a UserGroup; `ALL_USERS` grants none (crosscut §1.4). Provisioning an internal user, by a staff invitation, a People hire or NewStaffAccount, adds `BOSS_USERS` ("IronStone BOSS users", which opens Commons, Comms and the Records drive) with the app groups of the approved grant proposal, and offboarding ends it with them; a PASS or e-commerce public account never receives it. Until Admin's Users screens are built, the paths are the tools' UserAccount screens (add the group membership there) and Mantle's `mantle.party.PartyServices.create#PartyUserAccount` with `userGroupId` `BOSS_USERS`, followed by the app groups.
+
 **Passwords.** Admin never sets or mails a password an administrator chose. A reset uses existing `org.moqui.impl.UserServices.reset#Password`:
 - it mails a random reset password through the `PASSWORD_RESET` template;
 - that password can only be used to change the password, and the current password stays valid;

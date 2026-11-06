@@ -35,11 +35,18 @@ function as(username, name, parameters) {
 const userIdOf = (username) => sys(() => ec.entity.find("moqui.security.UserAccount").condition("username", username).one().userId)
 function makeUser(userId, partyId) {
     sys(() => {
-        if (ec.entity.find("moqui.security.UserAccount").condition("userId", userId).count() > 0) return
-        const account = ec.entity.makeValue("moqui.security.UserAccount")
-        account.setFields({ userId, username: userId.toLowerCase(), userFullName: "Call target " + userId.slice(15), partyId: partyId || null,
-            disabled: "N" }, true, null, null)
-        account.create()
+        if (ec.entity.find("moqui.security.UserAccount").condition("userId", userId).count() == 0) {
+            const account = ec.entity.makeValue("moqui.security.UserAccount")
+            account.setFields({ userId, username: userId.toLowerCase(), userFullName: "Call target " + userId.slice(15), partyId: partyId || null,
+                disabled: "N" }, true, null, null)
+            account.create()
+        }
+        // Comms is opened by BOSS_USERS, not ALL_USERS
+        if (ec.entity.find("moqui.security.UserGroupMember").condition("userGroupId", "BOSS_USERS").condition("userId", userId).count() == 0) {
+            const member = ec.entity.makeValue("moqui.security.UserGroupMember")
+            member.setFields({ userGroupId: "BOSS_USERS", userId: userId, fromDate: ec.user.nowTimestamp }, true, null, null)
+            member.create()
+        }
     })
 }
 function endCalls() {
@@ -73,6 +80,9 @@ spec({
         endCalls()
         sys(() => {
             ec.entity.find("moqui.call.CallMediaNode").condition("instanceId", NODE).deleteAll()
+            ec.entity.find("moqui.security.UserGroupMember").condition("userId", "in", [SAME, OTHER, NOPARTY]).deleteAll()
+            // the Forum's tracking mode a group membership makes (mantle.forum.TrackingServices.refresh#Mode)
+            ec.entity.find("mantle.forum.ForumTrackingMode").condition("partyId", "in", [SAME, OTHER]).deleteAll()
             ec.entity.find("moqui.security.UserAccount").condition("userId", "in", [SAME, OTHER, NOPARTY]).deleteAll()
             ec.entity.find("mantle.party.Person").condition("partyId", "in", [SAME, OTHER]).deleteAll()
             ec.entity.find("mantle.party.Organization").condition("partyId", ORG).deleteAll()

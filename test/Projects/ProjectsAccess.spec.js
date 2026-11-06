@@ -5,7 +5,8 @@
 // part and never another client's record, an internal note, a rate or a cost; writes only through ironstone.client.ClientServices
 // (every other IronStone write is in the deny pattern BOSS_PROJECTS_INTERNAL, data/BossSetupData.xml); reaches no record chat
 // room, records drive, internal presence or agent; and reads, read only, the repositories its project shares. Internal users
-// keep what they had: Commons and Comms are AUTHZT_ALLOW for ALL_USERS (not ALWAYS), so the client group's deny reaches.
+// keep what they had: Commons and Comms are AUTHZT_ALLOW for BOSS_USERS (not ALWAYS), so the client group's deny reaches; an
+// account in no group but ALL_USERS (a public account) opens neither (impl-drawers-commons.md R29).
 // Screens whose logic another spec owns (Home, ProjectDetail, WorkItemDetail, Billing, Code) are not rendered here: a refusal
 // is checked by a service, a transition or the status of a refused render. The sentinels are made in setupSpec with
 // authorization off and removed after: internal notes on ACME-1, ACME and Acme's request, a client rate and budget and item
@@ -203,7 +204,7 @@ spec({
 })
 
 const setTypes = (type) => sys(() => {
-    for (const id of ["BOSS_COMMONS_ALL_USERS", "BOSS_COMMS_ALL_USERS"]) {
+    for (const id of ["BOSS_COMMONS_USERS", "BOSS_COMMS_USERS"]) {
         const row = ec.entity.find("moqui.security.ArtifactAuthz").condition("artifactAuthzId", id).one()
         row.authzTypeEnumId = type
         row.update()
@@ -271,13 +272,13 @@ feature("who opens what: a client opens Projects alone, refused the internal scr
     },
 })
 
-feature("internal users are unchanged by client access: Commons and Comms as under ALWAYS, the team's menus, denies, items, rooms and drive", {
+feature("internal users are unchanged by client access: Commons and Comms as under ALWAYS, the team's menus, denies, items, rooms and drive; an ALL_USERS-only account is refused both roots", {
     when() {
-        const types = sys(() => ["BOSS_COMMONS_ALL_USERS", "BOSS_COMMS_ALL_USERS", "BOSS_COMMONS_CLIENT", "BOSS_COMMS_CLIENT"].map((id) =>
+        const types = sys(() => ["BOSS_COMMONS_USERS", "BOSS_COMMS_USERS", "BOSS_COMMONS_CLIENT", "BOSS_COMMS_CLIENT"].map((id) =>
             ec.entity.find("moqui.security.ArtifactAuthz").condition("artifactAuthzId", id).one()?.authzTypeEnumId))
-        // a project manager, a team member and a user in no group but ALL_USERS: the menu data of the apps' main screens (each
-        // level lists the subscreens the user may open) are the same with the records as ALWAYS (put back for the comparison) and as ALLOW
-        const USERS = ["john.doe", "joe.developer", "boss.test.allusers"]
+        // a project manager and a team member: the menu data of the apps' main screens (each level lists the subscreens the user
+        // may open) are the same with the records as ALWAYS (put back for the comparison) and as ALLOW
+        const USERS = ["john.doe", "joe.developer"]
         const MAIN = ["Commons", "Comms", "Commons/Home", "Commons/Tasks", "Commons/Contacts", "Commons/Calendar", "Commons/Knowledge", "Commons/Notes",
             "Commons/Files", "Commons/Settings", "Comms/Home", "Comms/Inbox", "Comms/Chat", "Comms/Settings"]
         const fingerprint = () => MAIN.map((path) => {
@@ -288,6 +289,8 @@ feature("internal users are unchanged by client access: Commons and Comms as und
         const always = USERS.map((user) => as(user, fingerprint))
         setTypes("AUTHZT_ALLOW")
         const allow = USERS.map((user) => as(user, fingerprint))
+        // a user in no group but ALL_USERS, as a PASS public account is: neither root, nor any screen under them
+        const allUsers = as("boss.test.allusers", fingerprint)
         const problems = []
         USERS.forEach((user, index) => allow[index].forEach((line, at) => {
             if (line !== always[index][at]) problems.push(`${user}: ALWAYS ${always[index][at]} / ALLOW ${line}`)
@@ -314,11 +317,13 @@ feature("internal users are unchanged by client access: Commons and Comms as und
             return { drives: Array.from(service(`${FILES}.get#UserDrives`, {}).driveList || []).map((drive) => drive.driveId), errors: info._errors,
                 name: info.resource ? info.resource.name : null, agentUse: ec.user.hasPermission("AgentUse") }
         })
-        return { types, problems, john, joe, johnChat, joeChat, johnDrive }
+        return { types, problems, allUsers, john, joe, johnChat, joeChat, johnDrive }
     },
-    then({ types, problems, john, joe, johnChat, joeChat, johnDrive }) {
+    then({ types, problems, allUsers, john, joe, johnChat, joeChat, johnDrive }) {
         types == ["AUTHZT_ALLOW", "AUTHZT_ALLOW", "AUTHZT_DENY", "AUTHZT_DENY"]
         problems.join("\n") == ""
+        allUsers.length == 14
+        allUsers.filter((line) => /^\S+ 200 /.test(line)).join("\n") == ""
         john.Projects == ["Home", "Projects", "WorkItems", "Requests", "Code", "Time", "Resources", "Billing", "Reports", "Settings"]
         john.WorkItems == ["Backlog", "Timeline", "Import"]
         joe.menu.Projects == ["Home", "Projects", "WorkItems", "Requests", "Code", "Time", "Resources", "Reports"]

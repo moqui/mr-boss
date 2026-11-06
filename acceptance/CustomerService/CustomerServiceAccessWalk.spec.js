@@ -13,9 +13,10 @@
 //   hold or receive stock without the group that grants it;
 // - the W and F users work from Customer Service's shared mounts (ReturnDetail, QualityInspection, InvoiceDetail) without the
 //   Warehouse or Accounting root; their receipt and settlement are CustomerServiceReturnsWalk's;
-// - a customer contact (the Support app's demo accounts) reaches nothing of Customer Service in BOSS: no app root but Commons and
-//   Comms (ALL_USERS', F-P16-2), where it sees no case record but Joe Q Public his own case as one of its people, no launcher entry, no ironstone.customerservice service and no
-//   staff case print; the Support app's isolation between customers is mr-pass's SupportIsolation.
+// - a customer contact (the Support app's demo accounts, PASS public accounts holding no BOSS group) reaches nothing in BOSS: no
+//   app root, Commons and Comms included (F216; every BOSS app requires a UserGroup, impl-drawers-commons R29), no case record
+//   on a refused Commons or Comms page, no launcher entry, no ironstone.customerservice service and no staff case print; the
+//   Support app's isolation between customers is mr-pass's SupportIsolation.
 // The later features read what setupSpec adds. Run: ./moq accept mr-boss --spec CustomerServiceAccessWalk
 const lib = ec.resource.script("component://mr-boss/test/CustomerService/CustomerServiceSpecLib.js")
 const {ids, users, asUser, system, invoke, shell} = lib
@@ -589,13 +590,13 @@ feature("the W agent and the F authorizer work from Customer Service's shared mo
 })
 
 feature(
-    "a customer contact reaches nothing of Customer Service in BOSS: no root or launcher entry, no service, record or staff print",
+    "a customer contact reaches nothing in BOSS: no root (Commons and Comms too) or launcher entry, no service, record or staff print",
     {
         when() {
             const problems = []
-            const roots = otherRoots.concat(["CustomerService", "Insights"])
-            // Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a public account opens them (F-P16-2);
-            // there it sees no record of the cases, their customers or orders: the request list and Joe's case, the inbox, Chatter
+            const roots = otherRoots.concat(["CustomerService", "Insights", "Commons", "Comms"])
+            // Commons and Comms are granted to BOSS_USERS, not ALL_USERS (F216), so a public account is refused them; their pages
+            // show it no record of the cases, their customers or orders: the request list and Joe's case, the inbox
             const commonsPages = [
                 ["Commons", "Requests/List", {}],
                 ["Commons", "Requests/RequestDetail", {requestId: ids.thermostatCaseId}],
@@ -614,19 +615,12 @@ feature(
                 asUser(username, () => {
                     for (const [root, path, parameters] of commonsPages) {
                         const got = render(root, path, parameters)
-                        // Joe Q Public's own account reads his own case there as one of its people (F-P16-2), never its
-                        // internal note; the JoeDist contacts no case of either side
-                        const forbidden =
-                            username === "joe@public.com"
-                                ? new RegExp("P16 Retail secret|" + sides.services.pattern.source)
-                                : anyCase
-                        if (forbidden.test(got.output))
-                            problems.push(
-                                `${username} sees a case's record on ${root}/${path}: ${got.output.match(forbidden)[0]}`
-                            )
+                        if (opens(got)) problems.push(`${username} opens ${root}/${path}`)
+                        if (anyCase.test(got.output))
+                            problems.push(`${username} sees a case's record on ${root}/${path}: ${got.output.match(anyCase)[0]}`)
                     }
                 })
-                const launcher = shell(username).apps.filter(app => !["Commons", "Comms"].includes(app))
+                const launcher = shell(username).apps
                 if (launcher.length) problems.push(`${username}'s launcher has ${launcher.join(", ")}`)
                 for (const [service, parameters] of [
                     ["ironstone.customerservice.AccessServices.search#Records", {text: "joe", limit: 20}],

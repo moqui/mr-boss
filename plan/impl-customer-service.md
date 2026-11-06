@@ -3382,6 +3382,11 @@ SupportWarranty, SupportAssignment, AccountingControls, CustomerServiceAssignmen
     fails.
   Recommended: (a). Not changed here; the AccessWalk keeps asserting today's behaviour (Commons and Comms open, no case
   record but Joe's own as one of its people).
+  - Resolved Nov 5 (the user's call): neither (a) nor a heuristic, but (b) as a rule: every BOSS app requires a UserGroup,
+    and `ALL_USERS` grants none. Commons, Comms and the Records drive are granted to `BOSS_USERS`, the group of every
+    internal user, and basic-comms' root to `BASIC_COMMS_USERS`; a public account holds neither, so the AccessWalk now
+    asserts a Support contact is refused Commons and Comms and has no tile for them. The finding, the decision and how
+    design-drawers-commons §2's "everyone who signs in" came about are impl-drawers-commons R29 (design-crosscut §1.4).
 
 - **Final suites (Nov 5, on master after P16 merged, nothing else running):** standalone mr-mantle 1,751 passed, 2
   failed (the baseline WorkTimeEntries and WorkTimesheets, which need mr-boss's demo data), 11 skipped; `./moq test-apps`
@@ -3661,7 +3666,7 @@ is written there too.
 | F213 | P15 review: the saved-reply preview does not say the mail will carry the Support link; the return label is always served as a PDF whatever the carrier returned; MyCases reads all of a customer's case ids before paging, fine at portal sizes | §7 |
 | F214 | P15 review: `send#EmailDraft` gains a hook adding the CustomerCase link to an agent's mail filed on a case when every recipient is on the case's customer side and the sender holds SUPPORT_CASE_EDIT; `authorize#Return` and `decide#ReturnException` now mail the customer a decision notice (no reason) where the organization has a service policy, so Retail's demo authorizations mail the customer | Kept: both act only on cases and service-policy returns (§2's Mantle rule changes) |
 | F215 | P16: The Customer Service administrator (BOSS_CUSTOMER_SERVICE_ADMIN, MANTLE_ACTIVE_ORG) reaches every organization's cases, customers, orders, palette rows, links, choices and report rows when no organization is active (by design, CustomerService.js; impl-purchasing F185); the isolation sweeps leave it out. | See P16 |
-| F216 | P16: Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a PASS public account (a Support contact, which holds no group) opens both BOSS roots and its launcher lists them; Joe Q Public's own account reads his own case in Commons Requests as one of its people (its title, status and conversation as Commons shows a request's people, not its internal notes). Design §8 says a customer contact reaches nothing in BOSS; Projects denies its client contacts Commons and Comms through BOSS_PROJECT_CLIENT, and a public account has no group to deny. Left for the lead (§7): a deny for public accounts on the BOSS roots (a framework or PASS marker of a public account, or a Commons and Comms grant narrowed to internal users). | See P16 |
+| F216 | P16: Commons and Comms are authorized for ALL_USERS (design-drawers-commons §2), so a PASS public account (a Support contact, which holds no group) opens both BOSS roots and its launcher lists them; Joe Q Public's own account reads his own case in Commons Requests as one of its people (its title, status and conversation as Commons shows a request's people, not its internal notes). Design §8 says a customer contact reaches nothing in BOSS; Projects denies its client contacts Commons and Comms through BOSS_PROJECT_CLIENT, and a public account has no group to deny. | Resolved Nov 5 (the user's call): every BOSS app requires a UserGroup; Commons, Comms and the Records drive are granted to `BOSS_USERS` (internal users), not ALL_USERS (impl-drawers-commons R29). See P16 |
 | F217 | P16: `ignore-error` on a screen's service-call leaves no error message, so `!ec.message.hasError()` after it says nothing; ReturnAuthorization took another organization's return for the user's (fixed here); other screens that test hasError after an ignored call may say "not authorized" or "empty" where "not available" is meant (none leaked a record in the walk). | See P16 |
 | F218 | P16: CaseDetail has no Items tab (design CaseDetail: "Items only when present"); a claim's product and an order change's lines show on WarrantyAssessment and OrderChangeDetail (§7). | See P16 |
 | F219 | P16: The case summary's internal variant shows the template's customer-visible answers only; an internal field's answer stays on CaseDetail (CaseTemplates.js has no staff projection of a response to reuse). | See P16 |
@@ -3698,8 +3703,7 @@ Designed, not in this build:
     NewCase's warranty path refusing the whole case for a serial not the customer's, and its customerAssets choice listing
     a resold serial (F185); CaseDetail's Items tab when present (F218); the internal case summary's internal template
     answers (F219).
-  - Access: a deny for PASS public accounts on the BOSS Commons and Comms roots, which ALL_USERS grants (F216); screens
-    that test `hasError` after an ignored service-call (F217).
+  - Access: screens that test `hasError` after an ignored service-call (F217).
   - Comms and channels: an Inbox `message-actions` slot (F121); a permission test on Chat's and Voicemail's ext-actions and
     a hold on mail failing DMARC (F132).
   - Other components: mr-marble's survey screens refusing a form that is not a survey (F134); Purchasing's callers of

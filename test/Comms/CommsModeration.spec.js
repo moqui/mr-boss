@@ -116,9 +116,10 @@ feature("a public member's first post in a bound category waits in the queue", {
                     .find('moqui.security.UserAccount')
                     .condition('username', 'boss.mod.' + name)
                     .one().userId
-                if (group)
+                // an internal user is in BOSS_USERS too, which opens Comms
+                for (const userGroupId of group ? ['BOSS_USERS', group] : [])
                     call('create#moqui.security.UserGroupMember', {
-                        userGroupId: group,
+                        userGroupId,
                         userId,
                         fromDate: at - 1000,
                     })
