@@ -2942,6 +2942,52 @@ Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 w
   - **F-P14-4** The demo has no feed: the demo Shop sites are disabled until published (Shop P1), so a demo feed of
     POPC_DEFAULT could not build on a fresh load; the walk makes its own site.
 
+**Review Nov 6 (P14)** (branch `com/p14`). Checked against the phase, design-commerce §9 and §3 ChannelHealth, design-shop
+§13.2 and impl-commerce §2: public serving (get#ShopFeed by the host's site only, the feed's store the site's Shop's, a
+disabled or unpublished site NOT_AVAILABLE and a refused feed FEED_UNAVAILABLE, both NotFound so PASS answers 404; rows
+of the card's public fields only, no cost, internal id, variant or other store's data; the build's content type,
+`no-store`, `nosniff` and the digest's ETag; `feeds` reserved in PublicApps.js and routed only for
+`feeds/{key}.{xml|csv|json}` to `/Shop/feed`, no other Shop transition reachable); builds written once (no update of a
+build anywhere), publish under the feed's lock with its operation key and revision, BUILD_INCOMPLETE/OUTDATED/STALE, a
+fatal build recorded with the active build kept; the store scope and COMMERCE_CHANNEL_OPERATE in every staff service,
+forged feed, build and store ids refused, channel health reading only counts and descriptions (no payload, URL or
+secret); the ShopCatalog.js exports; decimals (prices are the projection's money text, no arithmetic or `+` on a decimal
+in the writers, screens or Reporting.js); the Built note.
+- **R1 (high, restricted values)** A manual build ran the projection as the signed-in operator: `shopOf` names the
+  user's party as the customer and get#StoreProductPrice gives a customer's own price rows, so the operator's (or any
+  staff member's customer-specific) price went into the public artifact. `project` now builds a visitor's projection
+  (`customerPartyId` null). Spec: StoreFeeds' build feature with an operator-only mug price (fails without the fix).
+- **R2 (high, serving)** A withdrawal scheduled ahead advances the generation when it is scheduled, not when it takes
+  effect, so a build made in between served the product after its row ended (serving checked nothing at the build's own
+  generation). `servable` now also re-resolves when a ProductStoreProduct or ProductStoreCategory row of the store started
+  or ended after the build started (four one-row reads per serve), keyed by that instant. Spec: StoreFeeds' last feature
+  ends the mug's row without a generation change and the feed is refused (fails without the fix); it also checks the
+  site unpublished (NOT_AVAILABLE) and another site's key (FEED_UNAVAILABLE).
+- **R3 (medium, F-P14-1 contained)** The build pages the store's publication rows itself (`candidatesOf`: ShopCatalog.js
+  `publishedIds`' rule, 1,000 rows a read, at most 50,000 candidates, the category tree applied as it reads) instead of
+  Shop's 2,000-candidate list; past the 5,000-row bound the rest are ROW_LIMIT skips without being projected. The
+  `publishedIds` and `publicOf` exports, which nothing then used, are taken back out (ShopCatalog.js only adds `cards`,
+  `contentTexts`, `plainText`). F-P14-1 can close.
+- **R4 (medium, job)** run#StoreFeeds held one transaction for the whole run: each feed's schedule stamp and failure
+  record locked that feed's row until the last feed was built (a staff edit or publish waited up to the 30-minute
+  timeout), and a rollback at the end lost every failure record. The job is now `transaction="ignore"`; each build stays
+  its own transaction.
+- **R5 (low, scalability)** The `mantle.product.feedServing` cache had no conf entry (unbounded, one key left behind per
+  generation change): mr-mantle MoquiConf.xml bounds it (2,000 entries, a day).
+- Decision 1 (feeds changed in place, not dated rows) is acceptable: a feed is a binding with one identity that its builds
+  and public path hang off, its key fields (and its reason) are audit-logged, ending it is its `thruDate`, and every build
+  records the format, locale, currency and generation it was made with; an as-of read of a feed's settings is the audit
+  log's. §2's list should name feeds among the records of their own rather than the dated rows.
+- Specs (`--nobuild`): Mantle StoreFeeds 4/4 (1.27 s) with ShopCatalog, StorePublication, SitePages, PassAuthority,
+  StoreAdmin: 37/37; mr-pass ShopFeeds, ShopAccess, ShopCatalog, Transport, Integrations: 15/15; BOSS CommerceFeeds,
+  CommerceAccess, CommerceReports, CommerceStores, CommerceSitePages: 24/24. Acceptance not rerun (unchanged).
+- For the lead: `store#StoreFeed` accepts any category id (only its existence is checked), so a feed's category name can
+  be another organization's (rows stay the store's published products; low); `find#StoreFeeds` reads at most 200 feeds
+  before the state filter and paging (low); a category membership change scheduled ahead (ProductCategoryMember of an
+  allow list) takes effect without a generation change and is not in R2's check (low; the publication and store category
+  rows are); the remote frontend carries a feed's whole artifact in one answer (5,000 rows of up to 5,000 characters of
+  description can be large; a streamed or paged answer would bound it).
+
 ### P15 — Finish
 
 - The tui and server-static screen sweeps of Commerce, one acceptance test per mode (each screen's twin is built in
