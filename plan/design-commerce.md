@@ -75,6 +75,13 @@ may assign narrower permission sets. Publishing is not implied by editing.
 those stores of their organizations; a user with none works every store of their organizations.
 Mantle seeds the `COMMERCE_*` permissions, none of which exists yet (impl-commerce F2).
 
+**Areas by group (Nov 5, 2026; impl-commerce P1).** Home, Stores, Merchandising and Promotions open for every Commerce
+user; Website for the merchandiser, designer, theme developer and publisher; Orders and Customers for the store and
+subscription operators; Integrations for the channel operator; Reports for the manager and the three operators;
+Settings for the manager; the administrator opens every area. Each area seen by some groups is an artifact group that
+denies `BOSS_COMMERCE`. A store-limited staff member's stores also narrow raw store reads (the `COMMERCE_STORE` filter,
+impl-commerce F50), and they reach a site only through one of their stores.
+
 | Group | Proposed grants |
 | --- | --- |
 | `BOSS_COMMERCE_ADMIN` (existing) | All authz on the root with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`, as today; gains every `COMMERCE_*` permission. Operator host allowlists, credentials and other apps' financial, price and stock privileges stay separate |

@@ -12,9 +12,15 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Commerce: root of the app for e-commerce and channel managers (initial-design.md app table); its sections
-    follow design-commerce.md when that file is written. Not yet implemented: its BOSS_COMMERCE
-    grant in data/BossSetupData.xml is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Commerce (design-commerce §1): the root of the app for store managers, merchandisers, designers, theme
+    developers, publishers, store, channel and subscription operators and the Commerce administrator. The root user group
+    BOSS_COMMERCE and the administrator group BOSS_COMMERCE_ADMIN open it (data/BossSetupData.xml); its areas are the files
+    of screen/Commerce/, in the menu order of design §1.2 by their default-menu-index:
+    1 Home; 2 Stores; 3 Merchandising; 4 Website; 5 Orders; 6 Customers; 7 Promotions; 8 Integrations; 9 Reports; 10 Settings.
+    Home, Stores, Merchandising and Promotions are every Commerce user's; Website, Orders, Customers, Integrations, Reports and
+    Settings their groups' (BOSS_COM_<Area>). ironstone.commerce.ContextServices.get#SharedContext checks the user and
+    resolves their organizations, stores (a store-limited staff member's own), capabilities and links for every subscreen;
+    each service checks again. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Commerce" menu-image="sym_o_storefront" menu-image-type="icon">
 
@@ -22,6 +28,11 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Commerce"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <!-- a store-limited staff member's stores in the user context, for the COMMERCE_STORE entity filters (F50) -->
+        <service-call name="ironstone.commerce.ContextServices.setup#StoreScope"/>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}"
+                out-map="commerce"/>
+        <set field="sharedLinks" from="commerce.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -29,7 +40,21 @@ along with this software (see the LICENSE.md file). If not, see
             (the theme values STRT_CHATTER_SCREEN and STRT_RECORD_FILES_SCREEN; impl-drawers-commons.md R5) -->
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
+        <!-- later phases: the shared screens mounted at the root, hidden from the menu -->
     </subscreens>
+
+    <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
+        (design §1.2): orders and carts in the palette (P8), New store in quick create once StoreDetail is built (P2) -->
+    <shell-providers>
+        <!-- P1: the user's stores in the palette (search#Records), each opening Home scoped to it until StoreDetail (P2) -->
+        <palette-source group="Commerce" label="Commerce stores" icon="sym_o_storefront"
+                service="ironstone.commerce.ContextServices.search#Records" sequence="48"/>
+        <keymap scope="commerce">
+            <key keys="g e" label="Commerce home" screen="Commerce/Home"/>
+            <key keys="g s" label="Stores" screen="Commerce/Stores"/>
+            <key keys="g m" label="Merchandising" screen="Commerce/Merchandising"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="commerce-panel" type="popup"/></widgets>
 </screen>

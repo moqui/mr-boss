@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Commerce app's context (impl-commerce §2, §4, P1; design-commerce §1.1; Commerce.js): the user's organizations,
+    stores and capabilities, and the record check every Commerce screen, mount and shared mount calls before the Mantle
+    service. A user may open Commerce through an authorization of their groups on its root (BOSS_COMMERCE, the root user
+    group, or BOSS_COMMERCE_ADMIN) with COMMERCE_VIEW; MANTLE_USER_ORG's organizations limit their stores, MANTLE_ACTIVE_ORG
+    (the administrator's) leaves the active organization, or every one with none active, and a current StoreStaff
+    ProductStoreParty row limits a user to those stores. Capabilities are the Mantle permissions the services check, and the
+    menu areas' authorizations. Disabled artifact authorization widens nothing here. No entity filter covers a store's
+    child records, its orders or its sites (F9), so each is checked here by its organization and store, and by the Mantle
+    service again. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="define" noun="Parameters" type="interface">
+        <description>The in-parameters the Commerce app services share; each service declares what it returns.</description>
+        <in-parameters>
+            <parameter name="appRoot" type="String"/>
+        </in-parameters>
+    </service>
+    <service verb="get" noun="SharedContext" allow-remote="false">
+        <description>Check that the user may open Commerce and resolve their scope and the app's routes: capabilities (the
+            permissions, own and borrowed, and the areas), the organizations and whether they work in every one, whether a
+            store assignment limits them, and the stores they may choose. Refuses a user without Commerce
+            (COMMERCE_UNAVAILABLE), a Projects client contact and a PASS public account among them, and another app root
+            (COMMERCE_CONTEXT).</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="activeOrganizationPartyId" type="String"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="storeLimited" type="Boolean"/>
+            <parameter name="storeOptions" type="List"><description>The user's stores as {value, label}, by name, at most
+                100</description></parameter>
+            <parameter name="appRoot" type="String"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase" type="String"/>
+            <parameter name="webBase" type="String"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="shared" from="ec.resource.script(module).execute('sharedContext', context)"/>
+            <set field="capabilities" from="shared.capabilities"/>
+            <set field="organizationPartyIds" from="shared.organizationPartyIds"/>
+            <set field="activeOrganizationPartyId" from="shared.activeOrganizationPartyId"/>
+            <set field="allOrganizations" from="shared.allOrganizations"/>
+            <set field="storeLimited" from="shared.storeLimited"/>
+            <set field="storeOptions" from="shared.storeOptions"/>
+            <set field="appRoot" from="shared.appRoot"/>
+            <set field="sharedLinks" from="shared.sharedLinks"/>
+            <set field="linkBase" from="shared.linkBase"/>
+            <set field="webBase" from="shared.webBase"/>
+        </actions>
+    </service>
+    <service verb="setup" noun="StoreScope" allow-remote="false">
+        <description>Puts a store-limited staff member's stores (their current StoreStaff ProductStoreParty rows) in the user
+            context as commerceStoreIds for the COMMERCE_STORE entity filter set on Commerce's authorizations (F50), as
+            setup#ClientProjectInfo does for the client filters; called per render from the Commerce root's always-actions.
+            Leaves it unset for a user with no current row (who works every store of their organizations) and for a system
+            administrator, so the filter set does not apply; a failure to read the rows leaves _NA_, so it matches
+            nothing.</description>
+        <out-parameters>
+            <parameter name="storeLimited" type="Boolean"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="setup" from="ec.resource.script(module).execute('setupStoreScope', context)"/>
+            <set field="storeLimited" from="setup.storeLimited"/>
+        </actions>
+    </service>
+    <service verb="get" noun="StoreScope" allow-remote="false">
+        <description>The stores the user works: storeIds (their organizations' stores, a store-limited staff member's own),
+            storeLimited and staffStoreIds, the store assignment that limits them. Later phases' services condition their finds
+            of a store's records on it, which the organization and store filters do not cover. Refuses a user without Commerce
+            (COMMERCE_UNAVAILABLE).</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <out-parameters>
+            <parameter name="storeIds" type="List"/>
+            <parameter name="storeLimited" type="Boolean"/>
+            <parameter name="staffStoreIds" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('storeScope', context)"/>
+            <set field="storeIds" from="found.storeIds"/>
+            <set field="storeLimited" from="found.storeLimited"/>
+            <set field="staffStoreIds" from="found.staffStoreIds"/>
+        </actions>
+    </service>
+    <service verb="check" noun="Record" allow-remote="false">
+        <description>A record a Commerce screen or mount was given: a store, a PASS site, a store's order or cart, or a
+            customer. Answers its kind's name, a label and a short detail. Refuses a record that does not exist and one outside
+            the scope alike (RECORD_UNAVAILABLE): another organization's store, a store a store-limited staff member is not
+            assigned, a site of no store or organization of theirs, an order of no store or of another's, another
+            organization's customer. With a capability named (storeEdit, publish, ...), refuses a user without its permission
+            (PERMISSION_DENIED).</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="recordType" required="true"><description>store, site, order, cart or customer (Commerce.js
+                recordKinds)</description></parameter>
+            <parameter name="recordId" required="true"/>
+            <parameter name="capability"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="recordType"/>
+            <parameter name="recordId"/>
+            <parameter name="kindName"/>
+            <parameter name="label"/>
+            <parameter name="detail"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="record" from="ec.resource.script(module).execute('checkRecord', context)"/>
+            <set field="recordType" from="record.recordType"/>
+            <set field="recordId" from="record.recordId"/>
+            <set field="kindName" from="record.kindName"/>
+            <set field="label" from="record.label"/>
+            <set field="detail" from="record.detail"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Choices" allow-remote="false">
+        <description>The options of a Commerce drop-down the user may choose, searched by term in the query, with the
+            selected value's label: stores (the user's organizations' stores, a store-limited staff member's own) and
+            organizations (the user's). Refuses an unknown choice.</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="choice" required="true"/>
+            <parameter name="term"/>
+            <parameter name="selected"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="options" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('choices', context)"/>
+            <set field="options" from="found.options"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false">
+        <description>The palette's Commerce records: the stores the user works (by id or name), ignoring case, limited in the
+            query and checked again, each opening Home scoped to it until StoreDetail (P2); orders and carts in P8. No rows for
+            a user without Commerce.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('search', context)"/>
+            <set field="rows" from="found.rows"/>
+        </actions>
+    </service>
+</services>

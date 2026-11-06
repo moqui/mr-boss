@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<entity-facade-xml type="demo">
+    <!-- Commerce's demo after the users (impl-commerce P1): the store-limited staff member's StoreStaff row on POPC_DEFAULT
+        (commerce.storestaff, of Ziziwork Retail and Ziziwork Services, works only that store), and the two PASS sites the
+        demo service makes, disabled until published, each with Account, Billing and Support mounts: ZIZI_SHOP
+        (shop.zizi.localhost) for POPC_DEFAULT's Ziziwork Retail and ZIZI_DIGITAL (digital.zizi.localhost) for BOSS_COM_DIGITAL's
+        Ziziwork Services. Shop P1 adds their Shop mounts. -->
+    <mantle.product.store.ProductStoreParty productStoreId="POPC_DEFAULT" partyId="BOSS_COM_STAFF" roleTypeId="StoreStaff"
+            fromDate="1265184000000"/>
+    <ironstone.commerce.DemoServices.load-CommerceDemo/>
+</entity-facade-xml>

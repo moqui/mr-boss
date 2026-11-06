@@ -12,11 +12,12 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the Stores & channels section of IronStone Commerce (initial-design.md app table);
-    design-commerce.md decides its screens. -->
+<!-- The Stores area of IronStone Commerce (design-commerce §3 Stores, StoreDetail, StoreGroups): the stores of the user's
+    organizations, a store's configuration and readiness, and store groups (impl-commerce P2); for every Commerce user, each
+    store limited by ironstone.commerce.ContextServices (a store-limited staff member's own stores). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Stores &amp; channels" default-menu-index="2" menu-image="sym_o_sell" menu-image-type="icon">
+        default-menu-title="Stores" default-menu-index="2" menu-image="sym_o_sell" menu-image-type="icon">
     <widgets>
-        <label text="Placeholder: Stores and channels." type="p"/>
+        <label text="Placeholder: Stores, their configuration and readiness, and store groups." type="p"/>
     </widgets>
 </screen>
