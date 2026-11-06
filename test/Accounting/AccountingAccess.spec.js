@@ -1326,3 +1326,17 @@ feature("server choices keep a selected label outside the search page", {
         failures == []
     }
 })
+
+// mr-pass impl-shop P5 (X4, F15): the payment operator (treasury) releases a Payment hold; AR does not hold the permission
+feature("treasury holds the Payment hold's release permission (PAYMENT_HOLD_RELEASE); AR does not", {
+    when() {
+        return {
+            treasury: as("finance.treasury", () => ec.user.hasPermission("PAYMENT_HOLD_RELEASE")),
+            ar: as("finance.ar", () => ec.user.hasPermission("PAYMENT_HOLD_RELEASE"))
+        }
+    },
+    then({treasury, ar}) {
+        treasury === true
+        ar === false
+    }
+})

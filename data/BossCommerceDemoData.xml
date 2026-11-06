@@ -77,4 +77,18 @@ along with this software (see the LICENSE.md file). If not, see
             fromDate="1265184000000" isEnabled="N"/>
     <mantle.product.store.ProductStoreSetting productStoreId="POPC_DEFAULT" settingTypeEnumId="PsstCheckoutSupportQueue"
             fromDate="1265184000000" settingValue="BOSS_CS_Q_SUPPORT" changeReason="Demo checkout"/>
+    <!-- Shop P5 review (F-SP5-4): POPC_DEFAULT's card payments through a test gateway with a hosted page, so the demo's Shop
+        checks out (the payer returns from its page; its lookup approves), enabled for Ziziwork Retail. A payment with a
+        payment method (Mantle's and Accounting's orders of the store) is approved at once, as TEST_APPROVE did. -->
+    <mantle.account.method.PaymentGatewayConfig paymentGatewayConfigId="BOSS_COM_HOSTED" paymentGatewayTypeEnumId="PgtTest"
+            description="Local Test: hosted page for Shop, approves a payment with a method"
+            authorizeServiceName="mantle.account.PaymentTestServices.hostedPendingOrApprove#PaymentAuthorization"
+            captureServiceName="mantle.account.PaymentTestServices.alwaysApprove#PaymentCapture"
+            releaseServiceName="mantle.account.PaymentTestServices.alwaysApprove#PaymentRelease"
+            refundServiceName="mantle.account.PaymentTestServices.alwaysApprove#PaymentRefund"
+            detailsServiceName="mantle.account.PaymentTestServices.hostedOnlyApprove#PaymentDetails"/>
+    <mantle.account.method.PaymentGatewayOrganization organizationPartyId="ORG_ZIZI_RETAIL" paymentGatewayConfigId="BOSS_COM_HOSTED"
+            fromDate="1265184000000" isEnabled="Y"/>
+    <mantle.product.store.ProductStorePaymentGateway productStoreId="POPC_DEFAULT" paymentInstrumentEnumId="PiCreditCard"
+            paymentGatewayConfigId="BOSS_COM_HOSTED"/>
 </entity-facade-xml>
