@@ -788,7 +788,7 @@ R-COM-W05). Recovery respects consent/suppression, inactivity and send limits. N
 sends until the store enables them. **Consent (Nov 5, 2026; impl-commerce §4):** the consent is
 the store's "cart reminders" topic, which a signed-in customer turns on in the PASS Account email
 preferences page (Shop §9), or, since Nov 6, checks among checkout's optional emails (offered
-to a signed-in buyer only; an unverified account's choice waits for its confirmation); a guest's
+only to a signed-in buyer whose account email is verified, Shop P6 review R2's rule; P9 follow-up review R2); a guest's
 cart is never eligible. Refresh rechecks eligibility; a successful checkout
 suppresses queued recovery. **Needs:** COM-OPS, SHOP-CART.
 
