@@ -271,7 +271,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
-| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | — |
+| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026 |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
 | P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
@@ -1833,6 +1833,89 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   reviews a delivered item with a photo; the merchandiser approves it and replies; the public page shows the reply and
   the photo and no private identity; the buyer's edit returns it to pending and out of the average; deciding another
   review leaves this one alone.
+
+**Built Nov 6 (P9)** (branch `com/p9`).
+- Mantle:
+  - Records (`entity/StoreReviewEntities.xml`, F19, F41): ProductReview extended with the purchase proof (`orderId`,
+    `orderItemSeqId`), the author's public label (`displayName`) and the store's reply (`replyText`, `replyUserId`,
+    `replyDate`), the proof and reply audit-logged with the status, an index by store, product and status; the status
+    transition PrvwApproved to PrvwPending ("Review Edited"); `mantle.product.ProductReviewImage` (review, sequence, digest
+    with a unique index, location, name, type, size). `data/StoreReviewsSetupData.xml`: the ledger source
+    `MdsrcReviewRequest`. The demo's two reviews renamed DEMO_REVIEW_1 and _2 (F-P9-1).
+  - `service/mantle/product/StoreReviews.js` behind `StoreMerchandisingServices` `find#Reviews`, `get#Review`,
+    `get#ReviewImage` (staff, any state) with COMMERCE_VIEW, `moderate#Review` (approve or delete; `reviews`, the list rows'
+    `selectionKeys` (productReviewId@revision) or one review, each at its expected revision in its own transaction through
+    the internal `decide#Review`, a result per review; a delete needs its reason, which goes to the status's audit log) and
+    `reply#Review` (an approved review's plain-text reply at its revision, or `withdraw`) with COMMERCE_MERCHANDISE, all in
+    the store scope (StoreAdmin.js); `queue#ReviewRequests` and `build#ReviewRequest`; and `ShopCatalogServices` `get#Reviews`
+    (getProductReviews), `submit#Review` (submitProductReview) and `get#ReviewImage` (getShopReviewImage). Every decision,
+    reply and edit of an approved review advances the store's site generations. ShopCatalog.js' product view carries
+    `product.reviews` (the first five, the summary, the visitor's own review's state and the write link), appended to
+    ThemeView.js' product shape.
+  - The proof: a signed-in account with its email verified (the self relationship, after Shop P6's claim of its email's
+    guest purchases), and its own order line of the product or of a variant of it: an order of the store whose parts are all
+    the account's (ShopCustomer.js `ownOrder`), approved, sent or completed, the line not cancelled, delivered (its shipment
+    delivered, the order completed, or a current download grant). One review per account, store and product; a second is
+    ALREADY_REVIEWED; an edit at the expected revision returns an approved review to pending. Photos: PNG or JPEG only, one a
+    call, up to three, staged and scanned through PortalMedia.js and kept under the content root
+    (`productReview/{store}/{review}/{seq}`); one refused (type, size, no scanner, scan) is named in `imageRefused` and the
+    text kept.
+  - The request (`service/StoreReviews.secas.xml`): ShipmentDeliveredRequestReviews (a shipment to ShipDelivered) and
+    DownloadFirstRequestReview (a grant's first download) call `queue#ReviewRequests`, which queues one delivery per line
+    (`reviewRequest:{order}:{line}`) only for a Shop order (a completed StoreCheckout) of a store with a current
+    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F-P9-2); the build suppresses it once
+    the buyer reviewed the product, the line was cancelled or returned, or the product is no longer public.
+  - Shop's operations in Schema/Routes and their Mantle mirrors (identical), `Contracts.d.ts` and PassAuthority's DOWNLOADS:
+    `getProductReviews` (GET), `submitProductReview` (POST, its `file`), `getShopReviewImage` (a GET download). None is a
+    token write.
+- mr-pass: `screen/Shop/Review.xml` with `Shop/ShopReviews.js` (Review?productId=: the approved reviews a page at a time and,
+  for the buyer, SubmitReview with up to three photos posted one a call at the review's new revision, or the change of
+  their own); `Shop.xml`'s media route serves a review image by `reviewImage`; ProductDetail's PublicReviews in the PASS shell
+  (`Catalog.html.fancy`) and in the starter theme's `product-main` section; ShopAccount.js exports its page helpers.
+- BOSS: `Commerce/Merchandising/Reviews.xml` (ReviewFind; Reviews with the bulk decision on selected rows, ReviewDecision with
+  the text and photos, Reply and Withdraw reply), `linkPaths` "Merchandising/Reviews", Products' Commerce paths and
+  Shared/Product360's Reviews link under Commerce.
+- Specs (all `--nobuild`): Mantle `test/product/StoreReviews` (4 features, 0.9 s: no proof and a visitor refused, a PDF and an
+  unscanned PNG refused with the text kept, a second review refused; only approved public and in the summary, a pending
+  review's image not served and the approved one's served, the reader refused a decision, a stale decision named, the reply
+  and the author's label without the account; the edit back to pending, out of the average, its image no longer served, a
+  stale edit refused; the request queued once by the delivered shipment's SECA, suppressed without consent, its build's
+  review link, suppressed once reviewed, an order Shop did not place queuing none); mr-pass `test/Shop/ShopReviews` (2
+  features, 0.2 s: a scanned photo kept, local and remote reads alike, the photo served by digest only once approved, the
+  product page's one shell render with the review, reply and photo and no account; the Review page's one render with the
+  change form; the routes); BOSS `CommerceReviews` (2 features, 0.1 s: a bulk decision with a result per review, approved,
+  stale and another organization's store's; Reviews' one qvt render). Also run, all pass: Mantle ShopCatalog,
+  StoreFulfillment, DeliveryLedger, ShopCustomer, StorePublication, ThemeAuthoring, ThemeReleases, PassAuthority; mr-pass
+  Transport, ShopAccess, ShopCatalog, ShopAccount, ShopThemes, ShopPreview, ShopCart; mr-boss CommerceAccess,
+  CommerceAssortment, ProductsAccess. Not run: `./moq test-apps` (the brief: no whole suites).
+- Acceptance: `acceptance/Commerce/CommerceReviewsScenario` (mr-boss, 3 features: the usable-when on POPC_DEFAULT's
+  DEMO_1_1 through a spec site, the Shop operations and the Reviews transitions as commerce.merchandiser, with the reader
+  refused), run once: 3 passed.
+- Lint: `moqui lint --screens` 132 flagged sites as before, none in Reviews, Review or ShopReviews.
+- Inventories: no ss-inventory or usl-inventory row (SimpleScreens has no review screen, mantle-usl no review service).
+- Decisions: a review is one per account, store and product, its proof found from the account's own delivered line and kept
+  through edits; the author's label is chosen and stored at submission ("A customer" otherwise, and for the demo's reviews);
+  an image's digest is the sha-256 of the review, its sequence and the file's base64, so the same photo twice has two
+  addresses; staff see a pending review's photos through Reviews' own transition; the proof refusals (PURCHASE_REQUIRED,
+  VERIFY_REQUIRED) are Unprocessable so a page shows their text; an edit keeps the store's reply, shown again on
+  re-approval (F-P9-5); SubmitReview is a PASS-shell page, not a theme component (a theme has no form).
+- Findings (provisional):
+  - **F-P9-1** The demo's ProductReview rows used ids 100001 and 100002, which the sequence hands out next, so the second
+    review made on a demo database failed on its key; renamed DEMO_REVIEW_1 and _2.
+  - **F-P9-2** The review request is a solicitation, so the ledger sends it only with a granted PcpMarketingEmail, which
+    Shop never collects (no checkout opt-in, §4): on the demo no request goes out. For the lead: a store "review requests"
+    topic on Email preferences as cart reminders have, or treat it as transactional with the preferences link it carries.
+  - **F-P9-3** PASS's facade and transports take one `file` an operation, so up to three photos are three calls; and a
+    FileItem in a service's parameter map loses its methods in process, so the specs add a photo through StoreReviews.js
+    as the service does.
+  - **F-P9-4** The request is queued at delivery or first download and sent within the job's two minutes; the ledger's
+    `queue#Delivery` has no not-before date, so a store's "days after delivery" waits for one.
+  - **F-P9-5** An author's edit keeps the store's reply, which shows again under the new text when it is re-approved; the
+    merchandiser may withdraw it first.
+  - **F-P9-6** Reviews reach a theme as `product.reviews`; the starter's product section renders them, but a release
+    published before P9 (from the old starter) shows none until republished.
+  - **F-P9-7** For a signed-in visitor, each product page view reads their qualifying lines to offer the write link (up to
+    200 orders); a session cache would spare it.
 
 ### P10 — Cart recovery
 

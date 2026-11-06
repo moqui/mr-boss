@@ -19,7 +19,8 @@ along with this software (see the LICENSE.md file). If not, see
     their own permissions, no cost, margin or method): Documents with DocumentDetail, Price lists with PriceListDetail and
     Explain price in the menu; Product360, CategoryDetail and InventoryAvailability hidden, opened from rows. Every Commerce
     user; the merchandiser changes the assortment and categories (COMMERCE_MERCHANDISE), the publisher publishes
-    (COMMERCE_PUBLISH), each checked again in mantle.product.StoreMerchandisingServices. Reviews come with P9. -->
+    (COMMERCE_PUBLISH), each checked again in mantle.product.StoreMerchandisingServices. Reviews (P9): the store's reviews,
+    decided and replied to by the merchandiser. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Merchandising" default-menu-index="3" menu-image="sym_o_category" menu-image-type="icon">
     <subscreens default-item="Assortment" always-use-full-path="true">

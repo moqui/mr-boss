@@ -277,7 +277,9 @@ const linkPaths = [
     "Website/Themes",
     "Website/ThemeDetail",
     "Website/ThemeEditor",
-    "Website/TemplateEditor"
+    "Website/TemplateEditor",
+    // P9: the store's reviews (design §4 Reviews)
+    "Merchandising/Reviews"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")

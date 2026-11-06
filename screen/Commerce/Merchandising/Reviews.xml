@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Reviews (design-commerce §4 Reviews; style-guide §3.2 List; impl-commerce P9): ReviewFind (store, product, state, posted
+    dates, text or author, unreplied) and the reviews of the user's stores (mantle.product.StoreMerchandisingServices.find#Reviews:
+    product, rating, the author's public label, date, state, reply, photos). A merchandiser (COMMERCE_MERCHANDISE) decides
+    reviews: the selected rows in one bulk decision, each at the revision shown, with a result per review (moderate#Review);
+    one review in ReviewDecision with its text and photos (get#ReviewImage, any state, for staff); and an approved review's
+    public reply (Reply: reply#Review, or its withdrawal). The store is checked by ironstone.commerce.ContextServices.check#Record,
+    and each service checks the permission and the store's organization again. A review's text is the customer's: no editor
+    changes it. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Reviews" default-menu-index="5">
+    <parameter name="productStoreId"/>
+    <parameter name="productId"/>
+    <parameter name="statusId"/>
+    <parameter name="term"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="unreplied"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="catalogChoices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- the selected rows (productReviewId@revision) or one review, approved or deleted: a message per review -->
+    <transition name="moderate">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.moderate#Review" out-map="decided"
+                    in-map="{decision:decision, selectionKeys:(selectionKeys || null), productReviewId:(productReviewId || null),
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null), changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${decision == 'approve' ? 'Approved' : 'Deleted'} ${decided.decidedCount} of ${decided.results.length} reviews.</message>
+                <set field="refusedResults" from="decided.results.filter((row) =&gt; !row.ok)"/>
+                <iterate list="refusedResults" entry="refused">
+                    <message type="warning">Review ${refused.productReviewId} not decided: ${refused.message}</message>
+                </iterate>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="reply">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.reply#Review"
+                    in-map="{productReviewId:productReviewId, replyText:replyText, withdraw:(withdraw == 'true'),
+                        changeReason:(changeReason || null), expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${withdraw == 'true' ? 'Withdrew the reply to' : 'Published the reply to'} review ${productReviewId}.</message>
+            </if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <!-- a review's photo for staff, in any state of the review -->
+    <transition name="reviewImage" read-only="true">
+        <parameter name="productReviewId"/>
+        <parameter name="imageSeqId"/>
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.get#ReviewImage" out-map="image"
+                    in-map="{productReviewId:productReviewId, imageSeqId:imageSeqId}"/>
+            <script>if (!ec.message.hasError() &amp;&amp; image.location) {
+                const was = ec.artifactExecution.disableAuthz()
+                try { ec.web.sendResourceResponse(image.location, true) } finally { if (!was) ec.artifactExecution.enableAuthz() }
+            }</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="statusId" from="statusId ?? 'PrvwPending'"/>
+        <if condition="productStoreId">
+            <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="storeFound" from="!productStoreId || !!storeRecord?.recordId"/>
+        <if condition="storeFound">
+            <service-call name="mantle.product.StoreMerchandisingServices.find#Reviews" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:(productStoreId || null), productId:(productId || null),
+                        statusId:(statusId || null), term:(term || null), fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        unreplied:(unreplied == 'Y'), pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="reviews" from="found?.reviews || []"/>
+        <set field="reviewsCount" from="found?.reviewsCount || 0"/>
+        <set field="reviewsPageIndex" from="found?.reviewsPageIndex || 0"/>
+        <set field="reviewsPageSize" from="found?.reviewsPageSize || 20"/>
+        <set field="reviewsPageMaxIndex" from="found?.reviewsPageMaxIndex || 0"/>
+        <set field="reviewsPageRangeLow" from="found?.reviewsPageRangeLow || 0"/>
+        <set field="reviewsPageRangeHigh" from="found?.reviewsPageRangeHigh || 0"/>
+        <set field="findValues" from="{productStoreId:productStoreId, productId:productId, statusId:statusId, term:term,
+                fromDate:fromDate, thruDate:thruDate, unreplied:unreplied}"/>
+        <set field="product360Url" from="sharedLinks['Merchandising/Product360']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Reviews" type="h5"/></container>
+        </container>
+        <form-single name="ReviewFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productId">
+                <default-field title="Product">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="catalogChoices" server-search="true" min-length="0"
+                                parameter-map="{choice:'products', selected:productId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="State">
+                    <drop-down allow-empty="true" no-current-selected-key="PrvwPending">
+                        <option key="PrvwPending" text="Pending"/>
+                        <option key="PrvwApproved" text="Approved"/>
+                        <option key="PrvwDeleted" text="Deleted"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Text or author"><text-line size="24"/></default-field></field>
+            <field name="fromDate"><default-field title="Posted from"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Posted before"><date-time type="date"/></default-field></field>
+            <field name="unreplied">
+                <default-field title="Without a reply"><check><option key="Y" text=" "/></check></default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="productId"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="unreplied"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <section name="NoStore" condition="!storeFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="No store"/>
+                    <box-body>
+                        <label text="Choose one of your stores. A store you do not work is not available." type="p"/>
+                        <link url="." text="All your stores' reviews" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ReviewList" condition="storeFound">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Reviews" list="reviews" skip-form="true" select-columns="true">
+                            <row-selection id-field="selectionKey" parameter="selectionKeys" list-mode="true" condition="can.merchandise">
+                                <action>
+                                    <dialog button-text="Approve or delete" title="Decide the selected reviews"/>
+                                    <form-single name="SelectedDecision" transition="moderate">
+                                        <field name="decision">
+                                            <default-field title="Decision">
+                                                <drop-down allow-empty="false">
+                                                    <option key="approve" text="Approve"/>
+                                                    <option key="delete" text="Delete"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="changeReason">
+                                            <default-field title="Reason" tooltip="Kept with the decision; needed to delete"><text-line size="40"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Decide"><submit confirmation="Decide the selected reviews? Each is decided at the version shown here."/></default-field></field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="${product360Url}" text="${productName}" link-type="anchor" parameter-map="{productId:productId}"/>
+                                </default-field>
+                            </field>
+                            <field name="ratingText"><default-field title="Rating"><display/></default-field></field>
+                            <field name="authorText"><default-field title="Author"><display/></default-field></field>
+                            <field name="postedText"><default-field title="Posted"><display/></default-field></field>
+                            <field name="statusText">
+                                <default-field title="State">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${statusColor}">${
+                                            WebUtilities.encodeHtml(statusText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: statusText})}]]></text>
+                                        <text type="html">${statusText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="excerpt"><default-field title="Review"><display/></default-field></field>
+                            <field name="imageCount"><default-field title="Photos"><display/></default-field></field>
+                            <field name="repliedText" from="replied ? 'Replied' : ''"><default-field title="Reply"><display/></default-field></field>
+                            <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                            <field name="rowActions">
+                                <default-field title="">
+                                    <container-dialog id="ReviewDecision_${productReviewId}" button-text="Decide" icon="sym_o_gavel" width="720"
+                                            title="Review of ${productName}" condition="statusId != 'PrvwDeleted'">
+                                        <label text="${ratingText} · ${authorText} · ${postedText}${verifiedPurchase ? ' · Verified purchase, order ' + orderId : ''}" type="p" style="text-caption m-muted"/>
+                                        <label text="${body}" type="p"/>
+                                        <image url="reviewImage" url-type="transition" alt="Photo 1 of review ${productReviewId}" height="160"
+                                                parameter-map="{productReviewId:productReviewId, imageSeqId:images[0]?.imageSeqId}" condition="images.length &gt; 0"/>
+                                        <image url="reviewImage" url-type="transition" alt="Photo 2 of review ${productReviewId}" height="160"
+                                                parameter-map="{productReviewId:productReviewId, imageSeqId:images[1]?.imageSeqId}" condition="images.length &gt; 1"/>
+                                        <image url="reviewImage" url-type="transition" alt="Photo 3 of review ${productReviewId}" height="160"
+                                                parameter-map="{productReviewId:productReviewId, imageSeqId:images[2]?.imageSeqId}" condition="images.length &gt; 2"/>
+                                        <label text="Store reply: ${replyText}" type="p" condition="replied"/>
+                                        <form-single name="ReviewDecisionForm_${productReviewId}" transition="moderate" condition="can.merchandise"
+                                                map="{productReviewId:productReviewId, expectedLastUpdatedStamp:lastUpdatedStamp}">
+                                            <field name="productReviewId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                            <field name="decision">
+                                                <default-field title="Decision">
+                                                    <drop-down allow-empty="false">
+                                                        <option key="approve" text="Approve"/>
+                                                        <option key="delete" text="Delete"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason">
+                                                <default-field title="Reason" tooltip="Kept with the decision; needed to delete"><text-line size="40"/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Decide"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="decision"/><field-ref name="changeReason"/></field-row>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                    <container-dialog id="ReviewReply_${productReviewId}" button-text="${replied ? 'Change reply' : 'Reply'}" icon="sym_o_reply" width="640"
+                                            title="Reply to the review of ${productName}" condition="can.merchandise &amp;&amp; statusId == 'PrvwApproved'">
+                                        <label text="${excerpt}" type="p" style="text-caption m-muted"/>
+                                        <form-single name="ReviewReplyForm_${productReviewId}" transition="reply"
+                                                map="{productReviewId:productReviewId, replyText:replyText, expectedLastUpdatedStamp:lastUpdatedStamp}">
+                                            <field name="productReviewId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                            <field name="replyText">
+                                                <default-field title="Public reply" tooltip="Plain text, shown under the review in the store"><text-area rows="5" cols="60"/></default-field>
+                                            </field>
+                                            <field name="submitButton"><default-field title="Publish reply"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="reply" text="Withdraw reply" link-type="hidden-form" btn-type="danger" icon="sym_o_delete"
+                                            condition="can.merchandise &amp;&amp; replied" confirmation="Withdraw the store's reply to review ${productReviewId}?"
+                                            parameter-map="{productReviewId:productReviewId, withdraw:'true', expectedLastUpdatedStamp:lastUpdatedStamp}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="ratingText"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <label text="No reviews match. Reviews come from the store's buyers and wait here until they are approved." type="p"
+                        style="text-caption m-muted" condition="!reviews.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
