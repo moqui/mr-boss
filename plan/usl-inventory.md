@@ -975,7 +975,7 @@ Added in the Projects build (Oct 21–22, 2026; impl-projects.md P1–P10), call
 | PromotionServices | apply#NewCustomerDiscount |  |  |
 | PromotionServices | apply#BuyGetDiscount |  |  |
 | PromotionServices | apply#FlatDiscount |  |  |
-| StoreServices | create#StoreShippingOption | Commerce/Settings/CheckoutSettings |  |
+| StoreServices | create#StoreShippingOption | Commerce/Settings/CheckoutSettings | Commerce/Settings/CheckoutSettings#AddShipOptionForm (through mantle.product.StoreAdminServices.store#ShippingOption) |
 | StoreServices | get#StoreShippingOptions | PASS:Shop/Checkout |  |
 | StoreServices | clone#ProductStore | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail#CloneStoreForm (through mantle.product.StoreAdminServices.clone#Store) |
 | StoreServices | format#UrlSlug | PRD-TAXONOMY; Commerce/Merchandising/CategoryDetail | Products/Categories/CategoryDetail/Identifiers (guarded preview before store); Commerce/Merchandising/CategoryDetail (P3) |
@@ -1813,7 +1813,7 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | JournalContentServices | save#ContentFile | Accounting/GeneralLedger/JournalEntryDetail (RecordFiles) | Shared/RecordFiles (Accounting journal context) |
 | TaxServices | store#Authority | Accounting/Tax/TaxAuthorities | Accounting/Tax/TaxAuthorities |
 | TaxServices | store#Rate | Accounting/Tax/TaxRates | Accounting/Tax/TaxRates |
-| TaxServices | simulate#SalesTax | Accounting/Tax/TaxRates; Commerce/Settings/CheckoutSettings | Accounting/Tax/TaxRates |
+| TaxServices | simulate#SalesTax | Accounting/Tax/TaxRates; Commerce/Settings/CheckoutSettings | Accounting/Tax/TaxRates; Commerce/Settings/CheckoutSettings#TaxPreview (its calculation, SalesTax.js sample, through mantle.product.StoreAdminServices.preview#StoreTax) |
 | TaxServices | find#SalesTaxLines | Accounting/Tax/TaxStatementDetail | Accounting/Tax/TaxStatementDetail (get#StatementDetail) |
 | TaxServices | create#SalesTaxStatement | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |
 | TaxServices | run#Vendor1099Statements | Accounting/Tax/TaxStatements | Accounting/Tax/TaxStatements |

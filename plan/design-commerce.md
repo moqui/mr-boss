@@ -1001,6 +1001,26 @@ only; the Marketing automation choice appears with Marketing's cart-abandoned tr
 Accounting's Dunning preview (`mantle.account.CollectionServices.preview#Dunning`) skips the
 invoice of a renewal still in retry, so a customer never gets both (X5, R-SC-03).
 
+**As built (Nov 6, impl-commerce P6).** CheckoutPolicy's fields are the setting types
+`PsstCheckoutAccount` (either, account, guest), `PsstCheckoutDestinations` (geo ids),
+`PsstCheckoutStockDisclosure` (hidden, availability, backorder), `PsstCheckoutTerms` (whether buyers
+accept the site's `terms` policy page), `PsstCheckoutPhone` (the purchase contact's phone: hidden,
+optional, required) and `PsstCheckoutSupportQueue`; TaxDisplay's display and origin are
+`PsstTaxDisplay` and `PsstTaxOrigin` beside the store's tax gateway. An absent setting means its
+default (either, any destination, availability, terms accepted, phone optional, prices exclusive of
+tax). A local rate may also name a carrier and method (empty for any). A store is rated by its local
+rates while one is in effect or starts later; once all have ended, the local gateway's zero applies
+again. Matching takes the lowest priority, then the latest start; the overlap refusal compares rates
+of the same zone id (a group and its member at one priority are not detected). An order part with
+no matching rate gets no shipping item and `rateUnavailable`, and `get#OrderShippingRatesBulk` leaves
+the method out. Removing a ship option, shipping gateway or payment gateway binding writes its own
+audit row with the user and reason. The tax preview is `simulate#SalesTax`'s calculation for a user
+who reads the store (COMMERCE_VIEW), without Accounting's read. Gateway capabilities are a table of
+StoreCheckout.js by gateway type, which Shop P5 and P7 extend; they inform, and readiness blocks only
+a binding the organization no longer enables. Readiness adds Payments, Delivery (a warning), Local
+rates, Terms page, Support queue and Support pages, each fixed in CheckoutSettings (the Terms page and
+Support pages on the store's sites).
+
 **Source:** research §9, §11; Shop §§6–10. **Needs:** COM-CHECKOUT, COM-OPS, SHOP-CHECKOUT,
 SHOP-PAYMENT, SHOP-SUBSCRIPTION.
 

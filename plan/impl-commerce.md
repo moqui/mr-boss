@@ -268,7 +268,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability || built Nov 5, 2026 |
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | built Nov 6, 2026 |
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
-| P6 Checkout settings | Mantle, BOSS | CheckoutSettings | — |
+| P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | — |
@@ -1213,6 +1213,106 @@ Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
   outside the organization's enabled rows refused, the settings' one qvt render).
 - **Usable when:** the demo store gets local rates for two zones, the simulator quotes a sample cart for each and none
   for a third country; binding a disabled gateway is refused; readiness lists what still blocks checkout.
+
+**Built Nov 6 (P6).**
+- Mantle:
+  - `entity/ProductStoreShippingEntities.xml` (new): `ProductStoreShippingRate` (sequenced id; store, zone `geoId`, optional
+    carrier and method, weight band with its unit, value band, charge, currency, priority, dates, `previousRateId`,
+    `changeReason`; key fields audit-logged) and the setting types `PsstCheckoutAccount`, `PsstCheckoutDestinations`,
+    `PsstCheckoutStockDisclosure`, `PsstCheckoutTerms`, `PsstCheckoutPhone`, `PsstCheckoutSupportQueue`, `PsstTaxDisplay`,
+    `PsstTaxOrigin`. `entity/ProductStoreEntities.xml`: ProductStoreSetting gains `changeReason`, its value, end and reason
+    audit-logged; ProductStoreShippingGateway's gateway audit-logged.
+  - `service/mantle/product/StoreCheckout.js` (new) and its services appended to `StoreAdminServices.xml`:
+    `get#CheckoutSettings`, `store#CheckoutPolicy` (dated, per-field kinds, a reason, an empty field ends its setting),
+    `store#ShippingOption` (over `create#StoreShippingOption`; a CarrierShipmentMethod only, `METHOD_NOT_OFFERED`),
+    `store#StoreShippingGateway` (the local gateway or one with a ShippingGatewayCarrier row, `GATEWAY_NOT_APPROVED`; the
+    carrier account masked on read), `store#StoreShippingRate` (ordered bands `BAND_INVALID`, `RATE_OVERLAP` at one priority,
+    no past start, a change of a rate in effect ends it and starts its successor, end with a reason), `simulate#StoreShipping`,
+    `get#StoreShippingRateLocal` (no permission: the local gateway's rule), `store#StorePaymentGateway` (the organization's
+    enabled, current PaymentGatewayOrganization rows only, `GATEWAY_NOT_ENABLED`, Z4), `store#StoreTax` (the gateway through
+    `store#Store` with its reason and revision; display and origin settings), `preview#StoreTax`, `find#CheckoutOptions`.
+    Each checks `COMMERCE_VIEW`/`COMMERCE_STORE_EDIT` and the store's scope through StoreAdmin.js. A removal of a ship option,
+    shipping gateway or payment gateway binding needs its reason and writes an EntityAuditLog row (F61), so History shows it.
+  - StoreAdmin.js (tables appended): `settingTypes` gains the eight types with kinds checked in `settingKinds`
+    (choices, destinations, the support queue among `SupportPortal.offeredQueues`, a current store facility; `settingValue`
+    takes the store), `cloneLeftOutSettingTypes` the queue and tax origin, `historyEntities` the settings and shipping
+    gateways (a setting's row named by its type), and `readinessChecks` six purchase checks from StoreCheckout.js: Payments,
+    Delivery (warning), Local rates (blocks a store on the local gateway with no rate in effect), Terms page (each Shop site's
+    live `terms` page, unless the policy says buyers are not asked), Support queue (F37) and Support pages (each Shop site's
+    enabled `support` mount targeting the store's organization, F38); fix `checkout`, or `sites` for the last.
+  - `CarrierServices.get#OrderShippingRateLocal` (F20): for a store with a rate in effect now or later, the matching rate's
+    charge (lowest priority, then latest start; the part's shipped items' value and weight, an item with no weight counting
+    1 as before, units through `convert#Uom`), or no item and `rateUnavailable` with a warning when none matches; a store
+    with none keeps the zero. `get#OrderShippingRatesBulk` leaves out a method with `rateUnavailable`.
+  - `SalesTax.js`: `simulate` checks Accounting's read and calls the new exported `sample`, which `preview#StoreTax` calls
+    after its store check.
+- BOSS:
+  - `screen/Commerce/Settings.xml` is the area (its placeholder replaced) with `Settings/CheckoutSettings.xml`: the store
+    choice, the readiness strip, CheckoutPolicy (view and Change policy), Ship options, Shipping gateways, Local rates with
+    Add, Change, End and the simulator, Payment gateways with capabilities and state, Tax with Change tax and the preview;
+    removals in dialogs with their reason. A store Mantle refuses (a Commerce administrator's choice outside Mantle's scope)
+    shows Not available.
+  - Commerce.js (appended): `linkPaths` `Settings/CheckoutSettings`; `ownerLinks` (ContextServices `get#OwnerLinks`) gives
+    Warehouse's Carriers and Accounting's PaymentMethods and TaxAuthorities to a user whose groups may open them (F6).
+    StoreDetail's General maps a `checkout` fix to CheckoutSettings for a user with the Settings area.
+  - Demo (`BossCommerceDemoData.xml`, appended): ORG_ZIZI_RETAIL's PaymentGatewayOrganization rows for TEST_APPROVE
+    (enabled) and TEST_DECLINE (disabled); POPC_DEFAULT's support queue BOSS_CS_Q_SUPPORT. No demo rates (below).
+- Specs: Mantle `test/product/StoreShippingRates` (5 features, 1.6 s: bands, overlap at one priority and dates, permission
+  and organization; rated parts by zone, band, method and priority, Japan undeliverable with no item and left out of the
+  bulk rates; the simulator's two zones and none for Japan; a store with no rates at zero with readiness blocking, then
+  charged; a change starting a successor, an ended store back to zero) and `test/product/StoreCheckout` (4 features, 1.3 s:
+  the policy's kinds, queue, reason and dated change in History; gateways enabled and approved only, removals with their
+  reason in History; support queue, Support pages and Terms readiness and the PASS names; tax gateway and the reader's
+  preview). BOSS `CommerceCheckoutSettings` (2 features, 0.6 s: TEST_DECLINE refused, reader and other organization, owner
+  links for the administrator and not the manager; CheckoutSettings' one qvt render). `CommerceStores`' StoreDetail now
+  expects things to fix and the checkout fix link. No CommerceAccess case: the rules are Mantle's permission and scope.
+  Also run, all pass: Mantle StoreAdmin (7, with the new specs), and CarrierServices, OrderToCashBasicFlow, WarehouseShipping, ShipmentPick,
+  ShipmentLoads, ShippoGateway, ProductCatalogServices, SitePages, AccountingPortals, AccountingSetup, AccountingCurrency,
+  AccountingTax, Promotions, StorePromotions, StorePublication, ReturnToResponseBasicFlow, DropShip, RestApiTests (216
+  features); mr-pass ShopAccess, Forum, Portals, ShopThemes, Integrations (29); BOSS CommerceAccess, CommerceStores,
+  CommercePromotions, CommerceAssortment, CommerceSitePages, AccountingAccess, AccountingPayables, AccountingPayments,
+  ProjectsAccess (62 with CommerceCheckoutSettings). Not run: `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommerceCheckoutWalk` (4 features: readiness blocking on local rates and the Terms page;
+  the manager's rates for US Continental and Canada through `saveRate`, the simulator quoting 6.00 and 14.00 and nothing for
+  Japan, the local rates' finding ready; TEST_DECLINE refused through `savePayment` and TEST_APPROVE kept; Services' manager
+  Not available; CheckoutSettings in qvt and html), run: 4 passed; it ends its rates in cleanup. Also run: AppStructure
+  (its placeholder floor 45 → 43, F-P6-4), CommerceFoundationWalk, CommerceStoresWalk, TuiRender: pass. The whole mr-boss
+  acceptance suite was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites, none in the Commerce screens.
+- Inventories: ss-inventory's six EditProductStore ship option, shipping gateway and payment gateway rows name their forms;
+  usl-inventory's `create#StoreShippingOption` and `simulate#SalesTax` rows name CheckoutSettings.
+- Design: design-commerce §8's as-built note (setting types and defaults, a rate's carrier and method, when a store is
+  rated, matching and overlap, no delivery, removals, the preview, capabilities, readiness).
+- Decisions:
+  - An absent checkout setting is its default; Shop's checkout reads the policy in process (StoreCheckout.js `settingAt`,
+    `checkoutPolicy`), as `get#CheckoutSettings` is staff-only.
+  - A store is rated while a rate is in effect or starts later, so ending every rate gives the default back (the walk relies
+    on it); no demo rates on POPC_DEFAULT, whose orders Mantle's specs place at zero shipping.
+  - A rate may name a carrier and method; overlap is checked on the same zone id only; a tie at one priority takes the latest
+    start.
+  - Payment readiness blocks on bindings only; capabilities inform (Shop P5 decides what checkout needs).
+  - The tax preview calls the calculation factored out of `simulate#SalesTax` rather than `simulate#SalesTax` itself, whose
+    Accounting read a Commerce manager need not hold.
+  - The simulator takes a sample address's geos (country, state) or a contact mech id, as get#PostalAddressGeoIdSet reads them.
+- Findings (provisional):
+  - **F-P6-1** `calculate#OrderShipping` sums a part's missing total as 0 (`copsOut.shippingTotal ?? 0`) and
+    `get#StoreShippingOptions` lists an unrated option without a total, so a store with rates and an address no rate serves
+    gets no shipping charge on an order placed from the order screens (a warning message only). Shop P5 must quote through
+    `get#OrderShippingRatesBulk` and refuse a part with no quote.
+  - **F-P6-2** An order item's creation already runs the part's shipping calculation (Mantle's ECA), so the local rule runs
+    on each cart change; for a store with no rates it is one read of the store's rates.
+  - **F-P6-3** A Commerce administrator's store choices (Commerce.js: every organization) include stores Mantle's StoreAdmin
+    scope refuses (FacilityScope's organizations: BOSS_ACCT_STORE for commerce.admin); StoreDetail fails for them the same
+    way. CheckoutSettings shows Not available; the two scopes should agree.
+  - **F-P6-4** AppStructure's placeholder floor (45) was one above master's count after P4 and P7 each replaced a
+    placeholder on their own branch (44); with Settings it is 43.
+  - **F-P6-5** Mantle has no record of a payment gateway's capabilities; StoreCheckout.js `gatewayCapabilities` (by gateway
+    type: the test gateway hosted when its authorize service is `hostedPending`, Authorize.Net saved methods) is the place
+    Shop P5 and P7 set theirs.
+  - **F-P6-6** A created setting's audit rows carry no reason (F63), so its reason is the audit row of its `changeReason`
+    field (History's "Reason"); an update's rows carry it.
+  - **F-P6-7** The demo store's readiness now blocks (no local rate; ZIZI_SHOP has no Terms page): Shop P5's demo checkout
+    needs a store Mantle's specs do not place at zero, or those specs a store of their own.
 
 ### P7 — Promotions
 

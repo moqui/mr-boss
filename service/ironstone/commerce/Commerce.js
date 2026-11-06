@@ -268,7 +268,9 @@ const linkPaths = [
     // P4: a site's pages and navigation (design §5)
     "Website/Pages",
     "Website/PageDetail",
-    "Website/Navigation"
+    "Website/Navigation",
+    // P6: a store's checkout settings (design §8)
+    "Settings/CheckoutSettings"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -650,7 +652,43 @@ function setupStoreScope() {
     return {storeLimited: !!storeIds}
 }
 
-const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope}
+// ===== owners' screens (P6, F6) =====
+// The other apps' editors CheckoutSettings links rather than mounts, each by its screen path under mr-boss/screen and its
+// address: Warehouse's Carriers and Accounting's PaymentMethods and TaxAuthorities.
+const ownerScreens = {
+    carriers: {path: "Warehouse/Locations/Carriers", url: "/qapps/Warehouse/Locations/Carriers"},
+    paymentMethods: {path: "Accounting/Settings/PaymentMethods", url: "/qapps/Accounting/Settings/PaymentMethods"},
+    taxAuthorities: {path: "Accounting/Tax/TaxAuthorities", url: "/qapps/Accounting/Tax/TaxAuthorities"}
+}
+// Whether the user may open a screen: its app root allowed to one of their groups, and each level below it allowed where a
+// group's authorization names it (ALWAYS over DENY over ALLOW), read directly as screenGrants does; a system administrator
+// opens every one; a Projects client contact none.
+function mayOpenScreen(path) {
+    if (!ec.user.userId || ec.user.hasPermission("PROJECT_CLIENT")) return false
+    if (access.systemAdmin()) return true
+    const groupIds = Array.from(ec.user.getUserGroupIdSet() || [])
+    if (!groupIds.length) return false
+    const authzRows = screenAuthz(groupIds)
+    const parts = path.split("/")
+    for (let depth = 1; depth <= parts.length; depth++) {
+        const found = screenGrants("component://mr-boss/screen/" + parts.slice(0, depth).join("/") + ".xml", authzRows)
+        if (depth === 1 && !found.allowed.length) return false
+        if (depth > 1 && found.found && !found.allowed.length) return false
+    }
+    return true
+}
+// ownerLinks: the owners' screens the user may open, each its address (with the organization when given), else null.
+function ownerLinks(p) {
+    required()
+    const query = p.organizationPartyId ? "?organizationPartyId=" + encodeURIComponent(p.organizationPartyId) : ""
+    return {
+        links: Object.fromEntries(
+            Object.entries(ownerScreens).map(([key, screen]) => [key, mayOpenScreen(screen.path) ? screen.url + query : null])
+        )
+    }
+}
+
+const operations = {sharedContext, checkRecord, search, choices, storeScope, setupStoreScope, ownerLinks}
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Commerce branch: the user's scope, the same refusing a user
