@@ -3138,6 +3138,11 @@ in the writers, screens or Reporting.js); the Built note.
   allow list) takes effect without a generation change and is not in R2's check (low; the publication and store category
   rows are); the remote frontend carries a feed's whole artifact in one answer (5,000 rows of up to 5,000 characters of
   description can be large; a streamed or paged answer would bound it).
+- **Waves 16–17 suites, gate C4/S4 (Nov 6, on master after Commerce P13 and P14 and Shop P8 merged, nothing else
+  running):** standalone mr-mantle 1,888 passed, 2 failed (the baseline); `./moq test-apps` 3,295 server and 17 client
+  features passed; lint as before; after the P13/P14 splice, acceptance AppStructure (floor 39), CommerceFeedsWalk and
+  CommerceChannelsScenario 26 of 26. Feature time: server mr-mantle 369.8 of 393 s, mr-boss 240.8 of 264 s, mr-pass 17.0
+  of 20 s; client mr-boss 51.3 of 57 s, mr-pass 8.2 of 9 s. Stage C4/S4 is done.
 
 ### P15 — Finish
 
