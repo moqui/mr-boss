@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Feeds (design-commerce §9 Feeds; style-guide §3.2 List; impl-commerce P14, COM-FEED): FeedFind (store, site, format,
+    state), the feeds of the user's stores (mantle.product.StoreChannelServices.find#StoreFeeds: COMMERCE_CHANNEL_OPERATE and
+    the store scope), each with its format, the public address it is served at, the build serving and the last build's
+    rows, skips and errors, and NewFeed (store, Shop site, name, address name, a registered format, the store's locale and
+    currency, product scope, schedule; store#StoreFeed). A row opens FeedDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Feeds" default-menu-index="5">
+    <parameter name="productStoreId"/>
+    <parameter name="siteId"/>
+    <parameter name="formatEnumId"/>
+    <parameter name="state"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createFeed">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.store#StoreFeed" out-map="saved"
+                    in-map="{productStoreId:newProductStoreId, siteId:newSiteId, feedName:feedName, feedKey:feedKey,
+                        formatEnumId:newFormatEnumId, productCategoryId:(productCategoryId || null), scheduleEnumId:(scheduleEnumId || null),
+                        includeImages:(includeImages || 'N'), includeUnavailable:(includeUnavailable || 'N'), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="productStoreFeedId" from="saved.productStoreFeedId"/>
+                <message type="success">Started the feed ${feedName}. Build it, check the preview, then publish it.</message>
+            </if>
+        </actions>
+        <default-response url="../FeedDetail"><parameter name="productStoreFeedId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.StoreChannelServices.find#StoreFeeds" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), siteId:(siteId || null), formatEnumId:(formatEnumId || null),
+                    state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^[A-Z_]+: /, '') : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="feeds" from="(found?.feeds || []).map(feed => Object.assign({}, feed, {
+                servingText: feed.activeBuild ? feed.activeBuild.completedDateText + ' · ' + feed.activeBuild.rowCount + ' products' : 'Not published',
+                latestText: feed.latestBuild ? (feed.latestBuild.complete ? feed.latestBuild.rowCount + ' rows, ' + feed.latestBuild.skipCount + ' skipped, '
+                    + feed.latestBuild.errorCount + ' errors' : 'Failed: ' + feed.latestBuild.failureText) + ' · ' + feed.latestBuild.startedDateText : 'Not built yet'}))"/>
+        <set field="feedsCount" from="found?.feedsCount || 0"/>
+        <set field="feedsPageIndex" from="found?.feedsPageIndex || 0"/>
+        <set field="feedsPageSize" from="found?.feedsPageSize || 20"/>
+        <set field="feedsPageMaxIndex" from="found?.feedsPageMaxIndex || 0"/>
+        <set field="feedsPageRangeLow" from="found?.feedsPageRangeLow || 0"/>
+        <set field="feedsPageRangeHigh" from="found?.feedsPageRangeHigh || 0"/>
+        <set field="stateOptions" from="[{value:'current', label:'Current'}, {value:'ended', label:'Ended'}, {value:'all', label:'All'}]"/>
+        <set field="filtered" from="!!(productStoreId || siteId || formatEnumId || (state &amp;&amp; state != 'current'))"/>
+        <set field="findValues" from="{productStoreId:productStoreId, siteId:siteId, formatEnumId:formatEnumId, state:state || 'current'}"/>
+        <set field="firstStore" from="(commerce.storeOptions || [])[0]?.value || null"/>
+        <set field="newFeed" from="{newProductStoreId:(productStoreId || firstStore), newFormatEnumId:'PsffGoogleXml', scheduleEnumId:'PsfsManual',
+                includeImages:'Y', includeUnavailable:'N'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Product feeds" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewFeed" button-text="New feed" icon="sym_o_add" type="primary" width="720" title="New product feed">
+                    <label type="p" style="text-caption m-muted"
+                            text="A feed lists the store's public products as its Shop site shows them, in a registered format, at the site's feed address. Nothing is served until you publish a build."/>
+                    <form-single name="NewFeedForm" transition="createFeed" map="newFeed">
+                        <field name="newProductStoreId">
+                            <default-field title="Store">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'stores', selected:newFeed.newProductStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="newSiteId">
+                            <default-field title="Shop site" tooltip="The store's Shop site whose catalog the feed lists and which serves it">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'sites'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="feedName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                        <field name="feedKey">
+                            <default-field title="Address name" tooltip="Lower case letters, digits and hyphens: the feed is at feeds/{name}.{format} on the Shop site">
+                                <text-line size="24"/>
+                            </default-field>
+                        </field>
+                        <field name="newFormatEnumId">
+                            <default-field title="Format">
+                                <drop-down>
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration">
+                                            <econdition field-name="enumTypeId" value="StoreFeedFormat"/>
+                                            <order-by field-name="sequenceNum"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="productCategoryId">
+                            <default-field title="Only this category" tooltip="Empty: every published product of the store">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="choices" server-search="true" min-length="0" depends-optional="true"
+                                            parameter-map="{choice:'storeCategories'}">
+                                        <depends-on field="newProductStoreId" parameter="productStoreId"/>
+                                    </dynamic-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="scheduleEnumId">
+                            <default-field title="Schedule">
+                                <drop-down>
+                                    <entity-options key="${enumId}" text="${description}">
+                                        <entity-find entity-name="moqui.basic.Enumeration">
+                                            <econdition field-name="enumTypeId" value="StoreFeedSchedule"/>
+                                            <order-by field-name="sequenceNum"/>
+                                        </entity-find>
+                                    </entity-options>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="includeImages"><default-field title="Include images"><check><option key="Y" text=" "/></check></default-field></field>
+                        <field name="includeUnavailable">
+                            <default-field title="Include out of stock" tooltip="Otherwise a product that cannot be bought now is skipped">
+                                <check><option key="Y" text=" "/></check>
+                            </default-field>
+                        </field>
+                        <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                        <field name="submitButton"><default-field title="Start feed"><submit/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="FeedFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="siteId">
+                <default-field title="Site">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'sites', selected:siteId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="formatEnumId">
+                <default-field title="Format">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration">
+                                <econdition field-name="enumTypeId" value="StoreFeedFormat"/>
+                                <order-by field-name="sequenceNum"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down allow-empty="false"><list-options list="stateOptions" key="${value}" text="${label}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="siteId"/>
+                    <field-ref name="formatEnumId"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="FeedList" list="feeds" skip-form="true">
+                    <field name="feedName">
+                        <default-field title="Feed">
+                            <link url="${sharedLinks['Integrations/FeedDetail']}" text="${feedName}" link-type="anchor"
+                                    parameter-map="{productStoreFeedId:productStoreFeedId}"/>
+                        </default-field>
+                    </field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="formatText"><default-field title="Format"><display text="${formatText} · ${locale} · ${currencyUomId}"/></default-field></field>
+                    <field name="publicPath"><default-field title="Address"><display text="${siteName} ${publicPath || ''}" style="text-mono"/></default-field></field>
+                    <field name="servingText"><default-field title="Serving"><display/></default-field></field>
+                    <field name="latestText"><default-field title="Last build"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="feedName"/><field-ref name="storeName"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="latestText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!feeds.length &amp;&amp; filtered" text="No feed matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!feeds.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No product feed yet. A feed lists a store's public products for a marketplace or comparison site."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

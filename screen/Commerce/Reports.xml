@@ -24,6 +24,7 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="OnlineSales" location="component://mr-boss/screen/Commerce/Reports/OnlineSales.xml" menu-title="Online sales" menu-index="2"/>
         <subscreens-item name="CartRecovery" location="component://mr-boss/screen/Commerce/Reports/CartRecovery.xml" menu-title="Cart recovery" menu-index="3"/>
         <subscreens-item name="PromotionUse" location="component://mr-boss/screen/Commerce/Reports/PromotionUse.xml" menu-title="Promotion use" menu-index="4"/>
+        <subscreens-item name="ChannelHealth" location="component://mr-boss/screen/Commerce/Reports/ChannelHealth.xml" menu-title="Channel health" menu-index="5"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="CommerceReportsPanel" type="tab"/>

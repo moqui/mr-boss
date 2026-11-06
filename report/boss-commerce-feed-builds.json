@@ -1,0 +1,29 @@
+{
+  "id": "boss-commerce-feed-builds",
+  "type": "dataset",
+  "title": "Store feed builds",
+  "body": {
+    "documentType": "BossStoreFeedBuild",
+    "timeField": "startedDate",
+    "signal": "business",
+    "fieldDefaults": {
+      "productStoreId": {
+        "lookup": {
+          "entityName": "mantle.product.store.ProductStore",
+          "keyField": "productStoreId",
+          "displayField": "storeName"
+        }
+      },
+      "productStoreFeedId": {
+        "lookup": {
+          "entityName": "mantle.product.store.ProductStoreFeed",
+          "keyField": "productStoreFeedId",
+          "displayField": "feedName"
+        }
+      },
+      "buildStatusEnumId": {
+        "enumTypeId": "StoreFeedBuildStatus"
+      }
+    }
+  }
+}

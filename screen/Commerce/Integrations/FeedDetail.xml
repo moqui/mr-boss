@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- FeedDetail (design-commerce §9 FeedDetail; style-guide §3.3 Detail; impl-commerce P14, COM-FEED): one feed of the user's
+    stores (mantle.product.StoreChannelServices.get#StoreFeed). FeedConfig (store#StoreFeed at the feed's revision, with a
+    reason; a change of site, address, format or category takes the published build down until a new one is published),
+    FeedBuilds (each build's time, generation, rows, skips, errors and digest; the one serving marked), FeedPreview (Build
+    now, build#StoreFeed; the chosen build's sample rows as the public sees them, its skipped products with why, its errors,
+    get#FeedBuild; the artifact download) and PublishFeed (a complete build at the feed's revision with an operation key,
+    publish#StoreFeed; refused while a product in it was withdrawn after it was built). For the channel operator. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Feed" default-menu-include="false">
+    <parameter name="productStoreFeedId" required="true"/>
+    <parameter name="feedBuildId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveFeed">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.store#StoreFeed" out-map="saved"
+                    in-map="{productStoreFeedId:productStoreFeedId, expectedRevision:expectedRevision, feedName:feedName, feedKey:feedKey,
+                        siteId:siteId, formatEnumId:formatEnumId, productCategoryId:(productCategoryId || ''), scheduleEnumId:scheduleEnumId,
+                        includeImages:(includeImages || 'N'), includeUnavailable:(includeUnavailable || 'N'), changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">${saved.activeCleared ? 'Saved; the published build is down until you publish a new one' : 'Saved'}</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreFeedId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endFeed">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.store#StoreFeed"
+                    in-map="{productStoreFeedId:productStoreFeedId, expectedRevision:expectedRevision, ended:'Y', changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Feed ended; it is no longer served</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreFeedId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="buildFeed">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.build#StoreFeed" out-map="built" in-map="{productStoreFeedId:productStoreFeedId}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="feedBuildId" from="built.feedBuildId"/>
+                <script>ec.message.addMessage(built.failed ? 'The build failed: ' + built.build.failureText + '. What is published stays as it was.'
+                    : 'Built: ' + built.build.rowCount + ' products, ' + built.build.skipCount + ' skipped, ' + built.build.errorCount + ' errors. Check the preview, then publish it.',
+                    built.failed ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreFeedId"/><parameter name="feedBuildId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="publishFeed">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.publish#StoreFeed" out-map="published"
+                    in-map="{productStoreFeedId:productStoreFeedId, feedBuildId:feedBuildId, expectedRevision:expectedRevision, operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Published: the feed serves this build</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreFeedId"/><parameter name="feedBuildId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="downloadBuild" read-only="true" method="get">
+        <actions>
+            <service-call name="mantle.product.StoreChannelServices.get#FeedBuild" out-map="downloaded" in-map="{feedBuildId:feedBuildId, withArtifact:'Y'}"/>
+            <script>ec.web.sendTextResponse(downloaded.artifactText, downloaded.build.contentType, 'feed-' + feedBuildId + '.' + (downloaded.build.contentType.includes('csv') ? 'csv' : downloaded.build.contentType.includes('json') ? 'json' : 'xml'))</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.StoreChannelServices.get#StoreFeed" in-map="{productStoreFeedId:productStoreFeedId}" out-map="found"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="feed" from="found?.feed || null"/>
+        <set field="builds" from="(found?.builds || []).map(row => Object.assign({}, row, {
+                activeText: feed &amp;&amp; feed.activeBuild &amp;&amp; feed.activeBuild.feedBuildId == row.feedBuildId ? 'Serving' : '',
+                countsText: row.complete ? row.rowCount + ' rows, ' + row.skipCount + ' skipped, ' + row.errorCount + ' errors' : row.failureText,
+                digestText: row.artifactDigest ? row.artifactDigest.slice(0, 12) : ''}))"/>
+        <set field="shownBuildId" from="feedBuildId || builds[0]?.feedBuildId || null"/>
+        <if condition="feed &amp;&amp; shownBuildId">
+            <service-call name="mantle.product.StoreChannelServices.get#FeedBuild" in-map="{feedBuildId:shownBuildId}" out-map="shown"
+                    transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="shownBuild" from="shown?.build || null"/>
+        <set field="sampleRows" from="shown?.sample || []"/>
+        <set field="skipRows" from="shown?.skips || []"/>
+        <set field="errorRows" from="shown?.errors || []"/>
+        <set field="config" from="feed ? {productStoreFeedId:productStoreFeedId, expectedRevision:feed.revision, feedName:feed.feedName,
+                feedKey:feed.feedKey, siteId:feed.siteId, formatEnumId:feed.formatEnumId, productCategoryId:feed.productCategoryId,
+                scheduleEnumId:feed.scheduleEnumId, includeImages:feed.includeImages, includeUnavailable:feed.includeUnavailable,
+                productStoreId:feed.productStoreId} : {}"/>
+        <set field="publishValues" from="shownBuild ? {productStoreFeedId:productStoreFeedId, feedBuildId:shownBuild.feedBuildId,
+                expectedRevision:feed.revision, operationKey:'feed-' + ec.user.randomString(24)} : {}"/>
+    </actions>
+    <widgets>
+        <section name="FeedMissing" condition="!feed">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Feed not available"/>
+                    <box-body>
+                        <label type="p" text="Feed ${productStoreFeedId} is not available: it does not exist, or it is not of a store you work."/>
+                        <link url="${sharedLinks['Integrations/Feeds']}" text="Back to feeds" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="FeedFound" condition="feed">
+            <widgets>
+                <context record-entity="mantle.product.store.ProductStoreFeed" record-id="${productStoreFeedId}" title="Feed ${feed.feedName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${feed.feedName}" type="h5"/>
+                            <label text="${[feed.storeName, feed.siteName, feed.formatText, feed.stateText].filter(Boolean).join(' · ')}" type="p"
+                                    style="text-caption m-muted"/>
+                            <label text="Served at ${feed.publicPath} on ${feed.siteName}" type="p" style="text-caption text-mono" condition="feed.publicPath"/>
+                        </container>
+                        <container style="col-12 col-md-auto row items-center q-gutter-sm m-record-actions">
+                            <form-single name="BuildFeed" transition="buildFeed" map="{productStoreFeedId:productStoreFeedId}">
+                                <field name="productStoreFeedId"><default-field><hidden/></default-field></field>
+                                <field name="submitButton"><default-field title="Build now"><submit/></default-field></field>
+                            </form-single>
+                            <container-dialog id="EndFeed" button-text="End feed" icon="sym_o_block" width="560" title="End ${feed.feedName}"
+                                    condition="feed.current">
+                                <label type="p" text="The feed stops being served at once; its builds stay for the record."/>
+                                <form-single name="EndFeedForm" transition="endFeed" map="{productStoreFeedId:productStoreFeedId, expectedRevision:feed.revision}">
+                                    <field name="productStoreFeedId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="changeReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="End feed"><submit type="danger"/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </container>
+                    </container>
+                </container>
+                <container-box>
+                    <box-header title="Configuration"/>
+                    <box-body>
+                        <form-single name="FeedConfig" transition="saveFeed" map="config">
+                            <field name="productStoreFeedId"><default-field><hidden/></default-field></field>
+                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="feedName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                            <field name="feedKey"><default-field title="Address name"><text-line size="24"/></default-field></field>
+                            <field name="siteId">
+                                <default-field title="Shop site">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'sites', selected:config.siteId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="formatEnumId">
+                                <default-field title="Format">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="StoreFeedFormat"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="productCategoryId">
+                                <default-field title="Only this category">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                parameter-map="{choice:'storeCategories', productStoreId:config.productStoreId, selected:config.productCategoryId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="scheduleEnumId">
+                                <default-field title="Schedule">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration">
+                                                <econdition field-name="enumTypeId" value="StoreFeedSchedule"/>
+                                                <order-by field-name="sequenceNum"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="includeImages"><default-field title=" "><check><option key="Y" text="Include images"/></check></default-field></field>
+                            <field name="includeUnavailable"><default-field title=" "><check><option key="Y" text="Include out of stock products"/></check></default-field></field>
+                            <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row-big><field-ref name="feedName"/><field-ref name="feedKey"/></field-row-big>
+                                <field-row-big><field-ref name="siteId"/><field-ref name="formatEnumId"/></field-row-big>
+                                <field-row-big><field-ref name="productCategoryId"/><field-ref name="scheduleEnumId"/></field-row-big>
+                                <field-row-big><field-ref name="includeImages"/><field-ref name="includeUnavailable"/></field-row-big>
+                                <field-ref name="changeReason"/>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                        <label type="p" style="text-caption m-muted" text="Locale ${feed.locale} and currency ${feed.currencyUomId}: the store's, as its Shop shows them."/>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Builds"/>
+                    <box-body-nopad>
+                        <form-list name="FeedBuilds" list="builds" skip-form="true" paginate="false">
+                            <field name="startedDateText">
+                                <default-field title="Built">
+                                    <link url="." text="${startedDateText}" link-type="anchor" parameter-map="{productStoreFeedId:productStoreFeedId, feedBuildId:feedBuildId}"/>
+                                </default-field>
+                            </field>
+                            <field name="statusText"><default-field title="Result"><display/></default-field></field>
+                            <field name="generation" align="right"><default-field title="Generation"><display/></default-field></field>
+                            <field name="countsText"><default-field title="Rows"><display/></default-field></field>
+                            <field name="digestText"><default-field title="Digest"><display style="text-mono"/></default-field></field>
+                            <field name="activeText"><default-field title=" "><display style="text-positive"/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="startedDateText"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="countsText"/><field-ref name="activeText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!builds.length" text="Not built yet: Build now makes the first one."/>
+                    </box-body-nopad>
+                </container-box>
+                <section name="FeedPreview" condition="shownBuild">
+                    <widgets>
+                        <container-box>
+                            <box-header title="Preview of the build of ${shownBuild.startedDateText}"/>
+                            <box-toolbar>
+                                <link url="downloadBuild" text="Download" icon="sym_o_download" link-type="anchor-button" condition="shownBuild.complete"
+                                        parameter-map="{productStoreFeedId:productStoreFeedId, feedBuildId:shownBuild.feedBuildId}"/>
+                                <container-dialog id="PublishFeed" button-text="Publish this build" icon="sym_o_publish" type="primary" width="560"
+                                        title="Publish the build of ${shownBuild.startedDateText}" condition="shownBuild.canPublish">
+                                    <label type="p" text="${shownBuild.rowCount} products, ${shownBuild.skipCount} skipped and ${shownBuild.errorCount} errors, made at publication generation ${shownBuild.generation} (now ${shownBuild.currentGeneration})."/>
+                                    <label type="p" style="text-caption m-muted" text="The feed address serves this build from now on, until a product in it is withdrawn or another build is published."/>
+                                    <form-single name="PublishFeedForm" transition="publishFeed" map="publishValues">
+                                        <field name="productStoreFeedId"><default-field><hidden/></default-field></field>
+                                        <field name="feedBuildId"><default-field><hidden/></default-field></field>
+                                        <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Publish"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
+                            <box-body>
+                                <label type="p" style="text-negative" condition="!shownBuild.complete" text="This build failed: ${shownBuild.failureText}. What is published stays as it was."/>
+                                <label type="p" style="text-warning" condition="shownBuild.complete &amp;&amp; !shownBuild.servable"
+                                        text="Products withdrawn since this build (${shownBuild.withdrawn.join(', ')}) keep it from being served; build again."/>
+                                <label type="p" style="text-positive" condition="shownBuild.isActive" text="This build is serving."/>
+                            </box-body>
+                            <box-body-nopad>
+                                <form-list name="FeedSample" list="sampleRows" skip-form="true" paginate="false">
+                                    <field name="id"><default-field title="Product"><display style="text-mono"/></default-field></field>
+                                    <field name="title"><default-field title="Title"><display/></default-field></field>
+                                    <field name="price" align="right"><default-field title="Price"><display/></default-field></field>
+                                    <field name="availability"><default-field title="Availability"><display/></default-field></field>
+                                    <field name="link"><default-field title="Address"><display style="text-caption"/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="title"/><field-ref name="id"/></column>
+                                        <column><field-ref name="price"/><field-ref name="availability"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-pa-md m-muted" condition="shownBuild.complete &amp;&amp; !sampleRows.length" text="No product is in this build."/>
+                            </box-body-nopad>
+                        </container-box>
+                        <section name="FeedSkipped" condition="skipRows.length || errorRows.length"><widgets>
+                        <container-box>
+                            <box-header title="Skipped and failed products"/>
+                            <box-body-nopad>
+                                <form-list name="FeedSkips" list="skipRows" skip-form="true" paginate="false">
+                                    <field name="productId"><default-field title="Product"><display style="text-mono"/></default-field></field>
+                                    <field name="productName"><default-field title="Name"><display/></default-field></field>
+                                    <field name="reasonCode"><default-field title="Why"><display/></default-field></field>
+                                </form-list>
+                                <form-list name="FeedErrors" list="errorRows" skip-form="true" paginate="false">
+                                    <field name="productId"><default-field title="Product"><display style="text-mono"/></default-field></field>
+                                    <field name="message"><default-field title="Error"><display/></default-field></field>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        </widgets></section>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -1221,6 +1221,21 @@ immediately invalidates an artifact containing withdrawn products: serving the o
 blocked until a safe replacement is ready. A rebuild must not resurrect content withdrawn after
 its snapshot. **Needs:** COM-FEED, SHOP-CATALOG, SHOP-RENDER.
 
+**As built (Nov 6, 2026; impl-commerce P14).** `ProductStoreFeed` (Mantle `entity/StoreFeedEntities.xml`) is a feed of
+a store bound to one of its Shop sites, a registered format (Google Merchant RSS, CSV, JSON) and destination (the Shop
+site only; a pushed destination registers with its connector), with a category scope, image and out-of-stock policy and
+a schedule; its locale and currency are the store's, the only ones Shop's projection sells in. It is current from
+`fromDate` until `thruDate` (ending it stops serving) and changed in place at its revision with its key fields
+audit-logged and a reason, not as dated rows: a change of site, address, format or category clears the active build.
+`ProductStoreFeedBuild` is the immutable build (complete with its artifact, digest, generation, row products, skips and
+errors, or failed with its reason). The feed path is `feeds/{key}.{xml|csv|json}` under the Shop mount (`feeds` joins
+PublicApps.js `reservedPaths`), answered no-store; once the site's generation has moved past the build's, the build's
+products are resolved again and any one no longer public blocks it (remembered per build and generation). Publishing
+takes an operation key and the feed's revision. The feed job publishes only a complete build with no errors; one with
+errors waits for the operator. A virtual product is one row (its lowest public variant price), not one row per
+variant. ChannelHealth reads the stores' SystemMessages through `SystemMessageRemote.productStoreId` (counts only),
+and Home's Integration errors card is its attention total for a channel operator.
+
 ## 10. Shared screen contexts
 
 **Shared maps (proposed, CX-MAPS):** store/pickup facilities, readable Customer360 addresses and transaction address
