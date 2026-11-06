@@ -920,7 +920,7 @@ payment is in flight); `R.retry#Renewal` takes an operation key (a double submit
 resumes the same occurrence through Shop's coordinator, and is refused while a payment is unresolved
 (PAYMENT_UNRESOLVED) or with no recorded consent (CONSENT_REQUIRED). A refund of an automatic contract's
 latest term ends its renewal (design-shop §10.2 as built). Customer360 lists the customer's subscriptions.
-Storeless native Subscription rows for Sales' mount are not listed yet (impl-commerce F-P12-2).
+Storeless native Subscription rows for Sales' mount are not listed yet (impl-commerce F145).
 
 ### Requests
 

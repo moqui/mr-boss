@@ -2728,14 +2728,14 @@ Shop P7's records and coordinator. Ends stage C3/S3.
     Shop's, Insights' exclusions Insights'.
   - No upstream fix: F112–F114 are Shop P7's own code.
 - Findings (provisional):
-  - **F-P12-1** A refund of a contract's latest term while a renewal payment is already with the provider leaves that
+  - **F144** A refund of a contract's latest term while a renewal payment is already with the provider leaves that
     renewal to settle: it activates and the contract's cancel-at moves to its end, so a refunded buyer can be charged once
     more in that window. Closing it needs the refund to wait for or void the in-flight attempt (Accounting's coordinator).
-  - **F-P12-2** `find#StoreSubscriptions` lists store contracts only; the storeless Subscription rows of native sales orders
+  - **F145** `find#StoreSubscriptions` lists store contracts only; the storeless Subscription rows of native sales orders
     for Sales' mount (design §6's Sales context) wait for Sales.
-  - **F-P12-3** PASS SiteDetail's subscription binding is on each site's own host, not a BOSS route, so the Paid access pane
+  - **F146** PASS SiteDetail's subscription binding is on each site's own host, not a BOSS route, so the Paid access pane
     names it instead of linking it.
-  - **F-P12-4** Shop F114's second half stays: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal,
+  - **F147** Shop F114's second half stays: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal,
     allow-remote false), as the P7 review noted.
 
 **Review Nov 6 (P12)** (branch `com/p12`). Checked against the phase, design-commerce §4/§6/§8 and impl-commerce §2: the
@@ -2765,7 +2765,7 @@ ProductSubscriptionResource callers unchanged); no `valueOf` or float money in t
   the pane already renders once in CommerceSubscriptions.
 - **R5 (low)** A change read the time twice, ending the row in effect and starting its successor a moment apart (a purchase
   in between found no paid access; the worker's paid-access feature failed about one run in six); one instant now.
-- F-P12-1 re-checked and kept (not contained): once the provider approves a renewal asked before the refund, `applyStep`
+- F144 re-checked and kept (not contained): once the provider approves a renewal asked before the refund, `applyStep`
   places it and `activate` gives that paid term (cancel-at moves to its end; nothing renews after). The buyer pays once more
   and gets the term paid for; stopping it needs a release (authorized) or refund (captured) of that payment from the
   coordinator, a gateway call outside the step's locks: Accounting's.
@@ -2773,7 +2773,7 @@ ProductSubscriptionResource callers unchanged); no `valueOf` or float money in t
   StoreOperations, StoreFulfillment, DunningRenewalExclusion, PaymentAttemptPurpose, Subscriptions, StoreAdmin, ShopCheckout:
   49/49; BOSS CommerceSubscriptions, CommerceCheckoutSettings, CommerceOrders, CommerceAccess, ProductsSharedContext,
   ProductsAccess 30/30; PASS ShopSubscriptions, ShopAccess 6/6. Acceptance not rerun (unchanged).
-- For the lead: F-P12-1 as above; `run#Renewals`' due-contract batch is limited before contracts whose period already has an
+- For the lead: F144 as above; `run#Renewals`' due-contract batch is limited before contracts whose period already has an
   occurrence are filtered out, so more than `limits.batch` active contracts with a renewal in flight (held placements) would
   starve newly due ones until the nightly hand-off (low; filter in the query or page past them); a concurrent double submit
   of one retry key runs the coordinator twice (still one charge) and the second answers a duplicate-key error rather than
@@ -3028,6 +3028,12 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F141 | P11: cart recovery's eligibility is not historical ("signed in") | Accepted |
 | F142 | P11: Insights' catalogue registration (Z10), the graph views and further ReportScope choices not built | Later |
 | F143 | P11: ten mr-boss acceptance failures outside P11 (CommerceFoundationWalk, CommerceSitePagesWalk, four Customer Service walks, two Purchasing replenishment walks, TuiRender) | Fixed (Nov 6, `com/accfix`): none was a framework regression. Stale expectations (CommerceFoundationWalk after P5/P10, CustomerServiceKnowledgeWalk after Shop P3); walks sharing one database (SitePagesWalk after AssortmentWalk, SupportWalk, ReportsWalk, TuiRender); two real bugs: NewCase's duplicate warning filtered open cases after taking the newest ten, and Mantle `store#Preferences` made an organization's first own PartyAcctgPreference with only the fields passed, so it lost its inherited currency (it now starts from the inherited fields, with an AccountingSetup check). Full `./moq accept mr-boss`: 460 of 461 server (AppStructure's floor, P11's), 169 of 169 client |
+| F144 | P12: a refund of the latest term while a renewal payment is with the provider lets that renewal be placed and its term granted, so the buyer pays once more but gets that term | Accounting: the coordinator releases or refunds that payment (a gateway call outside the steps' locks) |
+| F145 | P12: `find#StoreSubscriptions` does not list the storeless Subscription rows of native sales orders | Sales' mount |
+| F146 | P12: the Paid access pane names PASS SiteDetail's subscription binding (on each site's own host) instead of linking it | Accepted |
+| F147 | P12: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal, allow-remote false) | Accepted |
+| F148 | P12 review: `run#Renewals` limits its due batch (100) before leaving out contracts with an in-flight occurrence, so many in-flight renewals can delay newly due ones to the nightly hand-off | P15: filter in the query |
+| F149 | P12 review: a concurrent double submit of one retry key gets a duplicate-key error instead of `alreadyApplied` (every `lib.operation` caller does) | Accepted (one charge either way) |
 
 ## 7. Later
 
