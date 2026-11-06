@@ -1,0 +1,256 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PromoCodeDetail (design-commerce §7 PromoCodeDetail; crosscut §2 Shared/PromoCodeDetail, §3.28; style-guide §3.3 Detail;
+    impl-commerce P7): the record header (the code, its promotion and store, its state as a chip; More: Expire, its promotion)
+    and the boxes Code (dates, the use limits per code and per customer, customer entered, customers only, with the reason of
+    a change), Customers (the parties the code is limited to: a customer the user may work with, checked by
+    ironstone.commerce.ContextServices.check#Record) and Usage (the committed uses, an order to a row). A code is expired,
+    never deleted, so its usage stays readable. Read and saved through mantle.product.StorePromotionServices (get#PromoCode,
+    store#PromoCode, store#PromoCodeParty, expire#PromoCode, find#PromotionUses). Commerce's context only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotion code" default-menu-include="false">
+    <parameter name="appRoot"/>
+    <parameter name="promoCodeId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
+        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="codes"><default-response url="${sharedLinks['Promotions/PromoCodes']}"/></transition>
+    <transition name="saveCode">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromoCode"
+                    in-map="{promoCodeId:promoCodeId, fromDate:(fromDate || null), thruDate:(thruDate || null),
+                        useLimitPerCode:(useLimitPerCode ?? ''), useLimitPerCustomer:(useLimitPerCustomer ?? ''),
+                        userEntered:(userEntered == 'Y' ? 'Y' : 'N'), requireParty:(requireParty == 'Y' ? 'Y' : 'N'),
+                        changeReason:(changeReason || null), expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the code</message></if>
+        </actions>
+        <default-response url="."><parameter name="promoCodeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="expireCode">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.expire#PromoCode"
+                    in-map="{promoCodeId:promoCodeId, changeReason:(changeReason || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Expired the code; its usage stays here</message></if>
+        </actions>
+        <default-response url="."><parameter name="promoCodeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addParty">
+        <actions>
+            <!-- a customer the user may work with (Commerce's customer scope), then Mantle's save -->
+            <service-call name="ironstone.commerce.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:'customer', recordId:(partyId || '')}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.product.StorePromotionServices.store#PromoCodeParty" out-map="partyOut"
+                        in-map="{promoCodeId:promoCodeId, partyId:partyId}"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Added the customer</message>
+                <if condition="!partyOut.requireParty"><message type="warning">The code is for anyone until Customers only is set</message></if>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="promoCodeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeParty">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromoCodeParty"
+                    in-map="{promoCodeId:promoCodeId, partyId:partyId, remove:true}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Removed the customer</message></if>
+        </actions>
+        <default-response url="."><parameter name="promoCodeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.StorePromotionServices.get#PromoCode" out-map="codeOut" transaction="force-new"
+                ignore-error="true" in-map="{promoCodeId:promoCodeId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!codeOut?.code"/>
+        <if condition="recordFound">
+            <set field="code" from="codeOut.code"/>
+            <set field="parties" from="codeOut.parties || []"/>
+            <set field="canEdit" from="!!codeOut.canEdit"/>
+            <service-call name="mantle.product.StorePromotionServices.find#PromotionUses" out-map="usesOut" transaction="force-new"
+                    ignore-error="true" in-map="{promoCodeId:promoCodeId, pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="uses" from="usesOut?.uses || []"/>
+            <set field="usesCount" from="usesOut?.usesCount || 0"/>
+            <set field="usesPageIndex" from="usesOut?.usesPageIndex || 0"/>
+            <set field="usesPageSize" from="usesOut?.usesPageSize || 20"/>
+            <set field="usesPageMaxIndex" from="usesOut?.usesPageMaxIndex || 0"/>
+            <set field="usesPageRangeLow" from="usesOut?.usesPageRangeLow || 0"/>
+            <set field="usesPageRangeHigh" from="usesOut?.usesPageRangeHigh || 0"/>
+            <set field="captionText" from="[code.promotionText, code.storeName, [code.fromDateText, code.thruDateText].filter((part) =&gt; part).join(' to ')]
+                    .filter((part) =&gt; part).join(' · ')"/>
+            <set field="stateColor" from="code.current ? 'positive' : code.future ? 'info' : 'grey-7'"/>
+            <set field="usesText" from="(usesOut?.useCount || 0) + ' uses on ' + (usesOut?.orderCount || 0) + ' orders'"/>
+            <set field="codeValues" from="Object.assign({}, code, {expectedLastUpdatedStamp: code.lastUpdatedStamp})"/>
+            <set field="canExpire" from="canEdit &amp;&amp; !code.ended"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="CodeNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Promotion code ${promoCodeId} is not available: it does not exist, or it is not a code of your stores' promotions."/>
+                <link url="codes" text="Back to Promotion codes" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+
+        <section name="CodeFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.product.store.ProductStorePromoCode" record-id="${promoCodeId}" title="${code.promoCode}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(code.promoCode)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PromoCodeKey", style: "strong", text: code.promoCode})}]]></text>
+                            </render-mode>
+                            <label text="${code.promotionText}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(code.state)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PromoCodeState", text: code.state})}]]></text>
+                            <text type="html">${code.state}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="${code.limitsText} · ${usesText} · changed ${code.lastUpdatedText}" type="span" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <button-menu text="More" icon="more_horiz">
+                            <link url="${sharedLinks['Promotions/PromotionDetail']}" text="Promotion" icon="sym_o_local_offer" link-type="anchor"
+                                    parameter-map="{storePromotionId:code.storePromotionId}"/>
+                            <link url="expireCode" text="Expire the code" icon="sym_o_event_busy" link-type="hidden-form-link" btn-type="danger"
+                                    condition="canExpire" confirmation="Expire the code ${code.promoCode} now? It stays readable with its usage."
+                                    parameter-map="{promoCodeId:promoCodeId}"/>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+
+            <container-box>
+                <box-header title="Code"/>
+                <box-body>
+                    <form-single name="CodeForm" transition="saveCode" map="codeValues">
+                        <field name="promoCodeId"><default-field><hidden/></default-field></field>
+                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                        <field name="fromDate">
+                            <conditional-field condition="canEdit" title="From"><date-time/></conditional-field>
+                            <default-field title="From"><display text="${code.fromDateText}"/></default-field>
+                        </field>
+                        <field name="thruDate">
+                            <conditional-field condition="canEdit" title="Through" tooltip="Empty runs on"><date-time/></conditional-field>
+                            <default-field title="Through"><display text="${code.thruDateText}"/></default-field>
+                        </field>
+                        <field name="useLimitPerCode">
+                            <conditional-field condition="canEdit" title="Uses of the code" tooltip="Empty for no limit"><text-line size="5"/></conditional-field>
+                            <default-field title="Uses of the code"><display/></default-field>
+                        </field>
+                        <field name="useLimitPerCustomer">
+                            <conditional-field condition="canEdit" title="Uses per customer" tooltip="Empty for no limit"><text-line size="5"/></conditional-field>
+                            <default-field title="Uses per customer"><display/></default-field>
+                        </field>
+                        <field name="userEntered">
+                            <conditional-field condition="canEdit" title=" "><check><option key="Y" text="Customers enter it"/></check></conditional-field>
+                            <default-field title="Customers enter it"><display/></default-field>
+                        </field>
+                        <field name="requireParty">
+                            <conditional-field condition="canEdit" title=" "><check><option key="Y" text="Only for the customers named below"/></check></conditional-field>
+                            <default-field title="Customers only"><display/></default-field>
+                        </field>
+                        <field name="changeReason">
+                            <conditional-field condition="canEdit" title="Reason for a change" tooltip="Kept with the dates and limits in the history"><text-line size="40"/></conditional-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="useLimitPerCode"/><field-ref name="useLimitPerCustomer"/></field-row>
+                            <field-row><field-ref name="userEntered"/><field-ref name="requireParty"/></field-row>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Customers"/>
+                <box-toolbar>
+                    <container-dialog id="AddCodeParty" button-text="Add customer" icon="sym_o_person_add" width="560" title="Limit the code to a customer"
+                            condition="canEdit">
+                        <form-single name="AddCodePartyForm" transition="addParty">
+                            <field name="promoCodeId"><default-field><hidden/></default-field></field>
+                            <field name="partyId">
+                                <default-field title="Customer">
+                                    <drop-down>
+                                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'customers'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Add customer"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="text-caption m-muted" text="A guest checkout never uses a code limited to customers."/>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="CodeParties" list="parties" skip-form="true" paginate="false">
+                        <field name="partyName"><default-field title="Customer"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="removeParty" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger" condition="canEdit"
+                                        confirmation="Remove ${partyName} from the code?" parameter-map="{promoCodeId:promoCodeId, partyId:partyId}"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="partyName"/></column>
+                            <column><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!parties.length" text="No customer is named on the code."/>
+                </box-body-nopad>
+            </container-box>
+
+            <container-box>
+                <box-header title="Usage"/>
+                <box-body-nopad>
+                    <form-list name="CodeUses" list="uses" skip-form="true">
+                        <field name="orderName"><default-field title="Order"><display/></default-field></field>
+                        <field name="placedDateText"><default-field title="Placed"><display/></default-field></field>
+                        <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                        <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>
+                        <field name="discount"><default-field title="Discount"><display currency-unit-field="currencyUomId" align="right"/></default-field></field>
+                        <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="orderName"/><field-ref name="customerName"/></column>
+                            <column><field-ref name="discount"/><field-ref name="placedDateText"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!uses.length" text="No placed order has used this code."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

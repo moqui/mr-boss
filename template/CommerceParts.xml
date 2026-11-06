@@ -18,7 +18,8 @@ along with this software (see the LICENSE.md file). If not, see
     - storeOptions: a store form's drop-downs, the values its Mantle save accepts
       (mantle.product.StoreAdminServices.find#StoreOptions: facilities, staff, emailTemplates, orderChecks, documents,
       wikiSpaces, taxGateways, settingTypes, groupStores), after the root's Commerce check.
-    - catalogChoices (P3): categories and products of the catalog, in Commerce's catalog context. -->
+    - catalogChoices (P3): categories and products of the catalog, in Commerce's catalog context.
+    - promotionOptions (P7): the registered promotion rules and the user's stores' promotions. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
     <transition name="choices" read-only="true">
@@ -45,6 +46,16 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="ironstone.products.CatalogServices.search#CatalogChoices" out-map="found"
                     in-map="{appRoot:'Commerce', choice:(choice || 'products'), term:term, selected:selected}"/>
             <script>ec.web.sendJsonResponse(found?.rows || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <!-- P7: a promotion form's drop-downs: the registered promotion rules (choice rules) and the promotions of the user's
+        stores (choice promotions), from mantle.product.StorePromotionServices.find#PromotionOptions -->
+    <transition name="promotionOptions" read-only="true">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.find#PromotionOptions" out-map="found"
+                    in-map="{choice:choice, productStoreId:(productStoreId || null), term:(term || null), selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found?.options || [])</script>
         </actions>
         <default-response type="none"/>
     </transition>

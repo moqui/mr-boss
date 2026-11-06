@@ -12,11 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Promotions area of IronStone Commerce (design-commerce §7): a store's promotions and promotion codes
-    (impl-commerce P7); for every Commerce user, the manager changing them (COMMERCE_PROMOTION_EDIT). -->
+<!-- The Promotions area of IronStone Commerce (design-commerce §7; impl-commerce P7): a store's promotions and promotion codes,
+    the shared screens of crosscut §3.28 in Commerce's context (ironstone.commerce.ContextServices.get#SharedContext: the
+    user's stores): Promotions (the default) and Promotion codes in the menu, PromotionDetail and PromoCodeDetail hidden,
+    opened from rows. Every Commerce user reads them; the promotion manager changes them (COMMERCE_PROMOTION_EDIT), checked
+    again in mantle.product.StorePromotionServices. Marketing mounts the same screens with its own context later (F24). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Promotions" default-menu-index="7" menu-image="sym_o_local_offer" menu-image-type="icon">
+    <subscreens default-item="Promotions" always-use-full-path="true">
+        <subscreens-item name="Promotions" location="component://mr-boss/screen/Shared/Promotions.xml" menu-title="Promotions" menu-index="1"/>
+        <subscreens-item name="PromoCodes" location="component://mr-boss/screen/Shared/PromoCodes.xml" menu-title="Promotion codes" menu-index="2"/>
+        <subscreens-item name="PromotionDetail" location="component://mr-boss/screen/Shared/PromotionDetail.xml" menu-include="false"/>
+        <subscreens-item name="PromoCodeDetail" location="component://mr-boss/screen/Shared/PromoCodeDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: A store's promotions and promotion codes." type="p"/>
+        <subscreens-panel id="CommercePromotionsPanel" type="tab"/>
     </widgets>
 </screen>
