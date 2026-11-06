@@ -271,7 +271,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | built Nov 6, 2026 |
-| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026 |
+| P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026; follow-up (review requests topic, checkout opt-ins) built Nov 6 |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
 | P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
@@ -2037,7 +2037,8 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   - The request (`service/StoreReviews.secas.xml`): ShipmentDeliveredRequestReviews (a shipment to ShipDelivered) and
     DownloadFirstRequestReview (a grant's first download) call `queue#ReviewRequests`, which queues one delivery per line
     (`reviewRequest:{order}:{line}`) only for a Shop order (a completed StoreCheckout) of a store with a current
-    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F95); the build suppresses it once
+    PsetReviewRequest email; not transactional, with PcpMarketingEmail as its consent (F95; since the follow-up below, the
+    store's review requests topic); the build suppresses it once
     the buyer reviewed the product, the line was cancelled or returned, or the product is no longer public.
   - Shop's operations in Schema/Routes and their Mantle mirrors (identical), `Contracts.d.ts` and PassAuthority's DOWNLOADS:
     `getProductReviews` (GET), `submitProductReview` (POST, its `file`), `getShopReviewImage` (a GET download). None is a
@@ -2128,6 +2129,115 @@ caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema
   client features passed; `moqui lint --screens` as before. Feature time under load: server mr-mantle 399.0 of 383 s,
   mr-boss 290.5 of 264 s (P8 and P9 add about 3 s and 1 s alone; the rest is the concurrent worker, as Shop P6's run
   showed); client mr-boss 53.4 of 57 s, mr-pass 8.2 of 9 s. Budgets measured again at the next quiet run.
+
+**Follow-up Nov 6 (P9: review requests and checkout opt-ins)** (branch `com/p9b`; the user's decision in §4, F95). Built:
+- Mantle:
+  - `service/mantle/public/StoreTopics.js` (new): a store's topics, "cart reminders" (Shop P6's, moved here from AccountHub.js)
+    and "review requests" (purpose `PcpReviewRequest`, list type `REVIEW_REQUEST`, store setting `PsstReviewRequestList`, the
+    list made when first needed), each on for a party while its latest consent of the purpose on the list is a grant; the
+    checkout's opt-ins (reviewRequests, cartReminders to a signed-in buyer with a verified account email only (review R2), news only when `PsstNewsList` names the
+    store's list) offered by `PsstCheckoutOptIns` (absent: all three, so the demo stores offer the first two; `none`: none),
+    each unchecked with a one-line statement of what it is and is not; recording at placement (granted for a buyer whose
+    verified account email is the checkout's; else a `ContactListParty` `CLPT_PENDING` membership of the list, never sent
+    to), each opt-in in a transaction of its own (`apply#CheckoutOptIn`, a failure logged and named); confirmation by the
+    receipt's code (`make#OptInConfirmLink`: a new code whose digest the checkout keeps, 60 days) or, for a choice the account checked
+    while signed in, by its verified sign-in (`confirmVerified`, from ShopCustomer.js' claim and the preferences page; a
+    claimed guest's choice only by the link, review R1), granting only a choice still pending.
+    `data/AccountHubSetupData.xml` +5 seed rows; `entity/StoreOptInEntities.xml` (StoreCheckout `optInsJson`, `optInPending`,
+    `optInCodeDigest`, `optInCodeDate`, an index by customer and pending).
+  - `AccountHubServices` `check#ReviewRequestConsent`, `apply#CheckoutOptIn` (internal), `make#OptInConfirmLink`; AccountHub.js'
+    preferences list both topics per store (each needing a verified email to turn on, R2; turning one off ends a choice still
+    pending), mark a choice waiting for confirmation, leave a pending list row alone on save, answer the receipt's
+    `confirm` code read only (`mode: confirm`) and confirm it on `choices.confirm`.
+  - The review request (StoreReviews.js `queue#ReviewRequests`): `PcpReviewRequest` on the store's topic list, never
+    PcpMarketingEmail. The delivery ledger (MessageDeliveries.js, `queue#Delivery` `consentContactListId`): a delivery with a
+    topic's list needs the recipient's latest consent of its purpose on that list; one without is unchanged.
+  - Checkout (ShopCheckout.js): the view's `checkout.optIns`; `submit#Checkout` `optIns` (only those offered, kept by the
+    freeze); `place` records them before `place#Order`, so the receipt finds a pending choice. `send#OrderStoreEmail`
+    (OrderInfoServices.xml, PsetOrderPlaced): a Shop order with a pending choice gets `optInConfirmUrl` in its body
+    parameters (its own transaction, errors ignored); any other order none.
+- mr-pass: Checkout's review form shows the store's optional emails (each a separate unchecked box with its statement,
+  "Already on" for an account, and "Not needed for your order: your receipt and order updates come either way") and posts the
+  checked ones; Account/EmailPreferences shows the review requests topic, a choice waiting for confirmation, and the receipt
+  link's page (the choices and one Confirm button posting to save). Schema `submitCheckout` +`optIns`,
+  `getEmailPreferences`/`storeEmailPreferences` +`confirm` (Mantle's ForumSchema.js identical), `Contracts.d.ts`.
+- Docs: design-commerce §4 Reviews (review requests their own opt-in; the message classes, instructional follow-ups
+  transactional), §6 CartDetail's consent; design-shop §6 Checkout (optional emails), §9 EmailPreferences, §11 Delivery
+  (message classes), §16, §19; impl-shop P6 note. No instructional message exists to reclassify (none built).
+- Specs (`--nobuild`): Mantle ShopCheckout +1 feature (0.54 s: a guest offered review requests only, unchecked, with its
+  statement; the choice pending, not consented; the receipt's link, its read-only page, a wrong code refused, the confirm
+  granting it; nothing checked records nothing; an order with no pending choice, or no checkout, gets no link), StoreReviews'
+  request feature (marketing email consent granted and still suppressed with the topic's purpose and list in the snapshot;
+  the topic granted, `check#ReviewRequestConsent` true and the next attempt not suppressed), ShopCustomer (the claimed guest
+  checkout's pending review requests moved to the account and still pending, an own choice confirmed by the verified sign-in
+  (review R1); cart reminders offered to the verified account only (review R2); the preferences' second topic); mr-pass ShopCheckout
+  (the review form's unchecked box and statement, no cart reminders for a guest) and ShopAccount (the review requests topic).
+  Run, all pass: Mantle ShopCheckout, StoreReviews, ShopCustomer, DeliveryLedger, Consent, StoreFulfillment, ShopCart,
+  OrderToCashBasicFlow, PassAuthority, ContactListSend (111 features); mr-pass ShopCheckout, ShopAccount, ShopAccess,
+  ShopReviews, Transport (14); mr-boss CommerceReviews, Consent, Unsubscribe (22). New Mantle feature time 0.54 s (the
+  ShopCheckout feature; the other additions are checks on existing features). Acceptance: none changed, none run.
+- Lint: `moqui lint --screens` 132 flagged sites as before, none in the Shop or Account files.
+- Decisions: the pending state is Mantle's existing list membership (`CLPT_PENDING`), since PartyConsent has none; the
+  confirmation rides on the order receipt (PsetOrderPlaced) as one link to the email preferences page, read only until its
+  button; cart reminders are offered only to a signed-in buyer (a guest's cart is never recovered; review R2: with a verified
+  account email); a confirmation grants
+  only what is still pending; the news opt-in subscribes through `ConsentServices.set#ContactListPartySubscription` until
+  Marketing's `request#Subscription` exists; a guest's confirmed review requests consent is the guest party's and moves
+  with the claim.
+- Findings (provisional):
+  - **F118** `PsstCheckoutOptIns` and `PsstNewsList` are store settings that CheckoutSettings does not edit yet (they
+    are not in StoreCheckout.js' `checkoutPolicy`, so a store sets them by data). For P10 (with RecoveryPolicy) or P15.
+  - **F119** The receipt's link needs a PsetOrderPlaced store email and an Account mount on the site; without either a
+    guest's choice waits until the account turns the topic on itself (review R1). The demo's generic template (ScreenRenderEmail) shows the link as an
+    `optInConfirmUrl` line; a store's own template should render it as a link with its words.
+  - **F120** `send#OrderStoreEmail` (Mantle's receipt) now asks `make#OptInConfirmLink` for every PsetOrderPlaced email: one
+    indexed read of StoreCheckout by order, nothing for an order without a pending choice (OrderToCashBasicFlow unchanged).
+  - **F121** BOSS's Comms Consent screens show the topic lists (REVIEW_REQUEST, CART_REMINDER) and a pending checkout
+    choice as the list's "Pending Acceptance" member; the consent history names the checkout's order and statement.
+  - **F122** The confirmation page (Account/EmailPreferences `?confirm=`) has no render spec: the screen's one html
+    render is ShopAccount's account mode; its rule is Mantle's (ShopCheckout's feature).
+  - **F123** A review request to a guest with confirmed consent links the Review page, which asks them to sign in (the
+    review needs a verified account, and the claim then makes the guest's order theirs).
+
+**Review Nov 6 (P9 follow-up)** (`git diff $(git merge-base master com/p9b)..com/p9b` in mr-mantle, mr-pass, mr-boss).
+Checked: consent (boxes never pre-checked, the view's `chosen` only the buyer's; a forged or unoffered `optIns` entry is
+dropped by `chosenFrom`, ShopCheckout's "unknown" and a guest's cartReminders; a pending choice is a `CLPT_PENDING` row, and
+list sends take `CLPT_ACCEPTED` only; the receipt's code is a digest on the checkout, bound to the checkout and its site,
+60 days, URL-safe; the GET only reads, the POST is the PASS form with its form token and grants only a choice still pending,
+so a replay changes nothing; a topic turned on then off before the confirmation stays off; the ledger's snapshot names
+`PcpReviewRequest` and the store's list); cart reminders' `check#CartReminderConsent` unchanged after the move to
+StoreTopics.js; merge#Parties moves PartyConsent, ContactListParty and StoreCheckout, so a guest's confirmed consent goes with
+Shop P6's claim of an anonymous guest only; the freeze keeps the offered opt-ins and placement records them before
+`place#Order`, each in its own transaction (`probe`), a failure logged; send#OrderStoreEmail runs on tx-commit, so its
+force-new `make#OptInConfirmLink` sees the recorded choice; a non-Shop order costs one indexed read (STORE_CHECKOUT_ORDER);
+`queue#Delivery` without `consentContactListId` keeps its consentJson and consent check; Schema.js and ForumSchema.js
+identical; Contracts.d.ts. Fixes:
+- **R1 (medium, consent)** A verified sign-in confirmed a claimed guest checkout's pending choices: whoever checked the box
+  was not signed in (anyone can type another's email at a guest checkout), and signing in is no act of consent. Now
+  `confirmVerified` confirms only the account's own checkouts (`accountCheckout` Y); a claimed guest's choice moves to the
+  account still pending, confirmed by the receipt's link or by the account turning the topic on. ShopCustomer checks both.
+- **R2 (low, consent)** Cart reminders were offered to an unverified account, whose choice the receipt's link (to the
+  checkout's address, possibly not the account's) could then grant, bypassing Shop P6 review R2's verified account address.
+  Now offered only to an account checkout whose account email is verified; ShopCustomer checks the verified and unverified
+  offers.
+- **R3 (low, operation identity)** `submit#Checkout`'s request hash always carried `optIns` (an empty list for a submit
+  without any), and the offered list, which a store's setting could change between a submit and its retry. Now the request
+  carries the opt-ins as asked (sorted, once each) and only when some are; the freeze keeps the offered ones.
+Docs corrected for R1/R2 (this note's Built text, design-commerce §6, design-shop §6 and §19, impl-shop's P6 note).
+Specs (`--nobuild`): Mantle ShopCheckout, StoreReviews, ShopCustomer, DeliveryLedger, Consent, ShopCart, OrderToCashBasicFlow,
+ContactListSend, PassAuthority 103 passed (ShopCustomer's cart reminders feature 0.47 s); mr-pass ShopCheckout, ShopAccount,
+ShopAccess, ShopReviews, Transport 14 passed; mr-boss CommerceReviews, Consent, Unsubscribe 22 passed. For the lead:
+- On the preferences page a pending topic shows unchecked "waiting"; saving it unchecked does not end the choice (only on
+  then off does), and a pending news-list row is skipped by the save, so the account cannot withdraw a pending choice there
+  except by turning it on and off. Conservative enough (nothing is sent while pending); a "decline" could end it.
+- The receipt's code stays usable for its 60 days after the confirmation (harmless: it grants only what still waits); a
+  resent receipt (forceByType) makes a new code and voids the earlier email's link.
+- `recordCheckout`'s final StoreCheckout update runs in the placement transaction (the opt-ins themselves each in their
+  own), so a database error on that one row would still fail the placement step, which the placement job retries.
+- The news opt-in at placement subscribes through `set#ContactListPartySubscription`, which also re-grants a withdrawn
+  PcpMarketingEmail (that service's existing rule for a subscribe).
+- No spec covers an unverified account's own pending choice confirmed after it verifies (R1's own-choice check marks the
+  claimed checkout as the account's to exercise `confirmVerified`).
 
 ### P10 — Cart recovery
 
@@ -2287,6 +2397,7 @@ design-commerce.md, design-shop.md or the owner's design.
 | Nov 5, 2026 | One adoption proposal (`propose#StorePublication`, P3), reused by Shop P8's legacy adoption; scheduled page and menu publication is C1's (P4); a refund revokes a download from Shop P6, before paid access in P7 | The plan's choice; design-shop §17.2 changed |
 | Nov 5, 2026 | Accept Hosted's form POST to the provider gets the CSP it needs: Shop's payment relay route allows `form-action` to the Authorize.Net hosted page (production and sandbox), the rest of PASS keeps its CSP (Shop F37) | The user's call during the build, refining the Accept Hosted row above; Shop P5 |
 | Nov 5, 2026 | F59 (a member whose last StoreStaff row ends, or whose only row starts later, works every store of their organizations) is noted and left as §4's rule for now | The user's call during the build; revisit if store-limited staff need a stricter rule |
+| Nov 6, 2026 | Review requests are their own per-store opt-in, a "review requests" topic beside cart reminders, not marketing email; checkout offers a few clearly marked opt-ins (review requests, cart reminders, the store's news when it has a list), separate, unchecked, each saying what it is and is not; receipts and order notices stay transactional, and instructional or documentation follow-ups of a purchase (how-to, download instructions, setup guides) are transactional with no topic | The user's call (F95): "do an opt-in for review requests; instructional/documentation follow-ups can be transactional but I agree review requests should be opt-in; if we have a few clearly marked opt-in options in checkout it's a good thing (well, for some corporate philosophies), options show clear distinctions and what they are and are not signing up for." P9 follow-up. Refines the Nov 5 rows: checkout now has opt-ins (the news one only when the store names its list, recorded through ConsentServices until Marketing's `request#Subscription`), and cart reminders may also be checked at checkout by a signed-in buyer. A guest's or unverified account's choice waits as a pending list membership until the receipt's link or (an account's own choice, review R1) a verified sign-in confirms it. design-commerce §4, design-shop §6, §9, §11 changed |
 
 ## 5. Open questions
 
@@ -2397,7 +2508,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F92 | P5: does the anonymous preview record a Visit? | Yes, from its second request; fixed with F86 |
 | F93 | P5 review: at render the preview token checks the actor's account is enabled, not their theme permission or store scope (a revoked designer's open preview lasts at most 20 minutes); Shop P2's `get#ThemeDraft` with `includeText` returns source text to any `COMMERCE_VIEW` holder | Accepted: twenty minutes at most; theme source holds no secrets |
 | F94 | P9: the demo's ProductReview ids were the sequence's next values, so a second new review failed on a demo database | Renamed DEMO_REVIEW_1 and _2 |
-| F95 | P9: the review request is a solicitation, sent only with a granted PcpMarketingEmail, which Shop never collects, so the demo sends none | For the user: a per-store review-requests topic on Email preferences (as cart reminders), or transactional |
+| F95 | P9: the review request is a solicitation, sent only with a granted PcpMarketingEmail, which Shop never collects, so the demo sends none | Resolved Nov 6 (the user's call, §4): a per-store "review requests" topic (PcpReviewRequest) on Email preferences and among checkout's opt-ins; the request needs it, not marketing email (P9 follow-up) |
 | F96 | P9: PASS's facade takes one file per operation, so three photos are three calls | Accepted |
 | F97 | P9: the review request is sent within the ledger job's two minutes of delivery; the ledger has no not-before date for "days after delivery" | Later (the ledger's not-before) |
 | F98 | P9: an author's edit keeps the store's reply, which shows again on re-approval | Accepted |
@@ -2420,6 +2531,15 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F115 | P8 review: Customer360 shows a customer's current emails and addresses to a store operator, as Customer Service does; design §10 masks only payment methods | Accepted |
 | F116 | P8 review: Order again needs only COMMERCE_ORDER_VIEW, so a read-only operator can make open orders | Accepted (nothing placed or charged) |
 | F117 | P8 review: a store's checkout support queue brings every case of that queue into the store's cases | Accepted; a store's own queue is the deployment's choice |
+| F118 | P9 follow-up: CheckoutSettings does not edit `PsstCheckoutOptIns` or `PsstNewsList`; a store sets them by data | P10 or P15 |
+| F119 | P9 follow-up: the receipt's confirmation link needs an OrderPlaced store email and an Account mount on the site; the demo's generic template shows it as a plain line | Accepted; P15 for the demo template |
+| F120 | P9 follow-up: every OrderPlaced receipt does one indexed StoreCheckout read for the link | Accepted |
+| F121 | P9 follow-up: BOSS's Comms Consent screens show the topic lists and a pending checkout choice as a "Pending Acceptance" member | Accepted |
+| F122 | P9 follow-up: the confirmation page has no render spec (EmailPreferences has its one render; the rule is tested in Mantle) | Accepted |
+| F123 | P9 follow-up: a guest's review request links the Review page, which asks them to sign in (a review needs a verified account) | Accepted |
+| F124 | P9 follow-up review: a pending topic saved unchecked on the preferences page does not end the choice, and a pending news choice cannot be withdrawn there | P15: a decline action |
+| F125 | P9 follow-up review: `recordCheckout`'s last StoreCheckout update runs in the placement transaction, so a database error there fails the step (the job retries) | Accepted |
+| F126 | P9 follow-up review: no spec of an unverified account's own pending choice confirmed once the account verifies | P15 |
 
 ## 7. Later
 

@@ -515,6 +515,17 @@ A bulk decision posts each selected row with the revision shown and answers per 
 the delivery ledger at a Shop line's delivery or first download, once per line, and needs the recipient's marketing email
 consent (impl-commerce F-P9-2).
 
+**Review requests are their own opt-in (Nov 6, 2026; impl-commerce §4, F95).** The review request is a solicitation, not a
+transactional notice, and is consented per store, not by marketing email: each store has a "review requests" topic (a
+contact list of its own, purpose `PcpReviewRequest`, as Shop P6's "cart reminders"), which a customer turns on on the PASS
+Account email preferences page or at checkout (design-shop §6 Checkout's optional emails). The delivery ledger sends the
+request only while that topic is granted; marketing email consent neither sends it nor is needed. Its message carries the
+preferences link. **Message classes.** Transactional (no opt-in, sent whatever the buyer chose): the receipt, order,
+shipment, download-ready, invoice and subscription notices, and instructional or documentation follow-ups of a purchase
+(how to use it, download instructions, setup guides). Opt-in per store topic: review requests and cart reminders. Marketing
+(the store's news and offers list, `ConsentServices`' list consent): anything that promotes. A message that both instructs
+and promotes is marketing.
+
 ## 5. Website authoring
 
 This section is the **one definition of the staff editors**. Shop §12 owns the theme package,
@@ -774,9 +785,11 @@ method. Each message is a source on the Comms delivery ledger (X8), keyed by car
 window and template, which records the consent snapshot and the outcome; RecoveryHistory reads
 it. Every message carries an unsubscribe link to the PASS Account email preferences page (X15,
 R-COM-W05). Recovery respects consent/suppression, inactivity and send limits. No automatic
-sends until the store enables them. **Consent (Nov 5, 2026; impl-commerce §4):** with no
-checkout opt-in, the consent is the store's "cart reminders" topic, which a signed-in customer
-turns on in the PASS Account email preferences page (Shop §9); a guest's cart is never eligible. Refresh rechecks eligibility; a successful checkout
+sends until the store enables them. **Consent (Nov 5, 2026; impl-commerce §4):** the consent is
+the store's "cart reminders" topic, which a signed-in customer turns on in the PASS Account email
+preferences page (Shop §9), or, since Nov 6, checks among checkout's optional emails (offered
+only to a signed-in buyer whose account email is verified, Shop P6 review R2's rule; P9 follow-up review R2); a guest's
+cart is never eligible. Refresh rechecks eligibility; a successful checkout
 suppresses queued recovery. **Needs:** COM-OPS, SHOP-CART.
 
 **One sender per cart (Nov 1, 2026; review R-MKT-R03, X8).** Cart abandonment is one shared trigger
