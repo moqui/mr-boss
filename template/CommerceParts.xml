@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Parts of the IronStone Commerce screens (impl-commerce P2). A screen includes each transition it uses by name
+    (transition-include), so a form here posts to the screen it is on.
+    - choices: the app's drop-downs (ironstone.commerce.ContextServices.get#Choices: stores, organizations).
+    - storeOptions: a store form's drop-downs, the values its Mantle save accepts
+      (mantle.product.StoreAdminServices.find#StoreOptions: facilities, staff, emailTemplates, orderChecks, documents,
+      wikiSpaces, taxGateways, settingTypes, groupStores), after the root's Commerce check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.commerce.ContextServices.get#Choices" in-map="context" out-map="found"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeOptions" read-only="true">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.find#StoreOptions" out-map="found"
+                    in-map="{choice:choice, productStoreId:(productStoreId || null), productStoreGroupId:(productStoreGroupId || null),
+                        organizationPartyId:(organizationPartyId || null), typeEnumId:(typeEnumId || null), term:(term || null),
+                        selected:(selected || null)}"/>
+            <script>ec.web.sendJsonResponse(found?.options || [])</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets/>
+</screen>

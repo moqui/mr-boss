@@ -150,7 +150,7 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="search" noun="Records" allow-remote="false">
         <description>The palette's Commerce records: the stores the user works (by id or name), ignoring case, limited in the
-            query and checked again, each opening Home scoped to it until StoreDetail (P2); orders and carts in P8. No rows for
+            query and checked again, each opening its StoreDetail (P2); orders and carts in P8. No rows for
             a user without Commerce.</description>
         <in-parameters>
             <parameter name="text"/>

@@ -44,9 +44,9 @@ along with this software (see the LICENSE.md file). If not, see
     </subscreens>
 
     <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
-        (design §1.2): orders and carts in the palette (P8), New store in quick create once StoreDetail is built (P2) -->
+        (design §1.2): orders and carts in the palette (P8); New store opens from Stores and Home's first-use state (P2), not quick create -->
     <shell-providers>
-        <!-- P1: the user's stores in the palette (search#Records), each opening Home scoped to it until StoreDetail (P2) -->
+        <!-- P1: the user's stores in the palette (search#Records), each opening its StoreDetail (P2) -->
         <palette-source group="Commerce" label="Commerce stores" icon="sym_o_storefront"
                 service="ironstone.commerce.ContextServices.search#Records" sequence="48"/>
         <keymap scope="commerce">

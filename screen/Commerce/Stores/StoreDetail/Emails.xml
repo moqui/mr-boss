@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Emails tab (design-commerce §3 Emails; impl-commerce P2): the email template the store sends for each
+    notice type, dated (mantle.product.StoreAdminServices.store#StoreEmail: a ProductStoreEmailType, a registered template,
+    header image and detail link paths on the store's site, copy addresses; End). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Emails" default-menu-index="5">
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveEmail">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreEmail"
+                    in-map="{productStoreId:productStoreId, emailTypeEnumId:emailTypeEnumId, emailTemplateId:(emailTemplateId || null), headerImagePath:(headerImagePath || null), detailLinkPath:(detailLinkPath || null), webOrderBcc:(webOrderBcc || null), fromDate:(fromDate || null), thruDate:(thruDate || null), end:(end == 'Y')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the email</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['emails']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="emails" from="tabOut.emails || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="EmailsFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Store emails"/>
+                <box-toolbar>
+                    <container-dialog id="AddStoreEmail" button-text="Add email" icon="sym_o_add" width="640" title="Add an email"
+                            condition="canEdit">
+                        <form-single name="AddStoreEmailForm" transition="saveEmail">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="emailTypeEnumId">
+                                <default-field title="Sent for">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="ProductStoreEmailType"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="emailTemplateId">
+                                <default-field title="Template">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'emailTemplates', productStoreId:productStoreId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="detailLinkPath"><default-field title="Detail link" tooltip="A path on the store's site, such as /orders"><text-line size="30"/></default-field></field>
+                            <field name="headerImagePath"><default-field title="Header image" tooltip="A path on the store's site"><text-line size="30"/></default-field></field>
+                            <field name="webOrderBcc"><default-field title="Copy to" tooltip="Email addresses separated by commas"><text-line size="40"/></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add email"><submit/></default-field></field>
+                            <field-layout>
+                                <field-row><field-ref name="emailTypeEnumId"/><field-ref name="emailTemplateId"/></field-row>
+                                <field-row><field-ref name="detailLinkPath"/><field-ref name="headerImagePath"/></field-row>
+                                <field-ref name="webOrderBcc"/>
+                                <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                                <field-ref name="submitButton"/>
+                            </field-layout>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="StoreEmails" list="emails" skip-form="true" paginate="false">
+                        <field name="emailTypeText"><default-field title="Sent for"><display/></default-field></field>
+                        <field name="templateText"><default-field title="Template"><display/></default-field></field>
+                        <field name="webOrderBcc"><default-field title="Copy to"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveEmail" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreId:productStoreId, emailTypeEnumId:emailTypeEnumId, fromDate:fromDate, end:'Y'}"
+                                        confirmation="Stop sending ${emailTypeText} with ${templateText}?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="emailTypeText"/><field-ref name="templateText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!emails.length"
+                            text="This store sends no emails yet. Add the order placed email first."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

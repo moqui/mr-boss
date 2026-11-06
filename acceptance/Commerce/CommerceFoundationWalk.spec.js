@@ -47,7 +47,7 @@ feature("the reader finds POPC_DEFAULT in the palette, not BOSS_COM_DIGITAL; the
         const problems = []
         const palette = (user, text) =>
             asUser(user, () => invoke(context + "search#Records", {text, limit: 20}).rows.map(row => row.url))
-        const home = id => "/qapps/Commerce/Home?productStoreId=" + id
+        const home = id => "/qapps/Commerce/Stores/StoreDetail?productStoreId=" + id
         const reader = palette(users.read, "Ziziwork")
         if (!reader.includes(home(ids.storeId))) problems.push(`the reader's palette misses ${ids.storeId}: ${reader}`)
         if (reader.includes(home(ids.otherStoreId)) || palette(users.read, ids.otherStoreId).length)

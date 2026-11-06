@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Sites tab (design-commerce §3 SiteBindings; impl-commerce P2): the PASS sites that sell from the store (a Shop
+    mount whose target is the store, Shop P1), read only, with each one's state, hosts, mount and whether it is served
+    (mantle.product.StoreAdminServices.get#StoreSites). Hosts and mounts are the site operator's (store#Mounts); Commerce
+    shows them and binds none. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sites" default-menu-index="2">
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#StoreSites" out-map="sitesOut" in-map="{productStoreId:productStoreId}"/>
+            <set field="sites" from="(sitesOut.sites || []).map((row) =&gt; Object.assign({}, row, {servedColor: row.readinessText == 'Served' ? 'positive' : 'warning'}))"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="SitesFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Sites that sell from this store"/>
+                <box-body-nopad>
+                    <form-list name="SiteBindings" list="sites" skip-form="true" paginate="false">
+                        <field name="siteName"><default-field title="Site"><display/></default-field></field>
+                        <field name="canonicalHost"><default-field title="Address"><display/></default-field></field>
+                        <field name="pathPrefix"><default-field title="Mounted at"><display/></default-field></field>
+                        <field name="state"><default-field title="Site state"><display/></default-field></field>
+                        <field name="readinessText">
+                            <default-field title="Served">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${servedColor}">${
+                                        WebUtilities.encodeHtml(readinessText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: readinessText})}]]></text>
+                                    <text type="html">${readinessText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="siteName"/><field-ref name="canonicalHost"/></column>
+                            <column><field-ref name="readinessText"/><field-ref name="pathPrefix"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!sites.length"
+                            text="No site sells from this store yet. A site operator mounts the shop for it on a site and gives the site its address."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

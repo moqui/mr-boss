@@ -73,6 +73,8 @@ may assign narrower permission sets. Publishing is not implied by editing.
 **Store-limited staff (Nov 5, 2026; impl-commerce §4).** A store's staff are dated
 `ProductStoreParty` rows in the proposed `StoreStaff` role. A user with a current one works only
 those stores of their organizations; a user with none works every store of their organizations.
+Because the rows are the limit itself, a store-limited staff member does not change store staff rows (P2 review): ending
+or dating their own would widen them to every store, and adding one to a manager would limit the manager.
 Mantle seeds the `COMMERCE_*` permissions, none of which exists yet (impl-commerce F2).
 
 **Areas by group (Nov 5, 2026; impl-commerce P1).** Home, Stores, Merchandising and Promotions open for every Commerce
@@ -351,6 +353,14 @@ IntegrationDetail's action (Nov 5, impl-commerce F23). Readiness refuses a payme
 organization's enabled `PaymentGatewayOrganization` rows (Z4) and a store whose shipping is bound
 to the local rate gateway with no local rate rule (§8).
 
+**As built (Nov 5, 2026; impl-commerce P2).** Readiness is the first box of the General tab, and the record header shows
+its count of blocking findings. Each finding names the section that fixes it (`general`, `sites`, `facilities`,
+`emails`, `settings`), never a screen path, so Mantle names no BOSS screen; StoreDetail maps the section to its tab. A
+missing fulfillment facility only warns (a digital store needs none). TypedSettings sets only the types StoreAdmin.js
+lists with their kinds (true/false, number, percentage, one line); template, content and URL locations are shown, not
+set. OrderChecks' typed parameters are the names a ServiceRegister's `configParameters` lists. History is the audit log
+of ProductStore's fields and the ship-option and payment-gateway bindings; the dated tabs keep their ended rows.
+
 Clone starts unpublished, with no host mount, active recovery schedule, external credentials,
 customer data or running connector. Mantle's `clone#ProductStore` copies party rows of every role,
 a customer's CustomerBillTo included, so the guard passes staff roles only and reports the sections
@@ -377,6 +387,11 @@ field), `ProductStoreGroupMember` and `ProductStoreGroupParty`, whose keys alrea
 `fromDate` and which carry `thruDate`. There is no baseline screen, and the ProductStoreGroupType
 enumeration has no values; Commerce seeds them (Nov 5). These are the complete new
 form fields, plus generated keys, expected revision and change reason.
+
+**A group's organization (Nov 5, 2026; impl-commerce P2).** ProductStoreGroup has no organization field, so a group
+belongs to the organization of its current `OrgInternal` ProductStoreGroupParty row, which `C.store#StoreGroup` writes at
+creation; Parties lists the other rows (staff roles). A group holds stores of its own organization only, and a
+store-limited staff member changes only a group whose members in effect are all theirs.
 
 Groups select stores for reporting and explicit bulk operations. They do not inherit settings,
 share carts, combine currency totals, or turn per-store promotions into one global promotion.

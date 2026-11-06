@@ -680,29 +680,29 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditProductStore | CloneProductStoreForm | Commerce/Stores/StoreDetail |  |
-| EditProductStore | EditStoreForm | Commerce/Stores/StoreDetail |  |
+| EditProductStore | CloneProductStoreForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail#CloneStoreForm |
+| EditProductStore | EditStoreForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/General#StoreGeneral |
 | EditProductStore | NewShippingOptionForm | Commerce/Settings/CheckoutSettings |  |
 | EditProductStore | ShipOptionsForm | Commerce/Settings/CheckoutSettings |  |
 | EditProductStore | NewShippingGatewayForm | Commerce/Settings/CheckoutSettings |  |
 | EditProductStore | ShippingGatewaysForm | Commerce/Settings/CheckoutSettings |  |
 | EditProductStore | NewPaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
 | EditProductStore | PaymentGatewayForm | Commerce/Settings/CheckoutSettings |  |
-| EditProductStore | NewStoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
-| EditProductStore | StoreDataDocumentForm | Commerce/Stores/StoreDetail |  |
-| FindProductStore | NewStoreForm | Commerce/Stores |  |
-| FindProductStore | StoresForm | Commerce/Stores |  |
+| EditProductStore | NewStoreDataDocumentForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/SearchContent#SetSearchDocumentForm |
+| EditProductStore | StoreDataDocumentForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/SearchContent#SearchDocuments |
+| FindProductStore | NewStoreForm | Commerce/Stores | Commerce/Stores/Stores#NewStoreForm |
+| FindProductStore | StoresForm | Commerce/Stores | Commerce/Stores/Stores#StoreList |
 | FindProductStoreCategory | NewStoreCategoryForm | Commerce/Merchandising/StoreCategories |  |
 | FindProductStoreCategory | StoreCategoriesForm | Commerce/Merchandising/StoreCategories |  |
-| FindProductStoreEmails | NewStoreEmailForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreEmails | StoreEmailsForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreFacility | NewStoreFacilityForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreFacility | StoreFacilityFormList | Commerce/Stores/StoreDetail |  |
-| FindProductStoreParty | NewStorePartyForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreParty | StorePartyFormList | Commerce/Stores/StoreDetail |  |
-| FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail |  |
-| FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail |  |
+| FindProductStoreEmails | NewStoreEmailForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Emails#AddStoreEmailForm |
+| FindProductStoreEmails | StoreEmailsForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Emails#StoreEmails |
+| FindProductStoreFacility | NewStoreFacilityForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Facilities#AddStoreFacilityForm |
+| FindProductStoreFacility | StoreFacilityFormList | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Facilities#StoreFacilities |
+| FindProductStoreParty | NewStorePartyForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Staff#AddStoreStaffForm |
+| FindProductStoreParty | StorePartyFormList | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Staff#StoreStaff |
+| FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#AddStoreSettingForm |
+| FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#AddStoreSettingForm |
+| FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#StoreSettings |
 | EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
 | EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
 | EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |

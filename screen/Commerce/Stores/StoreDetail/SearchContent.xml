@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreDetail's Search and content tab (design-commerce §3 SearchContent; impl-commerce P2): the store's search documents
+    by type and its wiki spaces by content type and locale (mantle.product.StoreAdminServices.store#StoreContentBinding: a
+    registered search document of the type, set or removed; a wiki space from a date, never a private one; End). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Search and content" default-menu-index="7">
+    <transition-include name="storeOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="saveDocument">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreContentBinding"
+                    in-map="{productStoreId:productStoreId, typeEnumId:typeEnumId, dataDocumentId:(dataDocumentId || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the search document</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveSpace">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#StoreContentBinding"
+                    in-map="{productStoreId:productStoreId, storeWikiSpaceId:(storeWikiSpaceId || null), spaceTypeEnumId:(spaceTypeEnumId || null), locale:(locale || null), wikiSpaceId:(wikiSpaceId || null), fromDate:(fromDate || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the content space</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <if condition="recordFound">
+            <service-call name="mantle.product.StoreAdminServices.get#Store" out-map="tabOut"
+                    in-map="{productStoreId:productStoreId, include:['content']}"/>
+            <set field="canEdit" from="!!tabOut.canEdit"/>
+            <set field="documents" from="tabOut.content?.documents || []"/>
+            <set field="spaces" from="tabOut.content?.spaces || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="ContentFound" condition="recordFound"><widgets>
+            <container-box>
+                <box-header title="Search documents"/>
+                <box-toolbar>
+                    <container-dialog id="SetSearchDocument" button-text="Set search document" icon="sym_o_search" width="560"
+                            title="Set a search document" condition="canEdit">
+                        <form-single name="SetSearchDocumentForm" transition="saveDocument">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="typeEnumId">
+                                <default-field title="Searches">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="ProductStoreDataDocumentType"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="dataDocumentId">
+                                <default-field title="Document" tooltip="Empty removes it">
+                                    <drop-down allow-empty="true">
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'documents', productStoreId:productStoreId}">
+                                            <depends-on field="typeEnumId"/>
+                                        </dynamic-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="SearchDocuments" list="documents" skip-form="true" paginate="false">
+                        <field name="typeText"><default-field title="Searches"><display/></default-field></field>
+                        <field name="documentText"><default-field title="Document"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveDocument" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit" parameter-map="{productStoreId:productStoreId, typeEnumId:typeEnumId}"
+                                        confirmation="Remove the ${typeText} document?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="typeText"/></column>
+                            <column><field-ref name="documentText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!documents.length" text="The store uses no search document of its own."/>
+                </box-body-nopad>
+            </container-box>
+            <container-box>
+                <box-header title="Content spaces"/>
+                <box-toolbar>
+                    <container-dialog id="AddContentSpace" button-text="Add content space" icon="sym_o_add" width="560"
+                            title="Add a content space" condition="canEdit">
+                        <form-single name="AddContentSpaceForm" transition="saveSpace">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="spaceTypeEnumId">
+                                <default-field title="Content">
+                                    <drop-down>
+                                        <entity-options key="${enumId}" text="${description}">
+                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                <econdition field-name="enumTypeId" value="ProductStoreWikiSpaceType"/>
+                                                <order-by field-name="description"/>
+                                            </entity-find>
+                                        </entity-options>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="wikiSpaceId">
+                                <default-field title="Wiki space">
+                                    <drop-down>
+                                        <dynamic-options transition="storeOptions" server-search="true" min-length="0"
+                                                parameter-map="{choice:'wikiSpaces', productStoreId:productStoreId}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="locale">
+                                <default-field title="Language" tooltip="Empty serves every language">
+                                    <drop-down allow-empty="true">
+                                        <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="submitButton"><default-field title="Add content space"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="ContentSpaces" list="spaces" skip-form="true" paginate="false">
+                        <field name="spaceTypeText"><default-field title="Content"><display/></default-field></field>
+                        <field name="spaceText"><default-field title="Wiki space"><display/></default-field></field>
+                        <field name="locale"><default-field title="Language"><display/></default-field></field>
+                        <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                        <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                        <field name="stateText">
+                            <default-field title="State">
+                                <render-mode>
+                                    <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                        WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                    <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                    <text type="html">${stateText}</text>
+                                </render-mode>
+                            </default-field>
+                        </field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="saveSpace" text="End" icon="sym_o_block" link-type="hidden-form-link" btn-type="danger"
+                                        condition="canEdit &amp;&amp; !ended"
+                                        parameter-map="{productStoreId:productStoreId, storeWikiSpaceId:storeWikiSpaceId}"
+                                        confirmation="End ${spaceText} as this store's ${spaceTypeText}?"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="spaceTypeText"/><field-ref name="spaceText"/></column>
+                            <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!spaces.length" text="No wiki space gives this store its pages."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

@@ -264,7 +264,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 5 (§6 F1–F56) |
 | P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | built Nov 5, 2026 |
-| P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | — |
+| P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | built Nov 5, 2026 |
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability | — |
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | — |
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
@@ -562,6 +562,132 @@ Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
     unpublished;
   - a merchandiser reads StoreDetail but cannot save; another organization's manager is refused POPC_DEFAULT;
   - a change of the store's tax gateway is in its History with the user and reason.
+
+**Built Nov 5 (P2).**
+- Mantle:
+  - `service/mantle/product/StoreAdminServices.xml` over one module `StoreAdmin.js` (operations table): `find#Stores`
+    (paged, by name ignoring case, organization, channel, group; each store's sites), `get#Store` (fields with names, the
+    reservation group read only, the revision, `canEdit`, and on request `include` the sections facilities, staff, emails,
+    approvals, content, settings, history), `get#StoreSites` (the `shop` mounts naming the store, read only),
+    `store#Store` (new: the organization's base currency and document locale unless chosen, else the user's locale, a
+    facility from now, no mount; change: stale revision refused, a policy change needs its reason, the organization fixed
+    once the store has orders), the dated saves `store#StoreFacility`, `store#StoreParty` (staff roles only: StoreStaff),
+    `store#StoreEmail`, `store#StoreApproval` (registered OrderValidate only; typed parameters from the register's
+    `configParameters`), `store#StoreContentBinding` (search documents: an indexed DataDocument over the type's entity;
+    wiki spaces, never `restrictView`), `store#StoreSetting` (the `settingTypes` table with kinds), `find#StoreGroups`,
+    `store#StoreGroup`, `clone#Store`, `check#StoreReadiness`, `find#StoreOptions` (each form's drop-down, the values its
+    save accepts). Each checks `COMMERCE_VIEW` / `COMMERCE_STORE_EDIT`, the store's organization (FacilityScope's own
+    organizations; Warehouse's `FACILITY_ALL_ORGANIZATIONS` does not widen) and a current StoreStaff row's stores (F51 also
+    in Mantle). Dated replacement (`saveDated`): a row from a date ends the open one there, the same instant changes in
+    place, a later-starting row is refused (`DATED_OVERLAP`); End ends the row in effect, or withdraws one not yet started.
+    Tables later phases extend: `staffRoles`, `settingTypes`, `cloneLeftOutSettingTypes`, `documentTypes`,
+    `readinessChecks`.
+  - Clone (F12): `clone#ProductStore` called with categories and emails only (`copyParties`, `copyProducts`,
+    `copyFacilities`, `copySettings` off); the guard copies the target organization's facilities, the StoreStaff rows of
+    people working for it and the `settingTypes` settings, nulls the integration remote and an inventory facility of
+    another organization; the preview reports each section copied and left out (customers' and other party rows,
+    products, promotions, gateways and ship options, order checks, content bindings, site mounts) and the
+    organization-sensitive references; the clone needs `approveReferences` (`CLONE_APPROVAL_REQUIRED`), checks the base's
+    revision and keys the operation on `PostingOperation` (`StoreClone`, a retry answers the first result).
+  - Readiness (read only): organization, currency, site (an enabled `shop` mount), site address, fulfillment facility (a
+    warning: a digital store needs none), tax gateway, order placed email; each finding `{key, area, label, ready,
+    severity, warning, message, fix}` with `fix` a section key (general, sites, facilities, emails, settings), never a BOSS
+    path. For Shop P1: `check#StoreReadiness` is `authenticate="anonymous-all"`; with `input {siteId, app, targetId}` it
+    answers `result {checks: [{name, ready}]}` (blocking checks only, no messages, no permission, as PublicApps' other
+    readiness services), so it registers in PublicApps.js as `shop`'s `readiness` unchanged; with `productStoreId` it needs
+    `COMMERCE_VIEW` and the store's scope.
+  - Seeds and audit (`entity/ProductStoreEntities.xml`): `PsetCartRecovery`, `PsetSubscriptionRenewal`,
+    `PsetReviewRequest` (F16); ProductStoreGroupType `PsgtReporting`, `PsgtRegion`, `PsgtBrand`, `PsgtChannel` (F13);
+    `enable-audit-log` on ProductStore's organization, currency, locale, channel, approval delay and tax gateway, and on
+    ProductStoreShipOption's carrier and method and ProductStorePaymentGateway's instrument and gateway (F15). store#Store
+    passes each changed field's `_changeReason`.
+- BOSS:
+  - `screen/Commerce/Stores.xml` (the area: Stores, Store groups; StoreDetail hidden), `Stores/Stores.xml` (StoreFind,
+    StoreList with phone columns and the sites chip, NewStore for a store manager not limited to stores),
+    `Stores/StoreDetail.xml` (record header with the readiness chip, More: Clone store with the per-section preview,
+    references and approval, Store groups; not-available state) and its tabs `StoreDetail/General.xml` (Readiness with
+    each finding's Fix link to its tab, General save with the reason, Reservation read only linking Warehouse's
+    StoreReservation), `Sites.xml` (read only), `Facilities.xml`, `Staff.xml`, `Emails.xml`, `OrderChecks.xml`,
+    `SearchContent.xml`, `Settings.xml`, `History.xml`; `Stores/StoreGroups.xml` (GroupList, New group, GroupEdit,
+    Members, Parties); `template/CommerceParts.xml` (`choices`, `storeOptions`).
+  - Each screen runs after the root's `get#SharedContext`; StoreDetail's always-actions `check#Record` (store), then the
+    Mantle services. Home's first-use New store opens Stores with `_openDialog=NewStore`. Commerce.js: the store kind's
+    destination is `Stores/StoreDetail?productStoreId=` (palette and `get#RecordLink`), `linkPaths` gains
+    `Stores/StoreDetail` and `Stores/StoreGroups`. No quick create (New store is on Stores and Home).
+- Specs (feature times from runs while the lead ran the full suites, so noisy):
+  - Mantle `test/product/StoreAdmin` (7 features, 2.4 s): defaults and the permission and organization refusals; the
+    store-limited member; dated replacement and each save's refusals; the reason, History and a stale revision; the
+    clone's sections, approval, retry and exclusions; readiness and its PASS form; store groups.
+  - BOSS `CommerceStores` (2 features, 0.8 s): the reads by scope (holds the demo store and not the other organization's,
+    b55cef91's pattern); StoreDetail's header and General tab, each one qvt render per user (manager with Clone and
+    Save, reader without; the tab is its own level, `lastStandalone: "1"`). `CommerceAccess` gains one case (F51: the
+    store-limited member refused a second Retail store in `get#Store` and `check#Record`, the reader not, Services'
+    manager refused; 0.2 s; the spec makes `BOSS_COM_P2_SECOND`), and its record-link expectation now names StoreDetail.
+  - Also run, all pass: Mantle RestApiTests, OrderToCashBasicFlow, ReturnToResponseBasicFlow, Promotions,
+    CarrierServices, DropShip, ReturnPolicies, SalesReports (117 features with StoreAdmin); BOSS CommerceAccess,
+    CommerceStores, ProjectsAccess, AppOrganizationFilters, WarehousePolicies, CustomerServiceAccess (65 features; that
+    run flagged CustomerServiceAccess at 21.4 s and ProjectsAccess at 15.7 s over 15 s, under the concurrent load, files
+    P2 did not change). Not run: `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommerceStoresWalk` (5 features: the new store through Stores' `createStore` with the
+  organization's currency and no site, a facility from tomorrow and a staff member, readiness naming site, tax, order email
+  and facility; the clone of POPC_DEFAULT through `cloneStore` with its categories, facilities and staff and no customer
+  row, product, mount or promotion; the merchandiser reading StoreDetail and refused `saveStore`; Services' manager refused
+  POPC_DEFAULT; the tax gateway change in History with user and reason; every Stores screen and StoreDetail tab in qvt and
+  html for the manager), run once: 5 passed. CommerceFoundationWalk (its palette URL now StoreDetail's): 5 passed on its
+  second run; the first failed at the PASS account's sign-in because the Customer Service Support demo's contacts were not
+  made during that runtime's load (F-P2-1). The whole mr-boss acceptance suite was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites, none in the Commerce screens.
+- Inventories: ss-inventory's 15 Stores/StoreDetail ProductStore rows (clone, store, data documents, emails, facilities,
+  parties, settings) name their built forms; usl-inventory's `clone#ProductStore` names CloneStoreForm.
+- Decisions:
+  - A store group belongs to the organization of its current `OrgInternal` ProductStoreGroupParty row (ProductStoreGroup
+    has no organization field); members are its organization's stores; a store-limited member edits only a group whose
+    members are all theirs (design §3 StoreGroups updated).
+  - The Mantle services apply the StoreStaff limit too, not only ContextServices, so the rule holds without BOSS.
+  - A store-limited staff member does not start stores, groups or clones (`STORE_LIMITED`): they could not see them; nor
+    assign store staff (review R1).
+  - TypedSettings writes only the `settingTypes` table's types (template, content and URL locations are shown, not set);
+    OrderChecks' parameters come from `ServiceRegister.configParameters` (OrderManualApprove takes none).
+  - The clone copies the target organization's facilities and its people's staff rows only; another organization's are
+    left out and reported. Order checks and content bindings are not copied (Mantle never did).
+  - Readiness fix links are section keys mapped to tabs by BOSS (design §3 StoreDetail updated); delivery facility is a
+    warning, not a blocker.
+  - The store module is one script module with XML service shells, as P1's ContextServices, for the shared scope,
+    dated replacement and clone plan; each service sets its declared out-parameters.
+- Findings (provisional):
+  - **F-P2-1** On a fresh runtime load with the binary of mr-moqui d9bcc20d, `ironstone.customerservice.DemoServices`'s
+    Support step failed once ("canceling statement due to user request" from a held transaction-cache write, then a
+    duplicate `form_inv_key`), so `dana@joesdist.example.com` had no login and CommerceFoundationWalk's outsider feature
+    failed; it passed on the next run. For the lead / TX-Cache: a data-load race, not Commerce's.
+  - **F-P2-2** A delete of a ship-option or payment-gateway binding writes no audit row (the framework audits create and
+    update only); CheckoutSettings (P6) records its removals itself.
+
+**Review Nov 5 (P2).**
+- Checked: `git diff master...com/p2` in mr-mantle and mr-boss against this section, design §3 and §2: every StoreAdmin
+  operation checks `COMMERCE_VIEW`/`COMMERCE_STORE_EDIT`, the store's organization (FacilityScope's own organizations;
+  `FACILITY_ALL_ORGANIZATIONS` does not widen) and the StoreStaff limit; a missing and a foreign store refused alike; the
+  options and group reads scoped by the same query; store#Store's partial update leaves unsent fields alone, the policy
+  reason and stale revision; dated replacement; clone#Store over `clone#ProductStore` with copyParties/Products/
+  Facilities/Settings off, the approval, the base revision and the `PostingOperation` retry (answered before the stale
+  check); the audit fields, seeds and Mantle defaults (`clone#ProductStore`'s own defaults unchanged); readiness's failure
+  tolerance. The anonymous PASS form of `check#StoreReadiness` (`allow-remote="false"`, so only server code reaches it;
+  Forum's `check#Readiness` passes only an enabled mount's own target) answers `{name, ready}` per blocking check, no
+  message, field or id, as Portal's and Support's app readiness do for any target: nothing beyond whether a store id
+  exists and its six booleans. Mantle stands without BOSS: StoreAdmin 7/7 on a runtime with mr-mantle only.
+- **R1 (high)** A store-limited staff member could end or date their own StoreStaff row through `store#StoreParty` (the
+  End link on Staff), which removed their limit and opened every store of the organization; or end a colleague's, or add
+  a row to a manager and limit them. `store#StoreParty` now refuses a store-limited member (`STORE_LIMITED`), Staff hides
+  its add and End for them, StoreAdmin's store-limited feature checks the refusal, and design §1.1 says why.
+- **R2 (low)** CommerceStores rendered StoreDetail and its General tab twice each in qvt (manager and reader), against
+  AGENTS.md's one render per screen per mode; it now renders each once, the manager's, and reads the reader's
+  `get#Store` (`canEdit` false). The merchandiser's page stays in CommerceStoresWalk.
+- Specs after the fixes (binary of 23:13): Mantle StoreAdmin 7 passed (2.6 s; also 7 passed, 2.9 s, on the Mantle-only
+  runtime); BOSS CommerceStores 2 and CommerceAccess 8 passed (4.1 s). Lint: no Commerce screen flagged. Acceptance not
+  rerun (unchanged).
+- For the lead: (1) a change of a store's organization (no orders yet) keeps its facility and staff rows of the old
+  organization; P6 or a later phase may end them or refuse the change while they exist. (2) CommerceAccess's P2 case
+  makes `BOSS_COM_P2_SECOND` without cleanup, which later specs' store counts will see. (3) F-P2-2 stands: binding deletes
+  are not audited by the framework. (4) The budget measure and `./moq test-apps` were not run here.
 
 ### P3 — Assortment and catalog mounts
 

@@ -17,7 +17,7 @@ along with this software (see the LICENSE.md file). If not, see
     payment holds, fulfillment, unpaid, carts, reviews, integration errors) and PeriodStrip (orders, net sales and top product
     for the period against the previous one), each "Not configured" until the phases that measure them (P8 the work, P11 the
     strip), never zero; visits and conversion stay hidden without Marketing's tracking (impl-commerce §4). The first-use state
-    (no store in the user's scope) links New store for a store manager. RecentOrders arrives with P8. -->
+    (no store in the user's scope) opens Stores' NewStore for a store manager (P2). RecentOrders arrives with P8. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="productStoreId"/>
@@ -63,7 +63,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <label text="Start with a store: its organization, warehouse, checkout and readiness checklist." type="p"
                                 condition="can.storeEdit"/>
                         <link url="${sharedLinks['Stores']}" text="New store" link-type="anchor-button" btn-type="primary"
-                                icon="sym_o_add" condition="can.storeEdit"/>
+                                icon="sym_o_add" condition="can.storeEdit" parameter-map="{_openDialog:'NewStore'}"/>
                     </box-body>
                 </container-box>
             </widgets>

@@ -246,7 +246,10 @@ const linkPaths = [
     "Promotions",
     "Integrations",
     "Reports",
-    "Settings"
+    "Settings",
+    // P2: a store's configuration and the store groups (design §3)
+    "Stores/StoreDetail",
+    "Stores/StoreGroups"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -318,11 +321,11 @@ function readCustomer(partyId) {
 }
 
 // Each kind a Commerce screen, mount, palette or record link may be given: its name, icon, the screen that opens it
-// (destination, the path and id parameter under the root; null until its phase builds it: a store opens Home scoped to it
-// until StoreDetail, P2; the others have no Commerce link until P8) and its read (owners: the organizations it names;
+// (destination, the path and id parameter under the root; null until its phase builds it: a store opens StoreDetail, P2;
+// the others have no Commerce link until P8) and its read (owners: the organizations it names;
 // stores: the stores it belongs to; or null when there is no such record).
 const recordKinds = {
-    store: {name: "Store", icon: "sym_o_storefront", destination: null, home: true, read: readStore},
+    store: {name: "Store", icon: "sym_o_storefront", destination: "Stores/StoreDetail?productStoreId=", read: readStore},
     site: {name: "Site", icon: "sym_o_language", destination: null, read: readSite},
     order: {name: "Store order", icon: "sym_o_receipt_long", destination: null, read: orderId => readStoreOrder(orderId, false)},
     cart: {name: "Cart", icon: "sym_o_shopping_cart", destination: null, read: orderId => readStoreOrder(orderId, true)},
@@ -361,11 +364,10 @@ function checkRecord(p) {
     return recordOf(userScope, p.recordType, p.recordId)
 }
 
-// The Commerce screen of a record: its kind's destination, else Home scoped to a store, else none.
+// The Commerce screen of a record: its kind's destination, else none.
 function recordUrl(kind, recordId) {
     const definition = recordKinds[kind]
     if (definition?.destination) return "/qapps/Commerce/" + definition.destination + encodeURIComponent(recordId)
-    if (definition?.home) return "/qapps/Commerce/Home?productStoreId=" + encodeURIComponent(recordId)
     return null
 }
 // The Commerce link of a record the user may work with, else null (get#RecordLink).
