@@ -516,6 +516,14 @@ AGENTS.md and Practices-App-Dev:
     puts it in an `in` condition should page or condition on the organizations instead.
   - Not run: `./moq test-apps`, the budget measure and the acceptance CommerceFoundationWalk.
 
+- **Wave 1 suites (Nov 5, on master after P1 merged; the P2 worker and the framework worker's cargo build ran at the
+  same time, so the times measure the load):** standalone mr-mantle 1,751 passed, 2 failed (the baseline
+  WorkTimeEntries and WorkTimesheets), 11 skipped; `./moq test-apps` 3,089 server features passed and 1 failed
+  (CommerceAccess compared an unlimited user's stores exactly, and other specs add stores to ORG_ZIZI_RETAIL in a full
+  run; it now checks the demo store is held and the other organization's is not, b55cef91), 15 client features passed;
+  `moqui lint --screens` clean. Under the load mr-mantle took 599.5 s, mr-boss 370.4 s and mr-pass 19.6 s; the budgets
+  are measured on a quiet run before any is raised.
+
 ### P2 — Stores
 
 Design §3 Stores, StoreDetail and StoreGroups; COM-STORE.
