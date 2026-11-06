@@ -1083,6 +1083,51 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   - **F-P4-6** The template key is checked only for its shape, not against the active release's templates; P5's editors
     or Shop P3's page render should check it.
 
+**Review Nov 5 (P4).**
+- Checked: `git diff master...com/p4` in mr-mantle and mr-boss against this section, §2 and design §5. F-P4-1's grant
+  (`withSpaceUpdate`): the WikiSpaceUser row is made and put back inside the caller's transaction (`store#SitePage`,
+  `publish#SitePage`, the job's item transaction), so it is never committed; a failed wiki write marks the transaction
+  rollback-only (any service error does), so a skipped restore rolls back with it; `get#WikiPageAccess` reads the row
+  without the entity cache and the framework's transaction cache is per thread, so a concurrent request of the same user
+  (Commons Knowledge) never sees it. Kept; the framework allows only no-user internal writes, so no safer mechanism exists
+  without a framework change (F-P4-1 stands). The re-key: Forum.js' `getSitePage` and `publishSitePage` find by site and
+  role and give a new binding its key; Forum, ForumAccess, ShopThemes, Mailboxes and PassAuthority pass; Forum.js's
+  reserved list is PublicApps.js `reservedPaths` unchanged. `publish#SitePage`: operation key before the revision check,
+  `REVISION_STALE`, the exact version made the wiki's published one and the binding's in one transaction, the generation
+  on publish now, withdraw and activation only. F-P4-2: PageContent mounts only Knowledge.qvue with its own six
+  transitions (no Knowledge.xml under Commerce); the space's `restrictUpdate` keeps Commons Knowledge's writes out. F65,
+  the live reads (published site, active versions only, destinations re-checked), store scope through StoreAdmin.js on
+  pages, menus, redirects and the `sites`, `sitePages` and `destinations` choices.
+- **R1 (high)** A menu's category item, and a redirect to a category, were checked through `get#StoreCategories`
+  (`COMMERCE_VIEW`): an anonymous `get#SiteNavigation`, and so ThemeView's navigation on every Shop page, failed on the
+  error message the refusal left. The check reads the store's tree directly (StoreMerchandising.js exports `storeTree`,
+  appended), and each live item's check keeps its errors in their own frame. SitePages' menu now has a category item
+  read anonymously. (mr-mantle e42c6380)
+- **R2 (medium)** A scheduled publication refused with an error message (an author who can no longer sign in:
+  `internalLoginUser` adds one) was never recorded, as the failure write does not run beside an error: the item was
+  retried every minute with no readiness finding. The refusal clears the messages first, and the job records the failure
+  in its own transaction when the item's could not commit. SitePages has the disabled author's scheduled redirect.
+  (e42c6380)
+- **R3 (medium)** A redirect draft saved with a from date, or a failed scheduled one, could not be published once that
+  date had passed (`VALUE_INVALID`, a past start); a passed date is now. A failed menu version was never cleared, so its
+  readiness finding stayed after the menu was published again; publishing a menu now ends it. (e42c6380)
+- **R4 (low)** The `destinations` choice labelled any product id given as `selected` with its name; only one the store
+  has. (mr-boss 9f4c949a)
+- **R5 (low)** ThemeView's `navigation` shape dropped a menu's third level; the WikiSpaceUser row's `allowUpdate` is put
+  back exactly (an empty one stayed `N`). (e42c6380)
+- For the lead:
+  - `store#SitePage` changes a published page's route, role, title, SEO and template live with `COMMERCE_THEME_EDIT`
+    alone (the generation advanced, `publicationRevision` not, the stamp check optional): confirm, or make those of a
+    published page wait for `COMMERCE_PUBLISH`.
+  - The store page space is `restrictView N`: every Commons Knowledge user reads the pages' drafts and versions.
+  - The job records a refusal that rolled its transaction back (R2) whatever its cause, so a transient one (a lock
+    timeout) also needs the publisher to publish again; scheduled menus and redirects are not refused when their window
+    ended before they started (pages are, `WINDOW_PASSED`).
+  - `docs/Upgrading.md`'s MySQL `CREATE UNIQUE INDEX PASS_PAGE_ROLE` fails if the table check made the index already.
+- Specs after the fixes: Mantle SitePages 7 passed (2.6 s), ThemeReleases, StoreAdmin, StorePublication 18, Mailboxes
+  and PassAuthority 28; BOSS CommerceSitePages, CommerceAccess, CommerceAssortment 17, Knowledge and
+  CustomerServiceKnowledge 25; PASS Forum, ForumAccess, ShopThemes 31. No screen changed; acceptance not rerun.
+
 ### P5 — Theme editors and preview
 
 Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with Shop P2's engine and releases
