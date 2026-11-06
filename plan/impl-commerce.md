@@ -1757,6 +1757,10 @@ expire not delete, store#PromoCodeParty; the four Shared screens (Commerce's con
   `moqui lint --screens` clean. Feature time: server mr-mantle 357.2 of 370 s, mr-boss 246.8 of 264 s, mr-pass 18.2 of
   17 s; client mr-boss 52.9 of 57 s, mr-pass 8.2 of 6 s (ShopCheckoutWalk 3.9 s). mr-pass's budgets raised by Shop's
   share to 20 s and 9 s (the user's agreement, §4).
+- **Wave 10 suites (Nov 6, on master after Shop P6 merged, nothing else running):** standalone mr-mantle 1,840 passed,
+  2 failed (the baseline), 11 skipped; `./moq test-apps` 3,223 server and 17 client features passed; `moqui lint --screens`
+  as before. Feature time: server mr-mantle 369.8 of 370 s, mr-boss 248.2 of 264 s, mr-pass 18.1 of 20 s; client mr-boss
+  53.3 of 57 s, mr-pass 8.1 of 9 s. mr-mantle's budget raised by Shop P5–P6's share (12.6 s) to 383 s (§4).
 
 ### P8 — Orders, carts and customers
 
