@@ -1750,6 +1750,14 @@ expire not delete, store#PromoCodeParty; the four Shared screens (Commerce's con
   - The TEST2 feature's discount assertion depends on how many TEST2 uses the database already holds (its code allows 5
     in all); its placement assertion is the one that always tests the unchanged default.
 
+- **Wave 9 suites (Nov 6, on master after Shop P5 and the framework's session decline merged; Shop P6's worker ran at
+  the same time):** standalone mr-mantle 1,825 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,204
+  server features passed and 1 failed (AccountingPayables' portal demo compared ORG_ZIZI_RETAIL's links exactly, and a
+  full run issues one more acknowledgement link; it now checks each demo link is there), 17 client features passed;
+  `moqui lint --screens` clean. Feature time: server mr-mantle 357.2 of 370 s, mr-boss 246.8 of 264 s, mr-pass 18.2 of
+  17 s; client mr-boss 52.9 of 57 s, mr-pass 8.2 of 6 s (ShopCheckoutWalk 3.9 s). mr-pass's budgets raised by Shop's
+  share to 20 s and 9 s (the user's agreement, §4).
+
 ### P8 — Orders, carts and customers
 
 Design §6 Orders, Carts, CartDetail (without recovery), Returns, Customers and Requests, and §10's order, return,
