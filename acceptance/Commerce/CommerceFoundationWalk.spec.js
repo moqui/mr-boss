@@ -131,7 +131,9 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
             const one = (entity, fields) => ec.entity.find(entity).condition(fields).one()
             const site = siteId => ({
                 state: one("mantle.public.PublicSite", {siteId})?.state,
-                hosts: list("mantle.public.PublicSiteHost", {siteId}).map(row => row.hostname),
+                hosts: list("mantle.public.PublicSiteHost", {siteId})
+                    .map(row => row.hostname)
+                    .sort(),
                 mounts: list("mantle.public.PublicSiteApp", {siteId})
                     .map(row => row.app + ":" + (row.targetId || ""))
                     .sort()
@@ -154,12 +156,13 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
     },
     then({facilities, emails, shipOptions, staff, digital, shop, digitalSite}) {
         facilities == ["ZIRET_WH"]
-        emails == 5
+        emails == 6 // Commerce P10 added PsetCartRecovery
         shipOptions == 3
         staff == ["BOSS_COM_STAFF"]
         digital == ids.otherOrganizationId
         shop.state == "disabled"
-        shop.hosts == ["shop.zizi.localhost"]
+        // Commerce P5 added ZIZI_SHOP's theme preview host
+        shop.hosts == ["preview.shop.zizi.localhost", "shop.zizi.localhost"]
         shop.mounts == ["account:", "billing:ORG_ZIZI_RETAIL", "shop:POPC_DEFAULT", "support:ORG_ZIZI_RETAIL"]
         digitalSite.state == "disabled"
         digitalSite.hosts == ["digital.zizi.localhost"]

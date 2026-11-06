@@ -111,6 +111,19 @@ spec({
     },
     cleanupSpec() {
         ec.message.clearErrors()
+        // the token walk revokes the Support queue's demo form token (Customer Service P15's SUPPORT_TOKENS); the walks
+        // after this one (SupportWalk) use it
+        system(() => {
+            const intake = ec.resource.script("component://mr-boss/service/ironstone/customerservice/SupportDemo.js")
+                .SUPPORT_TOKENS.intake
+            const demo = one("mantle.party.ExternalAccessCapability", {tokenDigest: ec.user.singleUseCodeHash(intake)})
+            if (demo?.revokedDate)
+                invoke("update#mantle.party.ExternalAccessCapability", {
+                    capabilityId: demo.capabilityId,
+                    revokedDate: null,
+                    revokedByUserId: null
+                })
+        })
         login("john.doe")
         ec.artifactExecution.enableAuthz()
     }

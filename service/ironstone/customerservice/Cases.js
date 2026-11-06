@@ -622,9 +622,8 @@ function prepareCase(p) {
     const preferred = [p.requestCategoryId, type?.defaultCategoryId, policy?.defaultCategoryId]
     const requestCategoryId = preferred.find(id => id && queues.some(row => row.value === id)) || queues[0]?.value || null
     const customer = p.customerPartyId ? cs.customerOf(userScope, p.customerPartyId) : null
-    const duplicates = customer
-        ? findCases({recentFor: p.customerPartyId, pageSize: 10}).cases.filter(row => openStatuses.includes(row.statusId))
-        : []
+    // the customer's newest open cases (open ones only: recently closed cases never push an open one out of the ten)
+    const duplicates = customer ? findCases({recentFor: p.customerPartyId, statusId: openStatuses, pageSize: 10}).cases : []
     return {
         organizations,
         organizationPartyId,

@@ -123,7 +123,8 @@ feature(
             tab.output.includes("Thermostat calibration offset")
             linked.errors == ""
             one("mantle.request.WikiPageRequest", {requestId: state.caseId, wikiPageId: english.wikiPageId}) != null
-            send.url.includes("help/Thermostat reads the wrong temperature?ver=" + english.publishedVersionName)
+            // the Support app's article page on the demo Shop site (Shop P3, F56)
+            send.url.includes("/support/CustomerArticle?wikiPageId=" + english.wikiPageId)
             send.composeUrl.includes("recordId=" + state.caseId)
             sendPost.errors == ""
             draftPost.errors.includes("ARTICLE_NOT_PUBLISHED")
