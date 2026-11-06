@@ -12,12 +12,20 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Reports area of IronStone Commerce (design-commerce §3 OnlineSales, CartRecovery, PromotionUse,
-    ChannelHealth): online sales, cart recovery, promotion use and channel health (impl-commerce P11, P14); for the manager
-    and the store, channel and subscription operators (BOSS_COM_REPORTS). -->
+<!-- The Reports area of IronStone Commerce (design-commerce §3 OnlineSales, CartRecovery, PromotionUse, ChannelHealth;
+    impl-commerce P11): ReportsHome (the report catalogue, the default), Online sales, Cart recovery and Promotion use, each
+    with its ReportScope (store, period, currency) over ironstone.commerce.ReportingServices; Channel health with P14. For
+    the manager and the store, channel and subscription operators (BOSS_COM_REPORTS). Home's period strip opens Online sales
+    with its store and period. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Reports" default-menu-index="9" menu-image="sym_o_bar_chart" menu-image-type="icon">
+    <subscreens default-item="ReportsHome" always-use-full-path="true">
+        <subscreens-item name="ReportsHome" location="component://mr-boss/screen/Commerce/Reports/ReportsHome.xml" menu-title="Reports" menu-index="1"/>
+        <subscreens-item name="OnlineSales" location="component://mr-boss/screen/Commerce/Reports/OnlineSales.xml" menu-title="Online sales" menu-index="2"/>
+        <subscreens-item name="CartRecovery" location="component://mr-boss/screen/Commerce/Reports/CartRecovery.xml" menu-title="Cart recovery" menu-index="3"/>
+        <subscreens-item name="PromotionUse" location="component://mr-boss/screen/Commerce/Reports/PromotionUse.xml" menu-title="Promotion use" menu-index="4"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: Online sales, cart recovery, promotion use and channel health." type="p"/>
+        <subscreens-panel id="CommerceReportsPanel" type="tab"/>
     </widgets>
 </screen>

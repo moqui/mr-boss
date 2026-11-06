@@ -19,11 +19,15 @@ along with this software (see the LICENSE.md file). If not, see
     strip), never zero; visits and conversion stay hidden without Marketing's tracking (impl-commerce §4). The first-use state
     (no store in the user's scope) opens Stores' NewStore for a store manager (P2). P8: the work counts
     (mantle.order.StoreOperationsServices.get#StoreWorkSummary: to approve, payment holds, to fulfill, unpaid, open carts,
-    stuck placements and undelivered notices, each opening the scoped list for an order reader) and RecentOrders. -->
+    stuck placements and undelivered notices, each opening the scoped list for an order reader) and RecentOrders. P11: the
+    period is a calendar day, week, month, quarter or year (this month by default) against the one before, and PeriodStrip
+    reads ironstone.commerce.ReportingServices.get#HomePeriod: orders (Sales' orders.placed) and net sales (Accounting's net
+    invoiced) per currency with their change, and the top product, the same totals Online sales shows for the store and
+    period, each card opening it for a user of Reports; a strip that cannot be read says so and the work cards still show. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="productStoreId"/>
-    <parameter name="periodDays"/>
+    <parameter name="interval"/>
     <transition name="choices" read-only="true">
         <actions>
             <service-call name="ironstone.commerce.ContextServices.get#Choices" in-map="context" out-map="found"/>
@@ -43,13 +47,20 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="storeFound" from="!!store?.recordId"/>
         </if>
-        <set field="periodOptions" from="[{value: '7', label: 'Last 7 days'}, {value: '30', label: 'Last 30 days'},
-                {value: '90', label: 'Last 90 days'}]"/>
-        <set field="days" from="['7', '30', '90'].includes(String(periodDays || '')) ? Number(periodDays) : 30"/>
-        <set field="scope" from="{productStoreId: storeFound ? productStoreId : null, periodDays: String(days)}"/>
-        <set field="periodStart" from="new Date(Number(ec.user.nowTimestamp) - days * 86400000)"/>
-        <set field="periodText" from="ec.l10n.format(periodStart, 'd MMM yyyy') + ' – ' + ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy')"/>
+        <set field="periodOptions" from="[{value: 'd', label: 'Today'}, {value: 'w', label: 'This week'}, {value: 'M', label: 'This month'},
+                {value: 'q', label: 'This quarter'}, {value: 'y', label: 'This year'}]"/>
+        <set field="scope" from="{productStoreId: storeFound ? productStoreId : null, interval: ['d', 'w', 'M', 'q', 'y'].includes(interval) ? interval : 'M'}"/>
         <set field="scopeText" from="storeFound ? store.label : (commerce.storeLimited ? 'Your stores' : 'All your stores')"/>
+        <!-- P11: the period strip of the stores in scope (a strip that cannot be read is said to be; the work still counts) -->
+        <if condition="hasStores &amp;&amp; !(productStoreId &amp;&amp; !storeFound)">
+            <service-call name="ironstone.commerce.ReportingServices.get#HomePeriod" out-map="strip" transaction="force-new"
+                    ignore-error="true" in-map="{appRoot:appRoot, productStoreId:scope.productStoreId, interval:scope.interval}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="period" from="strip?.period || null"/>
+        <set field="periodText" from="period ? period.periodText : ''"/>
+        <set field="periodCards" from="period?.cards || []"/>
+        <set field="salesLink" from="period?.canReports ? sharedLinks['Reports/OnlineSales'] + '?interval=' + scope.interval + (scope.productStoreId ? '&amp;productStoreId=' + encodeURIComponent(scope.productStoreId) : '') : ''"/>
         <!-- P8: the work counts and recent orders of the stores in scope (mantle.order.StoreOperationsServices.get#StoreWorkSummary;
             a count that cannot be read shows a dash, the others still count) -->
         <if condition="hasStores">
@@ -94,7 +105,7 @@ along with this software (see the LICENSE.md file). If not, see
                             </drop-down>
                         </default-field>
                     </field>
-                    <field name="periodDays">
+                    <field name="interval">
                         <default-field title="Period">
                             <drop-down allow-empty="false">
                                 <list-options list="periodOptions" key="${value}" text="${label}"/>
@@ -103,13 +114,13 @@ along with this software (see the LICENSE.md file). If not, see
                     </field>
                     <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
                     <field-layout>
-                        <field-row><field-ref name="productStoreId"/><field-ref name="periodDays"/></field-row>
+                        <field-row><field-ref name="productStoreId"/><field-ref name="interval"/></field-row>
                         <field-ref name="submitButton"/>
                     </field-layout>
                 </form-single>
                 <label text="Store ${productStoreId} is not available to you." type="p" style="text-negative"
                         condition="productStoreId &amp;&amp; !storeFound"/>
-                <label text="${scopeText}, ${periodText}" type="p" style="text-caption m-muted"/>
+                <label text="${scopeText}${periodText ? ', ' + periodText : ''}" type="p" style="text-caption m-muted"/>
                 <container-box>
                     <box-header title="Work to do"/>
                     <box-body>
@@ -160,11 +171,25 @@ along with this software (see the LICENSE.md file). If not, see
                 <container-box>
                     <box-header title="This period against the previous one"/>
                     <box-body>
-                        <dashboard min-width="160">
-                            <number-card title="Orders" value="Not configured" icon="sym_o_receipt_long" size="sm"/>
-                            <number-card title="Net sales" value="Not configured" icon="sym_o_payments" size="sm"/>
-                            <number-card title="Top product" value="Not configured" icon="sym_o_star" size="sm"/>
-                        </dashboard>
+                        <label text="Sales could not be read just now; the work above still counts." type="p" style="m-muted"
+                                condition="!period"/>
+                        <label text="Left out: ${period.omittedText}" type="p" style="text-caption text-warning"
+                                condition="period?.omittedText"/>
+                        <label text="No sales in these stores yet: Orders 0, Net sales none." type="p" style="m-muted"
+                                condition="period &amp;&amp; !periodCards.length"/>
+                        <section-iterate name="PeriodStrip" list="periodCards" entry="card">
+                            <widgets>
+                                <dashboard min-width="160">
+                                    <number-card title="Orders (${card.currencyUomId})" value="${card.ordersText}" icon="sym_o_receipt_long"
+                                            size="sm" delta="${card.ordersDelta}" link="${salesLink}"/>
+                                    <number-card title="Net sales (${card.currencyUomId})" value="${card.netText}" icon="sym_o_payments"
+                                            size="sm" delta="${card.netDelta}" link="${salesLink}"/>
+                                    <number-card title="Top product (${card.currencyUomId})" value="${card.topProductText}" icon="sym_o_star"
+                                            size="sm" link="${salesLink}"/>
+                                </dashboard>
+                                <label text="${card.previousText}" type="p" style="text-caption m-muted"/>
+                            </widgets>
+                        </section-iterate>
                     </box-body>
                 </container-box>
             </widgets>

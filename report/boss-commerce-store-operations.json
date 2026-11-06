@@ -1,0 +1,181 @@
+{
+  "id": "boss-commerce-store-operations",
+  "type": "dashboard",
+  "title": "Store operations",
+  "body": {
+    "panels": {
+      "orders": {
+        "title": "Orders by store and day",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "mantle-sales-orders",
+            "aggregations": [
+              {
+                "id": "day",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "placedDate",
+                  "calendar_interval": "1d"
+                }
+              },
+              {
+                "id": "store",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "productStoreId",
+                  "size": 20
+                }
+              },
+              {
+                "id": "orders",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "orderId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "checkouts": {
+        "title": "Checkouts by state and day",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-commerce-checkouts",
+            "aggregations": [
+              {
+                "id": "day",
+                "type": "date_histogram",
+                "role": "x-axis",
+                "params": {
+                  "field": "createdDate",
+                  "calendar_interval": "1d"
+                }
+              },
+              {
+                "id": "status",
+                "type": "terms",
+                "role": "series",
+                "params": {
+                  "field": "statusId",
+                  "size": 10
+                }
+              },
+              {
+                "id": "checkouts",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "checkoutId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "failures": {
+        "title": "Checkout failures by store",
+        "visualization": "table",
+        "queries": [
+          {
+            "datasetId": "boss-commerce-checkouts",
+            "queryString": "failureCode:*",
+            "aggregations": [
+              {
+                "id": "store",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "productStoreId",
+                  "size": 50
+                }
+              },
+              {
+                "id": "failure",
+                "type": "terms",
+                "role": "split-rows",
+                "params": {
+                  "field": "failureCode",
+                  "size": 20
+                }
+              },
+              {
+                "id": "checkouts",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "checkoutId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "payments": {
+        "title": "Payment attempts by phase",
+        "visualization": "bar",
+        "queries": [
+          {
+            "datasetId": "boss-commerce-payment-attempts",
+            "aggregations": [
+              {
+                "id": "phase",
+                "type": "terms",
+                "role": "x-axis",
+                "params": {
+                  "field": "phase",
+                  "size": 10
+                }
+              },
+              {
+                "id": "attempts",
+                "type": "cardinality",
+                "role": "metric",
+                "params": {
+                  "field": "paymentId"
+                }
+              }
+            ],
+            "transformations": [
+              {
+                "type": "organize",
+                "hide": [
+                  "count"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "boss-commerce-payment-attempts",
+  "type": "dataset",
+  "title": "Store payment attempts",
+  "body": {
+    "documentType": "BossStorePaymentAttempt",
+    "timeField": "createdDate",
+    "signal": "business",
+    "fieldDefaults": {
+      "productStoreId": {
+        "lookup": {
+          "entityName": "mantle.product.store.ProductStore",
+          "keyField": "productStoreId",
+          "displayField": "storeName"
+        }
+      },
+      "purposeEnumId": {
+        "enumTypeId": "PaymentAttemptPurpose"
+      }
+    }
+  }
+}
