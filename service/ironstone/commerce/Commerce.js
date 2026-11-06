@@ -259,7 +259,12 @@ const linkPaths = [
     "Merchandising/Documents",
     "Merchandising/PriceLists",
     "Merchandising/PriceExplain",
-    "Merchandising/InventoryAvailability"
+    "Merchandising/InventoryAvailability",
+    // P7: the shared promotion screens in Commerce's context (design §7)
+    "Promotions/Promotions",
+    "Promotions/PromotionDetail",
+    "Promotions/PromoCodes",
+    "Promotions/PromoCodeDetail"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Commerce") denied("COMMERCE_CONTEXT", "Commerce context is not available")
@@ -489,6 +494,35 @@ const choiceSources = {
         if (chosen && !options.some(option => option.value === selected))
             options.push({value: chosen.productCategoryId, label: chosen.categoryName})
         return options
+    },
+    // P7: the customers a promotion code may be limited to (Customer-role parties of the user's organizations or shared,
+    // not internal, not another user's private contact; a store-limited staff member's those with an order in their
+    // stores), by name or id, each checked by customerOf
+    customers: (userScope, term, selected) => {
+        const factory = ec.entity.conditionFactory
+        let query = find("mantle.party.PartyDetailAndRole", {roleTypeId: "Customer"})
+        if (userScope.ownerIds) query = query.condition("ownerPartyId", "in", ["_NA_"].concat(userScope.ownerIds))
+        if (term)
+            query = query.condition(
+                factory.makeCondition(
+                    ["partyId", "pseudoId", "organizationName", "firstName", "lastName"].map(field =>
+                        factory.makeCondition(field, "like", likeText(term)).ignoreCase()
+                    ),
+                    "or"
+                )
+            )
+        const ids = Array.from(
+            query
+                .selectField("partyId")
+                .orderBy("partyId")
+                .limit(choiceLimit * 2)
+                .list()
+        ).map(row => row.partyId)
+        if (selected && !ids.includes(selected)) ids.push(selected)
+        return ids
+            .filter(partyId => !!customerOf(userScope, partyId))
+            .slice(0, choiceLimit + 1)
+            .map(partyId => ({value: partyId, label: partyName(partyId)}))
     }
 }
 function choices(p) {

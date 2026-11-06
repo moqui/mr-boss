@@ -1,0 +1,312 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PromotionDetail (design-commerce §7 PromotionDetail; crosscut §2 Shared/PromotionDetail, §3.28; style-guide §3.3 Detail;
+    impl-commerce P7): the record header (the promotion's id, description, store, rule and dates, its state as a chip; More:
+    its codes) and the boxes Promotion (dates, order, code requirement, free ground shipping and the use limits per order, per
+    customer and in all, with the reason of a change), Parameters (the registered rule's own parameters, each typed by the rule),
+    Products (included and excluded) and Redemptions (the committed uses, an order and code to a row). Read and saved through
+    mantle.product.StorePromotionServices (get#Promotion, store#Promotion, store#PromotionParameters, store#PromotionProducts,
+    find#PromotionUses), which check the permission and the store's scope; another organization's promotion, one of another
+    staff member's store and a forged id are not available alike. The limits are counted again under a lock when an order is
+    placed (check#OrderPromotionLimits). Commerce's context only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotion" default-menu-include="false">
+    <parameter name="appRoot"/>
+    <parameter name="storePromotionId" required="true"/>
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
+        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+    </always-actions>
+    <transition-include name="catalogChoices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="promotions"><default-response url="${sharedLinks['Promotions/Promotions']}"/></transition>
+    <transition name="savePromotion">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#Promotion"
+                    in-map="{storePromotionId:storePromotionId, itemDescription:itemDescription, fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), sequenceNum:(sequenceNum === '' ? null : sequenceNum), requireCode:(requireCode == 'Y' ? 'Y' : 'N'),
+                        freeGroundShipping:(freeGroundShipping == 'Y' ? 'Y' : 'N'), useLimitPerOrder:(useLimitPerOrder ?? ''),
+                        useLimitPerCustomer:(useLimitPerCustomer ?? ''), useLimitPerPromotion:(useLimitPerPromotion ?? ''),
+                        changeReason:(changeReason || null), expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the promotion</message></if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="saveParameter">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromotionParameters" out-map="parametersOut"
+                    in-map="{storePromotionId:storePromotionId, parameters:{[parameterName]: (parameterValue ?? '')}}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Saved ${parameterName}</message>
+                <if condition="parametersOut?.missing?.length">
+                    <message type="warning">The rule still needs ${parametersOut.missing.join(', ')}</message>
+                </if>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addProducts">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromotionProducts"
+                    in-map="{storePromotionId:storePromotionId, productId:productId, excludeProduct:(excludeProduct == 'Y' ? 'Y' : 'N')}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the product</message></if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="removeProduct">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromotionProducts"
+                    in-map="{storePromotionId:storePromotionId, productId:productId, remove:true}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Removed the product</message></if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <service-call name="mantle.product.StorePromotionServices.get#Promotion" out-map="promotionOut" transaction="force-new"
+                ignore-error="true" in-map="{storePromotionId:storePromotionId}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="recordFound" from="!!promotionOut?.promotion"/>
+        <if condition="recordFound">
+            <set field="promotion" from="promotionOut.promotion"/>
+            <set field="parameters" from="promotionOut.parameters || []"/>
+            <set field="products" from="promotionOut.products || []"/>
+            <set field="canEdit" from="!!promotionOut.canEdit"/>
+            <service-call name="mantle.product.StorePromotionServices.find#PromotionUses" out-map="usesOut" transaction="force-new"
+                    ignore-error="true" in-map="{storePromotionId:storePromotionId, pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="uses" from="usesOut?.uses || []"/>
+            <set field="usesCount" from="usesOut?.usesCount || 0"/>
+            <set field="usesPageIndex" from="usesOut?.usesPageIndex || 0"/>
+            <set field="usesPageSize" from="usesOut?.usesPageSize || 20"/>
+            <set field="usesPageMaxIndex" from="usesOut?.usesPageMaxIndex || 0"/>
+            <set field="usesPageRangeLow" from="usesOut?.usesPageRangeLow || 0"/>
+            <set field="usesPageRangeHigh" from="usesOut?.usesPageRangeHigh || 0"/>
+            <set field="captionText" from="[promotion.storeName, promotion.ruleText, promotion.requireCode == 'Y' ? ec.l10n.localize('Needs a code') : ec.l10n.localize('No code needed'),
+                    [promotion.fromDateText, promotion.thruDateText].filter((part) =&gt; part).join(' to ')].filter((part) =&gt; part).join(' · ')"/>
+            <set field="stateColor" from="promotion.current ? 'positive' : promotion.future ? 'info' : 'grey-7'"/>
+            <set field="usesText" from="(usesOut?.useCount || 0) + ' uses on ' + (usesOut?.orderCount || 0) + ' orders'"/>
+            <set field="promotionValues" from="Object.assign({}, promotion, {expectedLastUpdatedStamp: promotion.lastUpdatedStamp})"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="PromotionNotFound" condition="!recordFound"><widgets>
+            <container-box type="warning"><box-header title="Not available"/><box-body>
+                <label type="p" text="Promotion ${storePromotionId} is not available: it does not exist, or it is not one of your stores' promotions."/>
+                <link url="promotions" text="Back to Promotions" link-type="anchor"/>
+            </box-body></container-box>
+        </widgets></section>
+
+        <section name="PromotionFound" condition="recordFound"><widgets>
+            <context record-entity="mantle.product.store.ProductStorePromotion" record-id="${storePromotionId}" title="${promotion.itemDescription}"/>
+            <container style="m-record-header">
+                <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                    <container style="col-12 col-md m-record-title">
+                        <container style="row items-center no-wrap">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none q-mr-sm text-mono">${WebUtilities.encodeHtml(storePromotionId)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PromotionKey", style: "strong", text: storePromotionId})}]]></text>
+                            </render-mode>
+                            <label text="${promotion.itemDescription}" type="h5"/>
+                        </container>
+                        <label text="${captionText}" type="p" style="text-caption m-muted q-mb-none"/>
+                    </container>
+                    <container style="col-12 col-md-auto m-record-status">
+                        <render-mode>
+                            <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${WebUtilities.encodeHtml(promotion.state)}</q-chip>]]></text>
+                            <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "PromotionState", text: promotion.state})}]]></text>
+                            <text type="html">${promotion.state}</text>
+                        </render-mode>
+                    </container>
+                </container>
+                <container style="row items-center q-col-gutter-x-md q-col-gutter-y-sm m-record-foot">
+                    <container style="col-12 col-md">
+                        <label text="${promotion.limitsText} · ${usesText} · changed ${promotion.lastUpdatedText}" type="span" style="text-caption m-muted"/>
+                    </container>
+                    <container style="col-12 col-md-auto row items-center q-gutter-y-xs m-record-actions">
+                        <button-menu text="More" icon="more_horiz">
+                            <link url="${sharedLinks['Promotions/PromoCodes']}" text="Promotion codes (${promotion.codeCount})" icon="sym_o_confirmation_number"
+                                    link-type="anchor" parameter-map="{storePromotionId:storePromotionId}"/>
+                        </button-menu>
+                    </container>
+                </container>
+            </container>
+
+            <container-box>
+                <box-header title="Promotion"/>
+                <box-body>
+                    <form-single name="PromotionForm" transition="savePromotion" map="promotionValues">
+                        <field name="storePromotionId"><default-field><hidden/></default-field></field>
+                        <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                        <field name="itemDescription">
+                            <conditional-field condition="canEdit" title="Description"><text-line size="40"/></conditional-field>
+                            <default-field title="Description"><display/></default-field>
+                        </field>
+                        <field name="fromDate">
+                            <conditional-field condition="canEdit" title="From"><date-time/></conditional-field>
+                            <default-field title="From"><display text="${promotion.fromDateText}"/></default-field>
+                        </field>
+                        <field name="thruDate">
+                            <conditional-field condition="canEdit" title="Through" tooltip="Empty runs on"><date-time/></conditional-field>
+                            <default-field title="Through"><display text="${promotion.thruDateText}"/></default-field>
+                        </field>
+                        <field name="sequenceNum">
+                            <conditional-field condition="canEdit" title="Order" tooltip="Promotions apply in this order"><text-line size="5"/></conditional-field>
+                            <default-field title="Order"><display/></default-field>
+                        </field>
+                        <field name="requireCode">
+                            <conditional-field condition="canEdit" title=" "><check><option key="Y" text="Needs a promotion code"/></check></conditional-field>
+                            <default-field title="Needs a code"><display/></default-field>
+                        </field>
+                        <field name="freeGroundShipping">
+                            <conditional-field condition="canEdit" title=" "><check><option key="Y" text="Free ground shipping"/></check></conditional-field>
+                            <default-field title="Free ground shipping"><display/></default-field>
+                        </field>
+                        <field name="useLimitPerOrder">
+                            <conditional-field condition="canEdit" title="Uses per order" tooltip="Empty for no limit"><text-line size="5"/></conditional-field>
+                            <default-field title="Uses per order"><display/></default-field>
+                        </field>
+                        <field name="useLimitPerCustomer">
+                            <conditional-field condition="canEdit" title="Uses per customer" tooltip="Empty for no limit"><text-line size="5"/></conditional-field>
+                            <default-field title="Uses per customer"><display/></default-field>
+                        </field>
+                        <field name="useLimitPerPromotion">
+                            <conditional-field condition="canEdit" title="Uses in all" tooltip="Empty for no limit"><text-line size="5"/></conditional-field>
+                            <default-field title="Uses in all"><display/></default-field>
+                        </field>
+                        <field name="changeReason">
+                            <conditional-field condition="canEdit" title="Reason for a change" tooltip="Kept with the dates and limits in the history"><text-line size="40"/></conditional-field>
+                        </field>
+                        <field name="submitButton">
+                            <conditional-field condition="canEdit" title="Save"><submit/></conditional-field>
+                        </field>
+                        <field-layout>
+                            <field-row><field-ref name="itemDescription"/><field-ref name="sequenceNum"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="requireCode"/><field-ref name="freeGroundShipping"/></field-row>
+                            <field-row-big>
+                                <field-ref name="useLimitPerOrder"/>
+                                <field-ref name="useLimitPerCustomer"/>
+                                <field-ref name="useLimitPerPromotion"/>
+                            </field-row-big>
+                            <field-ref name="changeReason"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted"
+                            text="Each limit is counted again over the placed orders when an order is placed; an order past one is refused until it is repriced."/>
+                </box-body>
+            </container-box>
+
+            <container-box>
+                <box-header title="Rule values"/>
+                <box-body-nopad>
+                    <form-list name="PromotionParameters" list="parameters" skip-form="true" paginate="false">
+                        <field name="parameterName"><default-field title="Value"><display/></default-field></field>
+                        <field name="description"><default-field title="What it does"><display/></default-field></field>
+                        <field name="parameterValue"><default-field title="Set to"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <container-dialog id="EditParameter_${parameterName}" button-text="Set" icon="sym_o_edit" width="520"
+                                        title="Set ${parameterName}" condition="canEdit">
+                                    <form-single name="EditParameter_${parameterName}_Form" transition="saveParameter"
+                                            map="{storePromotionId:storePromotionId, parameterName:parameterName, parameterValue:parameterValue}">
+                                        <field name="storePromotionId"><default-field><hidden/></default-field></field>
+                                        <field name="parameterName"><default-field><hidden/></default-field></field>
+                                        <field name="parameterValue">
+                                            <conditional-field condition="kind == 'boolean'" title="${parameterName}">
+                                                <drop-down allow-empty="true"><option key="true" text="Yes"/><option key="false" text="No"/></drop-down>
+                                            </conditional-field>
+                                            <default-field title="${parameterName}" tooltip="${description}"><text-line size="20"/></default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted" text="${description}"/>
+                                </container-dialog>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="parameterName"/><field-ref name="description"/></column>
+                            <column><field-ref name="parameterValue"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!parameters.length" text="This rule takes no values."/>
+                </box-body-nopad>
+            </container-box>
+
+            <container-box>
+                <box-header title="Products"/>
+                <box-toolbar>
+                    <container-dialog id="AddPromotionProduct" button-text="Add product" icon="sym_o_add" width="560" title="Add a product" condition="canEdit">
+                        <form-single name="AddPromotionProductForm" transition="addProducts">
+                            <field name="storePromotionId"><default-field><hidden/></default-field></field>
+                            <field name="productId">
+                                <default-field title="Product">
+                                    <drop-down>
+                                        <dynamic-options transition="catalogChoices" server-search="true" min-length="0" parameter-map="{choice:'products'}"/>
+                                    </drop-down>
+                                </default-field>
+                            </field>
+                            <field name="excludeProduct"><default-field title=" "><check><option key="Y" text="Leave this product out"/></check></default-field></field>
+                            <field name="submitButton"><default-field title="Add product"><submit/></default-field></field>
+                        </form-single>
+                        <label type="p" style="text-caption m-muted" text="With no product included, the rule applies to every product not left out."/>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body-nopad>
+                    <form-list name="PromotionProducts" list="products" skip-form="true" paginate="false">
+                        <field name="productName"><default-field title="Product"><display/></default-field></field>
+                        <field name="productId"><default-field title="ID"><display/></default-field></field>
+                        <field name="useText"><default-field title="Applies"><display/></default-field></field>
+                        <field name="actions">
+                            <default-field title="">
+                                <link url="removeProduct" text="Remove" icon="sym_o_delete" link-type="hidden-form-link" btn-type="danger" condition="canEdit"
+                                        confirmation="Remove ${productName} from the promotion?" parameter-map="{storePromotionId:storePromotionId, productId:productId}"/>
+                            </default-field>
+                        </field>
+                        <columns type="mobile">
+                            <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                            <column><field-ref name="useText"/><field-ref name="actions"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!products.length" text="No product is named: the rule applies to every product."/>
+                </box-body-nopad>
+            </container-box>
+
+            <container-box>
+                <box-header title="Redemptions"/>
+                <box-body-nopad>
+                    <form-list name="PromotionUses" list="uses" skip-form="true">
+                        <field name="orderName"><default-field title="Order"><display/></default-field></field>
+                        <field name="placedDateText"><default-field title="Placed"><display/></default-field></field>
+                        <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                        <field name="promoCode"><default-field title="Code"><display/></default-field></field>
+                        <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>
+                        <field name="discount"><default-field title="Discount"><display currency-unit-field="currencyUomId" align="right"/></default-field></field>
+                        <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="orderName"/><field-ref name="customerName"/></column>
+                            <column><field-ref name="discount"/><field-ref name="placedDateText"/></column>
+                        </columns>
+                    </form-list>
+                    <label type="p" style="q-pa-md m-muted" condition="!uses.length" text="No placed order has used this promotion."/>
+                </box-body-nopad>
+            </container-box>
+        </widgets></section>
+    </widgets>
+</screen>

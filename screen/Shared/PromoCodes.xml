@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- PromoCodes (design-commerce §7 PromoCodes; crosscut §2 Shared/PromoCodes, §3.28; style-guide §3.2 List; impl-commerce P7):
+    CodeFind (promotion, code, state, customers only), the code list (mantle.product.StorePromotionServices.find#PromoCodes:
+    the codes of the user's stores' promotions with their dates, limits and placed uses), NewCode (store#PromoCode: one code,
+    typed or drawn) and GenerateCodes for a promotion manager (generate#PromoCodes: a bounded batch with a prefix, random or
+    numbered, previewed first with its collisions, then made code by code under an operation key, each failure named).
+    Commerce's context only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotion codes" default-menu-index="2">
+    <parameter name="appRoot"/>
+    <parameter name="storePromotionId"/>
+    <parameter name="term"/>
+    <parameter name="state"/>
+    <parameter name="requireParty"/>
+    <parameter name="generatePreview"/>
+    <parameter name="genPromotionId"/>
+    <parameter name="genCount"/>
+    <parameter name="genPrefix"/>
+    <parameter name="genNumbered"/>
+    <parameter name="genSuffixLength"/>
+    <parameter name="genStartNumber"/>
+    <parameter name="genFromDate"/>
+    <parameter name="genThruDate"/>
+    <parameter name="genUseLimitPerCode"/>
+    <parameter name="genUseLimitPerCustomer"/>
+    <parameter name="genRequireParty"/>
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
+        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+    </always-actions>
+    <transition-include name="promotionOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createCode">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#PromoCode" out-map="saved"
+                    in-map="{storePromotionId:newStorePromotionId, promoCode:(promoCode || null), fromDate:(fromDate || null),
+                        thruDate:(thruDate || null), useLimitPerCode:(useLimitPerCode ?? ''), useLimitPerCustomer:(useLimitPerCustomer ?? ''),
+                        userEntered:'Y', requireParty:(newRequireParty == 'Y' ? 'Y' : 'N')}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="promoCodeId" from="saved.promoCodeId"/>
+                <message type="success">Made the code ${saved.promoCode}</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Promotions/PromoCodeDetail']}"><parameter name="promoCodeId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the batch's preview: the page again with the dialog open on its result -->
+    <transition name="previewCodes">
+        <actions>
+            <set field="generatePreview" value="Y"/>
+            <set field="_openDialog" value="GenerateCodes"/>
+        </actions>
+        <default-response url=".">
+            <parameter name="storePromotionId"/><parameter name="generatePreview"/><parameter name="_openDialog"/>
+            <parameter name="genPromotionId"/><parameter name="genCount"/><parameter name="genPrefix"/><parameter name="genNumbered"/>
+            <parameter name="genSuffixLength"/><parameter name="genStartNumber"/><parameter name="genFromDate"/><parameter name="genThruDate"/>
+            <parameter name="genUseLimitPerCode"/><parameter name="genUseLimitPerCustomer"/><parameter name="genRequireParty"/>
+        </default-response>
+    </transition>
+    <transition name="generateCodes">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.generate#PromoCodes" out-map="generated"
+                    in-map="{storePromotionId:genPromotionId, count:genCount, prefix:(genPrefix || ''), numbered:(genNumbered == 'Y'),
+                        suffixLength:(genSuffixLength || null), startNumber:(genStartNumber || null), fromDate:(genFromDate || null),
+                        thruDate:(genThruDate || null), useLimitPerCode:(genUseLimitPerCode ?? ''), useLimitPerCustomer:(genUseLimitPerCustomer ?? ''),
+                        userEntered:'Y', requireParty:(genRequireParty == 'Y' ? 'Y' : 'N'), operationKey:operationKey}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="storePromotionId" from="genPromotionId"/>
+                <message type="success">Made ${generated.doneCount} codes</message>
+                <if condition="generated.failedCount">
+                    <message type="warning">Not made: ${generated.results.filter((row) =&gt; !row.ok).map((row) =&gt; row.promoCode + ' (' + row.message + ')').join(', ')}</message>
+                </if>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="sharedMountContext.capabilities"/>
+        <service-call name="mantle.product.StorePromotionServices.find#PromoCodes" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{storePromotionId:(storePromotionId || null), term:term, state:(state || null), requireParty:(requireParty || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="codes" from="found?.codes || []"/>
+        <set field="codesCount" from="found?.codesCount || 0"/>
+        <set field="codesPageIndex" from="found?.codesPageIndex || 0"/>
+        <set field="codesPageSize" from="found?.codesPageSize || 20"/>
+        <set field="codesPageMaxIndex" from="found?.codesPageMaxIndex || 0"/>
+        <set field="codesPageRangeLow" from="found?.codesPageRangeLow || 0"/>
+        <set field="codesPageRangeHigh" from="found?.codesPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(storePromotionId || term || state || requireParty)"/>
+        <set field="findValues" from="{storePromotionId:storePromotionId, term:term, state:state, requireParty:requireParty}"/>
+        <set field="newCode" from="{newStorePromotionId:(storePromotionId || null)}"/>
+        <set field="generateValues" from="{genPromotionId:(genPromotionId || storePromotionId || null), genCount:(genCount || 10), genPrefix:genPrefix,
+                genNumbered:genNumbered, genSuffixLength:(genSuffixLength || 8), genStartNumber:genStartNumber, genFromDate:genFromDate,
+                genThruDate:genThruDate, genUseLimitPerCode:genUseLimitPerCode, genUseLimitPerCustomer:genUseLimitPerCustomer, genRequireParty:genRequireParty}"/>
+        <if condition="generatePreview == 'Y' &amp;&amp; can.promotionEdit &amp;&amp; genPromotionId">
+            <service-call name="mantle.product.StorePromotionServices.generate#PromoCodes" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{storePromotionId:genPromotionId, count:genCount, prefix:(genPrefix || ''), numbered:(genNumbered == 'Y'),
+                        suffixLength:(genSuffixLength || null), startNumber:(genStartNumber || null), fromDate:(genFromDate || null),
+                        thruDate:(genThruDate || null), useLimitPerCode:(genUseLimitPerCode ?? ''), useLimitPerCustomer:(genUseLimitPerCustomer ?? ''),
+                        requireParty:(genRequireParty == 'Y' ? 'Y' : 'N'), preview:true}"/>
+            <set field="previewError" from="ec.message.hasError() ? ec.message.getErrorsString().replace(/^(Error: )?[A-Z][A-Z0-9_]+: /, '') : null"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="previewText" from="preview?.preview ? ('Makes ' + preview.makeCount + ' codes, such as ' + preview.codes.slice(0, 3).join(', ')
+                    + (preview.collisions ? '; ' + preview.collisions + (genNumbered == 'Y' ? ' are taken and will be skipped: ' + preview.taken.slice(0, 10).join(', ') : ' drawn again for collisions') : '; none collides')
+                    + (preview.existingWithPrefix ? '. ' + preview.existingWithPrefix + ' codes already start with ' + (genPrefix || '').toUpperCase() : '') + '.') : null"/>
+            <script>generateValues.operationKey = 'codes-' + ec.user.randomString(24)</script>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Promotion codes" type="h5"/></container>
+            <container style="col-auto row q-gutter-sm">
+                <container-dialog id="GenerateCodes" button-text="Generate codes" icon="sym_o_auto_awesome" width="760"
+                        title="Generate promotion codes" condition="can.promotionEdit">
+                    <form-single name="GenerateCodesForm" transition="previewCodes" map="generateValues">
+                        <field name="storePromotionId"><default-field><hidden/></default-field></field>
+                        <field name="genPromotionId">
+                            <default-field title="Promotion">
+                                <drop-down>
+                                    <dynamic-options transition="promotionOptions" server-search="true" min-length="0"
+                                            parameter-map="{choice:'promotions', selected:generateValues.genPromotionId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="genCount"><default-field title="How many" tooltip="Up to 500"><text-line size="5"/></default-field></field>
+                        <field name="genPrefix"><default-field title="Prefix" tooltip="Letters, digits, - or _"><text-line size="12"/></default-field></field>
+                        <field name="genNumbered"><default-field title=" "><check><option key="Y" text="Numbered, not random"/></check></default-field></field>
+                        <field name="genSuffixLength"><default-field title="Random characters" tooltip="4 to 16"><text-line size="4"/></default-field></field>
+                        <field name="genStartNumber"><default-field title="First number" tooltip="For numbered codes; 1 when empty"><text-line size="6"/></default-field></field>
+                        <field name="genFromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                        <field name="genThruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                        <field name="genUseLimitPerCode"><default-field title="Uses of each code" tooltip="Empty for no limit"><text-line size="5"/></default-field></field>
+                        <field name="genUseLimitPerCustomer"><default-field title="Uses per customer" tooltip="Empty for no limit"><text-line size="5"/></default-field></field>
+                        <field name="genRequireParty"><default-field title=" "><check><option key="Y" text="Only for the customers named on a code"/></check></default-field></field>
+                        <field name="submitButton"><default-field title="Preview"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="genPromotionId"/><field-ref name="genCount"/></field-row>
+                            <field-row><field-ref name="genPrefix"/><field-ref name="genNumbered"/></field-row>
+                            <field-row><field-ref name="genSuffixLength"/><field-ref name="genStartNumber"/></field-row>
+                            <field-row><field-ref name="genFromDate"/><field-ref name="genThruDate"/></field-row>
+                            <field-row><field-ref name="genUseLimitPerCode"/><field-ref name="genUseLimitPerCustomer"/></field-row>
+                            <field-ref name="genRequireParty"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-negative" condition="previewError" text="${previewError}"/>
+                    <section name="GeneratePreview" condition="previewText"><widgets>
+                        <label type="p" style="q-mt-md text-weight-medium" text="${previewText}"/>
+                        <form-single name="GenerateCodesConfirm" transition="generateCodes" map="generateValues">
+                            <field name="genPromotionId"><default-field><hidden/></default-field></field>
+                            <field name="genCount"><default-field><hidden/></default-field></field>
+                            <field name="genPrefix"><default-field><hidden/></default-field></field>
+                            <field name="genNumbered"><default-field><hidden/></default-field></field>
+                            <field name="genSuffixLength"><default-field><hidden/></default-field></field>
+                            <field name="genStartNumber"><default-field><hidden/></default-field></field>
+                            <field name="genFromDate"><default-field><hidden/></default-field></field>
+                            <field name="genThruDate"><default-field><hidden/></default-field></field>
+                            <field name="genUseLimitPerCode"><default-field><hidden/></default-field></field>
+                            <field name="genUseLimitPerCustomer"><default-field><hidden/></default-field></field>
+                            <field name="genRequireParty"><default-field><hidden/></default-field></field>
+                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                            <field name="submitButton">
+                                <default-field title="Generate ${preview.makeCount} codes"><submit confirmation="Generate ${preview.makeCount} codes?"/></default-field>
+                            </field>
+                        </form-single>
+                    </widgets></section>
+                </container-dialog>
+                <container-dialog id="NewCode" button-text="New code" icon="sym_o_add" type="primary" width="640"
+                        title="New promotion code" condition="can.promotionEdit">
+                    <form-single name="NewCodeForm" transition="createCode" map="newCode">
+                        <field name="newStorePromotionId">
+                            <default-field title="Promotion">
+                                <drop-down>
+                                    <dynamic-options transition="promotionOptions" server-search="true" min-length="0"
+                                            parameter-map="{choice:'promotions', selected:newCode.newStorePromotionId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="promoCode"><default-field title="Code" tooltip="Empty draws one"><text-line size="20"/></default-field></field>
+                        <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                        <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                        <field name="useLimitPerCode"><default-field title="Uses of the code" tooltip="Empty for no limit"><text-line size="5"/></default-field></field>
+                        <field name="useLimitPerCustomer"><default-field title="Uses per customer" tooltip="Empty for no limit"><text-line size="5"/></default-field></field>
+                        <field name="newRequireParty"><default-field title=" "><check><option key="Y" text="Only for the customers named on the code"/></check></default-field></field>
+                        <field name="submitButton"><default-field title="Make the code"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="newStorePromotionId"/><field-ref name="promoCode"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-row><field-ref name="useLimitPerCode"/><field-ref name="useLimitPerCustomer"/></field-row>
+                            <field-ref name="newRequireParty"/>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="CodeFind" transition="." map="findValues">
+            <field name="storePromotionId">
+                <default-field title="Promotion">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="promotionOptions" server-search="true" min-length="0"
+                                parameter-map="{choice:'promotions', selected:storePromotionId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Code"><text-line size="20"/></default-field></field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="current" text="Current"/><option key="later" text="Starts later"/><option key="ended" text="Ended"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requireParty">
+                <default-field title="Customers">
+                    <drop-down allow-empty="true"><option key="Y" text="Named customers only"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="storePromotionId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="state"/>
+                    <field-ref name="requireParty"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CodeList" list="codes" skip-form="true">
+                    <field name="promoCode">
+                        <default-field title="Code">
+                            <link url="${sharedLinks['Promotions/PromoCodeDetail']}" text="${promoCode}" link-type="anchor"
+                                    parameter-map="{promoCodeId:promoCodeId}"/>
+                        </default-field>
+                    </field>
+                    <field name="promotionText"><default-field title="Promotion"><display/></default-field></field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                    <field name="limitsText"><default-field title="Use limits"><display/></default-field></field>
+                    <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>
+                    <field name="state">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                    WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                <text type="html">${state}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="promoCode"/><field-ref name="promotionText"/></column>
+                        <column><field-ref name="state"/><field-ref name="useCount"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!codes.length &amp;&amp; filtered" text="No code matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!codes.length &amp;&amp; !filtered"
+                        text="No promotion code yet. A promotion that needs a code applies only with one of its codes."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

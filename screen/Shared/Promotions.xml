@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Promotions (design-commerce §7 Promotions; crosscut §2 Shared/Promotions, §3.28; style-guide §3.2 List; impl-commerce P7):
+    PromotionFind (store, description, rule, code required, state), the promotion list
+    (mantle.product.StorePromotionServices.find#Promotions: the user's stores' promotions with their rule, dates, limits and
+    placed uses) and NewPromotion for a promotion manager (store#Promotion: a store of the user's, a registered rule, never a
+    service name from the browser). Commerce's context only (ironstone.commerce.ContextServices.get#SharedContext, which refuses
+    another app root); Marketing adds its context when it mounts this screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Promotions" default-menu-index="1">
+    <parameter name="appRoot"/>
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="serviceRegisterId"/>
+    <parameter name="requireCode"/>
+    <parameter name="state"/>
+    <always-actions>
+        <service-call name="ironstone.commerce.ContextServices.get#SharedContext" in-map="{appRoot:appRoot}" out-map="sharedMountContext"/>
+        <set field="appRoot" from="sharedMountContext.appRoot"/>
+        <set field="sharedLinks" from="sharedMountContext.sharedLinks"/>
+    </always-actions>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition-include name="promotionOptions" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="createPromotion">
+        <actions>
+            <service-call name="mantle.product.StorePromotionServices.store#Promotion" out-map="saved"
+                    in-map="{productStoreId:newProductStoreId, serviceRegisterId:newServiceRegisterId, itemDescription:itemDescription,
+                        requireCode:(requireCode == 'Y' ? 'Y' : 'N'), fromDate:(fromDate || null), thruDate:(thruDate || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="storePromotionId" from="saved.storePromotionId"/>
+                <message type="success">Started the promotion ${itemDescription}. Set its rule's values and limits next.</message>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Promotions/PromotionDetail']}"><parameter name="storePromotionId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="sharedMountContext.capabilities"/>
+        <service-call name="mantle.product.StorePromotionServices.find#Promotions" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, serviceRegisterId:(serviceRegisterId || null),
+                    requireCode:(requireCode || null), state:(state || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="promotions" from="found?.promotions || []"/>
+        <set field="promotionsCount" from="found?.promotionsCount || 0"/>
+        <set field="promotionsPageIndex" from="found?.promotionsPageIndex || 0"/>
+        <set field="promotionsPageSize" from="found?.promotionsPageSize || 20"/>
+        <set field="promotionsPageMaxIndex" from="found?.promotionsPageMaxIndex || 0"/>
+        <set field="promotionsPageRangeLow" from="found?.promotionsPageRangeLow || 0"/>
+        <set field="promotionsPageRangeHigh" from="found?.promotionsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || term || serviceRegisterId || requireCode || state)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, serviceRegisterId:serviceRegisterId, requireCode:requireCode, state:state}"/>
+        <set field="newPromotion" from="{newProductStoreId:(productStoreId || (sharedMountContext.storeOptions || [])[0]?.value || null), requireCode:'Y'}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Promotions" type="h5"/></container>
+            <container style="col-auto">
+                <container-dialog id="NewPromotion" button-text="New promotion" icon="sym_o_add" type="primary" width="720"
+                        title="New promotion" condition="can.promotionEdit">
+                    <form-single name="NewPromotionForm" transition="createPromotion" map="newPromotion">
+                        <field name="itemDescription"><default-field title="Description" tooltip="Shown on the order line"><text-line size="40"/></default-field></field>
+                        <field name="newProductStoreId">
+                            <default-field title="Store">
+                                <drop-down>
+                                    <dynamic-options transition="choices" server-search="true" min-length="0"
+                                            parameter-map="{choice:'stores', selected:newPromotion.newProductStoreId}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="newServiceRegisterId">
+                            <default-field title="Rule">
+                                <drop-down>
+                                    <dynamic-options transition="promotionOptions" server-search="true" min-length="0" parameter-map="{choice:'rules'}"/>
+                                </drop-down>
+                            </default-field>
+                        </field>
+                        <field name="requireCode"><default-field title=" "><check><option key="Y" text="Needs a promotion code"/></check></default-field></field>
+                        <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                        <field name="thruDate"><default-field title="Through" tooltip="Empty runs on"><date-time/></default-field></field>
+                        <field name="submitButton"><default-field title="Start the promotion"><submit/></default-field></field>
+                        <field-layout>
+                            <field-row><field-ref name="itemDescription"/><field-ref name="newProductStoreId"/></field-row>
+                            <field-row><field-ref name="newServiceRegisterId"/><field-ref name="requireCode"/></field-row>
+                            <field-row><field-ref name="fromDate"/><field-ref name="thruDate"/></field-row>
+                            <field-ref name="submitButton"/>
+                        </field-layout>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted"
+                            text="The rule's values, products and use limits are set on the promotion once it is started."/>
+                </container-dialog>
+            </container>
+        </container>
+        <form-single name="PromotionFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Description or ID"><text-line size="24"/></default-field></field>
+            <field name="serviceRegisterId">
+                <default-field title="Rule">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="promotionOptions" server-search="true" min-length="0" parameter-map="{choice:'rules'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="requireCode">
+                <default-field title="Code">
+                    <drop-down allow-empty="true"><option key="Y" text="Needs a code"/><option key="N" text="No code needed"/></drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="current" text="Current"/><option key="later" text="Starts later"/><option key="ended" text="Ended"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="serviceRegisterId"/>
+                    <field-ref name="requireCode"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="PromotionList" list="promotions" skip-form="true">
+                    <field name="itemDescription">
+                        <default-field title="Promotion">
+                            <link url="${sharedLinks['Promotions/PromotionDetail']}" text="${itemDescription}" link-type="anchor"
+                                    parameter-map="{storePromotionId:storePromotionId}"/>
+                        </default-field>
+                    </field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="ruleText"><default-field title="Rule"><display/></default-field></field>
+                    <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                    <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                    <field name="sequenceNum"><default-field title="Order"><display/></default-field></field>
+                    <field name="limitsText"><default-field title="Use limits"><display/></default-field></field>
+                    <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>
+                    <field name="state">
+                        <default-field title="State">
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${current ? 'positive' : future ? 'info' : 'grey-7'}">${
+                                    WebUtilities.encodeHtml(state)}</q-chip>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: state})}]]></text>
+                                <text type="html">${state}</text>
+                            </render-mode>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="itemDescription"/><field-ref name="storeName"/></column>
+                        <column><field-ref name="state"/><field-ref name="limitsText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!promotions.length &amp;&amp; filtered" text="No promotion matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!promotions.length &amp;&amp; !filtered &amp;&amp; can.promotionEdit"
+                        text="No promotion yet. Start one with New promotion: its store, its rule, then its values and limits."/>
+                <label type="p" style="q-pa-md m-muted" condition="!promotions.length &amp;&amp; !filtered &amp;&amp; !can.promotionEdit"
+                        text="Your stores have no promotions."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

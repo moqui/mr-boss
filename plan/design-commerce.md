@@ -241,10 +241,10 @@ cases and returns (X7).
 | SubscriptionDetail | Commerce/Customers/Subscriptions/SubscriptionDetail | detail | xml | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
 | Requests | Commerce/Customers/Requests | list | xml | Follow customer cases about store orders and products | Request | own store-filtered view of Customer Service cases | case readers | new C2 | store, filters |
 | RequestDetail | Commerce/Customers/Requests/RequestDetail | detail | xml | Read a store case and open it in Customer Service | Request | Projects §6 / crosscut §3.11 | case readers | parity C2 | request |
-| Promotions | Commerce/Promotions | list | xml | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
+| Promotions | Commerce/Promotions/Promotions (the area's default) | list | xml | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
 | PromotionDetail | Commerce/Promotions/PromotionDetail | detail | xml | Configure one promotion | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | promotion |
 | PromoCodes | Commerce/Promotions/PromoCodes | list | xml | Find/generate codes | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | promotion, codes |
-| PromoCodeDetail | Commerce/Promotions/PromoCodes/PromoCodeDetail | detail | xml | Configure eligibility and limits | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | code |
+| PromoCodeDetail | Commerce/Promotions/PromoCodeDetail | detail | xml | Configure eligibility and limits | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | code |
 | Integrations | Commerce/Integrations | list | xml | Inspect channel connections | SystemMessageRemote | own | channel operator | new C4 | store, filters |
 | IntegrationDetail | Commerce/Integrations/IntegrationDetail | detail | xml | Resolve channel message failures | SystemMessageRemote + SystemMessage | own | channel operator | new C4 | store, remote |
 | ChannelImport | Commerce/Integrations/ChannelImport | wizard | xml | Validate/import channel orders | SystemMessage + import batch | own | channel operator | new C4 | store, batch |
@@ -878,11 +878,18 @@ existing `mantle.product.PromotionServices.apply#OrderPromotions` and its regist
 `apply#Promotion` interface implementations. Price resolution remains separate. Redemption limits
 are committed atomically at checkout, once per order/code; a cart preview does not consume them.
 Mantle counts uses over placed orders only, without a lock, when a code is added and at repricing,
-never at placement, and never reads the promotion's `useLimitPerCustomer` or
-`useLimitPerPromotion`; so the proposed `P.check#OrderPromotionLimits` counts every limit field
-again under a lock of the promotion's and code's rows at checkout's freeze and at the placement of
-any store order (Nov 5, impl-commerce F18 and §4: a deliberate change to Mantle's default, with an
-order with no limits and mr-marble's order screens unchanged).
+never at placement; so `P.check#OrderPromotionLimits` counts every limit field again under a lock
+of the promotion's and code's rows at checkout's freeze and at the placement of any store order
+(Nov 5, impl-commerce F18 and §4: a deliberate change to Mantle's default, with an order with no
+limits and mr-marble's order screens unchanged). Built in P7 (Nov 6): a use is Mantle's
+`promoTimesUsed` of the promotion items of orders whose part is placed or later, as
+`apply#OrderPromotions` counts it; the uses per order are per order part, as it applies them;
+`place#Order` refuses an order past a limit (`PROMOTION_LIMIT_REACHED`, naming each limit) before
+its status changes, and the caller reprices it (the discount comes off) and places it again; an
+order already placed is not counted again when it is placed back (un-approve); an order whose
+promotions and codes set no limit takes no lock. The promotion's dates and limits and the code's are
+audit-logged with the reason of a change. A promotion keeps its store and rule; reads are
+`P.get#Promotion` and `P.get#PromoCode`, and the drop-downs `P.find#PromotionOptions`.
 **Needs:** COM-PROMO, SHOP-CHECKOUT.
 
 ### PromoCodes
@@ -895,7 +902,9 @@ order with no limits and mr-marble's order screens unchanged).
 | GenerateCodes | dialog | Generate a bounded batch | count, prefix, dates, limits, requireParty | collision/result preview | P.generate#PromoCodes (proposed) | new; fields here plus operation ID/revision |
 
 P.find#PromoCodes and P.store#PromoCode serve the baseline FindPromoCode forms. Batch generation
-adds count, prefix and collision/result preview, capped and executed as independent items.
+adds count, prefix and collision/result preview, capped and executed as independent items (P7:
+up to 500, random characters drawn again on a collision or numbered from a start with the taken
+ones listed in the preview and skipped, keyed by an operation key on `PostingOperation`).
 **Source:** research §11; FindPromoCode NewPromoCodeForm/PromoCodeForm. **Needs:** COM-PROMO.
 
 ### PromoCodeDetail

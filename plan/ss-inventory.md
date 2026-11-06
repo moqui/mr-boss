@@ -703,17 +703,17 @@ is unchanged.
 | FindProductStoreSettings | SelectStoreSettingForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#AddStoreSettingForm |
 | FindProductStoreSettings | NewStoreSettingForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#AddStoreSettingForm |
 | FindProductStoreSettings | StoreSettingsForm | Commerce/Stores/StoreDetail | Commerce/Stores/StoreDetail/Settings#StoreSettings |
-| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
-| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
-| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
-| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail |  |
-| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions |  |
-| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions |  |
-| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
-| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
-| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodes/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail |  |
-| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes |  |
-| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes |  |
+| EditPromotion | EditPromotionForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail | Commerce/Promotions/PromotionDetail (Shared/PromotionDetail: PromotionForm) (P7) |
+| EditPromotion | PromoParameterForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail | Commerce/Promotions/PromotionDetail (Shared/PromotionDetail: PromotionParameters, EditParameter) (P7) |
+| EditPromotion | AddProductForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail | Commerce/Promotions/PromotionDetail (Shared/PromotionDetail: AddPromotionProductForm) (P7) |
+| EditPromotion | ProductsForm | Shared/PromotionDetail; Commerce/Promotions/PromotionDetail; Marketing/Promotions/PromotionDetail | Commerce/Promotions/PromotionDetail (Shared/PromotionDetail: PromotionProducts) (P7) |
+| FindPromotion | NewPromotionForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions | Commerce/Promotions/Promotions (Shared/Promotions: NewPromotionForm) (P7) |
+| FindPromotion | PromotionsForm | Shared/Promotions; Commerce/Promotions; Marketing/Promotions | Commerce/Promotions/Promotions (Shared/Promotions: PromotionFind, PromotionList) (P7) |
+| EditPromoCode | EditPromoCodeForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail | Commerce/Promotions/PromoCodeDetail (Shared/PromoCodeDetail: CodeForm, Expire) (P7) |
+| EditPromoCode | NewPromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail | Commerce/Promotions/PromoCodeDetail (Shared/PromoCodeDetail: AddCodePartyForm) (P7) |
+| EditPromoCode | PromoCodePartyForm | Shared/PromoCodeDetail; Commerce/Promotions/PromoCodeDetail; Marketing/Promotions/PromoCodes/PromoCodeDetail | Commerce/Promotions/PromoCodeDetail (Shared/PromoCodeDetail: CodeParties) (P7) |
+| FindPromoCode | NewPromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes | Commerce/Promotions/PromoCodes (Shared/PromoCodes: NewCodeForm, GenerateCodesForm) (P7) |
+| FindPromoCode | PromoCodeForm | Shared/PromoCodes; Commerce/Promotions/PromoCodes; Marketing/Promotions/PromoCodes | Commerce/Promotions/PromoCodes (Shared/PromoCodes: CodeFind, CodeList) (P7) |
 
 ## Project (26 forms)
 

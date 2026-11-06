@@ -269,7 +269,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P4 Site pages and navigation | Mantle, mr-pass (read), BOSS | Pages, PageDetail, Navigation | — |
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | — |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | — |
-| P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | — |
+| P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | — |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
@@ -1053,6 +1053,113 @@ COM-PROMO.
 - **Usable when:** a promotion manager makes a 10% code limited to one use per customer, generates 50 codes with a
   prefix, and the second placed order of the same customer with the code is refused the discount; an expired code stays
   readable in Usage.
+
+**Built Nov 6 (P7).**
+- Mantle:
+  - `service/mantle/product/StorePromotionServices.xml` over one module `StorePromotions.js` (operations table):
+    `find#Promotions` (the user's stores' promotions by description or id ignoring case, rule, code requirement and state,
+    paged, each with its store, rule, dates, limits and placed uses), `get#Promotion` (with the rule's parameters typed by the
+    registered service's in-parameters less apply#Promotion's: number, boolean, text, required, description; its products,
+    code count and `canEdit`), `store#Promotion` (a registered `ProductStorePromotion` rule only, `SERVICE_NOT_REGISTERED`;
+    the store and rule fixed once made; limits whole numbers of at least 1 or empty; stale revision; the reason into the audit
+    log), `store#PromotionParameters` (a map of name to value, each typed, an unknown name refused, empty removes; answers the
+    required ones missing), `store#PromotionProducts` (the store organization's or shared products, at most 200, include,
+    exclude or remove), `find#PromoCodes`, `get#PromoCode`, `store#PromoCode` (2 to 40 letters, digits, - or _, unique
+    ignoring case `CODE_TAKEN`, drawn when empty; its promotion fixed, its text once used `CODE_REDEEMED`),
+    `generate#PromoCodes` (1 to 500, a prefix, random characters drawn again on a collision or numbered from a start with
+    the taken ones listed; preview writes nothing; each code its own transaction through `lib.probe`, a failure named and
+    the rest made; `PostingOperation` `PromoCodeBatch`, a retry answers the first result), `store#PromoCodeParty`,
+    `expire#PromoCode` (never a delete; `ALREADY_EXPIRED`), `find#PromotionUses` (an order and code to a row: placed date,
+    customer name only, uses, discount, status; totals), `find#PromotionOptions` (rules, promotions) and
+    `check#OrderPromotionLimits`. Each maintenance service checks `COMMERCE_VIEW` / `COMMERCE_PROMOTION_EDIT` and the
+    store's scope through StoreAdmin.js (`scope`, `storeOf`, `storeQuery`, `dateOf`, `rowDates`); a promotion of no store
+    is refused like one outside the scope.
+  - **Limits at placement (F18):** `check#OrderPromotionLimits` (authenticate false, not remote) takes the order's promotion
+    items in the parts being placed (not yet placed, or the part asked for), reads the promotions and codes they use, and
+    for those with a limit locks their rows (`for update`, promotions then codes, each in id order) and counts the placed uses
+    again as `apply#OrderPromotions` counts them (`promoTimesUsed` of `OrderItemAndPartSummary` in the placed statuses, this
+    order's other placed parts included): the code's per code and per customer, the promotion's per customer and in all,
+    and per order per part (as Mantle applies it). `place#Order` calls it first, before the status changes, and refuses
+    an order past a limit (`PROMOTION_LIMIT_REACHED`, each limit with what it allows, the uses and the order's); the caller
+    reprices (`handle#OrderMajorChange` takes the discount off) and places again. An order of no store, with no promotion
+    use or whose promotions and codes set no limit takes no lock and places as before; an order placed back (un-approve)
+    consumes nothing new. With `lock: false` it is the cart's preview. Mantle's add-code and repricing checks are unchanged
+    (warnings).
+  - `entity/ProductStoreEntities.xml`: ProductStorePromoCode's `parties` relationship keyed on `promoCodeId` (the demo's
+    nested TEST1 party loads through it); ProductStorePromotion's description names
+    `mantle.product.PromotionServices.apply#Promotion`; `enable-audit-log` on the promotion's and code's dates and limits.
+    `service/mantle/order/OrderServices.xml` place#Order: the one call above.
+- BOSS:
+  - `screen/Commerce/Promotions.xml` (the area: Promotions, the default, and Promotion codes; PromotionDetail and
+    PromoCodeDetail hidden) mounting `screen/Shared/Promotions.xml` (PromotionFind, PromotionList with phone columns and the
+    state chip, NewPromotion for a promotion manager), `Shared/PromotionDetail.xml` (record header with the state chip and
+    More: Promotion codes; Promotion form with the limits and the reason; Rule values, each set in its row's dialog typed by
+    the rule; Products with Add and Remove; Redemptions), `Shared/PromoCodes.xml` (CodeFind, CodeList, NewCode, GenerateCodes
+    with its preview in the dialog and then the batch under an operation key) and `Shared/PromoCodeDetail.xml` (record header,
+    More: Promotion, Expire the code; Code form; Customers through Commerce's customer check; Usage). Each reads
+    `ironstone.commerce.ContextServices.get#SharedContext`, which refuses another app root (Commerce's context only), and
+    calls the Mantle services; a promotion or code outside the scope shows Not available.
+  - Commerce.js (appended): `linkPaths` for the four routes; the `customers` choice (Customer-role parties of the user's
+    organizations or shared, each through `customerOf`). CommerceParts gains `promotionOptions`.
+- Specs:
+  - Mantle `test/product/StorePromotions` (6 features, 3.3 s): a rule not registered or forged refused, a zero limit, the
+    reader and the other organization refused, typed parameters (a bad value, an unknown name, the missing required ones),
+    a foreign product, a fixed rule, a stale revision, the reads by scope; codes taken ignoring case, a numbered batch with a
+    taken code previewed and named, its retry, a random batch, a count over 500, the reader refused, an expired code still
+    read with its reason in the audit log; an order with a limit-free promotion placed with no lock; the demo store's TEST2
+    code added as the order screens add it and placed as before, the same customer's next cart refused the code by Mantle's
+    warning; the promotion's per-customer and total limits refusing two placements, the preview naming the limit, the
+    repriced order placed without the discount, the uses read back; two concurrent placements past a code's limit (real
+    threads through `parallel`: the first holds its transaction 0.4 s, the second places 0.1 s in, waits for the lock and is
+    refused). With the lock turned off in place#Order the last feature fails (the second places too), so it tests the lock.
+  - BOSS `CommercePromotions` (2 features, 0.7 s): store scope (the manager's and reader's promotions of POPC_DEFAULT, none
+    of BOSS_COM_DIGITAL; the same unchanged save allowed for the manager, `PERMISSION_DENIED` for the reader,
+    `RECORD_UNAVAILABLE` for Services' manager, who is refused the promotion and its codes too; the customers choice with a
+    selected customer) and PromotionDetail's one qvt render. No CommerceAccess case: the rule is the Mantle permission and
+    scope, which StorePromotions checks.
+  - Also run, all pass: Mantle StorePromotions, Promotions, OrderToCashBasicFlow, OrderBulk, OrderChanges, OrderLifecycle,
+    OrderConfirmations, AssetReservationMultipleThreads, AssetReservationMisc, OrderToCashTime, ReturnToResponseBasicFlow,
+    DropShip, Subscriptions, AccountingPortals, PassAuthority, StoreAdmin, StorePublication, RestApiTests, SalesReports
+    (172 features); BOSS CommercePromotions, CommerceAccess, CommerceStores, CommerceAssortment, CustomerServiceOrders,
+    CustomerServiceOrderChanges, CustomerServiceAccess, ProjectsAccess (54 features); mr-marble OrderRoleFilters and
+    ProjectSummarySource (21) and its client BrowserSmoke (3: OrderDetail and PrintOrder of the flow orders). Not run:
+    `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommercePromotionsWalk` (6 features: the manager's 10% promotion of POPC_DEFAULT
+  through createPromotion, its three rule values and its order, a code limited to one use per customer; 50 codes with a
+  prefix previewed in GenerateCodes and generated; one customer's two carts with the code, the first placed with 2.00 off
+  one unit, the second refused `PROMOTION_LIMIT_REACHED`, repriced and placed without it, a third cart refused the code;
+  the code expired and its PromoCodeDetail showing Ended with the order in Usage; the reader refused createPromotion and
+  seeing PromotionDetail without its form, Services' manager Not available; the four screens in qvt and html), run: 6
+  passed. Also run: AppStructure, TuiRender, CommerceFoundationWalk, CommerceStoresWalk and CommerceAssortmentWalk with it,
+  43 passed. The whole mr-boss acceptance suite was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites, none in the new screens.
+- Inventories: ss-inventory's eleven EditPromotion, FindPromotion, EditPromoCode and FindPromoCode rows name their built
+  forms, and the Commerce PromoCodeDetail path is `Commerce/Promotions/PromoCodeDetail` (design §2 changed); usl-inventory
+  has no row the screens call (PromotionServices' services are Shop's and the order screens').
+- Decisions:
+  - A promotion past a limit at placement is refused, not repriced in place: the customer agreed to a total, and Shop's
+    freeze must never charge more silently (design-shop §6); the caller reprices and places again.
+  - The uses per order are counted per order part, as `apply#OrderPromotions` applies them, so a multi-part order places as
+    before; the other limits count the order's other placed parts.
+  - A promotion keeps its store and rule, a code its promotion and (once used) its text; codes are expired, never deleted;
+    no delete service is built.
+  - The routes are flat under the area: `Commerce/Promotions/Promotions` (the area's default) and
+    `Commerce/Promotions/PromoCodeDetail` (design §2 had `Commerce/Promotions` and `PromoCodes/PromoCodeDetail`), so a
+    shared list screen holds no subscreens.
+  - Mantle's `store#PromoCodeParty` takes any active party that is not another user's private contact; Commerce limits
+    the choice to its customers and checks the party with `check#Record` (customer) before the save.
+- Findings (provisional):
+  - **F-P7-1** F18 is partly wrong for the port: `apply#OrderPromotions` and `add#OrderPromoCode` do read the promotion's
+    `useLimitPerCustomer` and `useLimitPerPromotion` (unlocked, as the code's limits). Design §7 corrected.
+  - **F-P7-2** A promotion with no `sequenceNum` applies after the numbered ones (PostgreSQL orders nulls last), and with
+    `itemsWithPromo` false the first promotion takes the units: the demo's PopcNewCustomer (99, no code) takes a new
+    customer's units before an unnumbered code promotion of POPC_DEFAULT (the walk sets its promotion's order to 1).
+    NewPromotion sets no order; for the lead: default a new promotion's order, or say it in the form.
+  - **F-P7-3** Only `place#Order` counts the limits: a placed order that `handle#OrderMajorChange` reprices (an item added
+    to a placed order) and an order set to OrderPlaced through `update#OrderStatus` directly are counted unlocked, as before.
+  - **F-P7-4** An EntityFind is used up by `count()`: a second use of the same find (`lib.page(query, p, f, query.count())`)
+    fails "entity find was already used"; the module builds the find twice. For the framework docs or a later fix.
+  - **F-P7-5** Redemptions and Usage name the order without a link until P8 mounts Commerce's OrderDetail.
 
 ### P8 — Orders, carts and customers
 
