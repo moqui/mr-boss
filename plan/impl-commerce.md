@@ -1161,6 +1161,50 @@ COM-PROMO.
     fails "entity find was already used"; the module builds the find twice. For the framework docs or a later fix.
   - **F-P7-5** Redemptions and Usage name the order without a link until P8 mounts Commerce's OrderDetail.
 
+**Review Nov 5 (P7).** Checked: the diff of mr-mantle and mr-boss against the phase, §2 and §4; `check#OrderPromotionLimits`
+and every caller of `place#Order` in mr-mantle, mr-boss, mr-marble and mr-pass (create#RecurringOrder(s), OrderBulk,
+ReturnServices' replacement orders, DropShip, PurchaseOrders, PurchaseReturns, Awards, X12 import, the REST `place`, the
+order screens, the demo services); the lock order; the no-store, no-promotion and no-limit paths (no `for update`, the
+same placement); `useLimitPerOrder` per part (as `apply#OrderPromotions` passes it to the rule as `useLimit`); the
+StorePromotions services' permission and scope, registered rules, typed parameters, generate's bounds and operation key,
+expire not delete, store#PromoCodeParty; the four Shared screens (Commerce's context only); the audit log and reason.
+- **R1 (high)** A multi-part store order whose parts share a promotion with a per-customer, total or per-code limit could
+  never be placed: `apply#OrderPromotions` prices one part at a time and counted only placed parts, so each part took the
+  use; `place#Order`'s recount refused the order and repricing gave the same discount again (shown by a scratch spec).
+  `apply#OrderPromotions` now counts the uses of the order's other parts not yet placed (not cancelled or rejected) against
+  those limits, so a repriced order places. StorePromotions gains the feature (two parts, one discounted, placed; 0.3 s);
+  a single-part order prices as before (Promotions, OrderToCashBasicFlow). mr-mantle ce5f1079.
+- **R2 (low)** The concurrency feature assumed the first thread takes the lock within 0.1 s; under load the second could,
+  and the feature would fail though the lock held. It now asserts one placed and one refused, whichever came first (it
+  still fails with no lock: both place). mr-mantle ce5f1079.
+- Callers: a recurring order's clone copies product items only (no promotion items) and is placed without a lock;
+  orders priced and placed in one transaction (X12 import, returns' replacements, DropShip, purchase orders, which have
+  no store) are refused only when a concurrent placement takes the last use, and the X12 message's retry reprices. The
+  refusal is right for a stale cart and for staff placing an old order (OrderDetail's message says to reprice).
+- Lock order: within one placement, promotions then codes in id order, before update#OrderStatus' rows and the asset
+  reservations; no other service locks a promotion or code row. A cycle needs one transaction placing several orders
+  with different limited promotions (OrderBulk's up to 100 parts, a return's two replacement orders) against another;
+  the database's deadlock detection would refuse one. Low.
+- **F-P7-3** judged low: repricing a placed part (handle#OrderMajorChange) counts unlocked as Mantle always did and is
+  staff-only; `update#OrderStatus` to OrderPlaced is reachable only from services (the REST `place` resource maps to
+  place#Order; ProjectServices' approve#MilestoneApproval places a project's open or proposed sales orders this way, a
+  staff action, unchecked; it could call place#Order instead).
+- Specs run: Mantle StorePromotions (7 features; three runs, all pass), Promotions, OrderToCashBasicFlow, OrderBulk,
+  OrderChanges, Subscriptions, RestApiTests, OrderLifecycle, DropShip (118 features, pass); BOSS CommercePromotions and
+  CommerceAccess (11, pass); mr-marble OrderRoleFilters (20) and client BrowserSmoke (3), pass.
+- For the lead:
+  - OrderBulk places its parts in one transaction, so one order past a limit now rolls back the whole bulk change (as
+    any placement error did before); a per-part transaction with the refused orders listed would follow AGENTS.md's
+    failure tolerance.
+  - generate#PromoCodes writes its PostingOperation after the codes, each made in its own transaction: two concurrent
+    submissions of one key both make a batch (the second then fails on the key), and a batch interrupted before the end
+    is made again in full on retry. Claiming the key first (a pending row) would need an EntityLib change.
+  - Decision 5: Mantle's store#PromoCodeParty accepts any active party not another user's private contact, and
+    get#PromoCode names the code's parties; both are `allow-remote="false"` and Commerce checks the customer first, but a
+    later caller (Shop, Marketing) must check the party itself.
+  - The TEST2 feature's discount assertion depends on how many TEST2 uses the database already holds (its code allows 5
+    in all); its placement assertion is the one that always tests the unchanged default.
+
 ### P8 — Orders, carts and customers
 
 Design §6 Orders, Carts, CartDetail (without recovery), Returns, Customers and Requests, and §10's order, return,
