@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- ReturnDetail's Commerce branch (crosscut §3.18; design-commerce §10 ReturnDetail; impl-commerce P8): the section
+    Shared/ReturnDetail includes when appRoot is Commerce, over mantle.order.StoreOperationsServices.get#StoreReturn (a return
+    of the user's stores' orders; a missing one and another store's are "not available" alike). Read only: the header
+    (customer, store, source orders, status) with Open in Customer Service, which authorizes it, and in Accounting, which
+    settles it; its lines with what was asked and received and how each is settled. No parallel return workflow. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <widgets>
+        <section name="CommerceReturn" condition="appRoot == 'Commerce'">
+            <widgets>
+                <section name="CommerceReturnMissing" condition="!storeReturn">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Return not available"/>
+                            <box-body>
+                                <label type="p" text="Return ${returnId} is not available: it does not exist, or it is not of an order of a store you work."/>
+                                <link url="${sharedLinks['Orders/Returns']}" text="Back to returns" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CommerceReturnFound" condition="storeReturn">
+                    <actions>
+                        <set field="rh" from="storeReturn.returnHeader"/>
+                        <set field="customerUrl" from="rh.customerPartyId ? sharedLinks['Customers/Customer360'] + '?customerPartyId=' + encodeURIComponent(rh.customerPartyId) : null"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.return.ReturnHeader" record-id="${returnId}" title="Return ${rh.displayId} · ${rh.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Return ${rh.displayId}" type="h5"/>
+                                        <link url="${customerUrl}" url-type="plain" text="${rh.customerName}" link-type="anchor" condition="customerUrl"/>
+                                    </container>
+                                    <label text="${[rh.storeName, 'requested ' + rh.entryText, 'order ' + rh.orderIds.join(', ')].join(' · ')}" type="p"
+                                            style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${rh.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <link url="${operationLinks.serviceReturn}${returnId}" url-type="plain" text="Open in Customer Service"
+                                        link-type="anchor-button" btn-type="primary" icon="sym_o_open_in_new" condition="operationLinks.serviceReturn"/>
+                                <link url="${operationLinks.accountingReturn}${returnId}" url-type="plain" text="Open in Accounting"
+                                        link-type="anchor-button" condition="operationLinks.accountingReturn"/>
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Source order" link-type="anchor-button"
+                                        parameter-map="{orderId:rh.orderIds[0]}"/>
+                            </container>
+                        </container>
+                        <label type="p" style="text-caption m-muted"
+                                text="Read only in Commerce: Customer Service authorizes the return and Accounting settles it."/>
+                        <container-box>
+                            <box-header title="Lines · ${storeReturn.items.length}"/>
+                            <box-body-nopad>
+                                <form-list name="CommerceReturnItems" list="storeReturn.items" skip-form="true" paginate="false">
+                                    <field name="returnItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description">
+                                        <default-field title="Item">
+                                            <label text="${description}" type="div"/>
+                                            <label text="${reasonText}" type="div" style="text-caption m-muted" condition="reasonText"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="requestedText" align="right"><default-field title="Asked"><display/></default-field></field>
+                                    <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                    <field name="settlementText"><default-field title="Settlement"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="statusText"/><field-ref name="settlementText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

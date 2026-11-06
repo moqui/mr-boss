@@ -237,7 +237,14 @@ along with this software (see the LICENSE.md file). If not, see
                 <box-header title="Usage"/>
                 <box-body-nopad>
                     <form-list name="CodeUses" list="uses" skip-form="true">
-                        <field name="orderName"><default-field title="Order"><display/></default-field></field>
+                        <!-- P8 (F70): the order opens Commerce's OrderDetail for a user of the Orders area -->
+                        <field name="orderName">
+                            <default-field title="Order">
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderName}" link-type="anchor"
+                                        parameter-map="{orderId:orderId}" condition="sharedMountContext.capabilities.orders"/>
+                                <label text="${orderName}" type="span" condition="!sharedMountContext.capabilities.orders"/>
+                            </default-field>
+                        </field>
                         <field name="placedDateText"><default-field title="Placed"><display/></default-field></field>
                         <field name="customerName"><default-field title="Customer"><display/></default-field></field>
                         <field name="useCount"><default-field title="Uses"><display format="#,##0"/></default-field></field>

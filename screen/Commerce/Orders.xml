@@ -12,11 +12,22 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- The Orders area of IronStone Commerce (design-commerce §6 Orders, Carts, Returns): a store's orders, carts and
-    returns (impl-commerce P8, P10); for the store and subscription operators (BOSS_COM_ORDERS). -->
+<!-- The Orders area of IronStone Commerce (design-commerce §6 Orders, Carts, Returns; impl-commerce P8): a store's submitted
+    orders (the default), carts and returns, for the store and subscription operators (BOSS_COM_ORDERS). Each list reads
+    mantle.order.StoreOperationsServices, which checks COMMERCE_ORDER_VIEW and the store scope again; OrderDetail and
+    ReturnDetail are the shared screens in Commerce's context, CartDetail Commerce's own, each opened from rows. Cart recovery
+    is P10's. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Orders" default-menu-index="5" menu-image="sym_o_shopping_cart" menu-image-type="icon">
+    <subscreens default-item="Orders" always-use-full-path="true">
+        <subscreens-item name="Orders" location="component://mr-boss/screen/Commerce/Orders/Orders.xml" menu-title="Orders" menu-index="1"/>
+        <subscreens-item name="Carts" location="component://mr-boss/screen/Commerce/Orders/Carts.xml" menu-title="Carts" menu-index="2"/>
+        <subscreens-item name="Returns" location="component://mr-boss/screen/Commerce/Orders/Returns.xml" menu-title="Returns" menu-index="3"/>
+        <subscreens-item name="OrderDetail" location="component://mr-boss/screen/Shared/OrderDetail.xml" menu-include="false"/>
+        <subscreens-item name="CartDetail" location="component://mr-boss/screen/Commerce/Orders/CartDetail.xml" menu-include="false"/>
+        <subscreens-item name="ReturnDetail" location="component://mr-boss/screen/Shared/ReturnDetail.xml" menu-include="false"/>
+    </subscreens>
     <widgets>
-        <label text="Placeholder: A store's orders, carts and returns." type="p"/>
+        <subscreens-panel id="CommerceOrdersPanel" type="tab"/>
     </widgets>
 </screen>

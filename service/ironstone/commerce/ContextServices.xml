@@ -186,4 +186,32 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="links" from="found.links"/>
         </actions>
     </service>
+
+    <!-- P8: the owners' screens an order, return, customer or case links to, and the Comms call context -->
+    <service verb="get" noun="OperationLinks" allow-remote="false">
+        <description>The address prefixes of the owners' screens Commerce's orders, returns, customers and cases link to
+            (Customer Service's CaseDetail, OrderChangeDetail, OrderDetail, ReturnDetail and Customer360; Accounting's
+            OrderDetail and ReturnDetail), each null when the user may not open it: Commerce works none of them (design §6).
+            Refuses a user without Commerce.</description>
+        <implements service="ironstone.commerce.ContextServices.define#Parameters"/>
+        <out-parameters><parameter name="links" type="Map"/></out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('operationLinks', context)"/>
+            <set field="links" from="found.links"/>
+        </actions>
+    </service>
+    <service verb="get" noun="CallContext">
+        <description>The call-context provider of the Commerce root (Comms' ring bar and call; design §1.4): the caller's
+            open store orders and carts in the user's stores (the caller by the number's last seven digits), each with its
+            Commerce link, through mantle.order.StoreOperationsServices.get#StoreCallRecords; the contacts are Comms' own
+            provider's. Nothing for a user without COMMERCE_ORDER_VIEW.</description>
+        <implements service="org.moqui.comms.ProviderInterfaces.call#Context"/>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/commerce/Commerce.js"/>
+            <set field="found" from="ec.resource.script(module).execute('callContext', context)"/>
+            <set field="contactList" from="found.contactList"/>
+            <set field="recordList" from="found.recordList"/>
+        </actions>
+    </service>
 </services>

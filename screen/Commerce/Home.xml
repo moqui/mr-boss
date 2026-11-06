@@ -17,7 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     payment holds, fulfillment, unpaid, carts, reviews, integration errors) and PeriodStrip (orders, net sales and top product
     for the period against the previous one), each "Not configured" until the phases that measure them (P8 the work, P11 the
     strip), never zero; visits and conversion stay hidden without Marketing's tracking (impl-commerce §4). The first-use state
-    (no store in the user's scope) opens Stores' NewStore for a store manager (P2). RecentOrders arrives with P8. -->
+    (no store in the user's scope) opens Stores' NewStore for a store manager (P2). P8: the work counts
+    (mantle.order.StoreOperationsServices.get#StoreWorkSummary: to approve, payment holds, to fulfill, unpaid, open carts,
+    stuck placements and undelivered notices, each opening the scoped list for an order reader) and RecentOrders. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="productStoreId"/>
@@ -48,6 +50,19 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="periodStart" from="new Date(Number(ec.user.nowTimestamp) - days * 86400000)"/>
         <set field="periodText" from="ec.l10n.format(periodStart, 'd MMM yyyy') + ' – ' + ec.l10n.format(ec.user.nowTimestamp, 'd MMM yyyy')"/>
         <set field="scopeText" from="storeFound ? store.label : (commerce.storeLimited ? 'Your stores' : 'All your stores')"/>
+        <!-- P8: the work counts and recent orders of the stores in scope (mantle.order.StoreOperationsServices.get#StoreWorkSummary;
+            a count that cannot be read shows a dash, the others still count) -->
+        <if condition="hasStores">
+            <service-call name="mantle.order.StoreOperationsServices.get#StoreWorkSummary" out-map="work" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:scope.productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="workCounts" from="work?.counts || {}"/>
+        <set field="countText" from="Object.fromEntries(['toApprove', 'paymentHolds', 'toFulfill', 'unpaid', 'openCarts', 'stuckPlacements',
+                'noticeExceptions'].map(key => [key, workCounts[key] == null ? '—' : String(workCounts[key])]))"/>
+        <set field="recentOrders" from="work?.recentOrders || []"/>
+        <set field="ordersPath" from="sharedLinks['Orders/Orders']"/>
+        <set field="storeQuery" from="scope.productStoreId ? '&amp;productStoreId=' + encodeURIComponent(scope.productStoreId) : ''"/>
     </actions>
     <widgets>
         <container style="row items-center q-col-gutter-sm">
@@ -99,16 +114,49 @@ along with this software (see the LICENSE.md file). If not, see
                     <box-header title="Work to do"/>
                     <box-body>
                         <dashboard min-width="160">
-                            <number-card title="To approve" value="Not configured" icon="sym_o_approval" size="sm"/>
-                            <number-card title="Payment holds" value="Not configured" icon="sym_o_front_hand" size="sm"/>
-                            <number-card title="To fulfill" value="Not configured" icon="sym_o_local_shipping" size="sm"/>
-                            <number-card title="Unpaid" value="Not configured" icon="sym_o_credit_card_off" size="sm"/>
-                            <number-card title="Open carts" value="Not configured" icon="sym_o_shopping_cart" size="sm"/>
+                            <number-card title="To approve" value="${countText.toApprove}" icon="sym_o_approval" size="sm"
+                                    link="${can.orders ? ordersPath + '?statusId=OrderPlaced' + storeQuery : ''}"/>
+                            <number-card title="Payment holds" value="${countText.paymentHolds}" icon="sym_o_front_hand" size="sm"
+                                    link="${can.orders ? ordersPath + '?attention=paymentHold' + storeQuery : ''}"/>
+                            <number-card title="To fulfill" value="${countText.toFulfill}" icon="sym_o_local_shipping" size="sm"
+                                    link="${can.orders ? ordersPath + '?statusId=OrderApproved' + storeQuery : ''}"/>
+                            <number-card title="Unpaid" value="${countText.unpaid}" icon="sym_o_credit_card_off" size="sm"
+                                    link="${can.orders ? ordersPath + '?payment=unpaid' + storeQuery : ''}"/>
+                            <number-card title="Open carts" value="${countText.openCarts}" icon="sym_o_shopping_cart" size="sm"
+                                    link="${can.orders ? sharedLinks['Orders/Carts'] + '?state=' + storeQuery : ''}"/>
+                            <number-card title="Placements waiting" value="${countText.stuckPlacements}" icon="sym_o_pending_actions" size="sm"
+                                    link="${can.orders ? ordersPath + '?attention=stuck' + storeQuery : ''}"/>
+                            <number-card title="Notices not delivered" value="${countText.noticeExceptions}" icon="sym_o_mail_lock" size="sm"
+                                    link="${can.orders ? ordersPath + '?attention=notice' + storeQuery : ''}"/>
                             <number-card title="Reviews" value="Not configured" icon="sym_o_reviews" size="sm"/>
                             <number-card title="Integration errors" value="Not configured" icon="sym_o_sync_problem" size="sm"/>
                         </dashboard>
                     </box-body>
                 </container-box>
+                <section name="RecentOrdersSection" condition="work?.canOrders"><widgets>
+                <container-box>
+                    <box-header title="Recent orders"/>
+                    <box-body-nopad>
+                        <form-list name="RecentOrders" list="recentOrders" skip-form="true" paginate="false">
+                            <field name="orderId">
+                                <default-field title="Order">
+                                    <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor" style="text-mono"
+                                            parameter-map="{orderId:orderId}"/>
+                                </default-field>
+                            </field>
+                            <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                            <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="orderId"/><field-ref name="customerName"/></column>
+                                <column><field-ref name="statusText"/><field-ref name="totalText"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!recentOrders.length" text="No submitted order yet."/>
+                    </box-body-nopad>
+                </container-box>
+                </widgets></section>
                 <container-box>
                     <box-header title="This period against the previous one"/>
                     <box-body>

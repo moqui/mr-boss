@@ -270,7 +270,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P5 Theme editors and preview | mr-moqui, Mantle, mr-pass, BOSS | Themes, ThemeDetail, ThemeEditor, TemplateEditor | built Nov 6, 2026 |
 | P6 Checkout settings | Mantle, BOSS | CheckoutSettings | built Nov 6, 2026 |
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
-| P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | — |
+| P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | built Nov 6, 2026 |
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | — |
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
@@ -1803,6 +1803,141 @@ customer and request rows; COM-OPS, CX-ASSIST and the Comms hooks (design §1.4)
     opening Customer Service, and Commerce takes none of their actions;
   - a capture failed after placement shows the `OhtPayment` hold, which a Commerce operator cannot release;
   - Order again on a past order makes a new open order at today's prices.
+
+**Built Nov 6 (P8).**
+- Mantle:
+  - `service/mantle/order/StoreOperationsServices.xml` over one module `StoreOperations.js` (O): `find#StoreOrders`
+    (submitted orders of the user's stores or one, never OrderOpen; by number, name or external reference, customer,
+    status, placed dates; an Attention filter `paymentHold`, `hold`, `cancelRequest`, `notice` and `stuck`; a payment
+    filter over the computed state, at most 500 candidates, `truncated` says so), each row with its store, channel,
+    customer, placed date, status, total, computed payment state (held when an OhtPayment hold is open; paid by its
+    invoices or captured payments; authorized; promised; no charge; unpaid), fulfillment state (shipments and the digital
+    lines' StoreItemFulfillment: "Downloads ready", "held", "revoked", "pending") and badges (holds, the Payment hold,
+    a cancellation proposal); `get#StoreOrder` (OrderDetail's Commerce branch: header, open holds, items, payments,
+    shipments, invoices, open order changes, cases, returns, the order's notices on the delivery ledger with the address
+    masked, its Shop checkout; an open order refused, it is a cart); `reorder#StoreOrder` (Order again, F43:
+    `clone#Order` with `copyPayment` false and product items only, each part back to OrderOpen, promotion lines dropped,
+    `recalc#OrderPartItemAmounts` then `handle#OrderMajorChange`; nothing placed or charged); `find#StoreCarts` and
+    `get#StoreCart` (OrderOpen store orders by the shopper's activity, StoreCartAccess.lastActivityDate; states active,
+    abandoned, checking out, placement waiting, made by staff; a guest shows "Guest"; recovery empty until P10);
+    `find#StoreReturns` and `get#StoreReturn` (ReturnHeaders by their lines' source orders' store, Requested first; read
+    only); `find#StoreCustomers` and `get#StoreCustomer` (parties with an order or a signed-in cart in the user's stores,
+    never a directory; the PASS account's state as ExternalAccess.selfOf reads it, current addresses, payment methods as
+    type and last four, orders, carts, cases, returns; subscriptions empty until P12); `find#StoreRequests`,
+    `get#StoreRequest` and `add#StoreRequestNote` (cases, a CaseProfile, by `Request.productStoreId`, linked to a store
+    order by RequestRecord, or in a store's checkout support queue; open by default; the conversation; an internal note
+    through `add#RequestComment`); `find#StoreDeliveries` (the store's delivery-ledger notices, exceptions by default,
+    read only, F91); `get#StoreWorkSummary` (Home: to approve, payment holds, to fulfill, unpaid, open carts, stuck
+    placements, notice exceptions, each count failing alone; the recent orders for an order reader); `get#StoreCallRecords`
+    (the call context's open store orders and carts of given parties). Each checks COMMERCE_VIEW, COMMERCE_ORDER_VIEW for
+    the order, cart, return, customer and case reads, and StoreAdmin.js's scope (F51: a store-limited member is refused
+    another store of the same organization in every one); a missing record and one outside it are RECORD_UNAVAILABLE.
+  - `entity/StoreOperationsViewEntities.xml`: `mantle.order.return.StoreReturnItemView` (a return's lines with their source
+    order's store) and `mantle.request.StoreRequestOrderView` (a request linked to an order, with its store), so the store's
+    returns and cases are found in the query. No Mantle rule changed, so no default to test.
+- BOSS:
+  - Areas: `screen/Commerce/Orders.xml` (Orders, the default; Carts; Returns; OrderDetail, CartDetail and ReturnDetail
+    hidden) and `screen/Commerce/Customers.xml` (Customers, the default; Requests; Customer360 and RequestDetail hidden);
+    `Orders/Orders.xml` (OrderFind with Attention and Payment, the list with badges; a stuck placement opens CartDetail),
+    `Orders/Carts.xml`, `Orders/CartDetail.xml` (CartSummary, the checkout box with a stuck placement's banner, an empty
+    RecoveryHistory), `Orders/Returns.xml`, `Customers/Customers.xml`, `Customers/Requests.xml`.
+  - Shared screens' Commerce branches (each reading the Mantle service and `get#OperationLinks`): `template/CommerceOrderDetail.xml`
+    (the Payment hold banner read only with Accounting's order, other holds, cancellation proposals linking Customer
+    Service's OrderChangeDetail, the cards, items, payments, shipments, invoices, cases, returns and notices; Order again
+    through `commerceReorder`, which opens the new cart), `CommerceReturnDetail.xml` (read only, Open in Customer Service and
+    in Accounting), `CommerceCustomer360.xml` (one page, no tabs; the Accounting tabs' prompts and actions now leave Commerce
+    out), `CommerceRequestDetail.xml` (read only, Internal note, Open in Customer Service); Shared/OrderDetail,
+    ReturnDetail, Customer360 and RequestDetail include them.
+  - Commerce.js (appended but the palette's `recordEntity`, now per find): the order, cart and customer record kinds' screens;
+    the palette's store orders and carts (`searchFinds`); the ten `linkPaths`; `operationLinks` (Customer Service's
+    CaseDetail, OrderChangeDetail, OrderDetail, ReturnDetail and Customer360, Accounting's OrderDetail and ReturnDetail, each
+    for a user who may open it); `callContext`. ContextServices: `get#OperationLinks`, `get#CallContext`.
+  - `PaletteServices.get#RecordLink` (F8, F42): Customer Service's sales-order branch returns only with a link, so a store
+    order or cart opens OrderDetail or CartDetail under Commerce for a user who works its store; Customer Service's users
+    keep their link.
+  - The root: `call-context` (`boss.commerce`), the Assist prompts of design §1.4 for StoreDetail, CartDetail and OrderDetail,
+    keys g o, g c, g u. Home: WorkCards from `get#StoreWorkSummary` (a dash for a count that failed; each opening the scoped
+    list for an order reader), Placements waiting and Notices not delivered added, Reviews and Integration errors still Not
+    configured (P9, P13), RecentOrders. F70: PromotionDetail's Redemptions and PromoCodeDetail's Usage link the order for a
+    user of the Orders area.
+  - `skill/store-readiness.md` and `skill/cart-recovery.md`, `skill/aliases.json` (cart, store), `test/skill-retrieval.json`
+    (+4 cases; recall@3 1.00, 10 of 10).
+- mr-pass: `acceptance/ShopOrdersInCommerce.spec.js` and its README line (below).
+- Specs:
+  - Mantle `test/order/StoreOperations` (3 features, 1.1 s alone, 1.6 s under load): orders leave out carts, carry the Payment hold and the cancel
+    request, list a stuck placement (ORDER_CHANGED), keep to the scope (the reader PERMISSION_DENIED, the other
+    organization's operator, the store-limited member refused the second store, F51), the work counts; carts abandoned and
+    stuck, returns and cases by their orders' store (a case of no store left out), an internal note, customers no directory
+    (a Customer-role party of the organization with no order refused); Order again open at today's price (10, the clone kept
+    20) with no payment, another organization's and a cart refused.
+  - BOSS `test/Commerce/CommerceOrders` (2 features, 0.6 s): the demo store's held order (the operator reads the hold,
+    `release#OrderHold` refused PAYMENT_HOLD_RELEASE; the reader refused; another organization's order RECORD_UNAVAILABLE);
+    `get#RecordLink` under Commerce for the operator, under Customer Service for its order desk, none for the other
+    organization; the palette's order and cart; OrderDetail's Commerce branch and CartDetail each rendered once (qvt). No
+    CommerceAccess case: the rule is Mantle's permission and scope.
+  - Also run, all pass: Mantle StoreOperations; BOSS CommerceOrders, CommercePromotions, CommerceAccess, CommerceStores,
+    CommerceCheckoutSettings and the specs reading the shared screens, the palette and the shell (Accounting*, Chat, Chatter,
+    ClientBilling, CommonsSettings, CommsHome, CustomerService* (9), Manufacturing* (4), Notifications, ProductsAccess,
+    ProjectRequests, ProjectsAccess, Purchasing* (4), QuickCreate, Requests, TodayPanel, Warehouse* (4),
+    AppOrganizationFilters): 338 features, 71.8 s; `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
+- Acceptance: mr-pass `acceptance/ShopOrdersInCommerce` (5 features, dependsOn ShopFixtures and ShopOrderScenarios; every
+  feature ignored without mr-boss, so PASS stands alone): physical and digital-only Shop orders placed through a page's
+  calls and approved, with ShopOrderScenarios' mixed order, in Orders with their payment and fulfillment (the digital
+  "Downloads ready", the mixed "Shipped · Downloads revoked" after that spec's refund) and in Warehouse's and Accounting's
+  OrderDetail; the question in Requests, the return in Returns (Requested), the cancel request's badge, the owners' links for
+  a user who opens Customer Service and none for the operator, RequestDetail and ReturnDetail read only, the operator
+  refused `authorize#Return`; a capture declined after placement (ZIZI_SHOP_CAPFAIL) held, listed and shown, the operator
+  refused the release; Order again posted from OrderDetail, the new open order at `get#ProductPrice`'s price with no payment,
+  CartDetail "Made by staff"; Home, Orders, Carts, Returns, Customers, Requests and Customer360 in qvt and Orders in html.
+  `./moq accept mr-pass --spec ShopOrdersInCommerce`, run: 12 features (with its two fixtures), 12 passed; then
+  `./moq accept mr-pass` once: server suite 32 features, 29 passed, 3 ignored (as before), 0 failed; client suite 41 of 41.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new screens or templates.
+- Inventories: usl-inventory's clone#Order names Commerce/Orders/OrderDetail's Order again; the Designed-in paths
+  `Commerce/Orders/Carts/CartDetail`, `Orders/Returns/ReturnDetail` and `Customers/Requests/RequestDetail` became the flat
+  built paths (design §2 changed). ss-inventory has no Commerce order row. The other usl rows naming Commerce/Orders/OrderDetail
+  (place, approve, hold, release, cancel, the item mutators) stay unimplemented in Commerce: its OrderDetail is read only and
+  those actions are the owners' screens' (design §10).
+- Decisions (design §16 row "Orders, carts and customers as built"):
+  - The detail screens are flat under their areas, as P7's.
+  - A stuck Shop placement is an open order with its payment kept: it is listed by Orders' Attention filter and opens
+    CartDetail, never OrderDetail; Commerce shows it read only.
+  - A cart is abandoned an hour after its last shopper activity with no live checkout until P10's RecoveryPolicy sets the
+    store's delay; a staff-made cart has no shopper activity and is never abandoned.
+  - A case is the store's by its store, a link to a store order or the store's support queue; a product link alone is not
+    (a product belongs to no one store), so design §6's "or products" is left out.
+  - Order again needs COMMERCE_ORDER_VIEW (the subscription operator's too) and makes an open order only; whoever places it
+    places it through the order's owner.
+  - Customer360 in Commerce is one page, not tabs; its Accounting tabs stay Accounting's.
+  - The P8 acceptance lives in mr-pass beside the Shop scenarios it reads (F-P8-1), not in `acceptance/Commerce/`.
+  - Routed items: F8, F42, F43, F51 and F70 done as above. impl-shop F85: stuck placements listed (Orders' Attention, Home's
+    Placements waiting, CartDetail's banner) and the OhtPayment hold shown read only. F91: a store-scoped review, read only
+    (`find#StoreDeliveries`, OrderDetail's Notices, Orders' "Notice not delivered", Home's count); resolving stays
+    `resolve#Delivery`'s MESSAGE_DELIVERY_REVIEW, which no Commerce group gets until Comms scopes it by store (F-P8-4).
+    F86: no store default for digital-only orders here (F-P8-5).
+- Findings (provisional):
+  - **F-P8-1** `dependsOn` does not order a run: the named specs are added, but the run keeps component load order and then
+    file names, so a spec named before its dependency runs first (mr-boss's specs run before mr-pass's, and in mr-pass
+    `CommerceOrderScenarios` ran before ShopFixtures). The walk was renamed to sort after ShopOrderScenarios. For the
+    framework: run a spec's dependsOn first, as the help says.
+  - **F-P8-2** No Accounting screen releases a Payment hold: `release#OrderHold` with PAYMENT_HOLD_RELEASE is reachable only as a
+    service (ShopPaymentScenarios calls it); Commerce links Accounting's OrderDetail, which shows no release. For Accounting.
+  - **F-P8-3** A stuck placement has no resolution screen anywhere: its payment is kept and the order open, and nothing
+    places it again or refunds it but the services. For Accounting and Shop (impl-shop F85's remainder).
+  - **F-P8-4** F91: `resolve#Delivery` stays unscoped; a store-scoped resolve (or Comms' review screen) is needed before a
+    Commerce group may resolve its notices.
+  - **F-P8-5** F86 left for Sales: a store already turns PsstOrdApproveNewCust and PsstOrdApproveAddrMissing off in
+    StoreDetail's approval checks; a default that skips them only for an all-digital order would be a new
+    `check#OrderPreApprove` condition with its default test, Sales' approval policy rather than Commerce's. The acceptance
+    approves the demo store's Shop orders by hand, as ShopOrderScenarios does.
+  - **F-P8-6** Not built from the phase text: the "Log as note" response-action (no Commerce screen takes a note on an order or
+    cart; a case takes one in RequestDetail), the IntegrationDetail and Product360 prompts (P13, P9) and the channel-retry
+    skill (P13, no IntegrationDetail yet).
+  - **F-P8-7** RecurringTemplate bases are not left out of Orders yet: `orderPurposeEnumId` does not exist until Shop P7 marks
+    them; `find#StoreOrders` is where the condition goes.
+  - **F-P8-8** StoreOperations scopes an order by its store alone (the store's organization), while Commerce.js's
+    `check#Record` of an order also needs each part's vendor to be one of the user's organizations: a store order vended by
+    another organization would be listed and then refused by the record check (and its record link). None exists in the
+    demo; for the lead, whether Mantle should check the vendor too.
 
 ### P9 — Reviews
 

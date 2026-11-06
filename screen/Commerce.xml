@@ -44,15 +44,32 @@ along with this software (see the LICENSE.md file). If not, see
     </subscreens>
 
     <!-- palette types, quick create, Today sources and notification topics grow with the phases that build their records
-        (design §1.2): orders and carts in the palette (P8); New store opens from Stores and Home's first-use state (P2), not quick create -->
+        (design §1.2): orders and carts in the palette (P8, through search#Records); New store opens from Stores and Home's
+        first-use state (P2), not quick create -->
     <shell-providers>
-        <!-- P1: the user's stores in the palette (search#Records), each opening its StoreDetail (P2) -->
+        <!-- P1: the user's stores in the palette (search#Records), each opening its StoreDetail (P2); P8 adds the stores' orders
+            (OrderDetail) and carts (CartDetail) -->
         <palette-source group="Commerce" label="Commerce stores" icon="sym_o_storefront"
                 service="ironstone.commerce.ContextServices.search#Records" sequence="48"/>
+        <!-- P8: the caller's open store orders and carts in Comms' ring bar and call (Comms' own provider answers the contacts;
+            design §1.4); store orders and carts in the palette through the source above (searchFinds) -->
+        <call-context name="boss.commerce" service="ironstone.commerce.ContextServices.get#CallContext"/>
+        <!-- P8: the Assist prompts of design §1.4 for the screens built so far (IntegrationDetail's with P13, Product360's
+            reviews with P9) -->
+        <assist-prompt label="Store readiness" text="Explain this store's readiness findings" screen="Commerce/Stores/StoreDetail"
+                entity="mantle.product.store.ProductStore" sequence="10"/>
+        <assist-prompt label="Why no order?" text="Why did this cart not convert?" screen="Commerce/Orders/CartDetail"
+                entity="mantle.order.OrderHeader" sequence="20"/>
+        <assist-prompt label="Payment and fulfillment" text="Summarize payment and fulfillment" screen="Commerce/Orders/OrderDetail"
+                entity="mantle.order.OrderHeader" sequence="30"/>
         <keymap scope="commerce">
             <key keys="g e" label="Commerce home" screen="Commerce/Home"/>
             <key keys="g s" label="Stores" screen="Commerce/Stores"/>
             <key keys="g m" label="Merchandising" screen="Commerce/Merchandising"/>
+            <!-- P8 -->
+            <key keys="g o" label="Store orders" screen="Commerce/Orders/Orders"/>
+            <key keys="g c" label="Carts" screen="Commerce/Orders/Carts"/>
+            <key keys="g u" label="Store customers" screen="Commerce/Customers/Customers"/>
         </keymap>
     </shell-providers>
 

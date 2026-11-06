@@ -80,10 +80,15 @@ along with this software (see the LICENSE.md file). If not, see
             if (ec.user.userId && (recordEntityName === 'mantle.order.OrderHeader' || recordEntityName === 'mantle.party.Party'
                     || docType === 'MantleParty')) {
                 const customerService = ec.resource.script('component://mr-boss/service/ironstone/customerservice/CustomerService.js')
+                // a sales order Customer Service does not take (its link is null: a user out of its scope) falls through to
+                // the branches below, so Commerce's store orders and carts open there (impl-commerce F42)
                 if (recordEntityName === 'mantle.order.OrderHeader' && customerService.isSalesOrder(id)) {
-                    url = customerService.recordLink('order', id)
-                    icon = 'sym_o_receipt_long'
-                    return
+                    const serviceUrl = customerService.recordLink('order', id)
+                    if (serviceUrl) {
+                        url = serviceUrl
+                        icon = 'sym_o_receipt_long'
+                        return
+                    }
                 }
                 if (recordEntityName !== 'mantle.order.OrderHeader' && customerService.hasScreen('customer')) {
                     const customerUrl = customerService.recordLink('customer', id)
@@ -101,6 +106,20 @@ along with this software (see the LICENSE.md file). If not, see
                 url = ec.resource.script('component://mr-boss/service/ironstone/commerce/Commerce.js').recordLink('store', id)
                 icon = 'sym_o_storefront'
                 return
+            }
+            // P8: a store's order opens OrderDetail, an open one CartDetail, under Commerce for a user who works its store
+            // (F8); anyone else goes on to the branches below
+            if (ec.user.userId && recordEntityName === 'mantle.order.OrderHeader') {
+                const storeOrder = ec.entity.find('mantle.order.OrderHeader').condition('orderId', id).disableAuthz().one()
+                if (storeOrder?.productStoreId) {
+                    const kind = storeOrder.statusId === 'OrderOpen' ? 'cart' : 'order'
+                    const commerceUrl = ec.resource.script('component://mr-boss/service/ironstone/commerce/Commerce.js').recordLink(kind, id)
+                    if (commerceUrl) {
+                        url = commerceUrl
+                        icon = kind === 'cart' ? 'sym_o_shopping_cart' : 'sym_o_receipt_long'
+                        return
+                    }
+                }
             }
             // purchase orders, supplier quotes and purchase agreements open under Purchasing for a user who may work with them
             // there (ironstone.purchasing's scope: the root grant, the buying organization and the supplier,

@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- CartDetail (design-commerce §6 CartDetail; style-guide §3.3 Detail; impl-commerce P8): one open order of the user's
+    stores, read only (mantle.order.StoreOperationsServices.get#StoreCart): CartSummary (its lines and totals, activity, store
+    and its Shop checkout's phase; a stuck placement, impl-shop F85, says why it waits and that its payment is kept) and
+    RecoveryHistory, empty until P10 builds cart recovery. Sending never changes an order or signs staff in as the shopper;
+    an active checkout is never a staff-editable draft. A missing cart and one outside the scope are "not available". -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Cart" default-menu-include="false">
+    <parameter name="orderId" required="true"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.get#StoreCart" in-map="{orderId:orderId}" out-map="found"
+                transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="cart" from="found?.cart || null"/>
+        <set field="lines" from="found?.lines || []"/>
+        <set field="checkout" from="found?.checkout || null"/>
+        <set field="access" from="found?.access || null"/>
+        <set field="recovery" from="found?.recovery || []"/>
+        <set field="customerUrl" from="cart?.customerPartyId ? sharedLinks['Customers/Customer360'] + '?customerPartyId=' + encodeURIComponent(cart.customerPartyId) : null"/>
+    </actions>
+    <widgets>
+        <section name="CartMissing" condition="!cart">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Cart not available"/>
+                    <box-body>
+                        <label type="p" text="Cart ${orderId} is not available: it does not exist, it is no longer open, or it is not of a store you work."/>
+                        <link url="${sharedLinks['Orders/Carts']}" text="Back to carts" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="CartFound" condition="cart">
+            <widgets>
+                <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Cart ${orderId} · ${cart.customerText}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <container style="row items-center q-gutter-x-sm">
+                                <label text="Cart ${orderId}" type="h5"/>
+                                <link url="${customerUrl}" url-type="plain" text="${cart.customerText}" link-type="anchor" condition="customerUrl"/>
+                                <label text="${cart.customerText}" type="span" style="text-subtitle1 m-muted" condition="!customerUrl"/>
+                            </container>
+                            <label text="${[cart.storeName, cart.sourceText, 'started ' + cart.entryText].filter(Boolean).join(' · ')}" type="p"
+                                    style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto m-record-status">
+                            <label text="${cart.stateText}" type="span" style="text-weight-medium ${cart.stuck ? 'text-negative' : cart.abandoned ? 'text-warning' : ''}"/>
+                        </container>
+                    </container>
+                </container>
+                <section name="CartStuck" condition="checkout?.stuck">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Placement waiting for staff"/>
+                            <box-body>
+                                <label type="p" text="The shopper paid (${checkout.paymentText || 'payment kept'}, due ${checkout.dueText}) but the order was not placed: ${checkout.failureText || 'placement failed ' + checkout.tries + ' times'}."/>
+                                <label type="p" style="text-caption m-muted q-mb-none"
+                                        text="Read only: the payment is kept. An Accounting payment operator reconciles it; the order is placed or refunded there."/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <dashboard min-width="150" style="q-mb-sm">
+                    <number-card title="Value" value="${cart.totalText}" icon="sym_o_shopping_cart" size="sm"/>
+                    <number-card title="Lines" value="${cart.lineCount}" icon="sym_o_list" size="sm"/>
+                    <number-card title="Last activity" value="${cart.activityText || '—'}" icon="sym_o_schedule" size="sm"/>
+                    <number-card title="Checkout" value="${checkout ? checkout.statusText : 'Not started'}" icon="sym_o_point_of_sale" size="sm"/>
+                </dashboard>
+                <container-box>
+                    <box-header title="Cart summary · ${lines.length}"/>
+                    <box-body-nopad>
+                        <form-list name="CartSummary" list="lines" skip-form="true" paginate="false">
+                            <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                            <field name="description">
+                                <default-field title="Item">
+                                    <label text="${description}" type="div"/>
+                                    <label text="${itemTypeText}" type="div" style="text-caption m-muted"/>
+                                </default-field>
+                            </field>
+                            <field name="quantityText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                            <field name="unitText" align="right"><default-field title="Price"><display/></default-field></field>
+                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/></column>
+                                <column><field-ref name="amountText"/></column>
+                            </columns>
+                        </form-list>
+                        <container style="row justify-end q-pa-sm">
+                            <label text="Total ${cart.totalText}" type="span" style="text-subtitle1 text-weight-medium"/>
+                        </container>
+                    </box-body-nopad>
+                </container-box>
+                <container-row>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Checkout"/>
+                            <box-body>
+                                <label type="p" condition="checkout"
+                                        text="${checkout.statusText}${checkout.frozenText ? ', totals frozen ' + checkout.frozenText : ''}${checkout.dueText ? ', due ' + checkout.dueText : ''}${checkout.paymentText ? ', payment ' + checkout.paymentText : ''}."/>
+                                <label type="p" condition="!checkout" text="No checkout started."/>
+                                <label type="p" style="text-caption m-muted q-mb-none" condition="access"
+                                        text="Shop cart since ${access.createdText}${access.closedText ? '; closed ' + access.closedText : ''}."/>
+                                <label type="p" style="text-caption m-muted q-mb-none" condition="cart.madeByStaff"
+                                        text="Made by staff (Order again): no shopper activity is recorded."/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                    <row-col md="6">
+                        <container-box>
+                            <box-header title="Recovery history"/>
+                            <box-body>
+                                <label type="p" style="m-muted q-mb-none" condition="!recovery.length"
+                                        text="No recovery sent. Cart recovery comes with the store's recovery policy."/>
+                            </box-body>
+                        </container-box>
+                    </row-col>
+                </container-row>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
