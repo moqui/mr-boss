@@ -26,7 +26,10 @@ along with this software (see the LICENSE.md file). If not, see
     template/PurchasingReturnDetail.xml). Customer Service mounts it at CustomerService/Returns/ReturnDetail (crosscut §3.18
     Customer Service row, impl-customer-service P9): a customer return of the user's organizations and customers, authorized,
     labelled, closed or cancelled there, received for W and settled for F (ironstone.customerservice.ReturnServices
-    get#ReturnDetail; template/CustomerServiceReturnDetail.xml). -->
+    get#ReturnDetail; template/CustomerServiceReturnDetail.xml). Commerce mounts it at Commerce/Orders/ReturnDetail
+    (crosscut §3.18, design-commerce §10, impl-commerce P8): a return of the user's stores' orders, read only, with Open in
+    Customer Service and in Accounting (mantle.order.StoreOperationsServices.get#StoreReturn;
+    template/CommerceReturnDetail.xml). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Return"
@@ -76,6 +79,16 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.message.clearErrors()</script>
             <set field="returnFound" from="!!returnFound"/>
         </if>
+        <!-- Commerce (impl-commerce P8): a return of the user's stores' orders, read only -->
+        <if condition="appRoot == 'Commerce'">
+            <service-call name="mantle.order.StoreOperationsServices.get#StoreReturn" in-map="{returnId:returnId}"
+                    out-map="storeReturn" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="storeReturn" from="storeReturn?.returnHeader ? storeReturn : null"/>
+            <service-call name="ironstone.commerce.ContextServices.get#OperationLinks" out-map="linksOut" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="operationLinks" from="linksOut?.links || {}"/>
+        </if>
         <if condition="appRoot == 'Purchasing'">
             <service-call name="ironstone.purchasing.ReturnServices.get#ReturnDetail"
                     in-map="{appRoot:appRoot, returnId:returnId}" out-map="context" transaction="force-new" ignore-error="true"/>
@@ -87,8 +100,9 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseReturn" location="component://mr-boss/template/WarehouseReturnDetail.xml"/>
         <section-include name="PurchasingReturn" location="component://mr-boss/template/PurchasingReturnDetail.xml"/>
         <section-include name="CustomerServiceReturn" location="component://mr-boss/template/CustomerServiceReturnDetail.xml"/>
+        <section-include name="CommerceReturn" location="component://mr-boss/template/CommerceReturnDetail.xml"/>
         <label text="This return is not available in this app." type="p"
                 condition="appRoot != 'Accounting' &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing'
-                    &amp;&amp; appRoot != 'CustomerService'"/>
+                    &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce'"/>
     </widgets>
 </screen>

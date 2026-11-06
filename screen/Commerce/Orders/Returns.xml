@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Returns (design-commerce §6 Returns; style-guide §3.2 List; impl-commerce P8): ReturnFind (store, return or order, status)
+    and the returns whose lines come from the user's stores' orders (mantle.order.StoreOperationsServices.find#StoreReturns),
+    Requested first: the RMA, customer, source order, requested and received quantities and settlement. A store-filtered
+    view of Customer Service's returns (X7): Customer Service authorizes, Accounting settles, Commerce takes no return action.
+    A row opens the shared ReturnDetail in Commerce's context. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Returns" default-menu-index="3">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="statusId"/>
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.find#StoreReturns" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, statusId:(statusId || null), customerPartyId:(customerPartyId || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="returns" from="found?.returns || []"/>
+        <set field="returnsCount" from="found?.returnsCount || 0"/>
+        <set field="returnsPageIndex" from="found?.returnsPageIndex || 0"/>
+        <set field="returnsPageSize" from="found?.returnsPageSize || 20"/>
+        <set field="returnsPageMaxIndex" from="found?.returnsPageMaxIndex || 0"/>
+        <set field="returnsPageRangeLow" from="found?.returnsPageRangeLow || 0"/>
+        <set field="returnsPageRangeHigh" from="found?.returnsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || term || statusId || customerPartyId)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, statusId:statusId, customerPartyId:customerPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Returns" type="h5"/></container>
+        </container>
+        <form-single name="ReturnFind" transition="." map="findValues">
+            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Return or order"><text-line size="22"/></default-field></field>
+            <field name="statusId">
+                <default-field title="Status">
+                    <drop-down allow-empty="true">
+                        <option key="ReturnRequested" text="Requested"/><option key="ReturnApproved" text="Approved"/>
+                        <option key="ReturnShipped" text="Shipped"/><option key="ReturnReceived" text="Received"/>
+                        <option key="ReturnCompleted" text="Completed"/><option key="ReturnCancelled" text="Cancelled"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="ReturnList" list="returns" skip-form="true">
+                    <field name="returnId">
+                        <default-field title="Return">
+                            <link url="${sharedLinks['Orders/ReturnDetail']}" text="${displayId}" link-type="anchor" style="text-mono"
+                                    parameter-map="{returnId:returnId}"/>
+                        </default-field>
+                    </field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="orderText">
+                        <default-field title="Order">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderText}" link-type="anchor" style="text-mono"
+                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                        </default-field>
+                    </field>
+                    <field name="storeName"><default-field title="Store"><display/></default-field></field>
+                    <field name="entryText"><default-field title="Requested"><display/></default-field></field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="requestedText" align="right"><default-field title="Quantity"><display/></default-field></field>
+                    <field name="receivedText" align="right"><default-field title="Received"><display/></default-field></field>
+                    <field name="settledText"><default-field title="Settlement"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="returnId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="settledText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!returns.length &amp;&amp; filtered" text="No return matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!returns.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No return of your stores' orders. Customers ask for returns from the shop's Support pages; Customer Service works them."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

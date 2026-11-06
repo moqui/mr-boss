@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Orders (design-commerce §6 Orders; style-guide §3.2 List; impl-commerce P8): OrderFind (store, number, name or external
+    reference, status, attention and payment state) and the list of the user's stores' submitted orders
+    (mantle.order.StoreOperationsServices.find#StoreOrders: never an open order), each with its customer, store and channel,
+    placed date, status, total, computed payment state, fulfillment and its badges (a hold, a Payment hold, a cancellation
+    request). A row opens the shared OrderDetail; a stuck Shop placement (Attention: placement waiting, impl-shop F85) is still
+    an open order with its payment kept and opens CartDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Orders" default-menu-index="1">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="statusId"/>
+    <parameter name="attention"/>
+    <parameter name="payment"/>
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.find#StoreOrders" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, statusId:(statusId || null), attention:(attention || null),
+                    payment:(payment || null), customerPartyId:(customerPartyId || null), pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="orders" from="found?.orders || []"/>
+        <set field="ordersCount" from="found?.ordersCount || 0"/>
+        <set field="ordersPageIndex" from="found?.ordersPageIndex || 0"/>
+        <set field="ordersPageSize" from="found?.ordersPageSize || 20"/>
+        <set field="ordersPageMaxIndex" from="found?.ordersPageMaxIndex || 0"/>
+        <set field="ordersPageRangeLow" from="found?.ordersPageRangeLow || 0"/>
+        <set field="ordersPageRangeHigh" from="found?.ordersPageRangeHigh || 0"/>
+        <set field="truncated" from="!!found?.truncated"/>
+        <set field="filtered" from="!!(productStoreId || term || statusId || attention || payment || customerPartyId)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, statusId:statusId, attention:attention, payment:payment,
+                customerPartyId:customerPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Orders" type="h5"/></container>
+        </container>
+        <form-single name="OrderFind" transition="." map="findValues">
+            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Order, name or reference"><text-line size="22"/></default-field></field>
+            <field name="statusId">
+                <default-field title="Status">
+                    <drop-down allow-empty="true">
+                        <option key="OrderPlaced" text="Placed"/><option key="OrderApproved" text="Approved"/>
+                        <option key="OrderProcessing" text="Processing"/><option key="OrderSent" text="Sent"/>
+                        <option key="OrderHold" text="Held"/><option key="OrderCompleted" text="Completed"/>
+                        <option key="OrderCancelled" text="Cancelled"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="attention">
+                <default-field title="Attention">
+                    <drop-down allow-empty="true">
+                        <option key="paymentHold" text="Payment hold"/><option key="hold" text="Any hold"/>
+                        <option key="cancelRequest" text="Cancellation requested"/><option key="stuck" text="Placement waiting"/>
+                        <option key="notice" text="Notice not delivered"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="payment">
+                <default-field title="Payment">
+                    <drop-down allow-empty="true">
+                        <option key="unpaid" text="Unpaid"/><option key="promised" text="Promised"/>
+                        <option key="authorized" text="Authorized"/><option key="paid" text="Paid"/>
+                        <option key="held" text="Payment hold"/><option key="none" text="No charge"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="attention"/>
+                    <field-ref name="payment"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <label type="p" style="text-caption m-muted" condition="truncated"
+                text="Only the newest matching orders are shown: narrow the store or the dates to see the rest."/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="OrderList" list="orders" skip-form="true">
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <link url="${stuck ? sharedLinks['Orders/CartDetail'] : sharedLinks['Orders/OrderDetail']}" text="${orderId}"
+                                    link-type="anchor" style="text-mono" parameter-map="{orderId:orderId}"/>
+                            <label text="${orderName}" type="div" style="text-caption m-muted" condition="orderName"/>
+                        </default-field>
+                    </field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="storeName">
+                        <default-field title="Store">
+                            <label text="${storeName}" type="div"/>
+                            <label text="${[salesChannelText, externalId].filter(Boolean).join(' · ')}" type="div"
+                                    style="text-caption m-muted" condition="salesChannelText || externalId"/>
+                        </default-field>
+                    </field>
+                    <field name="placedText"><default-field title="Placed"><display/></default-field></field>
+                    <field name="statusText">
+                        <default-field title="Status">
+                            <label text="${statusText}" type="div" style="${held ? 'text-warning' : ''}"/>
+                            <label text="${paymentHold ? 'Payment hold · Accounting releases it' : holdText ? 'On hold: ' + holdText : ''}"
+                                    type="div" style="text-caption text-warning" condition="held || paymentHold"/>
+                            <label text="Cancellation requested" type="div" style="text-caption text-warning" condition="cancelRequested"/>
+                            <label text="${failureText}" type="div" style="text-caption text-negative" condition="stuck"/>
+                        </default-field>
+                    </field>
+                    <field name="paymentText"><default-field title="Payment"><display/></default-field></field>
+                    <field name="fulfillmentText"><default-field title="Fulfillment"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="totalText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!orders.length &amp;&amp; filtered" text="No order matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!orders.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="Your stores have no submitted orders yet. Open carts are under Carts."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

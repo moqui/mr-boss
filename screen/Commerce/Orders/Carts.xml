@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Carts (design-commerce §6 Carts; style-guide §3.2 List; impl-commerce P8): CartFind (store, number or name, state) and the
+    open orders of the user's stores (mantle.order.StoreOperationsServices.find#StoreCarts), latest shopper activity first:
+    the customer (a guest's cart shows "Guest", never an invented identity), lines, value, activity, its Shop checkout's
+    phase and its state (active; abandoned: inactive past the store's delay with no live checkout; checking out; placement
+    waiting; a staff cart made by Order again). Recovery is P10's. A row opens CartDetail. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Carts" default-menu-index="2">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="state"/>
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.find#StoreCarts" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, state:(state || null), customerPartyId:(customerPartyId || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="carts" from="found?.carts || []"/>
+        <set field="cartsCount" from="found?.cartsCount || 0"/>
+        <set field="cartsPageIndex" from="found?.cartsPageIndex || 0"/>
+        <set field="cartsPageSize" from="found?.cartsPageSize || 20"/>
+        <set field="cartsPageMaxIndex" from="found?.cartsPageMaxIndex || 0"/>
+        <set field="cartsPageRangeLow" from="found?.cartsPageRangeLow || 0"/>
+        <set field="cartsPageRangeHigh" from="found?.cartsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || term || state || customerPartyId)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, state:state, customerPartyId:customerPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Carts" type="h5"/></container>
+        </container>
+        <form-single name="CartFind" transition="." map="findValues">
+            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Cart or name"><text-line size="22"/></default-field></field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="active" text="Active"/><option key="abandoned" text="Abandoned"/>
+                        <option key="checkout" text="Checking out"/><option key="stuck" text="Placement waiting"/>
+                        <option key="staff" text="Made by staff"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CartList" list="carts" skip-form="true">
+                    <field name="orderId">
+                        <default-field title="Cart">
+                            <link url="${sharedLinks['Orders/CartDetail']}" text="${orderId}" link-type="anchor" style="text-mono"
+                                    parameter-map="{orderId:orderId}"/>
+                        </default-field>
+                    </field>
+                    <field name="customerText"><default-field title="Customer"><display/></default-field></field>
+                    <field name="storeName">
+                        <default-field title="Store">
+                            <label text="${storeName}" type="div"/>
+                            <label text="${sourceText}" type="div" style="text-caption m-muted"/>
+                        </default-field>
+                    </field>
+                    <field name="lineCount" align="right"><default-field title="Lines"><display/></default-field></field>
+                    <field name="totalText" align="right"><default-field title="Value"><display/></default-field></field>
+                    <field name="activityText"><default-field title="Last activity"><display/></default-field></field>
+                    <field name="checkoutText"><default-field title="Checkout"><display/></default-field></field>
+                    <field name="stateText">
+                        <default-field title="State">
+                            <label text="${stateText}" type="span" style="${stuck ? 'text-negative' : abandoned ? 'text-warning' : ''}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="orderId"/><field-ref name="customerText"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="totalText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!carts.length &amp;&amp; filtered" text="No cart matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!carts.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="Your stores have no open carts."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

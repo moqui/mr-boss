@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrderDetail's Commerce branch (crosscut §3.6; design-commerce §10 OrderDetail; impl-commerce P8): the section
+    Shared/OrderDetail includes when appRoot is Commerce, over mantle.order.StoreOperationsServices.get#StoreOrder (a
+    submitted order of the user's stores; a missing one and another store's are "not available" alike) and
+    ironstone.commerce.ContextServices.get#OperationLinks (the owners' screens the user may open). Read only: the header
+    (customer, store, channel, placed, status, total) with Order again (reorder#StoreOrder: a new open order at today's
+    prices, no payment copied, F43) and More (the order in Customer Service and in Accounting); a Payment hold banner
+    (OhtPayment), read only with Accounting's order (an Accounting payment operator releases it, X4); open cancellation
+    proposals linking Customer Service's OrderChangeDetail (X7); the payment, fulfillment and case cards; items, payments,
+    shipments, invoices, cases, returns and the order's notices on the delivery ledger (addresses masked). Place, approve,
+    hold and cancel stay the owners' screens'. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="commerceReorder">
+        <actions>
+            <service-call name="mantle.order.StoreOperationsServices.reorder#StoreOrder" in-map="{orderId:orderId, orderRevision:(orderRevision || null), operationKey:(operationKey || null)}" out-map="reordered"/>
+            <if condition="!ec.message.hasError()">
+                <set field="orderId" from="reordered.orderId"/>
+                <script>ec.message.addMessage(reordered.message, 'success')</script>
+            </if>
+        </actions>
+        <default-response url="${sharedLinks['Orders/CartDetail']}"><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CommerceOrder" condition="appRoot == 'Commerce'">
+            <widgets>
+                <section name="CommerceOrderMissing" condition="!storeOrder">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Order not available"/>
+                            <box-body>
+                                <label type="p" text="Order ${orderId} is not available: it does not exist, it is still an open cart, or it is not of a store you work."/>
+                                <link url="${sharedLinks['Orders/Orders']}" text="Back to orders" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CommerceOrderFound" condition="storeOrder">
+                    <actions>
+                        <set field="co" from="storeOrder.order"/>
+                        <set field="customerUrl" from="co.customerPartyId ? sharedLinks['Customers/Customer360'] + '?customerPartyId=' + encodeURIComponent(co.customerPartyId) : null"/>
+                        <set field="paymentHold" from="storeOrder.holds.find(hold => hold.payment) || null"/>
+                        <set field="otherHolds" from="storeOrder.holds.filter(hold => !hold.payment)"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.order.OrderHeader" record-id="${orderId}" title="Order ${orderId} · ${co.customerName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <container style="row items-center q-gutter-x-sm">
+                                        <label text="Order ${orderId}" type="h5"/>
+                                        <link url="${customerUrl}" url-type="plain" text="${co.customerName}" link-type="anchor" condition="customerUrl"/>
+                                    </container>
+                                    <label text="${[co.orderName, co.storeName, co.salesChannelText, 'placed ' + co.placedText,
+                                            co.externalId ? 'reference ' + co.externalId : ''].filter(Boolean).join(' · ')}" type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${co.statusText}" type="span" style="text-weight-medium ${co.held ? 'text-warning' : ''}"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <container-dialog id="CommerceOrderAgain" button-text="Order again" icon="sym_o_replay" width="560"
+                                        title="Order again from order ${orderId}" condition="co.canReorder">
+                                    <form-single name="CommerceOrderAgainForm" transition="commerceReorder"
+                                            map="{orderId:orderId, orderRevision:co.orderRevision, operationKey:'reorder-' + ec.user.randomString(24)}">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="submitButton"><default-field title="Make the new order"><submit/></default-field></field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted"
+                                            text="A new open order for ${co.customerName} in ${co.storeName} with this order's product lines at today's prices. No payment is copied and nothing is placed or charged."/>
+                                </container-dialog>
+                                <button-menu text="More" icon="more_horiz">
+                                    <link url="${operationLinks.serviceOrder}${orderId}" url-type="plain" text="Open in Customer Service"
+                                            condition="operationLinks.serviceOrder"/>
+                                    <link url="${operationLinks.accountingOrder}${orderId}" url-type="plain" text="Open in Accounting"
+                                            condition="operationLinks.accountingOrder"/>
+                                    <link url="${customerUrl}" url-type="plain" text="Customer" condition="customerUrl"/>
+                                </button-menu>
+                            </container>
+                        </container>
+                        <section name="CommercePaymentHold" condition="paymentHold">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="Payment hold"/>
+                                    <box-body>
+                                        <label type="p" text="${paymentHold.reasonText || 'A payment exception after placement.'}"/>
+                                        <label type="p" style="text-caption m-muted q-mb-none"
+                                                text="Held ${paymentHold.placedText}. Read only: an Accounting payment operator releases the hold."/>
+                                        <link url="${operationLinks.accountingOrder}${orderId}" url-type="plain" text="Open in Accounting"
+                                                link-type="anchor" condition="operationLinks.accountingOrder"/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section>
+                        <section-iterate name="CommerceOrderHolds" list="otherHolds" entry="hold">
+                            <widgets>
+                                <container-box type="warning">
+                                    <box-header title="On hold · ${hold.typeText}"/>
+                                    <box-body>
+                                        <label type="p" text="${hold.reasonText || 'No reason was given.'}"/>
+                                        <label type="p" style="text-caption m-muted q-mb-none" text="Held ${hold.placedText}. Read only: its owner releases it."/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section-iterate>
+                        <section-iterate name="CommerceOrderChanges" list="storeOrder.changes" entry="change">
+                            <widgets>
+                                <container-box type="info">
+                                    <box-header title="${change.cancel ? 'Cancellation requested' : 'Change requested · ' + change.kindText}"/>
+                                    <box-body>
+                                        <label type="p" text="Asked ${change.dateText}, ${change.statusText}. Customer Service decides it."/>
+                                        <link url="${operationLinks.orderChange}${change.requestId}" url-type="plain" text="Open in Customer Service"
+                                                link-type="anchor" condition="operationLinks.orderChange"/>
+                                    </box-body>
+                                </container-box>
+                            </widgets>
+                        </section-iterate>
+                        <dashboard min-width="150" style="q-mb-sm">
+                            <number-card title="Total" value="${co.totalText}" icon="sym_o_shopping_cart" size="sm"/>
+                            <number-card title="Payment" value="${co.paymentText}" icon="sym_o_payments" size="sm"/>
+                            <number-card title="Fulfillment" value="${co.fulfillmentText}" icon="sym_o_local_shipping" size="sm"/>
+                            <number-card title="Cases" value="${storeOrder.cases.length}" icon="sym_o_support_agent" size="sm"/>
+                        </dashboard>
+                        <container-box>
+                            <box-header title="Items · ${storeOrder.items.length}"/>
+                            <box-body-nopad>
+                                <form-list name="CommerceOrderItems" list="storeOrder.items" skip-form="true" paginate="false">
+                                    <field name="orderItemSeqId"><default-field title="#"><display/></default-field></field>
+                                    <field name="description">
+                                        <default-field title="Item">
+                                            <label text="${description}" type="div"/>
+                                            <label text="${itemTypeText}" type="div" style="text-caption m-muted"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="quantityText" align="right"><default-field title="Ordered"><display/></default-field></field>
+                                    <field name="cancelledText" align="right"><default-field title="Cancelled"><display/></default-field></field>
+                                    <field name="deliveredText" align="right"><default-field title="Shipped or delivered"><display/></default-field></field>
+                                    <field name="unitText" align="right"><default-field title="Price"><display/></default-field></field>
+                                    <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="description"/></column>
+                                        <column><field-ref name="amountText"/><field-ref name="deliveredText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
+                        </container-box>
+                        <container-row>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Payments · ${storeOrder.payments.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderPayments" list="storeOrder.payments" skip-form="true" paginate="false">
+                                            <field name="instrumentText"><default-field title="Payment"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="amountText" align="right"><default-field title="Amount"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No payment recorded." condition="!storeOrder.payments.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Shipments · ${storeOrder.shipments.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderShipments" list="storeOrder.shipments" skip-form="true" paginate="false">
+                                            <field name="shipmentId"><default-field title="Shipment"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="trackingText"><default-field title="Tracking"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="Nothing shipped." condition="!storeOrder.shipments.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Invoices · ${storeOrder.invoices.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderInvoices" list="storeOrder.invoices" skip-form="true" paginate="false">
+                                            <field name="invoiceId"><default-field title="Invoice"><display/></default-field></field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="totalText" align="right"><default-field title="Total"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="Not invoiced yet." condition="!storeOrder.invoices.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                            <row-col md="6">
+                                <container-box>
+                                    <box-header title="Cases · ${storeOrder.cases.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderCases" list="storeOrder.cases" skip-form="true" paginate="false">
+                                            <field name="requestId">
+                                                <default-field title="Case">
+                                                    <link url="${sharedLinks['Customers/RequestDetail']}" text="${requestId} · ${requestName}"
+                                                            link-type="anchor" parameter-map="{requestId:requestId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No case about this order." condition="!storeOrder.cases.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Returns · ${storeOrder.returns.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderReturns" list="storeOrder.returns" skip-form="true" paginate="false">
+                                            <field name="returnId">
+                                                <default-field title="Return">
+                                                    <link url="${sharedLinks['Orders/ReturnDetail']}" text="${returnId}" link-type="anchor"
+                                                            parameter-map="{returnId:returnId}"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                                            <field name="dateText"><default-field title="Requested"><display/></default-field></field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No return of this order." condition="!storeOrder.returns.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                                <container-box>
+                                    <box-header title="Notices · ${storeOrder.notices.length}"/>
+                                    <box-body-nopad>
+                                        <form-list name="CommerceOrderNotices" list="storeOrder.notices" skip-form="true" paginate="false">
+                                            <field name="sourceText"><default-field title="Notice"><display/></default-field></field>
+                                            <field name="toText"><default-field title="To"><display/></default-field></field>
+                                            <field name="stateText">
+                                                <default-field title="State">
+                                                    <label text="${stateText}" type="div" style="${exception ? 'text-warning' : ''}"/>
+                                                    <label text="${lastError}" type="div" style="text-caption m-muted" condition="exception &amp;&amp; lastError"/>
+                                                </default-field>
+                                            </field>
+                                        </form-list>
+                                        <label type="p" style="m-muted q-pa-sm q-mb-none" text="No notice on the delivery ledger." condition="!storeOrder.notices.length"/>
+                                    </box-body-nopad>
+                                </container-box>
+                            </row-col>
+                        </container-row>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

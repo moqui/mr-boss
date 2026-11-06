@@ -589,7 +589,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | --- | --- | --- | --- |
 | OrderBulkServices | store#Order |  |  |
 | OrderBulkServices | change#OrderPartsStatus |  |  |
-| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/Carts/CartDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360); — (Purchasing P3: OrderDetail reads through ironstone.purchasing.OrderServices.get#OrderDetail; the display info gains revisionHistoryList and itemOtherAuditLogList) |
+| OrderInfoServices | get#OrderDisplayInfo | Purchasing/Orders/OrderDetail; Shared/Customer360; Shared/Supplier360; PASS:Shop/Cart; PASS:Shop/Checkout; PASS:Shop/Orders/OrderConfirmation; PASS:Shop/Orders/OrderDetail; Commerce/Orders/CartDetail; Commerce/Orders/OrderDetail; Sales/Orders/OrderDetail | — (replaced by mantle.account.CustomerFinanceServices.get#CustomerFinance on Accounting/Receivables/Customer360); — (Purchasing P3: OrderDetail reads through ironstone.purchasing.OrderServices.get#OrderDetail; the display info gains revisionHistoryList and itemOtherAuditLogList) |
 | OrderInfoServices | get#OrderItemsTotalCount |  |  |
 | OrderInfoServices | get#OrderItemDisplayInfo |  |  |
 | OrderInfoServices | get#OrderPartBillingAddress |  |  |
@@ -636,7 +636,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | OrderServices | reject#Order |  | Purchasing/Orders/OrderDetail and Purchasing/Approvals (Refuse, through mantle.order.PurchaseServices.decide#PurchaseApproval) (Purchasing P4) |
 | OrderServices | reject#OrderPart |  |  |
 | OrderServices | reject#OrderItem |  |  |
-| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3) |
+| OrderServices | clone#Order | Purchasing/Orders/OrderDetail; Sales/Orders/OrderDetail; Commerce/Orders/OrderDetail; Commerce/Customers/Customer360 | Purchasing/Orders/OrderDetail (Clone, through PurchaseServices.clone#PurchaseOrder) (Purchasing P3); Commerce/Orders/OrderDetail (Order again, through mantle.order.StoreOperationsServices.reorder#StoreOrder: copyPayment false, then repriced; Commerce P8) |
 | OrderServices | update#OrderRecur | Shared/OrderDetail; Sales/Orders/OrderDetail; Sales/Agreements/RecurringOrders |  |
 | OrderServices | create#RecurringOrders |  | Accounting/Receivables/RecurringInvoices (its job's last run) |
 | OrderServices | create#RecurringOrder |  |  |
@@ -836,7 +836,7 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CommunicationServices | findOrCreate#ChatCommunicationEvent |  | Comms/Chat |
 | CommunicationServices | create#RecordFromChatMessage |  | Comms/Chat |
 | ConsentServices | store#PartyConsent | Marketing/Audiences/Consent/ConsentDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact; Comms/Consent/List |
-| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/Carts/CartDetail | Comms/Consent/Contact |
+| ConsentServices | get#PartyConsentState | Marketing/Audiences/Consent/ConsentDetail; Marketing/Customers/Customer360; Marketing/Contacts/ContactDetail; Commerce/Orders/CartDetail | Comms/Consent/Contact |
 | ConsentServices | get#PartyConsentHistory | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Comms/Consent/Contact |
 | ConsentServices | find#Consents | Marketing/Audiences/Consent | Comms/Consent/List |
 | ConsentServices | subscribe#ContactListParty | Marketing/Audiences/Consent/ConsentDetail; Marketing/Audiences/Lists/MemberDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Comms/Consent/Contact |

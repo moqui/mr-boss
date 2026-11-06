@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Customers (design-commerce §6 Customers; style-guide §3.2 List; impl-commerce P8): CustomerFind (store, name or id) and
+    the customers of the user's stores (mantle.order.StoreOperationsServices.find#StoreCustomers: each a party with an order
+    or a signed-in cart there, never a party directory), with their stores, orders, open carts, last order and PASS account
+    state. A row opens the shared Customer360 in Commerce's context. Duplicates merge only through Commons' merge#Parties. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Customers" default-menu-index="1">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.find#StoreCustomers" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="customers" from="found?.customers || []"/>
+        <set field="customersCount" from="found?.customersCount || 0"/>
+        <set field="customersPageIndex" from="found?.customersPageIndex || 0"/>
+        <set field="customersPageSize" from="found?.customersPageSize || 20"/>
+        <set field="customersPageMaxIndex" from="found?.customersPageMaxIndex || 0"/>
+        <set field="customersPageRangeLow" from="found?.customersPageRangeLow || 0"/>
+        <set field="customersPageRangeHigh" from="found?.customersPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || term)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Customers" type="h5"/></container>
+        </container>
+        <form-single name="CustomerFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Name or ID"><text-line size="24"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="CustomerList" list="customers" skip-form="true">
+                    <field name="customerName">
+                        <default-field title="Customer">
+                            <link url="${sharedLinks['Customers/Customer360']}" text="${customerName}" link-type="anchor"
+                                    parameter-map="{customerPartyId:partyId}"/>
+                        </default-field>
+                    </field>
+                    <field name="storeText"><default-field title="Stores"><display/></default-field></field>
+                    <field name="lastOrderText">
+                        <default-field title="Last order">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${lastOrderText}" link-type="anchor"
+                                    parameter-map="{orderId:lastOrderId}" condition="lastOrderId"/>
+                        </default-field>
+                    </field>
+                    <field name="orderCount" align="right"><default-field title="Orders"><display/></default-field></field>
+                    <field name="openCartCount" align="right"><default-field title="Open carts"><display/></default-field></field>
+                    <field name="accountText"><default-field title="Account"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="customerName"/><field-ref name="storeText"/></column>
+                        <column><field-ref name="lastOrderText"/><field-ref name="accountText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!customers.length &amp;&amp; filtered" text="No customer matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!customers.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No customer has ordered from your stores yet."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

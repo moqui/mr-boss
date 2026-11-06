@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Requests (design-commerce §6 Requests; style-guide §3.2 List; impl-commerce P8): RequestFind (store, case or subject,
+    open or all) and the support cases of the user's stores (mantle.order.StoreOperationsServices.find#StoreRequests: by the
+    case's store, linked to one of the stores' orders, or filed in a store's checkout support queue): subject, customer,
+    source order, status, queue, assignee and due date. A store-filtered view of Customer Service's cases (X7): a row opens
+    the shared RequestDetail read only, with Open in Customer Service for a user who works cases there. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Requests" default-menu-index="3">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="state"/>
+    <parameter name="customerPartyId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <actions>
+        <service-call name="mantle.order.StoreOperationsServices.find#StoreRequests" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{productStoreId:(productStoreId || null), term:term, state:(state || null), customerPartyId:(customerPartyId || null),
+                    pageIndex:pageIndex, pageSize:pageSize}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="requests" from="found?.requests || []"/>
+        <set field="requestsCount" from="found?.requestsCount || 0"/>
+        <set field="requestsPageIndex" from="found?.requestsPageIndex || 0"/>
+        <set field="requestsPageSize" from="found?.requestsPageSize || 20"/>
+        <set field="requestsPageMaxIndex" from="found?.requestsPageMaxIndex || 0"/>
+        <set field="requestsPageRangeLow" from="found?.requestsPageRangeLow || 0"/>
+        <set field="requestsPageRangeHigh" from="found?.requestsPageRangeHigh || 0"/>
+        <set field="filtered" from="!!(productStoreId || term || state || customerPartyId)"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, state:state, customerPartyId:customerPartyId}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Requests" type="h5"/></container>
+        </container>
+        <form-single name="RequestFind" transition="." map="findValues">
+            <field name="customerPartyId"><default-field><hidden/></default-field></field>
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Case or subject"><text-line size="22"/></default-field></field>
+            <field name="state">
+                <default-field title="Show">
+                    <drop-down allow-empty="true"><option key="all" text="Open and closed"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="RequestList" list="requests" skip-form="true">
+                    <field name="requestId">
+                        <default-field title="Case">
+                            <link url="${sharedLinks['Customers/RequestDetail']}" text="${requestId} · ${requestName}" link-type="anchor"
+                                    parameter-map="{requestId:requestId}"/>
+                        </default-field>
+                    </field>
+                    <field name="customerName"><default-field title="Customer"><display/></default-field></field>
+                    <field name="orderId">
+                        <default-field title="Order">
+                            <link url="${sharedLinks['Orders/OrderDetail']}" text="${orderId}" link-type="anchor" style="text-mono"
+                                    parameter-map="{orderId:orderId}" condition="orderId"/>
+                        </default-field>
+                    </field>
+                    <field name="statusText"><default-field title="Status"><display/></default-field></field>
+                    <field name="queueText"><default-field title="Queue"><display/></default-field></field>
+                    <field name="assigneeText"><default-field title="Assignee"><display/></default-field></field>
+                    <field name="dueText"><default-field title="Due"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="requestId"/><field-ref name="customerName"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="dueText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; filtered" text="No case matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!requests.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="No open case about your stores. Customers ask from the shop's Support pages; Customer Service answers."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

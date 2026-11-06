@@ -55,6 +55,9 @@ along with this software (see the LICENSE.md file). If not, see
     pane. In the other contexts a case's Complete and Cancel are hidden from a user without SUPPORT_CASE_EDIT, who is sent to
     CaseDetail; the services route a holder's through transition#Case.
 
+    Commerce (impl-commerce P8, crosscut §3.11, design-commerce §10 RequestDetail; mantle.order.StoreOperationsServices
+    get#StoreRequest, template/CommerceRequestDetail.xml): a case of the user's stores at Commerce/Customers/RequestDetail,
+    read only but for an internal note, with Open in Customer Service.
     The request is found under the record visibility rule (R5, R28; in Projects also its project's, impl-projects.md F1): one the
     user may not see is "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -103,6 +106,8 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="applyCaseReply" location="component://mr-boss/template/CustomerServiceReplies.xml"/>
     <!-- Customer Service P8: a closed case's follow-up on CaseDetail (template/CustomerServiceLineage.xml) -->
     <transition-include name="followUpCase" location="component://mr-boss/template/CustomerServiceLineage.xml"/>
+    <!-- Commerce (impl-commerce P8): an internal note on a store case (template/CommerceRequestDetail.xml) -->
+    <transition-include name="commerceRequestNote" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
 
     <!-- a move of the status-bar: in Projects a triage move by one who may triage it (ironstone.projects.ProjectRequestServices triage#Request),
         else the requester's Submit and Cancel (Commons' set#RequestStatus) -->
@@ -321,6 +326,22 @@ along with this software (see the LICENSE.md file). If not, see
                 recordFound = false
                 return
             }
+            // Commerce (impl-commerce P8): a case of the user's stores, read only, in its own section (template/CommerceRequestDetail.xml)
+            if (appRoot === 'Commerce') {
+                ec.message.pushErrors()
+                try {
+                    const out = ec.service.sync().name('mantle.order.StoreOperationsServices.get#StoreRequest').parameters({requestId: requestId})
+                            .requireNewTransaction(true).call() || {}
+                    storeRequest = out.request && !ec.message.hasError() ? out : null
+                    const links = ec.service.sync().name('ironstone.commerce.ContextServices.get#OperationLinks').call() || {}
+                    operationLinks = links.links || {}
+                } catch (error) {
+                    storeRequest = null
+                    operationLinks = {}
+                } finally { ec.message.clearErrors(); ec.message.popErrors() }
+                recordFound = false
+                return
+            }
             // Customer Service (impl-customer-service P2, F49): a case in its own section (template/CustomerServiceCaseDetail.xml)
             if (appRoot === 'CustomerService') {
                 detailPath = '/qapps/CustomerService/Cases/CaseDetail'
@@ -485,7 +506,8 @@ along with this software (see the LICENSE.md file). If not, see
         <section-include name="WarehouseStockRequest" location="component://mr-boss/template/WarehouseRequestDetail.xml"/>
         <section-include name="PurchasingRequest" location="component://mr-boss/template/PurchasingRequestDetail.xml"/>
         <section-include name="CustomerServiceCase" location="component://mr-boss/template/CustomerServiceCaseDetail.xml"/>
-        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; !mfgRequest"><widgets>
+        <section-include name="CommerceRequest" location="component://mr-boss/template/CommerceRequestDetail.xml"/>
+        <section name="RequestNotFound" condition="!recordFound &amp;&amp; appRoot != 'Warehouse' &amp;&amp; appRoot != 'Purchasing' &amp;&amp; appRoot != 'CustomerService' &amp;&amp; appRoot != 'Commerce' &amp;&amp; !mfgRequest"><widgets>
             <container-box type="warning"><box-header title="Not available"/><box-body>
                 <label type="p" text="Request ${requestId} is not available: it does not exist, or you are not one of its people or organizations."/>
                 <link url="requests" text="Back to Requests" link-type="anchor"/>

@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- RequestDetail's Commerce branch (crosscut §3.11; design-commerce §10 RequestDetail; impl-commerce P8): the section
+    Shared/RequestDetail includes when appRoot is Commerce, over mantle.order.StoreOperationsServices.get#StoreRequest (a
+    case of the user's stores; a missing one and another store's are "not available" alike). Read only but for an internal
+    note (add#StoreRequestNote, never sent to the customer): the header (customer, store, source order, queue, assignee,
+    due, status) with Open in Customer Service for a user who works cases there; the description and the conversation.
+    Assignment, replies and resolution stay Customer Service's (X7). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd">
+    <transition name="commerceRequestNote">
+        <actions>
+            <service-call name="mantle.order.StoreOperationsServices.add#StoreRequestNote" in-map="{requestId:requestId, body:body}"/>
+            <if condition="!ec.message.hasError()"><message type="success">The note is on case ${requestId}</message></if>
+        </actions>
+        <default-response url="."><parameter name="requestId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <widgets>
+        <section name="CommerceRequest" condition="appRoot == 'Commerce'">
+            <widgets>
+                <section name="CommerceRequestMissing" condition="!storeRequest">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="Case not available"/>
+                            <box-body>
+                                <label type="p" text="Case ${requestId} is not available: it does not exist, or it is not about a store you work."/>
+                                <link url="${sharedLinks['Customers/Requests']}" text="Back to requests" link-type="anchor"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
+                <section name="CommerceRequestFound" condition="storeRequest">
+                    <actions>
+                        <set field="rq" from="storeRequest.request"/>
+                        <set field="customerUrl" from="rq.customerPartyId ? sharedLinks['Customers/Customer360'] + '?customerPartyId=' + encodeURIComponent(rq.customerPartyId) : null"/>
+                        <set field="noteValue" from="{requestId:requestId, body:''}"/>
+                    </actions>
+                    <widgets>
+                        <context record-entity="mantle.request.Request" record-id="${requestId}" title="Case ${requestId} · ${rq.requestName}"/>
+                        <container style="m-record-header">
+                            <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                                <container style="col-12 col-md m-record-title">
+                                    <label text="Case ${requestId} · ${rq.requestName}" type="h5"/>
+                                    <label text="${[rq.customerName, rq.storeName, rq.queueText ? 'queue ' + rq.queueText : '',
+                                            rq.assigneeText ? 'with ' + rq.assigneeText : '', rq.dueText ? 'due ' + rq.dueText : ''].filter(Boolean).join(' · ')}"
+                                            type="p" style="text-caption m-muted"/>
+                                </container>
+                                <container style="col-12 col-md-auto m-record-status">
+                                    <label text="${rq.statusText}" type="span" style="text-weight-medium"/>
+                                </container>
+                            </container>
+                            <container style="row items-center q-gutter-xs m-record-actions">
+                                <link url="${operationLinks.caseDetail}${requestId}" url-type="plain" text="Open in Customer Service"
+                                        link-type="anchor-button" btn-type="primary" icon="sym_o_open_in_new" condition="operationLinks.caseDetail"/>
+                                <container-dialog id="CommerceRequestNote" button-text="Internal note" icon="sym_o_sticky_note_2" width="560"
+                                        title="An internal note on case ${requestId}">
+                                    <form-single name="CommerceRequestNoteForm" transition="commerceRequestNote" map="noteValue">
+                                        <field name="requestId"><default-field><hidden/></default-field></field>
+                                        <field name="body"><default-field title="Note"><text-area rows="4" cols="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Add note"><submit/></default-field></field>
+                                    </form-single>
+                                    <label type="p" style="text-caption m-muted" text="Internal: the customer never sees it. Replies are Customer Service's."/>
+                                </container-dialog>
+                                <link url="${sharedLinks['Orders/OrderDetail']}" text="Order ${rq.orderId}" link-type="anchor-button"
+                                        parameter-map="{orderId:rq.orderId}" condition="rq.orderId"/>
+                                <link url="${customerUrl}" url-type="plain" text="Customer" link-type="anchor-button" condition="customerUrl"/>
+                            </container>
+                        </container>
+                        <container-box>
+                            <box-header title="Description"/>
+                            <box-body>
+                                <label type="p" text="${rq.description || 'No description.'}"/>
+                            </box-body>
+                        </container-box>
+                        <container-box>
+                            <box-header title="Conversation · ${storeRequest.conversation.length}"/>
+                            <box-body-nopad>
+                                <form-list name="CommerceRequestConversation" list="storeRequest.conversation" skip-form="true" paginate="false">
+                                    <field name="dateText"><default-field title="When"><display/></default-field></field>
+                                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="body">
+                                        <default-field title="Message">
+                                            <label text="${subject}" type="div" style="text-weight-medium" condition="subject"/>
+                                            <label text="${body}" type="div"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="dateText"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="body"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="m-muted q-pa-sm q-mb-none" text="Nothing said on this case yet." condition="!storeRequest.conversation.length"/>
+                            </box-body-nopad>
+                        </container-box>
+                    </widgets>
+                </section>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
