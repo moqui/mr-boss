@@ -272,7 +272,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P7 Promotions | Mantle, BOSS | Promotions, PromotionDetail, PromoCodes, PromoCodeDetail | built Nov 6, 2026 |
 | P8 Orders, carts and customers | Mantle, BOSS | Orders, OrderDetail, Carts, CartDetail, Returns, ReturnDetail, Customers, Customer360, Requests, RequestDetail | built Nov 6, 2026 |
 | P9 Reviews | Mantle, mr-pass, BOSS | Reviews; Shop ProductDetail's reviews | built Nov 6, 2026; follow-up (review requests topic, checkout opt-ins) built Nov 6 |
-| P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | — |
+| P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | built Nov 6, 2026 |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | — |
 | P12 Paid access and subscriptions | Mantle, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | — |
 | P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | — |
@@ -2268,6 +2268,167 @@ Design §6 CartDetail's recovery and §8 RecoveryPolicy; COM-OPS' recovery, SHOP
   failing send does not stop the batch; one mail per cart and window); BOSS `CommerceRecovery`.
 - **Usable when** (design §12.2 scenario 9): an opted-in signed-in shopper's cart idle past the delay gets one notice,
   whose link restores the cart repriced in a fresh session; a guest's cart with no consent gets none.
+
+**Built Nov 6 (P10)** (branch `com/p10`).
+- Mantle:
+  - `service/mantle/order/CartRecovery.js` (new) behind `StoreOperationsServices` `get#CartRecovery` (COMMERCE_ORDER_VIEW,
+    StoreOperations.js' scope: the eligibility and its reason, the consent state, the policy, the ledger's prior sends with the
+    address masked and whether the link was used; with `preview` and COMMERCE_RECOVERY the template's exact subject and body,
+    the link shown as made at the send), `send#CartRecovery` (COMMERCE_RECOVERY: an eligible cart only, the refusal its reason
+    code; a reason, an operation key, PostingOperation type CartRecovery, and the cart's revision), `run#CartRecovery` (the
+    `run_CartRecovery` job, every ten minutes: the stores with PsstRecoveryEnabled true only, their signed-in carts idle past
+    the delay within the window, each through `queue#CartRecovery` in its own transaction, a failure logged and named),
+    `queue#CartRecovery` (internal: one delivery on the ledger, event `cartRecovery:{orderId}:{last activity ms}`, purpose
+    PcpCartReminder on the store's cart reminders list, tried at once) and `build#CartRecovery` (the ledger's source build:
+    suppressed when the cart is closed, completed, checking out, the shopper came back since the window or it is no longer
+    eligible; else a new one-time token whose digest goes on StoreCartAccess `recoveryTokenDigest` until the window ends, and
+    the recovery and email preferences links; a site with no Shop or preferences page fails it); `StoreAdminServices`
+    `get#`/`store#CartRecoveryPolicy` (COMMERCE_VIEW / COMMERCE_STORE_EDIT, StoreCheckout.js' dated settings: PsstRecoveryEnabled,
+    PsstRecoveryDelay, PsstRecoverySender, PsstRecoveryMaxSends, PsstRecoveryRetention and F118's PsstCheckoutOptIns and
+    PsstNewsList, each validated by its kind in StoreAdmin.js; a field not given is left); `ShopCartServices.recover#Cart`
+    (recoverCart: the signed-in account whose cart it is spends the token under the order's lock, the capability rotated with
+    the activity, the lines repriced and the unavailable named; a visitor SIGN_IN_REQUIRED with the token kept; spent, expired,
+    replaced, revoked or another account's NOT_AVAILABLE; its own lookup throttle).
+  - Eligibility (one function for the screen, the job, the send and each attempt): recovery on, sender built-in, a current
+    PsetCartRecovery email, a Shop access row with a signed-in customer (never a guest's or staff's), the order open, no
+    completed or live checkout, product lines, `check#CartReminderConsent`, the account's own email verified (the P9 follow-up
+    review's R2), idle past the delay and within the window, nothing in this window yet, fewer sends than the most (failed and
+    suppressed ones do not count).
+  - Appended: StoreAdmin.js settingTypes, settingKinds (recoveryDelay, recoveryMaxSends, recoveryRetention, recoverySender,
+    checkoutOptIns, newsList) and cloneLeftOutSettingTypes (PsstRecoveryEnabled, PsstNewsList); StoreCheckout.js exports
+    `settingsOf` and `storeSettings` and a `newsLists` option source; ShopCart.js exports `reprice`, `usable`, `answer`;
+    StoreOperations.js exports `scope`, `storeOrder`, `deliveryRow`, names MdsrcCartRecovery's order in `deliveryOrders`, and
+    takes a cart's abandonment from the store's delay (`CartRecovery.delayOf`, once a store a call; an hour by default).
+  - Changed rule: MessageDeliveries.js runs a source's build in a transaction of its own (F-P10-1); DeliveryLedger unchanged.
+  - Records: `entity/CartRecoveryEntities.xml` (StoreCartAccess `recoveryExpireDate`); `data/CartRecoverySetupData.xml` (the
+    five setting types, the ledger source MdsrcCartRecovery), `data/CartRecoveryJobData.xml` (run_CartRecovery).
+  - Shop's `recoverCart` in ForumSchema.js and PassRoutes.js (identical to PASS's), PassApi.js' and PassAuthority.js'
+    TOKEN_WRITES.
+- mr-pass: `screen/Shop/Recover.xml` with `Shop/ShopRecovery.js` (Recover?r= keeps the token in the session and redirects to the
+  clean address; a visitor gets the sign-in link back to Recover; the shopper's Open my cart posts `Recover/restore`, which
+  keeps the new capability and opens the cart with "Your cart is back, at today's prices" and the unavailable lines; a spent
+  or expired link gets "This cart link is no longer available"); Schema.js and Routes.js (`POST shop/cart/recovery`),
+  Transport.js' TOKEN_WRITES, Contracts.d.ts.
+- BOSS: `Orders/CartDetail.xml` RecoveryHistory (the reason, consent, recipient masked, the policy line, the sends with outcome
+  and "link used") and RecoverCart (a dialog with the previewed subject and body and a reason, for a user with the recovery
+  capability and an eligible cart; `sendRecovery`); `Settings/CheckoutSettings.xml` Cart recovery (RecoveryPolicy's view and
+  Change recovery: on/off, delay, sender, most sends, window, F118's optional emails and news list; `saveRecovery`). Demo:
+  POPC_DEFAULT's PsetCartRecovery email (BossCommerceDemoData.xml) and Joe Q Public's cart reminders for it (Demo.js step
+  `recovery`); the store's recovery stays off.
+- Specs (all `--nobuild`):
+  - Mantle `test/order/CartRecovery` (4 features, 1.4 s of feature time): nothing sent before a store enables recovery
+    (RECOVERY_OFF), the policy's reason, kinds and reader refused, F118's opt-ins saved and shown; the job sends one mail to the
+    opted-in idle cart and none to the active (90 minutes against the store's two hours), the guest's, the unconsented or the
+    completed cart, a site without a Shop link fails its send and the batch goes on, a second run sends nothing (ALREADY_SENT),
+    Carts' abandonment by the store's delay; the link: a visitor SIGN_IN_REQUIRED, another account NOT_AVAILABLE, the owner's
+    cart restored with the new capability, the withdrawn line named and the old price repriced, spent and expired links
+    NOT_AVAILABLE, the history's "redeemed"; a queued recovery suppressed by a completed checkout; the staff send refused without
+    COMMERCE_RECOVERY or a reason, previewed, sent once per key (alreadyApplied), a second key ALREADY_SENT, a guest's cart GUEST.
+  - BOSS `CommerceRecovery` (1 feature, 0.3 s): the demo's consenting customer's idle cart RECOVERY_OFF until the manager turns
+    recovery on (another organization's manager RECORD_UNAVAILABLE), then previewed and sent once by the store operator; the
+    subscription operator (ORDER_VIEW without RECOVERY) PERMISSION_DENIED. CommerceOrders' CartDetail render and
+    CommerceCheckoutSettings' render gained their recovery checks (no new render). No CommerceAccess case: the rule is Mantle's
+    permission and scope, as P8's.
+  - mr-pass ShopCart +1 feature (0.05 s): the Recover page's form for the token kept, never the token; an unknown link NotFound;
+    recoverCart a POST in the three lists.
+  - Also run, all pass: Mantle StoreOperations, ShopCart, StoreAdmin, StoreCheckout, StoreReviews, StoreFulfillment,
+    DeliveryLedger, ShopCheckout, ShopCustomer, PassAuthority, Consent; mr-pass ShopCart, ShopAccount, ShopAccess, ShopCheckout,
+    Transport; mr-boss CommerceAccess, CommerceStores, CommerceCheckoutSettings, CommerceOrders, CommerceRecovery, Unsubscribe
+    (124 features; mr-pass ShopCheckout's page feature fails only in that one combined run, F-P10-2, and passes with its own
+    component's specs). Not run: `./moq test-apps` (the brief).
+- Acceptance: `acceptance/Commerce/CommerceRecoveryScenario` (mr-boss, 3 features, stepwise, run once: 3 passed): a new verified
+  shopper turns on POPC_DEFAULT's cart reminders through `storeEmailPreferences` and adds to a cart on a spec site; a guest adds
+  another; both left two hours; the manager turns recovery on through CheckoutSettings' `saveRecovery`; the job sends the
+  shopper one notice (with the preferences link) and the guest none (GUEST), a second run none; in a fresh session (no cart
+  capability, signed out) `Recover?r=` keeps the token, the page asks the visitor to sign in, the shopper's page offers Open
+  my cart, `Recover/restore` keeps a new capability whose cart has the line back at today's price, the link refused the second
+  time; CartDetail shows the one send and "link used".
+- Lint: `moqui lint --screens` (release binary) 132 flagged sites as before, none in CartDetail, CheckoutSettings, Recover or
+  ShopRecovery.
+- Inventories: usl-inventory's `get#PartyConsentState` row names CartDetail's RecoveryHistory, which reads the store topic's
+  consent through `check#CartReminderConsent` instead; ss-inventory has no recovery row (SimpleScreens has none).
+- Decisions:
+  - The abandonment window is the cart's last activity: one event and mail per visit to the cart, at most the policy's sends
+    across visits; the ledger's unique event, recipient and template key is the dedup by cart and recipient.
+  - The token is made at each attempt by the source's build (never kept on the ledger), so a resend replaces the earlier link;
+    it lives until the end of the recovery window (PsstRecoveryRetention, 7 days by default), which is also how long an idle cart
+    may be reminded.
+  - The recovery link needs the cart's own signed-in account (the cart is never a guest's, and Shop P4's capability of an
+    account cart reaches only that account): a visitor signs in first, and the token is spent only by the Open my cart post, so
+    a mail scanner's GET spends nothing. "A fresh session" is a new capability kept in the PASS session; the HTTP session itself
+    is not renewed (F-P10-3).
+  - A staff send needs the same eligibility as the job's (recovery on, consent, verified email, idle past the delay); it only
+    sends earlier than the next job run.
+  - A site without a Shop or email preferences page fails the send (the ledger's failed, an exception) rather than suppressing
+    it, since the store's setup is wrong, not the event.
+  - The demo store's recovery is off; Joe Q Public is the consenting customer.
+  - F118 done: CheckoutSettings' Cart recovery box edits PsstCheckoutOptIns (a text of none or the ids) and PsstNewsList (a
+    drop-down of the organization's lists), with the store edit permission and scope.
+- Findings (provisional):
+  - **F-P10-1** The delivery ledger ran a source's build in the attempt's own transaction, so a build that threw left the
+    transaction rollback-only: the "message could not be made" failure was never recorded and the delivery stayed queued, tried
+    again every two minutes. The build now runs in a transaction of its own (a token or link it makes commits even when the
+    send then fails, which is harmless). It changes only the failure path of every source.
+  - **F-P10-2** Shop P4's cart-creation throttle (30 a requester in ten minutes) is reached when many cart-making specs of mr-mantle
+    and mr-pass run in one process: mr-pass ShopCheckout's page feature then renders nothing (RATE_LIMITED). Not P10's (its specs
+    make carts as rows); per-component or worker runs pass. For the lead: reset the throttles between specs, or a test property.
+  - **F-P10-3** Rotating the cart capability does not renew the HTTP session id (no PASS call for it); the old capability is dead,
+    which is what the cart's access needs.
+  - **F-P10-4** The ledger keeps no "redeemed" fact: RecoveryHistory derives it from StoreCartAccess `recoveryUsedDate` after the
+    latest send. P11's CartRecovery report (recovered orders) needs the same reading, or a recovery fact of its own.
+  - **F-P10-5** RecoveryPolicy's retention is the recovery window (eligibility and link life), not a purge of the ledger's rows;
+    the sends' retention is Comms' ledger's and the privacy provider's (design §6).
+  - **F-P10-6** The Marketing automation sender is not offered (no Marketing yet, design §8); `OTHER_SENDER` is the reason a
+    store set to another sender would show.
+
+**Review Nov 6 (P10)** (`git diff master...com/p10` in mr-mantle, mr-pass and mr-boss). Checked against this section,
+design §6 CartDetail and §8 RecoveryPolicy, design-shop §13.2 and §2. Consent: only an access row's signed-in customer
+(never a guest's or staff's cart) with an account, the latest PcpCartReminder consent on the store's topic list granted
+(`check#CartReminderConsent`; a pending checkout choice is a CLPT_PENDING membership, never a grant) and the account's own
+verified address; the ledger checks the topic again at the hand-off and the build re-runs the whole eligibility (store off,
+template gone, closed, completed, checking out, the shopper back, consent off: suppressed); the mail carries the email
+preferences link; the job reads only stores with PsstRecoveryEnabled true. Dedup: the event key is the cart and its last
+activity, MESSAGE_DELIVERY_EVENT is unique (a concurrent run's second create fails and is named, never sent), the most
+sends count only what reached someone; each cart is queued with `probe` in its own transaction. Token: 48 random
+characters, only its digest kept, spent only by the POST under the order's lock and the access row re-read, bound to the
+row's account (another account NOT_AVAILABLE), the site, store and currency (`usable`), expired, replaced (a resend
+overwrites the digest) or revoked refused; the cart's capability is rotated (the old digest replaced). The Recover page
+keeps `r` in the session and redirects at once; PASS sends `Referrer-Policy: same-origin` and no-store on every page, so
+the token reaches no third party (the first GET's URL is in the server's access log, as any emailed link is). recoverCart
+in Schema/ForumSchema and Routes/PassRoutes (identical) and the three TOKEN_WRITES lists. Staff: `get#`/`send#CartRecovery`
+through StoreOperations' scope (store list and foreign-vendor orders), COMMERCE_RECOVERY for the preview and the send,
+operation key and revision; the preview's link is `LINK-MADE-WHEN-SENT`. F-P10-1: `buildApart` changes only where a
+source's build runs; the three sources (download notice, review request, recovery) read only and make a token at most, and
+the attempt already ran in its own transaction, so no build saw a caller's uncommitted rows before either. F118: both
+fields through `storeSettings` with COMMERCE_STORE_EDIT and the store scope; PsstCheckoutOptIns is "none" or known ids only
+(StoreTopics.js reads the same form); PsstNewsList a current list of the store's organization, never a topic's list.
+- **R1** (medium) The job took a store's 500 oldest idle signed-in carts in the window (`orderBy lastActivityDate`), every
+  one of which is read whatever its consent or earlier send; once a store had 500 such carts in its seven-day window, the
+  carts newly past the delay were never reached. It now takes the newest first (`-lastActivityDate`).
+- **R2** (minor, spec) CartRecovery had no case of a queued recovery suppressed by the shopper's return or by cart
+  reminders turned off before the send, nor of another organization's operator; the fourth feature now has all three
+  (suppressed with "The shopper came back to the cart" and "No consent for this message"; RECORD_UNAVAILABLE for read and
+  send).
+- **R3** (F-P10-2, spec) mr-pass ShopCheckout's setup removes this ten-minute window's `cart-create` bucket of its
+  requester before making its carts, as AccountingPortals removes its bucket; the throttle is unchanged. The combined
+  run that failed (mr-mantle, mr-pass and mr-boss, 24 specs, 124 features) now passes.
+- Specs (`--nobuild`): Mantle CartRecovery, StoreOperations, ShopCart, StoreAdmin, StoreCheckout, DeliveryLedger,
+  StoreReviews, StoreFulfillment, ShopCustomer, Consent, PassAuthority 61 passed (CartRecovery's fourth feature 0.7 s);
+  mr-pass ShopCart, ShopAccount, ShopAccess, ShopCheckout, Transport 16 passed; mr-boss CommerceRecovery, CommerceOrders,
+  CommerceCheckoutSettings, CommerceAccess, Unsubscribe 25 passed; the combined set above 124 passed. Acceptance not run
+  (unchanged).
+- For the lead:
+  - The job reads every signed-in idle cart of the window again each run (up to 500 a store, each a transaction with the
+    consent, verified-address and ledger reads), most of them already handled; a "handled" mark on the access row (the
+    last window sent) would let the query skip them.
+  - A staff send's operation key covers the cart only: a retry with another reason answers the first send (not a
+    conflict).
+  - The sent mail's rendered body (with the link) is kept in EmailMessage by `send#EmailTemplate`, as the download
+    notice's guest link is; whoever can read EmailMessage can use the link until it is spent or expires, though only
+    from the cart's own signed-in account.
+  - F-P10-3: the framework rotates the session id at a password sign-in and carries its attributes over
+    (`session.rs` `rotate_on_password_login`), so the kept token survives the sign-in; the acceptance walk signs in with
+    `login()`, not through the sign-in page, so that path is not walked.
 
 ### P11 — Reports and Home
 

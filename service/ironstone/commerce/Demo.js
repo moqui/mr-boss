@@ -5,7 +5,8 @@
 // store's organization, F38); (P4) ZIZI_SHOP's published returns policy page and main menu; and (P6 review) its published
 // terms policy page, which checkout readiness asks of each Shop site; (P5) POPC_DEFAULT's theme draft copied from the
 // starter and ZIZI_SHOP's theme preview host, preview.shop.zizi.localhost (PshkPreview, never canonical). Each site, and
-// each page, on its own (one that fails is named and the rest are made); idempotent.
+// each page, on its own (one that fails is named and the rest are made); (P10) Joe Q Public's cart reminders for POPC_DEFAULT;
+// idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
 
@@ -144,7 +145,7 @@ function ensurePreviewHost() {
 }
 function load() {
     const errors = []
-    for (const name of Object.keys(sites).concat(["pages", "menu", "terms", "theme", "preview"])) {
+    for (const name of Object.keys(sites).concat(["pages", "menu", "terms", "theme", "preview", "recovery"])) {
         try {
             lib.probe("ironstone.commerce.DemoServices.run#CommerceDemoStep", {step: name})
         } catch (error) {
@@ -154,7 +155,24 @@ function load() {
     }
     return {complete: errors.length === 0, errors}
 }
+// P10: the demo's consenting customer, Joe Q Public (CustJqp, whose account Customer Service's demo verifies), with POPC_DEFAULT's
+// cart reminders on, as he would turn them on in the email preferences page; the store's recovery stays off until enabled
+const recoveryCustomer = {partyId: "CustJqp", productStoreId: "POPC_DEFAULT"}
+function ensureRecoveryConsent() {
+    const {partyId, productStoreId} = recoveryCustomer
+    if (!one("mantle.party.Party", {partyId})) return
+    if (call("mantle.public.AccountHubServices.check#CartReminderConsent", {partyId, productStoreId}).consented) return
+    call("mantle.public.AccountHubServices.apply#CheckoutOptIn", {
+        optInId: "cartReminders",
+        mode: "grant",
+        partyId,
+        productStoreId,
+        sourceEnumId: "PcsForm",
+        evidenceText: "Commerce demo: cart reminders turned on"
+    })
+}
 function runStep(p) {
+    if (p.step === "recovery") return ensureRecoveryConsent() || {}
     if (p.step === "theme") return ensureTheme() || {}
     if (p.step === "preview") return ensurePreviewHost() || {}
     if (p.step === "pages" || p.step === "menu" || p.step === "terms") {

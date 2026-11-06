@@ -15,11 +15,23 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- CartDetail (design-commerce §6 CartDetail; style-guide §3.3 Detail; impl-commerce P8): one open order of the user's
     stores, read only (mantle.order.StoreOperationsServices.get#StoreCart): CartSummary (its lines and totals, activity, store
     and its Shop checkout's phase; a stuck placement, impl-shop F85, says why it waits and that its payment is kept) and
-    RecoveryHistory, empty until P10 builds cart recovery. Sending never changes an order or signs staff in as the shopper;
-    an active checkout is never a staff-editable draft. A missing cart and one outside the scope are "not available". -->
+    RecoveryHistory (P10, get#CartRecovery: whether the cart may be sent a recovery and why not, the consent state, the
+    store's policy, the prior sends on the delivery ledger with their outcome and whether the link was used) with RecoverCart
+    for a user with COMMERCE_RECOVERY (send#CartRecovery: the exact body previewed, a reason, one send; the reason it is
+    refused says why). Sending never changes an order or signs staff in as the shopper; an active checkout is never a
+    staff-editable draft. A missing cart and one outside the scope are "not available". -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cart" default-menu-include="false">
     <parameter name="orderId" required="true"/>
+    <transition name="sendRecovery">
+        <actions>
+            <service-call name="mantle.order.StoreOperationsServices.send#CartRecovery" out-map="sent"
+                    in-map="{orderId:orderId, reason:(reason || null), operationKey:(operationKey || null), orderRevision:(orderRevision || null)}"/>
+            <if condition="!ec.message.hasError()"><script>ec.message.addMessage(sent.message, 'success')</script></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <actions>
         <service-call name="mantle.order.StoreOperationsServices.get#StoreCart" in-map="{orderId:orderId}" out-map="found"
                 transaction="force-new" ignore-error="true"/>
@@ -29,6 +41,14 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="checkout" from="found?.checkout || null"/>
         <set field="access" from="found?.access || null"/>
         <set field="recovery" from="found?.recovery || []"/>
+        <!-- P10: the recovery history, and the exact body for a user who may send -->
+        <if condition="cart">
+            <service-call name="mantle.order.StoreOperationsServices.get#CartRecovery" out-map="recoveryOut" transaction="force-new"
+                    ignore-error="true" in-map="{orderId:orderId, preview:!!commerce.capabilities?.recovery}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="rec" from="recoveryOut?.recovery || null"/>
+        <set field="sends" from="rec?.sends || []"/>
         <set field="customerUrl" from="cart?.customerPartyId ? sharedLinks['Customers/Customer360'] + '?customerPartyId=' + encodeURIComponent(cart.customerPartyId) : null"/>
     </actions>
     <widgets>
@@ -121,11 +141,51 @@ along with this software (see the LICENSE.md file). If not, see
                     </row-col>
                     <row-col md="6">
                         <container-box>
-                            <box-header title="Recovery history"/>
+                            <box-header title="Recovery history · ${sends.length}"/>
+                            <box-toolbar>
+                                <container-dialog id="RecoverCart" button-text="Send recovery" icon="sym_o_forward_to_inbox" width="640"
+                                        title="Send a recovery of cart ${orderId}" condition="rec?.canSend">
+                                    <label type="p" text="To ${rec?.recipientText} · ${rec?.policy?.templateText}"/>
+                                    <label type="p" style="text-weight-medium" text="${rec?.preview?.subject || ''}" condition="rec?.preview"/>
+                                    <label type="pre" style="text-mono text-caption" text="${rec?.preview?.body || ''}" condition="rec?.preview?.body"/>
+                                    <label type="p" style="text-negative" text="${rec?.preview?.problem}" condition="rec?.preview?.problem"/>
+                                    <label type="p" style="text-caption m-muted"
+                                            text="The link in the message is made when it is sent and works once, for the customer's own signed-in account. Nothing in the cart changes."/>
+                                    <form-single name="RecoverCartForm" transition="sendRecovery"
+                                            map="{orderId:orderId, orderRevision:rec?.orderRevision, operationKey:'recover-' + ec.user.randomString(24)}">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="orderRevision"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="reason"><default-field title="Reason for the send"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Send recovery"><submit/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
+                            </box-toolbar>
                             <box-body>
-                                <label type="p" style="m-muted q-mb-none" condition="!recovery.length"
-                                        text="No recovery sent. Cart recovery comes with the store's recovery policy."/>
+                                <label type="p" condition="rec" text="${rec.reasonText} · ${rec.consentText}${rec.recipientText ? ' · to ' + rec.recipientText : ''}"/>
+                                <label type="p" style="text-caption m-muted" condition="rec"
+                                        text="Recovery ${rec.policy.enabledText}; after ${rec.policy.delayText} idle, at most ${rec.policy.maxSendsText} a cart, within ${rec.policy.retentionText}; ${rec.policy.senderText}.${rec.redeemedText ? ' Link used ' + rec.redeemedText + '.' : ''}"/>
+                                <label type="p" style="m-muted q-mb-none" condition="!rec" text="Recovery history is not available."/>
+                                <label type="p" style="m-muted q-mb-none" condition="rec &amp;&amp; !sends.length" text="No recovery sent."/>
                             </box-body>
+                            <box-body-nopad>
+                                <form-list name="RecoveryHistory" list="sends" skip-form="true" paginate="false">
+                                    <field name="createdText"><default-field title="Queued"><display/></default-field></field>
+                                    <field name="toText"><default-field title="To"><display/></default-field></field>
+                                    <field name="stateText">
+                                        <default-field title="Outcome">
+                                            <label text="${stateText}${redeemed ? ' · link used' : ''}" type="div"/>
+                                            <label text="${lastError}" type="div" style="text-caption m-muted" condition="lastError"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="sentText"><default-field title="Sent"><display/></default-field></field>
+                                    <field name="sentBy"><default-field title="By"><display/></default-field></field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="createdText"/><field-ref name="toText"/></column>
+                                        <column><field-ref name="stateText"/></column>
+                                    </columns>
+                                </form-list>
+                            </box-body-nopad>
                         </container-box>
                     </row-col>
                 </container-row>

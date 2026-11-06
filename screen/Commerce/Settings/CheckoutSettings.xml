@@ -16,8 +16,10 @@ along with this software (see the LICENSE.md file). If not, see
     still blocks a purchase, from mantle.product.StoreAdminServices.check#StoreReadiness) and the groups CheckoutPolicy (dated
     settings: guest or account, destinations, stock disclosure, terms, the purchase contact's phone, the support queue among
     the organization's offered queues), ShippingOptions, ShippingGateways (approved ones only), LocalRates with the simulator,
-    PaymentGateways (only the organization's enabled gateways) and TaxDisplay with the tax preview. RecoveryPolicy is P10's,
-    RecurringPolicy P12's. The store is checked by ironstone.commerce.ContextServices.check#Record, then read and saved through
+    PaymentGateways (only the organization's enabled gateways), TaxDisplay with the tax preview, and (P10) RecoveryPolicy (dated
+    settings: on or off, the inactivity delay, the sender, the most sends a cart, the recovery window; the PsetCartRecovery
+    binding shown, edited with StoreDetail's emails) with the checkout's optional emails and news list (F118). RecurringPolicy
+    is P12's. The store is checked by ironstone.commerce.ContextServices.check#Record, then read and saved through
     mantle.product.StoreAdminServices (COMMERCE_VIEW reads, COMMERCE_STORE_EDIT changes, the store's scope). The carriers,
     payment methods and tax authorities the choices come from are their owners' editors (F6): linked for a user who may open
     them (ContextServices.get#OwnerLinks), never mounted. -->
@@ -115,6 +117,17 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="productStoreId"/></default-response>
         <error-response url="."/>
     </transition>
+    <transition name="saveRecovery">
+        <actions>
+            <service-call name="mantle.product.StoreAdminServices.store#CartRecoveryPolicy" out-map="saved"
+                    in-map="{productStoreId:productStoreId, enabled:enabled, delayMinutes:delayMinutes, sender:sender, maxSends:maxSends,
+                        retentionDays:retentionDays, checkoutOptIns:(checkoutOptIns ?? ''), newsListId:(newsListId ?? ''),
+                        fromDate:(fromDate || null), changeReason:changeReason}"/>
+            <if condition="!ec.message.hasError()"><message type="success">Saved the recovery policy (${saved.changed.length} changed)</message></if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
 
     <actions>
         <set field="can" from="commerce.capabilities"/>
@@ -194,6 +207,12 @@ along with this software (see the LICENSE.md file). If not, see
                 <script>ec.message.clearErrors()</script>
             </if>
             <set field="taxRows" from="taxOut?.rows || []"/>
+            <!-- P10: RecoveryPolicy and the checkout's optional emails (F118) -->
+            <service-call name="mantle.product.StoreAdminServices.get#CartRecoveryPolicy" out-map="recoveryOut" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="recoveryView" from="recoveryOut?.view || {}"/>
+            <set field="recoveryValues" from="Object.assign({productStoreId:productStoreId, changeReason:''}, recoveryOut?.values || {})"/>
         </if>
     </actions>
 
@@ -666,6 +685,55 @@ along with this software (see the LICENSE.md file). If not, see
                         </columns>
                     </form-list>
                 </box-body-nopad>
+            </container-box>
+
+            <!-- RecoveryPolicy (P10) and the checkout's optional emails (F118) -->
+            <container-box>
+                <box-header title="Cart recovery"/>
+                <box-toolbar>
+                    <container-dialog id="ChangeRecovery" button-text="Change recovery" icon="sym_o_edit" width="640"
+                            title="Change the cart recovery policy" condition="canEdit">
+                        <form-single name="RecoveryPolicyForm" transition="saveRecovery" map="recoveryValues">
+                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                            <field name="enabled"><default-field title="Recovery">
+                                <drop-down allow-empty="false"><option key="false" text="Off: nothing is sent"/><option key="true" text="On"/></drop-down>
+                            </default-field></field>
+                            <field name="delayMinutes"><default-field title="Inactivity delay (minutes)" tooltip="15 minutes to 30 days after the shopper's last change">
+                                <text-line size="8"/></default-field></field>
+                            <field name="sender"><default-field title="Sender" tooltip="A Marketing automation comes with Marketing">
+                                <drop-down allow-empty="false"><option key="builtin" text="Built-in recovery"/></drop-down></default-field></field>
+                            <field name="maxSends"><default-field title="Most sends a cart" tooltip="1 to 5, one per visit to the cart">
+                                <text-line size="4"/></default-field></field>
+                            <field name="retentionDays"><default-field title="Recovery window (days)" tooltip="How long after the last activity a cart is reminded and its link works">
+                                <text-line size="4"/></default-field></field>
+                            <field name="checkoutOptIns"><default-field title="Checkout's optional emails"
+                                    tooltip="none, or some of reviewRequests, cartReminders, news; empty for the default">
+                                <text-line size="40"/></default-field></field>
+                            <field name="newsListId"><default-field title="News and offers list">
+                                <drop-down allow-empty="true">
+                                    <dynamic-options transition="checkoutOptions" server-search="false" min-length="0"
+                                            parameter-map="{choice:'newsLists', productStoreId:productStoreId, selected:recoveryValues.newsListId}"/>
+                                </drop-down></default-field></field>
+                            <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                            <field name="changeReason"><default-field title="Reason for the change"><text-line size="50"/></default-field></field>
+                            <field name="submitButton"><default-field title="Save recovery"><submit/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </box-toolbar>
+                <box-body>
+                    <form-single name="RecoveryPolicyView" map="recoveryView">
+                        <field name="enabledText"><default-field title="Recovery"><display/></default-field></field>
+                        <field name="delayText"><default-field title="Inactivity delay"><display/></default-field></field>
+                        <field name="senderText"><default-field title="Sender"><display/></default-field></field>
+                        <field name="maxSendsText"><default-field title="Most sends a cart"><display/></default-field></field>
+                        <field name="retentionText"><default-field title="Recovery window"><display/></default-field></field>
+                        <field name="templateText"><default-field title="Recovery email" tooltip="The store's Cart Recovery email, set in the store's emails"><display/></default-field></field>
+                        <field name="checkoutOptInsText"><default-field title="Checkout's optional emails"><display/></default-field></field>
+                        <field name="newsListText"><default-field title="News and offers list"><display/></default-field></field>
+                    </form-single>
+                    <label type="p" style="text-caption m-muted q-mb-none"
+                            text="Only a signed-in customer who turned on this store's cart reminders, with a verified email, is reminded; a guest's cart never is. One reminder per visit to the cart, and none once it checks out."/>
+                </box-body>
             </container-box>
         </widgets></section>
     </widgets>
