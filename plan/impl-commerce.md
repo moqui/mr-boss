@@ -2923,6 +2923,42 @@ Design §9 Integrations, IntegrationDetail and ChannelImport; COM-CHANNEL.
   - **F-P13-7** `Commerce/Integrations.xml` is no longer a placeholder, so mr-boss's acceptance AppStructure floor of
     placeholder screens drops from 40 to 39.
 
+**Review Nov 6 (P13).** Checked: the API intake (the framework's `/rest/sm` checks the remote's method, and an HMAC
+remote with no header name or secret is refused there; `receive#ChannelOrders` also refuses a stopped binding and one whose
+method is none or unset, takes the store from the remote only, and the endpoint passes no `parentMessageId`; SmatLogin stays
+allowed, a logged-in user authorized for `receive#IncomingSystemMessage`); credentials and texts never returned by a service or
+screen (the screens call only the services); dedup by the four keys under the remote's row lock (concurrent intakes of one
+remote serialize, so no unique index is needed; replays and conflicts share the keys, so one could not be unique); orders
+placed for the binding's customer at the channel's prices with decimals read by their methods; the staged batch, its digest
+and PostingOperation; the file text-only decision (UTF-8, 2 MiB, a registered format; nothing is rendered or run, so no scan:
+accepted); `storeRetry` (only from scripts: X12.js' `execute` passes one argument, so `checked` is never set by a service; its
+caller checks COMMERCE_CHANNEL_OPERATE, the store scope of the EDI connection's store and that the document or receipt is
+the binding's: kept); every staff service's scope; `add#StoreOrderNote` (COMMERCE_ORDER_VIEW, the order scope, internal);
+Mantle defaults (new fields nullable, the new status and transitions unused by existing flows; EDI's retry unchanged).
+- R1 (medium; mr-mantle 46b1aeeb) Two concurrent consumes of one channel order (the framework's consume job, a retry, a second commit of a batch:
+  consume#ReceivedSystemMessage does not lock the message) could each make an order. `consume#ChannelOrder` now locks the
+  message for its transaction, so the second finds the order and answers it.
+- R2 (medium; mr-mantle 46b1aeeb) An order kept as it came because it was unreadable (an external ID too long or with control characters, not an
+  object) was in error and listed as retryable; a retry consumed its raw text as if canonical, making an order with no external
+  ID or dedup. Such a message is no longer retryable and `consume#ChannelOrder` refuses one without its hash and external ID
+  (ORDER_UNREADABLE). StoreChannels' intake feature checks it, and the API intake's BINDING_DISABLED and
+  BINDING_UNAUTHENTICATED refusals (not checked before).
+- R3 (low; f284354e) CommerceAccess.spec.js had been reformatted by Prettier in four earlier features; restored to its base with the P13
+  feature appended (append-only).
+- Specs (`--nobuild`): Mantle StoreChannels, EdiX12, StoreOperations, ShopCheckout, AuthorizeNetGateway, ShippoGateway,
+  PayTraceGateway, StorePublication (82 features, pass; StoreChannels 1.65 s); BOSS CommerceChannels, CommerceAccess,
+  CommerceOrders (17 features, pass). The acceptance spec was not changed or run.
+- For the lead:
+  - Two concurrent `commit#ChannelImport` calls of one batch (a double submit) both pass the Staged check (the claim is not
+    atomic: a lock on the batch would deadlock with the commit's own new-transaction updates of it). R1 keeps their orders
+    single; the second ends with a PostingOperation key error. A claim row made first (the PostingOperation as pending) would
+    answer it cleanly.
+  - The commit's digest is the file's (with format, remote and mapping version), not the preview's outcomes: an order received
+    between preview and commit changes an outcome without BATCH_CHANGED (dedup still holds).
+  - A binding's customer may be any Customer-role party not private to another user, not only the organization's customers.
+  - A replay of a failed original is kept as a duplicate with no order, and keeps none after the original is retried.
+  - `importText`'s 2 MiB limit counts characters, not bytes (the file path counts bytes).
+
 ### P14 — Feeds and channel health
 
 Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 with Shop P8.
