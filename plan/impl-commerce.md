@@ -2534,7 +2534,10 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
   `get#SalesOrderSummary` and `get#SalesInvoiceSummary` for the same store, organization and currency (orders, gross, net,
   net invoiced); Home's strip the same totals, Home rendered; the store-limited staff member's totals POPC_DEFAULT's and
   another store refused, Services' manager reading only the digital store and refused POPC_DEFAULT in Commerce and in Mantle;
-  the CSV's rows; the four Reports screens in qvt. Run: 6 of 6 passed.
+  the CSV's rows; the four Reports screens in qvt. Run: 6 of 6 passed. Then `./moq accept mr-boss` once: server 467
+  features, 452 passed, 11 failed, 4 skipped; client 169 of 169. AppStructure's placeholder floor (43) no longer held once
+  P8's Orders and Customers and P11's Reports replaced theirs: now 40, and AppStructure passes. The other ten failures are
+  not P11's code (F-P11-7).
 - Lint: `moqui lint --screens` (release binary) 132 flagged sites as before, none in Commerce's screens or templates.
 - Inventories: usl-inventory's get#SalesOrderSummary, get#SalesInvoiceSummary and get#SalesTopProduct name Commerce/Home and
   Commerce/Reports/OnlineSales; ss-inventory has no report row.
@@ -2566,6 +2569,12 @@ Design §3 Home and the Reports area, §1.4's shipped definitions; COM-REPORTS. 
     shows signed-in abandoned carts, not the job's eligibility at the time.
   - **F-P11-6** Not built from design §3: Insights' registration of the catalogue (Z10; Insights has no catalog yet), the
     reports' graph views and ReportScope's store-group and free compare-period choices.
+  - **F-P11-7** `./moq accept mr-boss` on this branch fails ten features outside P11's code: CommerceFoundationWalk (the demo
+    store has 6 emails, not 5: P10's PsetCartRecovery email), CommerceSitePagesWalk (a draft product's menu item is not
+    refused DESTINATION_NOT_PUBLIC), CustomerServiceCasesWalk, CustomerServiceKnowledgeWalk, CustomerServiceReportsWalk,
+    CustomerServiceSupportWalk (2), PurchasingReplenishmentRoutesWalk, PurchasingReplenishmentWalk and TuiRender
+    (Customer360's ServiceCases without BOSS_CS_CASE_THERMO), mostly the demo's cases and supply as earlier walks leave them.
+    Not checked against master. For the lead.
 
 ### P12 — Paid access and subscriptions
 
