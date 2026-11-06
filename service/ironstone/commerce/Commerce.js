@@ -559,7 +559,12 @@ const choiceSources = {
                 value: row.productId,
                 label: row.productName + " (" + row.productId + ")"
             }))
-            if (selected && !options.some(option => option.value === selected)) {
+            // the selected product's label only when the store has it (a forged id names nothing)
+            if (
+                selected &&
+                !options.some(option => option.value === selected) &&
+                rows("mantle.product.store.ProductStoreProduct", {productStoreId: mount.targetId, productId: selected}).length
+            ) {
                 const product = one("mantle.product.Product", {productId: selected})
                 if (product) options.push({value: selected, label: (product.productName || selected) + " (" + selected + ")"})
             }
