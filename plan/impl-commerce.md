@@ -2880,7 +2880,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F140 | P11: each dataset is one document type, so the store operations dataset ships as checkouts and payment attempts; datasets ADMIN-only until Insights applies a store scope | Insights (later) |
 | F141 | P11: cart recovery's eligibility is not historical ("signed in") | Accepted |
 | F142 | P11: Insights' catalogue registration (Z10), the graph views and further ReportScope choices not built | Later |
-| F143 | P11: ten mr-boss acceptance failures outside P11 (CommerceFoundationWalk, CommerceSitePagesWalk, four Customer Service walks, two Purchasing replenishment walks, TuiRender) | Being fixed on `com/accfix` |
+| F143 | P11: ten mr-boss acceptance failures outside P11 (CommerceFoundationWalk, CommerceSitePagesWalk, four Customer Service walks, two Purchasing replenishment walks, TuiRender) | Fixed (Nov 6, `com/accfix`): none was a framework regression. Stale expectations (CommerceFoundationWalk after P5/P10, CustomerServiceKnowledgeWalk after Shop P3); walks sharing one database (SitePagesWalk after AssortmentWalk, SupportWalk, ReportsWalk, TuiRender); two real bugs: NewCase's duplicate warning filtered open cases after taking the newest ten, and Mantle `store#Preferences` made an organization's first own PartyAcctgPreference with only the fields passed, so it lost its inherited currency (it now starts from the inherited fields, with an AccountingSetup check). Full `./moq accept mr-boss`: 460 of 461 server (AppStructure's floor, P11's), 169 of 169 client |
 
 ## 7. Later
 
