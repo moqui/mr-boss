@@ -973,6 +973,8 @@ design-commerce.md, design-shop.md or the owner's design.
 | Nov 5, 2026 | `PublicSite.subscriptionUrl` is set and cleared by `store#RecurringOffer` (Shop P7; its screen P12), never over an outside address a site owner entered; readiness only checks it | The plan's choice; design-shop §4.3, §10, §13.2 and §15 had readiness set it |
 | Nov 5, 2026 | Shop P1 comes after Commerce P2, and the phases that use another's work are in sequence; only independent pairs run side by side (§1) | The review of Nov 5: Shop P1 registers Commerce P2's readiness |
 | Nov 5, 2026 | One adoption proposal (`propose#StorePublication`, P3), reused by Shop P8's legacy adoption; scheduled page and menu publication is C1's (P4); a refund revokes a download from Shop P6, before paid access in P7 | The plan's choice; design-shop §17.2 changed |
+| Nov 5, 2026 | Accept Hosted's form POST to the provider gets the CSP it needs: Shop's payment relay route allows `form-action` to the Authorize.Net hosted page (production and sandbox), the rest of PASS keeps its CSP (Shop F37) | The user's call during the build, refining the Accept Hosted row above; Shop P5 |
+| Nov 5, 2026 | F59 (a member whose last StoreStaff row ends, or whose only row starts later, works every store of their organizations) is noted and left as §4's rule for now | The user's call during the build; revisit if store-limited staff need a stricter rule |
 
 ## 5. Open questions
 
@@ -1047,7 +1049,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F56 | P0: ZZW_RETAIL's `/popc/content/` URL is read by CustomerArticle and also by Send to customer's `get#ArticlePublicLink` (Knowledge.js:416-444, made absolute on the BOSS webroot, asserted by CustomerServiceKnowledge.spec.js:121), the INTERNAL_PUBLIC_SPACE guard (:190), SpaceDetail and Marble's wiki links; `/pcontact` is a dead alias | Shop P3 moves `publicPageUrl` and `publicAttachmentUrl` to the Shop site's absolute page route (better, `publicLink` through `PublicApps.pageUrl`), drops `/pcontact` and updates the spec |
 | F57 | P1: the shared binaries were older than base-component (no `UserSecurityChecks.assertDocumentExpression`, mr-moqui 4f8997c0), so data files with DataDocument fields failed to load and every BOSS spec failed at sign-in | The lead rebuilt `target/release/moqui` (Nov 5, from mr-moqui fff2e5f6); P1's specs rerun on it |
 | F58 | P1: Mantle has no store email templates (the PopRestStore ones were not ported) | The demo binds POPC_DEFAULT's five automatic types to one demo template on the local sink; real templates come with Shop's notices |
-| F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides; for the user to confirm (the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current) |
+| F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides, noted and left for now (the user's call, §4); the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current |
 
 ## 7. Later
 
