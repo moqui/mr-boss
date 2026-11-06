@@ -1382,6 +1382,15 @@ ThemeServices only (POST through `moqui.request`, so the session token is checke
     1.1 s, Phone, Preview and the channel 0.9 s, the publisher's ThemeDetail with Validate 1.2 s, Publish and Confirm
     1.5 s; the time is the server's save, validate and publish. The client budget needs its 8 s.
 
+- **Gate C1/S1 suites (Nov 6, on master after P5 and Shop P4 merged, nothing else running):** standalone mr-mantle
+  1,812 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped; `./moq test-apps` 3,187
+  server features passed and 1 failed (CommercePromotions: the `customers` choice put the selected customer after the
+  page it then cut, so in a full run's many customers it was lost; now first), 16 client features passed; `moqui lint
+  --screens` clean. Feature time: server mr-mantle 353.4 of 370 s, mr-boss 245.4 of 264 s, mr-pass 15.7 of 17 s; client
+  mr-boss 53.7 of 49 s (CommerceThemesWalk 7.6 s, the golden path), mr-pass 4.3 of 6 s. Shares so far: Commerce's BOSS
+  server specs 17.6 s, Shop's mr-pass specs 5.4 s. mr-boss's client budget raised by the walk to 57 s (the user's
+  agreement, §4).
+
 ### P6 — Checkout settings
 
 Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.

@@ -531,8 +531,9 @@ const choiceSources = {
                 .limit(choiceLimit * 2)
                 .list()
         ).map(row => row.partyId)
-        if (selected && !ids.includes(selected)) ids.push(selected)
-        return ids
+        // the selected customer first, so a long list's page never cuts it off
+        const ordered = selected ? [selected].concat(ids.filter(id => id !== selected)) : ids
+        return ordered
             .filter(partyId => !!customerOf(userScope, partyId))
             .slice(0, choiceLimit + 1)
             .map(partyId => ({value: partyId, label: partyName(partyId)}))

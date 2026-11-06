@@ -6,4 +6,6 @@
 # specs' feature time in the final ./moq test-apps, 18.2 s server (the CustomerService* specs) and 4.8 s client
 # (CustomerServiceCasesWalk), rounded up.
 server = 264
-client = 49
+# Nov 6, 2026: client raised by Commerce's golden-path walk, CommerceThemesWalk, 7.6 s in the gate C1/S1 ./moq test-apps
+# (the user's agreement, impl-commerce §4: raised at each wave end by the measured share), rounded up.
+client = 57
