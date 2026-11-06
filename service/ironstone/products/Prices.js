@@ -91,7 +91,17 @@ function run(op, parameters) {
         return out
     }
     function findPrices(p) {
-        const capabilities = access().capabilities
+        const context = access(),
+            capabilities = context.capabilities
+        // A mounting app's context leaves out the rows its capabilities withhold (Commerce, Customer Service: supplier prices
+        // and costs), whatever else the user holds; Mantle's find#ProductPrices answers by the user's own permissions.
+        const withheld = price =>
+            context.appRoot !== "Products" &&
+            (price.priceTypeEnumId === "PptAverage"
+                ? !capabilities.costRead
+                : domain("direction", price) === "purchase"
+                  ? !capabilities.supplierPriceRead
+                  : !capabilities.priceRead)
         if (!capabilities.priceRead && !capabilities.supplierPriceRead && !capabilities.costRead)
             throw new Error("Price read authority is required")
         if (p.productId) product(p.productId)
@@ -125,6 +135,7 @@ function run(op, parameters) {
                     if (p.customerPartyId && price.customerPartyId !== p.customerPartyId) continue
                     if (p.productStoreId && price.productStoreId !== p.productStoreId) continue
                     if (!storeAllowed(price.productStoreId)) continue
+                    if (withheld(price)) continue
                     if (p.agreementId && price.agreementId !== p.agreementId) continue
                     matching.push(price)
                 }

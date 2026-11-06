@@ -117,3 +117,26 @@ feature("Product360 under Commerce shows the product's publication in the user's
         !result.output.includes("Costs")
     }
 })
+
+// Review (P3): the shared price list under Commerce leaves out supplier prices and costs whatever else the user holds (the
+// system administrator reads them under Products), and keeps the store's sales price
+feature("the price rows under Commerce leave out supplier prices that Products shows the same user", {
+    when() {
+        const ids = appRoot =>
+            asUser(
+                "john.doe",
+                () =>
+                    Array.from(
+                        invoke("ironstone.products.CatalogServices.find#ProductPrices", {appRoot, productId: "DEMO_1_1"})
+                            .priceRows || []
+                    ).map(row => row.productPriceId),
+                false
+            )
+        return {products: ids("Products"), commerce: ids("Commerce")}
+    },
+    then({products, commerce}) {
+        products.includes("BOSS_PUR_AGR_A_01")
+        !commerce.includes("BOSS_PUR_AGR_A_01")
+        commerce.includes("DEMO_1_1_CTL")
+    }
+})

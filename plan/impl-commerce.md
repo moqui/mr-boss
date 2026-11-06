@@ -845,6 +845,59 @@ publication part), with SHOP-CATALOG's resolver core.
   - **F-P3-3** The demo's DEMO_VAR variants are drafts (`createVariantProducts`), so none is saleable until a catalog editor
     activates them; the walk activates three.
 
+**Review Nov 5 (P3).**
+- Checked: `git diff master...com/p3` in mr-mantle and mr-boss against this section, §2, design §4 and §10: the resolver
+  (own row, or the virtual's published row without the variant's exclusion, intersected with `check#ProductUsable` Sell,
+  the view and purchase allow trees with an empty one showing nothing, the site's enabled `shop` mount; a future row not
+  public, a withdrawal ending it; a date other than now needing `COMMERCE_VIEW` and the store's scope); the dated
+  ProductStoreProduct with Mantle's defaults (a row with no kind or date published, ShipmentServices' signature read and
+  ForumIntegration.js' `productPublic` on the current row; PASS Integrations passes); `publish#StoreProducts` (each product
+  in its own transaction through `lib.probe`, a result per product, `PostingOperation` `StorePublication` answering a retry
+  with the first result, the stale revision refused naming the current, `COMMERCE_PUBLISH`, the generation of the sites of
+  `PublicSiteApp{app: "shop", targetId}` advanced inside each product's transaction); `move#StoreCategory`'s cycle (now and
+  by later rollups), past-date and later-move refusals and `CATEGORY_SHARED_OUTSIDE`/`CATEGORY_SHARED`; Products'
+  SharedContext Commerce branch (catalog and price writes by the user's own `PRODUCT_CATALOG_EDIT`/`PRICE_EDIT`, cost,
+  margin, method, supplier price off; `storeIds` narrowing Prices.js and Taxonomy.js; Products' and the other apps' callers
+  pass no or their own `appRoot` and are unchanged); CategoryDetail's move (route `Products/Categories/CategoryDetail`
+  unchanged, every link to it in mr-boss, mr-pass and mr-marble still resolves); the store-limited member and another
+  organization refused; the AppStructure and TuiRender parameters; the specs' leanness (one Product360 qvt render).
+- **R1 (high)** `get#StorePublication` is `anonymous-view` and answered anyone every product id asked for with its name,
+  `reasonCode` (`NOT_SELLABLE` naming a published draft, `VARIANT_EXCLUDED`, `NOT_IN_VIEW_CATEGORY`), `sellReason`, dates,
+  template, badge and rank, and its list mode listed every published row, public or not. A caller without `COMMERCE_VIEW`
+  in the store's scope now gets a product that is not public as `{productId, isPublic: false, purchasable: false}` only,
+  and a list of the public products only (resolved, then paged). Staff answers are unchanged. StorePublication checks it
+  with no one signed in. (mr-mantle fcff5e90)
+- **R2 (medium)** A publication, withdrawal, exclusion and storefront change took any `fromDate`, so a past one rewrote
+  what a store had shown (ending earlier rows in the past); `move#StoreCategory` already refused a past date. They now
+  refuse a time more than a minute past (`VALUE_INVALID`), as do the preview and the batch per product. (fcff5e90)
+- **R3 (medium)** The shared price list under Commerce (and Customer Service) showed supplier prices and cost rows to a
+  user who held those permissions elsewhere, because Prices.js listed what Mantle's `find#ProductPrices` answers by the
+  user's own permissions; the context's `supplierPriceRead`/`costRead`/`priceRead` now leave those rows out in every
+  mounting app's context but Products'. CommerceAssortment checks a purchase agreement price Products shows the
+  administrator is left out under Commerce while the store's sales price stays. (mr-boss, this commit)
+- **R4 (low)** `get#CategoryStores` answered another organization's category with its stores' count; it now refuses it
+  (`CATEGORY_UNAVAILABLE`). (fcff5e90)
+- **F-P3-1, decided:** an upgrade note, mr-mantle `docs/Upgrading.md` (linked from its README), with the key check and the
+  PostgreSQL and MySQL statements that give the old rows a start date and put the key on the three fields. A Mantle
+  upgrade service was not built: the framework's `rekey_table` and `table_primary_key` are Rust only, with no service or
+  script binding (ChatServices' `migrate#ChatActors` is a Rust service), and a service cannot run DDL.
+- Specs after the fixes: Mantle StorePublication 6 passed (1.7 s), with StoreAdmin, OrderToCashBasicFlow and
+  WarehouseShipping 65 passed; BOSS CommerceAssortment 4 and CommerceAccess 9 passed; ProductsSharedContext,
+  ProductsPricing, ProductsImport, ProductsCosts, ProductsAccess, ProductsSuppliers, ProductsPriceLists, ProductsTaxonomy,
+  ProductsDocuments, WarehouseReceiving, WarehouseAccess, CustomerServiceOrders, CustomerServiceAccess, PurchasingAccess
+  and ManufacturingAccess 181 passed; PASS Integrations 6 passed. No screen changed; acceptance not rerun (unchanged).
+- For the lead: (1) a framework service for a key rebuild (`rekey_table` behind a `migrate#...` or generic
+  `rekey#EntityTable`) would let Mantle ship ProductStoreProduct's rebuild as a setup-data step like ChatActors. (2)
+  `get#StorePublication` without `siteId` skips the site check, so the public can read a store with no shop site; Shop's
+  catalog should always pass the site (or the service could require it of a non-staff caller), and "site access" does not
+  yet read the site's own access rule. (3) The list mode for the public resolves every published product before paging
+  (one `check#ProductUsable` each); Shop's catalog should use the in-process `resolve` with its own paging, or a
+  sellability column, for a large store. (4) Products' writes under Commerce's CategoryDetail (parents, members) go
+  through Products' services: they need only `PRODUCT_CATALOG_EDIT`, skip `move#StoreCategory`'s shared-store check and do
+  not advance the store's site generation; likewise Taxonomy's and Prices.js' store narrowing holds for the Commerce mount,
+  not for the same user under Products. Decide whether a StoreStaff limit and the generation reach Products. (5) F-P3-2
+  stands. (6) `./moq test-apps` and the budget measure were not run.
+
 ### P4 — Site pages and navigation
 
 Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page part, SHOP-CONTENT.
