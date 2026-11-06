@@ -1128,6 +1128,30 @@ Design §5 site pages, Pages, PageDetail and Navigation (X14); COM-THEME's page 
   and PassAuthority 28; BOSS CommerceSitePages, CommerceAccess, CommerceAssortment 17, Knowledge and
   CustomerServiceKnowledge 25; PASS Forum, ForumAccess, ShopThemes 31. No screen changed; acceptance not rerun.
 
+**Follow-up Nov 6 (F78).**
+- `store#SitePage` (SitePages.js, `expectedRevision` added to ThemeServices.xml): a change of a published or scheduled
+  page's title, route, locale, role, template or SEO is a publication: it needs `COMMERCE_PUBLISH` beside
+  `COMMERCE_THEME_EDIT` (`PERMISSION_DENIED` naming it) and the binding's `publicationRevision` as read (`REVISION_STALE`
+  without it), and advances that revision (and, on a published page, the site's generation). Refusing fitted the records
+  better than holding a draft binding: the live reads and the job read the binding's own fields, and a held copy would
+  need new fields, a merge at publication and a second schedule. A draft page's fields and every text save are as before.
+  Shared/PageDetail/PageRoute: editable on such a page only with the publish permission (otherwise its values shown and
+  a line naming it), saved with the page's revision.
+- The job refuses a scheduled menu version or redirect whose window ended before it ran (`WINDOW_PASSED`, as pages, one
+  `windowOpen` check). Found while testing it: the job's menu item read its version by a numeric from date, which
+  PostgreSQL refuses, so no scheduled menu version was ever activated; it reads the key as a
+  date-time now, and SitePages activates one.
+- mr-mantle `docs/Upgrading.md`: the `PASS_PAGE_ROLE` index is made only when missing (PostgreSQL `IF NOT EXISTS`, as
+  before, said; MySQL a query of `information_schema.STATISTICS` first, the `CREATE UNIQUE INDEX` only when it lists
+  nothing).
+- Specs: Mantle SitePages 9 features (was 7; 3.0 s): a published page's binding by the designer refused, without the
+  revision refused, by a holder of both changed with the revision and generation +1, a draft's change as before; a passed
+  window refused for a scheduled menu version and redirect, a due menu version activated. ThemeReleases 5 passed. BOSS
+  CommerceSitePages 4 (PageRoute's one qvt render as the designer on the published returns page: no Save, the line);
+  CommerceAccess's P4 case now: the designer and the reader refused on the published returns page, the administrator
+  (both permissions) edits it, another organization's site refused (14 features with CommerceSitePages). mr-pass Forum and
+  ForumAccess 27 passed. Lint: PageRoute not flagged. Acceptance not run (CommerceSitePagesWalk only renders PageRoute).
+
 - **Wave 4 suites (Nov 6, on master after Shop P2, P7 and the F60 fix merged; P4's worker ran at the same time):**
   standalone mr-mantle 1,777 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped;
   `./moq test-apps` 3,134 server features and 15 client features passed, none failed; within every budget (server:
@@ -1716,7 +1740,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F75 | P4: design-shop's row saying `get#SitePage` serves only the guidelines and about roles is stale; the PASS operations for pages, navigation and redirects are Shop's | Shop P3 updates design-shop and adds the operations |
 | F76 | P4: ZZW_RETAIL is not restricted and is not the store's page space, so Commerce made POPC_DEFAULT a page space of its own | Shop P3 serves the store's page space; ZZW_RETAIL's move (F17, F56) is re-planned there |
 | F77 | P4: a page's template key is checked for its shape only, not against the theme's templates | P5 checks it against the draft's and the active release's templates |
-| F78 | P4 review: `store#SitePage` makes a published page's route, role, title, SEO and template changes live at once with `COMMERCE_THEME_EDIT`; the store page space is `restrictView N`; scheduled menus and redirects are not refused when their window ended before they start; the MySQL `PASS_PAGE_ROLE` step fails if the index exists | A follow-up (com/p4fix): such changes to a published page wait for `COMMERCE_PUBLISH`; menus and redirects take pages' `WINDOW_PASSED`; Upgrading.md's MySQL step made conditional. Drafts readable by BOSS users through Commons is accepted (internal readers only) |
+| F78 | P4 review: `store#SitePage` makes a published page's route, role, title, SEO and template changes live at once with `COMMERCE_THEME_EDIT`; the store page space is `restrictView N`; scheduled menus and redirects are not refused when their window ended before they start; the MySQL `PASS_PAGE_ROLE` step fails if the index exists | Resolved Nov 6 (com/p4fix, P4's Follow-up): a published or scheduled page's binding change needs `COMMERCE_PUBLISH` and the expected `publicationRevision`, which advances (refused rather than held: the binding has no draft fields); scheduled menus and redirects refused `WINDOW_PASSED` (and the job's scheduled-menu key read fixed for PostgreSQL); Upgrading.md's MySQL index step conditional, PostgreSQL's `IF NOT EXISTS` noted. Drafts readable by BOSS users through Commons is accepted (internal readers only) |
 
 ## 7. Later
 

@@ -1,6 +1,6 @@
 // Commerce site pages (impl-commerce P4; design-commerce §5 Pages, PageDetail): Pages lists the pages of the sites the
-// user's stores sell on (find#SitePages, as Pages reads it), and PageDetail's one qvt render (its Publication tab, for the
-// publisher: what the site shows and the Publish dialog); and F65: under Commerce, CategoryDetail's
+// user's stores sell on (find#SitePages, as Pages reads it), and PageDetail's qvt renders (its Publication tab, for the
+// publisher: what the site shows and the Publish dialog; its Route tab, for the designer on a published page); and F65: under Commerce, CategoryDetail's
 // parent and member writes are refused in favour of Store categories. The page, navigation and publication rules are
 // Mantle's (test/public/SitePages); the designer, reader and other-organization case is CommerceAccess's. The walk is the
 // acceptance CommerceSitePagesWalk. Run: ./moq test mr-boss --spec Commerce/CommerceSitePages
@@ -65,6 +65,30 @@ feature("PageDetail's Publication tab shows what the site shows and the publishe
         result.output.includes("Not published yet")
         result.output.includes("Publish")
         !result.output.includes("Not available")
+    }
+})
+
+// PageRoute rendered once (qvt) as the designer on the demo's published returns page: its values shown, not editable,
+// as changing them is a publication (F78)
+feature("PageRoute shows a published page's values to the designer without Save, naming the publish permission", {
+    when() {
+        const page = system(() =>
+            ec.entity
+                .find("mantle.public.PublicSitePage")
+                .condition({siteId: ids.siteId, pageRole: "returns"})
+                .disableAuthz()
+                .one()
+        )
+        return asUser(users.designer, () =>
+            lib.page("Website/PageDetail/PageRoute", {sitePageId: page.sitePageId, lastStandalone: "1"})
+        )
+    },
+    then(result) {
+        result.status == 200
+        result.errors == []
+        result.output.includes("needs the publish permission")
+        result.output.includes("returns")
+        !result.output.includes("Save")
     }
 })
 

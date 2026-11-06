@@ -658,7 +658,9 @@ store's page space (the store's full-page content space, made with `restrictUpda
 `T.store#SitePage` writes, giving the designer the space's update right for the one write, so Commons Knowledge cannot
 change or wiki-publish it. Publishing a version makes it the page's published wiki version and the binding's in one
 transaction, so a visitor's read always finds the binding's exact version published; a version saved since stays a draft.
-A publication from a later date waits in the binding's scheduled fields and the `run_ScheduledSitePublications` job
+A published or scheduled page's route, locale, role, title, template and SEO are what the site shows, so changing them is
+a publication too: `COMMERCE_PUBLISH` as well as `COMMERCE_THEME_EDIT`, against the binding's publication revision, which
+advances (F78). A publication from a later date waits in the binding's scheduled fields and the `run_ScheduledSitePublications` job
 revalidates it as its publisher (the grant and the store still theirs, the version and route still valid); a refusal is
 kept on the page and listed by the store's readiness, and the live version stays. PageContent is Commons Knowledge's
 component in a Commerce mode (the bound page alone) with PageDetail's own transitions, its terminal twin a text form

@@ -15,8 +15,9 @@ along with this software (see the LICENSE.md file). If not, see
 <!-- PageRoute, PageDetail's Route and SEO tab (design-commerce §5 PageDetail PageRoute; impl-commerce P4): the page's title,
     route under the Shop's pages/, locale, policy role and theme template, and its SEO title, description and social image,
     saved through mantle.public.ThemeServices.store#SitePage (COMMERCE_THEME_EDIT; a taken route or role, a value out of
-    shape and a page changed since it was read are refused). On a published page the change is live at once and the
-    site's generation advances; the key fields are in the audit log (History). A reader sees the values. -->
+    shape and a page changed since it was read are refused). A published or scheduled page's values are a publication
+    (F78): editable with COMMERCE_PUBLISH too, saved against the page's publication revision, live at once on a published
+    page with the site's generation advanced; the key fields are in the audit log (History). Others see the values. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Route and SEO" default-menu-index="2">
     <transition name="saveRoute">
@@ -24,7 +25,7 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.public.ThemeServices.store#SitePage"
                     in-map="{sitePageId:sitePageId, title:title, routePath:routePath, locale:locale, pageRole:pageRole, templateKey:templateKey,
                         seoTitle:seoTitle, seoDescription:seoDescription, socialImageUrl:socialImageUrl, changeReason:(changeReason || null),
-                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null), expectedRevision:(expectedRevision || null)}"/>
             <if condition="!ec.message.hasError()"><message type="success">Saved the page's route and SEO.</message></if>
         </actions>
         <default-response url="."><parameter name="sitePageId"/></default-response>
@@ -34,17 +35,21 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="routeValues" from="recordFound ? {sitePageId:sitePageId, title:sitePage.title, routePath:sitePage.routePath, locale:(sitePage.locale || ''),
                 pageRole:(sitePage.pageRole || ''), templateKey:(sitePage.templateKey || ''), seoTitle:(sitePage.seoTitle || ''),
                 seoDescription:(sitePage.seoDescription || ''), socialImageUrl:(sitePage.socialImageUrl || ''),
-                expectedLastUpdatedStamp:sitePage.lastUpdatedStamp, changeReason:''} : {}"/>
-        <set field="canEdit" from="recordFound &amp;&amp; pagesCan.themeEdit"/>
+                expectedLastUpdatedStamp:sitePage.lastUpdatedStamp, expectedRevision:sitePage.publicationRevision, changeReason:''} : {}"/>
+        <set field="pageIsLive" from="recordFound &amp;&amp; (sitePage.state == 'published' || sitePage.scheduled)"/>
+        <set field="canEdit" from="recordFound &amp;&amp; pagesCan.themeEdit &amp;&amp; (!pageIsLive || pagesCan.publish)"/>
     </actions>
     <widgets>
         <section name="RouteForm" condition="recordFound">
             <widgets>
                 <label text="The page is published: a change here shows on the site at once." type="p" style="text-caption text-warning"
                         condition="canEdit &amp;&amp; sitePage.state == 'published'"/>
+                <label text="The page is published or scheduled: changing these values needs the publish permission." type="p"
+                        style="text-caption" condition="pageIsLive &amp;&amp; pagesCan.themeEdit &amp;&amp; !pagesCan.publish"/>
                 <form-single name="PageRouteForm" transition="saveRoute" map="routeValues">
                     <field name="sitePageId"><default-field><hidden/></default-field></field>
                     <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
                     <field name="title">
                         <conditional-field condition="canEdit" title="Title"><text-line size="40"/></conditional-field>
                         <default-field title="Title"><display/></default-field>
