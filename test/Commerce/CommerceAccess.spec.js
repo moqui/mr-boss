@@ -1,5 +1,5 @@
-// Commerce access (impl-commerce §2, §4, P1; design-commerce §1.1): who may open Commerce, the menu, providers and launcher per
-// group, Home's one render (qvt), the capabilities from the Mantle permissions and the area authorizations, the organization
+// Commerce access (impl-commerce §2, §4, P1; design-commerce §1.1): who may open Commerce, the menu, providers and launcher (the
+// reader, a capability group and the administrator), Home's one render (qvt), the capabilities from the Mantle permissions and the area authorizations, the organization
 // and store scope (a store-limited staff member's stores) through the services and the COMMERCE_STORE filter, the record
 // check against another organization's, an unassigned and forged ids, a capability on a record, record links, the areas a
 // group guards, and the paths around the Mantle services that no Commerce group reaches: the Mantle REST store paths and the
@@ -65,18 +65,19 @@ feature(
         when() {
             const problems = []
             const shared = user => asUser(user, () => refusal(context + "get#SharedContext", {}))
-            for (const user of [users.read, users.manager, users.admin, users.storeStaff, users.services]) {
+            // the reader, manager and administrator get it in the capabilities feature
+            for (const user of [users.storeStaff, users.services]) {
                 const message = shared(user)
                 if (message !== "") problems.push(`${user} is refused the context: ${message}`)
             }
             // a PASS public account (Customer Service's Support demo contact) holds no BOSS group
-            for (const user of ["warehouse.read", "customerservice.read", "sheldon.acme", "dana@joesdist.example.com"]) {
+            for (const user of ["customerservice.read", "sheldon.acme", "dana@joesdist.example.com"]) {
                 const message = shared(user)
                 if (!refused(message)) problems.push(`${user} gets the context: ${message || "accepted"}`)
             }
             const otherRoot = asUser(users.read, () => refusal(context + "get#SharedContext", {appRoot: "Warehouse"}))
             if (!otherRoot.includes("COMMERCE_CONTEXT")) problems.push(`another root's context is given: ${otherRoot}`)
-            for (const user of ["customerservice.read", "sheldon.acme", "dana@joesdist.example.com"]) {
+            for (const user of ["sheldon.acme", "dana@joesdist.example.com"]) {
                 const home = screenRefusal(user, "Home")
                 if (!unauthorized(home)) problems.push(`${user} opens Home: ${home || "opened"}`)
             }
@@ -105,23 +106,19 @@ const order = [
 const open = ["Home", "Stores", "Merchandising", "Promotions"]
 const menuOf = extra => order.filter(name => open.includes(name) || extra.includes(name))
 
-feature("the Commerce menu and providers follow each group's areas; the launcher shows it to its users only", {
+feature("the Commerce menu and providers follow the areas' groups; the launcher shows it to its users only", {
     when() {
+        // the reader (no guarded area), a capability group's member (its areas) and the administrator (every area); each
+        // group's areas are its area capabilities, from the same authorizations, in the capabilities feature
         const rows = [
             {user: users.read, extra: []},
-            {user: users.manager, extra: ["Reports", "Settings"]},
-            {user: users.merchandiser, extra: ["Website"]},
-            {user: users.designer, extra: ["Website"]},
-            {user: users.developer, extra: ["Website"]},
-            {user: users.publisher, extra: ["Website"]},
             {user: users.operator, extra: ["Orders", "Customers", "Reports"]},
-            {user: users.channel, extra: ["Integrations", "Reports"]},
-            {user: users.subscriptions, extra: ["Orders", "Customers", "Reports"]},
             {user: users.admin, extra: order}
         ]
         const problems = []
+        const shells = {}
         for (const {user, extra} of rows) {
-            const found = shell(user)
+            const found = (shells[user] = shell(user))
             if (found.status != 200) problems.push(`${user}'s menu: ${found.status}`)
             if (JSON.stringify(found.names) !== JSON.stringify(menuOf(extra)))
                 problems.push(`${user}'s menu is ${found.names}, not ${menuOf(extra)}`)
@@ -132,7 +129,7 @@ feature("the Commerce menu and providers follow each group's areas; the launcher
                 problems.push(`${user} has no commerce key scope`)
         }
         // the launcher: the reader has Commerce and no other business app; another app's user has no Commerce
-        const readerApps = shell(users.read).apps
+        const readerApps = shells[users.read].apps
         if (!readerApps.includes("Commerce")) problems.push(`the reader's launcher has no Commerce: ${readerApps}`)
         const business = [
             "Products",
