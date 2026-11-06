@@ -53,7 +53,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="message" from="found.message"/>
         </actions>
     </service>
-    <service verb="get" noun="Customer360" allow-remote="false">
+    <service verb="get" noun="Customer360" transaction="cache" allow-remote="false">
         <description>Shared/Customer360's Customer Service branch (crosscut §3.2): the customer's name, kind and owner, its
             contact mechanisms and contact people, identifications and tax registrations (read only), its cases the user
             sees, its orders and shipments with the user's organizations, its invoices from them (amounts only for

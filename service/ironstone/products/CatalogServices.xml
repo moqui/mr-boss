@@ -282,7 +282,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Catalog.js').execute('storeRow', context))</script>
         </actions>
     </service>
-    <service verb="get" noun="ProductDetail">
+    <service verb="get" noun="ProductDetail" transaction="cache">
         <in-parameters>
             <parameter name="appRoot"/>
             <parameter name="productId" required="true"/>
@@ -479,7 +479,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Catalog.js').execute('choices',context))</script>
         </actions>
     </service>
-    <service verb="find" noun="ProductPrices" allow-remote="false">
+    <service verb="find" noun="ProductPrices" transaction="cache" allow-remote="false">
         <in-parameters>
             <parameter name="appRoot"/>
             <parameter name="productId"/>
@@ -507,7 +507,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Prices.js').execute('findPrices',context))</script>
         </actions>
     </service>
-    <service verb="store" noun="ProductPrice" allow-remote="false">
+    <service verb="store" noun="ProductPrice" transaction="cache" allow-remote="false">
         <in-parameters>
             <parameter name="appRoot"/>
             <auto-parameters entity-name="mantle.product.ProductPrice" include="all"/>

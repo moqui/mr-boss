@@ -1251,7 +1251,7 @@ along with this software (see the LICENSE.md file). If not, see
 
     <!-- ========== Home ========== -->
 
-    <service verb="get" noun="ProjectsHome">
+    <service verb="get" noun="ProjectsHome" transaction="cache">
         <description>Projects Home (design-projects.md §3 Home) for the team and the managers: the counters
             (mantle.work.ProjectServices.get#ProjectHomeCounts, the managers' with managers), my next work items (the open items
             assigned to me, by due date then priority, ten; WorkItemServices find#WorkItems list mine), what changed lately in

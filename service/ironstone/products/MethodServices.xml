@@ -181,7 +181,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="message"/>
         </out-parameters>
     </service>
-    <service verb="get" noun="MethodContext" allow-remote="false">
+    <service verb="get" noun="MethodContext" transaction="cache" allow-remote="false">
         <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('context',context))</script>
@@ -229,7 +229,7 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('compare',context))</script>
         </actions>
     </service>
-    <service verb="get" noun="BomWhereUsed" allow-remote="false">
+    <service verb="get" noun="BomWhereUsed" transaction="cache" allow-remote="false">
         <implements service="ironstone.products.MethodServices.define#MethodParameters"/>
         <actions>
             <script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/products/Methods.js').execute('whereUsed',context))</script>
