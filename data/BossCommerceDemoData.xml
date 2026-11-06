@@ -96,4 +96,42 @@ along with this software (see the LICENSE.md file). If not, see
         until a store enables it, CheckoutSettings' Cart recovery). Joe Q Public's cart reminders are the demo service's. -->
     <mantle.product.store.ProductStoreEmail productStoreId="POPC_DEFAULT" emailTypeEnumId="PsetCartRecovery" fromDate="1265184000000"
             emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+
+    <!-- Shop P7: BOSS_COM_DIGITAL's paid access: a month of ZIZI_DIGITAL members' access (Monthly membership, BOSS_COM_PAID_MONTH,
+        a ProductSubscriptionResource of BOSS_COM_PAID_ACCESS, whose Forum handlers write source-bound PublicAccessGrant rows
+        for the site; ZIZI_DIGITAL has no Forum mount yet, so the binding is the site's, F-SP7-6), published in the store; the
+        store's card gateway, the BOSS_COM_HOSTED kind, which also renews a kept card off-session; the renewal notices on the
+        demo mailbox; and the store's digital checkout (no address, new-customer or card-name holds, no terms page yet). The
+        monthly offer is the demo service's (store#RecurringOffer, which also sets the site's subscription address). -->
+    <mantle.product.Product productId="BOSS_COM_PAID_MONTH" productName="Monthly membership" productTypeEnumId="PtDigital"
+            ownerPartyId="ORG_ZIZI_SERVICES" description="A month of Ziziwork Digital members' access"/>
+    <mantle.product.ProductPrice productPriceId="BOSS_COM_PAID_MONTH_P" productId="BOSS_COM_PAID_MONTH" pricePurposeEnumId="PppPurchase"
+            priceTypeEnumId="PptCurrent" fromDate="1265184000000" minQuantity="1" price="9.00" priceUomId="USD"/>
+    <mantle.product.subscription.SubscriptionResource subscriptionResourceId="BOSS_COM_PAID_ACCESS"
+            description="Ziziwork Digital members' access"
+            initServiceName="mantle.forum.EntitlementServices.init#ForumAccess"
+            renewServiceName="mantle.forum.EntitlementServices.renew#ForumAccess"
+            revokeAccessServiceName="mantle.forum.EntitlementServices.revoke#ForumAccess"
+            restoreAccessServiceName="mantle.forum.EntitlementServices.restore#ForumAccess"
+            destroyServiceName="mantle.forum.EntitlementServices.destroy#ForumAccess"/>
+    <mantle.product.subscription.ProductSubscriptionResource productId="BOSS_COM_PAID_MONTH" subscriptionResourceId="BOSS_COM_PAID_ACCESS"
+            fromDate="1265184000000" availableTime="1" availableTimeUomId="TF_mon"/>
+    <mantle.product.store.ProductStoreProduct productStoreId="BOSS_COM_DIGITAL" productId="BOSS_COM_PAID_MONTH" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo paid access"/>
+    <mantle.account.method.PaymentGatewayOrganization organizationPartyId="ORG_ZIZI_SERVICES" paymentGatewayConfigId="BOSS_COM_HOSTED"
+            fromDate="1265184000000" isEnabled="Y"/>
+    <mantle.product.store.ProductStorePaymentGateway productStoreId="BOSS_COM_DIGITAL" paymentInstrumentEnumId="PiCreditCard"
+            paymentGatewayConfigId="BOSS_COM_HOSTED"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="BOSS_COM_DIGITAL" settingTypeEnumId="PsstOrdApproveNewCust"
+            fromDate="1265184000000" settingValue="false" changeReason="Demo digital checkout"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="BOSS_COM_DIGITAL" settingTypeEnumId="PsstOrdApproveAddrMissing"
+            fromDate="1265184000000" settingValue="false" changeReason="Demo digital checkout"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="BOSS_COM_DIGITAL" settingTypeEnumId="PsstOrdApprovePayMethNameDiff"
+            fromDate="1265184000000" settingValue="false" changeReason="Demo digital checkout"/>
+    <mantle.product.store.ProductStoreSetting productStoreId="BOSS_COM_DIGITAL" settingTypeEnumId="PsstCheckoutTerms"
+            fromDate="1265184000000" settingValue="false" changeReason="Demo digital checkout"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="BOSS_COM_DIGITAL" emailTypeEnumId="PsetPaymentRetry" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+    <mantle.product.store.ProductStoreEmail productStoreId="BOSS_COM_DIGITAL" emailTypeEnumId="PsetSubscriptionRenewal" fromDate="1265184000000"
+            emailTemplateId="BOSS_COM_STORE_NOTICE"/>
 </entity-facade-xml>

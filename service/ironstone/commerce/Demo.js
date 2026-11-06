@@ -6,7 +6,7 @@
 // terms policy page, which checkout readiness asks of each Shop site; (P5) POPC_DEFAULT's theme draft copied from the
 // starter and ZIZI_SHOP's theme preview host, preview.shop.zizi.localhost (PshkPreview, never canonical). Each site, and
 // each page, on its own (one that fails is named and the rest are made); (P10) Joe Q Public's cart reminders for POPC_DEFAULT;
-// idempotent.
+// (Shop P7) BOSS_COM_DIGITAL's monthly membership offer; idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
 
@@ -145,7 +145,7 @@ function ensurePreviewHost() {
 }
 function load() {
     const errors = []
-    for (const name of Object.keys(sites).concat(["pages", "menu", "terms", "theme", "preview", "recovery"])) {
+    for (const name of Object.keys(sites).concat(["pages", "menu", "terms", "theme", "preview", "recovery", "subscriptions"])) {
         try {
             lib.probe("ironstone.commerce.DemoServices.run#CommerceDemoStep", {step: name})
         } catch (error) {
@@ -171,7 +171,34 @@ function ensureRecoveryConsent() {
         evidenceText: "Commerce demo: cart reminders turned on"
     })
 }
+// Shop P7: ZIZI_DIGITAL's paid access bound to the site (its Forum handlers' grants) and BOSS_COM_DIGITAL's monthly offer,
+// saved through store#RecurringOffer as Commerce's RecurringPolicy editor would (it also points the site's subscription
+// address at Shop's Subscriptions page); made once
+const paidAccess = {
+    siteId: "ZIZI_DIGITAL",
+    productStoreId: "BOSS_COM_DIGITAL",
+    productId: "BOSS_COM_PAID_MONTH",
+    subscriptionResourceId: "BOSS_COM_PAID_ACCESS"
+}
+function ensureSubscriptionOffer() {
+    const {siteId, productStoreId, productId, subscriptionResourceId} = paidAccess
+    createOnce(
+        "mantle.public.PublicSubscriptionBinding",
+        {subscriptionResourceId},
+        {siteId, targetType: "site", targetId: siteId, createdAt: ec.user.nowTimestamp, revision: 1}
+    )
+    if (lib.rows("mantle.product.subscription.StoreRecurringOffer", {productStoreId, productId}).length) return
+    call("mantle.product.ShopSubscriptionServices.store#RecurringOffer", {
+        productStoreId,
+        productId,
+        offerName: "Monthly membership",
+        priceAmount: "9.00",
+        autoRenew: "Y",
+        termsVersion: "1"
+    })
+}
 function runStep(p) {
+    if (p.step === "subscriptions") return ensureSubscriptionOffer() || {}
     if (p.step === "recovery") return ensureRecoveryConsent() || {}
     if (p.step === "theme") return ensureTheme() || {}
     if (p.step === "preview") return ensurePreviewHost() || {}
