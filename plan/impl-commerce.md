@@ -2123,6 +2123,11 @@ caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema
   - The download SECA (DownloadFirstRequestReview) and R2's claim have no spec of their own (the shipment SECA and Shop
     P6's claim have).
   - Removing a photo deletes its file before the transaction commits; a later failure leaves the row without its file.
+- **Wave 11 suites (Nov 6, on master after Commerce P8 and P9 merged; the P9 follow-up's worker ran at the same
+  time):** standalone mr-mantle 1,847 passed, 2 failed (the baseline), 11 skipped; `./moq test-apps` 3,236 server and 17
+  client features passed; `moqui lint --screens` as before. Feature time under load: server mr-mantle 399.0 of 383 s,
+  mr-boss 290.5 of 264 s (P8 and P9 add about 3 s and 1 s alone; the rest is the concurrent worker, as Shop P6's run
+  showed); client mr-boss 53.4 of 57 s, mr-pass 8.2 of 9 s. Budgets measured again at the next quiet run.
 
 ### P10 — Cart recovery
 
