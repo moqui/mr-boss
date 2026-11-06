@@ -1324,6 +1324,57 @@ Design §5 Themes, ThemeDetail, ThemeEditor and TemplateEditor; COM-THEME, with 
   - **F-P5-7** Whether the framework writes a Visit row for the anonymous preview request was not checked; nothing in
     the preview path writes one, sends mail or calls a cart, gateway or analytics.
 
+**Review Nov 5 (P5)** (reviewer; branch `com/p5`). Checked: the authoring services' permissions (COMMERCE_THEME_CODE on
+`get#`/`store#`/`change#ThemeFile` and file text in `get#ThemeHistory`, COMMERCE_THEME_EDIT on the rest, the store's
+scope through `themeOf`/`storeOf`), `expectedRevision` on every save and `checkedSave`'s file-and-line refusal, the
+required components, import's path, kind, size and Liquid checks (archive entries re-checked against the package path
+pattern, `..` refused, the upload staged on the server, never a caller's location), the binary assets (signatures with
+WEBP's second tag, 384 KB, the scanner, bytes served with their type and nosniff, an SVG cleaned when stored and when
+served, no HTML or script type in either type table), F77 (`templateOf` against the active release and the store's
+drafts), readiness, `pageUrl`, `sitesFor` and `getStoreSites` skipping preview hosts; the preview: only `/preview/{token}`
+and its assets route on a preview host, the token only as SHA-256, 20 minutes, its site, mount and theme bound and the
+host checked on each read, so a token of store A's draft cannot show on store B's site or host; the CSP (nonce'd script,
+`connect-src`/`form-action`/`base-uri` none, `frame-ancestors` from `pass_preview_frame_origins`, which only mr-pass's
+test conf sets, so production frames nothing until an operator names BOSS's origin), no-store, noindex, no-referrer;
+the MessageChannel on both sides (target origin, `e.source` the parent, origin list, URL nonce, one port, section ids
+matched against the outline); no mail, cart, payment or analytics call. The editors' JSON transitions and TUI twins call
+ThemeServices only (POST through `moqui.request`, so the session token is checked), no `v-html`. All `allow-remote="false"`.
+- **R1 (high, Mantle)** `store#Mounts` with `{hostname, preview: true}` never worked: Forum.js's input check allowed only
+  `hostname` and `canonical` in a host, so it refused with "Invalid configuration fields"; and once accepted, a save
+  that did not name `preview` (every existing caller) would have turned a preview host live. `preview` is now an allowed
+  boolean; a host named without it keeps its kind (new: live); PREVIEW_NOT_CANONICAL is checked on that kind. New
+  ThemeAuthoring feature (0.2 s): canonical preview refused with no row, a live and a preview host bound, a re-save
+  without `preview` keeps PshkPreview, `pageUrl` the live host, the Shop mount kept.
+- **R2 (medium, Mantle)** `import#Theme` wrote the package without the adapter's check, so a draft could hold a
+  `<script>` or an `onclick` (and an SVG uncleaned) though every other save refuses them. The import now cleans SVGs and
+  refuses an error in any file (`THEME_SOURCE_INVALID`, file and line). ThemeAuthoring's import feature has the case.
+- **R3 (low, mr-pass)** ShopPreview.js said the preview records no visit; it now says what F-P5-7 found.
+- Specs: Mantle ThemeAuthoring (7 features, 3.7 s), ThemeReleases, AccountingPortals, SupplierPortal, StoreAdmin,
+  SitePages (52 pass); mr-pass ShopPreview, ShopThemes, ShopAccess, Forum, Portals (26 pass); mr-boss CommerceThemes,
+  CommerceAccess, CommerceStores (16 pass); client CommerceThemesWalk 7.9 s.
+- **For the lead:**
+  - **F-P5-7 / F-P5-1 (framework, before the gate's "records no visit" is claimed):** the preview answer sets
+    `moqui.session`; the first request starts no Visit (no cookie came), but the frame's next request (its stylesheet, a
+    reload, the next preview in the browser) brings the cookie back and the framework starts a Visit, whose
+    `initialRequest` is the `/preview/{token}/...` path, the token in plain text for its 20 minutes. Where BOSS and the
+    preview host are on different sites SameSite=Lax keeps the cookie out of the frame; on one registrable domain
+    (boss.example.com, preview.shop.example.com) it is sent. The fix is the framework's: a public-site response that
+    declines a session, handled as screen/mod.rs's `cacheable` (no cookie, the session discarded). Not done in the app
+    (only `Cache-Control: public, no-store` would reach that path today, a trick).
+  - **F-P5-2 can wait:** framework screen renders carry `frame-ancestors 'none'` and `X-Frame-Options: sameorigin`
+    (factory.rs defaults), so `/Login` and `/qapps` on the preview origin cannot be framed, by BOSS or anyone; only the
+    preview page names BOSS's origins. What is left is a sign-in on the preview origin, where draft markup still cannot
+    run script (the adapter refuses it, the CSP allows only the nonce'd script).
+  - The token checks that its actor's account is enabled, not that the actor still has a theme permission or the store;
+    a revoked designer's open preview lasts until it expires (at most 20 minutes). Acceptable as the design's
+    short-lived capability.
+  - Shop P2's `get#ThemeDraft` with `includeText` answers every source file's text to COMMERCE_VIEW, beside P5's
+    COMMERCE_THEME_CODE on `get#ThemeFile` and file text in `get#ThemeHistory`. Theme source holds no secret; decide
+    whether `includeText` should need COMMERCE_THEME_CODE.
+  - CommerceThemesWalk (7.9 s) has no trim that keeps the golden path: Themes to ThemeDetail to Edit theme 2.5 s, Save
+    1.1 s, Phone, Preview and the channel 0.9 s, the publisher's ThemeDetail with Validate 1.2 s, Publish and Confirm
+    1.5 s; the time is the server's save, validate and publish. The client budget needs its 8 s.
+
 ### P6 — Checkout settings
 
 Design §8 CheckoutSettings; COM-CHECKOUT, with the readiness of checkout.
