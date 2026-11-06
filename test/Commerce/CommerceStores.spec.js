@@ -66,9 +66,9 @@ feature(
             manager.errors == []
             manager.output.includes("Ziziwork Retail Store")
             manager.output.includes(ids.storeId)
-            // P6: the demo store's local gateway has no rate, which blocks a purchase (its site's Terms page is the demo's);
-            // Shop P5: its card gateway (TEST_APPROVE) has no hosted page, which Shop's checkout needs
-            manager.output.includes("2 things to fix")
+            // P6: the demo store's local gateway has no rate, which blocks a purchase (its site's Terms page is the demo's;
+            // Shop P5: its card gateway BOSS_COM_HOSTED has the hosted page Shop's checkout needs)
+            manager.output.includes("1 thing to fix")
             manager.output.includes("Clone store")
             manager.output.includes("Customer and other party rows")
             managerGeneral.status == 200

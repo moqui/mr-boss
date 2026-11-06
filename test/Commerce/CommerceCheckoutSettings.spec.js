@@ -33,15 +33,16 @@ feature("the demo store's checkout by scope: a disabled gateway refused, the rea
                 Object.assign({paymentGatewayConfigId: "TEST_DECLINE"}, bind)
             ),
             // the same binding the store has: no change, so a refusal is the permission's or the scope's
+            // (Shop P5 review: the demo's card gateway is BOSS_COM_HOSTED)
             same: refused(
                 users.manager,
                 "store#StorePaymentGateway",
-                Object.assign({paymentGatewayConfigId: "TEST_APPROVE"}, bind)
+                Object.assign({paymentGatewayConfigId: "BOSS_COM_HOSTED"}, bind)
             ),
             reader: refused(
                 users.read,
                 "store#StorePaymentGateway",
-                Object.assign({paymentGatewayConfigId: "TEST_APPROVE"}, bind)
+                Object.assign({paymentGatewayConfigId: "BOSS_COM_HOSTED"}, bind)
             ),
             readerRead: as(users.read, "get#CheckoutSettings", {productStoreId: ids.storeId}),
             other: refused(users.services, "get#CheckoutSettings", {productStoreId: ids.storeId}),
@@ -54,7 +55,7 @@ feature("the demo store's checkout by scope: a disabled gateway refused, the rea
         r.same == ""
         code(r.reader) == "PERMISSION_DENIED"
         r.readerRead.canEdit == false
-        r.readerRead.paymentGateways.some(row => row.paymentGatewayConfigId == "TEST_APPROVE" && row.enabled)
+        r.readerRead.paymentGateways.some(row => row.paymentGatewayConfigId == "BOSS_COM_HOSTED" && row.enabled)
         r.readerRead.policy.supportQueueId == "BOSS_CS_Q_SUPPORT"
         code(r.other) == "RECORD_UNAVAILABLE"
         r.managerLinks.carriers == null

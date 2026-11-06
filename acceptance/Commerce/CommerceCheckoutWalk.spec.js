@@ -169,7 +169,7 @@ feature(
         },
         then(r) {
             r.refused.errors.join(" ").includes("GATEWAY_NOT_ENABLED")
-            r.gateway == "TEST_APPROVE"
+            r.gateway == "BOSS_COM_HOSTED"
             r.other.output.includes("Not available")
         }
     }
