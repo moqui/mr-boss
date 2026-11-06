@@ -1915,7 +1915,40 @@ Design §4 Reviews, design-shop §5 ProductDetail's PublicReviews and SubmitRevi
   - **F-P9-6** Reviews reach a theme as `product.reviews`; the starter's product section renders them, but a release
     published before P9 (from the old starter) shows none until republished.
   - **F-P9-7** For a signed-in visitor, each product page view reads their qualifying lines to offer the write link (up to
-    200 orders); a session cache would spare it.
+    200 orders); a session cache would spare it. (Review R1: the lines of the product are read first, in one query.)
+
+**Review Nov 6 (P9).** Checked `git diff master...com/p9` in mr-mantle, mr-pass and mr-boss against this section, design
+§4 Reviews, design-shop §5 and §2. The proof is found from the session's account only (selfParty, OrderPart customer and
+vendor, ShopCustomer `ownOrder`); no party, order or line id is taken from the request, and an edit needs the account's own
+review at its revision. Public reads carry approved reviews only, the stored label, the reply's text and date (no reply
+user), `verifiedPurchase` and image URLs by digest; `get#ReviewImage` rechecks the review's status (Approved only, so an
+image cached from before an edit or a delete is refused), its store against the routed store and its product's
+publication; the media route is no-store; the remote read cache keeps only anonymous answers, keyed by the generation that
+every decision, reply and edit of an approved review advances. Images: PNG or JPEG before staging, PortalMedia's size,
+sniff and scan, a refusal named with the text kept, staging removed on every path. Staff: every service through
+`stores.scope` and `reviewOf` (another organization's store and a forged id refused alike), decisions each in its own
+transaction with a result per review. The SECAs are tx-commit rules, which the framework runs after the commit in a
+transaction of their own, so a failure cannot undo a delivery or a download; one line's failure is logged and the rest go
+on. Mantle defaults: the new fields are nullable, the one new transition only widens the flow; no other ProductReview
+caller in Mantle, BOSS, PASS or Marble; no reference to the old demo ids. Schema/Routes mirrors identical.
+- **R1** (minor, F-P9-7) `qualifyingItems` reads the account's lines of the product and its variants in one query before
+  any order, and stops at the first qualifying line for the proof and the write link: a signed-in visitor who never bought
+  the product costs two queries a product page.
+- **R2** (minor) The Review page (`get#Reviews`, the review request's link) did not claim the account's guest purchases, so
+  a guest buyer who then made an account was told to wait for their order although `submit#Review` (which claims) would
+  accept it; it now claims first, as the account pages do. The product page's view does not claim (kept cheap).
+- Specs (`--nobuild`): Mantle StoreReviews, ShopCatalog, StoreFulfillment, DeliveryLedger, PassAuthority, ShopCustomer 26
+  passed; mr-pass ShopReviews, ShopAccess, ShopCatalog, ShopAccount, Transport 13 passed; mr-boss CommerceReviews,
+  CommerceAccess 14 passed. Acceptance not run (unchanged).
+- For the lead:
+  - A review staff deleted does not count for "one review per account, store and product": the author may write a new one
+    (pending, throttled). Count deleted reviews too if a deletion should be final.
+  - A decision or reply without an expected revision is not stale-checked (the screens always send it); require it if
+    every caller should.
+  - Two simultaneous first submissions could make two reviews (no unique key on account, store and product).
+  - The download SECA (DownloadFirstRequestReview) and R2's claim have no spec of their own (the shipment SECA and Shop
+    P6's claim have).
+  - Removing a photo deletes its file before the transaction commits; a later failure leaves the row without its file.
 
 ### P10 — Cart recovery
 
