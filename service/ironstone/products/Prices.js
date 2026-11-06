@@ -22,6 +22,11 @@ function run(op, parameters) {
         if (!context.capabilities.read) throw new Error("Catalog read authority is required")
         return context
     }
+    // Under Commerce, a store price of a store the user does not work is neither shown nor changed (impl-commerce F47, F51).
+    const storeAllowed = productStoreId => {
+        const storeIds = access().storeIds
+        return !productStoreId || !storeIds || Array.from(storeIds).includes(productStoreId)
+    }
     function product(productId) {
         const record = local.readableProduct(productId)
         if (!record) throw new Error("Product is not available")
@@ -33,6 +38,7 @@ function run(op, parameters) {
         product(price.productId)
         domain("access", price)
         if (write) {
+            if (!storeAllowed(price.productStoreId)) throw new Error("Price record is not available")
             const capabilities = access().capabilities,
                 direction = domain("direction", price)
             if (!(
@@ -85,7 +91,17 @@ function run(op, parameters) {
         return out
     }
     function findPrices(p) {
-        const capabilities = access().capabilities
+        const context = access(),
+            capabilities = context.capabilities
+        // A mounting app's context leaves out the rows its capabilities withhold (Commerce, Customer Service: supplier prices
+        // and costs), whatever else the user holds; Mantle's find#ProductPrices answers by the user's own permissions.
+        const withheld = price =>
+            context.appRoot !== "Products" &&
+            (price.priceTypeEnumId === "PptAverage"
+                ? !capabilities.costRead
+                : domain("direction", price) === "purchase"
+                  ? !capabilities.supplierPriceRead
+                  : !capabilities.priceRead)
         if (!capabilities.priceRead && !capabilities.supplierPriceRead && !capabilities.costRead)
             throw new Error("Price read authority is required")
         if (p.productId) product(p.productId)
@@ -118,6 +134,8 @@ function run(op, parameters) {
                     if (p.vendorPartyId && price.vendorPartyId !== p.vendorPartyId) continue
                     if (p.customerPartyId && price.customerPartyId !== p.customerPartyId) continue
                     if (p.productStoreId && price.productStoreId !== p.productStoreId) continue
+                    if (!storeAllowed(price.productStoreId)) continue
+                    if (withheld(price)) continue
                     if (p.agreementId && price.agreementId !== p.agreementId) continue
                     matching.push(price)
                 }
@@ -149,6 +167,7 @@ function run(op, parameters) {
             const old = row(p.productPriceId, true)
             if (p.productId && p.productId !== old.productId) throw new Error("Price is not on this product")
         } else product(p.productId)
+        if (!storeAllowed(p.productStoreId)) throw new Error("Store is not available")
         return call(M + "store#ProductPrice", p)
     }
     function replace(p) {
@@ -214,8 +233,10 @@ function run(op, parameters) {
                             (uom.uomTypeEnumId !== "UT_OTHER_MEASURE" || ["OTH_ea", "OTH_ct", "OTH_pp"].includes(uom.uomId))
                     )
                     .map(uom => ({value: uom.uomId, label: uom.description + " (" + uom.uomId + ")"})),
+                // under Commerce, the stores the user works (a store-limited staff member's own, F47)
                 stores: rows(P + "store.ProductStore")
                     .filter(store => capabilities.systemAdmin || context.ownerPartyIds.includes(store.organizationPartyId))
+                    .filter(store => !context.storeIds || context.storeIds.includes(store.productStoreId))
                     .map(store => ({value: store.productStoreId, label: store.storeName || store.productStoreId}))
             },
             defaultOrganizationPartyId: defaultOrg,

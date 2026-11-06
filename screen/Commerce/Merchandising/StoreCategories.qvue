@@ -1,0 +1,75 @@
+<template><div class="q-pa-sm">
+    <div class="row items-center q-col-gutter-sm q-mb-sm">
+        <div class="col"><div class="text-h5">Store categories</div></div>
+        <div class="col-12 col-md-4"><m-drop-down v-model="productStoreId" name="productStoreId" label="Store" :options="storeOptions" @update:model-value="storeChanged"></m-drop-down></div>
+        <div class="col-auto"><q-btn label="Roles and members as forms" flat no-caps @click="openTwin"></q-btn></div>
+    </div>
+    <p v-if="error" role="alert" class="text-negative">{{error}}</p>
+    <div class="row q-col-gutter-md">
+        <div class="col-12 col-md-7">
+            <m-container-box title="Category tree">
+                <p class="text-caption">Drag a category onto another to move it under that one, or onto the top edge of a sibling to place it before. Moves start now.</p>
+                <p v-if="!tree.length">This store has no categories yet. Give it a browse root under Roles and members.</p>
+                <q-list dense bordered separator data-category-tree>
+                    <q-item v-for="node in tree" :key="node.productCategoryId + '-' + (node.parentProductCategoryId || '')" clickable :active="node.productCategoryId === selectedId"
+                            :draggable="canMove && !node.root" :data-category-id="node.productCategoryId"
+                            @click="select(node)" @dragstart="dragStart(node, $event)" @dragover.prevent @drop.prevent="drop(node, $event)">
+                        <q-item-section avatar :style="{paddingLeft: (node.depth * 18) + 'px'}"><q-icon :name="node.root ? 'sym_o_account_tree' : 'sym_o_drag_indicator'"></q-icon></q-item-section>
+                        <q-item-section>
+                            <q-item-label>{{node.categoryName}}</q-item-label>
+                            <q-item-label caption>{{node.productCategoryId}} · {{node.memberCount}} products<span v-if="node.shared"> · shared with another store</span></q-item-label>
+                        </q-item-section>
+                        <q-item-section side v-if="canMove && !node.root">
+                            <div class="row no-wrap">
+                                <q-btn flat dense round icon="sym_o_arrow_upward" aria-label="Move up" :disable="busy" @click.stop="step(node, 'up')"><q-tooltip>Move up</q-tooltip></q-btn>
+                                <q-btn flat dense round icon="sym_o_arrow_downward" aria-label="Move down" :disable="busy" @click.stop="step(node, 'down')"><q-tooltip>Move down</q-tooltip></q-btn>
+                            </div>
+                        </q-item-section>
+                    </q-item>
+                </q-list>
+            </m-container-box>
+        </div>
+        <div class="col-12 col-md-5">
+            <m-container-box :title="selected ? 'Products in ' + selected.categoryName : 'Products'">
+                <p v-if="!selected">Choose a category to see its products.</p>
+                <q-list v-else dense separator>
+                    <q-item v-for="member in members" :key="member.productId + '-' + member.fromDate"><q-item-section>
+                        <q-item-label>{{member.productName}}</q-item-label><q-item-label caption>{{member.productId}} · {{member.stateText}}</q-item-label>
+                    </q-item-section></q-item>
+                    <q-item v-if="!members.length"><q-item-section>No products in this category.</q-item-section></q-item>
+                </q-list>
+            </m-container-box>
+            <m-container-box title="Roles">
+                <q-list dense separator>
+                    <q-item v-for="role in roles" :key="role.storeCategoryTypeEnumId + role.productCategoryId + role.fromDate"><q-item-section>
+                        <q-item-label>{{role.typeText}}</q-item-label><q-item-label caption>{{role.categoryName}} · {{role.stateText}}</q-item-label>
+                    </q-item-section></q-item>
+                </q-list>
+            </m-container-box>
+        </div>
+    </div>
+</div></template>
+<script>
+module.exports = {
+    data(){return {productStoreId:'',storeOptions:[],tree:[],roles:[],members:[],selectedId:'',canMove:false,busy:false,error:'',dragged:null}},
+    computed:{screenPath(){return this.$root.basePath+'/'+this.$root.currentPathList.join('/')},selected(){return this.tree.find(n=>n.productCategoryId===this.selectedId)||null}},
+    methods:{
+        async request(name,params,post){const r=await moqui.request(this.screenPath+'/'+name,{method:post?'POST':'GET',params});const out=r.json||{};if(out.errors)throw new Error(typeof out.errors==='string'?out.errors:JSON.stringify(out.errors));return out},
+        async load(){this.busy=true;this.error='';try{const out=await this.request('tree',{productStoreId:this.productStoreId,productCategoryId:this.selectedId||''});this.productStoreId=out.productStoreId||'';this.storeOptions=out.storeOptions||[];this.tree=out.tree||[];this.roles=out.roles||[];this.members=out.members||[];this.canMove=!!out.canMove}catch(e){this.error=String(e.message||e);if(this.selectedId){this.selectedId='';this.members=[]}}finally{this.busy=false}},
+        storeChanged(){this.selectedId='';this.members=[];this.load()},
+        select(node){this.selectedId=node.productCategoryId;this.load()},
+        dragStart(node,event){this.dragged=node;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',node.productCategoryId)},
+        drop(target,event){const node=this.dragged;this.dragged=null;if(!node||node.productCategoryId===target.productCategoryId)return;const rect=event.currentTarget.getBoundingClientRect(),topEdge=event.clientY-rect.top<rect.height/3;
+            if(topEdge&&!target.root&&target.parentProductCategoryId)this.move(node,{toParentCategoryId:target.parentProductCategoryId,beforeCategoryId:target.productCategoryId},'before '+target.categoryName);
+            else this.move(node,{toParentCategoryId:target.productCategoryId},'under '+target.categoryName)},
+        step(node,direction){this.move(node,{direction,fromParentCategoryId:node.parentProductCategoryId||''},direction==='up'?'up':'down')},
+        // preview first: a category other stores of yours show is named and confirmed before it moves
+        async move(node,where,text){this.busy=true;this.error='';try{const params=Object.assign({productStoreId:this.productStoreId,productCategoryId:node.productCategoryId,fromParentCategoryId:node.parentProductCategoryId||''},where);
+            const preview=await this.request('move',Object.assign({previewOnly:true},params),true),stores=preview.affectedStores||[];let confirmShared=false;
+            if(stores.length>1){if(!(await moqui.confirmAction('Move '+node.categoryName+' '+text+'? It changes '+stores.map(s=>s.storeName).join(', ')+'.',document.activeElement)))return;confirmShared=true}
+            await this.request('move',Object.assign({confirmShared},params),true);moqui.notifyMessages('Moved '+node.categoryName+' '+text+'.')}catch(e){this.error=String(e.message||e)}finally{this.busy=false;await this.load()}},
+        openTwin(){this.$root.setUrl(this.$root.linkBasePath+'/'+this.$root.currentPathList.slice(0,-1).concat('StoreCategoriesTui').join('/')+'?productStoreId='+encodeURIComponent(this.productStoreId||''))},
+        fromParameters(){const id=this.$root.currentParameters?.productStoreId||'';if(id!==this.productStoreId||!this.tree.length){this.productStoreId=id;this.selectedId='';this.load()}}
+    },watch:{'$root.currentParameters':{deep:true,handler(){this.fromParameters()}}},mounted(){this.fromParameters()}
+};
+</script>

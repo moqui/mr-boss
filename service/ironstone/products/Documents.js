@@ -81,12 +81,14 @@ function run(op, parameters) {
                     .filter(([k, v]) => v != null)
                     .map(([k, v]) => encodeURIComponent(k) + "=" + encodeURIComponent(v))
                     .join("&")
+        // the mounting app's DocumentDetail (Commerce, impl-commerce P3), else Products'
+        const detailBase = a.sharedLinks?.DocumentDetail || "//Products/DocumentDetail"
         out.contentRows = out.contentRows.map(r =>
             Object.assign({}, r, {
                 fromDateText: date(r.fromDate),
                 thruDateText: date(r.thruDate),
-                detailUrl: "//Products/DocumentDetail?" + query(r),
-                previewUrl: "//Products/DocumentDetail/download?" + query(r) + "&inline=true",
+                detailUrl: detailBase + "?" + query(r),
+                previewUrl: detailBase + "/download?" + query(r) + "&inline=true",
                 imagePreview: r.inlineAllowed && String(r.mimeType).startsWith("image/"),
                 inheritanceText: r.inherited ? "Inherited from " + r.recordId : "Direct content"
             })

@@ -53,4 +53,17 @@ along with this software (see the LICENSE.md file). If not, see
     <mantle.product.store.ProductStore productStoreId="BOSS_COM_DIGITAL" storeName="Ziziwork Digital Store"
             organizationPartyId="ORG_ZIZI_SERVICES" defaultLocale="en_US" defaultCurrencyUomId="USD" requireInventory="N"
             reservationOrderEnumId="AsResOrdNoRes"/>
+
+    <!-- P3: POPC_DEFAULT's published assortment, dated rows of ProductStoreProduct (impl-commerce §4): the demo's stocked
+        products; Demo with Variants (DEMO_VAR) is left for a publisher to publish with its variants -->
+    <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_1_1" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo assortment" featuredRank="1"/>
+    <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_1_2" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo assortment"/>
+    <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_2_1" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo assortment"/>
+    <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_3_1" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo assortment"/>
+    <mantle.product.store.ProductStoreProduct productStoreId="POPC_DEFAULT" productId="DEMO_UNIT" fromDate="1265184000000"
+            publicationKindEnumId="PspkPublished" changeReason="Demo assortment" badgeText="Best seller" featuredRank="2"/>
 </entity-facade-xml>

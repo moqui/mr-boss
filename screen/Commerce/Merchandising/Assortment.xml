@@ -1,0 +1,295 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Assortment (design-commerce §4 Merchandising; style-guide §3.2 List; impl-commerce P3): AssortmentFind (store, name or ID,
+    category, publication state, type) and the store's assortment (mantle.product.StoreMerchandisingServices.find#StoreProducts:
+    the products the store may carry, a variant under its virtual product, each with its publication state and dates, its
+    storefront details, price readiness and stock policy). A publisher selects rows and reviews their publication or
+    withdrawal on PublishProducts (preview, then publish#StoreProducts); a merchandiser changes a published product's
+    storefront details (StoreProduct: store#StoreProduct, a new dated row). A store with no publication rows shows the adoption
+    proposal (propose#StorePublication), never published until approved. The store is checked by
+    ironstone.commerce.ContextServices.check#Record, and each service checks the permission and the store's organization
+    again. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Assortment" default-menu-index="1">
+    <parameter name="productStoreId"/>
+    <parameter name="term"/>
+    <parameter name="productCategoryId"/>
+    <parameter name="publicationState"/>
+    <parameter name="productTypeEnumId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <transition name="storeProduct">
+        <actions>
+            <service-call name="mantle.product.StoreMerchandisingServices.store#StoreProduct"
+                    in-map="{productStoreId:productStoreId, productId:productId, fromDate:(fromDate || null),
+                        templateKey:templateKey, badgeText:badgeText, featuredRank:(featuredRank || null),
+                        signatureRequiredEnumId:(signatureRequiredEnumId || null), changeReason:changeReason,
+                        expectedLastUpdatedStamp:(expectedLastUpdatedStamp || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <message type="success">Saved the storefront details of ${productId}.</message>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="productStoreId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- the selected rows (or the proposal's products) to PublishProducts' preview, with the action -->
+    <transition name="reviewPublication">
+        <actions>
+            <set field="productIds" from="(Array.isArray(productIds) ? productIds : String(productIds || '').split(',')).filter(Boolean).join(',')"/>
+        </actions>
+        <default-response url="../PublishProducts">
+            <parameter name="productStoreId"/>
+            <parameter name="productIds"/>
+            <parameter name="publishAction"/>
+        </default-response>
+        <error-response url="."/>
+    </transition>
+    <actions>
+        <set field="can" from="commerce.capabilities"/>
+        <set field="productStoreId" from="productStoreId || commerce.storeOptions?.[0]?.value || null"/>
+        <service-call name="ironstone.commerce.ContextServices.check#Record" out-map="storeRecord" transaction="force-new"
+                ignore-error="true" in-map="{appRoot:appRoot, recordType:'store', recordId:(productStoreId || '')}"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="storeFound" from="!!storeRecord?.recordId"/>
+        <if condition="storeFound">
+            <service-call name="mantle.product.StoreMerchandisingServices.find#StoreProducts" out-map="found" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:productStoreId, term:term, productCategoryId:(productCategoryId || null),
+                        publicationState:(publicationState || null), productTypeEnumId:(productTypeEnumId || null),
+                        pageIndex:pageIndex, pageSize:pageSize}"/>
+            <script>ec.message.clearErrors()</script>
+            <!-- a store with no publication rows: the adoption proposal (Shop P8 reuses it) -->
+            <service-call name="mantle.product.StoreMerchandisingServices.propose#StorePublication" out-map="proposed"
+                    transaction="force-new" ignore-error="true" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="products" from="found?.products || []"/>
+        <set field="productsCount" from="found?.productsCount || 0"/>
+        <set field="productsPageIndex" from="found?.productsPageIndex || 0"/>
+        <set field="productsPageSize" from="found?.productsPageSize || 20"/>
+        <set field="productsPageMaxIndex" from="found?.productsPageMaxIndex || 0"/>
+        <set field="productsPageRangeLow" from="found?.productsPageRangeLow || 0"/>
+        <set field="productsPageRangeHigh" from="found?.productsPageRangeHigh || 0"/>
+        <set field="proposals" from="proposed?.proposals || []"/>
+        <set field="proposalIds" from="proposals.map((row) =&gt; row.productId).join(',')"/>
+        <set field="findValues" from="{productStoreId:productStoreId, term:term, productCategoryId:productCategoryId,
+                publicationState:publicationState, productTypeEnumId:productTypeEnumId}"/>
+        <set field="product360Url" from="sharedLinks['Merchandising/Product360']"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col"><label text="Assortment" type="h5"/></container>
+        </container>
+        <form-single name="AssortmentFind" transition="." map="findValues">
+            <field name="productStoreId">
+                <default-field title="Store">
+                    <drop-down allow-empty="false">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'stores', selected:productStoreId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="term"><default-field title="Name or ID"><text-line size="24"/></default-field></field>
+            <field name="publicationState">
+                <default-field title="Publication">
+                    <drop-down allow-empty="true">
+                        <option key="published" text="Published"/>
+                        <option key="scheduled" text="Starts later"/>
+                        <option key="unpublished" text="Not published"/>
+                        <option key="withdrawn" text="Withdrawn"/>
+                        <option key="excluded" text="Variant excluded"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productTypeEnumId">
+                <default-field title="Type">
+                    <drop-down allow-empty="true">
+                        <entity-options key="${enumId}" text="${description}">
+                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                <econdition field-name="enumTypeId" value="ProductType"/>
+                                <order-by field-name="description"/>
+                            </entity-find>
+                        </entity-options>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="productCategoryId">
+                <default-field title="Category">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                parameter-map="{choice:'storeCategories', productStoreId:productStoreId, selected:productCategoryId}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="productStoreId"/>
+                    <field-ref name="term"/>
+                    <field-ref name="publicationState"/>
+                    <field-ref name="productTypeEnumId"/>
+                    <field-ref name="productCategoryId"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <section name="NoStore" condition="!storeFound">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="No store"/>
+                    <box-body>
+                        <label text="Choose one of your stores. A store you do not work is not available." type="p"/>
+                        <link url="../../Stores" text="Back to the stores" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Proposal" condition="storeFound &amp;&amp; proposals.length &gt; 0">
+            <widgets>
+                <container-box type="info">
+                    <box-header title="Nothing is published in this store yet"/>
+                    <box-toolbar>
+                        <link url="reviewPublication" text="Review publishing ${proposals.length} products" link-type="anchor-button"
+                                btn-type="primary" condition="can.publish"
+                                parameter-map="{productStoreId:productStoreId, productIds:proposalIds, publishAction:'publish'}"/>
+                    </box-toolbar>
+                    <box-body>
+                        <label text="The store's categories hold these sellable products. Nothing is public until a publisher reviews and publishes them." type="p"/>
+                        <form-list name="ProposalList" list="proposals" skip-form="true" paginate="false">
+                            <field name="productName"><default-field title="Product"><display/></default-field></field>
+                            <field name="productId"><default-field title="ID"><display/></default-field></field>
+                            <field name="variantCount"><default-field title="Variants"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                                <column><field-ref name="variantCount"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="Products" condition="storeFound">
+            <widgets>
+                <container-box>
+                    <box-body-nopad>
+                        <form-list name="Assortment" list="products" skip-form="true" select-columns="true">
+                            <row-selection id-field="productId" parameter="productIds" list-mode="true" condition="can.publish">
+                                <action>
+                                    <dialog button-text="Publish or withdraw" title="Review the selected products"/>
+                                    <form-single name="SelectedPublication" transition="reviewPublication">
+                                        <field name="productStoreId" from="productStoreId"><default-field><hidden/></default-field></field>
+                                        <field name="publishAction">
+                                            <default-field title="Action">
+                                                <drop-down allow-empty="false">
+                                                    <option key="publish" text="Publish"/>
+                                                    <option key="withdraw" text="Withdraw"/>
+                                                    <option key="exclude" text="Exclude variant"/>
+                                                    <option key="restore" text="Restore variant"/>
+                                                </drop-down>
+                                            </default-field>
+                                        </field>
+                                        <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                                    </form-single>
+                                </action>
+                            </row-selection>
+                            <field name="productName">
+                                <default-field title="Product">
+                                    <link url="${product360Url}" text="${productName}" link-type="anchor" parameter-map="{productId:productId}"/>
+                                </default-field>
+                            </field>
+                            <field name="productId"><default-field title="ID"><display/></default-field></field>
+                            <field name="stateText">
+                                <default-field title="Publication">
+                                    <render-mode>
+                                        <text type="qvt"><![CDATA[<q-chip dense square class="q-ma-none m-tonal text-${stateColor}">${
+                                            WebUtilities.encodeHtml(stateText)}</q-chip>]]></text>
+                                        <text type="tui"><![CDATA[${JSON.stringify({t: "text", text: stateText})}]]></text>
+                                        <text type="html">${stateText}</text>
+                                    </render-mode>
+                                </default-field>
+                            </field>
+                            <field name="fromDateText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruDateText"><default-field title="Through"><display/></default-field></field>
+                            <field name="productTypeText"><default-field title="Type"><display/></default-field></field>
+                            <field name="variantCount"><default-field title="Variants"><display/></default-field></field>
+                            <field name="badgeText"><default-field title="Badge"><display/></default-field></field>
+                            <field name="templateKey"><default-field title="Template"><display/></default-field></field>
+                            <field name="featuredRank"><default-field title="Rank"><display/></default-field></field>
+                            <field name="priceReady">
+                                <default-field title="Price">
+                                    <display text="${priceReady ? 'Priced' : 'No price'}"/>
+                                </default-field>
+                            </field>
+                            <field name="stockText"><default-field title="Stock"><display/></default-field></field>
+                            <field name="rowActions">
+                                <default-field title="">
+                                    <container-dialog id="StoreProduct_${productId}" button-text="Storefront details" icon="sym_o_edit" width="640"
+                                            title="Storefront details of ${productName}"
+                                            condition="can.merchandise &amp;&amp; ['published', 'scheduled'].includes(publicationState)">
+                                        <form-single name="StoreProductForm_${productId}" transition="storeProduct"
+                                                map="{productStoreId:productStoreId, productId:productId, templateKey:templateKey,
+                                                    badgeText:badgeText, featuredRank:featuredRank,
+                                                    signatureRequiredEnumId:signatureRequiredEnumId,
+                                                    expectedLastUpdatedStamp:lastUpdatedStamp}">
+                                            <field name="productStoreId"><default-field><hidden/></default-field></field>
+                                            <field name="productId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedLastUpdatedStamp"><default-field><hidden/></default-field></field>
+                                            <field name="badgeText"><default-field title="Badge text"><text-line size="30"/></default-field></field>
+                                            <field name="templateKey">
+                                                <default-field title="Template" tooltip="The theme's product template; empty for its default">
+                                                    <text-line size="30"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="featuredRank"><default-field title="Featured rank"><text-line size="6"/></default-field></field>
+                                            <field name="signatureRequiredEnumId">
+                                                <default-field title="Signature on delivery">
+                                                    <drop-down allow-empty="true">
+                                                        <entity-options key="${enumId}" text="${description}">
+                                                            <entity-find entity-name="moqui.basic.Enumeration" cache="true">
+                                                                <econdition field-name="enumTypeId" value="SignatureRequired"/>
+                                                                <order-by field-name="sequenceNum"/>
+                                                            </entity-find>
+                                                        </entity-options>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="fromDate">
+                                                <default-field title="From" tooltip="Empty: now">
+                                                    <date-time type="timestamp"/>
+                                                </default-field>
+                                            </field>
+                                            <field name="changeReason"><default-field title="Reason"><text-line size="40"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save details"><submit/></default-field></field>
+                                            <field-layout>
+                                                <field-row><field-ref name="badgeText"/><field-ref name="templateKey"/></field-row>
+                                                <field-row><field-ref name="featuredRank"/><field-ref name="signatureRequiredEnumId"/></field-row>
+                                                <field-row><field-ref name="fromDate"/><field-ref name="changeReason"/></field-row>
+                                                <field-ref name="submitButton"/>
+                                            </field-layout>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="productName"/><field-ref name="productId"/></column>
+                                <column><field-ref name="stateText"/><field-ref name="rowActions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+                <label text="No products match. A store carries its organization's products and the shared catalog's." type="p"
+                        style="text-caption m-muted" condition="!products.length"/>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

@@ -102,6 +102,8 @@ const demoRecords = {
     "Products/Products/List": {parameters: {text: "catalog sample"}, text: "Services catalog sample"},
     "Products/Categories/CategoryDetail": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
     "Shared/Product360/": {parameters: {productId: "BOSS_PRD_OWN"}, text: "Services catalog sample"},
+    // impl-commerce P3: CategoryDetail made shared (F5)
+    "Shared/CategoryDetail/": {parameters: {productCategoryId: "BOSS_PRD_CAT"}, text: "Services catalog"},
     // M2: Today, notifications, quick create, Home and the settings (the demo of service/ironstone/commons/DemoServices.xml), on text
     // that does not depend on the time of day the data was loaded
     "Commons/Home": { text: "Get started" },

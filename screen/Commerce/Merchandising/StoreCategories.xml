@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- StoreCategories (design-commerce §4 StoreCategories; impl-commerce P3): a store's category tree, a .qvue
+    (StoreCategories.qvue) with drag ordering: drop a category on another to move it under that one, or on a sibling's edge to
+    place it before; Move up and Move down. Each move is previewed first (the stores sharing the category are named and the
+    change confirmed) and saved through mantle.product.StoreMerchandisingServices.move#StoreCategory, which refuses a cycle, a
+    past date and a category a store the user does not work shares. Its terminal twin, StoreCategoriesTui, holds the same tree
+    with parent and sequence fields, Move up and Move down, and the store's category roles (StoreRoots) and category members
+    (CategoryProducts), and is the browser's form view as well. Every Commerce user reads; the merchandiser
+    (COMMERCE_MERCHANDISE) moves. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Store categories" default-menu-index="2" render-modes="vue,qvue,tui" server-static="vue,qvue">
+    <parameter name="productStoreId"/>
+    <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
+    <!-- the tree view's requests answer JSON; a refusal goes back in the answer's errors for the view to show -->
+    <transition name="tree" method="get" read-only="true">
+        <actions>
+            <set field="productStoreId" from="productStoreId || commerce.storeOptions?.[0]?.value || null"/>
+            <script><![CDATA[
+                const probe = (name, parameters) => {
+                    ec.message.pushErrors()
+                    try {
+                        const out = Object.assign({}, ec.service.sync().name(name).parameters(parameters).requireNewTransaction(true).call() || {})
+                        out.errors = ec.message.getErrorsString()
+                        return out
+                    } catch (error) {
+                        return {errors: String(error.message || error)}
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                }
+                const answer = probe('mantle.product.StoreMerchandisingServices.get#StoreCategories',
+                    {productStoreId: productStoreId, productCategoryId: productCategoryId || null})
+                Object.assign(answer, {productStoreId, canMove: !!commerce.capabilities.merchandise, storeOptions: commerce.storeOptions || []})
+                ec.web.sendJsonResponse(answer)
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="move" method="post">
+        <actions>
+            <script><![CDATA[
+                const probe = (name, parameters) => {
+                    ec.message.pushErrors()
+                    try {
+                        const out = Object.assign({}, ec.service.sync().name(name).parameters(parameters).requireNewTransaction(true).call() || {})
+                        out.errors = ec.message.getErrorsString()
+                        return out
+                    } catch (error) {
+                        return {errors: String(error.message || error)}
+                    } finally {
+                        ec.message.clearErrors()
+                        ec.message.popErrors()
+                    }
+                }
+                const flag = value => value === true || value === 'true'
+                ec.web.sendJsonResponse(probe('mantle.product.StoreMerchandisingServices.move#StoreCategory', {
+                    productStoreId, productCategoryId, toParentCategoryId: toParentCategoryId || null,
+                    fromParentCategoryId: fromParentCategoryId || null, direction: direction || null,
+                    beforeCategoryId: beforeCategoryId || null, previewOnly: flag(previewOnly), confirmShared: flag(confirmShared)}))
+            ]]></script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <widgets>
+        <render-mode>
+            <text type="qvue" location="component://mr-boss/screen/Commerce/Merchandising/StoreCategories.qvue" template="false"/>
+            <text type="tui"><![CDATA[${JSON.stringify([{t:'dynamicContainer',id:'StoreCategoriesTui',url:sri.buildUrl('../StoreCategoriesTui').addParameters({productStoreId:productStoreId||null}).getUrlWithParams()}])}]]></text>
+            <text type="html,qvt"><![CDATA[<p><a href="StoreCategoriesTui?productStoreId=${productStoreId||''}">Open the store's categories as forms</a></p>]]></text>
+        </render-mode>
+    </widgets>
+</screen>
