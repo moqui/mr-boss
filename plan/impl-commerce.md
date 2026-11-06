@@ -262,7 +262,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 5 (§6 F1–F45); five checks left |
+| P0 Checks | all (read) | — | done Nov 5 (§6 F1–F56) |
 | P1 Foundation | Mantle, BOSS | the Commerce root and menu, Home | built Nov 5, 2026 |
 | P2 Stores | Mantle, BOSS | Stores, StoreDetail, StoreGroups | — |
 | P3 Assortment and catalog mounts | Mantle, BOSS | Merchandising, StoreCategories, Product360, CategoryDetail, CategoryContent, Documents, DocumentDetail, PriceLists, PriceListDetail, PriceExplain, InventoryAvailability | — |
@@ -286,7 +286,7 @@ changes the design, an edit there. F1–F36 were found on Nov 5 while writing th
 Service P1–P8 and P12 left it, and the design edits they call for were made then (§6). The check of Customer
 Service's finished pieces was done later on Nov 5 (F25, F37–F45): each landed, and what differs from what this plan
 assumed is in those findings (no store queue link, the Support pages bound to the site's Support mount, no
-`SalesOrder` capability, no Account hub or email preferences page). Still to check:
+`SalesOrder` capability, no Account hub or email preferences page). The five below were checked later on Nov 5 (F46–F56):
 
 - **The Knowledge editor for PageDetail** (F29): it edits a wiki publishing space's pages (Customer Service's
   `inCustomerService` mount edits ZZW_RETAIL), never a `PublicSitePage`; still to check is what a version note and the
@@ -418,16 +418,16 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
   member and other organization, forged ids, a Projects client and a PASS public account refused the root and every
   `ironstone.commerce` service, the demo's state), run once: 5 passed. The mr-boss acceptance suite with it: 430
   features, 419 passed, 9 failed, 2 skipped; the same nine fail at the commit before P1 on the same runtime (425
-  features, 414 passed), from F-P1-1's older framework tree (AppStructure and TuiRender: Tools/Data/Export.xml not
+  features, 414 passed), from F57's older framework tree (AppStructure and TuiRender: Tools/Data/Export.xml not
   found; six Customer Service and two Purchasing walks).
-- Tests run, all pass (on the runtime of F-P1-1): CommerceAccess (7); ProjectsAccess, AppOrganizationFilters,
+- Tests run, all pass (on the runtime of F57): CommerceAccess (7); ProjectsAccess, AppOrganizationFilters,
   CustomerServiceAccess (37 features); AccountingAccess, PurchasingAccess, ProductsAccess, ManufacturingAccess,
   WarehousePolicies, WarehouseReturns, CustomerServiceOrders, CustomerServiceReturns, CustomerServiceOrderChanges,
   CustomerServiceWarranty, ProductsMethods, ProductsCosts, ManufacturingWorkOrders (123 features); Mantle RestApiTests,
   ReturnPolicies, OrderToCashTime, ReturnToResponseBasicFlow, OrderToCashBasicFlow, DropShip, SalesReports, Promotions,
   AssetReservationMultipleThreads, MantleSearch, CarrierServices (118 features, the specs that use POPC_DEFAULT).
   `moqui lint --screens` (Debug binary): no idiom or hazard site in the Commerce screens (132 sites in all, none
-  Commerce's). Not run: `./moq test-apps` and the budget (F-P1-1).
+  Commerce's). Not run: `./moq test-apps` and the budget (F57).
 - Inventories: no ss-inventory or usl-inventory row is implemented by P1 (Home's period strip and work counts are P8's
   and P11's; StoreDetail's store parties P2's).
 - P0 findings brought into P1 (numbered by the lead):
@@ -456,17 +456,17 @@ Design §1.1, §1.2 and §3 Home; COM-ACCESS.
     options are unchanged; the store-limited member is in both demo organizations, so the limit is what keeps
     BOSS_COM_DIGITAL out.
 - Findings (provisional):
-  - **F-P1-1** The shared binaries (`target/debug/moqui` and `target/release/moqui`) are older than the mr-moqui
+  - **F57** The shared binaries (`target/debug/moqui` and `target/release/moqui`) are older than the mr-moqui
     `runtime/base-component` they run on: they lack `UserSecurityChecks.assertDocumentExpression` (4f8997c0), so every
     data file with a DataDocument field (the framework's ResourceEntities, Mantle's documents, BossSetupData's drive
     rows) fails to load, BossUsersDemoData with them, and every BOSS spec fails at sign-in (CustomerServiceAccess: 22 of
     22 on the com-p1 runtime). The tests above ran on a scratch runtime whose `base-component` and `dev-component` are
     mr-moqui 1916b57f's, the newest tree the binary matches, with the com-p1 components. A rebuilt binary is needed
     before `./moq test-apps`, the budget measure and a re-run on the com-p1 runtime.
-  - **F-P1-2** Mantle has no store email templates (the PopRestStore ones were not ported), so the demo's five
+  - **F58** Mantle has no store email templates (the PopRestStore ones were not ported), so the demo's five
     automatic types are bound to one demo template with the framework's generic body on a local sink; real store
     notices are Shop's (P6) and P8's.
-  - **F-P1-3** Ending a member's last StoreStaff row widens them to every store of their organizations (§4's rule: a
+  - **F59** Ending a member's last StoreStaff row widens them to every store of their organizations (§4's rule: a
     user with no current row works every store). For the lead: keep the rule, or limit a user with any StoreStaff row,
     current or past (`_NA_` once all have ended).
 
@@ -483,7 +483,7 @@ AGENTS.md and Practices-App-Dev:
   StoreStaff rows, removes it otherwise), so an unlimited user and a system administrator are untouched; the fixture
   checks both. A forged or foreign store, site, order or customer in `check#Record`, `get#Choices`' `selected`,
   `search#Records`, `get#RecordLink` or Home's `productStoreId` is refused as missing; staff rows on a store outside the
-  user's organizations limit to nothing (an empty `in` is `1 = 0`), never widen. F-P1-3: the code follows §4 (a user
+  user's organizations limit to nothing (an empty `in` is `1 = 0`), never widen. F59: the code follows §4 (a user
   with a current row is limited to those stores, one with none works every store).
 - Groups and grants: the nine groups and design §1.1's table, not nested; the area groups deny `BOSS_COMMERCE` and allow
   their capability groups with `ALWAYS`, as BOSS_CS_RETURNS (F45); the twelve permissions in MantleSetupData each with
@@ -500,13 +500,13 @@ AGENTS.md and Practices-App-Dev:
   same authorizations, so the menu keeps the reader, the operator and the administrator, the launcher reuses the
   reader's shell, and the context feature keeps the store-limited and other-organization users and one other app's user
   (mr-boss c2ce3664). 7 features, 3.0 s, each under 0.6 s.
-- Tests run on the com-p1 runtime with the rebuilt release binary (Nov 5 22:15, F-P1-1 resolved): CommerceAccess,
+- Tests run on the com-p1 runtime with the rebuilt release binary (Nov 5 22:15, F57 resolved): CommerceAccess,
   ProjectsAccess, AppOrganizationFilters and CustomerServiceAccess, 44 features, all pass. In the first run, the one that
   loaded the database, CustomerServiceAccess' "Invite to support" failed once (`RECORD_UNAVAILABLE` for its spec's
   contact) while the load's background work was still running; it passed in the three runs after, and at master on a
   runtime of the master components; P1 touches nothing it reads.
 - For the lead:
-  - F-P1-3's widening has a second case: a member whose only StoreStaff row starts in the future works every store of
+  - F59's widening has a second case: a member whose only StoreStaff row starts in the future works every store of
     their organizations until it starts. Both are §4's rule; a "limited by any row, current, past or future" rule closes
     both.
   - POPC_DEFAULT's five email bindings make every order placed, approved, shipped, delivered or invoiced in that store
@@ -1034,6 +1034,20 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F43 | P0: `clone#Order` (OrderServices.xml:2385-2529) copies payments by default as Promised (`copyPayment`), copies each item's `unitAmount` without repricing, and makes an OrderOpen order | P8's Order again clones with `copyPayment=false` and reprices; Shop P7 clones renewals with `copyPayment=false` (Shop F17) |
 | F44 | P0: no spec is named `GoldenPath`: the client walks are `test/client/<App>/<App><Area>Walk.spec.js`, registered in `test/client/suite.js` (Customer Service's golden path is CustomerServiceCasesWalk); SpecLibs are `test/<App>/<App>SpecLib.js`; Mantle's `test/` has no `public/` folder | §2; the golden walks are CommerceThemesWalk and Shop's ShopCheckoutWalk; P4 starts `test/public/` |
 | F45 | P0: since BOSS_USERS (mr-boss cc38c49a), Commons and Comms open only for `BOSS_USERS`; app groups are not nested: a user is in `BOSS_USERS`, the app's root group and a capability group, the administrator in `BOSS_USERS` and the app's `_ADMIN` (BossUsersDemoData.xml:735-736); an area seen by some groups is an artifact group that denies the root group and allows them (BOSS_CS_RETURNS, BossSetupData.xml:1610-1640). The budgets after Customer Service: mr-boss 264 s and 49 s, mr-mantle 370 s, mr-pass 15 s and 6 s | P1 follows the pattern; §4's budget row updated |
+| F46 | P0: every SharedContext branch but Products' forces `catalogEdit` and `priceEdit` false; Documents and DocumentDetail refuse saves without `catalogEdit` (Documents.xml:26, 42) and Prices.js reads `canEdit` from the context | P3: the Commerce branch passes `read`, `priceRead`, `catalogEdit` and `priceEdit` through from `get#CatalogAccess`, with cost, margin and method off (as Manufacturing passes its method flags, SharedContext.js:133-134) |
+| F47 | P0: `get#SharedContext` returns only its declared out-parameters (CatalogServices.xml:24-38), so a store scope added in SharedContext.js is dropped; Prices.js and Taxonomy.js list the user's organizations' stores (by `ownerPartyIds`, :217-219, :800-802), with no per-store narrowing | P3 adds a `storeIds` out-parameter and narrows those store lists to it under Commerce |
+| F48 | P0: Shared/Prices.xml's transitions use `sharedLinks['Prices/PriceHistory']` and `['Products/BulkPrice']` unguarded (:66, :69) | P3 maps them to Commerce routes or hides those actions |
+| F49 | P0: `Commerce.xml` called no app `get#SharedContext` and set no `sharedLinks`, unlike CustomerService.xml:32-33 | P1 (built) |
+| F50 | P0: the organization filters cannot limit a staff member to some stores of an organization (BOSS_COMMERCE's rows carry `MANTLE_ACTIVE_ORG`; `MANTLE_USER_ORG_D` filters ProductStore by organization only) | P1 (built): the `COMMERCE_STORE` filter set over `ec.user.context.commerceStoreIds`, filled by `setup#StoreScope`; the Commerce services condition on the scope in their queries |
+| F51 | P0: store child records, orders, reviews, site records, `disableAuthz` reads (all of Products' scripts and the store choice lists), the raw REST paths and the search indexes escape any ProductStore filter | Every Commerce service conditions on its store scope (`get#StoreScope`); P2, P3 and P8 each test a store-limited user refused another store of the same organization |
+| F52 | P0: ZZW_RETAIL sets no `restrictUpdate` (ZcaProductDemoData.xml:43), so every BOSS_USERS member may edit and wiki-publish its pages in Commons Knowledge (`get#WikiPageAccess`, WikiServices.xml:1711-1780); the wiki publish is what `publish#SitePage`'s exact-version rule and the help links trust | P4: store page spaces have `restrictUpdate=Y`; `store#SitePage` writes after its own permission and store check, as no user with authz off (the framework's exemption), or keeps the space's `allowUpdate` rows in step with the grants |
+| F53 | P0: Commons Knowledge has no single-page mode; its modes are detected by path segment (Knowledge.qvue:680, 684), so under Commerce it would show Commons' side pane, page menu and Publish | P4 adds a Commerce mode to Knowledge.xml and Knowledge.qvue: the bound page only, no side pane, Publish, rename, move, delete or Request review, `savePage` through `store#SitePage` |
+| F54 | P0: a second host of a site already routes (two `<public-site>` entries with one `site-id`; `getSiteInfo` accepts any PublicSiteHost, Forum.js:2693-2698), but a host has no kind, so a preview host would serve the live site's mounts, accounts and checkout | P5: `PublicSiteHost.hostKindEnumId` (live, preview); on a preview host Pass.xml sends `frame-ancestors` the configured BOSS origins, noindex and no-store, refuses every route but the preview render and needs the preview capability (in the URL, never a cookie); `pageUrl`, `sitesFor` and readiness skip preview hosts; previews are served by the authority's runtime |
+| F55 | P0: the framework adds `X-Frame-Options: sameorigin` to every screen response lacking one (factory.rs:96, web/mod.rs:1929), and the desktop shell's CSP has `frame-src 'none'` (moqui-client assets.rs:37) | Framework (built by the framework worker for P5): X-Frame-Options left out when the response's CSP has `frame-ancestors`; the desktop shell allows configured preview origins |
+| F56 | P0: ZZW_RETAIL's `/popc/content/` URL is read by CustomerArticle and also by Send to customer's `get#ArticlePublicLink` (Knowledge.js:416-444, made absolute on the BOSS webroot, asserted by CustomerServiceKnowledge.spec.js:121), the INTERNAL_PUBLIC_SPACE guard (:190), SpaceDetail and Marble's wiki links; `/pcontact` is a dead alias | Shop P3 moves `publicPageUrl` and `publicAttachmentUrl` to the Shop site's absolute page route (better, `publicLink` through `PublicApps.pageUrl`), drops `/pcontact` and updates the spec |
+| F57 | P1: the shared binaries were older than base-component (no `UserSecurityChecks.assertDocumentExpression`, mr-moqui 4f8997c0), so data files with DataDocument fields failed to load and every BOSS spec failed at sign-in | The lead rebuilt `target/release/moqui` (Nov 5, from mr-moqui fff2e5f6); P1's specs rerun on it |
+| F58 | P1: Mantle has no store email templates (the PopRestStore ones were not ported) | The demo binds POPC_DEFAULT's five automatic types to one demo template on the local sink; real templates come with Shop's notices |
+| F59 | P1: under §4's rule, a member whose last StoreStaff row ends, or whose only row starts in the future, works every store of their organizations | Kept as §4 decides; for the user to confirm (the alternative: anyone with any StoreStaff row stays limited, to nothing when none is current) |
 
 ## 7. Later
 
