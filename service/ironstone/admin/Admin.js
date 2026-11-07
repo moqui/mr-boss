@@ -64,10 +64,13 @@ const capabilityPermissions = {
 // the operations operator and the administrator; Agents and Developer tools for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
-// administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator.
+// administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator; P7 Settings' Organizations,
+// OrganizationDetail and Constitution for the configuration administrator and the administrator (one artifact group, so
+// Organizations stands for the three).
 const areas = {
     users: "Users",
     access: "Access",
+    organizations: "Settings/Organizations",
     operations: "Operations",
     agents: "Agents",
     developer: "Developer"
@@ -269,6 +272,10 @@ const linkPaths = [
     "Users/Invitations",
     "Users/InviteStaff",
     "Settings/SettingsHome",
+    // P7: organizations and the Constitution
+    "Settings/Organizations",
+    "Settings/OrganizationDetail",
+    "Settings/Constitution",
     "Agents/Home",
     "System",
     "Developer/Home"
@@ -342,7 +349,13 @@ function readGroup(userGroupId) {
 // those Mantle's identity scope gives the caller, its read already refused out of scope; or null when there is no such record
 // or it is out of scope).
 const recordKinds = {
-    organization: {name: "Organization", icon: "sym_o_corporate_fare", need: null, destination: null, read: readOrganization},
+    organization: {
+        name: "Organization",
+        icon: "sym_o_corporate_fare",
+        need: null,
+        destination: "Settings/OrganizationDetail",
+        read: readOrganization
+    },
     user: {name: "User", icon: "sym_o_person", need: "identityView", destination: "Users/UserDetail", read: readUser},
     // P3: a group, and a user as a group's member: an access administrator reads the users of the organizations they administer
     // to add or end their memberships, without the identity operator's ADMIN_IDENTITY_VIEW
@@ -448,6 +461,21 @@ const searchFinds = [
                 .distinct(true)
                 .orderBy("userFullName"),
         url: recordId => "/qapps/Admin/Users/UserDetail?userId=" + encodeURIComponent(recordId)
+    },
+    // P7: the internal organizations the user administers, by name or pseudo id, for a holder of ADMIN_SETTINGS_VIEW (who opens
+    // OrganizationDetail)
+    {
+        kind: "organization",
+        need: "settingsView",
+        entityName: "mantle.party.Party",
+        idField: "partyId",
+        query: (userScope, condition) =>
+            find("mantle.party.PartyDetail")
+                .condition("partyId", "in", organizationIds(userScope).length ? organizationIds(userScope) : ["_NA_"])
+                .condition(condition(["organizationName", "pseudoId"]))
+                .selectField("partyId")
+                .orderBy("organizationName"),
+        url: recordId => "/qapps/Admin/Settings/OrganizationDetail?organizationPartyId=" + encodeURIComponent(recordId)
     }
 ]
 function search(p) {
@@ -463,7 +491,7 @@ function search(p) {
         )
     const found = new Map()
     for (const definition of searchFinds) {
-        const need = recordKinds[definition.kind].need
+        const need = definition.need || recordKinds[definition.kind].need
         if (need && !userScope.capabilities[need]) continue
         let rowsFound = []
         try {
@@ -572,6 +600,25 @@ const choiceSources = {
         return choiceSources
             .bundles(userScope, term, selected)
             .filter(option => option.value !== "ADMIN" && !privileged.has(option.value) && !sealedGroups.has(option.value))
+    },
+    // P7: the people OrganizationMembers may relate to an organization, the staff of the organizations in Mantle's identity scope
+    // (store#OrganizationMembership refuses another organization's staff without ADMIN_IDENTITY_GLOBAL itself)
+    staffPeople: (userScope, term) => {
+        if (!userScope.capabilities.identityManage) return []
+        let accounts = staffAccounts().selectField("partyId").selectField("userFullName").selectField("username").distinct(true)
+        if (term) {
+            const factory = ec.entity.conditionFactory
+            accounts = accounts.condition(
+                factory.makeCondition(
+                    ["username", "userFullName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        }
+        return Array.from(accounts.orderBy("userFullName").limit(choiceLimit).list()).map(row => ({
+            value: row.partyId,
+            label: (row.userFullName || row.username) + (row.username ? " (" + row.username + ")" : "")
+        }))
     },
     // the internal organizations the user administers (theirs, or every one for the administrator)
     organizations: (userScope, term, selected) => {

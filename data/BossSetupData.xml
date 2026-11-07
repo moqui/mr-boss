@@ -4029,4 +4029,45 @@ along with this software (see the LICENSE.md file). If not, see
             countField="count"
             routePath="monitor/Operations"
             organizationScope="Every organization" sequenceNum="910"/>
+
+    <!-- Admin P7 (impl-admin P7; design-admin §7 Organizations, OrganizationDetail and Constitution, §1.1): the Settings screens
+        Organizations, OrganizationDetail and Constitution for the configuration administrator (the organizations it belongs to and
+        their child organizations, MANTLE_USER_ORG) and the administrator (every organization with none active, MANTLE_ACTIVE_ORG),
+        denying the root user group as the other areas do; Mantle's IdentityServices check ADMIN_SETTINGS_VIEW and _MANAGE and the
+        organization scope, and its ConstitutionServices ORG_CONSTITUTION_EDIT in the organization, whatever opens the screens.
+        Members read their organization's Constitution in the Assist drawer's Rules pane, not here (impl-admin F46). -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ORGANIZATIONS" description="Admin organizations and the Constitution">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Organizations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/OrganizationDetail.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Admin/Settings/Constitution.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_CONFIGURE" userGroupId="BOSS_ADMIN_CONFIGURE"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_ORGANIZATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Organization Constitution edits are the configuration administrator's (design §1.1), with Mantle's ORG_CONSTITUTION_EDIT in
+        the organizations it works in; the instance's document stays the sealed ADMIN_CONSTITUTION_GLOBAL's (ADMIN) -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ORG_CONSTITUTION_EDIT" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ORG_CONSTITUTION_EDIT" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ORG_CONSTITUTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ORG_CONSTITUTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- Admin's own settings index entries (impl-admin P2's "For the lead"): organizations and the Constitution, each shown to a user
+        Admin › Settings opens them to -->
+    <ironstone.admin.SettingsEntry settingsKey="admin.organizations" version="1" ownerApp="Admin" title="Organizations"
+            description="Internal organizations: profile, contacts, members, defaults and setup links" settingsGroupEnumId="AdmSgCompany"
+            scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Organizations" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="5"/>
+    <ironstone.admin.SettingsEntry settingsKey="admin.constitution" version="1" ownerApp="Admin" title="Constitution"
+            description="The shared guidance for people and agent runs, for the instance and each organization" settingsGroupEnumId="AdmSgCompany"
+            scopeEnumId="AdmScOrganization" screenPath="Admin/Settings/Constitution" viewPermission="ADMIN_SETTINGS_VIEW"
+            configuredBy="Configuration administrator" sequenceNum="6"/>
 </entity-facade-xml>

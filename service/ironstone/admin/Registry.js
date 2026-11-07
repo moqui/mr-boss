@@ -296,7 +296,8 @@ const adapters = {
                   )
         ]
     },
-    // Mantle's organization Constitution: whether its own document is valid
+    // Mantle's organization Constitution: whether its own document is valid; its fix is Admin › Settings › Constitution in that
+    // organization's scope (P7), shown when the viewer opens it
     "mantle.party.ConstitutionServices.get#OrganizationConstitution": (provider, run) =>
         perOrganization(run, provider, organizationPartyId => {
             const out = ownerCall(provider.serviceName, {organizationPartyId})
@@ -307,7 +308,8 @@ const adapters = {
                         "Organization Constitution",
                         "failed",
                         "CONSTITUTION_INVALID",
-                        "Its own Constitution is not valid"
+                        "Its own Constitution is not valid",
+                        {fixPath: "Admin/Settings/Constitution?scope=" + encodeURIComponent(organizationPartyId)}
                     )
                 ]
             return [

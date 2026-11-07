@@ -5,7 +5,8 @@
 // each by its own grant, the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
 // direct entity call) beside the refused raw security mutators, and the organization scope of a record (another organization's
 // identity refused, a shared identity shown only by the organization in scope), and the settings index a BOSS user without Admin
-// opens alone (P2, F46). Home's one render (qvt) is AdminRegistries'. One feature per rule, each case of it a line of
+// opens alone (P2, F46), and P7's organizations area (the configuration administrator's and the administrator's, its organization
+// scope in AdminOrganizations). Home's one render (qvt) is AdminRegistries'. One feature per rule, each case of it a line of
 // its problems, with artifact authorization enabled. The framework's seal checks are the framework's (eca_tests.rs). The access
 // and isolation walk is the acceptance AdminFoundationWalk. A later phase adds a case only for an access rule it adds, and its
 // providers to the menu feature.
@@ -209,6 +210,8 @@ const capabilityNames = [
     "constitutionGlobal",
     "agentAdmin",
     "access",
+    // P7: Settings' Organizations, OrganizationDetail and Constitution (BOSS_ADM_ORGANIZATIONS)
+    "organizations",
     "operations",
     "agents",
     "developer",
@@ -223,7 +226,7 @@ const capabilityUsers = [
     {user: users.reader, granted: ["overview", "operations"]},
     {user: users.identity, granted: ["identityView", "identityManage"]},
     {user: users.access, granted: ["accessView", "accessManage", "access"]},
-    {user: users.configure, granted: ["settingsView", "settingsManage"]},
+    {user: users.configure, granted: ["settingsView", "settingsManage", "organizations"]},
     {user: users.integrations, granted: ["connectionView", "connectionManage"]},
     {user: users.operations, granted: ["operationView", "operationManage", "operations"]},
     {user: users.data, granted: ["transferView", "transferRun"]},
