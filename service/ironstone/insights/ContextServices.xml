@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Insights app's context (impl-insights §2, P1; design-insights §1.1, §15.2; Insights.js): the organizations whose results
+    the user sees, the capabilities from the INSIGHTS_* permissions, safe defaults and the canonical links. A user may open Insights
+    through an authorization of their groups on its root (BOSS_INSIGHTS, the root user group, or BOSS_INSIGHTS_ADMIN); the root
+    grant opens navigation only. The report engine checks its own artifacts whatever this answers: a capability opens an
+    affordance, never a source. Disabled artifact authorization widens nothing here. P10 adds store#Settings. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="Context" allow-remote="false">
+        <description>Check that the user may open Insights and resolve their context: the capabilities (the INSIGHTS_* permissions
+            and whether the copied report screens open), the organization choices (theirs, or every internal organization for the
+            Insights administrator with none active), the organization in scope (the requested one, else the active one, else the
+            only one), the safe defaults (a relative reporting range, currencies kept apart) and the canonical links. Refuses a
+            user without Insights (INSIGHTS_UNAVAILABLE), a Projects client contact and a PASS public account among them, another
+            app root (INSIGHTS_CONTEXT) and an organization that is not the user's, existing or not (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="appRoot"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="capabilities" type="Map"/>
+            <parameter name="organizations" type="List"/>
+            <parameter name="organizationPartyIds" type="List"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="allOrganizations" type="Boolean"/>
+            <parameter name="defaults" type="Map"/>
+            <parameter name="appRoot"/>
+            <parameter name="sharedLinks" type="Map"/>
+            <parameter name="linkBase"/>
+            <parameter name="webBase"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/insights/Insights.js"/>
+            <set field="found" from="ec.resource.script(module).execute('context', context)"/>
+            <set field="capabilities" from="found.capabilities"/>
+            <set field="organizations" from="found.organizations"/>
+            <set field="organizationPartyIds" from="found.organizationPartyIds"/>
+            <set field="organizationPartyId" from="found.organizationPartyId"/>
+            <set field="allOrganizations" from="found.allOrganizations"/>
+            <set field="defaults" from="found.defaults"/>
+            <set field="appRoot" from="found.appRoot"/>
+            <set field="sharedLinks" from="found.sharedLinks"/>
+            <set field="linkBase" from="found.linkBase"/>
+            <set field="webBase" from="found.webBase"/>
+        </actions>
+    </service>
+</services>

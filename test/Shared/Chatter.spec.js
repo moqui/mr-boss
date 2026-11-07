@@ -572,7 +572,7 @@ feature("every BOSS app root mounts its Chatter and RecordFiles panels, which an
     when() {
         const str = ec.screen.makeTest().rootScreen(webroot).render("shellData", {}, null)
         const json = JSON.parse(str.output)
-        // Sales, Insights and Admin have no grant until they are implemented
+        // the apps every internal user opens (BOSS_USERS); the others are opened by their own groups
         const boss = (json.apps || []).filter((app) => /^\/qapps\/(Commons|Comms)$/.test(app.path))
         return { shell: json.shell || {}, boss, chatter: render("apps/Commons/Chatter", {}, "qvue"), files: render("apps/Commons/RecordFiles", {}, "qvue") }
     },

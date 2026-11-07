@@ -12,9 +12,14 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- IronStone Insights: root of the app for owners and management (initial-design.md app table); its sections follow
-    design-insights.md when that file is written. Not yet implemented: its BOSS_INSIGHTS grant in data/BossSetupData.xml
-    is commented out, so no one may open it and it is in no menu. -->
+<!-- IronStone Insights (design-insights §1): the root of the app for owners, management and authorized analysts. The root user
+    group BOSS_INSIGHTS and the administrator group BOSS_INSIGHTS_ADMIN open it (data/BossSetupData.xml), as ADMIN does; the root
+    grant opens navigation only, and each screen and service checks its own permission (ironstone.insights.ContextServices.get#Context
+    resolves the organizations, capabilities, safe defaults and links for every subscreen) while the report engine checks its own
+    artifacts. The menu of design §1.2 grows by phase: P1 builds Home (a frame until P5); the groups Dashboards and KPIs, Report
+    builder, Reports, Delivery and alerts, Business flows and Settings come with the phases that build their entries. Until P2, P3,
+    P4 and P7 replace them, the copied Dashboards (with Dashboard), ReportBuilder, Reports and ScheduledReports screens stay open
+    only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies them to the root user group). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
 
@@ -22,6 +27,8 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="appRoot" value="Insights"/>
 
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
+        <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
+        <set field="sharedLinks" from="insights.sharedLinks"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">
@@ -30,6 +37,15 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Chatter" location="component://mr-boss/screen/Shared/Chatter.xml" menu-include="false"/>
         <subscreens-item name="RecordFiles" location="component://mr-boss/screen/Shared/RecordFiles.xml" menu-include="false"/>
     </subscreens>
+
+    <!-- palette types (dashboards, saved reports, flow maps), quick create (Dashboard, Analysis, Schedule by capability), the Assist
+        prompts and response action arrive with their records and screens (design §1.2: P2, P4, P7, P9, P10) -->
+    <shell-providers>
+        <!-- g s: g i is Comms' global Inbox key, which a scope key would shadow under Insights -->
+        <keymap scope="insights">
+            <key keys="g s" label="Insights home" screen="Insights/Home"/>
+        </keymap>
+    </shell-providers>
 
     <widgets><subscreens-panel id="insights-panel" type="popup"/></widgets>
 </screen>

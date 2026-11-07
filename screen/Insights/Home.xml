@@ -12,10 +12,27 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- Placeholder for the IronStone Insights landing page (initial-design.md); design-insights.md designs it. -->
+<!-- Insights Home (design-insights §3 Home; style-guide §3.1 Landing), its frame until P5: the management scope from get#Context
+    (HomeContext, read only: the organizations whose results the user sees), and the first-use state, which offers nothing yet:
+    the shipped dashboards and the report catalog arrive with P2 and P4, favorites, pinned reports and the attention board with
+    P4 and P5. It shows no sample numbers (design §1.2). A user with no Insights read (the root group alone) is told why. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
+    <actions>
+        <set field="can" from="insights.capabilities"/>
+        <set field="scopeText" from="insights.allOrganizations ? 'Every organization' : Array.from(insights.organizations || []).map(row => row.label).join(', ')"/>
+    </actions>
     <widgets>
-        <label text="Placeholder: The Insights landing page for owners and management." type="p"/>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col"><label text="Insights" type="h5"/></container>
+        </container>
+        <label text="Scope: ${scopeText || 'No organization'}" type="p" style="m-muted"/>
+        <container-box condition="can.view">
+            <box-header title="Dashboards and reports"/>
+            <box-body>
+                <label text="No dashboards or reports are shared with you yet." type="p"/>
+            </box-body>
+        </container-box>
+        <label text="Dashboards and reports are shown to Insights readers." type="p" style="m-muted" condition="!can.view"/>
     </widgets>
 </screen>
