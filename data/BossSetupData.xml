@@ -2649,8 +2649,8 @@ along with this software (see the LICENSE.md file). If not, see
         documents' DataDocumentUserGroup rows; the owners' report groups are granted below (BOSS_COM_DATASETS, BOSS_CS_DATASETS and
         their documents' rows). Datasets a steward creates are named insights-*. The
         Insights administrator reads no dataset (its business data stays a separate grant). Never grant an Insights group
-        org.moqui.report.dataset.* or a DataDocument-by-id or index: dataset: those resolve without admission and the row filter
-        (impl-insights F-P3-6). -->
+        org.moqui.report.dataset.* or a DataDocument-by-id or index: dataset: the engine opens those over a business dataset's
+        document only to a holder of their update artifact (impl-insights F-P3-6, review R1), which would read them unfiltered. -->
     <artifactGroups artifactGroupId="BOSS_INS_DATASETS" description="Insights: the business datasets">
         <artifacts artifactName="org.moqui.report.dataset.mantle-sales-orders" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.dataset.mantle-sales-items" artifactTypeEnumId="AT_SERVICE"/>

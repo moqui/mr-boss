@@ -663,6 +663,60 @@ index's freshness).
   - never grant an Insights group `org.moqui.report.dataset.*` or a DataDocument-by-id or `index:` dataset artifact: those resolve
     without the admission rule and the row filter (F-P3-6).
 
+**Review Nov 7 (P3).** A fresh review of mr-moqui d8302df5, mr-mantle 816dc6fd and mr-boss 589b2240/6e0c0ef6, weighted on the row
+filter and admission.
+- **Checked, holds:** every read (rows, suggestions, value counts, aggregates, panel CSV, playlists, alerts, Explore's query,
+  `export#Dataset`, readiness) goes through `resolve_dataset`, so the admission check and the row filter apply to all; a query
+  string or `ignoreVariables` is ANDed under the trusted predicate; a registered policy runs without the viewer's grant only by an
+  `enumCode` of a `ReportScopePolicy` enumeration (ADMIN data), with `userId` the signed-in viewer and `rowFilterParameters` from the
+  definition body only (each policy also refuses another `userId` and a non-name field); `get#OrganizationRowFilter`'s system
+  administrator is `ADMIN` membership (ProductAccess.js `systemAdmin`), a viewer of no organization matches nothing, and children are
+  `get#PartyInternalOrgIds`' direct ones; `index#BusinessDataset` checks the dataset's update artifact and indexes its one document of
+  one feed; Registry.js's `refreshKey` is reserved from scope parameters and R1's organization check is unchanged (AdminRegistries
+  passes); creation is over a document of a registered feed only, and a steward's dataset over any other document reaches no Insights
+  reader, since no Insights group has its DataDocumentUserGroup row (only the eight documents'); BOSS rows are appended but for the
+  BOSS_INS_LEGACY narrowing; the owners' report groups get their own datasets only; Mantle's seeds name no BOSS group; the copied
+  builder and its raw entity transitions are gone; DatasetView's export is capped at 10,000 and audited; `moqui lint --screens` has no
+  flagged Insights site; the specs' features are under 0.75 s each with one DatasetView qvt render.
+- **Fixes:**
+  - R1 (high, mr-moqui fd8e7830): F-P3-6 was convention only. A dataset that is not a business one (a DataDocument by id, an
+    `index:` alias, or a saved definition without the signal, which a steward could save as `insights-raw` through `save#Definition`
+    and every reader would read by the `insights-.*` pattern) over a document a business dataset reads now opens only to a holder of
+    its update artifact (`business::check_governed`).
+  - R2 (high, mr-moqui fd8e7830): `save#Definition` (and copy, restore, import, git pull) could change an admitted dataset's body,
+    dropping its `rowFilterService` or swapping its document, and it stayed admitted. A changed body now returns it to review;
+    deleting the definition deletes its admission (a later definition of the id started admitted); `create#BusinessDataset` starts in
+    review whatever row the id had.
+  - R3 (medium, mr-moqui fd8e7830): an admitted dataset was read whatever its definition later said (a shipped definition changes
+    with a component update). Reading needs a registered policy still bound; a business body naming `indexName` or `serviceName` (which
+    read past the admitted document, the service unfiltered) is refused; `signal: "business"` alone makes a dataset business, so a body
+    without `documentType` cannot skip admission.
+  - R4 (medium, mr-moqui fd8e7830): `store#BusinessDatasetFields` checked only secret names, so an encrypted entity field
+    (`AgentRemoteA2a.authJson`, a card number) could be added and indexed decrypted. The document is refused while it holds an
+    encrypted field (the change rolls back, the cached definition is dropped); removing or renaming a field that a business dataset
+    over the same document names (its row filter's field, its time field) is refused as a definition's use is.
+  - R5 (medium, mr-mantle 560e153f): `get#OrganizationRowFilter` took `get#PartyOrganizationInfo`'s active organization, which a
+    finance administrator (`ACCOUNTING_ADMIN`) may set to any internal organization, so they read that organization's dataset rows. The
+    active organization counts only when it is one of the viewer's own, or for a system administrator.
+  - docs/tools/Monitoring.md "Business datasets" and BossSetupData's F-P3-6 comment follow (mr-boss, this commit).
+- **Tests** (Debug, `--nobuild`, after the fixes): framework BusinessDatasets 6 of 6 (a new feature: the document by id, its index and
+  a copy without the signal refused to a reader, a definition saved without its filter back in review, an encrypted field refused;
+  and the row filter's field kept), 0.5 s; Mantle OrganizationRowFilter (a new feature: the finance administrator's selection, failing
+  before R5) and SalesReports 9 of 9, 1.0 s; SalesReportStoreScope's setup still fails with "Maximum call stack size exceeded"
+  (F37, F-P3-9); BOSS InsightsDatasets, InsightsAccess, InsightsDashboards, AdminRegistries, CommerceAccess and CustomerServiceAccess
+  55 of 55; tools 39 of 39 (6.5 s of 3 s on Debug, as before); cargo `clippy -p moqui-report --all-targets -D warnings` clean, `test
+  -p moqui-report` 77 of 77, moqui-host `--test it report_` 9 of 9; `moqui lint --screens` 132 sites, none in Insights; Prettier clean.
+  Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- **For the lead:**
+  - BossSetupData conflicts with master (Admin P3's block and P3's both append at the end): keep both;
+  - the grant warning (F-P3-6) is now a rule: a view grant on a raw document or `index:` dataset of a business document is refused,
+    but an update grant reads it unfiltered, so keep `org.moqui.report.dataset.*` update `ADMIN`'s alone;
+  - a steward's field changes edit the shared DataDocument (a field added to `insights-x` over MantleSalesOrderPart shows in
+    `mantle-sales-orders` after a rebuild, without review) and may add any plain non-secret, non-encrypted path through relationships
+    (a customer's birth date): until design §17 item 6's field classes, the steward role is the guard; consider returning the datasets
+    over a document to review on a field change;
+  - `store#BusinessDataset`'s `stewardUserId` is a label, not checked against a user or a grant.
+
 ### P4 — Report catalog and metrics
 
 Design §6.1, Reports and SavedReports, §6.2 for the built owners, §4 MeasureMeaning and PanelDetail's measure and
