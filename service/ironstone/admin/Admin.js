@@ -1,9 +1,10 @@
 // The Admin app's context (impl-admin §2, P1; design-admin §1.1, §17.2): who may open Admin, the organizations they may
 // administer, their capabilities, the record checks every Admin screen and mount runs before a framework or Mantle service, the
-// drop-downs, the palette and the developer tool links. UserAccount, UserGroup and the security records carry no organization,
-// so an identity is in scope through its party's organization relationships (Mantle's get#PartyInternalOrgIds); the framework
-// org.moqui.admin and Mantle IdentityServices services check their own permission and scope again, and nothing here grants
-// what they refuse.
+// drop-downs, the palette and the developer tool links. UserAccount, UserGroup and the security records carry no organization:
+// an identity is in scope by Mantle's identity scope (Identity.js), the find on mantle.party.UserAccountOrganization (an
+// account with each internal organization its party works for) under the organization entity filters of the authorization
+// the call runs under (impl-admin §4, the P4 follow-up), with no organization math here; the framework org.moqui.admin and
+// Mantle IdentityServices services check their own permission and scope again, and nothing here grants what they refuse.
 //
 // Opening Admin needs the root grant of one of the user's groups (BOSS_ADMIN, the root user group, or BOSS_ADMIN_ADMIN), read
 // directly so an inherited or disabled authorization cannot widen it; the root grant opens navigation only (design §1.1), and
@@ -29,8 +30,9 @@ const appLocations = {
     monitor: "component://tools/screen/Monitor.xml",
     dashboards: "component://tools/screen/Dashboards.xml"
 }
-// the internal organization relationships of a staff identity (as get#PartyInternalOrgIds and MANTLE_USER_ORG count them)
-const memberRelationships = ["PrtAgent", "PrtEmployee", "PrtMember"]
+// Mantle's identity scope: an identity as the caller may administer it, and the staff accounts in scope, each by the filtered
+// find of the caller's authorization
+const identityScope = () => ec.resource.script("component://mr-mantle/service/mantle/party/Identity.js")
 
 // ===== capabilities =====
 // Each capability from the Moqui permission the framework and Mantle services check (design §1.1's table; the framework seeds
@@ -302,17 +304,25 @@ function readOrganization(partyId) {
     if (!isInternal(partyId)) return null
     return {owners: [partyId], label: partyName(partyId), detail: one("mantle.party.Party", {partyId})?.pseudoId || ""}
 }
-// A user account (an identity): the internal organizations its party works for (agent, employee or member, as
-// get#PartyInternalOrgIds counts them). An account with no party, or whose party works for no internal organization,
-// belongs to none.
+// A user account (an identity), in Mantle's identity scope: the internal organizations its party works for (owners) and those
+// the caller's organization filters let it administer (inScope, the filtered find on UserAccountOrganization). One out of
+// scope, and one of no organization but for an instance administrator, is not available.
 function readUser(userId) {
     const account = userId ? one("moqui.security.UserAccount", {userId}) : null
     if (!account) return null
-    const partyId = account.partyId
-    const owners = partyId
-        ? Array.from(call("mantle.party.PartyServices.get#PartyInternalOrgIds", {partyId}).userOrgIds || [])
-        : []
-    return {owners, anyOwner: true, label: account.userFullName || account.username || userId, detail: account.username || ""}
+    let found
+    try {
+        found = identityScope().identity(userId)
+    } catch (error) {
+        if (lib.reasonCode(error) === "RECORD_UNAVAILABLE") return null
+        throw error
+    }
+    return {
+        owners: found.owners,
+        inScope: found.inScope,
+        label: account.userFullName || account.username || userId,
+        detail: account.username || ""
+    }
 }
 
 // A user group (P3): the groups and their grants are instance-wide, read with accessView alone; no organization scopes them
@@ -325,8 +335,9 @@ function readGroup(userGroupId) {
 
 // Each kind an Admin screen, mount, palette or record link may be given: its name, icon, the capability that reads it (null
 // for the scope alone), the screen that opens it (destination, the path and id parameter under the root; null until its
-// phase builds it: users in P4, organizations in P7) and its read (owners: the organizations it names; anyOwner: one of them
-// in scope is enough, for an identity that works for several organizations; or null when there is no such record).
+// phase builds it: users in P4, organizations in P7) and its read (owners: the organizations it names; inScope, for an identity:
+// those Mantle's identity scope gives the caller, its read already refused out of scope; or null when there is no such record
+// or it is out of scope).
 const recordKinds = {
     organization: {name: "Organization", icon: "sym_o_corporate_fare", need: null, destination: null, read: readOrganization},
     user: {name: "User", icon: "sym_o_person", need: "identityView", destination: "Users/UserDetail", read: readUser},
@@ -349,14 +360,13 @@ function recordOf(userScope, kind, recordId) {
         denied("PERMISSION_DENIED", capabilityPermissions[definition.need] + " is required")
     const found = definition.read(recordId)
     if (!found) unavailable()
-    const inScope = found.owners.filter(owner => administers(userScope, owner))
-    const allowed = found.instance
-        ? true
-        : found.owners.length
-          ? found.anyOwner
-              ? inScope.length > 0
-              : inScope.length === found.owners.length
-          : !userScope.ownerIds
+    const inScope = found.inScope || found.owners.filter(owner => administers(userScope, owner))
+    const allowed =
+        found.instance || found.inScope
+            ? true
+            : found.owners.length
+              ? inScope.length === found.owners.length
+              : !userScope.ownerIds
     if (!allowed) unavailable()
     const scopeText = kind === "user" || kind === "member" ? inScope.map(partyName).join(", ") : ""
     return {
@@ -421,17 +431,18 @@ const searchFinds = [
                 .orderBy("userGroupId"),
         url: recordId => "/qapps/Admin/Access/GroupDetail?userGroupId=" + encodeURIComponent(recordId)
     },
-    // P4: users, the staff identities of the organizations the user administers, by username, name or email; recordOf checks
-    // each again
+    // P4: users, the staff identities in Mantle's identity scope (the filtered find on UserAccountOrganization), by username,
+    // name or email; recordOf checks each again
     {
         kind: "user",
         entityName: "moqui.security.UserAccount",
         idField: "userId",
         query: (userScope, condition) =>
-            find("moqui.security.UserAccount")
-                .condition("partyId", "in", staffPartyIds(userScope).concat(["_NA_"]))
+            staffAccounts()
                 .condition(condition(["username", "userFullName", "emailAddress"]))
                 .selectField("userId")
+                .selectField("userFullName")
+                .distinct(true)
                 .orderBy("userFullName"),
         url: recordId => "/qapps/Admin/Users/UserDetail?userId=" + encodeURIComponent(recordId)
     }
@@ -481,41 +492,18 @@ function search(p) {
     return {rows: Array.from(found.values()).slice(0, limit)}
 }
 
-// The parties working for the organizations the user administers (agent, employee or member, as get#PartyInternalOrgIds counts).
-function staffPartyIds(userScope) {
-    return Array.from(
-        new Set(
-            Array.from(
-                find("mantle.party.PartyRelationship")
-                    .condition("toPartyId", "in", organizationIds(userScope).concat(["_NA_"]))
-                    .condition("relationshipTypeEnumId", "in", memberRelationships)
-                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
-                    .selectField("fromPartyId")
-                    .list()
-            ).map(row => row.fromPartyId)
-        )
-    )
+// The staff accounts in Mantle's identity scope: a find on UserAccountOrganization under the caller's organization filters (one
+// row for each of an account's organizations in scope), or a find of nothing when nothing is in scope.
+function staffAccounts() {
+    return identityScope().scopedAccounts() || find("mantle.party.UserAccountOrganization").condition("userId", "_NA_")
 }
 
 // ===== choices =====
-// The staff identities of the organizations the user administers whose name or username matches the term, for GroupMembers'
-// member search (P3): the parties working for those organizations (as get#PartyInternalOrgIds counts them), their accounts.
+// The staff identities in Mantle's identity scope whose name or username matches the term, for GroupMembers' member search
+// (P3).
 function memberOptions(userScope, term, selected) {
     if (!userScope.capabilities.accessView) return []
-    const partyIds = Array.from(
-        new Set(
-            Array.from(
-                find("mantle.party.PartyRelationship")
-                    .condition("toPartyId", "in", organizationIds(userScope))
-                    .condition("relationshipTypeEnumId", "in", memberRelationships)
-                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
-                    .selectField("fromPartyId")
-                    .list()
-            ).map(row => row.fromPartyId)
-        )
-    )
-    if (!partyIds.length) return []
-    let accounts = find("moqui.security.UserAccount").condition("partyId", "in", partyIds)
+    let accounts = staffAccounts().selectField("userId").selectField("userFullName").selectField("username").distinct(true)
     if (term) {
         const factory = ec.entity.conditionFactory
         accounts = accounts.condition(

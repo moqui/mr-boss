@@ -17,9 +17,9 @@ along with this software (see the LICENSE.md file). If not, see
     (entityName, recordId) and the answer's text in noteText. The record is checked as an Admin record first (a user in the
     organizations administered, ADMIN_IDENTITY_VIEW; a group, ADMIN_ACCESS_VIEW); the user reads and edits the text, then files
     it as a Chatter note on that record (mantle.party.CommunicationServices.log#RecordNote, which checks the record again). The
-    notes are read only by those get#RecordLinkInfo lets see the record: an account's by an ADMIN_IDENTITY_VIEW holder within the
-    organizations it administers, a group's by an ADMIN_ACCESS_VIEW holder (impl-admin F-P4-11, review R3). Nothing is filed
-    until the user submits. -->
+    notes are read only by those get#RecordLinkInfo lets see the record: an account's where the reader's organization filters
+    reach it (found through mantle.party.UserAccountOrganization, Mantle's identity scope), a group's by an ADMIN_ACCESS_VIEW
+    holder (impl-admin F75, the P4 follow-up). Nothing is filed until the user submits. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Log as note" default-menu-include="false">
     <parameter name="entityName"/>
@@ -51,7 +51,7 @@ along with this software (see the LICENSE.md file). If not, see
             <field name="entityName"><default-field><hidden/></default-field></field>
             <field name="recordId"><default-field title="Record"><display/></default-field></field>
             <field name="noteText">
-                <default-field title="Note" tooltip="A note on the record, seen by the identity or access administrators who open it">
+                <default-field title="Note" tooltip="A note on the record, seen by those who may see the record">
                     <text-area rows="8" cols="60"/>
                 </default-field>
             </field>
