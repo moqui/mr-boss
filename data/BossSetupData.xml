@@ -2641,4 +2641,514 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Admin P3 (impl-admin P3; design-admin §5, §1.1, §1.2): the Access area (Groups, GroupDetail) for the access administrator
+        and the administrator, denying the root user group as the other areas do; the framework's AccessServices check
+        ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE and the delegation rules whatever opens the screens. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_ACCESS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Access.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_ACCESS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_ACCESS_ACCESS" userGroupId="BOSS_ADMIN_ACCESS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_ACCESS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin P3: the capability registry (the framework's moqui.security.CapabilityBundle; design-admin §14 "Capability
+        description", design-crosscut §1.4), the registered bundles an access administrator assigns through
+        org.moqui.admin.AccessServices: each built app's groups (Commons and Comms, Customer Service, Commerce, Products, Purchasing,
+        Warehouse, Manufacturing, Accounting, Projects, Insights and Admin), each with the permissions it carries (its
+        UserGroupPermission rows above and in BossAccountingSetupData; kind view, edit, export or sensitive: costs, supplier prices,
+        pay and credit) and, for an app's root user group, its launcher as an artifact binding with the root's filter sets. Left out:
+        the groups of the apps not built (Sales, Marketing, Maintenance, People), the Projects client contacts' BOSS_PROJECT_CLIENT
+        (external users, given in Projects) and the service teams. The privileged groups are registered: the privileged-group EECA
+        and AccessServices still refuse a non-member. A later phase or app adds its own rows; the registry describes and never
+        grants (impl-admin §4). -->
+    <!-- Commons -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_USERS" appName="Commons" description="IronStone BOSS users" scopeDependency="organization" sequenceNum="10"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_USERS" artifactGroupId="BOSS_COMMONS" description="Commons launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_USERS" artifactGroupId="BOSS_COMMS" description="Comms launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMONS_ADMIN" appName="Commons" description="Commons administrator" scopeDependency="organization" sequenceNum="20"/>
+    <!-- Comms -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMS_ADMIN" appName="Comms" description="Comms administrator" scopeDependency="organization" sequenceNum="30"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CONTACT_ADMIN" appName="Comms" description="Contact admins (IronStone): edit and delete directory contacts, review duplicates" scopeDependency="organization" sequenceNum="40"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CONTACT_ADMIN" userPermissionId="CONTACT_ADMIN" capabilityKindEnumId="CpkEdit"/>
+    <!-- Customer Service -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" appName="Customer Service" description="Customer Service administrator" scopeDependency="organization, team" sequenceNum="50"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CASE_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_EXCEPTION_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WARRANTY_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_CONTACT_INVITE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_APPLY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="ORDER_CHANGE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_AUTHORIZE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_KNOWLEDGE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="SUPPORT_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="RETURN_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="WORKING_HOURS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ADMIN" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE" appName="Customer Service" description="Customer Service app users (the launcher)" scopeDependency="organization, team" sequenceNum="60"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_CUSTOMER_SERVICE" artifactGroupId="BOSS_CUSTOMER_SERVICE" description="Customer Service launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" appName="Customer Service" description="Service agent" scopeDependency="organization, team" sequenceNum="70"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="SUPPORT_CASE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="ORDER_CHANGE_REQUEST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_AGENT" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" appName="Customer Service" description="Service manager" scopeDependency="organization, team" sequenceNum="80"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CASE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CASE_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="RETURN_EXCEPTION_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="ORDER_CHANGE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="WARRANTY_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="SUPPORT_CONTACT_INVITE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" appName="Customer Service" description="Order desk" scopeDependency="organization, team" sequenceNum="90"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="ORDER_CHANGE_APPLY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="ORDER_CHANGE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_ORDER_DESK" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" appName="Customer Service" description="Return authorizer" scopeDependency="organization, team" sequenceNum="100"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_RETURN_AUTHORIZER" userPermissionId="RETURN_AUTHORIZE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" appName="Customer Service" description="Service knowledge author" scopeDependency="organization, team" sequenceNum="110"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_CUSTOMER_SERVICE_KNOWLEDGE" userPermissionId="SUPPORT_KNOWLEDGE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- Commerce -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_ADMIN" appName="Commerce" description="Commerce administrator" scopeDependency="organization, store" sequenceNum="120"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_STORE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_MERCHANDISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PUBLISH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_CODE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_THEME_PUBLISH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_ORDER_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_RECOVERY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PROMOTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_CHANNEL_OPERATE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_SUBSCRIPTION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PLACEMENT_RESOLVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE" appName="Commerce" description="Commerce app users (the launcher)" scopeDependency="organization, store" sequenceNum="130"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE" userPermissionId="COMMERCE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_COMMERCE" artifactGroupId="BOSS_COMMERCE" description="Commerce launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT,COMMERCE_STORE"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_MANAGER" appName="Commerce" description="Store manager" scopeDependency="organization, store" sequenceNum="140"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="COMMERCE_STORE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="COMMERCE_PROMOTION_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_MANAGER" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_MERCHANDISER" appName="Commerce" description="Merchandiser" scopeDependency="organization, store" sequenceNum="150"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_MERCHANDISER" userPermissionId="COMMERCE_MERCHANDISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_MERCHANDISER" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_DESIGNER" appName="Commerce" description="Store designer" scopeDependency="organization, store" sequenceNum="160"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_DESIGNER" userPermissionId="COMMERCE_THEME_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" appName="Commerce" description="Theme developer" scopeDependency="organization, store" sequenceNum="170"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" userPermissionId="COMMERCE_THEME_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_THEME_DEVELOPER" userPermissionId="COMMERCE_THEME_CODE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_PUBLISHER" appName="Commerce" description="Store publisher" scopeDependency="organization, store" sequenceNum="180"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_PUBLISHER" userPermissionId="COMMERCE_PUBLISH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_PUBLISHER" userPermissionId="COMMERCE_THEME_PUBLISH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_OPERATOR" appName="Commerce" description="Store operator" scopeDependency="organization, store" sequenceNum="190"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="COMMERCE_ORDER_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="COMMERCE_RECOVERY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_OPERATOR" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR" appName="Commerce" description="Channel operator" scopeDependency="organization, store" sequenceNum="200"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_CHANNEL_OPERATOR" userPermissionId="COMMERCE_CHANNEL_OPERATE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" appName="Commerce" description="Subscription operator" scopeDependency="organization, store" sequenceNum="210"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" userPermissionId="COMMERCE_ORDER_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_COMMERCE_SUBSCRIPTION_OPERATOR" userPermissionId="COMMERCE_SUBSCRIPTION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <!-- Products -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS" appName="Products" description="Catalog reader" scopeDependency="organization" sequenceNum="220"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PRODUCTS" artifactGroupId="BOSS_PRODUCTS" description="Products launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" appName="Products" description="Catalog editor" scopeDependency="organization" sequenceNum="230"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_CATALOG_EDIT" userPermissionId="PRODUCT_CATALOG_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_PRICE_READ" appName="Products" description="Price reader" scopeDependency="organization" sequenceNum="240"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_PRICE_READ" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_PRICE_EDIT" appName="Products" description="Price editor" scopeDependency="organization" sequenceNum="250"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_PRICE_EDIT" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_PRICE_EDIT" userPermissionId="PRICE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" appName="Products" description="Supplier-price reader" scopeDependency="organization" sequenceNum="260"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_READ" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" appName="Products" description="Supplier-price editor" scopeDependency="organization" sequenceNum="270"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_SUPPLIER_PRICE_EDIT" userPermissionId="SUPPLIER_PRICE_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_COST_READ" appName="Products" description="Cost reader" scopeDependency="organization" sequenceNum="280"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_READ" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" appName="Products" description="Cost estimator" scopeDependency="organization" sequenceNum="290"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_ESTIMATE" userPermissionId="PRODUCT_COST_ESTIMATE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_COST_APPROVE" appName="Products" description="Standard-cost approver" scopeDependency="organization" sequenceNum="300"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_COST_APPROVE" userPermissionId="PRODUCT_COST_APPROVE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PRODUCTS_ADMIN" appName="Products" description="Catalog administrator" scopeDependency="organization" sequenceNum="310"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_ESTIMATE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_COST_APPROVE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRICE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRICE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="SUPPLIER_PRICE_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_ADMIN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PRODUCTS_ADMIN" userPermissionId="PRODUCT_CATALOG_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- Purchasing -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_ADMIN" appName="Purchasing" description="Purchasing administrator" scopeDependency="organization" sequenceNum="320"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_ORDER_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PAYABLE_IMPORT" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_PROFILE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="RETURN_AUTHORIZE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_ORDER_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLY_PLAN_RUN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="SUPPLIER_SCORECARD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PURCHASE_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_PLANNER" appName="Purchasing" description="Purchasing planner" scopeDependency="organization" sequenceNum="330"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="SUPPLY_PLAN_RUN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_PLANNER" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_BUYER" appName="Purchasing" description="Purchasing buyer" scopeDependency="organization" sequenceNum="340"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PRICE_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PURCHASE_ORDER_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PAYABLE_IMPORT" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_PROFILE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="RETURN_AUTHORIZE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="SUPPLIER_SCORECARD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_BUYER" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING" appName="Purchasing" description="Purchasing app users (the launcher)" scopeDependency="organization" sequenceNum="350"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PURCHASING" artifactGroupId="BOSS_PURCHASING" description="Purchasing launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_REQUESTER" appName="Purchasing" description="Purchase requester" scopeDependency="organization" sequenceNum="360"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_APPROVE" appName="Purchasing" description="Purchase approver" scopeDependency="organization" sequenceNum="370"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_ORDER_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PURCHASE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_APPROVE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PURCHASING_READ" appName="Purchasing" description="Purchasing reader" scopeDependency="organization" sequenceNum="380"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="SUPPLY_PLAN_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PURCHASING_READ" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <!-- Warehouse -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_ADMIN" appName="Warehouse" description="Warehouse administrator" scopeDependency="organization, facility" sequenceNum="390"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPPING_CARRIER_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_RECEIVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ISSUE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_MOVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_ADJUST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="STOCK_COUNT_REVIEW" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="LOT_EXPIRY_EXTEND" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PICK" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_LOAD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_PACK" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="SHIPMENT_SHIP" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="FACILITY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_INSPECT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_VERIFY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_DISPOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" appName="Warehouse" description="Stock planner" scopeDependency="organization, facility" sequenceNum="400"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_STOCK_PLANNER" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_MANAGER" appName="Warehouse" description="Warehouse manager" scopeDependency="organization, facility" sequenceNum="410"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_MANAGER" userPermissionId="STOCK_POLICY_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" appName="Warehouse" description="Warehouse facility admin" scopeDependency="organization, facility" sequenceNum="420"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="STOCK_POLICY_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_FACILITY_ADMIN" userPermissionId="FACILITY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE" appName="Warehouse" description="Warehouse app users (the launcher)" scopeDependency="organization, facility" sequenceNum="430"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_WAREHOUSE" artifactGroupId="BOSS_WAREHOUSE" description="Warehouse launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_RECEIVE" appName="Warehouse" description="Warehouse receiving" scopeDependency="organization, facility" sequenceNum="440"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_RECEIVE" userPermissionId="STOCK_RECEIVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_INSPECT" appName="Warehouse" description="Warehouse inspection" scopeDependency="organization, facility" sequenceNum="450"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_INSPECT" userPermissionId="QUALITY_INSPECT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_ISSUE" appName="Warehouse" description="Warehouse material issue" scopeDependency="organization, facility" sequenceNum="460"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ISSUE" userPermissionId="STOCK_ISSUE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_MOVE" appName="Warehouse" description="Warehouse stock moves" scopeDependency="organization, facility" sequenceNum="470"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_MOVE" userPermissionId="STOCK_MOVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_COUNT" appName="Warehouse" description="Warehouse counts" scopeDependency="organization, facility" sequenceNum="480"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_COUNT" userPermissionId="STOCK_COUNT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" appName="Warehouse" description="Warehouse count review" scopeDependency="organization, facility" sequenceNum="490"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_COUNT_REVIEWER" userPermissionId="STOCK_COUNT_REVIEW" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_ADJUST" appName="Warehouse" description="Warehouse adjustments" scopeDependency="organization, facility" sequenceNum="500"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_ADJUST" userPermissionId="STOCK_ADJUST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_PICK" appName="Warehouse" description="Warehouse picking" scopeDependency="organization, facility" sequenceNum="510"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_PICK" userPermissionId="SHIPMENT_PICK" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" appName="Warehouse" description="Warehouse pick supervision" scopeDependency="organization, facility" sequenceNum="520"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_PICK_SUPERVISOR" userPermissionId="SHIPMENT_LOAD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_PACK" appName="Warehouse" description="Warehouse packing" scopeDependency="organization, facility" sequenceNum="530"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_PACK" userPermissionId="SHIPMENT_PACK" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_SHIP" appName="Warehouse" description="Warehouse shipping" scopeDependency="organization, facility" sequenceNum="540"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_SHIP" userPermissionId="SHIPMENT_SHIP" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_DISPATCH" appName="Warehouse" description="Warehouse delivery dispatch" scopeDependency="organization, facility" sequenceNum="550"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" appName="Warehouse" description="Warehouse shipping manager" scopeDependency="organization, facility" sequenceNum="560"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_SHIPPING_MANAGER" userPermissionId="SHIPMENT_SHIP" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" appName="Warehouse" description="Warehouse quality manager" scopeDependency="organization, facility" sequenceNum="570"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_VERIFY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_DISPOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_WAREHOUSE_QUALITY_MANAGER" userPermissionId="LOT_EXPIRY_EXTEND" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_WAREHOUSE_INTEGRATION_OPERATOR" appName="Warehouse" description="Warehouse integration operator" scopeDependency="organization, facility" sequenceNum="580"/>
+    <!-- Manufacturing -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" appName="Manufacturing" description="Production and resource administrator" scopeDependency="organization, plant" sequenceNum="590"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="METHOD_RESOURCES" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_RESOURCE_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_READ" appName="Manufacturing" description="Production reader" scopeDependency="organization, plant" sequenceNum="600"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_READ" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_METHOD" appName="Manufacturing" description="Method engineer" scopeDependency="organization, plant" sequenceNum="610"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="METHOD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" appName="Manufacturing" description="Method approver" scopeDependency="organization, plant" sequenceNum="620"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="METHOD_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_METHOD_APPROVE" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_ADMIN" appName="Manufacturing" description="Manufacturing administrator" scopeDependency="organization, plant" sequenceNum="630"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_RESOURCES" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="METHOD_COST_APPROVE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SCHEDULE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_OPERATE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_SUPERVISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_COST_REVIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCTION_POLICY_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="SUPPLY_PLAN_RUN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_INSPECT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_VERIFY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_DISPOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="FACILITY_ALL_ORGANIZATIONS" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_ADMIN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_COST" appName="Manufacturing" description="Production cost estimator" scopeDependency="organization, plant" sequenceNum="640"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="METHOD_COST_EDIT" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCTION_COST_REVIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_COST" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING" appName="Manufacturing" description="Manufacturing app users (the launcher)" scopeDependency="organization, plant" sequenceNum="650"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_MANUFACTURING" artifactGroupId="BOSS_MANUFACTURING" description="Manufacturing launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_PLAN" appName="Manufacturing" description="Production planner" scopeDependency="organization, plant" sequenceNum="660"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCTION_PLAN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="SUPPLY_PLAN_RUN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_PLAN" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_SCHEDULE" appName="Manufacturing" description="Production scheduler" scopeDependency="organization, plant" sequenceNum="670"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCTION_SCHEDULE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SCHEDULE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_OPERATE" appName="Manufacturing" description="Production operator" scopeDependency="organization, plant" sequenceNum="680"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCTION_OPERATE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_OPERATE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_SUPERVISE" appName="Manufacturing" description="Production supervisor" scopeDependency="organization, plant" sequenceNum="690"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCTION_SUPERVISE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_SUPERVISE" userPermissionId="PRODUCT_CATALOG_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" appName="Manufacturing" description="Production quality inspector" scopeDependency="organization, plant" sequenceNum="700"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_INSPECT" userPermissionId="QUALITY_INSPECT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" appName="Manufacturing" description="Production quality verifier" scopeDependency="organization, plant" sequenceNum="710"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_VERIFY" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_VERIFY" userPermissionId="QUALITY_DISPOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" appName="Manufacturing" description="Production quality administrator" scopeDependency="organization, plant" sequenceNum="720"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="PRODUCTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="METHOD_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_MANUFACTURING_QUALITY_ADMIN" userPermissionId="QUALITY_TEMPLATE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_MANUFACTURING_DISPLAY" appName="Manufacturing" description="Plant display" scopeDependency="organization, plant" sequenceNum="730"/>
+    <!-- Accounting -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_ADMIN" appName="Accounting" description="Accounting administrator" scopeDependency="organization" sequenceNum="740"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_GL_POST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="ACCOUNTING_ADMIN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="RECEIVABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BANK_RECONCILE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="BUDGET_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="CREDIT_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="FISCAL_CLOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="FISCAL_REOPEN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="INVOICE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="INVOICE_HOLD" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="INVOICE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="INVOICE_MATCH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYABLE_IMPORT" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PAYMENT_RUN_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="PRODUCTION_COST_POST" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="RECEIVABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="RETURN_CREDIT_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="SUPPLIER_TERMS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_ADMIN" userPermissionId="TAX_STATEMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_GL" appName="Accounting" description="General ledger posting" scopeDependency="organization" sequenceNum="750"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="ACCOUNTING_GL_POST" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_GL" userPermissionId="BUDGET_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_READ" appName="Accounting" description="Accounting financial reader" scopeDependency="organization" sequenceNum="760"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_READ" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_READ" userPermissionId="PRODUCT_COST_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_READ" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING" appName="Accounting" description="Accounting app users (the launcher)" scopeDependency="organization" sequenceNum="770"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_ACCOUNTING" artifactGroupId="BOSS_ACCOUNTING_ACCESS" description="Accounting launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_AR" appName="Accounting" description="Accounts receivable" scopeDependency="organization" sequenceNum="780"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AR" userPermissionId="RECEIVABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AR" userPermissionId="RECEIVABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AR" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AR" userPermissionId="CUSTOMER_CREDIT_VIEW" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_AP" appName="Accounting" description="Accounts payable" scopeDependency="organization" sequenceNum="790"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PAYABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="PAYABLE_IMPORT" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_HOLD" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="INVOICE_MATCH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_AP" userPermissionId="SUPPLIER_TERMS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_MATCH" appName="Accounting" description="Bill matching" scopeDependency="organization" sequenceNum="800"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="INVOICE_MATCH" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_MATCH" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_TREASURY" appName="Accounting" description="Treasury: payments and banking" scopeDependency="organization" sequenceNum="810"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="BANK_RECONCILE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYABLE_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TREASURY" userPermissionId="PAYMENT_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_TAX" appName="Accounting" description="Tax statements" scopeDependency="organization" sequenceNum="820"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_TAX" userPermissionId="TAX_STATEMENT_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ACCOUNTING_APPROVE" appName="Accounting" description="Finance approvers" scopeDependency="organization" sequenceNum="830"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="ACCOUNTING_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="INVOICE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="INVOICE_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="PAYMENT_RUN_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="FISCAL_CLOSE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="CREDIT_HOLD_RELEASE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="BUDGET_OVERRIDE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="BUDGET_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="RETURN_CREDIT_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ACCOUNTING_APPROVE" userPermissionId="PRODUCTION_COST_POST" capabilityKindEnumId="CpkSensitive"/>
+    <!-- Projects -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PROJECT_TEAM" appName="Projects" description="Project team (IronStone Projects): employees and contractors who do project work" scopeDependency="organization, project" sequenceNum="840"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_TEAM" userPermissionId="SSH_GIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_PROJECT_TEAM" artifactGroupId="BOSS_PROJECTS" description="Projects launcher" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PROJECT_MANAGER" appName="Projects" description="Project managers (IronStone Projects): project, delivery and resource managers, and who bills the work" scopeDependency="organization, project" sequenceNum="850"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="SSH_GIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="TIMESHEET_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="TIME_ENTRY_RATE" capabilityKindEnumId="CpkSensitive"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="ALLOCATION_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="MILESTONE_APPROVE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_PROJECT_MANAGER" userPermissionId="RECEIVABLE_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_PROJECTS_ADMIN" appName="Projects" description="Projects administrator" scopeDependency="organization, project" sequenceNum="860"/>
+    <!-- Insights -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_ADMIN" appName="Insights" description="Insights administrator" scopeDependency="organization; each source by its own view permission" sequenceNum="870"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_SETTINGS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_ADMIN" userPermissionId="INSIGHTS_SETTINGS_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS" appName="Insights" description="Insights app users (the launcher)" scopeDependency="organization; each source by its own view permission" sequenceNum="880"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_INSIGHTS" artifactGroupId="BOSS_INSIGHTS" description="Insights launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_READ" appName="Insights" description="Insights reader" scopeDependency="organization; each source by its own view permission" sequenceNum="890"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_READ" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_AUTHOR" appName="Insights" description="Insights author" scopeDependency="organization; each source by its own view permission" sequenceNum="900"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_AUTHOR" userPermissionId="INSIGHTS_AUTHOR" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_DATA" appName="Insights" description="Insights dataset steward" scopeDependency="organization; each source by its own view permission" sequenceNum="910"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_DATASET_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DATA" userPermissionId="INSIGHTS_DATASET_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_DISTRIBUTE" appName="Insights" description="Insights distributor" scopeDependency="organization; each source by its own view permission" sequenceNum="920"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DISTRIBUTE" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DISTRIBUTE" userPermissionId="INSIGHTS_SCHEDULE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_DISTRIBUTE" userPermissionId="INSIGHTS_DISTRIBUTE" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_INSIGHTS_FLOW" appName="Insights" description="Insights flow editor" scopeDependency="organization; each source by its own view permission" sequenceNum="930"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_INSIGHTS_FLOW" userPermissionId="INSIGHTS_FLOW_EDIT" capabilityKindEnumId="CpkEdit"/>
+    <!-- Admin -->
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN" appName="Admin" description="Admin app users (the launcher)" scopeDependency="organization" sequenceNum="940"/>
+    <moqui.security.CapabilityBundleArtifact userGroupId="BOSS_ADMIN" artifactGroupId="BOSS_ADMIN" description="Admin launcher and services" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL" entityFilterSetIds="MANTLE_USER_ORG,MANTLE_PRIVATE_CONTACT"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_READ" appName="Admin" description="Administrative reader" scopeDependency="organization" sequenceNum="950"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_READ" userPermissionId="ADMIN_OVERVIEW_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_IDENTITY" appName="Admin" description="Identity operator" scopeDependency="organization" sequenceNum="960"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ACCESS" appName="Admin" description="Access administrator" scopeDependency="organization" sequenceNum="970"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_CONFIGURE" appName="Admin" description="Configuration administrator" scopeDependency="organization" sequenceNum="980"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_INTEGRATIONS" appName="Admin" description="Integration administrator" scopeDependency="organization" sequenceNum="990"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_OPERATIONS" appName="Admin" description="Operations operator" scopeDependency="organization" sequenceNum="1000"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_DATA" appName="Admin" description="Data operator" scopeDependency="organization" sequenceNum="1010"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_RUN" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_AUDIT" appName="Admin" description="Audit reader" scopeDependency="organization" sequenceNum="1020"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_AUDIT" userPermissionId="ADMIN_AUDIT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_PRIVACY" appName="Admin" description="Privacy administrator" scopeDependency="organization" sequenceNum="1030"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_BACKUP" appName="Admin" description="Backup operator" scopeDependency="organization" sequenceNum="1040"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_RUN" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundle userGroupId="BOSS_ADMIN_ADMIN" appName="Admin" description="Admin administrator" scopeDependency="organization" sequenceNum="1050"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OVERVIEW_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_MANAGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_RUN" capabilityKindEnumId="CpkExport"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_AUDIT_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_VIEW" capabilityKindEnumId="CpkView"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_RUN" capabilityKindEnumId="CpkEdit"/>
+
 </entity-facade-xml>

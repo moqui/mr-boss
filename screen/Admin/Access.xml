@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Access area of IronStone Admin (design-admin §1.2, §5): Groups, the grant bundles and their use (P3, the default), and
+    GroupDetail, a group's profile, dated memberships, grants and defaults (P3, contextual); Capabilities and RowRules are P9's,
+    AccessInspector later. For the access administrator and the administrator (BOSS_ADM_ACCESS; design §2 gives Groups to the
+    access administrator, A); the framework's org.moqui.admin.AccessServices check ADMIN_ACCESS_VIEW and ADMIN_ACCESS_MANAGE
+    and the delegation rules themselves, whatever opens the screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Access" default-menu-index="3" menu-image="sym_o_group" menu-image-type="icon">
+    <subscreens default-item="Groups" always-use-full-path="true">
+        <subscreens-item name="Groups" location="component://mr-boss/screen/Admin/Access/Groups.xml" menu-title="Groups" menu-index="1"/>
+        <subscreens-item name="GroupDetail" location="component://mr-boss/screen/Admin/Access/GroupDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="AdminAccessPanel" type="tab"/>
+    </widgets>
+</screen>

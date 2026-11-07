@@ -1,4 +1,5 @@
-// Admin access (impl-admin §2, P1, P2; design-admin §1.1, §7, §13): who may open Admin, the menu, providers and launcher (the
+// Admin access (impl-admin §2, P1, P2, P3; design-admin §1.1, §5, §7, §13): who may open Admin, the menu (P3: the Access area
+// for the access administrators and the administrator), providers and launcher (the
 // reader, the administrator and an instance administrator), each group's capabilities from its permissions and
 // the area authorizations, Admin › System refused to the Admin administrator and opened to ADMIN with the developer tool links
 // each by its own grant, the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
@@ -143,7 +144,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
             {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"]},
             {
                 user: users.admin,
-                menu: ["Home", "Settings", "Operations", "Agents", "Developer"],
+                menu: ["Home", "Access", "Settings", "Operations", "Agents", "Developer"],
                 keys: ["g a", "g o", "g n", "g d"]
             }
         ]
@@ -161,7 +162,10 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
         }
         // an instance administrator's menu has System (its keys are left out: ADMIN's launcher holds every app)
         const systemMenu = shell(users.system, true).names
-        if (JSON.stringify(systemMenu) !== JSON.stringify(["Home", "Settings", "Operations", "Agents", "System", "Developer"]))
+        if (
+            JSON.stringify(systemMenu) !==
+            JSON.stringify(["Home", "Access", "Settings", "Operations", "Agents", "System", "Developer"])
+        )
             problems.push(`ADMIN's menu is ${systemMenu}`)
         // the launcher: the reader has Admin and no business app; another app's user has no Admin
         const readerApps = shells[users.reader].apps
@@ -198,6 +202,7 @@ const capabilityNames = [
     "backupDownload",
     "constitutionGlobal",
     "agentAdmin",
+    "access",
     "operations",
     "agents",
     "developer",
@@ -211,7 +216,7 @@ const adminHeld = capabilityNames.filter(
 const capabilityUsers = [
     {user: users.reader, granted: ["overview", "operations"]},
     {user: users.identity, granted: ["identityView", "identityManage"]},
-    {user: users.access, granted: ["accessView", "accessManage"]},
+    {user: users.access, granted: ["accessView", "accessManage", "access"]},
     {user: users.configure, granted: ["settingsView", "settingsManage"]},
     {user: users.integrations, granted: ["connectionView", "connectionManage"]},
     {user: users.operations, granted: ["operationView", "operationManage", "operations"]},
@@ -220,7 +225,7 @@ const capabilityUsers = [
     {user: users.privacy, granted: []},
     {user: users.backup, granted: ["backupView", "backupRun"]},
     {user: users.admin, granted: adminHeld},
-    {user: users.delegate, granted: ["accessView", "accessManage"]},
+    {user: users.delegate, granted: ["accessView", "accessManage", "access"]},
     {user: users.system, granted: capabilityNames}
 ]
 feature("each group holds exactly the capabilities of its permissions and areas; System and the Admin seals stay ADMIN's", {
