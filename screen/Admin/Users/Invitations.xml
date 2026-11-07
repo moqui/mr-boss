@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Invitations (design-admin §4 Invitations; impl-admin P5; style-guide §3.2 List): the staff invitations of the organizations
+    the user administers, from mantle.party.IdentityServices.find#Invitations (ADMIN_IDENTITY_VIEW; the organization filters
+    of the Users area apply to UserInvitation too). InvitationFind narrows by address or name, organization and state;
+    InvitationList shows each one's person, organization, access, state, expiry and sends, with Resend and Revoke
+    (resend#Invitation, revoke#Invitation at the row's revision, ADMIN_IDENTITY_MANAGE, each confirmed). Invite users opens
+    InviteStaff. When the instance cannot send mail, an invitation or a resend comes back here with revealInvitationId, and
+    reveal#InvitationLink makes and shows the acceptance link this once, as text with a copy button, not a link; the showing is
+    audited and the link is never stored or shown again (impl-admin §4). Bulk invite is Data import's (P15). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Invitations" menu-image="sym_o_forward_to_inbox" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="state"/>
+    <parameter name="pageIndex"/>
+    <parameter name="revealInvitationId"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="resendInvitation">
+        <actions>
+            <script>try { baseUrl = ec.web.getWebappRootUrl() || null } catch (err) { baseUrl = null }</script>
+            <service-call name="mantle.party.IdentityServices.resend#Invitation" out-map="resent"
+                    in-map="{invitationId:invitationId, expectedRevision:expectedRevision, baseUrl:baseUrl}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !resent.applied"><script>ec.message.addMessage(resent.reason, 'warning')</script></if>
+            <if condition="!ec.message.hasError() &amp;&amp; resent.applied &amp;&amp; resent.mailSent"><message type="success">Invitation sent again; the earlier link no longer works</message></if>
+            <if condition="!ec.message.hasError() &amp;&amp; resent.applied &amp;&amp; !resent.mailSent &amp;&amp; !resent.linkPending">
+                <message type="warning">A new link was made but its email was not sent: resend it again later</message></if>
+        </actions>
+        <conditional-response url="." condition="resent?.applied &amp;&amp; resent?.linkPending">
+            <parameter name="revealInvitationId" from="invitationId"/></conditional-response>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+    <transition name="revokeInvitation">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.revoke#Invitation" out-map="revoked"
+                    in-map="{invitationId:invitationId, expectedRevision:expectedRevision, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !revoked.applied"><script>ec.message.addMessage(revoked.reason, 'warning')</script></if>
+            <if condition="!ec.message.hasError() &amp;&amp; revoked.applied"><message type="success">Invitation revoked; its link no longer works</message></if>
+        </actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <!-- the acceptance link, made and shown this once (no mail server) -->
+        <if condition="revealInvitationId">
+            <script>try { baseUrl = ec.web.getWebappRootUrl() || null } catch (err) { baseUrl = null }</script>
+            <service-call name="mantle.party.IdentityServices.reveal#InvitationLink" out-map="revealed" transaction="force-new"
+                    ignore-error="true" in-map="{invitationId:revealInvitationId, baseUrl:baseUrl}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="acceptUrl" from="revealed?.applied ? revealed.acceptUrl : null"/>
+        <set field="revealRefused" from="revealInvitationId &amp;&amp; !acceptUrl ? (revealed?.reason || 'The link is not available') : null"/>
+        <service-call name="mantle.party.IdentityServices.find#Invitations" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{text:(text || null), organizationPartyId:(organizationPartyId || null), state:(state || null),
+                    pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            const when = (value) => value ? ec.l10n.format(new Date(Number(value)), 'yyyy-MM-dd HH:mm') : ''
+            invitations = Array.from(found?.invitationList || []).map(row => Object.assign({}, row, {
+                expiresText: row.state === 'pending' || row.state === 'expired' ? when(row.expiresDate) : '',
+                sentText: when(row.sentDate) + (row.sendCount > 1 ? ' (' + row.sendCount + ' sends)' : ''),
+                outcomeText: row.state === 'accepted' ? when(row.acceptedDate) : row.state === 'revoked' ? when(row.revokedDate) : ''}))
+        ]]></script>
+        <set field="invitationListCount" from="found?.invitationListCount || 0"/>
+        <set field="canInvite" from="!!admin?.capabilities?.identityManage"/>
+        <set field="filtered" from="!!(text || organizationPartyId || state)"/>
+        <set field="findValues" from="{text:text, organizationPartyId:organizationPartyId, state:state}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Invitations" type="h5"/>
+                <label text="Staff invitations of the organizations you administer. A link works once; a resend makes a new one and the earlier stops working."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+            <container style="col-auto">
+                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" condition="canInvite"/>
+            </container>
+        </container>
+
+        <section name="LinkShown" condition="acceptUrl"><widgets>
+            <container-box type="warning"><box-header title="Acceptance link for ${revealed.emailAddress}"/><box-body>
+                <label type="p" text="This instance has no mail server, so the invitation was not emailed. Copy this link and pass it to ${revealed.emailAddress} yourself. It is shown only now: resend the invitation for a new one."/>
+                <render-mode>
+                    <text type="qvt"><![CDATA[<q-input class="m-invitation-link" readonly outlined dense model-value="${acceptUrl}" aria-label="Acceptance link"><template v-slot:append><q-btn flat round dense icon="sym_o_content_copy" aria-label="Copy the link" @click="$event.currentTarget.ownerDocument.defaultView.navigator.clipboard.writeText('${acceptUrl}').then(() => $q.notify({message: 'Copied', type: 'positive', timeout: 1200}))"><q-tooltip>Copy</q-tooltip></q-btn></template></q-input>]]></text>
+                    <text type="html"><![CDATA[<p>${acceptUrl}</p>]]></text>
+                    <text type="tui">${JSON.stringify({t: 'text', text: acceptUrl})}</text>
+                </render-mode>
+            </box-body></container-box>
+        </widgets></section>
+        <label type="p" style="text-warning" condition="revealRefused" text="${revealRefused}"/>
+
+        <form-single name="InvitationFind" transition="." map="findValues">
+            <field name="text"><default-field title="Address or name"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="state">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="pending" text="Pending"/><option key="accepted" text="Accepted"/><option key="revoked" text="Revoked"/>
+                        <option key="expired" text="Expired"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="text"/>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="state"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="InvitationList" list="invitations" skip-form="true" paginate="true">
+                    <field name="personName">
+                        <default-field title="Person">
+                            <link url="../UserDetail" text="${personName}" link-type="anchor" parameter-map="{userId:userId}" condition="userId"/>
+                            <label text="${personName}" condition="!userId"/>
+                        </default-field>
+                    </field>
+                    <field name="emailAddress"><default-field title="Email"><display/></default-field></field>
+                    <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                    <field name="bundleSummary"><default-field title="Access"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <field name="expiresText"><default-field title="Expires"><display/></default-field></field>
+                    <field name="sentText"><default-field title="Sent"><display/></default-field></field>
+                    <field name="inviterName"><default-field title="By"><display/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <link url="resendInvitation" text="Resend" link-type="hidden-form-link" condition="canResend"
+                                    parameter-map="{invitationId:invitationId, expectedRevision:revision}"
+                                    confirmation="Send ${emailAddress} a new link? The earlier link stops working."/>
+                            <link url="revokeInvitation" text="Revoke" link-type="hidden-form-link" btn-type="danger" condition="canRevoke"
+                                    parameter-map="{invitationId:invitationId, expectedRevision:revision}"
+                                    confirmation="Revoke the invitation of ${emailAddress}? Its link stops working."/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="personName"/><field-ref name="emailAddress"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="expiresText"/></column>
+                        <column><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!invitations.length &amp;&amp; filtered" text="No invitation matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!invitations.length &amp;&amp; !filtered &amp;&amp; !failure" text="No invitations yet."/>
+                <label type="p" style="q-px-md q-pb-md m-muted" condition="invitationListCount &gt; invitations.length" text="Showing ${invitations.length} of ${invitationListCount}; narrow the search to see others."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

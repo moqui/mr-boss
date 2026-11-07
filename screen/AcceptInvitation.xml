@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- AcceptInvitation (design-admin §4 AcceptInvitation; impl-admin P5; style-guide §3.10 Wizard): a staff invitation's page, for
+    its token's holder, signed in or not, at /i/<token>: the token-route "i" of MoquiConf.xml renders it in the public shell
+    after mantle.party.IdentityServices.check#InvitationToken, which lets every well-formed token through so that a spent one
+    and an unknown one read the same here. The steps follow get#InvitationSummary's step, read again on every request:
+    Invitation (who invited the person to which organization, the address, the access proposed by name, the expiry; Continue),
+    Account (stage=account: accept as the account signed in with the invited address; sign in first when an account has the
+    address; sign out first when another account is signed in; or a new account with username, display name and password, the
+    address fixed), Factor (when a bundle's group requires one: the authenticator's key and its first code) and Done (open
+    Commons, which BOSS_USERS opens, or sign in). Every spent token, accepted, revoked, expired, resent or unknown, shows "This
+    invitation is no longer valid" and nothing else. Each transition passes the route's token (the token parameter, whatever
+    the request says) to a Mantle service that checks it again; nothing of the request names the organization or the access.
+    Links and the forms' actions are plain URLs under tokenRoute.basePath, as the public shell keeps them on the page: the forms
+    are written as qvt markup (m-form with that action), since a form-single's transition URL is built from the screen tree's
+    root, here the route's screen, so it would post to /createAccount (impl-admin F-P5-1). history="false" keeps the page,
+    whose path carries the token, off the session's screen history (session attributes are stored, F-P5-5). The Factor step
+    shows the authenticator key only to the session that accepted or the account signed in (review Nov 7 (P5)). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        require-authentication="false" default-menu-include="false" default-menu-title="Accept invitation" history="false">
+    <parameter name="stage"/>
+
+    <transition name="acceptExisting">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.accept#Invitation" in-map="{token:(token || '')}" out-map="accepted"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !accepted.applied"><script>ec.message.addMessage(accepted.reason, 'warning')</script></if>
+        </actions>
+        <default-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
+        <error-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
+    </transition>
+    <transition name="createAccount">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.accept#Invitation" out-map="accepted"
+                    in-map="{token:(token || ''), username:username, userFullName:userFullName, newPassword:newPassword, newPasswordVerify:newPasswordVerify}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !accepted.applied"><script>ec.message.addMessage(accepted.reason, 'warning')</script></if>
+        </actions>
+        <conditional-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain" condition="accepted?.applied"/>
+        <default-response url="${(tokenRoute?.basePath ?? '.') + '?stage=account'}" url-type="plain"/>
+        <error-response url="${(tokenRoute?.basePath ?? '.') + '?stage=account'}" url-type="plain"/>
+    </transition>
+    <transition name="confirmFactor">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.confirm#InvitationFactor" in-map="{token:(token || ''), code:code}" out-map="confirmed"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !confirmed.applied"><script>ec.message.addMessage(confirmed.reason, 'warning')</script></if>
+        </actions>
+        <default-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
+        <error-response url="${tokenRoute?.basePath ?? '.'}" url-type="plain"/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.get#InvitationSummary" in-map="{token:(token || '')}" out-map="summary"/>
+        <set field="basePath" from="tokenRoute?.basePath ?? ''"/>
+        <set field="step" from="summary.step || 'spent'"/>
+        <set field="onAccount" from="step === 'invitation' &amp;&amp; stage === 'account'"/>
+        <set field="bundleText" from="(summary.bundleList || []).map(bundle => bundle.description + (bundle.appName ? ' (' + bundle.appName + ')' : '')).join(', ')"/>
+        <set field="expiresText" from="summary.expiresDate ? ec.l10n.format(new Date(Number(summary.expiresDate)), 'MMM d, yyyy HH:mm') : ''"/>
+        <set field="signInUrl" from="'/Login?returnTo=' + encodeURIComponent(basePath + '?stage=account')"/>
+    </actions>
+    <widgets>
+        <container style="m-accept-invitation" >
+            <label text="Accept invitation" type="h5"/>
+
+            <section name="Spent" condition="step === 'spent'"><widgets>
+                <container-box><box-body>
+                    <label text="This invitation is no longer valid" type="h6" style="q-my-none"/>
+                    <label text="Ask the person who invited you for a new invitation." type="p" style="m-muted q-mb-none"/>
+                </box-body></container-box>
+            </widgets></section>
+
+            <section name="Invitation" condition="step === 'invitation' &amp;&amp; !onAccount"><widgets>
+                <label text="Step 1 of ${summary.factorRequired ? 4 : 3}: the invitation" type="p" style="text-caption m-muted"/>
+                <container-box><box-header title="${summary.inviterName || 'An administrator'} invited you to join ${summary.organizationName}"/><box-body>
+                    <label text="Invited address: ${summary.emailAddress}" type="p"/>
+                    <label text="Access: ${bundleText}" type="p"/>
+                    <label text="A second sign-in factor (an authenticator app) will be set up." type="p" condition="summary.factorRequired"/>
+                    <label text="The invitation expires ${expiresText}." type="p" style="m-muted"/>
+                    <link url="${basePath}?stage=account" url-type="plain" text="Continue" btn-type="primary"/>
+                </box-body></container-box>
+            </widgets></section>
+
+            <section name="Account" condition="onAccount"><widgets>
+                <label text="Step 2 of ${summary.factorRequired ? 4 : 3}: your account" type="p" style="text-caption m-muted"/>
+                <section name="SignedIn" condition="summary.accountMode === 'signedIn'"><widgets>
+                    <container-box><box-body>
+                        <label text="You are signed in as ${summary.signedInName}, with the invited address. Accepting adds ${summary.organizationName} and the access above to this account." type="p"/>
+                        <render-mode><text type="qvt"><![CDATA[<m-form name="AcceptExisting" id="AcceptExisting" action="${basePath}/acceptExisting" v-slot:default="formProps" :fields-initial="{}"><div class="q-ma-sm"><q-btn dense unelevated no-caps type="submit" color="primary" label="Accept invitation"></q-btn></div></m-form>]]></text><text type="tui" template="false">[]</text></render-mode>
+                    </box-body></container-box>
+                </widgets></section>
+                <section name="WrongAccount" condition="summary.accountMode === 'wrongAccount'"><widgets>
+                    <container-box type="warning"><box-body>
+                        <label text="You are signed in as ${summary.signedInName}, whose address is not the one invited (${summary.emailAddress}). Sign out first, then open this link again." type="p"/>
+                        <link url="/Login/logout" url-type="plain" text="Sign out"/>
+                    </box-body></container-box>
+                </widgets></section>
+                <section name="SignIn" condition="summary.accountMode === 'signIn'"><widgets>
+                    <container-box><box-body>
+                        <label text="An account already has the address ${summary.emailAddress}. Sign in to it, and you come back here to accept." type="p"/>
+                        <link url="${signInUrl}" url-type="plain" text="Sign in" btn-type="primary"/>
+                    </box-body></container-box>
+                </widgets></section>
+                <section name="Create" condition="summary.accountMode === 'create'"><widgets>
+                    <container-box><box-header title="Create your account"/><box-body>
+                        <label text="Your account's address is ${summary.emailAddress}; it cannot be changed here." type="p"/>
+                        <render-mode><text type="qvt"><![CDATA[<m-form name="CreateAccount" id="CreateAccount" action="${basePath}/createAccount" focus-field="username" v-slot:default="formProps" :fields-initial="{username:'', userFullName:'', newPassword:'', newPasswordVerify:''}">
+<div class="q-ma-sm"><m-text-line id="CreateAccount_username" type="text" name="username" label="Username" size="30" autocomplete="username" v-model="formProps.fields.username" :fields="formProps.fields"></m-text-line></div>
+<div class="q-ma-sm"><m-text-line id="CreateAccount_userFullName" type="text" name="userFullName" label="Display name" size="40" v-model="formProps.fields.userFullName" :fields="formProps.fields"></m-text-line></div>
+<div class="q-ma-sm"><m-text-line id="CreateAccount_newPassword" type="password" name="newPassword" label="Password" size="30" autocomplete="new-password" v-model="formProps.fields.newPassword"></m-text-line></div>
+<div class="q-ma-sm"><m-text-line id="CreateAccount_newPasswordVerify" type="password" name="newPasswordVerify" label="Password again" size="30" autocomplete="new-password" v-model="formProps.fields.newPasswordVerify"></m-text-line></div>
+<div class="q-ma-sm"><q-btn dense unelevated no-caps type="submit" color="primary" label="Create account and accept"></q-btn></div></m-form>]]></text><text type="tui" template="false">[]</text></render-mode>
+                    </box-body></container-box>
+                </widgets></section>
+                <link url="${basePath}" url-type="plain" text="Back" link-type="anchor"/>
+            </widgets></section>
+
+            <section name="Factor" condition="step === 'factor'"><widgets>
+                <label text="Step 3 of 4: a second sign-in factor" type="p" style="text-caption m-muted"/>
+                <container-box><box-header title="Set up your authenticator app"/><box-body>
+                    <label text="Your access to ${summary.organizationName} needs an authenticator app (such as Google Authenticator, Authy or 1Password) each time you sign in." type="p"/>
+                    <label text="On your phone, open this link to add the account, or enter the key by hand." type="p"/>
+                    <link url="${summary.factor?.qrUri}" url-type="plain" text="Add to authenticator app" link-type="anchor"/>
+                    <label text="Account: ${summary.factor?.qrLabel}" type="p"/>
+                    <label text="Key: ${summary.factor?.qrSecret}" type="p" style="text-mono"/>
+                    <render-mode><text type="qvt"><![CDATA[<m-form name="ConfirmFactor" id="ConfirmFactor" action="${basePath}/confirmFactor" focus-field="code" v-slot:default="formProps" :fields-initial="{code:''}">
+<div class="q-ma-sm"><m-text-line id="ConfirmFactor_code" type="text" name="code" label="Code from the app" size="10" autocomplete="one-time-code" v-model="formProps.fields.code" :fields="formProps.fields"></m-text-line></div>
+<div class="q-ma-sm"><q-btn dense unelevated no-caps type="submit" color="primary" label="Confirm"></q-btn></div></m-form>]]></text><text type="tui" template="false">[]</text></render-mode>
+                </box-body></container-box>
+            </widgets></section>
+
+            <section name="Done" condition="step === 'done'"><widgets>
+                <container-box type="success"><box-body>
+                    <label text="You have joined ${summary.organizationName}." type="h6" style="q-my-none"/>
+                    <label text="Your account is ready." type="p"/>
+                    <link url="/qapps/Commons" url-type="plain" text="Open IronStone BOSS" btn-type="primary" condition="summary.signedInAsInvited"/>
+                    <link url="/Login?returnTo=%2Fqapps%2FCommons" url-type="plain" text="Sign in" btn-type="primary" condition="!summary.signedInAsInvited"/>
+                </box-body></container-box>
+            </widgets></section>
+        </container>
+    </widgets>
+</screen>

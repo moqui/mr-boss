@@ -21,9 +21,15 @@
             <!-- a project's public request form (design-projects.md §6 RequestIntake; impl-projects.md P5) -->
             <token-route name="r" screen-location="component://mr-boss/screen/RequestIntake.xml"
                     token-service="mantle.request.RequestServices.check#IntakeToken" title="Send a request"/>
+            <!-- a staff invitation's acceptance (design-admin §4 AcceptInvitation; impl-admin P5): every well-formed token reaches the
+                page, which says "This invitation is no longer valid" for a spent or unknown one -->
+            <token-route name="i" screen-location="component://mr-boss/screen/AcceptInvitation.xml"
+                    token-service="mantle.party.IdentityServices.check#InvitationToken" title="Accept invitation"/>
             <!-- the public request form takes a few posts a minute from a client (on when the per-client web protection is) -->
             <web-protection>
                 <rate-limit name="request-form" path="/r/*/submit" methods="POST" requests="5" seconds="60" burst="5"/>
+                <!-- and an invitation's account and factor steps a few a minute (impl-admin P5) -->
+                <rate-limit name="invitation-accept" path="/i/*/*" methods="POST" requests="10" seconds="60" burst="5"/>
             </web-protection>
         </webapp>
     </webapp-list>

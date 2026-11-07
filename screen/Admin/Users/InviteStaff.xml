@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- InviteStaff (design-admin §4 Invitations; impl-admin P5): one staff invitation, from Invitations, the shell's quick create
+    and the palette's Invite users (Admin.xml). The address, the person's name when new, an organization the user administers,
+    the relationship, the access as registered bundles the user may assign that no invitation refuses (the invitationBundles
+    choice; IronStone BOSS users is always included, impl-admin §4), an expiry and a note, through
+    mantle.party.IdentityServices.invite#User (ADMIN_IDENTITY_MANAGE, which checks the scope and the proposal). The invitation
+    is mailed; when the instance cannot send mail, Invitations shows its acceptance link once (revealInvitationId). An address
+    with an account is matched when its owner accepts. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Invite users" default-menu-include="false" menu-image="sym_o_person_add" menu-image-type="icon">
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="inviteStaff">
+        <actions>
+            <set field="bundleIds" from="Array.from(typeof bundleGroupIdList === 'string' ? bundleGroupIdList.split(',') : (bundleGroupIdList || []))
+                    .map(id => String(id).trim()).filter(Boolean)"/>
+            <script>try { baseUrl = ec.web.getWebappRootUrl() || null } catch (err) { baseUrl = null }</script>
+            <service-call name="mantle.party.IdentityServices.invite#User" out-map="invited"
+                    in-map="{emailAddress:emailAddress, firstName:(firstName || null), lastName:(lastName || null),
+                        organizationPartyId:organizationPartyId, relationshipTypeEnumId:(relationshipTypeEnumId || null),
+                        bundleGroupIdList:(bundleIds.includes('BOSS_USERS') ? bundleIds : ['BOSS_USERS'].concat(bundleIds)),
+                        expireDays:(expireDays || null), message:(message || null), baseUrl:baseUrl}"/>
+            <if condition="!ec.message.hasError() &amp;&amp; !invited.applied">
+                <script>ec.message.addMessage(invited.reason, 'warning')</script>
+            </if>
+            <if condition="!ec.message.hasError() &amp;&amp; invited.applied &amp;&amp; invited.mailSent">
+                <message type="success">Invitation sent to ${emailAddress}</message>
+            </if>
+            <if condition="!ec.message.hasError() &amp;&amp; invited.applied &amp;&amp; !invited.mailSent &amp;&amp; !invited.linkPending">
+                <message type="warning">The invitation was made but its email was not sent: resend it from Invitations</message>
+            </if>
+        </actions>
+        <conditional-response url="../Invitations" condition="invited?.applied &amp;&amp; invited?.linkPending">
+            <parameter name="revealInvitationId" from="invited.invitationId"/></conditional-response>
+        <conditional-response url="../Invitations" condition="invited?.applied"/>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <set field="canInvite" from="!!admin?.capabilities?.identityManage"/>
+        <set field="inviteValues" from="{relationshipTypeEnumId:'PrtEmployee', expireDays:'7'}"/>
+    </actions>
+    <widgets>
+        <label text="Invite users" type="h5"/>
+        <label type="p" style="text-negative" condition="!canInvite" text="Inviting staff needs ADMIN_IDENTITY_MANAGE."/>
+        <section name="InviteForm" condition="canInvite"><widgets>
+            <label type="p" style="text-caption m-muted" text="The person gets a link that works once. They sign in with the account of that address, or create one, and get the organization and the access you choose. IronStone BOSS users is always included; privileged and sealed access is never offered."/>
+            <form-single name="InviteStaff" transition="inviteStaff" map="inviteValues" focus-field="emailAddress">
+                <field name="emailAddress"><default-field title="Email"><text-line size="40"/></default-field></field>
+                <field name="firstName"><default-field title="First name" tooltip="For a new person"><text-line size="25"/></default-field></field>
+                <field name="lastName"><default-field title="Last name"><text-line size="25"/></default-field></field>
+                <field name="organizationPartyId">
+                    <default-field title="Organization">
+                        <drop-down>
+                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                        </drop-down>
+                    </default-field>
+                </field>
+                <field name="relationshipTypeEnumId">
+                    <default-field title="Works as">
+                        <drop-down><option key="PrtEmployee" text="Employee"/><option key="PrtAgent" text="Agent"/>
+                            <option key="PrtMember" text="Member"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="bundleGroupIdList">
+                    <default-field title="Access" tooltip="Registered bundles you may assign">
+                        <drop-down allow-multiple="true">
+                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'invitationBundles'}"/>
+                        </drop-down>
+                    </default-field>
+                </field>
+                <field name="expireDays">
+                    <default-field title="Link expires after">
+                        <drop-down><option key="3" text="3 days"/><option key="7" text="7 days"/><option key="14" text="14 days"/>
+                            <option key="30" text="30 days"/></drop-down>
+                    </default-field>
+                </field>
+                <field name="message"><default-field title="Note in the email"><text-area rows="3" cols="50"/></default-field></field>
+                <field name="submitButton"><default-field title="Send invitation"><submit/></default-field></field>
+            </form-single>
+        </widgets></section>
+    </widgets>
+</screen>

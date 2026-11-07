@@ -78,6 +78,9 @@ along with this software (see the LICENSE.md file). If not, see
                         type="p" style="text-caption m-muted q-mb-none"/>
             </container>
             <container style="col-auto">
+                <link url="../InviteStaff" text="Invite users" icon="sym_o_person_add" btn-type="primary" condition="canCreate"/>
+            </container>
+            <container style="col-auto">
                 <container-dialog id="NewStaffAccountDialog" button-text="New staff account" icon="sym_o_person_add" width="600"
                         title="New staff account" condition="canCreate">
                     <label type="p" text="Invitations are the usual way to add staff. A direct account gets no password: a reset password is mailed so the person sets their own. IronStone BOSS users is always included."/>

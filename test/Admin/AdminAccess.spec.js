@@ -141,18 +141,20 @@ feature(
 feature("the Admin menu and keys follow the areas' groups and System's own grant; the launcher shows it to its users only", {
     when() {
         const rows = [
-            {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"]},
-            // P4: the Users area, the identity operator's and the administrator's (the reader's menu above has none)
-            {user: users.identity, menu: ["Home", "Users", "Settings"], keys: ["g a"]},
+            {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"], quick: []},
+            // P4: the Users area, the identity operator's and the administrator's (the reader's menu above has none); P5: its
+            // Invite users in quick create, which opens InviteStaff under that area
+            {user: users.identity, menu: ["Home", "Users", "Settings"], keys: ["g a"], quick: ["adminInviteUsers"]},
             {
                 user: users.admin,
                 menu: ["Home", "Users", "Access", "Settings", "Operations", "Agents", "Developer"],
-                keys: ["g a", "g o", "g n", "g d"]
+                keys: ["g a", "g o", "g n", "g d"],
+                quick: ["adminInviteUsers"]
             }
         ]
         const problems = []
         const shells = {}
-        for (const {user, menu, keys} of rows) {
+        for (const {user, menu, keys, quick} of rows) {
             const found = (shells[user] = shell(user))
             if (found.status != 200) problems.push(`${user}'s menu: ${found.status}`)
             if (JSON.stringify(found.names) !== JSON.stringify(menu))
@@ -160,7 +162,9 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
             const keymap = (found.providers?.keymaps || []).find(keymap => keymap.scope === "admin")
             const held = (keymap?.keys || []).map(key => key.keys)
             if (JSON.stringify(held) !== JSON.stringify(keys)) problems.push(`${user}'s admin keys are ${held}, not ${keys}`)
-            if ((found.providers?.quickCreate || []).length) problems.push(`${user} is offered quick create`)
+            const offered = (found.providers?.quickCreate || []).map(item => item.kind)
+            if (JSON.stringify(offered) !== JSON.stringify(quick))
+                problems.push(`${user} is offered quick create ${offered}, not ${quick}`)
         }
         // an instance administrator's menu has System (its keys are left out: ADMIN's launcher holds every app)
         const systemMenu = shell(users.system, true).names
