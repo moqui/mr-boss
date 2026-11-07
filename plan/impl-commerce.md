@@ -3300,6 +3300,15 @@ in the writers, screens or Reporting.js); the Built note.
   - F124's page: a waiting topic whose own box and decline box are both checked is declined and then turned on (a granted
     consent, the address verified); a list so checked is declined. Worth a look when the page is next touched.
   - CommerceIsolationWalk makes a theme draft of BOSS_COM_DIGITAL on every run, and the draft is kept.
+- **Final suites (Nov 6, on master after Commerce P15 and Shop P9 merged, nothing else running):** standalone mr-mantle
+  1,895 passed, 2 failed (the baseline); `./moq test-apps` 3,302 of 3,303 server features (Commons Contacts' split
+  feature read three names from the paged "all" list; the next feature already checks each scope by name, so it now
+  checks only that the page has rows and no `_NA_`) and 17 client features passed; lint as before. Final feature time and
+  budgets: server mr-mantle 372.2 of 393 s, mr-boss 244.6 of 264 s, mr-pass 17.2 of 20 s; client mr-boss 51.7 of 57 s,
+  mr-pass 8.1 of 9 s, mr-marble 7.3 of 9 s. Over the build mr-mantle's budget went from 370 to 393 s and mr-pass's from 15
+  and 6 s to 20 and 9 s, each raised by the measured share (§4); mr-boss's server budget stayed 264 s, its client 57 s.
+  Acceptance: P15's full `./moq accept mr-boss` 480 of 482 and Shop P9's `./moq accept mr-pass` all passing; the two
+  mr-boss failures (F178) also fail on master at 18:54 CST.
 
 ## 4. Decisions
 
@@ -3529,6 +3538,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F175 | P15: F165 and F103 are checked as a claim and a lock, not with concurrent threads | Accepted |
 | F176 | P15 review: with a waiting topic's own box and its decline box both checked, it is declined then turned on | Accepted |
 | F177 | P15 review: CommerceIsolationWalk makes a BOSS_COM_DIGITAL theme draft each run and never removes it | Later |
+| F178 | Final: CustomerServiceAssignmentWalk (round robin, an agent outside their hours) and CustomerServiceOrdersWalk (StockAtDate's as-of day) fail in the evening, US Central (after 00:00 UTC): each compares a local day or hour with a UTC one | Customer Service (acceptance walks) |
 
 ## 7. Later
 
