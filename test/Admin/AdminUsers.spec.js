@@ -2,12 +2,15 @@
 // identity as the Retail identity operator: its Retail organization alone, the Shared identity marker and why account-wide
 // changes need ADMIN_IDENTITY_GLOBAL, its memberships, factors, credentials, sessions and history), and the delegated rule on
 // UserDetail's transitions: the Retail operator signs a Retail user's session out, is refused the shared identity's session
-// (IDENTITY_GLOBAL) and every Services-only identity (RECORD_UNAVAILABLE). Mantle's rules are Mantle's StaffIdentity, the
+// (IDENTITY_GLOBAL) and every Services-only identity (RECORD_UNAVAILABLE); and identity scope by the organization filters of the
+// grant the call runs under (impl-admin §4, the P4 follow-up): ADMIN sees a Services-only identity with no active organization
+// and not with Retail active, the administrator's Users list shows it (F65), the Retail operator's palette never does. Mantle's
+// rules are Mantle's StaffIdentity, the
 // framework's sessions AdminSessions; the golden walk is test/client/Admin/AdminUsersWalk, the "usable when" the acceptance
 // AdminUsersUsable.
 // Run: ./moq test mr-boss --spec Admin/AdminUsers
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
-const {ids, users, asUser, system, refusal, page} = lib
+const {ids, users, asUser, system, refusal, invoke, page} = lib
 const visits = {retail: "ADM_USERS_VISIT_RETAIL", shared: "ADM_USERS_VISIT_SHARED"}
 const make = (entityName, fields) =>
     system(() => {
@@ -96,5 +99,37 @@ feature("the Retail operator signs a Retail user out, and is refused the shared 
         other.output.includes("User not available") && !other.output.includes("Sessions and history")
         loginAs.includes("ADMIN_LOGIN_AS")
         reader.includes("ADMIN_IDENTITY_VIEW")
+    }
+})
+
+feature("scope follows the grant's organization filters: ADMIN by the active organization, the administrator every one (F65)", {
+    when() {
+        const check = () =>
+            refusal("ironstone.admin.ContextServices.check#Record", {recordType: "user", recordId: ids.otherUserId})
+        const palette = () =>
+            Array.from(
+                invoke("ironstone.admin.ContextServices.search#Records", {text: "Commerce Services", limit: 10}).rows || []
+            ).map(row => row.recordId)
+        const admin = asUser(users.system, () => {
+            const none = check()
+            ec.user.setPreference("ACTIVE_ORGANIZATION", ids.organizationId)
+            try {
+                return {none, retail: check()}
+            } finally {
+                ec.user.setPreference("ACTIVE_ORGANIZATION", null)
+            }
+        })
+        return {
+            admin,
+            // the administrator's Users list (Mantle's find#Users under the area's MANTLE_ACTIVE_ORG grant) and palette
+            list: asUser(users.admin, () => page("Users/Users", {text: "commerce.services"})),
+            adminPalette: asUser(users.admin, palette),
+            operatorPalette: asUser(users.identity, palette)
+        }
+    },
+    then({admin, list, adminPalette, operatorPalette}) {
+        admin.none == "" && admin.retail.includes("RECORD_UNAVAILABLE")
+        list.errors.length == 0 && list.output.includes("Commerce Services manager")
+        adminPalette.includes(ids.otherUserId) && !operatorPalette.includes(ids.otherUserId)
     }
 })
