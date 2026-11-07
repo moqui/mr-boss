@@ -1474,7 +1474,7 @@ Products uses native guarded replacements for raw catalog writes, bulk assignmen
 | product/ProductImportServices | get#CatalogImport | Admin/Data/ImportDetail | Shared/ProductImport; Products/ProductImport |
 | product/ProductImportServices | get#CatalogImportReport | Admin/Data/ImportDetail | Shared/ProductImport; Products/ProductImport |
 | product/ProductImportServices | get#CatalogImportSample | Admin/Data/DataImport | Shared/ProductImport; Products/ProductImport |
-| product/CatalogCheckServices | validate#Catalog |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
+| product/CatalogCheckServices | validate#Catalog | Admin/Operations/Health | Shared/CatalogChecks; Products/CatalogChecks; Products/Home; Admin/Operations/Health and Admin/Home (readiness provider products.catalogChecks, impl-admin P2) |
 | product/CatalogCheckServices | get#CatalogChecks |  | Shared/CatalogChecks; Products/CatalogChecks; Products/Home |
 | product/PriceServices | store#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices; Commerce/Merchandising/Product360 (P3) |
 | product/PriceServices | replace#ProductPrice | Commerce/Merchandising/Product360; Sales/Agreements/CustomerPrices; Sales/Agreements/AgreementDetail | Shared/Prices; Shared/PriceListDetail; Shared/PriceExplain; Shared/SupplierPrices; Commerce/Merchandising/Product360 (P3) |
@@ -1792,12 +1792,12 @@ mutators in the app. Legacy unpost, posted rewrite and post#GlJournal remain une
 | SetupServices | get#PaymentMethods | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods; Accounting/Settings/PaymentMethods (get#Context) |
 | SetupServices | store#PaymentMethod | Accounting/Home; Accounting/Settings | Accounting/Settings/PaymentMethods |
 | SetupServices | get#Context | Accounting/Home; Accounting/Settings | Accounting/Settings/AccountingPreferences; Accounting/Settings/Currencies; Accounting/Settings/DocumentSettings; Accounting/Settings/PaymentTerms |
-| SetupServices | get#Readiness | Accounting/Home; Accounting/Settings | Accounting/Home (setupStatus offers Setup first); native contract |
+| SetupServices | get#Readiness | Accounting/Home; Accounting/Settings; Admin/Operations/Health | Accounting/Home (setupStatus offers Setup first); native contract; Admin/Operations/Health and Admin/Home (readiness provider accounting.setup, impl-admin P2, F16) |
 | SetupServices | store#SetupRun | Accounting/Settings/Setup | Accounting/Settings/Setup/Basis; Accounting/Settings/Setup/OpeningBalances |
 | SetupServices | preview#OpeningBalances | Accounting/Settings/Setup | Accounting/Settings/Setup (every step) |
 | SetupServices | import#OpenItems | Accounting/Settings/Setup | Accounting/Settings/Setup/OpenItems |
 | SetupServices | create#OpenItem | Accounting/Settings/Setup | Accounting/Settings/Setup/OpenItems (import#OpenItems, a row each) |
-| SetupServices | check#Readiness | Accounting/Settings/Setup; Admin/Operations/Health | Accounting/Settings/Setup/Readiness; Accounting/Settings/Setup/Activate |
+| SetupServices | check#Readiness | Accounting/Settings/Setup | Accounting/Settings/Setup/Readiness; Accounting/Settings/Setup/Activate (Admin Health reads get#Readiness instead, impl-admin F16) |
 | SetupServices | activate#Accounting | Accounting/Settings/Setup | Accounting/Settings/Setup/Activate |
 | CurrencyServices | store#Rate | Accounting/Settings/Currencies | Accounting/Settings/Currencies |
 | CurrencyServices | store#Currency | Accounting/Settings/Currencies | Accounting/Settings/Currencies |

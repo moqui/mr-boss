@@ -18,6 +18,8 @@ const {find, one, rows, denied, call} = lib
 const access = lib.access
 
 const rootLocation = "component://mr-boss/screen/Admin.xml"
+// the settings index, which BOSS_USERS may open without the Admin root (impl-admin F46): a non-inheritable ALLOW on it alone
+const settingsIndexLocation = "component://mr-boss/screen/Admin/Settings/SettingsHome.xml"
 const areaLocation = area => "component://mr-boss/screen/Admin/" + area + ".xml"
 const choiceLimit = 30
 // the framework app roots whose own grants open the tools an Admin screen links (Tools ToolsSecurityData, MonitoringSecurityData)
@@ -91,6 +93,37 @@ function screenGrants(location, authzRows) {
           : grants.filter(row => row.authzTypeEnumId === "AUTHZT_ALLOW")
     return {found: grants.length > 0, allowed}
 }
+// Whether a path of screens opens to the user's own groups, as the framework decides a screen path (authz.rs is_permitted):
+// an ALWAYS on a screen opens it and, inheritable, every screen below; a DENY refuses its screen and any ALLOW below it; the
+// last screen needs an ALLOW or ALWAYS of its own, or one inherited from the screen above it.
+function pathOpens(locations, authzRows) {
+    let inherited = null
+    let denied = false
+    for (const [index, location] of locations.entries()) {
+        const last = index === locations.length - 1
+        if (inherited?.inheritable && inherited.type === "AUTHZT_ALWAYS") return true
+        const grants = authzRows.filter(row =>
+            row.nameIsPattern === "Y"
+                ? new RegExp("^(?:" + row.artifactName + ")$").test(location)
+                : row.artifactName === location
+        )
+        const own =
+            grants.find(row => row.authzTypeEnumId === "AUTHZT_ALWAYS") ||
+            grants.find(row => row.authzTypeEnumId === "AUTHZT_DENY") ||
+            (denied ? null : grants.find(row => row.authzTypeEnumId === "AUTHZT_ALLOW"))
+        if (own) {
+            if (own.authzTypeEnumId === "AUTHZT_DENY") denied = true
+            if (last) return own.authzTypeEnumId !== "AUTHZT_DENY"
+            inherited = {type: own.authzTypeEnumId, inheritable: own.inheritAuthz === "Y"}
+        } else if (last) {
+            return !!inherited?.inheritable && inherited.type !== "AUTHZT_DENY"
+        } else if (!inherited?.inheritable) {
+            inherited = null
+        }
+    }
+    return false
+}
+
 // Only a system administrator, or an authorization whose filter sets name MANTLE_ACTIVE_ORG (the administrator group's),
 // administers every organization (the active one when there is one); any other grant is limited to the user's organizations,
 // so a grant set up without filters fails closed. A Projects client contact (PROJECT_CLIENT) never opens Admin, and a PASS
@@ -121,6 +154,40 @@ function areaGrant(grants, area) {
 function appGrant(grants, app) {
     if (grants.systemAdmin) return true
     return screenGrants(appLocations[app], grants.authzRows).allowed.length > 0
+}
+
+// Whether a destination, a path under /qapps, opens to the user: a framework app's route (Admin › System and system/ by System's
+// own grant, tools/, monitor/ and dashboards/ by theirs) or a BOSS screen path, each screen of it a file under mr-boss's screen
+// directory, checked as the framework checks the path. A registry's link is shown only when it opens.
+const appRoutes = [
+    ["Admin/System", "system"],
+    ["system", "system"],
+    ["tools", "tools"],
+    ["monitor", "monitor"],
+    ["dashboards", "dashboards"]
+]
+function destinationOpens(grants, path) {
+    if (!path) return false
+    if (grants.systemAdmin) return true
+    const route = String(path)
+        .split("?")[0]
+        .replace(/^\/+|\/+$/g, "")
+    const app = appRoutes.find(([prefix]) => route === prefix || route.startsWith(prefix + "/"))
+    if (app) return appGrant(grants, app[1])
+    const parts = route.split("/")
+    return pathOpens(
+        parts.map((_, index) => "component://mr-boss/screen/" + parts.slice(0, index + 1).join("/") + ".xml"),
+        grants.authzRows || []
+    )
+}
+// A BOSS user without Admin to whom the settings index alone is granted (impl-admin F46): its own ALLOW on SettingsHome.
+function settingsIndexOnly(userScope) {
+    return (
+        !userScope.read &&
+        !!ec.user.userId &&
+        !ec.user.hasPermission("PROJECT_CLIENT") &&
+        screenGrants(settingsIndexLocation, userScope.grants.authzRows || []).allowed.length > 0
+    )
 }
 
 // The scope of the current user: the organizations they administer (null for every internal organization), their own
@@ -184,13 +251,29 @@ const linkPaths = [
     // P1: the areas of the menu built so far (design §1.2)
     "Home",
     "Operations/Monitoring",
+    // P2: Health and the settings index
+    "Operations/Health",
+    "Settings/SettingsHome",
     "Agents/Home",
     "System",
     "Developer/Home"
 ]
 function sharedContext(p) {
     if (p.appRoot && p.appRoot !== "Admin") denied("ADMIN_CONTEXT", "Admin context is not available")
-    const userScope = required()
+    const found = scope()
+    // the settings index alone (impl-admin F46): no capability, the user's own organizations and the index's link
+    if (settingsIndexOnly(found))
+        return {
+            capabilities: {read: false, settingsIndex: true},
+            organizationPartyIds: found.memberIds,
+            activeOrganizationPartyId: found.activeOrganizationPartyId,
+            allOrganizations: false,
+            appRoot: "Admin",
+            linkBase: "//Admin",
+            webBase: "/qapps/Admin",
+            sharedLinks: {"Settings/SettingsHome": "//Admin/Settings/SettingsHome"}
+        }
+    const userScope = required(found)
     return {
         capabilities: userScope.capabilities,
         organizationPartyIds: organizationIds(userScope),
@@ -422,6 +505,8 @@ const operations = {sharedContext, checkRecord, search, choices, toolLinks, appA
     required,
     administers,
     recordOf,
+    destinationOpens,
+    settingsIndexOnly,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Admin operation " + op)
         return operations[op](parameters)

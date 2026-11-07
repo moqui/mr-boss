@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Admin's registries (impl-admin §4, P2, F32; design-admin §14): mr-boss's own records, rare in BOSS, whose data model is
+    Mantle's. Each is a trusted component definition seeded by its owner in its own setup data, never a service or index name
+    an administrator types: ironstone.admin.RegistryServices reads them, and a row naming a missing service or permission is
+    logged by name when read and left out, the others still answering. Insights P4 adds its records to this file. -->
+<entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-3.xsd">
+    <entity entity-name="ReadinessProvider" package="ironstone.admin" use="configuration">
+        <description>A readiness provider (design §14): a nonmutating check its owner calculates, which Admin's Home and Health
+            and Insights' DataReadiness read through get#Readiness, with no second readiness registry.</description>
+        <field name="providerKey" type="id-long" is-pk="true"/>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"><description>The app that owns the check (Admin, Accounting, ...)</description></field>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"/>
+        <field name="healthGroupEnumId" type="id"><description>Health's group: identity, business setup, transport, storage
+            and backup, observability</description></field>
+        <field name="scopeEnumId" type="id"><description>What one check covers: the instance, each organization or each
+            store the viewer administers</description></field>
+        <field name="serviceName" type="text-medium"><description>The owner's service; its answer is read by
+            RegistryServices' adapter for it, or as the contract's checks list</description></field>
+        <field name="requiredPermission" type="id-long"><description>The permission the viewer needs to read the provider;
+            the owner's service checks its own again</description></field>
+        <field name="fixPath" type="text-medium"><description>The owner's screen that fixes it, a path under /qapps, shown
+            only when the viewer may open it</description></field>
+        <field name="expectedFrequencyMinutes" type="number-integer"><description>The freshness facet of a data source: how
+            often it should be refreshed</description></field>
+        <field name="maxLagMinutes" type="number-integer"><description>The freshness facet: the lag past which the source
+            is stale</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one" title="AdminHealthGroup" related="moqui.basic.Enumeration" short-alias="healthGroup">
+            <key-map field-name="healthGroupEnumId" related="enumId"/></relationship>
+        <relationship type="one" title="AdminRegistryScope" related="moqui.basic.Enumeration" short-alias="scope">
+            <key-map field-name="scopeEnumId" related="enumId"/></relationship>
+        <relationship type="one" related="moqui.security.UserPermission" short-alias="permission">
+            <key-map field-name="requiredPermission" related="userPermissionId"/></relationship>
+    </entity>
+
+    <entity entity-name="RefreshOperation" package="ironstone.admin" use="configuration">
+        <description>A refresh operation (design §14): the owner's service that refreshes a source (an index, a feed, a
+            projection), which Admin's Health and Insights' RefreshRequest run through request#Refresh, never by a service
+            or index name from the request.</description>
+        <field name="refreshKey" type="id-long" is-pk="true"/>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"/>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"/>
+        <field name="serviceName" type="text-medium"/>
+        <field name="sourceKindEnumId" type="id"><description>index, feed or projection</description></field>
+        <field name="sourceName" type="text-medium"><description>The source it refreshes, as its owner names it</description></field>
+        <field name="requiredPermission" type="id-long"/>
+        <field name="scopeParameters" type="text-medium"><description>The names of the scope parameters passed to the
+            owner's service from the request (comma separated); any other is dropped</description></field>
+        <field name="providerKey" type="id-long"><description>The readiness provider whose source it refreshes, for Health's
+            row action</description></field>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one" title="AdminRefreshSource" related="moqui.basic.Enumeration" short-alias="sourceKind">
+            <key-map field-name="sourceKindEnumId" related="enumId"/></relationship>
+        <relationship type="one" related="moqui.security.UserPermission" short-alias="permission">
+            <key-map field-name="requiredPermission" related="userPermissionId"/></relationship>
+        <relationship type="one" related="ironstone.admin.ReadinessProvider" short-alias="provider" fk-name="ADM_REFRESH_PROVIDER">
+            <key-map field-name="providerKey"/></relationship>
+    </entity>
+
+    <entity entity-name="SettingsEntry" package="ironstone.admin" use="configuration">
+        <description>A settings entry (design §14, §14.2): an owner's settings landing in Admin's settings index, shown only
+            to a viewer who may open its destination. The owner resolves scope and executes writes; the entry grants
+            nothing.</description>
+        <field name="settingsKey" type="id-long" is-pk="true"/>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"/>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"/>
+        <field name="settingsGroupEnumId" type="id"><description>The index's group: Company, Applications or Instance</description></field>
+        <field name="scopeEnumId" type="id"/>
+        <field name="screenPath" type="text-medium"><description>The canonical editor, a path under /qapps; the entry shows
+            only when the viewer's own groups open it, as the framework decides a screen path</description></field>
+        <field name="viewPermission" type="id-long"><description>A permission the destination checks besides its screen
+            authorization, if any</description></field>
+        <field name="configuredBy" type="text-medium"><description>Who configures it, in the owner's words</description></field>
+        <field name="providerKey" type="id-long"><description>The readiness provider of what it configures, if any</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one" title="AdminSettingsGroup" related="moqui.basic.Enumeration" short-alias="settingsGroup">
+            <key-map field-name="settingsGroupEnumId" related="enumId"/></relationship>
+        <relationship type="one" title="AdminRegistryScope" related="moqui.basic.Enumeration" short-alias="scope">
+            <key-map field-name="scopeEnumId" related="enumId"/></relationship>
+        <relationship type="one" related="moqui.security.UserPermission" short-alias="permission">
+            <key-map field-name="viewPermission" related="userPermissionId"/></relationship>
+        <relationship type="one" related="ironstone.admin.ReadinessProvider" short-alias="provider" fk-name="ADM_SETTINGS_PROVIDER">
+            <key-map field-name="providerKey"/></relationship>
+    </entity>
+</entities>
