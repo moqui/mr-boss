@@ -960,7 +960,8 @@ along with this software (see the LICENSE.md file). If not, see
         BOSS_USERS alone. admin.delegate holds ADMIN_ACCESS_VIEW and the sealed ADMIN_ACCESS_MANAGE through a custom group,
         BOSS_ADMIN_DEMO_DELEGATE, and is not in the privileged BOSS_ADMIN_ACCESS (§15.3's escalation through grants: they cannot
         add anyone to it, nor grant ADMIN_BACKUP_DOWNLOAD). Loading data skips the seals, as a data load does. -->
-    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_DEMO_DELEGATE" description="Delegated access administrators (demo)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_DEMO_DELEGATE" description="Delegated access administrators (demo)"
+            groupTypeEnumId="UgtCustomRole"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DEMO_DELEGATE" userPermissionId="ADMIN_ACCESS_VIEW" fromDate="0"/>
     <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DEMO_DELEGATE" userPermissionId="ADMIN_ACCESS_MANAGE" fromDate="0"/>
     <mantle.party.Party partyId="BOSS_ADM_READER" partyTypeEnumId="PtyPerson"/>
@@ -1180,4 +1181,11 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
     <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
+    <!-- Admin P3 (impl-admin P3): the delegated access administrators' custom group opens the Access area (Groups, GroupDetail),
+        as BOSS_ADMIN_ACCESS does; the framework's AccessServices then let admin.delegate assign registered bundles and refuse the
+        privileged groups it is not in and the sealed grants it does not hold -->
+    <moqui.security.ArtifactAuthz artifactAuthzId="BOSS_ADM_ACCESS_DEMO_DELEGATE" userGroupId="BOSS_ADMIN_DEMO_DELEGATE"
+            artifactGroupId="BOSS_ADM_ACCESS" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ADM_ACCESS_DEMO_DELEGATE" entityFilterSetId="MANTLE_USER_ORG"/>
+    <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ADM_ACCESS_DEMO_DELEGATE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
 </entity-facade-xml>

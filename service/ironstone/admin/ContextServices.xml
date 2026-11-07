@@ -64,7 +64,9 @@ along with this software (see the LICENSE.md file). If not, see
             named (identityManage, accessManage, ...), without its permission (PERMISSION_DENIED).</description>
         <implements service="ironstone.admin.ContextServices.define#Parameters"/>
         <in-parameters>
-            <parameter name="recordType" required="true"><description>organization or user (Admin.js recordKinds)</description></parameter>
+            <parameter name="recordType" required="true"><description>organization, user, group or member (Admin.js
+                recordKinds; a group is instance-wide and needs ADMIN_ACCESS_VIEW, a member is a user an access administrator
+                reads, in the organizations they administer)</description></parameter>
             <parameter name="recordId" required="true"/>
             <parameter name="capability"/>
         </in-parameters>
@@ -91,7 +93,8 @@ along with this software (see the LICENSE.md file). If not, see
     </service>
     <service verb="get" noun="Choices" allow-remote="false">
         <description>The options of an Admin drop-down the user may choose, searched by term, with the selected value's label:
-            organizations (the internal organizations the user administers). Refuses an unknown choice and a user without
+            organizations (the internal organizations the user administers) and members (the staff accounts of those
+            organizations, for an ADMIN_ACCESS_VIEW holder adding a group member). Refuses an unknown choice and a user without
             Admin.</description>
         <implements service="ironstone.admin.ContextServices.define#Parameters"/>
         <in-parameters>
@@ -109,9 +112,9 @@ along with this software (see the LICENSE.md file). If not, see
         </actions>
     </service>
     <service verb="search" noun="Records" allow-remote="false">
-        <description>The palette's Admin records: none until the phases that build users, groups, connections and jobs add their
-            finds (design §1.2), each limited in the query to the user's scope and checked again. No rows for a user without
-            Admin.</description>
+        <description>The palette's Admin records: groups (P3, for an ADMIN_ACCESS_VIEW holder), opening GroupDetail; users,
+            connections and jobs with their phases (design §1.2), each limited in the query to the user's scope and checked
+            again. No rows for a user without Admin.</description>
         <in-parameters>
             <parameter name="text"/>
             <parameter name="limit" type="Integer"/>
@@ -138,6 +141,26 @@ along with this software (see the LICENSE.md file). If not, see
         <actions>
             <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
             <set field="apps" from="ec.resource.script(module).execute('appAccess', context)"/>
+        </actions>
+    </service>
+    <service verb="get" noun="MemberScope" allow-remote="false">
+        <description>Which of a group's members (userIds) the user may change: the accounts whose party works for an
+            organization the user administers (every one for the administrator), and how many are outside, counted and never
+            named (design §1.1: authority over one organization's memberships does not show another's). Needs
+            ADMIN_ACCESS_VIEW; refuses a user without Admin.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="userIds" type="List"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="inScopeUserIds" type="List"/>
+            <parameter name="outsideCount" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="module" value="component://mr-boss/service/ironstone/admin/Admin.js"/>
+            <set field="found" from="ec.resource.script(module).execute('memberScope', context)"/>
+            <set field="inScopeUserIds" from="found.inScopeUserIds"/>
+            <set field="outsideCount" from="found.outsideCount"/>
         </actions>
     </service>
 </services>

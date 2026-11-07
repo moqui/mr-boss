@@ -61,8 +61,10 @@ const capabilityPermissions = {
 // The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_ADM_<Area>): Operations for the reader,
 // the operations operator and the administrator; Agents and Developer tools for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
-// below, not an area. Later phases add their areas.
+// below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
+// administrator.
 const areas = {
+    access: "Access",
     operations: "Operations",
     agents: "Agents",
     developer: "Developer"
@@ -253,6 +255,9 @@ const linkPaths = [
     "Operations/Monitoring",
     // P2: Health and the settings index
     "Operations/Health",
+    // P3: groups and grants
+    "Access/Groups",
+    "Access/GroupDetail",
     "Settings/SettingsHome",
     "Agents/Home",
     "System",
@@ -305,13 +310,25 @@ function readUser(userId) {
     return {owners, anyOwner: true, label: account.userFullName || account.username || userId, detail: account.username || ""}
 }
 
+// A user group (P3): the groups and their grants are instance-wide, read with accessView alone; no organization scopes them
+// (design §1.1: UserGroup carries no organization), and the framework's AccessServices check delegation themselves.
+function readGroup(userGroupId) {
+    const group = userGroupId ? one("moqui.security.UserGroup", {userGroupId}) : null
+    if (!group) return null
+    return {owners: [], instance: true, label: group.description || userGroupId, detail: userGroupId}
+}
+
 // Each kind an Admin screen, mount, palette or record link may be given: its name, icon, the capability that reads it (null
 // for the scope alone), the screen that opens it (destination, the path and id parameter under the root; null until its
 // phase builds it: users in P4, organizations in P7) and its read (owners: the organizations it names; anyOwner: one of them
 // in scope is enough, for an identity that works for several organizations; or null when there is no such record).
 const recordKinds = {
     organization: {name: "Organization", icon: "sym_o_corporate_fare", need: null, destination: null, read: readOrganization},
-    user: {name: "User", icon: "sym_o_person", need: "identityView", destination: null, read: readUser}
+    user: {name: "User", icon: "sym_o_person", need: "identityView", destination: null, read: readUser},
+    // P3: a group, and a user as a group's member: an access administrator reads the users of the organizations they administer
+    // to add or end their memberships, without the identity operator's ADMIN_IDENTITY_VIEW
+    group: {name: "Group", icon: "sym_o_group", need: "accessView", destination: "Access/GroupDetail", read: readGroup},
+    member: {name: "User", icon: "sym_o_person", need: "accessView", destination: null, read: readUser}
 }
 
 // A record the user may administer: the organizations it names are theirs (every one, or for an identity one of them); one
@@ -328,13 +345,15 @@ function recordOf(userScope, kind, recordId) {
     const found = definition.read(recordId)
     if (!found) unavailable()
     const inScope = found.owners.filter(owner => administers(userScope, owner))
-    const allowed = found.owners.length
-        ? found.anyOwner
-            ? inScope.length > 0
-            : inScope.length === found.owners.length
-        : !userScope.ownerIds
+    const allowed = found.instance
+        ? true
+        : found.owners.length
+          ? found.anyOwner
+              ? inScope.length > 0
+              : inScope.length === found.owners.length
+          : !userScope.ownerIds
     if (!allowed) unavailable()
-    const scopeText = kind === "user" ? inScope.map(partyName).join(", ") : ""
+    const scopeText = kind === "user" || kind === "member" ? inScope.map(partyName).join(", ") : ""
     return {
         recordType: kind,
         recordId,
@@ -360,9 +379,22 @@ function checkRecord(p) {
 }
 
 // ===== palette =====
-// The finds of the palette: none until the phases that build users, groups, connections and jobs add theirs (design §1.2),
-// each by its id and names, ignoring case, limited in the query to the user's scope, and each row checked again by recordOf.
-const searchFinds = []
+// The finds of the palette: groups (P3); users, connections and jobs with their phases (design §1.2), each by its id and names,
+// ignoring case, limited in the query to the user's scope, and each row checked again by recordOf. A kind is searched only for
+// a holder of its read capability.
+const searchFinds = [
+    {
+        kind: "group",
+        entityName: "moqui.security.UserGroup",
+        idField: "userGroupId",
+        query: (userScope, condition) =>
+            find("moqui.security.UserGroup")
+                .condition(condition(["userGroupId", "description"]))
+                .selectField("userGroupId")
+                .orderBy("userGroupId"),
+        url: recordId => "/qapps/Admin/Access/GroupDetail?userGroupId=" + encodeURIComponent(recordId)
+    }
+]
 function search(p) {
     const userScope = scope()
     if (!userScope.read || !String(p.text || "").trim()) return {rows: []}
@@ -376,6 +408,8 @@ function search(p) {
         )
     const found = new Map()
     for (const definition of searchFinds) {
+        const need = recordKinds[definition.kind].need
+        if (need && !userScope.capabilities[need]) continue
         let rowsFound = []
         try {
             rowsFound = Array.from(definition.query(userScope, condition).limit(limit).list())
@@ -407,9 +441,53 @@ function search(p) {
 }
 
 // ===== choices =====
+// The staff identities of the organizations the user administers whose name or username matches the term, for GroupMembers'
+// member search (P3): the parties working for those organizations (as get#PartyInternalOrgIds counts them), their accounts.
+function memberOptions(userScope, term, selected) {
+    if (!userScope.capabilities.accessView) return []
+    const partyIds = Array.from(
+        new Set(
+            Array.from(
+                find("mantle.party.PartyRelationship")
+                    .condition("toPartyId", "in", organizationIds(userScope))
+                    .condition("relationshipTypeEnumId", "in", memberRelationships)
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .selectField("fromPartyId")
+                    .list()
+            ).map(row => row.fromPartyId)
+        )
+    )
+    if (!partyIds.length) return []
+    let accounts = find("moqui.security.UserAccount").condition("partyId", "in", partyIds)
+    if (term) {
+        const factory = ec.entity.conditionFactory
+        accounts = accounts.condition(
+            factory.makeCondition(
+                ["username", "userFullName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                "or"
+            )
+        )
+    }
+    const options = Array.from(accounts.orderBy("userFullName").limit(choiceLimit).list()).map(row => ({
+        value: row.userId,
+        label: (row.userFullName || row.username) + (row.username ? " (" + row.username + ")" : "")
+    }))
+    if (selected && !options.some(option => option.value === selected)) {
+        try {
+            const record = recordOf(userScope, "member", selected)
+            options.push({value: selected, label: record.label})
+        } catch (error) {
+            // a selected user outside the scope is not named
+        }
+    }
+    return options
+}
+
 // Each Admin drop-down: its options for the user, the term and the selected value, with the selected value's label when it is
-// in scope but not on the page. Later phases add sources (groups, users, bundles).
+// in scope but not on the page. Later phases add sources.
 const choiceSources = {
+    // P3: the users an access administrator may add to a group
+    members: memberOptions,
     // the internal organizations the user administers (theirs, or every one for the administrator)
     organizations: (userScope, term, selected) => {
         const ids = organizationIds(userScope)
@@ -498,7 +576,25 @@ function appAccess() {
     return Object.fromEntries(Object.keys(appLocations).map(app => [app, appGrant(userScope.grants, app)]))
 }
 
-const operations = {sharedContext, checkRecord, search, choices, toolLinks, appAccess}
+// get#MemberScope (P3): which of a group's members the user may change, the users of the organizations they administer (every
+// one for the administrator), and how many are outside; a member outside the scope is counted, never named.
+function memberScope(p) {
+    const userScope = required()
+    if (!userScope.capabilities.accessView) denied("PERMISSION_DENIED", "ADMIN_ACCESS_VIEW is required")
+    const userIds = Array.from(new Set(Array.from(p.userIds || [])))
+    const inScope = []
+    for (const userId of userIds) {
+        try {
+            recordOf(userScope, "member", userId)
+            inScope.push(userId)
+        } catch (error) {
+            if (lib.reasonCode(error) !== "RECORD_UNAVAILABLE") throw error
+        }
+    }
+    return {inScopeUserIds: inScope, outsideCount: userIds.length - inScope.length}
+}
+
+const operations = {sharedContext, checkRecord, search, choices, toolLinks, appAccess, memberScope}
 ;({
     // the scope for a phase's own module: the user's scope, the same refusing a user without Admin, and a record's check
     scope,
