@@ -1095,4 +1095,89 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Customer Service's Privacy team holds the privacy administrators' group (impl-customer-service F80, owner contract): its
         member customerservice.admin is in BOSS_ADMIN_PRIVACY, which grants nothing until PrivacyServices (impl-admin §7) -->
     <moqui.security.UserGroupMember userGroupId="BOSS_ADMIN_PRIVACY" userId="BOSS_CS_ADMIN" fromDate="0"/>
+    <!-- Insights (impl-insights P1): a user per group of design-insights §1.1, each in BOSS_USERS, the root user group BOSS_INSIGHTS
+        and their capability group, an agent of Ziziwork Retail, none in ADMIN: insights.reader, .author, .steward, .distributor and
+        .flow; insights.admin is in BOSS_INSIGHTS_ADMIN alone. For design §13.3's two-organization and confidential-field scenarios:
+        insights.services reads for Ziziwork Services only, and insights.finance is a Retail reader with financial read
+        (BOSS_ACCOUNTING_READ: ACCOUNTING_VIEW, PRODUCT_COST_VIEW, CUSTOMER_CREDIT_VIEW), which insights.reader lacks. -->
+    <mantle.party.Party partyId="BOSS_INS_READER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_READER" firstName="Insights" lastName="Reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_READER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_READER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_READER" username="insights.reader"
+            userFullName="Insights Reader" partyId="BOSS_INS_READER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_READER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_READER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_AUTHOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_AUTHOR" firstName="Insights" lastName="Author"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_AUTHOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_AUTHOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_AUTHOR" username="insights.author"
+            userFullName="Insights Author" partyId="BOSS_INS_AUTHOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_AUTHOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_AUTHOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_AUTHOR" userId="BOSS_INS_AUTHOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_STEWARD" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_STEWARD" firstName="Insights" lastName="Dataset steward"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_STEWARD_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_STEWARD" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_STEWARD" username="insights.steward"
+            userFullName="Insights Dataset steward" partyId="BOSS_INS_STEWARD"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_STEWARD" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_STEWARD" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_DATA" userId="BOSS_INS_STEWARD" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_DISTRIBUTOR" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_DISTRIBUTOR" firstName="Insights" lastName="Distributor"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_DISTRIBUTOR_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_DISTRIBUTOR" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_DISTRIBUTOR" username="insights.distributor"
+            userFullName="Insights Distributor" partyId="BOSS_INS_DISTRIBUTOR"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_DISTRIBUTOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_DISTRIBUTOR" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_DISTRIBUTE" userId="BOSS_INS_DISTRIBUTOR" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_FLOW" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_FLOW" firstName="Insights" lastName="Flow editor"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_FLOW_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_FLOW" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_FLOW" username="insights.flow"
+            userFullName="Insights Flow editor" partyId="BOSS_INS_FLOW"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_FLOW" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_FLOW" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_FLOW" userId="BOSS_INS_FLOW" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_ADMIN" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_ADMIN" firstName="Insights" lastName="Administrator"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_ADMIN_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_ADMIN" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_ADMIN" username="insights.admin"
+            userFullName="Insights Administrator" partyId="BOSS_INS_ADMIN"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_ADMIN" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_ADMIN" userId="BOSS_INS_ADMIN" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_SERVICES" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_SERVICES" firstName="Insights" lastName="Services reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_SERVICES_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_SERVICES" toPartyId="ORG_ZIZI_SERVICES" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_SERVICES" username="insights.services"
+            userFullName="Insights Services reader" partyId="BOSS_INS_SERVICES"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_SERVICES" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_SERVICES" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_FINANCE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_FINANCE" firstName="Insights" lastName="Financial reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_FINANCE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_FINANCE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_FINANCE" username="insights.finance"
+            userFullName="Insights Financial reader" partyId="BOSS_INS_FINANCE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_FINANCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_FINANCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_ACCOUNTING_READ" userId="BOSS_INS_FINANCE" fromDate="0"/>
 </entity-facade-xml>
