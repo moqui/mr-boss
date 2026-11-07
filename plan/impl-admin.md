@@ -1,12 +1,13 @@
 # IronStone BOSS — Admin implementation
 
-Nov 7, 2026 — plan, before Admin starts. P0 partly done: F1–F30 found while writing it, from the code as Commerce,
-Customer Service and the framework's Constitution (mr-moqui 07a315d4) left it (§6). Admin and Insights are the next two
-apps built, after Commerce, in one build order (§1); Insights' phases are in [impl-insights.md](impl-insights.md). The
-parts of design-admin that wait on People, Maintenance, Sales and Marketing, which are not built, are left out of this
-build (§4, §7). The plan's open questions were answered the same day (§4: Organizations and the Constitution in
-Admin's first release, shared devices in a second Insights release, the budgets raised per phase, components adding to
-the framework's seal lists, the acceptance link shown for copy when mail cannot be sent, recipient caps of 50 and 200).
+Nov 7, 2026 — plan, before Admin starts. P0 partly done: F1–F33 found while writing and reviewing it, from the code as
+Commerce, Customer Service and the framework's Constitution (mr-moqui 07a315d4) left it (§6). Admin and Insights are the
+next two apps built, after Commerce, in one build order (§1); Insights' phases are in
+[impl-insights.md](impl-insights.md). The parts of design-admin that wait on People, Maintenance, Sales and Marketing,
+which are not built, are left out of this build (§4, §7). The plan's open questions were answered the same day (§4:
+Organizations and the Constitution in Admin's first release, shared devices in a second Insights release, the budgets
+raised per phase, components adding to the framework's seal lists, the acceptance link shown for copy when mail cannot
+be sent, recipient caps of 50 and 200).
 
 How [design-admin.md](design-admin.md) gets built, in phases from the foundation to devices, each ending tested and
 usable. This file is kept at a high level, as [impl-commerce.md](impl-commerce.md) and the other core-app plans are:
@@ -41,9 +42,9 @@ identity, invitation or lifecycle services (F3, F4, F11). Admin is built on what
   - [design-admin.md](design-admin.md)
   - [design-insights.md](design-insights.md): §7 (ownership transfer), §11 (DataReadiness over Admin's readiness and
     refresh contracts) and its first-release delivery, which Admin's lifecycle and Exports use
-  - [design-crosscut.md](design-crosscut.md) §1.3 (the automation register and Admin's rows), §1.4 (capability groups,
-    the Admin and Insights rows, CX-ACCESS), §1.5 (CX-ASSIST, CX-DEVICE, CX-OPS-REPORTS), §3.32 (maps), §5 (settings
-    ownership) and §7
+  - [design-crosscut.md](design-crosscut.md) §1.3's automation register (Admin's rows), §1.4 (capability groups, the
+    Admin and Insights rows), §1.5 (CX-ASSIST, CX-DEVICE, CX-OPS-REPORTS), §3.32 (maps), §5 (settings ownership), §7.1
+    (CX-ACCESS) and §7.10 (Admin's needs)
   - the built apps' designs for the rows Admin registers: [design-accounting.md](design-accounting.md) (setup readiness,
     StatementImport, open items, PaymentMethods and the gateway boundary), [design-products.md](design-products.md)
     (CatalogChecks, ProductImport), [design-commerce.md](design-commerce.md) (store readiness, channel recovery and
@@ -83,12 +84,15 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   - `mr-moqui` (`crates/`, `runtime/base-component`): the `org.moqui.admin` service families (identity guards and
     sessions, access, configuration and connections, operations, data transfer, backups, audit, devices), the
     InstancePreference, transfer and registry records, the session refresh check (F4), the `authz` elements by which a
-    component adds to the seal lists (F5, §4) and the device credential (CX-DEVICE);
+    component adds to the seal lists (F5, §4), the framework seals of `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE`
+    and `ADMIN_BACKUP_DOWNLOAD` (§4), the owner-change services of drives and shared mail accounts (F31) and the
+    device credential (CX-DEVICE);
   - `runtime/component/mr-mantle`: `mantle.party.IdentityServices` with `UserInvitation` and `UserLifecycleOperation`,
-    the staff invitation template, the organization services, and the gateway connection adapters;
+    the staff invitation template, the organization services, the owner-change services of calendars and contact
+    books (F31), and the gateway connection adapters;
   - `runtime/component/mr-boss`: the Admin app, AcceptInvitation, Shared/DataImport, `ironstone.admin`
-    (ContextServices, RegistryServices, LifecycleServices), the registrations of the built apps, Admin's `report/`
-    and `skill/` files.
+    (ContextServices, RegistryServices, LifecycleServices) and its registry entities (F32), the registrations of the
+    built apps, Admin's `report/` and `skill/` files.
 
   `runtime/component/mr-marble` is read only, for the baseline Gateway, Vendor and Party/EditParty forms that
   ss-inventory maps. mr-pass is not changed: the PASS Account privacy page is later (§7).
@@ -150,14 +154,14 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
   Each phase starts after the one above it, except these, which run side by side because neither uses the other's
   work: Admin P2 beside Insights P2; Admin P3 beside Insights P3; Admin P4 beside Insights P4; Admin P5 beside Insights
-  P5; and stage 3 (Admin P8–P14, in order) beside stage 2
-  (Insights P6–P10, in order), stage 4 starting when both have reached their gates. The dependencies that fix the rest:
-  Insights P1 uses Admin P1's deny-pattern split (F14); Insights P3 registers its index refresh and freshness provider
-  in Admin P2's registries; Insights P7 registers its schedule ownership as a lifecycle participant of Admin P6 and
-  reads Admin P8's instance ceiling, which until stage 3 is the cap's built-in default of 200 (§4); Insights P10's
-  DataReadiness reads Admin P2's readiness; Admin P16's Exports list reads Insights P7's occurrences; Insights P11 plays
-  playlists on Admin P18's device credential. A phase of a side-by-side pair that appends to the same file as the other
-  (BossSetupData.xml, BossUsersDemoData.xml, mr-boss MoquiConf.xml) rebases on it before merging.
+  P5; and stage 3 (Admin P8–P14, in order) beside stage 2 (Insights P6–P10, in order), stage 4 starting when both have
+  reached their gates. The dependencies that fix the rest: Insights P1 uses Admin P1's deny-pattern split (F14); Admin
+  P3 fills Insights' capability rows for the groups Insights P1 created; Insights P3 registers its index refresh and
+  freshness provider in Admin P2's registries; Insights P7 registers its schedule ownership as a lifecycle participant
+  of Admin P6 and reads Admin P8's instance ceiling, which until Admin P8 is the cap's built-in default of 200 (§4);
+  Insights P10's DataReadiness reads Admin P2's readiness; Admin P16's Exports list reads Insights P7's occurrences;
+  Insights P11 plays playlists on Admin P18's device credential. A phase of a side-by-side pair that appends to the same
+  file as the other (BossSetupData.xml, BossUsersDemoData.xml, mr-boss MoquiConf.xml) rebases on it before merging.
 
 ## 2. Ground rules
 
@@ -186,11 +190,11 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
     tool links) and LifecycleServices (the lifecycle coordinator's participants and transfers), and the screens.
 
   No same-named `ironstone` pass-through over a framework or Mantle service is built.
-- **Permissions, not group names.** Services check `ec.user.hasPermission` and scope, never a BOSS group name, a
-  calling screen or a supplied `appRoot`; a write permission is not a view permission. The framework seeds the `ADMIN_*`
-  permissions of design §1.1 that its services check, each granted to `ADMIN`, as it seeds `ADMIN_LOGIN_AS` and
-  `ADMIN_CONSTITUTION_GLOBAL` today; BossSetupData grants them to the groups of design §1.1 (§4). Mantle specs and
-  framework specs grant them to spec-local groups, never a `BOSS_*` group.
+- **Permissions, not group names.** Services check `ec.user.hasPermission` and scope, never a BOSS group name, a calling
+  screen or a supplied `appRoot`; a write permission is not a view permission. The framework seeds design §1.1's
+  `ADMIN_*` permissions, each granted to `ADMIN`, as it seeds `ADMIN_PASSWORD` and `ADMIN_CONSTITUTION_GLOBAL` today,
+  and seals `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD`; BossSetupData grants them to the
+  groups of design §1.1 (§4). Mantle specs and framework specs grant them to spec-local groups, never a `BOSS_*` group.
 - **Bounded delegation everywhere** (design §1.1). The sealed-permission and privileged-group EECAs hold for Admin
   screens, Tools, imports, SSO role mappings and direct entity calls alike; an access administrator grants only
   registered bundles (the capability registry, P3); `check#AdministrationPath` guards every grant, membership, factor,
@@ -207,9 +211,10 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 - **Records follow the shared rules** (impl-drawers-commons §4; §4 here):
   - memberships and grants are dated rows (UserGroupMember, UserGroupPermission and organization PartyRelationship
     rows), ended, never deleted;
-  - the audit log on the key fields of the security records the build changes (F23): UserAccount's state, login,
-    email, scheduled end, allowed IPs and password-change flag; UserGroupMember's and UserGroupPermission's dates;
-    ArtifactAuthz's type; UserGroup's factor and IP flags; and PaymentGatewayOrganization (already audit-logged);
+  - the audit log on the key fields of the security records the build changes (F23): UserAccount's `disabled`, login,
+    email and `terminateDate` (already audit-logged) and its allowed IPs and password-change flag; UserGroupMember's
+    and UserGroupPermission's dates; ArtifactAuthz's type; UserGroup's factor and IP flags; and
+    PaymentGatewayOrganization (already audit-logged);
   - records of their own where a fact has its own identity: a staff invitation (a single-use token), a lifecycle
     operation and its steps (an operation with independent outcomes), a transfer batch where a target has no owner
     batch, a device credential, an instance preference;
@@ -231,7 +236,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
   services. The framework regression suite, Mantle's PartyServices, Constitution, PassAuthority and Forum specs,
   mr-pass's suite and the earlier apps' BOSS regression suite pass unchanged.
 - **Done for a phase** means all of these:
-  - impl-projects §2 "Done":
+  - impl-drawers-commons §4 "Done" (as impl-projects §2 applies it):
     - cargo tests for the touched crates, with goldens reviewed;
     - the regression tests for the rules the phase adds passing: the framework's in
       `runtime/base-component/framework/test` (or the tools component's, for a Tools screen), Mantle's in mr-mantle,
@@ -252,20 +257,20 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F30); the checks below left |
+| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F33); the checks below left |
 | P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | — |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | — |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | — |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | — |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | — |
-| P6 Lifecycle and offboarding | Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
+| P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
 | P10 Sign-in policy and identity providers | mr-moqui, BOSS | SignInPolicy, IdentityProviders, IdentityProviderDetail | — |
 | P11 Connections and mail relays | mr-moqui, Mantle, BOSS | Connections, ConnectionDetail, MailRelays, MailRelayDetail | — |
 | P12 Protocols and the mail queue | mr-moqui, BOSS | ProtocolsHome, ServerConfiguration, MailQueue | — |
-| P13 System messages and recovery | mr-moqui, Mantle, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
+| P13 System messages and recovery | mr-moqui, BOSS | MessageTypes, MessageTypeDetail, SystemMessages, SystemMessageDetail | — |
 | P14 Jobs and topics | mr-moqui, BOSS | Jobs, JobDetail, JobRuns, JobRunDetail, Topics, TopicDetail | — |
 | P15 Imports | mr-moqui, Mantle, BOSS | Imports, DataImport, ImportDetail; Products' import mount | — |
 | P16 Exports and backups | mr-moqui, BOSS | Exports, DataExport, Backups | — |
@@ -276,8 +281,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 ### P0 — Checks
 
 Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
-changes the design, an edit there. F1–F30 were found on Nov 7 while writing this plan; the design edits they call for
-were made then. Still to check:
+changes the design, an edit there. F1–F30 were found on Nov 7 while writing this plan and F31–F33 in its review the
+same day; the design edits they call for were made then. Still to check:
 
 - **Admin › System for `ADMIN` only** (F2): which change keeps `SYSTEM_APP`'s own check on the mounted
   `System.xml` for every BOSS group, given that an inheritable `AUTHZT_ALWAYS` on the Admin root skips it
@@ -287,7 +292,7 @@ were made then. Still to check:
 - **The administration path:** what `check#AdministrationPath` counts as a usable path against the login rules
   (an enabled, unexpired, unlocked member of `ADMIN` or a `BOSS_*_ADMIN` group whose factor requirement and allowed IPs
   it can meet), and how it answers a cluster with a stale member.
-- **Ending a session:** what `end_user_visit`'s SESSION_END (session.rs:558-634) reaches: the notification socket,
+- **Ending a session:** what `end_user_visit`'s SESSION_END (session.rs:558-631) reaches: the notification socket,
   Comms' call and chat connections, a running job's or agent run's identity, and a cluster member's cache; what P4's
   revocation must add for each.
 - **Projects' work-item import:** whether it keeps a run record (Commons' does not, F13); and the domain exporters
@@ -297,9 +302,11 @@ were made then. Still to check:
   edited (Comms has no Settings area) and whether a mail-account readiness projection exists, for the §14.2 row.
 - **The shipped report sources:** that job-run telemetry (`otel_spans`, `moqui.job.runs`) and the `moqui.report.audit`
   and `moqui.monitor.audit` log targets carry what `admin-job-runs` and `admin-access-log` need.
-- **The Constitution's read entry:** how a BOSS user without the Admin launcher reaches Admin › Settings › Constitution
-  (a screen of its own outside the Admin root, or the Assist drawer's Rules pane linked instead), given that the root's
-  grant is what opens its subscreens.
+- **Admin › Settings without the Admin launcher:** how a BOSS user who is not in an Admin group reaches SettingsHome
+  (P2: a warehouse manager opening Warehouse's settings from the index) and Settings › Constitution (P7: a member
+  reading its organization's document), given that the root's grant is what opens its subscreens: screens of their
+  own outside the Admin root, a narrow grant on those two, or the Assist drawer's Rules pane linked for the
+  Constitution.
 
 ### P1 — Foundation
 
@@ -315,15 +322,16 @@ permissions and seals), ADM-SHELL.
     F80, owner contract).
   - The permissions: the framework seeds `ADMIN_OVERVIEW_VIEW`, `ADMIN_IDENTITY_VIEW`, `_MANAGE`, `_GLOBAL`,
     `ADMIN_ACCESS_VIEW`, `_MANAGE`, `ADMIN_SETTINGS_VIEW`, `_MANAGE`, `ADMIN_CONNECTION_VIEW`, `_MANAGE`,
-    `ADMIN_OPERATION_VIEW`, `_MANAGE`, `ADMIN_TRANSFER_VIEW`, `_RUN`, `ADMIN_AUDIT_VIEW`, `ADMIN_BACKUP_VIEW` and
-    `_RUN`, each granted to `ADMIN` (§4); BossSetupData grants them by design §1.1's table. The privacy and retention
-    permissions and `ADMIN_BACKUP_DOWNLOAD` come with their later screens (§7).
-  - The seals (design §1.1, F5, §4). The framework first: `user-facade` `authz` gains child elements
-    `sealed-permission` and `privileged-group` (each with a `name`) in `moqui-conf-3.xsd`; the conf merge adds each
-    component's elements to the list, never replacing it; `security_checks.rs` reads the attribute lists (the
-    framework's defaults, as today) joined with every element. Then mr-boss MoquiConf adds `ADMIN_IDENTITY_GLOBAL` and
-    `ADMIN_ACCESS_MANAGE` as sealed permissions (`ADMIN_BACKUP_DOWNLOAD` with its screen, §7) and `BOSS_ADMIN_ACCESS`,
-    `BOSS_ADMIN_BACKUP` and `BOSS_ADMIN_ADMIN` as privileged groups, repeating none of the framework's.
+    `ADMIN_OPERATION_VIEW`, `_MANAGE`, `ADMIN_TRANSFER_VIEW`, `_RUN`, `ADMIN_AUDIT_VIEW`, `ADMIN_BACKUP_VIEW`, `_RUN`
+    and `_DOWNLOAD`, each granted to `ADMIN` (§4); BossSetupData grants them by design §1.1's table.
+    `ADMIN_BACKUP_DOWNLOAD` is seeded and sealed now, for design §15.3's escalation rule, though no screen uses it
+    until the archive download (§7); the privacy and retention permissions come with their later screens (§7).
+  - The seals (design §1.1, F5, §4). The framework: `user-facade` `authz` gains child elements `sealed-permission` and
+    `privileged-group` (each with a `name`) in `moqui-conf-3.xsd`; the conf merge adds each component's elements to
+    the list, never replacing it; `security_checks.rs` reads the attribute lists (the framework's defaults, as today)
+    joined with every element; and MoquiDefaultConf's `sealed-permissions` gains `ADMIN_IDENTITY_GLOBAL`,
+    `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD`, beside `ADMIN_CONSTITUTION_GLOBAL`. Then mr-boss MoquiConf adds
+    `BOSS_ADMIN_ACCESS`, `BOSS_ADMIN_BACKUP` and `BOSS_ADMIN_ADMIN` as `privileged-group` elements, and no seals.
   - The ordinary groups' authz on the root with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT`, the
     `ironstone\.admin\..*` service pattern on the artifact group, and `admin` and `insights` added to the client deny
     pattern, its rows that pass 255 characters split (F14; Insights P1 then needs no deny-pattern change).
@@ -341,13 +349,15 @@ permissions and seals), ADM-SHELL.
   `MonitorServices.get#SourceStatus` and `list#Incidents` with links into Monitor under its own grants; AgentsHome over
   `AgentAdminServices.get#EffectiveConfig` and `get#DashboardTotals`, the agent screens of ADM-AGENTS shown as
   unavailable until the framework builds them (§7), the Constitution link from P7; DeveloperHome over
-  `RegistryServices.find#ToolLinks`, each Tools route checked with its own permission.
+  `RegistryServices.find#ToolLinks` (P1 starts `ironstone.admin.RegistryServices` with it; P2 adds the rest), each
+  Tools route checked with its own permission.
 - **Home** (design §3): its frame with the Attention, SetupChecks and HealthCards forms showing "Not configured" until
   P2, and Monitor / Manage / Configure shortcuts for the areas built.
 - **Demo data.** BossUsersDemoData gains a user per group (`admin.reader`, `.identity`, `.access`, `.configure`,
   `.integrations`, `.operations`, `.data`, `.audit`, `.privacy`, `.backup`, `.admin`, none in `ADMIN`); an identity
-  operator delegated for ORG_ZIZI_RETAIL only; and a shared identity who works for ORG_ZIZI_RETAIL and
-  ORG_ZIZI_SERVICES, for design §15.3's delegated-administration scenario.
+  operator delegated for ORG_ZIZI_RETAIL only; a shared identity who works for ORG_ZIZI_RETAIL and
+  ORG_ZIZI_SERVICES, for design §15.3's delegated-administration scenario; and a delegated access administrator
+  holding `ADMIN_ACCESS_MANAGE` through a custom group, not in `BOSS_ADMIN_ACCESS`, for its escalation scenario.
 - **Specs.**
   - `test/Admin/AdminSpecLib.js` (ids, users, `shell`, `page`).
   - `AdminAccess`: the app's one access spec, about seven features with authorization on: each group's permissions,
@@ -356,12 +366,13 @@ permissions and seals), ADM-SHELL.
     a direct entity call), Home's one qvt render, and the refused raw security mutators. A later phase adds a case only
     for an access rule it adds.
   - Framework: the conf tests for the new elements (a component's element adds to the lists and keeps every default;
-    two components' elements both apply; a component that still sets the attribute replaces the defaults as before)
-    and a seal check on an element-added permission.
+    two components' elements both apply; a component that still sets the attribute replaces the defaults as before),
+    a privileged-group check on an element-added group, and the three new framework seals.
 - **Usable when** (an acceptance test to write, `acceptance/Admin/AdminFoundationWalk`): the menu renders for each
-  group; `admin.access`, holding `ADMIN_ACCESS_MANAGE` but not in `BOSS_ADMIN_ACCESS`, cannot add anyone to it through
-  Tools or a direct entity call; `admin.reader` opens Home but not System; a Projects client and a PASS public account
-  are refused the root and every `ironstone.admin` service.
+  group; the delegated access administrator, holding `ADMIN_ACCESS_MANAGE` but not in `BOSS_ADMIN_ACCESS`, cannot add
+  anyone to it through Tools or a direct entity call, and no one without `ADMIN_BACKUP_DOWNLOAD` can grant it;
+  `admin.reader` opens Home but not System; a Projects client and a PASS public account are refused the root and every
+  `ironstone.admin` service.
 
 ### P2 — Registries, Health and the settings index
 
@@ -381,14 +392,16 @@ ADM-OPERATIONS (its readiness part), ADM-SETTINGS (the index), ADM-SHELL.
   backup job and its mirror, the report template's server, the `ReportAlert` topic, administrators without a factor,
   failing or late job runs, stale cluster heartbeats, telemetry loss), as functions of RegistryServices reading the
   framework's own records and services; on a fresh instance the backup job is paused and its remote has no `sendUrl`,
-  so those two show as warnings (F9).
+  so the backup check warns of both (F9).
 - **The built apps' providers** (owner contracts, F16): Accounting's `mantle.ledger.SetupServices.get#Readiness`,
   Products' `CatalogCheckServices.validate#Catalog`, Commerce's `StoreAdminServices.check#StoreReadiness` (impl-commerce
-  §7) and the Constitution's source diagnostics (`ConstitutionServices.get#Constitution`).
+  §7) and the Constitution's source diagnostics (the framework's `ConstitutionServices.get#Constitution` for the global
+  document, Mantle's `get#OrganizationConstitution` for each organization's).
 - **The settings index** (§14.2): seed rows to the built paths (F21) for Customer Service, Commerce, Products,
-  Purchasing, Warehouse, Manufacturing, Accounting, Projects, Comms (P0), Voice (BasicComms System/Voice, `VoiceAdmin`)
-  and Admin; Insights adds its own in Insights P10. CX-MAPS's entry waits for the framework's Maps configuration screen,
-  which is not built (F22).
+  Purchasing, Warehouse, Manufacturing, Accounting, Projects, Comms (P0) and Voice (BasicComms System/Voice,
+  `VoiceAdmin`); Admin's entries are added by the phases that build their destinations (P7, P8, P11, P14), and Insights
+  adds its own in Insights P10. CX-MAPS's entry waits for the framework's Maps configuration screen, which is not built
+  (F22).
 - **Screens:** Home (Attention, SetupChecks, HealthCards over `get#Overview` and `get#Readiness`); Health
   (ReadinessFind, Readiness with refresh and request refresh); SettingsHome (SettingsFind, SettingsIndex in Company /
   Applications / Instance groups).
@@ -398,8 +411,8 @@ ADM-OPERATIONS (its readiness part), ADM-SETTINGS (the index), ADM-SHELL.
   Home's one qvt render).
 - **Usable when:** on the demo instance Home names the SMTP and backup warnings with their fix links; a finance reader
   with no Admin group sees Accounting's readiness only through Accounting; a Commerce store's readiness findings appear
-  on Health for `admin.reader`, who opens no store; SettingsHome opens Warehouse's settings for a warehouse manager
-  without the Admin launcher's other areas.
+  on Health for `admin.reader`, who opens no store; SettingsHome, reached as P0 settles, opens Warehouse's settings for
+  a warehouse manager without the Admin launcher's other areas.
 
 ### P3 — Groups and grants
 
@@ -414,8 +427,8 @@ Design §5 Groups and GroupDetail; ADM-ACCESS (AccessServices, the administratio
   (later) provider, factor and lifecycle change (P0's definition).
 - **The capability registry** (§4): a framework seed record, filled by BossSetupData from crosscut §1.4's rows for the
   built apps (app, group, permissions, view / edit / export / sensitive, delegable by), which `apply#Grants` and
-  `store#Membership` take as the registered bundles; Insights adds its rows in Insights P1. The Capabilities matrix is
-  P9.
+  `store#Membership` take as the registered bundles; Insights' rows are among them, its groups created in Insights P1.
+  The Capabilities matrix is P9.
 - **Screens:** Groups (GroupFind, GroupList with the privileged and sealed markers read from the effective lists,
   CreateGroup); GroupDetail (GroupProfile, GroupMembers, GroupCapabilities with its effective-change preview,
   GroupPreferences); GroupDetail's Assist prompt.
@@ -434,10 +447,12 @@ identity and session parts).
 
 - **Mantle `mantle.party.IdentityServices`** (design §17.2): `find#Users` (the users with a current relationship to an
   organization the caller administers; public identities only under explicit account authority, labelled as site
-  relationships), `get#Account`, `get#AccountHistory` (UserLoginHistory, Visit and audit rows), `create#StaffAccount`
-  (over `PartyServices.create#PartyUserAccount`, with the grant proposal BOSS supplies, F11) and
-  `reset#Authentication` (scope, and `ADMIN_IDENTITY_GLOBAL` for an account-wide change of a shared identity; over
-  `reset#Password` and `invalidate#UserAuthcFactorEntry`).
+  relationships), `get#Account`, `get#AccountHistory` (UserLoginHistory, Visit and audit rows),
+  `store#OrganizationMembership` (dated PartyRelationship rows to an internal organization, the `RepVendor`
+  representative among them; here rather than P7 because a staff account and an accepted invitation each write one),
+  `create#StaffAccount` (over `PartyServices.create#PartyUserAccount`, with its organization membership and the grant
+  proposal BOSS supplies, F11) and `reset#Authentication` (scope, and `ADMIN_IDENTITY_GLOBAL` for an account-wide
+  change of a shared identity; over `reset#Password` and `invalidate#UserAuthcFactorEntry`).
 - **Framework `org.moqui.admin.IdentityServices`**: `find#Sessions` and `revoke#Sessions` over HttpSession and Visit,
   self-scoped or for a target under identity authority, ending the sessions everywhere P0 found they reach;
   `revoke#AccountAccess`, which revokes another user's sessions, login keys, access tokens, app passwords, device keys
@@ -455,9 +470,10 @@ identity and session parts).
   user sign in?" prompt and the root's "Log as note" response action.
 - **Specs:** Mantle `test/party/StaffIdentity` (an ORG_ZIZI_RETAIL operator finds its users and not a user of
   ORG_ZIZI_SERVICES only; the shared identity's account-wide change refused without `ADMIN_IDENTITY_GLOBAL`; a reset
-  sends `reset#Password` and sets no password); framework `AdminSessions` (a revoked session refused on its next
-  request; a disabled account's live session ended; self scope); BOSS `AdminUsers` (UserDetail's one qvt render);
-  the golden walk `AdminUsersWalk` (find a user, end a membership, revoke a session).
+  sends `reset#Password` and sets no password; a membership dated and ended, never deleted); framework `AdminSessions`
+  (a revoked session refused on its next request; a disabled account's live session ended; self scope); BOSS
+  `AdminUsers` (UserDetail's one qvt render); the golden walk `AdminUsersWalk` (find a user, end a membership, revoke a
+  session).
 - **Usable when** (design §15.3 "Delegated administration", its account half): the ORG_ZIZI_RETAIL operator resets the
   shared identity's factor only for its own relationship, is refused disabling it globally, and cannot open an
   ORG_ZIZI_SERVICES-only user; a revoked session's next request goes to the login screen; Commons Account signs out the
@@ -472,7 +488,8 @@ Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invita
   `revoke#Invitation`, `check#InvitationToken` (the token route's service: `valid` and `routeContext`, F7),
   `get#InvitationSummary` and `accept#Invitation` (an explicit match of a verified address, or controlled account
   creation through `create#UserAccount`; the inviter's delegation, the target's scope and the current grants rechecked;
-  never ADMIN, a sealed right or a new organization from the invitation).
+  the organization membership written through P4's `store#OrganizationMembership`, then the grants; never ADMIN, a
+  sealed right or a new organization from the invitation).
 - **The invitation email:** an EmailTemplate of `EMT_ACCOUNT_INVITE` seeded in mr-mantle (F8) with its template
   screen, linking `/i/<token>`.
 - **When the instance cannot send mail** (no SMTP host, Admin's first setup check; §4): InviteStaff's and a resend's
@@ -510,6 +527,11 @@ participant; ADM-LIFECYCLE (lifecycle).
   `transfer#OwnedResource`: Commons' shared drives, contact books and calendars, Comms' shared mail accounts and
   Projects' assignments, each through its owner's service; Insights registers `pause#OwnedSchedules` and
   `transfer#DefinitionOwner` in Insights P7. A failed step leaves the revocation in place and stays visible for retry.
+- **The owners' services** (owner contracts, F31): Projects' assignments move through the built
+  `TaskServices.reassign#Task`, `WorkItemServices.bulk#WorkItems` and `RequestServices.reassign#Request`. Nothing
+  changes the owner of a drive (framework `FileServices`), a shared mail account (framework `EmailClientServices`), a
+  calendar (Mantle `CalendarServices`) or a contact book's owning user (Mantle `ContactBookServices`); P6 adds an
+  owner change to each, with its own permission and the new owner's eligibility checked by the owner.
 - **Bulk disable** from Users runs one operation per identity, each checked on its own.
 - **Screens:** UserDetail's Lifecycle tab (LifecycleActions, the account's operations); LifecycleOperations
   (LifecycleFind, LifecycleList); LifecycleDetail (LifecycleSummary, LifecycleSteps, TransferOwnership).
@@ -523,14 +545,14 @@ participant; ADM-LIFECYCLE (lifecycle).
 
 ### P7 — Organizations and the Constitution
 
-Design §7 Organizations, OrganizationDetail and Constitution, and the maps note; ADM-SETTINGS, ADM-CONSTITUTION. In
-Admin's first release (§4); ends stage 1.
+Design §7 Organizations, OrganizationDetail and Constitution (its maps note waits for the framework Maps screen, F22,
+§7); ADM-SETTINGS, ADM-CONSTITUTION. In Admin's first release (§4); ends stage 1.
 
-- **IdentityServices** `find#InternalOrganizations` (OrgInternal parties only), `store#OrganizationParent` and
-  `store#OrganizationMembership` (dated PartyRelationship rows, the `RepVendor` representative among them), over
-  `PartyServices.create#Organization`, `ensure#PartyRole`, `update#PartyDetail`, ContactServices and the party-setting
-  services; creating an organization initializes no accounting, membership or secret (Accounting's setup action is a
-  SetupLink).
+- **IdentityServices** `find#InternalOrganizations` (OrgInternal parties only) and `store#OrganizationParent` (a dated
+  PartyRelationship between OrgInternal parties), over `PartyServices.create#Organization`, `ensure#PartyRole`,
+  `update#PartyDetail`, ContactServices and the party-setting services; memberships through P4's
+  `store#OrganizationMembership`; creating an organization initializes no accounting, membership or secret
+  (Accounting's setup action is a SetupLink).
 - **The Constitution screen** (design §7, F20): Admin › Settings › Constitution over the built
   `mantle.party.ConstitutionServices` and the framework's `ConstitutionServices` (`edit#ConstitutionDocument`,
   `validate#Constitution`, `preview#ConstitutionPrompt`) and `tools/template/ConstitutionParts.xml`, with the scope
@@ -541,7 +563,7 @@ Admin's first release (§4); ends stage 1.
 - **Screens:** Organizations (OrganizationFind, OrganizationList, CreateOrganization); OrganizationDetail
   (OrganizationProfile, OrganizationContacts, OrganizationMembers, OrganizationDefaults with registered setting types
   only, SetupLinks from `get#Readiness`); Constitution.
-- **Specs:** Mantle `test/party/InternalOrganizations` (a parent only between OrgInternal parties; dated membership);
+- **Specs:** Mantle `test/party/InternalOrganizations` (a parent only between OrgInternal parties, dated);
   BOSS `AdminConstitution` (an ORG_ZIZI_RETAIL member reads its document without Admin; its delegate edits it and is
   refused ORG_ZIZI_SERVICES' and the global document; a stale hash refused; the one qvt render).
 - **Usable when** (design §15.3 "Constitution reading, customization and reset"): ORG_ZIZI_RETAIL's delegate customizes
@@ -563,7 +585,7 @@ Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
   MessageTranslations, EntityTranslations) for the configuration administrator without `ADMIN`; ReferenceData (the
   settings index's reference kinds, as owner links).
 - **Specs:** framework `AdminConfiguration` (an unregistered key refused; a value outside its allowed set refused; a
-  secret-classified key never returned); BOSS `AdminSettings`.
+  secret-classified key never returned); BOSS `AdminSettings` (InstanceSettings' one qvt render).
 - **Usable when:** `admin.configure` sets the instance display name and time zone and sees which values come from
   configuration and need a restart; translates a message with its placeholder kept; ReferenceData sends a unit change
   to Products.
@@ -622,10 +644,11 @@ Design §8.1, Connections, ConnectionDetail, §9 MailRelays and MailRelayDetail;
 - **Screens:** Connections (ConnectionFind, ConnectionList, NewConnection); ConnectionDetail (NativeConnection,
   OrganizationAvailability for payment gateways, ConnectionChecks, Consumers); MailRelays (RelayList, NewRelay);
   MailRelayDetail (RelayConfiguration, RelayTest, RelayConsumers).
-- **Specs:** framework `AdminConnections` (an endpoint change without the secret clears it and disables the connection;
-  a test against the new endpoint enables it; an account-owned server refused by `store#` and `test#Connection`);
-  Mantle `test/account/GatewayConnections` (the gateway adapters' validation; PaymentGatewayOrganization's dated
-  change); BOSS `AdminConnections`.
+- **Specs:** framework `AdminConnectionServices` (an endpoint change without the secret clears it and disables the
+  connection; a test against the new endpoint enables it; an account-owned server refused by `store#` and
+  `test#Connection`); Mantle `test/account/GatewayConnections` (the gateway adapters' validation;
+  PaymentGatewayOrganization's dated change); BOSS `AdminRelays` (MailRelays lists SYSTEM only; ConnectionDetail's one
+  qvt render).
 - **Usable when** (design §15.3 "Relay scope", "Endpoint change" and "Settings ownership", its gateway half): MailRelays
   lists SYSTEM and not Comms' account servers; changing the demo payment gateway's endpoint without its key leaves it
   disabled with no request sent; enabling it for ORG_ZIZI_SERVICES makes it a choice in that store's checkout settings
@@ -644,7 +667,8 @@ Design §9 ProtocolsHome, MailQueue and ServerConfiguration; ADM-PROTOCOLS.
 - **Screens:** ProtocolsHome (ProtocolReadiness, with links to Comms' accounts and templates and BasicComms' System ›
   Voice); ServerConfiguration (EffectiveProtocolSettings, ProtocolChecks); MailQueue (MailQueueFind, MailQueueList).
 - **Specs:** framework `AdminProtocols` (a disabled listener and an unbuilt feature differ; an allowlist mismatch is not
-  trusted); BOSS.
+  trusted); BOSS `AdminMailQueue` (a failed send listed with its owner link and no body; ProtocolsHome's one qvt
+  render).
 - **Usable when** (design §15.3 "Protocol readiness"): ProtocolsHome on the demo shows SMTP reception disabled, DAV
   ready and RTC absent apart; a failed mail send shows in MailQueue with its owner link and no body.
 
@@ -664,10 +688,11 @@ ADM-OPERATIONS.
 - **Screens:** MessageTypes, MessageTypeDetail (MessageContract, MessageContractUse), SystemMessages (MessageFind,
   MessageList with bulk recovery), SystemMessageDetail (MessageEvidence, MessageAttempts, MessageRecovery).
 - **Specs:** framework `AdminRecovery` (an ineligible message refused; an uncertain outcome offered reconciliation, not
-  retry; a failed item does not stop the batch); BOSS.
+  retry; a failed item does not stop the batch); BOSS `AdminSystemMessages` (SystemMessageDetail's one qvt render).
 - **Usable when** (design §15.3 "Unknown provider outcome", "Independent failure"): `admin.operations` retries a failed
-  Commerce channel message through Commerce's action, keeping its identity, and a batch of three with one ineligible
-  names it and retries the others.
+  Commerce channel message through Commerce's action, keeping its identity; a message whose provider outcome is
+  unknown is offered reconciliation, not retry; and a batch of three with one ineligible names it and retries the
+  others.
 
 ### P14 — Jobs and topics
 
@@ -682,7 +707,7 @@ Design §10 Jobs, JobDetail, JobRuns, JobRunDetail, Topics and TopicDetail; ADM-
   JobRuns (RunFind, RunList), JobRunDetail (RunEvidence, RunItems), Topics (TopicList), TopicDetail (TopicDefaults,
   TopicSubscriptions).
 - **Specs:** framework `AdminJobs` (an arbitrary service refused; a lock not deleted to idle a job; a wrapper with
-  failed items not shown as success); BOSS.
+  failed items not shown as success); BOSS `AdminJobRuns` (JobRunDetail's one qvt render).
 - **Usable when** (design §15.3 "Monitor reuse"): `admin.operations` pauses and resumes a job with its next run shown in
   the job's zone, opens a run's trace in Monitor only with Monitor's grant, and copies the job-run alert template to an
   owner so it fires.
@@ -760,12 +785,17 @@ second release (§4).
 - **The framework device credential** (CX-DEVICE): revocable, tied to one browser, limited to one registered route
   group (an artifact group), with an idle timeout; it identifies no person. `org.moqui.admin.DeviceServices`
   `register#Device` (the registration code shown once, stored hashed), `find#Devices` and `revoke#Device` (its sessions
-  ended at once); the route-group registration a framework seed record.
+  ended at once), checking `ADMIN_ACCESS_VIEW` and `ADMIN_ACCESS_MANAGE` (design §2 makes the registrar the access
+  administrator; no device permission is designed, §4); the route-group registration a framework seed record.
 - **What a device reads as:** a device identifies no person, but the dashboards it plays are read as someone. The
   registration names a display account (a UserAccount with no password or sign-in of its own, in groups the registrar
-  may grant under P3's delegation rules), under which the device's requests run, only within its route group. This is
-  the plan's proposal for CX-DEVICE, which names no principal; the phase checks it against the credential's design
-  before building, and the answer is written into design-admin §6 and crosscut CX-DEVICE.
+  may grant under P3's delegation rules), under which the device's requests run, only within its route group. The
+  display account has a Person party with a member relationship to each organization it shows, written through P4's
+  `store#OrganizationMembership`; without one `setup#UserOrganizationInfo` gives it no organization, and
+  `MANTLE_USER_ORG` and Insights' row filter show it nothing (F33). This is the plan's proposal for CX-DEVICE, which
+  names no principal (design-admin §19 holds the question); the phase checks it against the credential's design before
+  building, and the answer is written into design-admin §6 and crosscut CX-DEVICE, which already name the Playlists
+  route group.
 - **The route groups registered now:** Insights' Playlists, for its wall displays (Insights P11). Manufacturing's
   ShopFloor waits for its shared-station operator switch, which identifies each action's person by badge and PIN
   (impl-manufacturing §7); People's, Maintenance's and Marketing's kiosks for those apps (§7).
@@ -799,17 +829,22 @@ the owner's design.
 | Nov 7, 2026 | Two plans, one order: this file holds the order of both; a phase lives in the plan of the app whose screens it builds; framework and Mantle work goes in the phase that first needs it | The plan's choice, as impl-commerce and impl-shop |
 | Nov 7, 2026 | The order of §1, with Organizations and the Constitution (P7) in Admin's first release, stage 1: Admin's first release with Insights' browsing release; Insights' first release beside Admin's configuration and operations; Admin's data and audit | The user's call (answer 1), over the plan's draft, which had P7 in stage 3. Design §17.3 changed: A1 gains Organizations, OrganizationDetail and Constitution |
 | Nov 7, 2026 | Shared devices (P18) are built in a second Insights release, stage 5, with Insights' wall displays on them (Insights P11); the route groups registered are Insights' Playlists only, ShopFloor's waiting for Manufacturing's operator switch | The user's call (answer 2). A device runs as a display account its registrar names (P18's proposal, checked against CX-DEVICE there). Design §17.3 changed |
-| Nov 7, 2026 | The regression budgets are raised per phase by its measured share, with the user's agreement each time, as Purchasing's, Customer Service's and Commerce's were; each spec stays well under a second | The user's call (answer 3). The framework's is 12 s server and 6 s client, the tools component's 3 s (F30); Admin adds about twelve framework specs, five Mantle and fifteen BOSS, Insights about six framework and eleven BOSS |
-| Nov 7, 2026 | The framework lets a component add to the seal lists: `user-facade` `authz` gains `sealed-permission` and `privileged-group` child elements that every component's conf adds to, the attributes keeping the framework's defaults; mr-boss adds its three seals and three groups as elements (P1) | The user's call (answer 4), so a framework seal added later is never dropped by a component's repeated list (F5); design §1.1 changed |
+| Nov 7, 2026 | The regression budgets are raised per phase by its measured share, with the user's agreement each time, as Purchasing's, Customer Service's and Commerce's were; each spec stays well under a second | The user's call (answer 3). The framework's is 12 s server and 6 s client, the tools component's 3 s (F30); Admin adds about twelve framework specs, five Mantle and seventeen BOSS, Insights about six framework, one Mantle and eleven BOSS |
+| Nov 7, 2026 | The framework lets a component add to the seal lists: `user-facade` `authz` gains `sealed-permission` and `privileged-group` child elements that every component's conf adds to, the attributes keeping the framework's defaults; mr-boss adds its three privileged groups as elements (P1), the three Admin seals being the framework's (the row below) | The user's call (answer 4), so a framework seal added later is never dropped by a component's repeated list (F5); design §1.1 changed |
+| Nov 7, 2026 | The framework seals `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD` in MoquiDefaultConf, as it seals `ADMIN_CONSTITUTION_GLOBAL`; all three are seeded and sealed in P1, `ADMIN_BACKUP_DOWNLOAD` before its download screen (§7), so design §15.3's escalation rule holds from P1 | The user's call (the plan review): the framework seeds and checks them, and a framework-only instance keeps them sealed; design §1.1, §10.1, §15.3, §17.1, §18 and crosscut §1.4 changed |
 | Nov 7, 2026 | When the instance cannot send mail, InviteStaff and a resend show the acceptance link once, as plain text with a copy control rather than a link; showing it is audited, and the token is never stored in plain text, listed or shown again (P5) | The user's call (answer 5); design §4 Invitations changed |
 | Nov 7, 2026 | The group recipient cap is 50 per business schedule or alert rule by default (Insights Settings), under an instance ceiling of 200 (Admin's InstancePreference, P8; 200 until it exists) | The user's call (impl-insights answer 1, design-insights §17 Q5) |
-| Nov 7, 2026 | The framework seeds the `ADMIN_*` permissions its services check, each granted to `ADMIN`, beside `ADMIN_LOGIN_AS`, `ADMIN_PASSWORD` and `ADMIN_CONSTITUTION_GLOBAL`; BossSetupData grants them to the groups of design §1.1 | The plan's choice: framework `org.moqui.admin` services check them, and the framework may not depend on BOSS data |
-| Nov 7, 2026 | The §14 registries are seed records in the layer that reads them: BOSS `ironstone.admin` ReadinessProvider, RefreshOperation, SettingsEntry and LifecycleParticipant; framework records for the capability registry, connection adapters, recovery descriptors, transfer targets and device route groups. Each owner seeds its own rows; a row naming a missing service or permission is logged by name when read and left out | The plan's choice under design §14's "trusted component definitions, validated at load" |
+| Nov 7, 2026 | The framework seeds design §1.1's `ADMIN_*` permissions, each granted to `ADMIN`, beside `ADMIN_PASSWORD` and `ADMIN_CONSTITUTION_GLOBAL` (`ADMIN_LOGIN_AS` is `ADMIN_ADV`'s); BossSetupData grants them to the groups of design §1.1 | The plan's choice: framework `org.moqui.admin` services check most of them, the family is the framework's, and the framework may not depend on BOSS data; design §1.1 changed |
+| Nov 7, 2026 | The §14 registries are seed records in the layer that reads them: BOSS `ironstone.admin` ReadinessProvider, RefreshOperation, SettingsEntry and LifecycleParticipant; framework records for the capability registry, connection adapters, recovery descriptors, transfer targets and device route groups. Each owner seeds its own rows; a row naming a missing service or permission is logged by name when read and left out. The BOSS records are mr-boss's first entities, in an entity file Admin P2 creates and Insights P4 extends | The plan's choice under design §14's "trusted component definitions, validated at load"; F32 (Practices-App-Dev allows BOSS entities as rare) |
 | Nov 7, 2026 | A grant proposal (invitation, staff account, SSO role map) is a list of registered bundles BOSS supplies; Mantle validates each through the capability registry and names no BOSS group; BOSS always includes `BOSS_USERS` for an internal user | F11; design §4.1's "The BOSS users group" |
-| Nov 7, 2026 | Admin's lifecycle coordinator is built in P6 for Admin's own operations (disable, organization removal, restoration), with LifecycleOperations and LifecycleDetail moved from A2 into it | The plan's choice: design §17.3 put the coordinator in A1 and its screens in A2; without People's entry the screens are the coordinator's only view beyond UserDetail |
+| Nov 7, 2026 | Admin's lifecycle coordinator is built in P6 for Admin's own operations (disable, organization removal, restoration), with LifecycleOperations and LifecycleDetail moved from A2 into it | The plan's choice: design §17.3 put the coordinator in A1 and its screens in A2; without People's entry the screens are the coordinator's only view beyond UserDetail. Design §17.3 changed |
 | Nov 7, 2026 | Shared/DataImport replaces Shared/ProductImport: one definition, Products' route kept as its mount | Design §11.1 (review Z2); F12 |
-| Nov 7, 2026 | Owner-wizard targets without a run record (Commons' contacts, Projects' work items) are registered with a link and no runs | F13; a run record is their owners' later work (§7) |
+| Nov 7, 2026 | Owner-wizard targets without a run record (Commons' contacts, Projects' work items) are registered with a link and no runs | F13; a run record is their owners' later work (§7); design §11.1 changed |
 | Nov 7, 2026 | `BOSS_ADMIN_PRIVACY` is created in P1 with no permissions, so Customer Service's Privacy team can hold it; PrivacyServices and its permissions stay later | Design §1.1 and §17.3; impl-customer-service F80 |
+| Nov 7, 2026 | Admin P3 fills Insights' capability rows, beside the other built apps', for the groups Insights P1 creates | The plan's choice (the plan review): the registry is Admin P3's and BossSetupData fills it from crosscut §1.4; Insights P1 runs before it |
+| Nov 7, 2026 | `store#OrganizationMembership` is built in P4 rather than P7 | The plan's choice (the plan review): `create#StaffAccount` (P4) and `accept#Invitation` (P5) each write a membership |
+| Nov 7, 2026 | DeviceServices checks `ADMIN_ACCESS_VIEW` and `ADMIN_ACCESS_MANAGE`; no device permission is added | The plan's choice (the plan review): design §2 makes the access administrator the registrar, and §1.1 names no device permission |
+| Nov 7, 2026 | P6 adds an owner change to the framework's drives and shared mail accounts and to Mantle's calendars and contact books, each the owner's service | F31: the lifecycle participants need them, and only Projects' reassign services exist |
 
 ## 5. Open questions
 
@@ -820,24 +855,25 @@ the owner's design.
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan.
+is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, and F31–F33 in its review the same
+day.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
 | F1 | P0: `screen/Admin/` has six flat placeholders (Home; Users; Organizations; Integrations; Data; Settings), the root mounts only Chatter and RecordFiles and has no `<shell-providers>`. Its comment says the grant is commented out; in fact `BOSS_ADMIN` (BossSetupData.xml:254-261) gives `ADMIN` and `BOSS_ADMIN_ADMIN` `AUTHZT_ALWAYS` on the root. There is no root user group or other Admin group | P1 |
-| F2 | P0: Tools System is guarded only by `SYSTEM_APP` (ToolsSecurityData.xml:32-37: `System.xml`, inheritable, `AUTHZT_ALWAYS` for `ADMIN`); an inheritable `AUTHZT_ALWAYS` on a parent skips the child's check (authz.rs:450-456), so mounted under the Admin root it would open to `BOSS_ADMIN_ADMIN` | P1 keeps the mount `ADMIN`-only (P0 settles how); design §13 changed |
+| F2 | P0: Tools System is guarded only by `SYSTEM_APP` (ToolsSecurityData.xml:32-36: `System.xml`, inheritable, `AUTHZT_ALWAYS` for `ADMIN`); an inheritable `AUTHZT_ALWAYS` on a parent skips the child's check (authz.rs:450-456), so mounted under the Admin root it would open to `BOSS_ADMIN_ADMIN` | P1 keeps the mount `ADMIN`-only (P0 settles how); design §13 changed |
 | F3 | P0: UserServices' key, token, app-password, device-key and SSH-key services (Rust, user_keys.rs:89) act only on the caller; nothing revokes another user's credentials or all of a user's access at once | P4's `revoke#AccountAccess` (framework); design §4 UserDetail's AccessCredentials row changed |
-| F4 | P0: no service lists or ends another user's sessions; `end#UserVisit` (UserServices.xml:29, session.rs:558) ends only the caller's other visits; the per-request session refresh (session.rs:~1572-1618) checks only `hasLoggedOut`, so `disable#UserAccount` leaves live web sessions working | P4: `find#`/`revoke#Sessions` and the refresh checking `disabled` and `terminateDate` |
-| F5 | P0: a component's `user-facade` `authz` replaces the framework's attribute (conf.rs:316, node/mod.rs:493-505); the framework lists (MoquiDefaultConf.xml:834-835) now also seal `COMPONENT_DEPLOY`, `DATABASE_ADMIN`, `DATABASE_EXTERNAL` and `ADMIN_CONSTITUTION_GLOBAL`, which design §1.1 does not list; `ADMIN_CONSTITUTION_GLOBAL` is already the framework's | §4: components add to the lists by elements (P1); design §1.1 changed (mr-boss adds three seals, not four) |
+| F4 | P0: no service lists or ends another user's sessions; `end#UserVisit` (UserServices.xml:29, session.rs:558-631) ends only the caller's other visits; the per-request session refresh (session.rs:1571-1619) checks only `hasLoggedOut`, so `disable#UserAccount` leaves live web sessions working | P4: `find#`/`revoke#Sessions` and the refresh checking `disabled` and `terminateDate` |
+| F5 | P0: a component's `user-facade` `authz` replaces the framework's attribute (conf.rs:316, node/mod.rs:493-505); the framework lists (MoquiDefaultConf.xml:834-835) now also seal `COMPONENT_DEPLOY`, `DATABASE_ADMIN`, `DATABASE_EXTERNAL` and `ADMIN_CONSTITUTION_GLOBAL`, which design §1.1 does not list; `ADMIN_CONSTITUTION_GLOBAL` is already the framework's | §4: components add to the lists by elements (P1); the framework seals `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD` beside its own, and mr-boss adds only its three privileged groups; design §1.1 changed |
 | F6 | P0: login honors `terminateDate` (login.rs:1351, from the password and login-key paths), `ipAllowed` (:1286) and `requireAuthcFactor` (factor.rs:63); notifications check `terminateDate` (notify/message.rs:491) | P6 writes a future end date as designed; P4 adds the session-refresh check (F4) |
 | F7 | P0: there is no `i` token route; `i` is not a reserved name (token_route.rs:107-110); the token service gets `token` and `routeName` and returns `valid` and `routeContext` (:186-205); a token is 8-128 characters of `[A-Za-z0-9_-]` (:156); mr-boss has `s`, `u`, `cal` and `r` | P5 |
 | F8 | P0: Enumeration `EMT_ACCOUNT_INVITE` is seeded (BasicEntities.xml:679), with no EmailTemplate | P5 seeds it in mr-mantle |
-| F9 | P0: `backup_EmbeddedDatabase_daily` is seeded paused and its `EmbeddedDbBackup` remote has no `sendUrl` (MoquiSetupData.xml:73-78) | P2's checks show them as warnings on a fresh instance |
+| F9 | P0: `backup_EmbeddedDatabase_daily` is seeded paused and its `EmbeddedDbBackup` remote has no `sendUrl` (MoquiSetupData.xml:73-89) | P2's backup check warns of both on a fresh instance |
 | F10 | P0: `PaymentGatewayOrganization` (AccountingControlEntities.xml:217; organization, gateway, dates, enabled, audit-logged) has no production writer: it is read by SetupServices, PaymentServices, StoreAdminServices, ShopCheckout.js and Portal.js and written only by BOSS demo code and Mantle tests | P11's `store#PaymentGatewayOrganization` |
 | F11 | P0: there is no `mantle.party.IdentityServices`, `UserInvitation` or `UserLifecycleOperation`; `PartyServices.create#PartyUserAccount` (:797) takes one `userGroupId` (and `groupTypeEnumIdList`); Mantle cannot name `BOSS_USERS` | P4–P6; §4's grant proposal |
 | F12 | P0: Shared/ProductImport (560 lines, mounted only by Products/ProductImport) is catalog-specific throughout (its always-actions require `CatalogServices.get#SharedContext`; `ImportServices` and `get#CatalogOptions`; its labels); Mantle's `ProductCatalogImportKind` is already a kind registry (permission, validator, store, columns, key fields) and ProductCatalogOperation and its items the run records | P15 takes Shared/DataImport's context and steps from the target registration; Products' kinds stay its own |
 | F13 | P0: Commons' contact import keeps per-user drafts in `dbresource://ironstone/ContactImport/{userId}/{importId}/` and no run record (Contacts/Import.xml); Projects' work-item import is P0's to check | §4: registered with a link and no runs; a run record later (§7) |
-| F14 | P0: adding `admin` and `insights` to the client deny pattern (BOSS_PROJECTS_INTERNAL's ten AT_SERVICE rows, BossSetupData.xml:437-455) takes rows 441 (253 characters) and 443 (243) past 255; ProjectsAccess.spec.js:625-668 fails on any `ironstone.admin` or `ironstone.insights` write verb the pattern does not deny | P1 splits the two rows and adds both packages |
+| F14 | P0: adding `admin` and `insights` to the client deny pattern (BOSS_PROJECTS_INTERNAL's ten AT_SERVICE rows, BossSetupData.xml:437-456) takes rows 441 (253 characters) and 443 (243) past 255; ProjectsAccess.spec.js:625-667 fails on any `ironstone.admin` or `ironstone.insights` write verb the pattern does not deny | P1 splits the two rows and adds both packages |
 | F15 | P0: UserLoginHistory (SecurityEntities.xml:469) has no device field; a new-device check joins Visit's `initialUserAgent` and `clientIpAddress` | P10 |
 | F16 | P0: design §10 and §14.2 name Accounting's provider `check#Readiness`; built are `SetupServices.get#Readiness` (finance readers: findings and setupStatus) and `check#Readiness` (the activation rows, for setup); Products' checks are `CatalogCheckServices.validate#Catalog` with `get#CatalogChecks` for its options | P2 registers `get#Readiness` and `validate#Catalog`; design §10 and §14.2 changed |
 | F17 | P0: Commons Account lists "Where you are signed in" from Visit rows (Account.xml:178-207, 406-414) with no sign-out | P4 (owner contract) |
@@ -846,7 +882,7 @@ is written there too. F1–F30 were found on Nov 7, 2026, while writing this pla
 | F20 | P0: the Constitution's runtime, `org.moqui.admin.ConstitutionServices`, Mantle's `get#`/`store#`/`reset#OrganizationConstitution` (`ORG_CONSTITUTION_EDIT`) and System › Constitution with `ConstitutionParts.xml` were built Nov 7; an organization's JSON is in the resource its PartyContent's `contentLocation` names, not `description` as design §7's storage paragraph says | P7 builds only the Admin screen; design §7 changed |
 | F21 | P0: the built Settings areas match design §14.2's paths, each with its own landing (Customer Service's and Purchasing's `SettingsHome`, Products', Warehouse's and Projects' `Index`, Accounting's `Settings`), apart from Manufacturing's `ProductionSettings`, which the row does not list, and Comms, which has no Settings area (P0) | P2 seeds each area's landing; design §14.2's Manufacturing row changed |
 | F22 | P0: no Tools Maps configuration screen exists (the framework Maps plan is not built) | CX-MAPS's settings entry waits for it (§7) |
-| F23 | P0: UserGroupMember, UserGroupPermission and ArtifactAuthz have no `enable-audit-log` field (SecurityEntities.xml) | P3 adds the audit log on their key fields, P4 on UserAccount's |
+| F23 | P0: UserGroupMember, UserGroupPermission and ArtifactAuthz have no `enable-audit-log` field (SecurityEntities.xml); UserAccount already audits `username`, `userFullName`, `disabled`, `terminateDate` and `emailAddress`, and UserGroup nothing | P3 adds the audit log on their key fields and UserGroup's flags, P4 on UserAccount's `ipAllowed` and `requirePasswordChange` |
 | F24 | P0: ADMIN_LOGIN_AS is used by Tools' UserAccountDetail, the one login-as path | P4 reuses it |
 | F25 | P0: NotificationTopic has the delivery fields design §10 names; `ReportAlert` is seeded private in Updates (ReportSetupData.xml:5) | P14 as designed |
 | F26 | P0: Monitor's `get#SourceStatus` and `list#Incidents` exist (MonitorServices.xml:3, :50); ClusterMember has `heartbeat` (ServerEntities.xml:100) | P1, P2 as designed |
@@ -854,6 +890,9 @@ is written there too. F1–F30 were found on Nov 7, 2026, while writing this pla
 | F28 | P0: Customer Service's Privacy queue is restricted to its team because `BOSS_ADMIN_PRIVACY` did not exist (impl-customer-service F80); its privacy provider waits for PrivacyServices (F211) | P1 creates the group (§4); the provider stays later (§7) |
 | F29 | P0: no People, Sales, Marketing or Maintenance service the design names exists (`hire#Employee`, `apply#EmploymentChange`, `get#SalesReadiness`, `check#MaintenanceReadiness`, the import previews); their screens are placeholders | §4, §7 |
 | F30 | P0: the regression budgets are the framework's 12 s server and 6 s client, the tools component's 3 s, mr-boss's 264 s and 57 s, mr-mantle's 393 s | §4: raised per phase |
+| F31 | P0 (review): no service changes the owner of a drive (`FileServices.update#Drive` has no owner; only `add#`/`remove#DriveMember`), a shared mail account (`EmailClientServices.update#EmailAccount`), a calendar (`mantle.work.CalendarServices.update#Calendar`) or a contact book's owning user (`ContactBookServices.update#ContactBook` takes only `ownerPartyId`); Projects' assignments move through `TaskServices.reassign#Task`, `WorkItemServices.bulk#WorkItems` and `RequestServices.reassign#Request` | P6 adds an owner change to each owner (§4) |
+| F32 | P0 (review): mr-boss defines no entities and has no `entity/` directory; Practices-App-Dev.md:36 says BOSS entities are rare, the data model being Mantle's | §4: the BOSS registries are its first entity file (Admin P2) |
+| F33 | P0 (review): organization scope needs a party: `setup#UserOrganizationInfo` returns early with no `partyId` (PartyServices.xml:533-534), and `get#PartyInternalOrgIds` (:563-603) counts only PrtAgent, PrtEmployee and PrtMember relationships to OrgInternal parties, which `MANTLE_USER_ORG` uses | P18's display account has a party and a membership |
 
 ## 7. Later
 
@@ -863,7 +902,8 @@ Designed, not in this build:
   WebhookDetail and EventSubscription over DataDocument real-time feeds; MailDomains, MailDomainDetail and
   `check#AddressClaim` for Comms; Retention and holds; PrivacyRequests, PrivacyRequestDetail, PrivacyLookup and the PASS
   Account privacy page, with the privacy providers of Customer Service (its F211), Commerce and Shop, Forum, Commons
-  and Comms, and `BOSS_ADMIN_PRIVACY`'s permissions; the backup archive download with `ADMIN_BACKUP_DOWNLOAD`.
+  and Comms, and `BOSS_ADMIN_PRIVACY`'s permissions; the backup archive download, under the `ADMIN_BACKUP_DOWNLOAD`
+  P1 seals.
 - **What waits on People** (§4): `LifecycleServices.request#Provisioning` and `request#AccessEnd`, the tx-commit SECA on
   `hire#Employee` and `apply#EmploymentChange`, the IT checklist task's operation link; UserDetail's Employee360 link;
   the employee and time-and-attendance import targets; the payroll exchange export; People's settings row, readiness

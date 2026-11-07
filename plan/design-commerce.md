@@ -192,9 +192,10 @@ except where a needs row says otherwise.
 - **Shipped reports (CX-OPS-REPORTS).** mr-boss ships Commerce `report/*.json` definitions: a store
   operations dataset (orders, carts, recovery sends, promotion use, channel messages and feed
   builds by store and day), one Store operations dashboard, and alert templates for checkout
-  failures, long-unresolved payment attempts, feed build failures and intake error spikes
-  (R-COM-L03). Recovery delivery, feed builds, channel import and renewal dispatch declare
-  `operation` and `operation-ref` (R-LV-W07). The Reports area (§3) registers them with Insights.
+  failures, long-unresolved payment attempts and feed build failures, with intake error spikes later
+  (it needs a search document over SystemMessage; impl-commerce F159) (R-COM-L03). Recovery delivery, feed builds,
+  channel import and renewal dispatch declare `operation` and `operation-ref` (R-LV-W07). The Reports area (§3)
+  registers them with Insights.
 - **Meetings.** Video help from an order is later, through Customer Service and an Event with a
   CallLink (L7); Commerce adds no guest-link need.
 - **Devices.** POS terminals are later (§16).
