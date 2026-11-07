@@ -346,6 +346,11 @@ P1 review, AGENTS.md, the testing skill and Practices-App-Dev, with the engine's
   - the root user group alone (no capability group) reaches the reading operations from an Insights screen by the root's
     ALLOW; the engine's dataset checks still hold, and Home shows such a user nothing.
 
+- **Wave 2 suites (Nov 7, on master after P1 merged; the Admin P2 and Insights P2 workers ran at the same time):**
+  `mail_capture_sends=true ./moq test-apps` 3,324 server features and 17 client features passed, none failed; feature
+  time mr-mantle 344.5 of 393 s, mr-boss 197.3 of 264 s server and 49.4 of 57 s client, mr-pass 14.3 of 20 s. No budget
+  raised.
+
 ### P2 — Dashboards and Explore in Insights
 
 Design §4 Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail and Playlists, §5 Explore; INS-04 (a
