@@ -1032,7 +1032,7 @@ identity and session parts).
 - Tests run (Debug, `--nobuild`, unless noted): AdminSessions, AdminAccessServices, RecentAuth, SipDevice 21 of 21; StaffIdentity,
   PartyServices, PartyAccounts 18 of 18; AdminGroups, AdminRegistries, AdminUsers, AdminAccess, AdminClientFixtures, InsightsAccess 22 of
   22; CommonsSettings 9 of 9; AdminUsersWalk 1 of 1; ProjectsAccess and AppOrganizationFilters 15 of 15 on the main checkout's release
-  binary with this runtime (F37); cargo moqui-core `user::`, `service::jobs`, `script::runtime::ec_extra` and moqui-host `notws` (below);
+  binary with this runtime (F37); cargo moqui-core `user::`, `service::jobs`, `script::runtime::ec_extra` 113 of 113 and moqui-host `notws` 3 of 3, clippy moqui-core and moqui-host (lib) clean, rustfmt on the touched Rust;
   `moqui lint --screens` 132 flagged sites, as before. Prettier clean on the changed JavaScript. Not run: `./moq test-apps`,
   `./moq test-framework`, the acceptance suite.
 - Inventories: ss-inventory EditParty CreateUserAccount (Users), UpdateUserAccount, AddGroupForm, GroupsForm (UserDetail).
