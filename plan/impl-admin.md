@@ -1266,6 +1266,59 @@ Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invita
   - BossSetupData, BossUsersDemoData and MantleSetupData unchanged;
   - the acceptance AdminInvitationsUsable to run when asked.
 
+**Review Nov 7 (P5).**
+- Checked: tokens (43 characters, 256 bits, kept only as `singleUseCodeHash` under a unique index; never in a log line, a
+  list, `find#Invitations`, an audit row or an EmailMessage: `createEmailMessage` false, mail only with an SMTP host); single
+  use, a resend's new hash, expiry, revoke; `reveal#InvitationLink` (its issuer only, once by `linkShownDate`, within fifteen
+  minutes of the issue, the token made at that call, audited without it); F-P5-3 (every well-formed token reaches only the
+  "no longer valid" page: a 256-bit token cannot be guessed, each transition's service checks it again, posts under `/i/*/*`
+  are rate limited); acceptance (a signed-in account must have the invited address and, for a chosen person, be theirs;
+  `ACCOUNT_EXISTS` otherwise; nothing of the request names organization or access; no privileged or sealed group, whoever
+  sent it, rechecked at acceptance); F-P5-2's copy of the delegation rule against `Access.js` `proposalBundles`
+  (registered and enabled, the delegable permission held with ADMIN holding all, and stricter than F57 and F63: no sealed or
+  privileged group at all); the EECAs (they run as the invitee, or anonymous for a new account, so a privileged or sealed
+  membership fails closed; they cannot wrongly pass for the invitee except for one who already holds the right, and the
+  invitation's own refusal covers that); the UserInvitation filters and `find#Invitations`' scope; AcceptInvitation's steps,
+  the one spent message and the qvt forms under `/i/<token>`.
+- Fixes:
+  - **R1 (high, F-P5-8)** An identity operator could pull a site identity or another organization's staff into its scope by
+    inviting the address (no check unless a partyId was chosen, and none for a site identity), the owner's acceptance then
+    giving account-wide memberships. Now `invite#User` and `resend#Invitation` refuse (`IDENTITY_GLOBAL`) an invited person
+    (the one chosen, or the owner of the address's account) with an account and no internal organization, or working for an
+    organization outside the caller's scope, unless the caller holds `ADMIN_IDENTITY_GLOBAL` (P4 R2, F78's decision), and
+    `accept#Invitation` rechecks it for the inviter from the records against the redeeming account's person. A chosen person
+    whose address belongs to another person's account is refused (`ADDRESS_IN_USE`) instead of making a dead invitation.
+    mr-mantle 31d3519f.
+  - **R2 (medium, F-P5-9)** The factor step showed the new account's authenticator key to any holder of the link for a day
+    after acceptance (a forwarded or later-read email). The factor step and `confirm#InvitationFactor` now answer only the
+    session that accepted (`UserInvitation.acceptVisitId`; the acceptance post carries the session cookie the route's
+    no-store page set) or the account signed in; another holder sees the done step. mr-mantle 31d3519f.
+  - **R3 (low)** `accept#Invitation`, `confirm#InvitationFactor` and `reveal#InvitationLink` read the invitation for update,
+    so two concurrent requests on one invitation cannot both pass the single-use or show-once check. AcceptInvitation is
+    `history="false"`, keeping the token's path off the stored screen history. mr-mantle 31d3519f, mr-boss (the review
+    commit).
+  - Docs: design-admin §4.1 Invitations and §4 AcceptInvitation, `skill/invite-staff.md`, IdentityServices descriptions.
+- Tests (release binary, `--nobuild`): StaffInvitation (a feature added: the rule at invitation and acceptance; the factor
+  feature checks the key is withheld from another holder), StaffIdentity, PartyServices 23 of 23 (mr-mantle 1.6 s);
+  AdminInvitations, AdminUsers, AdminAccess, AdminGroups, ProjectsAccess 21 of 21; `moqui test mr-boss --skills` 17 of 17;
+  `moqui lint --screens` 132 flagged sites, as before. Acceptance `AdminInvitationsUsable` changed (the site account is
+  invited by the instance administrator after the identity operator is refused; the factor key read as the account) and run,
+  3 of 3; the rest of mr-boss's acceptance suite not run (other agents on the machine). Specs stay lean (each feature under
+  0.2 s).
+- For the lead:
+  - the scope rework (adm/p4fix): Invitations.js calls `identityLib.scope()` in `scopedInvitation` (resend, revoke, reveal),
+    `inviteUser` (twice), `findInvitations` and now `resendInvitation`; each is the inviter's call from a screen or the spec's
+    `as()`, all with authorization on, none with it disabled. Acceptance never calls `scope()`: it reads the inviter's
+    organizations through `get#PartyInternalOrgIds` from the records (no active-organization narrowing), which the rework
+    should align with its own definition if that changes;
+  - Invitations.js's `holds()` reads the inviter's permissions from current memberships (ADMIN holding all), without the
+    factor or allowed-IP conditions a live session's `hasPermission` applies, as there is no inviter session at acceptance;
+    a `check#GrantProposal` taking an actor (F-P5-2) would remove it;
+  - framework (with F-P5-4): the sign-in step's `returnTo` carries `/i/<token>`, and Login saves it as the screen last info,
+    a stored session attribute (F-P5-5), until it is used; redacting or not persisting a token route's path is the framework's;
+  - `reveal#InvitationLink` runs on Invitations' render (a GET): a reload or a client prefetch spends the showing, and a
+    resend gives a new link; acceptable, as the link is never shown twice.
+
 ### P6 — Lifecycle and offboarding
 
 Design §4.1 Offboarding, UserDetail's LifecycleActions, LifecycleOperations and LifecycleDetail, §14 lifecycle

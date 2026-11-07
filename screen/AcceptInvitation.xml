@@ -25,9 +25,11 @@ along with this software (see the LICENSE.md file). If not, see
     the request says) to a Mantle service that checks it again; nothing of the request names the organization or the access.
     Links and the forms' actions are plain URLs under tokenRoute.basePath, as the public shell keeps them on the page: the forms
     are written as qvt markup (m-form with that action), since a form-single's transition URL is built from the screen tree's
-    root, here the route's screen, so it would post to /createAccount (impl-admin F-P5-1). -->
+    root, here the route's screen, so it would post to /createAccount (impl-admin F-P5-1). history="false" keeps the page,
+    whose path carries the token, off the session's screen history (session attributes are stored, F-P5-5). The Factor step
+    shows the authenticator key only to the session that accepted or the account signed in (review Nov 7 (P5)). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        require-authentication="false" default-menu-include="false" default-menu-title="Accept invitation">
+        require-authentication="false" default-menu-include="false" default-menu-title="Accept invitation" history="false">
     <parameter name="stage"/>
 
     <transition name="acceptExisting">

@@ -18,7 +18,8 @@ administer. Never write a password or an invitation link into chat, a view or a 
    users is always included.
 2. Check the address is not already invited: `screen go=/qapps/Admin/Users/Invitations?text=<address>`. A pending one:
    offer Resend on its row instead (the earlier link stops working). An accepted one: the person has access; changes are
-   on their UserDetail.
+   on their UserDetail. An address of another organization's staff or of a customer's site account needs
+   identity-global authority (`ADMIN_IDENTITY_GLOBAL`); without it the invitation is refused with that reason.
 3. `screen go=/qapps/Admin/Users/InviteStaff`, `set` Email, First name, Last name, Organization and Access (only the
    bundles offered there; privileged and sealed access is never offered), and an optional note.
 4. Do not press Send invitation. Tell the administrator the form is filled and that they check the access and send it.

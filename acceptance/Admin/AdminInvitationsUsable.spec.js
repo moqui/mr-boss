@@ -3,8 +3,9 @@
 // member with a Purchasing bundle from InviteStaff and copies the link Invitations shows once; a resend makes the first link
 // read "This invitation is no longer valid"; the second link's account step creates the account, which then opens Commons with
 // IronStone BOSS users and the Purchasing group; a bundle whose group requires a factor stops the acceptance at the factor step;
-// and a site account holding an invited address gets no internal access without the invitation's token, and with it is
-// linked, not duplicated. The rules are Mantle's StaffInvitation and BOSS's AdminInvitations.
+// a site account's address is the identity operator's to invite only with ADMIN_IDENTITY_GLOBAL (review Nov 7 (P5)), and,
+// invited by the instance administrator, it gets no internal access without the invitation's token, and with it is linked,
+// not duplicated. The rules are Mantle's StaffInvitation and BOSS's AdminInvitations.
 // Run: ./moq accept mr-boss --spec AdminInvitationsUsable
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, page} = lib
@@ -22,15 +23,18 @@ let siteUserId
 
 const invitationOf = emailAddress =>
     system(() => ec.entity.find("mantle.party.UserInvitation").condition("emailAddress", emailAddress).one())
-// InviteStaff's transition as the operator, then Invitations with the link shown once: the token of the link
-function inviteAndCopy(emailAddress, bundleGroupIdList, names = {}) {
-    return asUser(users.identity, () => {
+// InviteStaff's transition as the operator (or another inviter), then Invitations with the link shown once: the token of
+// the link
+function inviteAndCopy(emailAddress, bundleGroupIdList, names = {}, inviter = users.identity) {
+    return asUser(inviter, () => {
         page(
             "Users/InviteStaff/inviteStaff",
             Object.assign({emailAddress, organizationPartyId: ids.organizationId, bundleGroupIdList}, names),
             "html"
         )
-        const shown = page("Users/Invitations", {revealInvitationId: invitationOf(emailAddress).invitationId})
+        const invitation = invitationOf(emailAddress)
+        if (!invitation) return null
+        const shown = page("Users/Invitations", {revealInvitationId: invitation.invitationId})
         return (shown.output.match(/\/i\/([A-Za-z0-9_-]{43})/) || [])[1]
     })
 }
@@ -170,6 +174,8 @@ feature("a bundle whose group requires a factor stops the acceptance at the fact
             newPassword: password,
             newPasswordVerify: password
         })
+        // the key is the accepting session's or the account's: here the account, signed in (its factor not yet confirmed)
+        ec.user.internalLoginUser("usable.factor." + run)
         const factor = route(token)
         login("john.doe")
         return {invitation, factor}
@@ -182,10 +188,13 @@ feature("a bundle whose group requires a factor stops the acceptance at the fact
 })
 
 feature(
-    "a site account holding an invited address gets no internal access without the token, and with it is linked, not duplicated",
+    "a site account's address needs ADMIN_IDENTITY_GLOBAL to invite; it gets no internal access without the token, and with it is linked",
     {
         when() {
-            const token = inviteAndCopy(addresses.site, "BOSS_PURCHASING")
+            // the identity operator, without ADMIN_IDENTITY_GLOBAL, is refused; the instance administrator invites it
+            const refused = inviteAndCopy(addresses.site, "BOSS_PURCHASING")
+            const notInvited = invitationOf(addresses.site) == null
+            const token = inviteAndCopy(addresses.site, "BOSS_PURCHASING", {}, users.system)
             login("usable.site." + run, password)
             ec.artifactExecution.enableAuthz()
             const without = (() => {
@@ -200,9 +209,10 @@ feature(
             const groupsBefore = groupsOf(siteUserId)
             const withToken = route(token, "acceptExisting")
             login("john.doe")
-            return {without, groupsBefore, withToken}
+            return {refused, notInvited, without, groupsBefore, withToken}
         },
-        then({without, groupsBefore, withToken}) {
+        then({refused, notInvited, without, groupsBefore, withToken}) {
+            refused == null && notInvited
             without.applied == false && without.reasonCode == "INVITATION_SPENT"
             !groupsBefore.includes("BOSS_USERS")
             withToken.errors.length == 0
