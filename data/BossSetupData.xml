@@ -3456,7 +3456,7 @@ along with this software (see the LICENSE.md file). If not, see
             description="Orders, items, gross, discounts, net sales, net invoiced and average order by store, period and currency; top products."
             purpose="Sales" basis="Placed date by period" routePath="Commerce/Reports/OnlineSales"
             sourceReference="ironstone.commerce.ReportingServices.get#OnlineSales"
-            metricIds="Sales.Orders,Accounting.InvoicedRevenue"
+            metricIds="Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
             catalogueService="ironstone.commerce.ReportingServices.get#ReportCatalogue" catalogueKey="Commerce.OnlineSales"
             exportFormats="CSV" sequenceNum="70"/>
     <ironstone.insights.ReportCatalogEntry entryId="Commerce.CartRecovery" version="1" ownerApp="Commerce" title="Cart recovery"
@@ -3569,7 +3569,7 @@ along with this software (see the LICENSE.md file). If not, see
             basis="Placed, shipped and invoiced dates" routePath="Accounting/Reports/SalesAnalysis"
             parameterContract="organizationPartyId,timePeriodId"
             sourceReference="mantle.sales.SalesReportServices.run#SalesAnalysis"
-            metricIds="Sales.Orders,Accounting.InvoicedRevenue"
+            metricIds="Sales.Orders,Sales.OrderValue,Accounting.InvoicedRevenue"
             catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="SalesAnalysis" sequenceNum="250"/>
     <!-- Warehouse (owner contract, design-warehouse §14): stock at date, operations history and count variance, by their routes -->
     <ironstone.insights.ReportCatalogEntry entryId="Warehouse.StockAtDate" version="1" ownerApp="Warehouse"
@@ -3711,17 +3711,31 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Sales (owner contract, impl-insights §4): orders over Mantle's SalesReportServices and the admitted sales datasets; Commerce
         reads it cut by productStoreIds, never redefined per store (design §6.2) -->
     <ironstone.insights.MetricRegistration metricId="Sales.Orders" version="1" ownerApp="Sales" title="Orders"
-            description="Placed sales orders, their count and value, in each order's own currency."
+            description="Placed sales orders, each counted once, whatever its currency."
             serviceName="mantle.sales.SalesReportServices.get#SalesOrderSummary" datasetIds="mantle-sales-orders,mantle-sales-items"
             catalogEntryId="Sales.SalesAnalysis" grain="Order part" recordKey="orderId, orderPartSeqId" dateBasis="Placed date"
             statusBasis="Placed orders: approved, processing, shipped and completed; not open (draft) or proposed (quote)"
-            aggregation="count" numerator="Orders counted once each; value the sum of the parts' totals" unitPolicy="currency"
-            additiveDimensions="store, channel, customer, product, period (within one currency)" nonAdditiveDimensions="currency"
+            aggregation="count" numerator="Orders counted once each" unitPolicy="count"
+            additiveDimensions="store, channel, customer, product, currency, period" nonAdditiveDimensions=""
             allowedDimensions="store, channel, customer, customer class, product, currency, period"
             supportedFilters="organizationPartyId, productStoreIds, currencyUomIds, customerClassificationIds, productIds"
             exclusions="Recurring base orders (orderPurposeEnumId OrpRecurringTemplate) are templates, never orders; their renewals count when placed. Open and proposed orders are not counted."
             drillContract="The orders of the selected bucket from the sales datasets" scopePolicy="The viewer's organizations (MantleOrganization)"
             freshness="The sales search index (MantleSales feed)" sequenceNum="10"/>
+    <!-- the value of the same orders, money in each order's own currency (review Nov 7: a count and a value are two measures, so a
+        count's target takes no currency and a value's names one) -->
+    <ironstone.insights.MetricRegistration metricId="Sales.OrderValue" version="1" ownerApp="Sales" title="Order value"
+            description="The value of placed sales orders, the sum of their parts' totals, in each order's own currency."
+            serviceName="mantle.sales.SalesReportServices.get#SalesOrderSummary" datasetIds="mantle-sales-orders,mantle-sales-items"
+            catalogEntryId="Sales.SalesAnalysis" grain="Order part" recordKey="orderId, orderPartSeqId" dateBasis="Placed date"
+            statusBasis="Placed orders: approved, processing, shipped and completed; not open (draft) or proposed (quote)"
+            aggregation="sum" numerator="The sum of the parts' totals" unitPolicy="currency"
+            additiveDimensions="store, channel, customer, product, period (within one currency)" nonAdditiveDimensions="currency"
+            allowedDimensions="store, channel, customer, customer class, product, currency, period"
+            supportedFilters="organizationPartyId, productStoreIds, currencyUomIds, customerClassificationIds, productIds"
+            exclusions="Recurring base orders (orderPurposeEnumId OrpRecurringTemplate) are templates, never orders; their renewals count when placed. Open and proposed orders are not counted."
+            drillContract="The orders of the selected bucket from the sales datasets" scopePolicy="The viewer's organizations (MantleOrganization)"
+            freshness="The sales search index (MantleSales feed)" sequenceNum="15"/>
     <!-- Accounting (owner contract, design-accounting §13): invoiced revenue -->
     <ironstone.insights.MetricRegistration metricId="Accounting.InvoicedRevenue" version="1" ownerApp="Accounting"
             title="Invoiced revenue" description="Finalized sales invoice amounts by invoice date, net of credit memos, in native currency."

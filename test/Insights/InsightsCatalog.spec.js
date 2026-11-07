@@ -177,6 +177,7 @@ feature("get#Metric answers basis, grain and denominator, by id and by the panel
     when() {
         return asUser(users.reader, () => ({
             orders: invoke(G + "get#Metric", {metricId: "Sales.Orders"}),
+            orderValue: invoke(G + "get#Metric", {metricId: "Sales.OrderValue"}),
             sla: invoke(G + "get#Metric", {metricId: "CustomerService.ServiceLevelCompliance"}),
             stock: invoke(G + "get#Metric", {metricId: "Warehouse.StockAtDate"}),
             // Commerce's shipped Store operations dashboard: its orders panel names Sales' orders measure
@@ -185,13 +186,15 @@ feature("get#Metric answers basis, grain and denominator, by id and by the panel
             unknown: refusal(G + "get#Metric", {metricId: "Sales.Pipeline"})
         }))
     },
-    then({orders, sla, stock, byPanel, unmeasured, unknown}) {
+    then({orders, orderValue, sla, stock, byPanel, unmeasured, unknown}) {
         orders.metric.ownerApp == "Sales"
         orders.metric.grain == "Order part"
         orders.metric.basis.startsWith("Placed date")
-        orders.metric.unitPolicy == "currency"
-        orders.rules.some(rule => rule.startsWith("Native currencies are kept apart"))
+        // a count and a value are two measures: the count takes no currency, the value keeps currencies apart
+        orders.metric.unitPolicy == "count"
         orders.rules.some(rule => rule.startsWith("Recurring base orders are templates"))
+        orderValue.metric.unitPolicy == "currency"
+        orderValue.rules.some(rule => rule.startsWith("Native currencies are kept apart"))
         sla.metric.aggregation == "ratio"
         sla.metric.denominator == "Clocks decided (met or missed) and open past due"
         sla.rules.some(rule => rule.startsWith("A rate is recomputed"))
@@ -223,8 +226,11 @@ feature("a panel's target is typed: mixed currencies refused, a missing or zero 
             invoke(reports + "save#Definition", {definition: panel(panelIds.mixed, [])})
             invoke(reports + "save#Definition", {definition: panel(panelIds.usd, [currencyFilter("USD")])})
             for (const id of Object.values(panelIds))
-                invoke(G + "store#PanelMeasure", {definitionId: id, metricId: "Sales.Orders"})
+                invoke(G + "store#PanelMeasure", {definitionId: id, metricId: "Sales.OrderValue"})
             const mixed = refusal(G + "store#PanelTarget", target(panelIds.mixed, {targetValue: "1000", targetUnitId: "USD"}))
+            // an order count's target is a number, without a currency, on a panel of every currency
+            invoke(G + "store#PanelMeasure", {definitionId: panelIds.mixed, metricId: "Sales.Orders"})
+            const count = refusal(G + "store#PanelTarget", target(panelIds.mixed, {targetValue: "50"}))
             const otherCurrency = refusal(
                 G + "store#PanelTarget",
                 target(panelIds.usd, {targetValue: "1000", targetUnitId: "EUR"})
@@ -253,13 +259,14 @@ feature("a panel's target is typed: mixed currencies refused, a missing or zero 
                 periodBinding: "panel"
             })
             const zero = invoke(G + "get#Metric", {definitionId: panelIds.usd, value: "500"})
-            return {mixed, otherCurrency, both, otherBasis, noTarget, stored, compared, detail, posted, zero}
+            return {mixed, count, otherCurrency, both, otherBasis, noTarget, stored, compared, detail, posted, zero}
         })
-        const {mixed, otherCurrency, both, otherBasis, noTarget, stored, compared, detail, posted, zero} = authored
-        return {mixed, otherCurrency, both, otherBasis, reader, noTarget, stored, compared, detail, posted, zero}
+        const {mixed, count, otherCurrency, both, otherBasis, noTarget, stored, compared, detail, posted, zero} = authored
+        return {mixed, count, otherCurrency, both, otherBasis, reader, noTarget, stored, compared, detail, posted, zero}
     },
-    then({mixed, otherCurrency, both, otherBasis, reader, noTarget, stored, compared, detail, posted, zero}) {
+    then({mixed, count, otherCurrency, both, otherBasis, reader, noTarget, stored, compared, detail, posted, zero}) {
         mixed.includes("TARGET_CURRENCY_MIXED")
+        count == ""
         otherCurrency.includes("TARGET_CURRENCY_MIXED")
         both.includes("TARGET_INPUT_INVALID")
         otherBasis.includes("TARGET_UNIT_MISMATCH")
@@ -278,7 +285,7 @@ feature("a panel's target is typed: mixed currencies refused, a missing or zero 
         detail.status == 200
         detail.errors == []
         detail.output.includes("Business measure")
-        detail.output.includes("Orders (Sales, version 1)")
+        detail.output.includes("Order value (Sales, version 1)")
         detail.output.includes("Target 1000 USD, better higher, over panel")
         detail.output.includes("Used in")
         zero.comparison.state == "unavailable"
