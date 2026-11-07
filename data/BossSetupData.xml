@@ -2330,14 +2330,15 @@ along with this software (see the LICENSE.md file). If not, see
         whose edit, new and explore open the Tools Dashboards app), ReportBuilder (the copied SimpleReport builder with its raw
         DataDocument transitions), Reports (the legacy saved-report picker) and ScheduledReports (the copied personal scheduled
         finds) stay the Insights administrator's and ADMIN's until P2, P3, P4 and P7 replace them: the root user group is denied
-        them, as impl-commerce F45's areas. Insights.js reads this as the legacy capability. -->
+        them, as impl-commerce F45's areas. Insights.js reads this as the legacy capability. The administrator's grant is ALLOW, as
+        on the root: an inheritable ALWAYS here would pass the engine's denies below (BOSS_INS_REPORT_*) from these screens. -->
     <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
         <artifacts artifactName="component://mr-boss/screen/Insights/(Dashboards|Dashboard|ReportBuilder|Reports|ScheduledReports)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_INS_LEGACY_DENY" userGroupId="BOSS_INSIGHTS"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_LEGACY_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
-                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>

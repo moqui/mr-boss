@@ -241,7 +241,8 @@ Design §1.1, §1.2 and §1.3's legacy screens; INS-01, INS-10 (the shell part).
     root authz `BOSS_INSIGHTS_ROOT` (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`); the deny pattern untouched (`insights` is
     in it since Admin P1);
   - `BOSS_INS_LEGACY`: the copied Dashboards, Dashboard, ReportBuilder, Reports and ScheduledReports denied to
-    `BOSS_INSIGHTS`, `ALWAYS` for `BOSS_INSIGHTS_ADMIN` (F20, F-P1-4); ADMIN keeps them through the root's ALWAYS;
+    `BOSS_INSIGHTS`, `ALLOW` for `BOSS_INSIGHTS_ADMIN` (F20, F-P1-4; `ALWAYS` until review R2); ADMIN keeps them through the
+    root's ALWAYS;
   - the nine `INSIGHTS_*` permissions with their ADMIN grants, and design §1.1's table: every group `INSIGHTS_VIEW`; the
     author `_AUTHOR`; the steward `_DATASET_VIEW`, `_DATASET_EDIT`; the distributor `_SCHEDULE`, `_DISTRIBUTE`; the flow
     editor `_FLOW_EDIT`; the administrator `_SETTINGS_VIEW`, `_SETTINGS_EDIT`;
@@ -644,7 +645,7 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F-P1-2 | P1: the browser report panels post to `/rest/s1/moqui/reports/query` (WebrootReport.js:1004), the REST path `DASHBOARDS_APP` guards (moqui.rest.xml:23-27), so reading needs the REST path's grant beside the operations | `BOSS_INS_REPORT_READ` grants `/moqui/reports` (its query, documents and datasets) |
 | F-P1-3 | P1: Comms' keymap binds `g i` globally (Comms.xml:52), and a scope key shadows a global one while its app is current | Insights home is `g s`; design §1.2 changed |
 | F-P1-4 | P1: F20's list of copied screens kept to the administrator leaves out Dashboards and Dashboard, whose edit, new and explore open Tools' Dashboards, which only ADMIN opens | Kept with the copied screens (`BOSS_INS_LEGACY`) until P2 |
-| F-P1-5 | P1: `BOSS_INSIGHTS_ADMIN`'s root grant was an inheritable ALWAYS (F1), which overrides any deny below it: F-P1-1's and those P2 puts on mounted Tools screens | ALLOW, as impl-admin F34; the copied screens' area gives it ALWAYS |
+| F-P1-5 | P1: `BOSS_INSIGHTS_ADMIN`'s root grant was an inheritable ALWAYS (F1), which overrides any deny below it: F-P1-1's and those P2 puts on mounted Tools screens | ALLOW, as impl-admin F34; the copied screens' area gives it ALLOW too (an ALWAYS there passed the engine's denies from those screens, review R2) |
 | F-P1-6 | P1: test/Shared/Chatter.spec.js said Insights and Admin have no grant | Comment corrected; its filter (Commons and Comms) unchanged |
 | F-P1-7 | P1: no organization analytics defaults exist until P10 (PartySetting types, §4) | `get#Context`'s defaults are a relative range (`now-30d` to `now`) and native currencies, never a default currency |
 

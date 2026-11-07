@@ -235,10 +235,11 @@ feature(
             )
             // under the Insights root, whose inheritable ALLOW reaches every service a screen calls (F-P1-1): the denies hold
             // for the reader and the administrator on each kind of mutating operation, and the author still saves
-            const underRoot = (user, service, parameters) =>
+            const under = (location, user, service, parameters) =>
                 asUser(user, () =>
-                    ec.artifactExecution.runAsUser("component://mr-boss/screen/Insights.xml", () => refusal(service, parameters))
+                    ec.artifactExecution.runAsUser("component://mr-boss/screen/" + location, () => refusal(service, parameters))
                 )
+            const underRoot = (user, service, parameters) => under("Insights.xml", user, service, parameters)
             const mutating = {
                 "save#Definition": dashboard,
                 "create#Schedule": {definitionId: dashboardId, cronExpression: "0 0 6 * * ?"},
@@ -254,6 +255,12 @@ feature(
             expect(
                 "the administrator saves a dashboard from an Insights screen",
                 underRoot(users.admin, reports + "save#Definition", dashboard),
+                "is not authorized"
+            )
+            // and from a copied screen, whose grant is the administrator's ALLOW, not an ALWAYS that would pass the denies
+            expect(
+                "the administrator saves a dashboard from the copied Dashboards",
+                under("Insights/Dashboards.xml", users.admin, reports + "save#Definition", dashboard),
                 "is not authorized"
             )
             expect(
