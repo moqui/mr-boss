@@ -1,5 +1,8 @@
 # IronStone BOSS — Commerce implementation
 
+Nov 6, 2026 — built: P0–P15 with IronStone Shop's P1–P9 in the one build order of §1 (stages C1/S1–C4/S4), each phase
+reviewed by a fresh agent and its fixes committed apart, merged in waves with the full regression suites after each
+(the Wave lines under the phases). What remains is §7 and the open findings of §6 (mr-moqui `plans/Remaining-Work.md`).
 Nov 5, 2026 — plan, before Commerce starts. P0 partly done: F1–F36 found while writing it, F37–F45 from Customer
 Service's finished code (§6); design-commerce, design-shop and the crosscut rows they touch brought in line with them.
 The plan's open questions answered (§4: the owners' contracts built here, Accept Hosted, gift cards and click and
