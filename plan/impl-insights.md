@@ -167,7 +167,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | built and reviewed Nov 7, merged |
 | P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | built and reviewed Nov 7, merged |
 | P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | built and reviewed Nov 7, merged |
-| P5 Home and attention | BOSS | Home | built and reviewed Nov 7 (branch `ins/p5`) |
+| P5 Home and attention | BOSS | Home | built and reviewed Nov 7, merged |
 | P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | — |
 | P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | — |
 | P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | — |
@@ -913,9 +913,9 @@ with Admin P7 (gate 1).
   with the `InsightsHome` preference and the first-use state.
 - **Specs:** BOSS `InsightsHome` (Home's one qvt render; a failing provider affects its card only; an unreadable one
   omitted).
-- **Usable when** (`acceptance/Insights/InsightsHomeUsable`; rewritten in the P5 review to what is registrable, F-P5-3):
+- **Usable when** (`acceptance/Insights/InsightsHomeUsable`; rewritten in the P5 review to what is registrable, F68):
   `insights.reader` opens Home and sees ORG_ZIZI_RETAIL's orders and order value by currency (invoiced revenue waits for
-  an admitted invoice dataset, F-P5-2) and no count from an app they cannot read; a Warehouse user with a selected
+  an admitted invoice dataset, F67) and no count from an app they cannot read; a Warehouse user with a selected
   facility sees the receipts waiting there, late ones as overdue, as a count equal to the receipts list's own that opens
   that list on that facility; every administrator card opens its owner's worklist with its filter; a failed provider
   names itself while the others show. Purchase approvals, put-away and past-due cases join when their owners count them
@@ -944,7 +944,7 @@ with Admin P7 (gate 1).
     - Warehouse's Receiving, with its late receipts as the overdue part.
   - `Monitor.OperationFailures`, Monitor's Business operations dashboard (F19), through `get#OperationFailures`.
   - Left out: Purchasing's Approvals waiting, Projects' Unbilled, Commerce's To fulfill and Unpaid, and Customer Service's
-    queue cards (F29, F-P5-3).
+    queue cards (F29, F68).
 - **`RegistryServices`** (Registry.js):
   - `get#Attention`:
     - A provider shows only when its route opens to the viewer (Admin.js `destinationOpens`) and they hold its permission.
@@ -957,7 +957,7 @@ with Admin P7 (gate 1).
     - An `ownerApp` filter is available.
   - `get#OperationFailures` runs the shipped `monitor-operations` dashboard's "Rollbacks and retries" query, read as the viewer,
     over the last day. An error notice from the engine is a refusal (`OPERATIONS_UNAVAILABLE`, not authorized) or a failure,
-    never a zero (F-P5-5).
+    never a zero (F70).
   - `get#Home` returns:
     - the scope, from `get#Context` (a saved organization no longer the user's falls back);
     - the dashboard variables that keep the panels to that scope;
@@ -977,7 +977,7 @@ with Admin P7 (gate 1).
   - `insights-suite-checkouts`: checkouts by state.
 
   The dashboard's hidden `organizationPartyId` and `vendorPartyId` variables keep the panels to the organization in scope; the
-  sales queries ignore the first and the others the second. Invoiced revenue has no admitted dataset (F-P5-2).
+  sales queries ignore the first and the others the second. Invoiced revenue has no admitted dataset (F67).
 - **Screen.** Home replaces P1's frame:
   - a header with Open a dashboard (primary), New dashboard for authors, and Arrange (a dialog over `store#HomeLayout`);
   - HomeContext: organization and period;
@@ -1020,11 +1020,11 @@ with Admin P7 (gate 1).
   - design-insights §3 Home (as built);
   - the owners' attention lines: design-commerce §3, design-accounting §13, design-products §1.3, design-purchasing §11,
     design-manufacturing §9, design-projects §11, design-warehouse §14.
-- Findings (provisional): F-P5-1 to F-P5-6 in §6. Decisions: the §4 rows of Nov 7 (P5).
+- Findings (provisional): F66 to F71 in §6. Decisions: the §4 rows of Nov 7 (P5).
 - For the lead:
   - the budget: mr-boss's share is InsightsHome's 0.8 s server;
-  - the owners' Home summaries used as count services are heavy (F-P5-1); light per-card count services are the owners' fixes;
-  - the usable-when's purchase approvals, put-away and past-due cases are not registered (F-P5-3);
+  - the owners' Home summaries used as count services are heavy (F66); light per-card count services are the owners' fixes;
+  - the usable-when's purchase approvals, put-away and past-due cases are not registered (F68);
   - BossSetupData's P5 block and AdminEntities.xml's entity are single appends at the end;
   - DigestPreview is P7's.
 
@@ -1033,12 +1033,12 @@ with Admin P7 (gate 1).
   error frame); a provider shows only when its route opens (`destinationOpens`) and its permission holds; no total; a request
   steers only `organizationPartyId`, checked by `get#Context`, while `countParameters`, the route and the filter are the seed's.
   `get#OperationFailures` reads the shipped `monitor-operations` definition and runs its query as the viewer, an engine error
-  notice being a refusal or a failure, never a zero (F-P5-5); the provider opens only where `monitor/Operations` opens, so no
+  notice being a refusal or a failure, never a zero (F70); the provider opens only where `monitor/Operations` opens, so no
   telemetry reaches a non-Monitor user. `get#Home` reads every definition as the viewer; the panels' variables come from
   `get#Home` on the server (`report-embed` takes no request value), and the datasets' row filters apply under them.
   `store#HomeLayout` writes only the caller's `InsightsHome`, with the revision check, refusing another organization. The suite
   is read only, its panels over admitted datasets, the orders panel without recurring base orders. Home is rendered once in
-  the regression suite (InsightsHome). The owners' scopes (F-P5-4) were read service by service: each counts the viewer's own
+  the regression suite (InsightsHome). The owners' scopes (F69) were read service by service: each counts the viewer's own
   organizations, stores, plants, facilities or projects and no parameter widens them.
 - Fixes:
   - **R1** (medium, F29) Manufacturing's counts are of the selected plant and Warehouse's Receiving of the selected facility,
@@ -1049,12 +1049,12 @@ with Admin P7 (gate 1).
     framework's "is not authorized for" were failed cards; they are refusals and leave the card out (caa3c006).
   - **R3** (low, scope text) with no plant Manufacturing counts every plant of the user's organizations and Products counts the
     shared catalog too; the cards say so (caa3c006).
-  - **R4** (low, F-P5-6) Insights' Dashboard fixes `vendorPartyId` with `organizationPartyId` when the dashboard declares it over
+  - **R4** (low, F71) Insights' Dashboard fixes `vendorPartyId` with `organizationPartyId` when the dashboard declares it over
     Mantle's sales datasets; Home sets it only for such a dashboard, never for an arranged dashboard's supplier variable
     (b21e6792).
-  - F-P5-3: the usable-when is rewritten above to what is registrable, as InsightsHomeUsable checks it.
-- Recorded: F-P5-7 (Manufacturing's own Home cards), F-P5-8 (the refusal pattern is wide); F-P5-4 corrected (Manufacturing
-  without a plant counts every plant, it is not left out); F-P5-6 done.
+  - F68: the usable-when is rewritten above to what is registrable, as InsightsHomeUsable checks it.
+- Recorded: F72 (Manufacturing's own Home cards), F73 (the refusal pattern is wide); F69 corrected (Manufacturing
+  without a plant counts every plant, it is not left out); F71 done.
 - Tests run (shared release binary, `--nobuild`, this worktree's runtime): InsightsHome (0.7 s), InsightsAccess, InsightsCatalog,
   InsightsDashboards, InsightsDatasets, ProjectsAccess, AdminRegistries, 34 of 34; InsightsHomeUsable (changed: the receipts
   route) with its dependency InsightsDatasetsUsable, 9 of 9; mr-boss's whole acceptance suite not run. `moqui lint --screens`:
@@ -1254,9 +1254,9 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | An entry with an owner's catalogue service is read by it (called as the viewer with the route's app as `appRoot`, once per call); without one, by whether its route opens to the viewer's own groups (Admin.js `destinationOpens`); SalesAnalysis is read through Accounting's catalogue, its route's | P4, F17, F60, F63 |
 | Nov 7, 2026 | A money target names one currency and is refused unless every query of the panel is filtered to that currency; a measure target shares the measure's unit and aggregation | P4, F62; design §4 PanelDetail changed |
 | Nov 7, 2026 | An attention provider is shown only when its route opens to the viewer and they hold its permission; its count service is called as the viewer, once per distinct call per board; an owner's refusal or a null count leaves it out, any other failure is its own named card; counts are grouped by owner and never totalled | P5; design §3 changed |
-| Nov 7, 2026 | Owner Home summaries serve as count services where they compute the card with its list's query (F29); only Accounting's list finds take Insights' organization, the others keep the owner's scope (active organization, selected plant or facility, the user's stores), which the card says | P5, F-P5-1, F-P5-4 |
+| Nov 7, 2026 | Owner Home summaries serve as count services where they compute the card with its list's query (F29); only Accounting's list finds take Insights' organization, the others keep the owner's scope (active organization, selected plant or facility, the user's stores), which the card says | P5, F66, F69 |
 | Nov 7, 2026 | Monitor's Business operations source is `RegistryServices.get#OperationFailures`, running the shipped dashboard's own rollbacks query as the viewer, so Monitor's grants decide | P5, F19 |
-| Nov 7, 2026 | The suite dashboard `insights-suite` places four shipped library panels by reference; its organization scope is two hidden variables (`organizationPartyId`, `vendorPartyId`) that Home sets; Home's arrangement is `store#HomeLayout` in `InsightsHome`, at most six panels | P5, F-P5-2, F-P5-6 |
+| Nov 7, 2026 | The suite dashboard `insights-suite` places four shipped library panels by reference; its organization scope is two hidden variables (`organizationPartyId`, `vendorPartyId`) that Home sets; Home's arrangement is `store#HomeLayout` in `InsightsHome`, at most six panels | P5, F67, F71 |
 | Nov 7, 2026 | SaveAs copies a definition through `save#Definition` as the author (one save with the chosen group) rather than `copy#Definition` (which keeps the source's group, F42); a saved find has no SaveAs in Insights | P4; design §6 SavedReports changed |
 
 ## 5. Open questions
@@ -1268,7 +1268,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F-P5-1 to F-P5-6 in P5 and F-P5-7, F-P5-8 in its review the same day.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, F26–F31 in P0's remaining checks, F32–F38 in P1, F39–F47 in P2, the provisional F48 to F57 in P3, F59 to F65 in P4, F66 to F71 in P5 and F72, F73 in its review the same day.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1337,14 +1337,14 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F63 | P4: a route's screen authorization can be wider than its owner's index: Warehouse's CountVariance opens to every Warehouse user (its index shows it to count reviewers and adjusters, whose service decides), Manufacturing's cost reports to every Manufacturing user (money only with financial read) | Kept (§4: route authorization where there is no catalogue service); an owner that wants a narrower catalog registers a catalogue service |
 | F64 | P4: under the shared release binary over a worktree runtime, a service file that does not parse loses its services silently ("no service named …"), with nothing in the test log | Found by a probe spec (a wrapped `from` attribute); a framework note: name a service file's registration failure in the log or the refusal |
 | F65 | P4: BOSS_INS_LEGACY's artifact is a pattern row whose name is its key, so narrowing it adds a row and leaves the old one on an existing instance (P3's narrowing too) | The seed narrows to ScheduledReports and reloads the earlier rows (P1, P2, P3) with `nameIsPattern="N"`, which match no screen (review R2) |
-| F-P5-1 | P5: the owners' Home summaries that compute the F29 cards also compute the whole landing: Products' `get#CatalogSummary` loads every product five times, Warehouse's, Manufacturing's and Projects' `get#Home` every queue or KPI, Commerce's `get#ChannelHealth` per-store message rows; the board for an all-app administrator took 0.8 s on the demo data | Kept (one call per summary per board, each in its own transaction); each owner's light count service per card, the same query as its list, is the owner's fix, and the registration then names it |
-| F-P5-2 | P5: there is no admitted invoice dataset (`Accounting.InvoicedRevenue` is a service metric over `get#SalesInvoiceSummary`), so the suite dashboard cannot show invoiced revenue by currency as a panel | The suite shows order value by currency (`Sales.OrderValue`) and orders; a Mantle invoice dataset admitted under §5, or a service-source panel, is needed for invoiced revenue |
-| F-P5-3 | P5: the "usable when" names open purchase approvals, receipts to put away and cases past due, which do not match a worklist's query (F29: Purchasing's Approvals waiting counts unread notifications; Warehouse's Putaway was not checked by P0; Customer Service's Overdue sums per-queue counts with no list of that filter) | Not registered; InsightsHomeUsable uses Warehouse's Receiving; each owner's one query for card and list registers them |
-| F-P5-4 | P5: only Accounting's list finds take an organization; the other owners' counts keep their own scope (active organization, selected plant or facility, the user's stores), and a Warehouse or Manufacturing user with no selected facility or plant gets no count | The card says the scope it keeps; Insights' organization narrows Accounting's cards and the panels. Review: each owner counts only the viewer's own scope; without a selection Warehouse answers no count (left out), Manufacturing counts every plant of the user's organizations, Products adds the shared catalog, Commerce, Purchasing and the journals answer 0 for a user with no store or organization, and Payables refuses with no organization (left out, R2); the cards' route carries the plant or facility counted (R1) |
-| F-P5-5 | P5: `run#Query` answers a dataset the viewer may not read as an error notice with no frames, not as an error, so a caller summing frames reads a zero | `get#OperationFailures` reads the notices (refused or failed, never zero); a framework note: an unauthorized dataset could refuse the call |
-| F-P5-6 | P5: a dashboard variable names one field, and the suite's datasets name the organization differently (`vendorPartyId` for the sales orders), while Insights' Dashboard fixes only `organizationPartyId` | The suite has two hidden variables, which Home sets together; done in review (R4): Insights' Dashboard fixes `vendorPartyId` too where it is over Mantle's sales datasets |
-| F-P5-7 | P5 review: Manufacturing's own Home cards (Open, In progress, Late) count the selected plant but open WorkOrders without it, so their list is wider than their count | Manufacturing's fix (its links to carry `facilityId`); Insights' cards carry it (R1) |
-| F-P5-8 | P5 review: the refusal pattern shared with the catalog (`not available`, `is required`) also matches genuine failures such as a resource "is not available" or a service's "X is required", which then leave a card out instead of naming a failure | Kept (a quiet omission, never a zero or another's count); the owners' coded refusals (`CODE: message`) would allow a strict match once Products' and Accounting's uncoded "... is required" are coded |
+| F66 | P5: the owners' Home summaries that compute the F29 cards also compute the whole landing: Products' `get#CatalogSummary` loads every product five times, Warehouse's, Manufacturing's and Projects' `get#Home` every queue or KPI, Commerce's `get#ChannelHealth` per-store message rows; the board for an all-app administrator took 0.8 s on the demo data | Kept (one call per summary per board, each in its own transaction); each owner's light count service per card, the same query as its list, is the owner's fix, and the registration then names it |
+| F67 | P5: there is no admitted invoice dataset (`Accounting.InvoicedRevenue` is a service metric over `get#SalesInvoiceSummary`), so the suite dashboard cannot show invoiced revenue by currency as a panel | The suite shows order value by currency (`Sales.OrderValue`) and orders; a Mantle invoice dataset admitted under §5, or a service-source panel, is needed for invoiced revenue |
+| F68 | P5: the "usable when" names open purchase approvals, receipts to put away and cases past due, which do not match a worklist's query (F29: Purchasing's Approvals waiting counts unread notifications; Warehouse's Putaway was not checked by P0; Customer Service's Overdue sums per-queue counts with no list of that filter) | Not registered; InsightsHomeUsable uses Warehouse's Receiving; each owner's one query for card and list registers them |
+| F69 | P5: only Accounting's list finds take an organization; the other owners' counts keep their own scope (active organization, selected plant or facility, the user's stores), and a Warehouse or Manufacturing user with no selected facility or plant gets no count | The card says the scope it keeps; Insights' organization narrows Accounting's cards and the panels. Review: each owner counts only the viewer's own scope; without a selection Warehouse answers no count (left out), Manufacturing counts every plant of the user's organizations, Products adds the shared catalog, Commerce, Purchasing and the journals answer 0 for a user with no store or organization, and Payables refuses with no organization (left out, R2); the cards' route carries the plant or facility counted (R1) |
+| F70 | P5: `run#Query` answers a dataset the viewer may not read as an error notice with no frames, not as an error, so a caller summing frames reads a zero | `get#OperationFailures` reads the notices (refused or failed, never zero); a framework note: an unauthorized dataset could refuse the call |
+| F71 | P5: a dashboard variable names one field, and the suite's datasets name the organization differently (`vendorPartyId` for the sales orders), while Insights' Dashboard fixes only `organizationPartyId` | The suite has two hidden variables, which Home sets together; done in review (R4): Insights' Dashboard fixes `vendorPartyId` too where it is over Mantle's sales datasets |
+| F72 | P5 review: Manufacturing's own Home cards (Open, In progress, Late) count the selected plant but open WorkOrders without it, so their list is wider than their count | Manufacturing's fix (its links to carry `facilityId`); Insights' cards carry it (R1) |
+| F73 | P5 review: the refusal pattern shared with the catalog (`not available`, `is required`) also matches genuine failures such as a resource "is not available" or a service's "X is required", which then leave a card out instead of naming a failure | Kept (a quiet omission, never a zero or another's count); the owners' coded refusals (`CODE: message`) would allow a strict match once Products' and Accounting's uncoded "... is required" are coded |
 
 ## 7. Later
 
