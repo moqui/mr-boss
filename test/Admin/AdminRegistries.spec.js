@@ -59,6 +59,7 @@ spec({
                 serviceName: "mantle.party.PartyServices.get#PartyOrganizationInfo",
                 sourceKindEnumId: "AdmRsProjection",
                 requiredPermission: "ADMIN_OPERATION_MANAGE",
+                scopeParameters: "organizationPartyId",
                 providerKey: "admin.jobRuns"
             })
         })
@@ -143,6 +144,15 @@ feature("a refresh needs its registration's permission and the viewer's organiza
         )
         if (!otherOrganization.includes("RECORD_UNAVAILABLE"))
             problems.push(`Services' refresh: ${otherOrganization || "accepted"}`)
+        // an organization passed as a scope parameter the registration lists is checked the same
+        const smuggled = asUser(users.operations, () =>
+            refusal(
+                registry + "request#Refresh",
+                Object.assign({scopeParameters: {organizationPartyId: ids.otherOrganizationId}}, request)
+            )
+        )
+        if (!smuggled.includes("RECORD_UNAVAILABLE"))
+            problems.push(`Services' refresh by scope parameter: ${smuggled || "accepted"}`)
         const unknown = asUser(users.admin, () => refusal(registry + "request#Refresh", {refreshKey: "spec.registries.none"}))
         if (!unknown.includes("REFRESH_UNAVAILABLE")) problems.push(`an unregistered refresh: ${unknown || "accepted"}`)
         // Health offers it with the check it refreshes to the administrator, who holds both permissions, and not to the reader

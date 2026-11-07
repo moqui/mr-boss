@@ -690,16 +690,20 @@ function requestRefresh(p) {
     if (!operation) denied("REFRESH_UNAVAILABLE", "Refresh " + (p.refreshKey || "") + " is not available")
     if (!has(operation.requiredPermission))
         denied("REFRESH_DENIED", operation.requiredPermission + " is required to refresh " + operation.title)
-    if (p.organizationPartyId) organizationsOf(userScope, p.organizationPartyId)
+    const scopeParameters = p.scopeParameters && typeof p.scopeParameters === "object" ? p.scopeParameters : {}
+    // the organization is checked against the viewer's scope wherever the request names it, a scope parameter too; the
+    // organization, operation key and reason never pass as scope parameters, whatever a registration lists
+    const organizationPartyId = p.organizationPartyId || scopeParameters.organizationPartyId || null
+    if (organizationPartyId) organizationsOf(userScope, organizationPartyId)
+    const reserved = ["organizationPartyId", "operationKey", "reason"]
     const allowed = String(operation.scopeParameters || "")
         .split(",")
         .map(name => name.trim())
-        .filter(Boolean)
-    const scopeParameters = p.scopeParameters && typeof p.scopeParameters === "object" ? p.scopeParameters : {}
+        .filter(name => name && !reserved.includes(name))
     const parameters = Object.fromEntries(
         allowed.filter(name => scopeParameters[name] != null).map(name => [name, scopeParameters[name]])
     )
-    if (p.organizationPartyId) parameters.organizationPartyId = p.organizationPartyId
+    if (organizationPartyId) parameters.organizationPartyId = organizationPartyId
     if (p.operationKey) parameters.operationKey = p.operationKey
     if (p.reason) parameters.reason = String(p.reason).slice(0, 255)
     const result = {refreshKey: operation.refreshKey, title: operation.title, completedText: ""}
