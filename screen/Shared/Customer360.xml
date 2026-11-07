@@ -38,7 +38,7 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- Customer Service (impl-customer-service P3): its read of the customer, which its tabs use -->
         <if condition="appRoot == 'CustomerService'">
             <service-call name="ironstone.customerservice.CustomerServices.get#Customer360" out-map="serviceCustomer"
-                    in-map="{appRoot:appRoot, customerPartyId:customerPartyId}" transaction="force-new" ignore-error="true"/>
+                    in-map="{appRoot:appRoot, customerPartyId:customerPartyId}" transaction="force-cache" ignore-error="true"/>
             <script>ec.message.clearErrors()</script>
             <set field="customerFound" from="!!serviceCustomer?.customerFound"/>
             <set field="customerDetail" from="serviceCustomer?.customerDetail || {}"/>
