@@ -23,7 +23,9 @@ along with this software (see the LICENSE.md file). If not, see
     period is a calendar day, week, month, quarter or year (this month by default) against the one before, and PeriodStrip
     reads ironstone.commerce.ReportingServices.get#HomePeriod: orders (Sales' orders.placed) and net sales (Accounting's net
     invoiced) per currency with their change, and the top product, the same totals Online sales shows for the store and
-    period, each card opening it for a user of Reports; a strip that cannot be read says so and the work cards still show. -->
+    period, each card opening it for a user of Reports; a strip that cannot be read says so and the work cards still show.
+    P14: Integration errors counts a channel operator's channel message errors and failing or blocked feeds of the last 30
+    days (get#ChannelHealth), opening Channel health. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Home" default-menu-index="1" menu-image="sym_o_dashboard" menu-image-type="icon">
     <parameter name="productStoreId"/>
@@ -72,6 +74,15 @@ along with this software (see the LICENSE.md file). If not, see
         <set field="countText" from="Object.fromEntries(['toApprove', 'paymentHolds', 'toFulfill', 'unpaid', 'openCarts', 'stuckPlacements',
                 'noticeExceptions'].map(key => [key, workCounts[key] == null ? '—' : String(workCounts[key])]))"/>
         <set field="recentOrders" from="work?.recentOrders || []"/>
+        <!-- P14: the integration card, a channel operator's: channel message errors and failing or blocked feeds of the stores in
+            scope over the last 30 days (mantle.product.StoreChannelServices.get#ChannelHealth), opening Channel health -->
+        <if condition="hasStores &amp;&amp; can.channelOperate">
+            <service-call name="mantle.product.StoreChannelServices.get#ChannelHealth" out-map="health" transaction="force-new"
+                    ignore-error="true" in-map="{productStoreId:scope.productStoreId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <set field="integrationText" from="!can.channelOperate ? '—' : health?.totals ? String(health.totals.attention) : '—'"/>
+        <set field="integrationLink" from="can.channelOperate &amp;&amp; can.reports ? sharedLinks['Reports/ChannelHealth'] + (scope.productStoreId ? '?productStoreId=' + encodeURIComponent(scope.productStoreId) : '') : ''"/>
         <set field="ordersPath" from="sharedLinks['Orders/Orders']"/>
         <set field="storeQuery" from="scope.productStoreId ? '&amp;productStoreId=' + encodeURIComponent(scope.productStoreId) : ''"/>
     </actions>
@@ -140,7 +151,8 @@ along with this software (see the LICENSE.md file). If not, see
                             <number-card title="Notices not delivered" value="${countText.noticeExceptions}" icon="sym_o_mail_lock" size="sm"
                                     link="${can.orders ? ordersPath + '?attention=notice' + storeQuery : ''}"/>
                             <number-card title="Reviews" value="Not configured" icon="sym_o_reviews" size="sm"/>
-                            <number-card title="Integration errors" value="Not configured" icon="sym_o_sync_problem" size="sm"/>
+                            <number-card title="Integration errors" value="${integrationText}" icon="sym_o_sync_problem" size="sm"
+                                    link="${integrationLink}"/>
                         </dashboard>
                     </box-body>
                 </container-box>

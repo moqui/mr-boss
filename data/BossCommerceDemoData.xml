@@ -134,4 +134,15 @@ along with this software (see the LICENSE.md file). If not, see
             emailTemplateId="BOSS_COM_STORE_NOTICE"/>
     <mantle.product.store.ProductStoreEmail productStoreId="BOSS_COM_DIGITAL" emailTypeEnumId="PsetSubscriptionRenewal" fromDate="1265184000000"
             emailTemplateId="BOSS_COM_STORE_NOTICE"/>
+
+    <!-- P13: a marketplace channel of the demo store (impl-commerce P13, design §9): the marketplace as the customer its orders
+        are placed for, and its binding to the channel order connector, with no credentials (the operator sets them in the
+        System tools before its API intake is enabled; a file import through it needs none) -->
+    <mantle.party.Party partyId="BOSS_COM_MARKETPLACE" partyTypeEnumId="PtyOrganization" ownerPartyId="ORG_ZIZI_RETAIL"/>
+    <mantle.party.Organization partyId="BOSS_COM_MARKETPLACE" organizationName="Ziziwork Marketplace"/>
+    <mantle.party.PartyRole partyId="BOSS_COM_MARKETPLACE" roleTypeId="Customer"/>
+    <moqui.service.message.SystemMessageRemote systemMessageRemoteId="BOSS_COM_MARKETPLACE" description="Ziziwork Marketplace orders"
+            productStoreId="POPC_DEFAULT" storeConnectorId="ChannelOrders" systemMessageTypeId="StoreChannelOrders" storeMappingVersion="1"
+            storeMappingJson="{&quot;customerPartyId&quot;:&quot;BOSS_COM_MARKETPLACE&quot;,&quot;salesChannelEnumId&quot;:&quot;ScWebExternal&quot;}"
+            storeDisabled="Y" messageAuthEnumId="SmatHmacSha256"/>
 </entity-facade-xml>

@@ -275,8 +275,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P10 Cart recovery | Mantle, mr-pass, BOSS | CartDetail's recovery, CheckoutSettings' RecoveryPolicy | built Nov 6, 2026 |
 | P11 Reports and Home | Mantle, BOSS | Home, OnlineSales, CartRecovery, PromotionUse | built Nov 6, 2026 |
 | P12 Paid access and subscriptions | Mantle, mr-pass, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | built Nov 6, 2026 |
-| P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | — |
-| P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | — |
+| P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | built Nov 6, 2026 |
+| P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | built Nov 6, 2026 |
 | P15 Finish | BOSS | — | — |
 
 ### P0 — Checks
@@ -2808,6 +2808,157 @@ Design §9 Integrations, IntegrationDetail and ChannelImport; COM-CHANNEL.
   makes one order for the duplicate, quarantines the conflict, and finishes the other rows; retrying a failed message
   keeps its identity.
 
+**Built Nov 6 (P13)** (branch `com/p13`).
+- Mantle:
+  - `entity/StoreChannelEntities.xml`: `mantle.product.store.StoreChannelConnector` (the registered connectors: message type,
+    kind, direction, mapping version, `managedBy`, disabled); SystemMessageRemote gains `storeConnectorId`,
+    `storeMappingVersion`, `storeMappingJson` (typed parameters, never credentials) and `storeDisabled`, audit-logged;
+    SystemMessage gains `productStoreId`, `contentHash` and `duplicateOfMessageId` with the index of the four dedup keys
+    (store, remote, `docType`, `messageId`); the import format enumeration (`SciCsv`, `SciJson`) and the SystemMessage status
+    `SmsgStaged` with its transitions. `data/StoreChannelSetupData.xml`: the message types `StoreChannelOrders` (receive
+    `receive#ChannelOrders`, consume `consume#ChannelOrder`) and `StoreChannelImport` (its receive refuses a post), and the two
+    connectors `ChannelOrders` and `EdiX12` (the EDI administrator's).
+  - `service/mantle/product/StoreChannelServices.xml` (P13's services at the top, `<!-- Feeds and channel health (P14) below
+    -->` before the end) over `StoreChannels.js` (I): `find#StoreIntegrations`, `get#StoreConnectors`, `get#StoreIntegration`,
+    `store#StoreIntegration` (a new binding stopped with an HMAC signature required; enabled only with an authentication
+    method other than none, credentials set and the mapping complete, CREDENTIALS_REQUIRED, MAPPING_INCOMPLETE; store and
+    connector fixed; EDI_MANAGED), `find#StoreMessages`, `get#StoreMessage` (the canonical fields, mapping findings, order,
+    original, children, EDI documents, errors' first lines; never the text), `retry#StoreMessages` (operationKey on
+    PostingOperation `StoreChannelRetry`, a reason, each item through `retry#StoreMessage` in its own transaction; a conflict
+    CONFLICT_REVIEW), `receive#ChannelOrders` (the receipt kept first, each order its own message: new Received, a matching
+    replay Consumed with `duplicateOfMessageId` and the original's order, a conflict Rejected with a `CONFLICT:` error naming
+    what differs; the API path refuses a stopped or unauthenticated binding), `consume#ChannelOrder` (create#Order and
+    create#OrderItem with the store's organization, currency and facility, the binding's customer and sales channel, the
+    channel's prices, shipping and tax as items, calculations off; place#Order; a message whose order exists answers it),
+    `refuse#ChannelImportPost`, `prepare#ChannelImport` (CSV or JSON, UTF-8, 2 MiB, 500 orders; a Staged batch, the same
+    file answering the staged one), `get#ChannelImport` (the preview while staged, the outcomes once committed) and
+    `commit#ChannelImport` (digest, reason; the orders through `receive#ChannelOrders` with the batch as parent, each consumed
+    in its own transaction; PostingOperation `ChannelImport:{batch}` with the reason; a second commit answers it). Every staff
+    service: COMMERCE_VIEW, COMMERCE_CHANNEL_OPERATE and StoreAdmin.js' scope (F51); RECORD_UNAVAILABLE outside it.
+  - `X12.js`: `storeRetry(op, input)`, `retry#Document`'s and `retry#Receipt`'s work for a caller that checked its own
+    permission and scope (StoreChannels' `retry#StoreMessage` for a store's partner), reachable from scripts only;
+    `execute` keeps EDI_ADMIN.
+  - `StoreOperations.js`/`StoreOperationsServices.xml`: `add#StoreOrderNote` (F111's "Log as note": an internal OrderNote on
+    a store order or cart, COMMERCE_ORDER_VIEW and the scope, as `add#StoreRequestNote`).
+- BOSS:
+  - `screen/Commerce/Integrations.xml` became the area (Integrations, the default; ChannelImport; IntegrationDetail hidden;
+    the line where P14's Feeds go); `Integrations/Integrations.xml` (IntegrationFind, the list with intake, credentials set
+    or not, last success, failures, conflicts and health; NewBinding), `Integrations/IntegrationDetail.xml` (Binding,
+    Mapping, the EDI partner's rejected documents and quarantined interchanges with their retry, MessageFind and Messages,
+    RetryMessages with per-item results, MessageDetail), `Integrations/ChannelImport.xml` (ImportSource, ImportPreview,
+    ImportCommit, ImportResult with the link to retry from IntegrationDetail).
+  - F111: the root's `assist-prompt` "Group these failures by cause" (IntegrationDetail) and `response-action` "Log as note"
+    (`Commerce/Orders/LogNote`, hidden in Orders: the answer's text in `noteText`, filed by `add#StoreOrderNote`);
+    `skill/channel-retry.md`, `skill/aliases.json` (integration, retry), `test/skill-retrieval.json` (+4 cases; recall@3
+    1.00, 14 of 14). The Product360 prompt is P15's.
+  - Commerce.js: the P13 `linkPaths` (appended). Demo (BossCommerceDemoData.xml, appended): the marketplace customer
+    `BOSS_COM_MARKETPLACE` and POPC_DEFAULT's binding of the same id, stopped with no credentials (an import needs none).
+- Specs:
+  - Mantle `test/product/StoreChannels` (3 features, 1.31 s alone: 0.44, 0.53, 0.34): binding, enabling waits for the
+    operator's credentials, never returned; the reader, organization B and the store-limited staff member refused; intake
+    by the four keys (a replay answers the original's order, a conflict with its `items.0.quantity 2 → 3` evidence, the same
+    external ID on another binding a new order, one order per store and ID), a failing order not stopping its receipt, the
+    safe summary (no extra field or text), retry after publishing keeping the message and external ID with a second submit
+    answered and the conflict CONFLICT_REVIEW; a staged CSV previewed (duplicate, conflict, new, error), the same file staged
+    once, an unregistered format and another digest refused, committed once (duplicate, conflict, applied, failed) with its
+    reason; the EDI partner's exceptions with their first line only and its conflict NOT_RETRYABLE.
+  - BOSS `test/Commerce/CommerceChannels` (2 features, 0.71 s alone, 0.37 s in a run of four specs): the channel operator's
+    JSON import into the demo marketplace (new and error, applied and failed ITEM_UNKNOWN) and the one qvt render of
+    IntegrationDetail with its MessageDetail and of ChannelImport's committed batch; Log as note for the store operator,
+    refused the channel operator. CommerceAccess +1 feature (0.11 s): the channel operator lists the demo binding, the store
+    operator is refused PERMISSION_DENIED, another organization's store's binding RECORD_UNAVAILABLE.
+  - Also run, all pass: Mantle StoreChannels, EdiX12, StoreOperations (23 features), AuthorizeNetGateway, ShippoGateway,
+    PayTraceGateway, StorePublication, ShopCheckout (59 features); BOSS CommerceChannels, CommerceAccess, CommerceOrders,
+    CommerceSubscriptions (19 features, 5.9 s); `moqui test mr-boss --skills`. Not run: `./moq test-apps` and the budget.
+- Acceptance: `acceptance/Commerce/CommerceChannelsScenario` (5 features), run once: 5 passed. The channel operator binds
+  POPC_DEFAULT, enabled only after the operator's secret; two orders over `receive#IncomingSystemMessage` (the API path)
+  made; a CSV with one of them unchanged, the other changed, a new one and an unsold product: one order for the duplicate,
+  the conflict quarantined with `items.0.quantity 1 → 3`, the new order made, the failing one not stopping the rest; the
+  product published and in PopcAllProducts, the retry keeps the message and external ID and makes its order once (the second
+  submit answered; the item withdrawn again after); Integrations, IntegrationDetail and both ChannelImport steps in qvt
+  with artifact authorization on. The mr-boss acceptance suite as a whole was not run.
+- Lint: `moqui lint --screens` (release binary), 132 sites as before, none in the new screens.
+- Inventories: no ss-inventory or usl-inventory row is P13's (SimpleScreens has no store integration screen; the tools'
+  SystemMessage screens stay the operator's).
+- Decisions (design §16 row "Integrations and channel import as built"):
+  - A binding is the SystemMessageRemote with the store and a registered connector (StoreChannelConnector rows, each with a
+    handler in StoreChannels.js); its mapping is a version and typed parameters (the customer orders are placed for, the
+    sales channel) in `storeMappingJson`. Credentials, endpoint and authentication are set by the operator in the System
+    tools; Commerce says only "Set" or "Not set".
+  - A new binding starts stopped with HMAC required; enabling needs an authentication method other than none, credentials
+    and a complete mapping; the API intake also refuses a binding whose authentication was later removed. A file import
+    goes through a stopped binding (it needs no endpoint).
+  - Dedup is by SystemMessage's store, remote, `docType` and `messageId` over the canonical order's hash (an order with no
+    currency is in the store's); a replay is kept Consumed as a duplicate answering the original's order, a conflict
+    Rejected with the differing fields in its error, never retried.
+  - A channel order is placed, not approved (the seller's decision), at the channel's prices, with promotions, shipping and
+    tax calculation off and shipping and tax as items; each line's product must be one the store sells now (the publication
+    resolver); no ship-to in mapping version 1.
+  - A batch is a SystemMessage of type StoreChannelImport, Staged until committed (a status of its own so no framework job
+    consumes it); the commit's operation and reason are a PostingOperation `ChannelImport:{batch}`; the file is text read
+    and checked (UTF-8, size, format), not a media file to scan.
+  - EDI: an EDI partner is listed by its EdiConnection's store; Commerce lists its rejected documents and quarantined
+    interchanges and retries them through X12.js' own retry with their identity (`storeRetry`), the channel operator's
+    permission and scope standing for EDI_ADMIN's there; its connection stays the EDI administrator's.
+  - Log as note is an internal OrderNote with COMMERCE_ORDER_VIEW, as P8's case note.
+  - Home's Integration errors card is left to P14's integration card, so the two phases do not change Home together.
+- Findings (provisional):
+  - **F158** Home's "Integration errors" card is still Not configured: P14 builds Home's integration card, which can
+    count `find#StoreIntegrations`' failures (or a count of StoreChannels' `failedCondition` per store).
+  - **F159** P11's "intake error spikes" alert is not shipped: it needs a document over the store's channel messages
+    (F140), and a feed on every SystemMessage write would index the gateways' and EDI's messages too. For Insights and the
+    lead.
+  - **F160** A failed channel order goes back to Received with a fail count (the framework's consume), so
+    `consume#AllReceivedSystemMessages` (paused by default) would retry a business refusal such as ITEM_UNKNOWN up to three
+    times before marking it Error. Harmless (identity kept, never two orders), but a consume service could end a business
+    refusal in Error with `noStatusUpdate`; left as the framework's rule.
+  - **F161** A replay of a failed original with other content is quarantined as a conflict: a channel that resends a
+    corrected order under the same external ID has to be asked for a new one. A "replace the failed original" action (the
+    original never made an order) would need its own rule and test; later.
+  - **F162** The framework's SystemMessage statuses have no staged state; Mantle seeds `SmsgStaged` and three transitions
+    for ChannelImport's batches. The framework could own a staged status for batches that wait for a person.
+  - **F163** Mapping version 1 has no ship-to or buyer: a marketplace order is placed for the binding's customer with
+    no address, so a physical marketplace order needs its address entered by its owner before shipping; a version 2 with
+    an address crosswalk (as EDI's EdiLocation) is for a real channel.
+  - **F164** `Commerce/Integrations.xml` is no longer a placeholder, so mr-boss's acceptance AppStructure floor of
+    placeholder screens drops from 40 to 39.
+
+**Review Nov 6 (P13).** Checked: the API intake (the framework's `/rest/sm` checks the remote's method, and an HMAC
+remote with no header name or secret is refused there; `receive#ChannelOrders` also refuses a stopped binding and one whose
+method is none or unset, takes the store from the remote only, and the endpoint passes no `parentMessageId`; SmatLogin stays
+allowed, a logged-in user authorized for `receive#IncomingSystemMessage`); credentials and texts never returned by a service or
+screen (the screens call only the services); dedup by the four keys under the remote's row lock (concurrent intakes of one
+remote serialize, so no unique index is needed; replays and conflicts share the keys, so one could not be unique); orders
+placed for the binding's customer at the channel's prices with decimals read by their methods; the staged batch, its digest
+and PostingOperation; the file text-only decision (UTF-8, 2 MiB, a registered format; nothing is rendered or run, so no scan:
+accepted); `storeRetry` (only from scripts: X12.js' `execute` passes one argument, so `checked` is never set by a service; its
+caller checks COMMERCE_CHANNEL_OPERATE, the store scope of the EDI connection's store and that the document or receipt is
+the binding's: kept); every staff service's scope; `add#StoreOrderNote` (COMMERCE_ORDER_VIEW, the order scope, internal);
+Mantle defaults (new fields nullable, the new status and transitions unused by existing flows; EDI's retry unchanged).
+- R1 (medium; mr-mantle 46b1aeeb) Two concurrent consumes of one channel order (the framework's consume job, a retry, a second commit of a batch:
+  consume#ReceivedSystemMessage does not lock the message) could each make an order. `consume#ChannelOrder` now locks the
+  message for its transaction, so the second finds the order and answers it.
+- R2 (medium; mr-mantle 46b1aeeb) An order kept as it came because it was unreadable (an external ID too long or with control characters, not an
+  object) was in error and listed as retryable; a retry consumed its raw text as if canonical, making an order with no external
+  ID or dedup. Such a message is no longer retryable and `consume#ChannelOrder` refuses one without its hash and external ID
+  (ORDER_UNREADABLE). StoreChannels' intake feature checks it, and the API intake's BINDING_DISABLED and
+  BINDING_UNAUTHENTICATED refusals (not checked before).
+- R3 (low; f284354e) CommerceAccess.spec.js had been reformatted by Prettier in four earlier features; restored to its base with the P13
+  feature appended (append-only).
+- Specs (`--nobuild`): Mantle StoreChannels, EdiX12, StoreOperations, ShopCheckout, AuthorizeNetGateway, ShippoGateway,
+  PayTraceGateway, StorePublication (82 features, pass; StoreChannels 1.65 s); BOSS CommerceChannels, CommerceAccess,
+  CommerceOrders (17 features, pass). The acceptance spec was not changed or run.
+- For the lead:
+  - Two concurrent `commit#ChannelImport` calls of one batch (a double submit) both pass the Staged check (the claim is not
+    atomic: a lock on the batch would deadlock with the commit's own new-transaction updates of it). R1 keeps their orders
+    single; the second ends with a PostingOperation key error. A claim row made first (the PostingOperation as pending) would
+    answer it cleanly.
+  - The commit's digest is the file's (with format, remote and mapping version), not the preview's outcomes: an order received
+    between preview and commit changes an outcome without BATCH_CHANGED (dedup still holds).
+  - A binding's customer may be any Customer-role party not private to another user, not only the organization's customers.
+  - A replay of a failed original is kept as a duplicate with no order, and keeps none after the original is retried.
+  - `importText`'s 2 MiB limit counts characters, not bytes (the file path counts bytes).
+
 ### P14 — Feeds and channel health
 
 Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 with Shop P8.
@@ -2827,6 +2978,171 @@ Design §9 Feeds and FeedDetail, §3 ChannelHealth; COM-FEED. Ends stage C4/S4 w
   skipped product named); BOSS `CommerceFeeds`.
 - **Usable when** (design §12.2 scenario 12, its feed half): a feed of POPC_DEFAULT builds and publishes; withdrawing a
   product makes the feed unavailable until the next build leaves it out.
+
+**Built Nov 6 (P14)** (branch `com/p14`).
+- Mantle:
+  - `entity/StoreFeedEntities.xml` (new): `mantle.product.store.ProductStoreFeed` (store, Shop site, name, `feedKey`, a
+    registered format and destination, the store's locale and currency, category scope, `includeImages`,
+    `includeUnavailable`, schedule, `activeBuildId`, `fromDate`/`thruDate`, `changeReason`; key fields audit-logged) and
+    `ProductStoreFeedBuild` (never changed once written: complete with its artifact, sha-256 digest, size, content type,
+    the site's generation it read, row products, skips, errors and sample rows, or failed with its code and text); enums
+    `StoreFeedFormat` (PsffGoogleXml, PsffCsv, PsffJson), `StoreFeedDestination` (PsfdShopSite), `StoreFeedSchedule`,
+    `StoreFeedBuildStatus`.
+  - `service/mantle/product/StoreChannelServices.xml` (new, only the `<!-- Feeds and channel health (P14) below -->` marker
+    and P14's services, for the lead's splice with P13) over `StoreFeeds.js` (new): `find#StoreFeeds`, `get#StoreFeed`,
+    `store#StoreFeed`, `build#StoreFeed`, `run#StoreFeedBuild` (the build step, its own transaction), `get#FeedBuild`,
+    `publish#StoreFeed`, `get#ChannelHealth`, `run#StoreFeeds` (the job) and `get#ShopFeed` (anonymous, the PASS operation
+    `getShopFeed`). Staff services: COMMERCE_CHANNEL_OPERATE with COMMERCE_VIEW in StoreAdmin.js' store scope. Only
+    registered formats (`FORMAT_UNREGISTERED`) and destinations (`DESTINATION_UNREGISTERED`); the site's Shop must sell from
+    the store (`SITE_INVALID`); locale and currency the store's; one current feed per site and key (`FEED_KEY_TAKEN`); a
+    change at the feed's revision (`STALE_REVISION`), a change of site, key, format or category clears the active build. A
+    build reads only ShopCatalog.js' projection (its exports gain `publishedIds`, `publicOf`, `cards`, `contentTexts`,
+    `plainText`): the store's published candidates (in the category tree when scoped), the resolver's public ones, their
+    cards and store descriptions, chunks of 100, a product the projection cannot read an error and the others go on; skips
+    with their code (`NOT_SELLABLE`, `VARIANT_EXCLUDED`, `PRICE_UNAVAILABLE`, `NOT_PURCHASABLE`, `ROW_LIMIT`); rows carry only
+    id, SKU, title, plain description, absolute links on the canonical host, image link, price and sale price text,
+    availability and badge. A fatal problem (`SITE_UNAVAILABLE`, `HOST_REQUIRED`) is a failed build recorded outside the
+    build's transaction, the active build unchanged. Publish: an operation key (`PostingOperation` StoreFeedPublish, a retry
+    answers the first result), the revision, a complete build of the feed's format (`BUILD_INCOMPLETE`, `BUILD_OUTDATED`),
+    every product still public (`BUILD_STALE` naming them). Serving: the active build of a current Shop-site feed by key and
+    extension, at its own generation as is, after it only when every row product resolves public now (remembered in the
+    `mantle.product.feedServing` cache by build and generation), else NotFound `FEED_UNAVAILABLE`. The job builds each due
+    hourly or daily feed through a probe (its own transaction) and publishes a complete build with no errors; a failure is a
+    failed build of that feed and the others go on. `get#ChannelHealth`: the stores' SystemMessages through
+    `SystemMessageRemote.productStoreId` for a period (30 days by default, at most two years), by store, remote and type
+    (received, processed, errors, retried, last success; only those fields are read, never a payload or remote secret,
+    10,000 messages at most), the current feeds (last complete build, rows, skips, failed builds in the period, latest
+    failure, blocked by a withdrawal) and totals.
+  - `data/MantleSetupData.xml` (appended): the `run_StoreFeeds` ServiceJob (hourly, it acts only on scheduled feeds).
+    `PublicApps.js` `reservedPaths` gains `feeds`. Mirrors: `forum/ForumSchema.js` and `script/PassRoutes.js` gain
+    `getShopFeed` (`GET shop/feeds`), identical to mr-pass's.
+- mr-pass: `service/pass/Schema.js` and `Routes.js` (appended) `getShopFeed`; `Contracts.d.ts` its input and `ShopFeed`;
+  `resolve#Route` sends `feeds/{key}.{xml|csv|json}` under the Shop mount to `/Shop/feed` (anything else under `feeds/`
+  Not Found); `screen/Shop.xml`'s `feed` transition over `screen/Shop/ShopFeeds.js` (new): the build's content type,
+  `no-store`, `nosniff`, an ETag of the digest; 404 for a refused feed, 503 when the authority cannot answer. README's spec
+  list.
+- BOSS:
+  - `screen/Commerce/Integrations.xml` is an area: Feeds (the default until P13's list) and FeedDetail.
+    `Integrations/Feeds.xml` (FeedFind: store, site, format, state; the list with address, serving build and last build;
+    NewFeed) and `Integrations/FeedDetail.xml` (header with Build now and End feed; FeedConfig; FeedBuilds; FeedPreview of
+    the chosen build: sample rows, skips with product names, errors, Download; PublishFeed with the build's counts and
+    generations, an operation key and the revision; the withdrawn products named when a build cannot be served).
+  - `screen/Commerce/Reports/ChannelHealth.xml` (ReportScope: store, period; totals cards, Channel messages, Product feeds
+    opening FeedDetail; CSV) over `ReportingServices.get#ChannelHealth` (Reporting.js `channelHealth`: Reports and
+    `channelOperate`, the catalogue entry shown to a channel operator only); `Reports.xml` gains it. Home's Integration errors
+    card: a channel operator's attention total of the last 30 days, opening Channel health (`—` for others).
+  - Commerce.js (appended) linkPaths `Integrations/Feeds`, `Integrations/FeedDetail`, `Reports/ChannelHealth`.
+  - `report/boss-commerce-feed-builds.json` (dataset) and `boss-commerce-feed-build-failures.json` (alert template, design
+    §1.4's feed build failures), over the DataDocument `BossStoreFeedBuild` (metadata only, never the artifact) and its
+    own feed `BossCommerceFeedBuilds` (appended to `data/BossCommerceReportData.xml`, ADMIN only).
+- Specs (`--nobuild`):
+  - Mantle `test/product/StoreFeeds` (4 features, 1.16 s): unregistered format and destination, another currency, a taken
+    key, the reader and another organization refused, the public path; a build of two rows with the unpriced product's skip
+    named, the sample's fields exactly the projection's, publish refused stale then published, a retry answered first, the
+    XML escaped with the price and canonical link, another extension and an unbuilt feed Not Found; a withdrawal blocking
+    serving and the old build's publication (`BUILD_STALE`), the rebuild at the next generation without it published and
+    served; a fatal build (`HOST_REQUIRED`) with the active build still served, the job publishing one scheduled feed past
+    another failing, channel health's message counts with no secret or payload and both failing feeds.
+  - mr-pass `test/Shop/ShopFeeds` (1 feature, 0.06 s): the route (and two refused paths), the CSV through the local facade
+    and a remote frontend alike, another extension and an unknown key 404, a withdrawal 404.
+  - BOSS `test/Commerce/CommerceFeeds` (2 features, 0.30 s, on a spec store of Ziziwork Retail with its own site, so the
+    demo store's sites stay as they are): FeedDetail (preview, publish action, a product) and Feeds rendered once each
+    (qvt); Channel health for the channel operator, its catalogue entry, the merchandiser refused. `CommerceAccess` +1
+    feature (0.10 s): the channel operator lists the demo store's feeds, the merchandiser is refused, another organization's
+    store is refused.
+  - Also run, all pass: Mantle ShopCatalog, StorePublication, SitePages, PassAuthority, StoreAdmin (37 features with
+    StoreFeeds); mr-pass ShopAccess, ShopCatalog, Forum, Integrations, Portals, Transport (30 with ShopFeeds); mr-boss
+    CommerceAccess, CommerceReports, CommerceStores, CommerceSitePages, CommerceRecovery, CommerceAssortment,
+    CommerceSubscriptions, CommerceOrders (33 with CommerceFeeds). Not run: `./moq test-apps` and the budget measure.
+- Acceptance: `acceptance/Commerce/CommerceFeedsWalk` (mr-boss, 3 features): the channel operator starts a Google Merchant
+  feed of POPC_DEFAULT on a walk site with Shop at `/` through Feeds' and FeedDetail's transitions, builds and publishes it,
+  and `/feeds/{key}.xml` routes to the feed and serves it with the product and canonical links; the publisher withdraws a
+  product in it, the feed is 404, FeedDetail names the product, the old build's publication is refused, the rebuild
+  published serves it without the product; Channel health (qvt), Home and Feeds (html) rendered. The walk removes its site
+  and feed afterwards and puts the product back. Run once: 3 of 3 passed.
+- Lint: `moqui lint --screens` (release binary), 132 flagged sites as before, none in the new or changed screens.
+- Inventories: no ss-inventory or usl-inventory row is a feed or channel health form (they are new, design §2's `new C4`
+  rows), so no Implemented-in column changes.
+- Design: design-commerce §9 FeedDetail and design-shop §13.2 have as-built notes.
+- Decisions:
+  - A feed is changed in place at its revision with its key fields audit-logged and a reason, not as dated rows (§2 lists
+    feeds among the dated rows): its builds and its public path hang off one identity, and ending it (`thruDate`) is its
+    date. A change of site, key, format or category takes the published build down.
+  - Locale and currency are the store's: Shop's projection sells in the store's only, so a feed in another is refused.
+  - The serving check after the generation moves re-resolves the build's products (every publication change advances the
+    generation, not only withdrawals), remembered per build and generation; serving is `no-store` so a withdrawal is
+    immediate.
+  - The job publishes a complete scheduled build only when it has no errors; a manual build is never published by itself.
+  - A virtual product is one row at its lowest public variant price (the projection's card), not one row per variant.
+  - The Shop site is the only registered destination; pushed destinations register with P13's connectors.
+  - Integrations is an area with Feeds as its default until P13's Integrations list joins it (merge note below).
+  - The BOSS spec runs on its own store and site: a Shop site added to the demo store changed CommerceStores' `siteText`.
+- For the lead (merge with P13): splice `StoreChannelServices.xml` at the marker; `Integrations.xml` gets P13's subscreens
+  (Integrations, IntegrationDetail, ChannelImport) and its default; ChannelHealth's remote rows can link P13's
+  IntegrationDetail once it exists (`sharedLinks['Integrations/IntegrationDetail']`); P13's intake error spikes alert
+  appends its own DataDocument to `BossCommerceReportData.xml` as this phase did.
+- Findings (provisional):
+  - **F150** ShopCatalog.js `publishedIds` stops at 2,000 candidates (`limits.candidates`), so a feed of a larger store
+    lists at most its first 2,000 published products (the feed's own row bound is 5,000); a feed needs a paged candidate
+    read of the publication rows.
+  - **F151** Every publication change of a store's sites (pages, menus, themes as well as products) advances the
+    generation, so a served feed is re-resolved once per generation change (cached per node). A record of each withdrawal's
+    generation would let serving check only the products withdrawn after the build.
+  - **F152** Prices and stock do not advance the generation (impl-shop P3 R5), so a served feed keeps its build's prices
+    and availability until the next build; a scheduled feed bounds it.
+  - **F153** The demo has no feed: the demo Shop sites are disabled until published (Shop P1), so a demo feed of
+    POPC_DEFAULT could not build on a fresh load; the walk makes its own site.
+
+**Review Nov 6 (P14)** (branch `com/p14`). Checked against the phase, design-commerce §9 and §3 ChannelHealth, design-shop
+§13.2 and impl-commerce §2: public serving (get#ShopFeed by the host's site only, the feed's store the site's Shop's, a
+disabled or unpublished site NOT_AVAILABLE and a refused feed FEED_UNAVAILABLE, both NotFound so PASS answers 404; rows
+of the card's public fields only, no cost, internal id, variant or other store's data; the build's content type,
+`no-store`, `nosniff` and the digest's ETag; `feeds` reserved in PublicApps.js and routed only for
+`feeds/{key}.{xml|csv|json}` to `/Shop/feed`, no other Shop transition reachable); builds written once (no update of a
+build anywhere), publish under the feed's lock with its operation key and revision, BUILD_INCOMPLETE/OUTDATED/STALE, a
+fatal build recorded with the active build kept; the store scope and COMMERCE_CHANNEL_OPERATE in every staff service,
+forged feed, build and store ids refused, channel health reading only counts and descriptions (no payload, URL or
+secret); the ShopCatalog.js exports; decimals (prices are the projection's money text, no arithmetic or `+` on a decimal
+in the writers, screens or Reporting.js); the Built note.
+- **R1 (high, restricted values)** A manual build ran the projection as the signed-in operator: `shopOf` names the
+  user's party as the customer and get#StoreProductPrice gives a customer's own price rows, so the operator's (or any
+  staff member's customer-specific) price went into the public artifact. `project` now builds a visitor's projection
+  (`customerPartyId` null). Spec: StoreFeeds' build feature with an operator-only mug price (fails without the fix).
+- **R2 (high, serving)** A withdrawal scheduled ahead advances the generation when it is scheduled, not when it takes
+  effect, so a build made in between served the product after its row ended (serving checked nothing at the build's own
+  generation). `servable` now also re-resolves when a ProductStoreProduct or ProductStoreCategory row of the store started
+  or ended after the build started (four one-row reads per serve), keyed by that instant. Spec: StoreFeeds' last feature
+  ends the mug's row without a generation change and the feed is refused (fails without the fix); it also checks the
+  site unpublished (NOT_AVAILABLE) and another site's key (FEED_UNAVAILABLE).
+- **R3 (medium, F150 contained)** The build pages the store's publication rows itself (`candidatesOf`: ShopCatalog.js
+  `publishedIds`' rule, 1,000 rows a read, at most 50,000 candidates, the category tree applied as it reads) instead of
+  Shop's 2,000-candidate list; past the 5,000-row bound the rest are ROW_LIMIT skips without being projected. The
+  `publishedIds` and `publicOf` exports, which nothing then used, are taken back out (ShopCatalog.js only adds `cards`,
+  `contentTexts`, `plainText`). F150 can close.
+- **R4 (medium, job)** run#StoreFeeds held one transaction for the whole run: each feed's schedule stamp and failure
+  record locked that feed's row until the last feed was built (a staff edit or publish waited up to the 30-minute
+  timeout), and a rollback at the end lost every failure record. The job is now `transaction="ignore"`; each build stays
+  its own transaction.
+- **R5 (low, scalability)** The `mantle.product.feedServing` cache had no conf entry (unbounded, one key left behind per
+  generation change): mr-mantle MoquiConf.xml bounds it (2,000 entries, a day).
+- Decision 1 (feeds changed in place, not dated rows) is acceptable: a feed is a binding with one identity that its builds
+  and public path hang off, its key fields (and its reason) are audit-logged, ending it is its `thruDate`, and every build
+  records the format, locale, currency and generation it was made with; an as-of read of a feed's settings is the audit
+  log's. §2's list should name feeds among the records of their own rather than the dated rows.
+- Specs (`--nobuild`): Mantle StoreFeeds 4/4 (1.27 s) with ShopCatalog, StorePublication, SitePages, PassAuthority,
+  StoreAdmin: 37/37; mr-pass ShopFeeds, ShopAccess, ShopCatalog, Transport, Integrations: 15/15; BOSS CommerceFeeds,
+  CommerceAccess, CommerceReports, CommerceStores, CommerceSitePages: 24/24. Acceptance not rerun (unchanged).
+- For the lead: `store#StoreFeed` accepts any category id (only its existence is checked), so a feed's category name can
+  be another organization's (rows stay the store's published products; low); `find#StoreFeeds` reads at most 200 feeds
+  before the state filter and paging (low); a category membership change scheduled ahead (ProductCategoryMember of an
+  allow list) takes effect without a generation change and is not in R2's check (low; the publication and store category
+  rows are); the remote frontend carries a feed's whole artifact in one answer (5,000 rows of up to 5,000 characters of
+  description can be large; a streamed or paged answer would bound it).
+- **Waves 16–17 suites, gate C4/S4 (Nov 6, on master after Commerce P13 and P14 and Shop P8 merged, nothing else
+  running):** standalone mr-mantle 1,888 passed, 2 failed (the baseline); `./moq test-apps` 3,295 server and 17 client
+  features passed; lint as before; after the P13/P14 splice, acceptance AppStructure (floor 39), CommerceFeedsWalk and
+  CommerceChannelsScenario 26 of 26. Feature time: server mr-mantle 369.8 of 393 s, mr-boss 240.8 of 264 s, mr-pass 17.0
+  of 20 s; client mr-boss 51.3 of 57 s, mr-pass 8.2 of 9 s. Stage C4/S4 is done.
 
 ### P15 — Finish
 
@@ -2998,7 +3314,7 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F105 | P9 review: removing a photo deletes its file before the transaction commits | P15 |
 | F106 | P8: `dependsOn` does not order a run (specs run in component load order, then by file name), so a mr-boss spec cannot depend on mr-pass specs | Framework; the P8 acceptance lives in mr-pass and sorts after ShopOrderScenarios |
 | F107 | P8: no Accounting screen releases a Payment hold (`release#OrderHold` is a service only) | Accounting (later) |
-| F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations) |
+| F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations). Done in Shop P8 (`resolve#StuckPlacement`, CartDetail) |
 | F109 | P8: `resolve#Delivery` stays unscoped; Commerce has a store-scoped read-only view of delivery exceptions | Comms (a store-scoped review) |
 | F110 | P8: Shop F86 (a guest's first digital order waits for approval) left for Sales; a store turns the approval checks off | Sales |
 | F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | P13 (integrations), P9's prompt at P15 |
@@ -3040,6 +3356,26 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F147 | P12: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal, allow-remote false) | Accepted |
 | F148 | P12 review: `run#Renewals` limits its due batch (100) before leaving out contracts with an in-flight occurrence, so many in-flight renewals can delay newly due ones to the nightly hand-off | P15: filter in the query |
 | F149 | P12 review: a concurrent double submit of one retry key gets a duplicate-key error instead of `alreadyApplied` (every `lib.operation` caller does) | Accepted (one charge either way) |
+| F150 | P14: ShopCatalog's candidates stopped at 2,000, so a feed listed at most 2,000 products | Fixed in the review (R3): the build pages the store's publication rows (5,000-row feed limit, the rest ROW_LIMIT skips) |
+| F151 | P14: every publication change (pages, menus, themes) advances the generation, so a served feed is re-resolved on each | Later: each withdrawal's generation recorded |
+| F152 | P14: price and stock changes don't advance the generation, so a feed keeps its build's prices until the next build | Accepted (scheduled builds) |
+| F153 | P14: no demo feed (the demo Shop sites are disabled until published) | Accepted |
+| F154 | P14 review: `store#StoreFeed` checks only that a category exists, so a feed may name another organization's category (its rows are still the store's published products) | P15 |
+| F155 | P14 review: `find#StoreFeeds` reads at most 200 feeds before filtering and paging | Accepted |
+| F156 | P14 review: an allow-list category membership scheduled for later takes effect without a generation change, outside R2's check | P15 |
+| F157 | P14 review: a remote frontend receives the whole feed artifact in one answer (up to 5,000 rows) | Later (streamed) |
+| F158 | P13: Home's Integration errors card was left to P14 | Built by P14 (the channel operator's attention count) |
+| F159 | P13: P11's "intake error spikes" alert is not shipped (it needs a search document over SystemMessage, indexing every message write) | Later |
+| F160 | P13: the paused `consume#AllReceivedSystemMessages` job, if turned on, retries business refusals (ITEM_UNKNOWN) up to three times; no second order is made | Accepted |
+| F161 | P13: a corrected resend of a failed order under the same external ID is quarantined as a conflict; no "replace the failed original" action | Later |
+| F162 | P13: the framework has no staged SystemMessage status, so Mantle seeds `SmsgStaged` | Accepted; framework later |
+| F163 | P13: version 1 channel orders carry no ship-to address | Later (mapping version 2) |
+| F164 | P13: AppStructure's placeholder floor drops from 40 to 39 (Integrations is no longer a placeholder) | At the merge (acceptance) |
+| F165 | P13 review: two concurrent `commit#ChannelImport` calls on one batch both pass the Staged check; orders stay single (R1) but the second ends with a PostingOperation key error | P15: a pending claim at the start |
+| F166 | P13 review: the commit's digest covers the file, format, remote and mapping version, not the preview's outcomes | Accepted (dedup holds) |
+| F167 | P13 review: a binding's customer may be any Customer-role party not private to another user, not only the organization's own | P15 |
+| F168 | P13 review: a replay of a failed original is kept as a duplicate with no order, and still has none after the original is retried | P15 |
+| F169 | P13 review: `importText`'s 2 MiB limit counts characters, the upload path bytes | P15 |
 
 ## 7. Later
 

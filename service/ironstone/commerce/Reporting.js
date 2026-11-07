@@ -554,7 +554,7 @@ function catalogue() {
     const userScope = commerce.required()
     if (!userScope.capabilities.reports) return {reports: []}
     return {
-        reports: catalogueEntries.map(entry => ({
+        reports: catalogueEntries.filter(entry => !entry.capability || userScope.capabilities[entry.capability]).map(entry => ({
             entryId: entry.entryId,
             ownerApp: "Commerce",
             title: L(entry.title),
@@ -569,6 +569,72 @@ function catalogue() {
 }
 
 const operations = {catalogue, onlineSales, homePeriod, cartRecovery, promotionUse}
+
+// ===== P14: get#ChannelHealth (design §3 ChannelHealth) =====
+// The channel operator's report: Mantle's get#ChannelHealth for the stores and period (COMMERCE_CHANNEL_OPERATE there), its
+// message and feed rows as the screen and the CSV show them.
+const messageColumns = [
+    {field: "storeName", title: "Store"},
+    {field: "remoteText", title: "Remote"},
+    {field: "messageTypeText", title: "Message type"},
+    {field: "received", title: "Received", number: true},
+    {field: "processed", title: "Processed", number: true},
+    {field: "errors", title: "Errors", number: true},
+    {field: "retried", title: "Retried", number: true},
+    {field: "lastSuccessText", title: "Last success"}
+]
+const feedColumns = [
+    {field: "storeName", title: "Store"},
+    {field: "feedName", title: "Feed"},
+    {field: "formatText", title: "Format"},
+    {field: "stateText", title: "State"},
+    {field: "lastCompleteText", title: "Last complete build"},
+    {field: "rowsText", title: "Products", number: true},
+    {field: "skippedText", title: "Skipped", number: true},
+    {field: "failures", title: "Failed builds", number: true}
+]
+function channelHealth(p) {
+    const scope = scopeOf(p, {reports: true})
+    if (!scope.can.channelOperate) denied("PERMISSION_DENIED", "Channel health is the channel operator's report")
+    const {periodInfo, current} = singlePeriod(p)
+    const found = scope.storeIds.length
+        ? call("mantle.product.StoreChannelServices.get#ChannelHealth", {
+              productStoreIds: scope.storeIds,
+              fromDate: new Date(current.from),
+              thruDate: new Date(Math.min(current.thru, now()))
+          })
+        : {messages: [], feeds: [], totals: {}}
+    const omitted = scope.omitted.slice()
+    if (found.truncated) omitted.push(L("More than 10000 messages in this period; the first 10000 are counted."))
+    const messages = Array.from(found.messages || [])
+    const feeds = Array.from(found.feeds || []).map(row =>
+        Object.assign({}, row, {
+            rowsText: row.rows == null ? "" : String(row.rows),
+            skippedText: row.skipped == null ? "" : String(row.skipped),
+            lastCompleteText: row.lastCompleteText || L("None yet")
+        })
+    )
+    const answer = Object.assign(frame(scope, periodInfo, [], omitted), {
+        periodText: current.text,
+        messages,
+        feeds,
+        totals: found.totals || {}
+    })
+    return exported(p, "ChannelHealth", "Channel health", answer, [
+        {columns: messageColumns, list: messages},
+        {columns: feedColumns, list: feeds}
+    ])
+}
+catalogueEntries.push({
+    entryId: "Commerce.ChannelHealth",
+    title: "Channel health",
+    description:
+        "Channel messages received, processed, failed and retried by remote and type, and each feed's last complete build, skips and failures.",
+    path: "Reports/ChannelHealth",
+    parameters: "store, period",
+    capability: "channelOperate"
+})
+operations.channelHealth = channelHealth
 ;({
     intervals,
     execute: (op, parameters) => {

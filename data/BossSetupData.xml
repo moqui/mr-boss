@@ -2138,4 +2138,8 @@ along with this software (see the LICENSE.md file). If not, see
         organization's stores (the active one's when one is active) in Mantle's store services too, as in Commerce.js -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_ALL_ORGANIZATIONS"
             fromDate="0"/>
+    <!-- Shop P8 (impl-commerce F108): resolving a stuck Shop placement (retry it, or release or refund its kept payment) is the
+        Commerce administrator's; the store operators read it in CartDetail -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PLACEMENT_RESOLVE"
+            fromDate="0"/>
 </entity-facade-xml>

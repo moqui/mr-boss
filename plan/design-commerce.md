@@ -786,6 +786,7 @@ SHOP-CART.
 | CartSummary | display | Explain latest cart state | order, lines, activity, store, totals, checkout phase | price/tax/shipping findings | O.get#StoreCart | existing `mantle.order.OrderInfoServices.get#OrderDisplayInfo`; PopRestStore cart info |
 | RecoveryHistory | list, read | Inspect eligible contact and prior attempts | eligibility reason, consent state, channel, sent time, delivery outcome, redeemed | redacted destination | O.get#CartRecovery; existing `mantle.party.ConsentServices.get#PartyConsentState` | Odoo abandonment follow-up |
 | RecoverCart | dialog | Send one authorized recovery invitation | registered template, verified destination choice, preview, reason | exact-body preview with its unsubscribe link | O.send#CartRecovery; existing `ConsentServices.create#UnsubscribeToken` | Odoo cart recovery; Comms consent |
+| ResolvePlacement | dialog | Resolve a stuck Shop placement (Shop P8, impl-commerce F108) | place again, or refund the kept payment and cancel the cart; reason | shown only for a stuck placement and a holder of `COMMERCE_PLACEMENT_RESOLVE` | `mantle.order.ShopOperationsServices.resolve#StuckPlacement` (operation key; existing `release#SinglePayment` / `refund#SinglePayment`, `cancel#Order`) | design-shop §18.1 "Failed placement after provider success" |
 
 Sending never changes an order or signs a staff member in as the shopper. The invitation carries
 a one-time recovery token of the cart's proposed `StoreCartAccess` (digest and throttle as the
@@ -1189,6 +1190,20 @@ owner wizard registered in [Admin §11's import targets](design-admin.md#111-sha
 (Commerce, channel orders): it keeps its own wizard and its SystemMessage batch and provides `get#`
 for its runs; there is no second import batch (Z2). **Needs:** COM-CHANNEL.
 
+**As built (Nov 6, 2026; impl-commerce P13).** A binding is a SystemMessageRemote with the store and a registered
+connector (`mantle.product.store.StoreChannelConnector`: `ChannelOrders`, the API's and ChannelImport's channel orders, and
+`EdiX12`, an EDI partner whose EdiConnection names the store), with a mapping version and typed parameters (the customer
+orders are placed for, the sales channel). The operator sets its endpoint authentication and credentials in the System
+tools; Commerce shows only whether they are set. A new binding starts with its intake stopped and is enabled only with an
+authentication method, credentials and a complete mapping; ChannelImport works through a stopped binding. Each channel order
+is its own SystemMessage, kept by the four keys (`productStoreId`, `systemMessageRemoteId`, `docType`, `messageId`) with its
+canonical content's hash: a replay is kept as a duplicate answering the original's order, a conflict kept rejected with the
+fields that differ. Orders are placed (not approved) at the channel's prices with shipping and tax as items, each line a
+product the store sells. A ChannelImport batch is a SystemMessage of its own, Staged until committed against the digest of
+its preview, with its reason recorded; its orders go through the API's receive and consume services. Retry
+(`retry#StoreMessages`) takes a reason and an operation key and runs each message or EDI document in its own transaction
+with its identity. IntegrationDetail's Assist prompt is "Group these failures by cause", with the channel-retry skill.
+
 ### Feeds
 
 | Form | Kind | Purpose | Highlighted fields | Widgets of note | Services | Derived from |
@@ -1220,6 +1235,21 @@ products and the reason; a fatal build leaves the previous complete artifact act
 immediately invalidates an artifact containing withdrawn products: serving the old artifact is
 blocked until a safe replacement is ready. A rebuild must not resurrect content withdrawn after
 its snapshot. **Needs:** COM-FEED, SHOP-CATALOG, SHOP-RENDER.
+
+**As built (Nov 6, 2026; impl-commerce P14).** `ProductStoreFeed` (Mantle `entity/StoreFeedEntities.xml`) is a feed of
+a store bound to one of its Shop sites, a registered format (Google Merchant RSS, CSV, JSON) and destination (the Shop
+site only; a pushed destination registers with its connector), with a category scope, image and out-of-stock policy and
+a schedule; its locale and currency are the store's, the only ones Shop's projection sells in. It is current from
+`fromDate` until `thruDate` (ending it stops serving) and changed in place at its revision with its key fields
+audit-logged and a reason, not as dated rows: a change of site, address, format or category clears the active build.
+`ProductStoreFeedBuild` is the immutable build (complete with its artifact, digest, generation, row products, skips and
+errors, or failed with its reason). The feed path is `feeds/{key}.{xml|csv|json}` under the Shop mount (`feeds` joins
+PublicApps.js `reservedPaths`), answered no-store; once the site's generation has moved past the build's, the build's
+products are resolved again and any one no longer public blocks it (remembered per build and generation). Publishing
+takes an operation key and the feed's revision. The feed job publishes only a complete build with no errors; one with
+errors waits for the operator. A virtual product is one row (its lowest public variant price), not one row per
+variant. ChannelHealth reads the stores' SystemMessages through `SystemMessageRemote.productStoreId` (counts only),
+and Home's Integration errors card is its attention total for a channel operator.
 
 ## 10. Shared screen contexts
 
@@ -1483,6 +1513,7 @@ Advanced B2B, multi-store promotion programs, POS and a public theme marketplace
 | Orders, carts and customers as built (Nov 6, 2026; impl-commerce P8) | The detail screens sit flat under their area (`Commerce/Orders/CartDetail`, `Orders/ReturnDetail`, `Customers/RequestDetail`, §2 changed), as P7's promotion screens. Orders' Attention filter adds stuck Shop placements (a placementPending checkout refused ORDER_CHANGED or past its tries: still an open order, opened as a cart, read only) and orders whose notice on the delivery ledger was not delivered; Unpaid is the computed payment state (held, paid, authorized, promised, no charge, unpaid). A cart is abandoned an hour after its last shopper activity with no live checkout until P10's RecoveryPolicy sets the store's delay; a cart staff made (Order again) has no shopper activity. Requests are cases by the case's store, linked to a store order or in the store's checkout support queue; a product link alone does not make a case the store's, as a product is not one store's. Customer360 in Commerce is one page, not tabs. Order again needs `COMMERCE_ORDER_VIEW` and makes an open order only (nothing placed or charged). A delivery exception is read in Commerce; its resolution stays `MESSAGE_DELIVERY_REVIEW`'s |
 | Cart recovery as built (Nov 6, 2026; impl-commerce P10) | RecoveryPolicy is five dated settings (on, delay, sender, most sends, window) with the checkout's optional emails and news list beside them (§8, F118); nothing is sent until a store turns it on. Only a signed-in account's cart with the store's cart reminders topic and a verified email is reminded, once per visit to the cart (the event is the cart and its last activity) and at most the policy's sends; a completed checkout or the shopper's return suppresses a queued one. The link's one-time token is the cart access row's, made at each send and spent by the cart's own signed-in account on Shop's Recover page, which rotates the cart's capability into that session and reprices it (§6) |
 | Reports and Home as built (Nov 6, 2026; impl-commerce P11) | The period of Home and the reports is a calendar day, week, month, quarter or year (this month by default) holding a chosen day, in the user's zone, against the one before, as Mantle's summaries bucket them; ReportScope is store, period, that day and currency (no store-group or free compare-period choice yet). Orders are `get#SalesOrderSummary`'s placed orders and net sales `get#SalesInvoiceSummary`'s invoiced product lines less discounts, read per store and per currency (a row per currency, never added across currencies), with `get#SalesTopProduct`; a Commerce reader without `ACCOUNTING_VIEW` is answered for stores of their scope, costs withheld (F21). Home's PeriodStrip is every Commerce user's and reads the same totals as OnlineSales; its cards open OnlineSales for a user of Reports. CartRecovery's cohort is the Shop carts opened in the period: abandoned (sent a reminder, idle past the store's delay in no live checkout, or recovered), signed in (the only carts a reminder may reach; consent is per send), sends (a suppressed one left out), delivered, recovered (the link used after the latest send and the order placed) and its value. PromotionUse counts placed orders' uses by promotion, code and currency with the orders' net sales and the uses left of a total limit. The report definitions shipped are two datasets (Shop checkouts and store payment attempts) beside Mantle's sales orders, the Store operations dashboard and the checkout-failure and unresolved-payment alerts; carts, recovery sends and promotion use are Commerce screens only for now. The graph views of §3 are not built |
+| Integrations and channel import as built (Nov 6, 2026; impl-commerce P13) | Bindings are store SystemMessageRemotes of registered connectors (ChannelOrders, EdiX12); credentials and endpoint authentication stay the operator's and are never shown; a new binding is stopped until they are set. Channel orders are deduplicated by store, remote, kind and external ID over a canonical hash (a replay answers the original, a conflict is quarantined with its evidence and never retried); each order is its own message and transaction, placed for the binding's customer at the channel's prices. ChannelImport's batch is a Staged SystemMessage committed by its preview's digest with a reason, through the API's connector path. "Log as note" files an Assist answer as an internal order note (§1.4). Home's integration card is P14's |
 
 ## 17. Open
 

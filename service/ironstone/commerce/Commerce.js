@@ -39,6 +39,8 @@ const capabilityPermissions = {
     promotionEdit: "COMMERCE_PROMOTION_EDIT",
     channelOperate: "COMMERCE_CHANNEL_OPERATE",
     subscriptionManage: "COMMERCE_SUBSCRIPTION_MANAGE",
+    // Shop P8 (impl-commerce F108): a stuck placement's resolution in CartDetail
+    placementResolve: "COMMERCE_PLACEMENT_RESOLVE",
     // borrowed (crosscut §1.4): the product master and price reads of Products' shared screens
     catalogView: "PRODUCT_CATALOG_VIEW",
     priceView: "PRICE_VIEW"
@@ -866,6 +868,11 @@ function callContext(p) {
 Object.assign(operations, {operationLinks, callContext})
 // ===== P12: subscriptions (design §6) =====
 linkPaths.push("Customers/Subscriptions", "Customers/SubscriptionDetail")
+// ===== P14: feeds and channel health (design §9, §3) =====
+linkPaths.push("Integrations/Feeds", "Integrations/FeedDetail", "Reports/ChannelHealth")
+
+// ===== P13: integrations and channel import (design §9) =====
+linkPaths.push("Integrations/Integrations", "Integrations/IntegrationDetail", "Integrations/ChannelImport", "Orders/LogNote")
 ;({
     recordLink,
     // the scope for a phase's own module and the shared mounts' Commerce branch: the user's scope, the same refusing a user

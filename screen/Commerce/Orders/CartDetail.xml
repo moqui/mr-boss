@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     store's policy, the prior sends on the delivery ledger with their outcome and whether the link was used) with RecoverCart
     for a user with COMMERCE_RECOVERY (send#CartRecovery: the exact body previewed, a reason, one send; the reason it is
     refused says why). Sending never changes an order or signs staff in as the shopper; an active checkout is never a
-    staff-editable draft. A missing cart and one outside the scope are "not available". -->
+    staff-editable draft. A missing cart and one outside the scope are "not available". Shop P8 (impl-commerce F108): a stuck
+    placement's ResolvePlacement for a user with COMMERCE_PLACEMENT_RESOLVE (place again, or refund the kept payment and cancel
+    the cart; ShopOperationsServices.resolve#StuckPlacement with an operation key and a reason). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Cart" default-menu-include="false">
     <parameter name="orderId" required="true"/>
@@ -28,6 +30,17 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.order.StoreOperationsServices.send#CartRecovery" out-map="sent"
                     in-map="{orderId:orderId, reason:(reason || null), operationKey:(operationKey || null), orderRevision:(orderRevision || null)}"/>
             <if condition="!ec.message.hasError()"><script>ec.message.addMessage(sent.message, 'success')</script></if>
+        </actions>
+        <default-response url="."><parameter name="orderId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Shop P8 (impl-commerce F108): a stuck placement retried, or its kept payment released or refunded and the cart cancelled
+        (resolve#StuckPlacement: COMMERCE_PLACEMENT_RESOLVE, the store's scope, an operation key and a reason) -->
+    <transition name="resolvePlacement">
+        <actions>
+            <service-call name="mantle.order.ShopOperationsServices.resolve#StuckPlacement" out-map="resolvedOut"
+                    in-map="{orderId:orderId, action:resolveAction, reason:(reason || null), operationKey:(operationKey || null)}"/>
+            <if condition="!ec.message.hasError()"><script>ec.message.addMessage(resolvedOut.stateText, resolvedOut.resolved ? 'success' : 'warning')</script></if>
         </actions>
         <default-response url="."><parameter name="orderId"/></default-response>
         <error-response url="."/>
@@ -88,8 +101,27 @@ along with this software (see the LICENSE.md file). If not, see
                             <box-header title="Placement waiting for staff"/>
                             <box-body>
                                 <label type="p" text="The shopper paid (${checkout.paymentText || 'payment kept'}, due ${checkout.dueText}) but the order was not placed: ${checkout.failureText || 'placement failed ' + checkout.tries + ' times'}."/>
-                                <label type="p" style="text-caption m-muted q-mb-none"
-                                        text="Read only: the payment is kept. An Accounting payment operator reconciles it; the order is placed or refunded there."/>
+                                <label type="p" style="text-caption m-muted q-mb-none" condition="!commerce.capabilities?.placementResolve"
+                                        text="The payment is kept. A Commerce administrator places the order again or refunds the payment here."/>
+                                <container-dialog id="ResolvePlacement" button-text="Resolve placement" icon="sym_o_build" width="560"
+                                        title="Resolve the placement of cart ${orderId}" condition="commerce.capabilities?.placementResolve">
+                                    <label type="p" text="Place again: the placement is tried once more as it was paid (an order changed after the payment is refused again). Refund: the payment is released, or refunded when it was captured, and the cart is cancelled; nothing changes unless the provider confirms."/>
+                                    <form-single name="ResolvePlacementForm" transition="resolvePlacement"
+                                            map="{orderId:orderId, resolveAction:'retry', operationKey:'resolve-' + ec.user.randomString(24)}">
+                                        <field name="orderId"><default-field><hidden/></default-field></field>
+                                        <field name="operationKey"><default-field><hidden/></default-field></field>
+                                        <field name="resolveAction">
+                                            <default-field title="Resolution">
+                                                <radio no-current-selected-key="retry">
+                                                    <option key="retry" text="Place the order again"/>
+                                                    <option key="refund" text="Refund the payment and cancel the cart"/>
+                                                </radio>
+                                            </default-field>
+                                        </field>
+                                        <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                        <field name="submitButton"><default-field title="Resolve"><submit confirmation="Resolve this placement?"/></default-field></field>
+                                    </form-single>
+                                </container-dialog>
                             </box-body>
                         </container-box>
                     </widgets>
