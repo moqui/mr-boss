@@ -531,6 +531,16 @@ administrator (a throwaway spec, not kept):
   - `restore#Definition` brings back an old version's group (the owner's earlier choice); the engine check of F42 stays
     the framework ask.
 
+- **Wave 3 suites (Nov 7, on master after Admin P2 and Insights P2 merged and the release binary rebuilt; the Admin P3
+  reviewer and the Insights P3 worker ran and built at the same time, load average about 7):** `./moq test-framework`:
+  every feature passed; cargo failed only F38's known test (impl-admin); the framework's server specs (15.9 of 12 s),
+  webroot's client (50.5 of 44 s) and basic-comms' client (7.2 of 7 s) over budget under the load (Wave 1 had the
+  framework at 9.7 s; P2's ReportMounts adds 0.1 s), to be measured on a quiet run before any raise. Standalone mr-mantle
+  1,902 passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq
+  test-apps` 3,331 server and 18 client features passed, none failed; mr-mantle 389.1 of 393 s, mr-boss 223.4 of 264 s
+  server and 53.1 of 57 s client (InsightsDashboardsWalk 3.0 s), mr-pass within budget. `moqui lint --screens` 132 sites.
+  No budget raised.
+
 ### P3 — Dataset admission
 
 Design §5 Datasets, DatasetDetail, DatasetFields and DatasetView, its admission and scope policy; INS-03, INS-09 (the
