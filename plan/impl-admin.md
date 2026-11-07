@@ -881,6 +881,57 @@ Design §5 Groups and GroupDetail; ADM-ACCESS (AccessServices, the administratio
   - `rustfmt` on `service/mod.rs` reorders its pre-existing module list and reformats `http_fixtures.rs` and `shell.rs`; left unformatted;
   - the acceptance AdminGroupsWalk to run when asked.
 
+**Review Nov 7 (P3).**
+- Checked: AccessServices and check#AdministrationPath line by line (every entry point checks `ADMIN_ACCESS_VIEW`/`MANAGE` as its first
+  statement, before any read or write; delegation, `NOT_DELEGABLE`, sealed and privileged refusals, revisions, dated rows ended never
+  deleted, the audit rows and reasons); the EECAs and `security_checks.rs`; `AdminAccessServices` (`ALL_USERS`, inheritable ALLOW);
+  REST exposure; F41 as built (F-P3-1) at future dates; organization scope (GroupDetail's members, `get#MemberScope`, `check#Record` on
+  `addMember` and `endMember`); the 105 capability rows against crosscut §1.4; the specs, the lint and the docs.
+- Fixes:
+  - **R1 (High, F-P3-3; mr-moqui 2942bd04)** A membership in a group that grants a sealed permission passed the grant on through Tools or
+    a direct entity write. New framework EECA `UserGroupMemberSealed` (`Security.eecas.xml`, beside `UserGroupMemberPrivileged`;
+    `assert_sealed_group_membership` in `security_checks.rs`, `UserSecurityChecks.assertSealedGroupMembership`): a create or update of a
+    `UserGroupMember` in a group with a sealed grant not ended (open or starting later) needs a holder of each such permission; an update
+    that only ends the membership sooner passes (the rule reads the stored row, `get-original-value`), so `end#Membership` and offboarding
+    stay open to any access administrator; authorization disabled (a load) passes as before; it runs while the message facade has errors.
+    The converse, a sealed grant to a group with members, stays `UserGroupPermissionSealed`. Cargo:
+    `a_membership_in_a_group_granting_a_sealed_permission_needs_its_holder` (refused; an ended grant not carried; ending passes, reopening
+    refused; a holder gives it) and `a_membership_ends_sooner_only_by_an_update_to_an_earlier_set_end`.
+  - **R2 (Medium; mr-moqui 2942bd04)** A registered privileged group's bundle was delegable by `ADMIN_ACCESS_MANAGE` alone, so a non-member
+    could grant `BOSS_ADMIN_BACKUP`'s `ADMIN_BACKUP_RUN`, or (as a holder) `BOSS_ADMIN_ACCESS`'s `ADMIN_ACCESS_MANAGE`, to a custom group
+    and join it: the privileged group without its membership rule. `Access.js` `delegable` now counts a privileged group's bundle only for
+    a member of it (grants, the grant dialog's options, `NOT_DELEGABLE`); `AdminAccessServices` checks a non-member is refused a
+    permission only `ADMIN_ADV`'s bundle offers. Attack-Surface and design §1.1, §5 say so.
+- Assessed, no change:
+  - F-P3-2: the inheritable `ALL_USERS` ALLOW reaches only the ten named services' own call trees; each refuses without its permission
+    before touching a row, all are `allow-remote="false"`, no REST file names them, and their bodies call no caller-named service or
+    entity. No framework group could replace `ALL_USERS` (an installation's own groups hold the permissions), so it stays.
+  - F-P3-1: counting `ADMIN` alone is right. A BOSS administrator can still lock the BOSS groups out of Admin (the last
+    `BOSS_ADMIN_ADMIN` member ending their own membership), which `ADMIN` repairs in Tools System; a BOSS administrator cannot end an
+    `ADMIN` membership (privileged) and every group-flag or membership change reaching an `ADMIN` member is path-checked, now and at the
+    dates it names. Acceptable.
+  - F-P3-7: agreed; the reader holds `ADMIN_OVERVIEW_VIEW` alone (design §1.1).
+  - Organization scope holds: `get#Group` returns every member to the screen's actions, which show only those `get#MemberScope` admits;
+    both transitions check the member as an Admin record with `accessManage` first (AdminGroups covers the Services user refused).
+  - The registry's 105 bundles are crosscut §1.4's built apps (Maintenance, People and Sales left out, unbuilt) plus the built apps'
+    existing groups; no bundle offers a sealed permission to a non-holder or, after R2, a privileged group's powers to a non-member.
+- Tests (Debug, `--nobuild`, unless noted): cargo moqui-core `service::eca`, `service::security_checks`, `script::runtime::ec_extra` 26
+  of 26; clippy moqui-core (lib and tests) clean; rustfmt on the touched Rust, Prettier on the touched JavaScript. AdminAccessServices 6 of
+  6; framework, tools and basic-comms server suites 327 of 342 passed, 12 skipped, 3 failed in basic-comms (`BasicCommsChat`,
+  `BasicCommsComposeRef`, `BasicCommsSync`: F37's "Maximum call stack size exceeded" on Debug, not this change); AdminGroups, AdminAccess,
+  AdminRegistries, InsightsAccess 19 of 19; ProjectsAccess and AppOrganizationFilters 15 of 15 on the main checkout's release binary with
+  this runtime and the new EECA left out for the run (that binary has no `assertSealedGroupMembership`, so with it every membership write,
+  data load included, fails "not a function"). `moqui lint --screens`: 132 flagged sites as before, none in the Access screens.
+- For the lead:
+  - the unsealed Admin bundles (`BOSS_ADMIN_IDENTITY`, `_CONFIGURE`, `_INTEGRATIONS`, `_OPERATIONS`, `_DATA`, `_AUDIT`, `_PRIVACY`) name
+    no `delegablePermissionId`, so any access administrator (the demo delegate included) may add themselves to them or grant their
+    permissions to a custom group. Design §1.1 lets the access administrator assign registered bundles, so it is left; if it is not
+    meant, give each its own `*_MANAGE` as the delegable permission (only `BOSS_ADMIN_ADMIN` holds them all);
+  - the framework binary and `Security.eecas.xml` ship together: an older binary with this runtime fails every `UserGroupMember` write;
+  - `UserGroupMemberSealed` reads the stored row on each `UserGroupMember` update (one primary-key read);
+  - budget shares unchanged in kind: framework server 0.5 s (AdminAccessServices), mr-boss about 0.4 s (AdminGroups); framework 13.6 s of
+    12 s and tools 6.1 s of 3 s on Debug, as before; `./moq test-framework` not run.
+
 ### P4 — Users and sessions
 
 Design §4.1, §4 Users, UserDetail (Account, Access, Credentials, Sessions/history) and Sessions; ADM-LIFECYCLE (the
