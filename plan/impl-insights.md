@@ -885,6 +885,17 @@ target; INS-02, INS-05.
   CustomerServiceAccess, ProjectsAccess: 58 of 59 (the failure above). `moqui lint --screens`: nothing in the Insights screens.
   Prettier clean. Acceptance not run (unchanged).
 
+- **Wave 5 suites (Nov 7, on master after Admin P4, Insights P4, the audit fix (F79) and Mantle's F61 merged and the
+  release binary rebuilt; Admin P5's and the P4 follow-up's reviewers and the Insights P5 worker ran at the same time):**
+  `./moq test-framework`: every spec feature passed; cargo failed F38's known test and
+  `chat_tests::an_agent_member_gets_each_message_through_its_entry_point` (passed in Wave 4; under investigation in the
+  adm/fw1 follow-up); webroot's client 45.9 of 44 s under the load. Standalone mr-mantle: the baseline two and
+  WorkPlanToCashBasicFlow (10 features: its expected audit rows meet P4's audited `requirePasswordChange`, F67), fixed in
+  adm/fw1. `mail_capture_sends=true ./moq test-apps` 3,348 server features passed, 10 failed (WorkPlanToCashBasicFlow
+  only); the client run's mr-marble BrowserSmoke server did not start behind that failure, 16 client features passed.
+  mr-mantle 428.2 of 393 s, mr-boss 250.0 of 264 s server and 58.5 of 57 s client (AdminUsersWalk 3.1 s added) under the
+  load; the budgets are measured on a quiet run at gate 1 before any raise. `moqui lint --screens` 132 sites.
+
 ### P5 — Home and attention
 
 Design §3 Home; INS-01, INS-02 (attention providers), INS-09, INS-10. Insights' last phase of stage 1, which ends
