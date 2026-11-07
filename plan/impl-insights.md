@@ -164,7 +164,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 7 (§6 F1–F31) |
 | P1 Foundation | BOSS | the Insights root and menu | built and reviewed Nov 7, merged |
-| P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | — |
+| P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | built Nov 7 |
 | P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | — |
 | P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | — |
 | P5 Home and attention | BOSS | Home | — |
@@ -368,6 +368,100 @@ first-release framework need).
 - **Usable when:** `insights.author` copies the shipped Store operations dashboard, edits and saves it without leaving
   Insights, and shares it with a group; its panels over datasets not yet admitted say not available, never zero; the
   Tools Dashboards app is unchanged for `ADMIN`; a playlist of two dashboards plays in kiosk mode.
+
+**Built Nov 7 (P2).** mr-moqui e6e91427, mr-boss 1aa05e91 (branch `ins/p2`).
+- **The framework** (F3, F27; mr-moqui `docs/tools/Monitoring.md` "Mounting the report screens"): the mounting app's root
+  sets `reportLinks` in `always-actions` (screen URLs for `dashboards`, `dashboard`, `definition`, `panel`, `explore`,
+  `split`, `playlist`, `alertRule`, `logContext`, `import`, `share`; a key left out or null is not offered), and Home,
+  Dashboard, Definition, Explore, Playlist, Reports' playlist transitions and Datasets send their transitions and links by
+  it, falling back to `//apps/dashboards/...` so Tools and Monitor (which include Dashboard.xml under `/apps/monitor`) are
+  unchanged (F-P2-1). Dashboard.xml sends `appLinks` (server paths of the editor, panel editor, Explore, alert rules and the
+  Dashboard whose transitions duplicate and remove) beside `screenUrl`; WebrootReport.js (`report.serverLink`,
+  `report.appLink`) and moqui-tui `components/report.rs` (`app_link`) build Edit, Explore, a filter outside a dashboard, the
+  duplicate and remove posts, New alert rule, the library panel's edit link and `e` from them and hide what is null.
+  `reportFixedVariables` (a viewer's `var-` never replaces one; shown as a constant), `reportHiddenComponents` (the list
+  leaves out a component's shipped definitions) and `reportDefinitionTypes` (an editor's types). Under a mount the
+  editor's datasets are `list#Datasets` (each dataset's own artifact, no `DASHBOARDS_APP` or `REPORT_DATASETS_ADMIN`), a
+  new panel starts on the first, Explore and Split open on a readable dataset (Split's request charts only with
+  `otel_metrics`), import is offered only with an `import` link and the group field is hidden (kept) with a `share` link.
+  A panel the viewer may not read says "Not available: <reason>" in the browser and the terminal, and Dashboard keeps the
+  dataset refusal out of the page's messages (F-P2-2). Dashboard already had `duplicatePanel` and `removePanel`; BOSS's
+  copy lacked them (F3) and the new mount takes them in.
+- **The Insights mounts** (each a BOSS screen that includes the framework screen and takes in its transitions):
+  `Dashboards` (Home, type dashboard), `Panels` ("Library panels", the framework Panels), `Playlists` ("Wall display": the
+  playlists the viewer may read, New playlist for authors through Reports' `createPlaylist`, one played by Playlist when
+  chosen), `Dashboard` (hidden; BusinessContext: the organization from `get#Context`, a forged one refused, fixed as the
+  `organizationPartyId` variable, the user's organizations when none is chosen (F-P2-5); the range from Insights'
+  defaults; ShareDashboard for the owner who authors), `DashboardEditor` and `PanelDetail` (hidden; the framework
+  Definition with types dashboard and report, or panel; only save, copy, restore, delete, export, reference and dashboard
+  taken in), `ReportBuilder/Explore` (Report builder's default, every Insights user) and `ReportBuilder/Split` (hidden).
+  The copied Dashboards and Dashboard are replaced (F35); the menu is Home, Dashboards, Library panels, Wall display,
+  Report builder (then the copied Reports and Scheduled reports for the administrator and ADMIN). The root sets
+  `reportLinks` from `get#Context` (no editor for a user without `INSIGHTS_AUTHOR` or `INSIGHTS_DATASET_EDIT`, no alert
+  rules, log context or import) and hides Tools' telemetry dashboards (F-P2-6).
+- **ShareDashboard**: `ironstone.insights.DashboardServices.get#ShareGroups` (the user's own groups, never `ALL_USERS`) and
+  `share#Dashboard` (an author, the owner, one of their groups or private, the engine's version check;
+  `INSIGHTS_AUTHOR_REQUIRED`, `SHARE_GROUP_UNAVAILABLE`, `DASHBOARD_REQUIRED`, `DASHBOARD_NOT_OWNED`), over Insights.js
+  `shareGroups`, `shareDashboard`; `get#Context` adds `reportLinks` and the P2 `sharedLinks`.
+- **Access** (`data/BossSetupData.xml`): `BOSS_INS_REPORT_ENGINE` denies `org\.moqui\.report\.ReportServices\..*` to
+  `BOSS_INSIGHTS` and `BOSS_INSIGHTS_ADMIN` (the P1 review's ask: a new operation fails closed); `BOSS_INS_REPORT_READ`'s
+  grants are ALWAYS and add `export#Definitions`; the per-operation denies of `_AUTHOR` and `_SCHEDULE` are gone (`_TOOLS`
+  kept as it was); `BOSS_INS_AUTHORING` denies DashboardEditor and PanelDetail to the root user group and the
+  administrator and gives the author and steward ALWAYS (F-P2-7); `BOSS_INS_LEGACY` names the copied builder's Datasets,
+  DatasetDetail and DatasetView with Reports and ScheduledReports, and Insights.js reads the legacy capability from
+  `ReportBuilder/Datasets` (F-P2-9). The rest are appends. No dataset artifact, `DASHBOARDS_APP` or Tools screen for any
+  Insights group; P3 admits the datasets.
+- **Specs.**
+  - mr-moqui `tools/test/ReportMounts.spec.js` over the test mount `tools/test/screen/ReportMount.xml` (2 features: a
+    mounted editor offers `otel_metrics` by its artifact alone, not `otel_logs`, starts a new panel on it, offers no
+    import, saves and returns under the mount; a mounted dashboard's `appLinks` and its fixed variable over a forged one;
+    Tools' Dashboard keeps Tools' links and Home's edit goes to Tools' editor). The browser case `a dashboard mounted under
+    another app ...` in webroot `WebrootReport.page.js`; the moqui-tui test
+    `a_mounted_dashboard_links_its_apps_screens_and_an_unreadable_panel_says_so`.
+  - BOSS `InsightsDashboards` (3 features: Dashboard's one qvt render as the author, under the webroot so the links
+    resolve: the organization fixed over a forged `var-organizationPartyId`, Insights' links and no Tools or alert-rule
+    link, Share, the library panel's dataset refusal named; the mounted editor's copy and save return under Insights; the
+    sharing rule, holder and non-holders). `InsightsAccess`: the reader's and the administrator's menus, the copied
+    builder in place of the copied Dashboards, the reader reading a definition under the root (the pattern deny passed
+    by the reading grant), DashboardEditor refused to the reader and the administrator and opened to the author.
+  - The golden walk `test/client/Insights/InsightsDashboardsWalk` (registered in `test/client/suite.js`, its data
+    `test/Insights/InsightsClientFixtures`, a server spec of the suite): the author opens a shared dashboard from Dashboards,
+    saves a copy in DashboardEditor, adds a library panel, saves, opens the copy in Dashboard where the panel says not
+    available; every URL under `/qapps/Insights` (F-P2-3 for why it is not Store operations).
+  - Acceptance, written and not run: `acceptance/client/Insights/InsightsDashboardsUsable` (in `acceptance/client/suite.js`,
+    with InsightsClientFixtures): the "usable when" (Store operations copied, edited, saved and shared; not available, never
+    zero; Tools unchanged for ADMIN; a two-dashboard playlist plays). Its copy of Store operations passes once P3 admits
+    the sales datasets (F-P2-3).
+- **Tests run.** Cargo: `cargo test -p moqui-tui` (all pass, the new test among them), `cargo clippy -p moqui-tui
+  --all-targets -D warnings` clean; no goldens changed. On the Debug binary (this worktree, `--nobuild`): InsightsAccess,
+  InsightsDashboards (9 of 9), the tools specs (39 of 39), the walk (3.2 s). On the main checkout's release binary over this
+  worktree's runtime (the screens and scripts are runtime files): the tools specs 39 of 39 (tools 2.5 s of 3 s);
+  InsightsAccess, InsightsDashboards, AdminAccess, CommerceAccess, Chatter 58 of 58; ProjectsAccess 8 of 8 (no F37
+  overflow on Debug either); webroot `WebrootReport` offline 49 of 49; the walk 3.0 s. `moqui lint --screens` (Debug): 132
+  sites, as before; the Insights and Dashboards screens only in the information lists. Prettier clean on the new and
+  changed BOSS JavaScript and ReportMounts. Not run: `./moq test-apps`, `./moq test-framework`, moqui-host's
+  integration tests (monitor_edge, monitor_tui and report_documents read Tools' Dashboards pages, whose Tools links are
+  unchanged: Panels' New panel link checked to render as before), the acceptance suite (AppStructure and TuiRender list
+  the Insights menu as ADMIN; InsightsFoundationWalk reads `ids.legacyMenu`, now with the P2 entries).
+- **Budget shares**: framework server (tools) ReportMounts 0.1 s (tools 2.5 s of 3 s); framework client (webroot) the new
+  case under 0.01 s; mr-boss server InsightsDashboards 0.34 s and InsightsAccess +0.45 s (2.95 s, release); mr-boss client
+  InsightsDashboardsWalk 3.0 s (release; 3.2 s Debug).
+- Inventories: no ss-inventory or usl-inventory row is implemented by P2 (its usl rows naming Insights/Dashboard and
+  PanelDetail are P4's measure sources).
+- Design edits: §1.1 (every engine operation denied unless granted; the editors the authors' area), §2 (PanelDetail at
+  `Insights/PanelDetail`), §4 Dashboard (the fixed organization variable, `reportLinks`; ShareDashboard's service and
+  groups), §4 Panels (PanelDetail's route).
+- Findings (provisional, for the lead to number): F-P2-1 to F-P2-9 in §6. Decisions: §4 rows of Nov 7 (P2).
+- For the lead:
+  - budget shares as above: framework 0.1 s server, about 0 s client; mr-boss 0.8 s server, 3.0 s client;
+  - F-P2-4's framework ask (an owner shares a definition only with a group they belong to, in `save#Definition`) is in
+    Remaining-Work's report-engine row; until then a crafted post to DashboardEditor/save can share with any group
+    (definitions only, never data);
+  - F-P2-3: the "usable when" acceptance test needs P3's admission of `mantle-sales-orders` before it can pass;
+  - the editors' ALWAYS area passes every deny below it (F-P2-7): a transition added to DashboardEditor or PanelDetail runs
+    any engine operation it calls for an author, so add only authoring transitions there;
+  - Explore's trace, user, visit and log-context transitions are taken in but lead to Monitor and System, which refuse
+    Insights users; they show only for telemetry fields, which no Insights group reads.
 
 ### P3 — Dataset admission
 
@@ -636,6 +730,11 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | Opening Insights needs the root grant alone, no permission; `INSIGHTS_VIEW` decides what Home and later screens show | P1, as Admin (impl-admin §4); a member of `BOSS_INSIGHTS` alone opens Home and is told why it shows nothing |
 | Nov 7, 2026 | The engine's operations by group: reading for every group, authoring for the author and steward, the dataset save for the steward, scheduling for the distributor; the administrator reads only (its business data and authoring stay separate grants); import, annotations, alert evaluation and git sync no Insights group's | P1 (F2, F4, F32); bundles in P12, the business annotation source in P6 |
 | Nov 7, 2026 | Dashboards and Dashboard stay with the copied screens, the administrator's and ADMIN's, until P2 mounts the framework screens | F35 |
+| Nov 7, 2026 | The framework report screens are mounted by a `reportLinks` map the app's root sets, sent to the clients as `appLinks`; a null link is not offered; Tools' screens without a map | P2, F-P2-1 (the plan's `appBase` generalized); mr-moqui docs/tools/Monitoring.md |
+| Nov 7, 2026 | Every ReportServices operation is denied to the root user group and the administrator by one pattern; the capability groups' grants are ALWAYS | P2, the P1 review's ask; a new framework operation fails closed |
+| Nov 7, 2026 | DashboardEditor and PanelDetail are the author's and steward's (an ALWAYS area); Dashboards, Dashboard, Library panels, Wall display, Explore and Compare every Insights user's | P2, design §1.1, §2 roles; F-P2-7 |
+| Nov 7, 2026 | The organization in scope is a fixed dashboard variable (`organizationPartyId`) until P3's row filter carries it | P2, design §4 Dashboard ("user variables never replace a scope predicate"); F-P2-5 |
+| Nov 7, 2026 | A dashboard is shared with one of the owner's own groups or kept private, through `share#Dashboard` | P2, design §4 ShareDashboard; F-P2-4 |
 | Nov 7, 2026 | The demo reader with financial read is in Accounting's `BOSS_ACCOUNTING_READ` (`ACCOUNTING_VIEW`, `PRODUCT_COST_VIEW`, `CUSTOMER_CREDIT_VIEW`), the owner's group, not an Insights one | P1 (design §13.3's confidential-field scenario) |
 
 ## 5. Open questions
@@ -689,6 +788,15 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F36 | P1: `BOSS_INSIGHTS_ADMIN`'s root grant was an inheritable ALWAYS (F1), which overrides any deny below it: F32's and those P2 puts on mounted Tools screens | ALLOW, as impl-admin F34; the copied screens' area gives it ALLOW too (an ALWAYS there passed the engine's denies from those screens, review R2) |
 | F37 | P1: test/Shared/Chatter.spec.js said Insights and Admin have no grant | Comment corrected; its filter (Commons and Comms) unchanged |
 | F38 | P1: no organization analytics defaults exist until P10 (PartySetting types, §4) | `get#Context`'s defaults are a relative range (`now-30d` to `now`) and native currencies, never a default currency |
+| F-P2-1 | P2: F27's `appBase` alone cannot carry Insights' route names (DashboardEditor, PanelDetail, ReportBuilder/Explore are not Tools' Definition and Explore), and Monitor's screens include Dashboard.xml under `/apps/monitor`, so a base relative to the including screen would break them | The mounting root's `reportLinks` map (screen URLs, null not offered), read by the screens' transitions with Tools' paths as the fallback; Dashboard.xml sends it as `appLinks` (server paths) beside `screenUrl` |
+| F-P2-2 | P2: Dashboard.xml's dataset-fields read left a dataset refusal in the page's messages (an error on every dashboard over a dataset the viewer may not read), and the browser and terminal panels said "No data in this time range" for a panel whose query was refused | The read runs as a probe; both panels say "Not available: <reason>" for an incomplete error notice |
+| F-P2-3 | P2: `save#Definition` (and `copy#Definition`, which saves) checks every dataset a definition references as the viewer (definitions.rs `references`), so an author cannot copy or save Store operations until P3 grants `mantle-sales-orders` | Kept (a definition never names a source its author cannot read); the walk copies a shared fixture dashboard and adds a library panel by reference; the "usable when" acceptance test passes after P3 |
+| F-P2-4 | P2: `save#Definition` takes any `userGroupId`, so an owner can share a definition with a group they do not belong to (definitions only, never data) | Insights shares through `share#Dashboard` (the owner's own groups) and the mounted editor keeps the group (hidden); the engine check is a framework ask (Remaining-Work's report-engine row) |
+| F-P2-5 | P2: `get#Context` resolves no single organization for a user of several organizations with none active (the demo author) | The fixed scope is the chosen organization, else the user's organization list; none for the administrator in every organization |
+| F-P2-6 | P2: shipped definitions are readable by every viewer, so Insights' Dashboards listed Tools' telemetry dashboards (Monitor), every panel of which no Insights group reads | `reportHiddenComponents` (`tools`) under Insights; the admitted-business filter of design §4 Dashboards comes with P3 |
+| F-P2-7 | P2: an area that denies the root user group and allows the authors cannot use ALLOW (DENY wins over ALLOW at the same artifact, authz.rs), and an inheritable ALWAYS on a screen passes every deny below it, the engine's included | The editors' area is ALWAYS for the author and steward, as Commerce's areas (F45), and the editor mounts take in only authoring transitions (no import) |
+| F-P2-8 | P2: design §2's `Insights/Panels/PanelDetail` would make Panels a parent whose widgets must render the child | PanelDetail is the hidden root route `Insights/PanelDetail`; design §2 changed |
+| F-P2-9 | P2: design §1.2 puts Explore at `ReportBuilder/Explore`, but ReportBuilder was the copied builder denied to the root user group (F20) | `BOSS_INS_LEGACY` names the copied children; ReportBuilder opens on Explore for every Insights user |
 
 ## 7. Later
 
