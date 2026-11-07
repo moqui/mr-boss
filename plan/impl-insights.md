@@ -761,7 +761,7 @@ target; INS-02, INS-05.
   Stock at date and not the Accounting statements; the orders panel's meaning shows its basis and that bases are
   excluded, and agrees with Commerce's OnlineSales for the same store and period.
 
-**Built Nov 7 (P4).** mr-boss (branch `ins/p4`), BOSS only.
+**Built Nov 7 (P4).** mr-boss c7a56dd2 (branch `ins/p4`), BOSS only.
 - **Records** (§4; `entity/AdminEntities.xml`, the registry entity file Admin P2 made, its Insights block at the end):
   `ironstone.insights.ReportCatalogEntry` (entry id, version, owner, title, description, purpose, basis, route, definition,
   parameter contract, source, metrics, the owner's catalogue service and its key, options service, export formats, schedule
