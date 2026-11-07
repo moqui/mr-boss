@@ -305,6 +305,47 @@ Design §1.1, §1.2 and §1.3's legacy screens; INS-01, INS-10 (the shell part).
   - Admin P3's capability registry gets Insights' rows (the nine permissions and six groups above);
   - `test/Shared/Chatter.spec.js`'s comment that Insights and Admin have no grant was stale and is corrected (F-P1-6).
 
+**Review Nov 7 (P1).** Checked the BOSS diff against this section, §2, §4, §6, design §1.1–§1.3, impl-admin F34, F35 and its
+P1 review, AGENTS.md, the testing skill and Practices-App-Dev, with the engine's checks read in moqui-report and authz.rs:
+- The engine's grants: every ReportServices operation enumerated from ReportServices.xml. Direct calls need an explicit grant
+  (no service is open by inheritance outside a screen), so a reader calls only `BOSS_INS_REPORT_READ`'s. Under an Insights
+  screen the root's ALLOW reaches any operation without a row of the user's: `save#`, `copy#`, `restore#`, `delete#Definition`,
+  the schedule operations, `import#Definitions`, `create#Annotation`, `evaluate#Alerts` and the git sync operations are denied
+  to `BOSS_INSIGHTS` and `BOSS_INSIGHTS_ADMIN`, with `pull#DefinitionGitSyncs` added (R1); `export#Definitions` stays open that
+  way, a read of definitions the viewer may read (`read_optional`); `run#ScheduledReport` is `anonymous-all`, outside
+  authorization. The engine's own checks (`authorize_own`: each dataset, the dataset save, git sync, alert evaluation,
+  webhooks, annotations) take nothing from an ancestor's ALLOW or ALWAYS, so the telemetry datasets stay `ADMIN`'s from any
+  screen or the REST path. `/moqui/reports` has only reading verbs (`query`, `documents` POST, `datasets` GET); annotations
+  are another path no Insights group holds. No Insights group has `DASHBOARDS_APP`, `REPORT_DATASETS_ADMIN` or a Tools screen.
+  The groups' operations match design §1.1 and §4's row (the steward's authoring is the dataset save's carrier).
+- The copied screens: denied to `BOSS_INSIGHTS`, so to every capability group, including the raw entity transitions
+  (`ancestor_deny`); the administrator's grant there was an inheritable ALWAYS, which passed the engine's denies from those
+  screens (R2). With ALLOW the administrator still opens them and posts the raw DataDocumentCondition transition (a probe,
+  not kept).
+- get#Context and Insights.js: scope from `MANTLE_USER_ORG` organizations, unrestricted only on a `MANTLE_ACTIVE_ORG` root
+  grant; a forged and an out-of-scope organization refused alike (`ORGANIZATION_UNAVAILABLE`); a Projects client by
+  `PROJECT_CLIENT`, a PASS account by holding no group; capabilities from the `INSIGHTS_*` permissions, no group name.
+- BossSetupData appends only, but for F1's row (and its comment); the demo users as P1 lists, each internal one in
+  `BOSS_USERS`, none in `ADMIN`. Screens: `moqui lint --screens` 132 sites, as before, the Insights screens only in the
+  information lists. Specs: InsightsAccess 6 features, each under 0.65 s; Home one qvt render (the html renders are refusals).
+- Fixes: **R1** (medium, security) `pull#DefinitionGitSyncs`, which has no check of its own, was open to every Insights user
+  from an Insights screen; it joins `BOSS_INS_REPORT_TOOLS`, and InsightsAccess calls `save#Definition`, `create#Schedule`,
+  `import#Definitions` and `pull#DefinitionGitSyncs` under the root as the reader, `save#Definition` as the administrator and
+  the author (the F-P1-1 denies had no regression check; the direct calls pass without them) (mr-boss b2064085). **R2** (low,
+  security) `BOSS_INS_LEGACY_ADMIN` is ALLOW, not ALWAYS; InsightsAccess checks the administrator refused `save#Definition`
+  under the copied Dashboards; the Built note and F-P1-5 corrected (mr-boss 74f55764).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): InsightsAccess, AdminAccess, ProjectsAccess,
+  CommerceAccess and Chatter 63 of 63 (mr-boss 12.8 s feature time); InsightsAccess 2.5 s, the engine feature 0.6 s. Each
+  fix's new case seen failing without it. Prettier clean. Not run: `./moq test-apps`, the acceptance walk.
+- For the lead:
+  - the denies are per operation, so an operation the framework adds to ReportServices is open from any Insights screen
+    that calls it until named here; a pattern deny of `org.moqui.report.ReportServices` for the root user group and the
+    administrator, with the reading grants made ALWAYS, would fail closed (P2, when the mounts arrive);
+  - `run#ScheduledReport` (`anonymous-all`, `allow-remote="false"`) delivers any schedule by id to any caller; harmless while
+    no screen calls it, a framework note for P7;
+  - the root user group alone (no capability group) reaches the reading operations from an Insights screen by the root's
+    ALLOW; the engine's dataset checks still hold, and Home shows such a user nothing.
+
 ### P2 — Dashboards and Explore in Insights
 
 Design §4 Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail and Playlists, §5 Explore; INS-04 (a
