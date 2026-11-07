@@ -261,14 +261,17 @@ feature("each group holds exactly the capabilities of its permissions and areas;
     }
 })
 
-feature("Admin › System is refused to the Admin administrator and opens to ADMIN; developer tools each by their own grant", {
+feature("Admin › System is refused to the Admin groups and opens to ADMIN; developer tools each by their own grant", {
     when() {
         const problems = []
-        for (const path of ["System", "System/Security/UserAccount"]) {
-            const got = screenRefusal(users.admin, path)
-            if (!unauthorized(got) || !got.includes("AT_XML_SCREEN ["))
-                problems.push(`the administrator opens ${path}: ${got || "opened"}`)
-        }
+        // the administrator (BOSS_ADMIN_ADMIN) and an ordinary Admin user (the root user group BOSS_ADMIN's ALLOW): the root,
+        // a subscreen and a transition below it
+        for (const user of [users.admin, users.reader])
+            for (const path of ["System", "System/Security/UserAccount", "System/Cache/CacheList/cacheElements"]) {
+                const got = screenRefusal(user, path)
+                if (!unauthorized(got) || !got.includes("AT_XML_SCREEN"))
+                    problems.push(`${user} opens ${path}: ${got || "opened"}`)
+            }
         const opened = screenRefusal(users.system, "System/Security/UserAccount")
         if (opened !== "") problems.push(`ADMIN is refused Admin › System: ${opened}`)
         const tools = user => asUser(user, () => invoke("ironstone.admin.RegistryServices.find#ToolLinks", {}).links || [])
