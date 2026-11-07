@@ -1,7 +1,8 @@
 // Insights dashboards (impl-insights P2; design-insights §4 Dashboard, DashboardEditor, ShareDashboard): the framework report
 // screens mounted under Insights (INS-04). Dashboard's one qvt render: the organization in scope fixed over a forged variable,
 // its links (appLinks) under Insights, a library panel over a dataset the author may not read said to be not available (Mantle's
-// sales orders wait for the steward's admission, P3), and Share for the owner; a panel inspect keeps the scope. The mounted editor copies and
+// sales orders wait for the steward's admission, P3), Share for the owner and the panel's measure meaning (P4); a panel inspect
+// keeps the scope. The mounted editor copies and
 // saves under Insights, keeps the group over a posted one and takes only its own types. Sharing: the owner shares with their
 // own group and makes the dashboard private again; another group, a reader and a shipped dashboard are refused. The access
 // rules of the editors and the engine are InsightsAccess's; the golden walk is the client InsightsDashboardsWalk; the "usable
@@ -72,6 +73,8 @@ spec({
                 body: {
                     title: "Orders per day",
                     visualization: "timeSeries",
+                    // P4: the panel names Sales' registered orders measure, which Dashboard's MeasureMeaning explains
+                    business: {metricId: "Sales.Orders", metricVersion: 1},
                     queries: [
                         {
                             datasetId: "mantle-sales-orders",
@@ -147,6 +150,10 @@ feature(
             // the library panel over sales orders: refused until the steward admits the dataset (P3), shown as such
             board.output.includes("mantle-sales-orders is not admitted")
             board.output.includes("Spec board")
+            // P4 MeasureMeaning: the library panel's registered measure, its basis and the base-order exclusion
+            board.output.includes("What the measures mean")
+            board.output.includes("Orders (Sales, version 1)")
+            board.output.includes("Recurring base orders are templates")
             inspect.errors == []
             inspect.output.includes(ids.organizationId)
             !inspect.output.includes(ids.otherOrganizationId)

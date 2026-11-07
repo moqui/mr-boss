@@ -1188,4 +1188,30 @@ along with this software (see the LICENSE.md file). If not, see
             artifactGroupId="BOSS_ADM_ACCESS" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ADM_ACCESS_DEMO_DELEGATE" entityFilterSetId="MANTLE_USER_ORG"/>
     <moqui.security.ArtifactAuthzFilter artifactAuthzId="BOSS_ADM_ACCESS_DEMO_DELEGATE" entityFilterSetId="MANTLE_PRIVATE_CONTACT"/>
+    <!-- Insights P4 (impl-insights P4, the catalog's "usable when"): Insights readers who are also an owner's readers, so the catalog
+        shows them the owners' entries: insights.servicemanager, a Customer Service manager (its Reports area), and insights.warehouse,
+        a Warehouse user (its Reports area by route); agents of Ziziwork Retail, none in ADMIN. -->
+    <mantle.party.Party partyId="BOSS_INS_SVC_MANAGER" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_SVC_MANAGER" firstName="Insights" lastName="Service manager"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_SVC_MANAGER_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_SVC_MANAGER" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_SVC_MANAGER" username="insights.servicemanager"
+            userFullName="Insights Service manager" partyId="BOSS_INS_SVC_MANAGER"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_SVC_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_SVC_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_SVC_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE" userId="BOSS_INS_SVC_MANAGER" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_CUSTOMER_SERVICE_MANAGER" userId="BOSS_INS_SVC_MANAGER" fromDate="0"/>
+    <mantle.party.Party partyId="BOSS_INS_WAREHOUSE" partyTypeEnumId="PtyPerson"/>
+    <mantle.party.Person partyId="BOSS_INS_WAREHOUSE" firstName="Insights" lastName="Warehouse reader"/>
+    <mantle.party.PartyRelationship partyRelationshipId="BOSS_INS_WAREHOUSE_ORG" relationshipTypeEnumId="PrtAgent"
+            fromPartyId="BOSS_INS_WAREHOUSE" toPartyId="ORG_ZIZI_RETAIL" toRoleTypeId="OrgInternal" fromDate="0"/>
+    <moqui.security.UserAccount userId="BOSS_INS_WAREHOUSE" username="insights.warehouse"
+            userFullName="Insights Warehouse reader" partyId="BOSS_INS_WAREHOUSE"
+            currentPassword="16ac58bbfa332c1c55bd98b53e60720bfa90d394" passwordHashType="SHA" locale="en_US" currencyUomId="USD"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_USERS" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_INSIGHTS_READ" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
+    <moqui.security.UserGroupMember userGroupId="BOSS_WAREHOUSE" userId="BOSS_INS_WAREHOUSE" fromDate="0"/>
 </entity-facade-xml>

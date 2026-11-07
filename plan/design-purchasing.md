@@ -960,6 +960,10 @@ A match operator applies matches, through `mantle.account.InvoiceMatchServices.a
 
 ## 11. Performance
 
+**Insights registration (impl-insights P4, Nov 7, 2026; F29).** Scorecards, Spend, Commitments, ProcurementTracker,
+PurchaseHistory and SupplierStatement are `ironstone.insights.ReportCatalogEntry` rows (`Purchasing.*`) read by their routes'
+screen authorization; no Purchasing metric is registered yet.
+
 Register these measures and canonical report routes with [Insights](design-insights.md#6-report-catalog-and-domain-metrics),
 including source basis, denominators, organization/supplier scope, currency/UOM and freshness.
 The framework reporting engine now supplies panels, pivot transformations and exploration; each

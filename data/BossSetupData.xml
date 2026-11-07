@@ -2326,14 +2326,15 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- The copied report screens (impl-insights F20; design §13.2): Reports (the legacy saved-report picker) and ScheduledReports
-        (the copied personal scheduled finds) stay the Insights administrator's and ADMIN's until P4 and P7 replace them: the root
-        user group is denied them, as impl-commerce F45's areas. P2 replaced the copied Dashboards and Dashboard (F35), P3 the copied
-        report builder's Datasets, DatasetDetail and DatasetView with their raw DataDocument transitions (BOSS_INS_DATASET_SCREENS
-        below). Insights.js reads this as the legacy capability. The administrator's grant is ALLOW, as on the root: an inheritable ALWAYS here would pass the engine's denies
+    <!-- The copied report screens (impl-insights F20; design §13.2): ScheduledReports (the copied personal scheduled finds) stays
+        the Insights administrator's and ADMIN's until P7 replaces it: the root user group is denied it, as impl-commerce F45's
+        areas. P2 replaced the copied Dashboards and Dashboard (F35), P3 the copied report builder's Datasets, DatasetDetail and
+        DatasetView with their raw DataDocument transitions (BOSS_INS_DATASET_SCREENS below), P4 the legacy saved-report picker
+        (Reports) with the report catalog and SavedReports, every Insights user's (an existing instance deletes the earlier
+        pattern rows of this group, which named those screens). Insights.js reads this as the legacy capability. The administrator's grant is ALLOW, as on the root: an inheritable ALWAYS here would pass the engine's denies
         below (BOSS_INS_REPORT_ENGINE) from these screens. -->
     <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
-        <artifacts artifactName="component://mr-boss/screen/Insights/(Reports|ScheduledReports)\.xml"
+        <artifacts artifactName="component://mr-boss/screen/Insights/ScheduledReports\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_INS_LEGACY_DENY" userGroupId="BOSS_INSIGHTS"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
@@ -3400,5 +3401,403 @@ along with this software (see the LICENSE.md file). If not, see
                 authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Insights P4 (impl-insights P4, §4; design-insights §6.1, §6.2): the report catalog and the metric registrations, each owner's
+        rows in a block of its own (owner contracts: each is written into the owner's design). An entry holds navigation only:
+        whether a viewer reads it is its owner's catalogue service where one is registered, else the route's own screen
+        authorization (impl-insights §4, F17); one entry per report, one owner (review Z10). -->
+    <!-- Customer Service (owner contract, design-customer-service §7 Reports): its six reports, read through its get#ReportCatalogue -->
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.ServiceLevelCompliance" version="1"
+            ownerApp="CustomerService" title="Service level compliance"
+            description="Clocks met, missed and still open past due, by queue, team, priority, policy or channel; cancellations apart."
+            purpose="Service" basis="Clock start date, as of a time" routePath="CustomerService/Reports/ServiceLevelCompliance"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="ironstone.customerservice.ReportingServices.get#SlaCompliance"
+            metricIds="CustomerService.ServiceLevelCompliance"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.ServiceLevelCompliance" exportFormats="CSV" sequenceNum="10"/>
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.ResponseTimes" version="1" ownerApp="CustomerService"
+            title="Response times"
+            description="First response and resolution: count, median, p90 and mean in business and elapsed time, and open age."
+            purpose="Service" basis="Clock start date" routePath="CustomerService/Reports/ResponseTimes"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="ironstone.customerservice.ReportingServices.get#ResponseTimes"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.ResponseTimes" exportFormats="CSV" sequenceNum="20"/>
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.CaseVolumes" version="1" ownerApp="CustomerService"
+            title="Case volumes"
+            description="Received, resolved, reopened, cancelled and merged cases, assignments and the open backlog."
+            purpose="Service" basis="Received date; backlog as of a time" routePath="CustomerService/Reports/CaseVolumes"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="ironstone.customerservice.ReportingServices.get#CaseVolumes" metricIds="CustomerService.Backlog"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.CaseVolumes" exportFormats="CSV" sequenceNum="30"/>
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.ReturnAnalysis" version="1" ownerApp="CustomerService"
+            title="Return analysis"
+            description="Returns by reason, product, response or customer: requested, received, accepted, credited, amounts per currency."
+            purpose="Service" basis="Return date" routePath="CustomerService/Reports/ReturnAnalysis"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="ironstone.customerservice.ReportingServices.get#ReturnAnalysis"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.ReturnAnalysis" exportFormats="CSV" sequenceNum="40"/>
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.SatisfactionResults" version="1" ownerApp="CustomerService"
+            title="CSAT results"
+            description="Feedback answers of one form and period: response rate, score distribution and the answers."
+            purpose="Service" basis="Answer date" routePath="CustomerService/Reports/SatisfactionResults"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.SatisfactionResults" sequenceNum="50"/>
+    <ironstone.insights.ReportCatalogEntry entryId="CustomerService.CaseAnalytics" version="1" ownerApp="CustomerService"
+            title="Case analytics" description="One case's clocks and events; opened from a case's Service level tab."
+            purpose="Service" basis="One case"
+            catalogueService="ironstone.customerservice.ReportingServices.get#ReportCatalogue"
+            catalogueKey="CustomerService.CaseAnalytics" sequenceNum="60"/>
+    <!-- Commerce (owner contract, design-commerce §3): its four reports, read through its get#ReportCatalogue; orders are the Sales metric cut by store -->
+    <ironstone.insights.ReportCatalogEntry entryId="Commerce.OnlineSales" version="1" ownerApp="Commerce" title="Online sales"
+            description="Orders, items, gross, discounts, net sales, net invoiced and average order by store, period and currency; top products."
+            purpose="Sales" basis="Placed date by period" routePath="Commerce/Reports/OnlineSales"
+            sourceReference="ironstone.commerce.ReportingServices.get#OnlineSales"
+            metricIds="Sales.Orders,Accounting.InvoicedRevenue"
+            catalogueService="ironstone.commerce.ReportingServices.get#ReportCatalogue" catalogueKey="Commerce.OnlineSales"
+            exportFormats="CSV" sequenceNum="70"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Commerce.CartRecovery" version="1" ownerApp="Commerce" title="Cart recovery"
+            description="Carts opened, abandoned, signed in, recovery sends, delivered, recovered orders and their value, per currency."
+            purpose="Sales" basis="Cart date by period" routePath="Commerce/Reports/CartRecovery"
+            sourceReference="ironstone.commerce.ReportingServices.get#CartRecovery"
+            catalogueService="ironstone.commerce.ReportingServices.get#ReportCatalogue" catalogueKey="Commerce.CartRecovery"
+            exportFormats="CSV" sequenceNum="80"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Commerce.PromotionUse" version="1" ownerApp="Commerce" title="Promotion use"
+            description="Orders, uses, discount and the net sales of those orders by promotion and code, with the uses left."
+            purpose="Sales" basis="Placed date by period" routePath="Commerce/Reports/PromotionUse"
+            sourceReference="ironstone.commerce.ReportingServices.get#PromotionUse"
+            catalogueService="ironstone.commerce.ReportingServices.get#ReportCatalogue" catalogueKey="Commerce.PromotionUse"
+            exportFormats="CSV" sequenceNum="90"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Commerce.ChannelHealth" version="1" ownerApp="Commerce"
+            title="Channel health"
+            description="Channel messages received, processed, failed and retried, and each feed's last complete build."
+            purpose="Sales" basis="Received date by period" routePath="Commerce/Reports/ChannelHealth"
+            sourceReference="ironstone.commerce.ReportingServices.get#ChannelHealth"
+            catalogueService="ironstone.commerce.ReportingServices.get#ReportCatalogue" catalogueKey="Commerce.ChannelHealth"
+            exportFormats="CSV" sequenceNum="100"/>
+    <!-- Accounting (owner contract, design-accounting §13): its statements and ledgers, read through its get#Catalog by reportId (F17); inventory valuation, which Warehouse mounts (crosscut §3.25), by its route -->
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.BalanceSheet" version="1" ownerApp="Accounting"
+            title="Balance sheet" description="Assets, liabilities and equity at the end of a period." purpose="Finance"
+            basis="Posted, fiscal period end" routePath="Accounting/Reports/BalanceSheet"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#BalanceSheet"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="BalanceSheet" sequenceNum="110"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.IncomeStatement" version="1" ownerApp="Accounting"
+            title="Income statement" description="Income and expense of a period, to net income." purpose="Finance"
+            basis="Posted, fiscal period" routePath="Accounting/Reports/IncomeStatement"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#IncomeStatement"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="IncomeStatement" sequenceNum="120"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.CashFlow" version="1" ownerApp="Accounting" title="Cash flow"
+            description="Cash from operating, investing and financing activities." purpose="Finance"
+            basis="Posted, fiscal period" routePath="Accounting/Reports/CashFlow"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#CashFlowStatement"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="CashFlow" sequenceNum="130"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.RetainedEarnings" version="1" ownerApp="Accounting"
+            title="Retained earnings" description="Retained earnings at the start, net income, distributions." purpose="Finance"
+            basis="Posted, fiscal period" routePath="Accounting/Reports/RetainedEarnings"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#RetainedEarningsStatement"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="RetainedEarnings" sequenceNum="140"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.FinancialRatios" version="1" ownerApp="Accounting"
+            title="Financial ratios" description="Liquidity, activity, leverage and profitability ratios." purpose="Finance"
+            basis="Posted, fiscal period" routePath="Accounting/Reports/FinancialRatios"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#FinancialRatios"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="FinancialRatios" sequenceNum="150"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.Aging" version="1" ownerApp="Accounting" title="Aging"
+            description="Receivables or payables open on a day, by days past due." purpose="Finance" basis="Open on a day"
+            routePath="Accounting/Reports/Aging" parameterContract="organizationPartyId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#Aging"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="Aging" sequenceNum="160"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.PartnerLedger" version="1" ownerApp="Accounting"
+            title="Partner ledger" description="Each customer's or supplier's movements and balance on its account."
+            purpose="Finance" basis="Posted, fiscal period" routePath="Accounting/Reports/PartnerLedger"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#PartnerLedger"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="PartnerLedger" sequenceNum="170"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.InvoiceReconciliation" version="1" ownerApp="Accounting"
+            title="Invoice reconciliation" description="Invoices, payments and postings that disagree with the ledger."
+            purpose="Finance" basis="Fiscal period" routePath="Accounting/Reports/InvoiceReconciliation"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#InvoiceReconciliation"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="InvoiceReconciliation"
+            sequenceNum="180"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.TrialBalance" version="1" ownerApp="Accounting"
+            title="Trial balance" description="Each account's beginning balance, debits, credits and ending balance."
+            purpose="Finance" basis="Posted, fiscal period" routePath="Accounting/Reports/TrialBalance"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.FinanceReportServices.run#TrialBalance"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="TrialBalance" sequenceNum="190"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.GeneralLedger" version="1" ownerApp="Accounting"
+            title="General ledger" description="The posted lines of each account, with a running balance." purpose="Finance"
+            basis="Posted, fiscal period" routePath="Accounting/Reports/GeneralLedger"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.FinanceReportServices.run#GeneralLedger"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="GeneralLedger" sequenceNum="200"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.PostedSummary" version="1" ownerApp="Accounting"
+            title="Posted amounts" description="Each account's posted debits, credits and balance between two days."
+            purpose="Finance" basis="Posted date" routePath="Accounting/Reports/PostedSummary"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.ledger.LedgerReportServices.run#PostedAmountSummary"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="PostedSummary" sequenceNum="210"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.BudgetVariance" version="1" ownerApp="Accounting"
+            title="Budget variance" description="Each account's budget, commitments, actual and what remains." purpose="Finance"
+            basis="Fiscal period" routePath="Accounting/Reports/BudgetVariance"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.other.BudgetReportServices.run#BudgetVariance"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="BudgetVariance" sequenceNum="220"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.StockTransactions" version="1" ownerApp="Accounting"
+            title="Stock transactions" description="The receipts, issues and count variances of a period." purpose="Inventory"
+            basis="Effective date, fiscal period" routePath="Accounting/Reports/StockTransactions"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.product.InventoryReportServices.run#StockTransactions"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="StockTransactions"
+            sequenceNum="230"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Accounting.InventoryValuation" version="1" ownerApp="Accounting"
+            title="Inventory valuation"
+            description="Stock value beside the inventory accounts, by product; values need financial read." purpose="Inventory"
+            basis="As of a day" routePath="Accounting/Inventory/InventoryValuation" parameterContract="organizationPartyId"
+            sourceReference="mantle.product.InventoryReportServices.run#InventoryValuation" sequenceNum="240"/>
+    <!-- Sales (owner contract, impl-insights §4, F18): SalesAnalysis is one entry, Sales', opening Accounting's built report until Sales is built and Accounting mounts Sales' report; Accounting's catalogue decides who reads it, as its route's -->
+    <ironstone.insights.ReportCatalogEntry entryId="Sales.SalesAnalysis" version="1" ownerApp="Sales" title="Sales analysis"
+            description="Ordered, shipped, invoiced and returned, by product, customer or class." purpose="Sales"
+            basis="Placed, shipped and invoiced dates" routePath="Accounting/Reports/SalesAnalysis"
+            parameterContract="organizationPartyId,timePeriodId"
+            sourceReference="mantle.sales.SalesReportServices.run#SalesAnalysis"
+            metricIds="Sales.Orders,Accounting.InvoicedRevenue"
+            catalogueService="ironstone.accounting.ReportServices.get#Catalog" catalogueKey="SalesAnalysis" sequenceNum="250"/>
+    <!-- Warehouse (owner contract, design-warehouse §14): stock at date, operations history and count variance, by their routes -->
+    <ironstone.insights.ReportCatalogEntry entryId="Warehouse.StockAtDate" version="1" ownerApp="Warehouse"
+            title="Stock at date"
+            description="What was on hand at the end of a past day, with its opening, receipts, issues and adjustments."
+            purpose="Inventory" basis="Effective date of each movement" routePath="Warehouse/Reports/StockAtDate"
+            sourceReference="mantle.product.InventoryReportServices.get#InventoryAtDate" metricIds="Warehouse.StockAtDate"
+            sequenceNum="260"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Warehouse.OperationsHistory" version="1" ownerApp="Warehouse"
+            title="Operations history"
+            description="Receipts, shipments, returns and transfers with their quantities, dates and days late."
+            purpose="Inventory" basis="Received or shipped, or expected" routePath="Warehouse/Reports/OperationsHistory"
+            parameterContract="fromDate,thruDate"
+            sourceReference="mantle.product.InventoryReportServices.find#OperationsHistory" sequenceNum="270"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Warehouse.CountVariance" version="1" ownerApp="Warehouse"
+            title="Count variance" description="Counted against expected quantities, with the posted variances and reasons."
+            purpose="Inventory" basis="Count date" routePath="Warehouse/Reports/CountVariance"
+            parameterContract="fromDate,thruDate" sourceReference="ironstone.warehouse.ReportServices.get#CountVariance"
+            sequenceNum="280"/>
+    <!-- Manufacturing (owner contract, impl-manufacturing F143): its reports with OEE, by their routes -->
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.WorkOrderStatus" version="1" ownerApp="Manufacturing"
+            title="Work order status"
+            description="Target, good and remaining quantity, days late and what blocks each work order." purpose="Production"
+            basis="Due and completion dates" routePath="Manufacturing/Reports/WorkOrderStatusReport"
+            parameterContract="organizationPartyId" sequenceNum="290"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.Materials" version="1" ownerApp="Manufacturing"
+            title="Materials" description="Required, issued, returned and net material, and good and held output, with lots."
+            purpose="Production" basis="Issued and received" routePath="Manufacturing/Reports/MaterialReport"
+            parameterContract="organizationPartyId" sequenceNum="300"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.OperationPerformance" version="1" ownerApp="Manufacturing"
+            title="Operation performance"
+            description="OEE by work center: availability, performance and quality, with downtime by reason."
+            purpose="Production" basis="A period, the last week by default"
+            routePath="Manufacturing/Reports/OperationPerformanceReport"
+            parameterContract="organizationPartyId,fromDate,thruDate"
+            sourceReference="mantle.work.ProductionReportServices.get#OperationPerformanceReport" metricIds="Manufacturing.Oee"
+            sequenceNum="310"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.Loss" version="1" ownerApp="Manufacturing" title="Loss"
+            description="Scrap, process loss and rework against good output; their cost needs financial read."
+            purpose="Production" basis="Loss date" routePath="Manufacturing/Reports/LossReport"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="320"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.Quality" version="1" ownerApp="Manufacturing" title="Quality"
+            description="Production inspections: samples, readings, failure rate, holds and time to disposition."
+            purpose="Production" basis="Inspection date" routePath="Manufacturing/Reports/QualityReport"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="330"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.ProductionCost" version="1" ownerApp="Manufacturing"
+            title="Production cost"
+            description="Cost by component, WIP, output allocation and variance of each work order; amounts need financial read."
+            purpose="Production" basis="Completion date, or open now" routePath="Manufacturing/Reports/ProductionCostReport"
+            parameterContract="organizationPartyId" sequenceNum="340"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.BomVariance" version="1" ownerApp="Manufacturing"
+            title="BOM variance" description="Planned against issued material, substitutes, yield and time."
+            purpose="Production" basis="Release date" routePath="Manufacturing/Reports/BillOfMaterialsVarianceReport"
+            parameterContract="organizationPartyId" sequenceNum="350"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Manufacturing.Planning" version="1" ownerApp="Manufacturing"
+            title="Planning" description="Required, available, held, suggested and converted quantities with their provenance."
+            purpose="Production" basis="The current supply plans" routePath="Manufacturing/Reports/PlanningReport"
+            parameterContract="organizationPartyId" sequenceNum="360"/>
+    <!-- Projects (owner contract, design-projects §11): portfolio, profitability, progress, sprints, time, utilization and work items, by their routes (Profitability and Utilization the managers') -->
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Portfolio" version="1" ownerApp="Projects" title="Portfolio"
+            description="Every project's status, health, progress, schedule against the forecast, and hours of budget."
+            purpose="Projects" basis="Now" routePath="Projects/Reports/Portfolio"
+            sourceReference="mantle.work.ProjectReportServices.get#PortfolioStatus" sequenceNum="370"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Profitability" version="1" ownerApp="Projects"
+            title="Profitability"
+            description="Budget, cost, billable value, billed and margin by project, with totals by client." purpose="Projects"
+            basis="Work date" routePath="Projects/Reports/Profitability" parameterContract="fromDate,thruDate"
+            sourceReference="mantle.work.ProjectReportServices.get#ProjectProfitability" sequenceNum="380"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Progress" version="1" ownerApp="Projects" title="Progress"
+            description="A project's estimated, actual and remaining work by milestone and down the work item tree."
+            purpose="Projects" basis="Now" routePath="Projects/Reports/Progress"
+            sourceReference="mantle.work.ProjectReportServices.get#ProgressBreakdown" sequenceNum="390"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Sprints" version="1" ownerApp="Projects" title="Sprints"
+            description="The velocity of a project's last sprints and a sprint's burndown." purpose="Projects"
+            basis="Sprint dates" routePath="Projects/Reports/Sprints"
+            sourceReference="mantle.work.ProjectReportServices.get#SprintVelocity" sequenceNum="400"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Time" version="1" ownerApp="Projects" title="Time"
+            description="Hours by project, item, person, work type or client, week by week or by month, with the billable part."
+            purpose="Projects" basis="Work date" routePath="Projects/Reports/Time" parameterContract="fromDate,thruDate"
+            sourceReference="mantle.work.ProjectReportServices.get#TimeReport" sequenceNum="410"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.Utilization" version="1" ownerApp="Projects" title="Utilization"
+            description="Capacity against the hours logged and billed, by person and week." purpose="Projects" basis="Work week"
+            routePath="Projects/Reports/Utilization" parameterContract="fromDate"
+            sourceReference="mantle.work.ProjectReportServices.get#Utilization" metricIds="Projects.Utilization"
+            sequenceNum="420"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Projects.WorkItems" version="1" ownerApp="Projects" title="Work items"
+            description="Open, created, resolved and overdue items, by status, type, assignee or component, and the cycle time."
+            purpose="Projects" basis="Created and resolved dates" routePath="Projects/Reports/WorkItems"
+            parameterContract="fromDate,thruDate" sourceReference="mantle.work.ProjectReportServices.get#WorkItemSummary"
+            sequenceNum="430"/>
+    <!-- Products (owner contract, design-products §1.3; F29): catalog checks, price history, cost history and cost roll-up, by
+        their routes (the cost reports the cost readers') -->
+    <ironstone.insights.ReportCatalogEntry entryId="Products.CatalogChecks" version="1" ownerApp="Products"
+            title="Catalog checks"
+            description="Products missing what they need to sell: prices, categories, images, descriptions and identifiers."
+            purpose="Catalog" basis="Now" routePath="Products/CatalogChecks" sequenceNum="440"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Products.PriceHistory" version="1" ownerApp="Products" title="Price history"
+            description="Each price's changes and the audit of who changed it, by product, price list and organization."
+            purpose="Catalog" basis="Change date" routePath="Products/Prices/PriceHistory"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="450"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Products.CostHistory" version="1" ownerApp="Products" title="Cost history"
+            description="Standard and estimated costs over time, with their approvals; for cost readers." purpose="Catalog"
+            basis="Effective date" routePath="Products/Prices/CostHistory" sequenceNum="460"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Products.CostRollup" version="1" ownerApp="Products" title="Cost roll-up"
+            description="How a product's standard cost builds up from its materials, operations and overheads; for cost readers."
+            purpose="Catalog" basis="The cost version" routePath="Products/Prices/CostRollup" sequenceNum="555"/>
+    <!-- Purchasing (owner contract, design-purchasing; F29): the Performance reports over ironstone.purchasing.ReportServices, by their routes -->
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.Scorecards" version="1" ownerApp="Purchasing"
+            title="Supplier scorecards"
+            description="Each supplier's delivery, quality and price results, with the evaluations behind them."
+            purpose="Purchasing" basis="Evaluation date" routePath="Purchasing/Performance/Scorecards"
+            parameterContract="organizationPartyId" sequenceNum="470"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.Spend" version="1" ownerApp="Purchasing" title="Spend"
+            description="Purchase spend by supplier, product or category, per currency." purpose="Purchasing" basis="Order date"
+            routePath="Purchasing/Performance/Spend" parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="480"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.Commitments" version="1" ownerApp="Purchasing"
+            title="Commitments"
+            description="Ordered, received, accepted and billed quantities of open purchase orders, stage by stage."
+            purpose="Purchasing" basis="Order date" routePath="Purchasing/Performance/Commitments"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="490"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.ProcurementTracker" version="1" ownerApp="Purchasing"
+            title="Procurement tracker"
+            description="Each request through its quote, order, receipt and bill, with the days at each stage."
+            purpose="Purchasing" basis="Request date" routePath="Purchasing/Performance/ProcurementTracker"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="500"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.PurchaseHistory" version="1" ownerApp="Purchasing"
+            title="Purchase history" description="What was bought from whom, at what price and when, by product or supplier."
+            purpose="Purchasing" basis="Order date" routePath="Purchasing/Performance/PurchaseHistory"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="510"/>
+    <ironstone.insights.ReportCatalogEntry entryId="Purchasing.SupplierStatement" version="1" ownerApp="Purchasing"
+            title="Supplier statement" description="A supplier's bills, payments and balance over a period, in its currency."
+            purpose="Purchasing" basis="Bill and payment dates" routePath="Purchasing/Performance/SupplierStatement"
+            parameterContract="organizationPartyId,fromDate,thruDate" sequenceNum="520"/>
+
+    <!-- The metric registrations (impl-insights §4, P4; design §6.2's metric owners, review X11): one owner per metric, each the
+        versioned descriptor of a measure its owner computes. The comparison rules of design §6.3 are their fields: unitPolicy
+        currency keeps native currencies apart, a ratio is recomputed from its numerator and denominator, a snapshot is never summed
+        across dates (nonAdditiveDimensions), and the orders metric excludes recurring base orders. -->
+    <!-- Sales (owner contract, impl-insights §4): orders over Mantle's SalesReportServices and the admitted sales datasets; Commerce
+        reads it cut by productStoreIds, never redefined per store (design §6.2) -->
+    <ironstone.insights.MetricRegistration metricId="Sales.Orders" version="1" ownerApp="Sales" title="Orders"
+            description="Placed sales orders, their count and value, in each order's own currency."
+            serviceName="mantle.sales.SalesReportServices.get#SalesOrderSummary" datasetIds="mantle-sales-orders,mantle-sales-items"
+            catalogEntryId="Sales.SalesAnalysis" grain="Order part" recordKey="orderId, orderPartSeqId" dateBasis="Placed date"
+            statusBasis="Placed orders: approved, processing, shipped and completed; not open (draft) or proposed (quote)"
+            aggregation="count" numerator="Orders counted once each; value the sum of the parts' totals" unitPolicy="currency"
+            additiveDimensions="store, channel, customer, product, period (within one currency)" nonAdditiveDimensions="currency"
+            allowedDimensions="store, channel, customer, customer class, product, currency, period"
+            supportedFilters="organizationPartyId, productStoreIds, currencyUomIds, customerClassificationIds, productIds"
+            exclusions="Recurring base orders (orderPurposeEnumId OrpRecurringTemplate) are templates, never orders; their renewals count when placed. Open and proposed orders are not counted."
+            drillContract="The orders of the selected bucket from the sales datasets" scopePolicy="The viewer's organizations (MantleOrganization)"
+            freshness="The sales search index (MantleSales feed)" sequenceNum="10"/>
+    <!-- Accounting (owner contract, design-accounting §13): invoiced revenue -->
+    <ironstone.insights.MetricRegistration metricId="Accounting.InvoicedRevenue" version="1" ownerApp="Accounting"
+            title="Invoiced revenue" description="Finalized sales invoice amounts by invoice date, net of credit memos, in native currency."
+            serviceName="mantle.sales.SalesReportServices.get#SalesInvoiceSummary" catalogEntryId="Sales.SalesAnalysis"
+            grain="Invoice item" recordKey="invoiceId, invoiceItemSeqId" dateBasis="Invoice date"
+            statusBasis="Finalized, sent and paid sales invoices" aggregation="sum" numerator="Invoice item amounts, net of credit memos"
+            unitPolicy="currency" additiveDimensions="customer, product, period (within one currency)" nonAdditiveDimensions="currency"
+            allowedDimensions="customer, customer class, product, store, currency, period"
+            supportedFilters="organizationPartyId, productStoreIds, currencyUomIds, customerClassificationIds, productIds"
+            exclusions="Draft and cancelled invoices; purchase invoices" scopePolicy="The viewer's organizations; Accounting report read"
+            freshness="The sales search index (MantleSales feed)" sequenceNum="20"/>
+    <!-- Customer Service (owner contract, design-customer-service §7): the open backlog and service level compliance -->
+    <ironstone.insights.MetricRegistration metricId="CustomerService.Backlog" version="1" ownerApp="CustomerService"
+            title="Open case backlog" description="Cases open at a moment, by queue, team, type or channel."
+            serviceName="ironstone.customerservice.ReportingServices.get#CaseVolumes" datasetIds="boss-service-clocks"
+            catalogEntryId="CustomerService.CaseVolumes" grain="Support case" recordKey="requestId" dateBasis="As of a time"
+            statusBasis="Open: not resolved, closed or cancelled" aggregation="snapshot" unitPolicy="count"
+            additiveDimensions="queue, team, type, channel" nonAdditiveDimensions="date"
+            allowedDimensions="queue, team, type, channel, priority" supportedFilters="organizationPartyId, requestCategoryId, teamPartyId"
+            exclusions="Requests without a case extension; merged cases (counted on the case kept)"
+            scopePolicy="The viewer's organizations, queues and teams" freshness="Live" sequenceNum="30"/>
+    <ironstone.insights.MetricRegistration metricId="CustomerService.ServiceLevelCompliance" version="1" ownerApp="CustomerService"
+            title="Service level compliance" description="Clocks met over the clocks decided and those open past due, in the period."
+            serviceName="ironstone.customerservice.ReportingServices.get#SlaCompliance" datasetIds="boss-service-clocks"
+            catalogEntryId="CustomerService.ServiceLevelCompliance" grain="Service level clock" recordKey="requestId, clockEnumId"
+            dateBasis="Clock start date, as it stood at the as-of time" statusBasis="Met, missed, closed without it, open past due"
+            aggregation="ratio" numerator="Clocks met" denominator="Clocks decided (met or missed) and open past due"
+            unitPolicy="percent" additiveDimensions="none (recompute from the parts)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="queue, team, priority band, policy, channel, clock"
+            supportedFilters="organizationPartyId, requestCategoryId, teamPartyId, bandEnumId, serviceLevelPolicyId"
+            exclusions="Cancelled clocks are apart, never in the rate; a clock a merge ended (its copy on the kept case counts)"
+            scopePolicy="The viewer's organizations, queues and teams" freshness="Live" sequenceNum="40"/>
+    <!-- Warehouse (owner contract, design-warehouse §14, design §6.2's Warehouse row): on hand and stock at date, snapshots -->
+    <ironstone.insights.MetricRegistration metricId="Warehouse.OnHand" version="1" ownerApp="Warehouse" title="Quantity on hand"
+            description="Physical quantity on hand now, by product, facility, location, lot and owner, in each product's unit."
+            serviceName="mantle.product.InventoryReportServices.get#InventoryProjectedInfo" datasetIds="mantle-inventory"
+            grain="Asset (lot and location)" recordKey="assetId" dateBasis="Now" statusBasis="Assets on hand"
+            aggregation="snapshot" unitPolicy="quantity" additiveDimensions="facility, location, lot, owner (within one product unit)"
+            nonAdditiveDimensions="date, product unit" allowedDimensions="product, facility, location, lot, owner"
+            supportedFilters="ownerPartyId, facilityId, productId"
+            exclusions="Valuation is Accounting's measure; a current snapshot is not a past one"
+            scopePolicy="The viewer's organizations (owner)" freshness="The inventory search index (MantleInventoryData feed)" sequenceNum="50"/>
+    <ironstone.insights.MetricRegistration metricId="Warehouse.StockAtDate" version="1" ownerApp="Warehouse" title="Stock at date"
+            description="What was on hand at the end of a past day, from the movements up to it."
+            serviceName="mantle.product.InventoryReportServices.get#InventoryAtDate" catalogEntryId="Warehouse.StockAtDate"
+            grain="Product, facility, location and lot" recordKey="productId, facilityId, locationSeqId, lotId"
+            dateBasis="Effective date of each movement, to the end of the day" aggregation="snapshot" unitPolicy="quantity"
+            additiveDimensions="facility, location, lot (within one product unit)" nonAdditiveDimensions="date, product unit"
+            allowedDimensions="product, facility, location, lot, owner" supportedFilters="asOfDate, productId, facilityId, ownerPartyId"
+            exclusions="Never summed across dates" scopePolicy="The viewer's facilities" freshness="Live" sequenceNum="60"/>
+    <!-- Manufacturing (owner contract, impl-manufacturing F143): OEE -->
+    <ironstone.insights.MetricRegistration metricId="Manufacturing.Oee" version="1" ownerApp="Manufacturing"
+            title="Overall equipment effectiveness" description="Availability times performance times quality, by work center, over a period."
+            serviceName="mantle.work.ProductionReportServices.get#OperationPerformanceReport"
+            catalogEntryId="Manufacturing.OperationPerformance" grain="Work center and period" recordKey="facilityId"
+            dateBasis="Operation run time in the period" aggregation="ratio"
+            numerator="Run time × ideal rate × good output, from the parts" denominator="Planned production time"
+            unitPolicy="percent" additiveDimensions="none (recompute from availability, performance and quality)"
+            nonAdditiveDimensions="every dimension" allowedDimensions="work center, product, downtime reason"
+            supportedFilters="organizationPartyId, facilityId, productId, fromDate, thruDate"
+            exclusions="Planned downtime is outside planned production time" scopePolicy="The viewer's organizations"
+            freshness="Live" sequenceNum="70"/>
+    <!-- Projects (owner contract, design-projects §11): utilization -->
+    <ironstone.insights.MetricRegistration metricId="Projects.Utilization" version="1" ownerApp="Projects" title="Utilization"
+            description="Hours logged and billed against each person's capacity, week by week."
+            serviceName="mantle.work.ProjectReportServices.get#Utilization" catalogEntryId="Projects.Utilization"
+            grain="Person and week" recordKey="partyId, week" dateBasis="Work date" aggregation="ratio"
+            numerator="Hours logged (and billable hours)" denominator="Capacity hours" unitPolicy="percent"
+            additiveDimensions="none (recompute from hours and capacity)" nonAdditiveDimensions="every dimension"
+            allowedDimensions="person, team, project, week" supportedFilters="fromDate, weeks, teamPartyId, partyId, rootWorkEffortId"
+            exclusions="A week without capacity is unavailable, not zero" scopePolicy="The Projects managers"
+            freshness="Live" sequenceNum="80"/>
+    <!-- Insights P4: a library panel's measure and target are authoring transitions of PanelDetail, named here beside P2's (the editors'
+        area is a non-inheritable ALWAYS that refuses a transition not named, the P2 review's R3) -->
+    <artifactGroups artifactGroupId="BOSS_INS_AUTHORING">
+        <artifacts artifactName="component://mr-boss/screen/Insights/PanelDetail\.xml/(storeMeasure|storeTarget)"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" nameIsPattern="Y" inheritAuthz="N"/>
     </artifactGroups>
 </entity-facade-xml>

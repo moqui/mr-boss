@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     the user sees, the capabilities from the INSIGHTS_* permissions, safe defaults and the canonical links. A user may open Insights
     through an authorization of their groups on its root (BOSS_INSIGHTS, the root user group, or BOSS_INSIGHTS_ADMIN); the root
     grant opens navigation only. The report engine checks its own artifacts whatever this answers: a capability opens an
-    affordance, never a source. Disabled artifact authorization widens nothing here. P10 adds store#Settings. -->
+    affordance, never a source. Disabled artifact authorization widens nothing here. P4 adds search#Records, the palette's
+    dashboards and saved reports (Registry.js); P10 adds store#Settings. -->
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
     <service verb="get" noun="Context" allow-remote="false">
         <description>Check that the user may open Insights and resolve their context: the capabilities (the INSIGHTS_* permissions
@@ -57,6 +58,24 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="reportLinks" from="found.reportLinks"/>
             <set field="linkBase" from="found.linkBase"/>
             <set field="webBase" from="found.webBase"/>
+        </actions>
+    </service>
+    <service verb="search" noun="Records" allow-remote="false">
+        <description>The palette's Insights rows (design §1.2): the user's saved dashboards and reports and the shipped business
+            dashboards whose title matches, each with recordEntity, recordId and its link. No rows for a user without Insights
+            read.</description>
+        <in-parameters>
+            <parameter name="text"/>
+            <parameter name="limit" type="Integer"/>
+            <parameter name="docTypes" type="List"/>
+            <parameter name="idMatch" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="rows" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('searchRecords', context)"/>
+            <set field="rows" from="found.rows"/>
         </actions>
     </service>
 </services>

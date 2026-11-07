@@ -4,10 +4,10 @@
 const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
-    // every Insights user's menu (P2: the dashboards and Report builder › Explore)
-    readerMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder"],
-    // and the copied report screens (impl-insights F20), the Insights administrator's and ADMIN's until their phases replace them
-    legacyMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder", "Reports", "ScheduledReports"]
+    // every Insights user's menu (P2: the dashboards and Report builder › Explore; P4: Reports and Saved reports)
+    readerMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder", "Reports", "SavedReports"],
+    // and the copied ScheduledReports (impl-insights F20), the Insights administrator's and ADMIN's until P7 replaces it
+    legacyMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder", "Reports", "SavedReports", "ScheduledReports"]
 }
 // The demo users of each group (each also in BOSS_INSIGHTS but the administrator), agents of Ziziwork Retail but the Services
 // reader, none in ADMIN; the reader with financial read; a Projects client contact, a PASS public account and another app's
@@ -21,6 +21,9 @@ const users = {
     admin: "insights.admin",
     services: "insights.services",
     finance: "insights.finance",
+    // P4: an Insights reader who is a Customer Service manager, and one who is a Warehouse user
+    serviceManager: "insights.servicemanager",
+    warehouse: "insights.warehouse",
     client: "sheldon.acme",
     pass: "dana@joesdist.example.com",
     otherApp: "customerservice.read",

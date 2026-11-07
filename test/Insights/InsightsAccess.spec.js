@@ -159,6 +159,8 @@ const capabilityUsers = [
     {user: users.admin, granted: ["view", "settingsView", "settingsEdit", "legacy"]},
     {user: users.services, granted: ["view"]},
     {user: users.finance, granted: ["view"]},
+    {user: users.serviceManager, granted: ["view"]},
+    {user: users.warehouse, granted: ["view"]},
     {user: users.system, granted: capabilityNames}
 ]
 feature("each group holds exactly the capabilities of its permissions; the copied screens are the administrator's", {
@@ -266,8 +268,8 @@ feature(
             )
             // and from a copied screen, whose grant is the administrator's ALLOW, not an ALWAYS that would pass the denies
             expect(
-                "the administrator saves a dashboard from the copied report builder",
-                under("Insights/Reports.xml", users.admin, reports + "save#Definition", dashboard),
+                "the administrator saves a dashboard from the copied scheduled reports",
+                under("Insights/ScheduledReports.xml", users.admin, reports + "save#Definition", dashboard),
                 "is not authorized"
             )
             // P2: every operation is denied to the root user group unless granted, and the reading grants pass that deny
@@ -307,13 +309,13 @@ feature(
 feature("the copied screens, the dataset screens and the editors are refused to the ordinary groups; each opens to its group", {
     when() {
         const problems = []
-        for (const path of ["Reports", "ScheduledReports", "ReportBuilder/Datasets"]) {
+        for (const path of ["ScheduledReports", "ReportBuilder/Datasets"]) {
             const message = screenRefusal(users.reader, path)
             if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
                 problems.push(`the reader opens ${path}: ${message || "opened"}`)
         }
-        const opened = screenRefusal(users.admin, "Reports")
-        if (opened !== "") problems.push(`the administrator is refused the copied Reports: ${opened}`)
+        const opened = screenRefusal(users.admin, "ScheduledReports")
+        if (opened !== "") problems.push(`the administrator is refused the copied ScheduledReports: ${opened}`)
         // P3: the dataset list the author's, DatasetDetail the steward's, the administrator refused both (F20's raw entity
         // transitions are gone with the copied builder)
         const authorList = screenRefusal(users.author, "ReportBuilder/Datasets")

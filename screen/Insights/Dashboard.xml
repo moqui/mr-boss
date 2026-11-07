@@ -19,7 +19,9 @@ along with this software (see the LICENSE.md file). If not, see
     dashboard's organizationPartyId variable (with none chosen, the user's organizations), so a viewer's var-organizationPartyId
     never replaces it; the range defaults to
     Insights' (get#Context) and currencies stay apart. ShareDashboard: the owner, an author, shares the dashboard with one of
-    their groups or makes it private (DashboardServices.share#Dashboard). Every query runs as the viewer: a panel over a dataset
+    their groups or makes it private (DashboardServices.share#Dashboard). MeasureMeaning (P4): each panel's registered measure,
+    its version, grain, basis, denominator, exclusions and the comparison rules (RegistryServices.find#PanelMeasures; the
+    meaning is the owner's registration, never Insights' own formula). Every query runs as the viewer: a panel over a dataset
     the viewer may not read says so (P3 admits the business datasets), never a zero. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Dashboard" default-menu-include="false">
@@ -63,6 +65,11 @@ along with this software (see the LICENSE.md file). If not, see
                 !found.definition.readOnly &amp;&amp; found.definition.ownerId === ec.user.userId"/>
         <set field="expectedVersion" from="found.definition.version"/>
         <set field="userGroupId" from="found.definition.userGroupId || ''"/>
+        <!-- MeasureMeaning: the panels that name a registered measure, read only when the dashboard has any -->
+        <service-call name="ironstone.insights.RegistryServices.find#PanelMeasures" in-map="{definitionId:definitionId}"
+                out-map="meaning" transaction="force-new" ignore-error="true"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="measures" from="meaning?.measures || []"/>
         <if condition="shareable">
             <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
             <set field="shareGroups" from="share.groups"/>
@@ -84,6 +91,24 @@ along with this software (see the LICENSE.md file). If not, see
                 <label text="Currencies are shown apart, each in its own." type="p" style="m-muted"/>
             </container>
             <container style="col-auto">
+                <container-dialog id="MeasureMeaning" button-text="Meaning" condition="measures.length">
+                    <label text="What the measures mean" type="h6"/>
+                    <form-list name="MeasureMeaningList" list="measures" skip-form="true" paginate="false">
+                        <field name="panelTitle"><default-field title="Panel"><display/></default-field></field>
+                        <field name="metricTitle"><default-field title="Measure"><display text="${metricTitle || message}"/></default-field></field>
+                        <field name="grain"><default-field title="Counts"><display/></default-field></field>
+                        <field name="basis"><default-field title="Basis"><display/></default-field></field>
+                        <field name="denominator"><default-field title="Rate"><display/></default-field></field>
+                        <field name="exclusions"><default-field title="Excludes"><display/></default-field></field>
+                        <field name="rulesText"><default-field title="Comparing"><display/></default-field></field>
+                        <field name="source"><default-field title="Source"><display text="${source}${freshness ? ' (' + freshness + ')' : ''}"/></default-field></field>
+                        <field name="message"><default-field title="Note"><display/></default-field></field>
+                        <columns type="mobile">
+                            <column><field-ref name="panelTitle"/><field-ref name="metricTitle"/></column>
+                            <column><field-ref name="basis"/><field-ref name="exclusions"/></column>
+                        </columns>
+                    </form-list>
+                </container-dialog>
                 <container-dialog id="ShareDashboard" button-text="Share" condition="shareable">
                     <form-single name="ShareDashboardForm" transition="shareDashboard">
                         <field name="definitionId"><default-field><hidden/></default-field></field>

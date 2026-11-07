@@ -13,7 +13,10 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Insights › PanelDetail (design-insights §4 PanelDetail; impl-insights P2, INS-04): the framework definition editor (Tools
-    Dashboards/Definition.xml) for one library panel, hidden from the menu; its measure and target forms come with P4.
+    Dashboards/Definition.xml) for one library panel, hidden from the menu. P4 adds BusinessMeasure (the panel's registered
+    measure, its version and read-only basis: RegistryServices.store#PanelMeasure), Target (design §4's typed input:
+    store#PanelTarget; a money target needs the panel filtered to that one currency, and a missing or zero target is an
+    unavailable comparison) and Dependencies (the definitions that use the panel, find#DefinitionUses).
     The author and the dataset steward open it (BOSS_INS_AUTHORING); save, copy, restore and delete run here and return here
     or to Insights' lists (the root's reportLinks), the dataset choices are the datasets the author may read, and sharing is
     Insights › Dashboard's ShareDashboard, so the editor's save keeps the group as it is (a posted group is not taken); save and
@@ -31,6 +34,125 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="export" location="component://tools/screen/Dashboards/Definition.xml"/>
     <transition-include name="reference" location="component://tools/screen/Dashboards/Definition.xml"/>
     <transition-include name="dashboard" location="component://tools/screen/Dashboards/Definition.xml"/>
+    <transition name="storeMeasure" method="post">
+        <service-call name="ironstone.insights.RegistryServices.store#PanelMeasure"
+                in-map="{definitionId:definitionId, metricId:(metricId || null), expectedVersion:expectedVersion}"/>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+        <error-response url="."><parameter name="definitionId"/></error-response>
+    </transition>
+    <transition name="storeTarget" method="post">
+        <service-call name="ironstone.insights.RegistryServices.store#PanelTarget"
+                in-map="{panelId:definitionId, targetKind:(targetKind || null), targetMetricId:(targetMetricId || null),
+                    targetValue:(targetValue || null), targetUnitId:(targetUnitId || null), periodBinding:(periodBinding || null),
+                    betterDirection:(betterDirection || null), expectedVersion:expectedVersion}"/>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+        <error-response url="."><parameter name="definitionId"/></error-response>
+    </transition>
 
-    <widgets><include-screen location="component://tools/screen/Dashboards/Definition.xml" share-scope="true"/></widgets>
+    <actions>
+        <!-- BusinessMeasure, Target and Dependencies: a saved library panel only (a new one is saved first) -->
+        <if condition="definitionId">
+            <service-call name="org.moqui.report.ReportServices.get#Definition" in-map="{definitionId:definitionId}"
+                    out-map="panelFound" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="panelDefinition" from="panelFound?.definition?.type === 'panel' ? panelFound.definition : null"/>
+        </if>
+        <if condition="panelDefinition">
+            <set field="panelOwned" from="!panelDefinition.readOnly &amp;&amp; panelDefinition.ownerId === ec.user.userId"/>
+            <set field="expectedVersion" from="panelDefinition.version"/>
+            <service-call name="ironstone.insights.RegistryServices.find#Metrics" out-map="metricChoices"/>
+            <set field="metricOptions" from="metricChoices.metrics || []"/>
+            <service-call name="ironstone.insights.RegistryServices.get#Metric" in-map="{definitionId:definitionId}"
+                    out-map="panelMeaning" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="panelMeasure" from="panelMeaning?.available ? panelMeaning.metric : null"/>
+            <set field="panelTarget" from="panelMeaning?.panel?.target || {}"/>
+            <set field="measureValues" from="{definitionId:definitionId, expectedVersion:expectedVersion, metricId:panelMeasure?.metricId}"/>
+            <set field="targetValues" from="{definitionId:definitionId, expectedVersion:expectedVersion, targetKind:panelTarget.targetKind,
+                    targetMetricId:panelTarget.targetMetricId, targetValue:panelTarget.targetValue, targetUnitId:panelTarget.targetUnitId,
+                    periodBinding:panelTarget.periodBinding || 'panel', betterDirection:panelTarget.betterDirection || 'higher'}"/>
+            <set field="targetText" from="!panelTarget.targetKind ? 'No target: the comparison is unavailable.' :
+                    (panelTarget.targetKind === 'constant' ? 'Target ' + panelTarget.targetValue + (panelTarget.targetUnitId ? ' ' + panelTarget.targetUnitId : '')
+                    : 'Target measure ' + panelTarget.targetMetricId) + ', better ' + panelTarget.betterDirection + ', over ' + panelTarget.periodBinding"/>
+            <service-call name="org.moqui.report.ReportServices.find#DefinitionUses" in-map="{definitionId:definitionId}"
+                    out-map="panelUsesFound" transaction="force-new" ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="panelUses" from="panelUsesFound?.usedIn || []"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="BusinessMeaning" condition="panelDefinition">
+            <widgets>
+                <container-box>
+                    <box-header title="Business measure"/>
+                    <box-body>
+                        <label text="${panelMeasure ? panelMeasure.title + ' (' + panelMeasure.ownerName + ', version ' + panelMeasure.version + ')' : 'No registered measure: the panel is an analysis, not a certified measure.'}" type="p"/>
+                        <label text="Counts ${panelMeasure?.grain}. Basis: ${panelMeasure?.basis}." type="p" style="m-muted" condition="panelMeasure"/>
+                        <label text="Rate: ${panelMeasure?.numerator} over ${panelMeasure?.denominator}." type="p" style="m-muted"
+                                condition="panelMeasure?.aggregation === 'ratio'"/>
+                        <label text="Excludes: ${panelMeasure?.exclusions}" type="p" style="m-muted" condition="panelMeasure?.exclusions"/>
+                        <label text="${(panelMeasure?.rules || []).join(' ')}" type="p" style="m-muted" condition="panelMeasure?.rules?.length"/>
+                        <label text="${panelMeaning?.versionMessage}" type="p" style="text-warning" condition="panelMeaning?.versionMessage"/>
+                        <form-single name="BusinessMeasure" transition="storeMeasure" map="measureValues" condition="panelOwned">
+                            <field name="definitionId"><default-field><hidden/></default-field></field>
+                            <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                            <field name="metricId">
+                                <default-field title="Measure" tooltip="A measure its owning app registers; empty, the panel is an analysis">
+                                    <drop-down allow-empty="true"><list-options list="metricOptions" key="${metricId}" text="${label}"/></drop-down>
+                                </default-field>
+                            </field>
+                            <field name="saveMeasure"><default-field title="Save measure"><submit/></default-field></field>
+                        </form-single>
+                        <label text="${targetText}" type="p" condition="panelMeasure"/>
+                        <container-dialog id="Target" button-text="Target" condition="panelOwned &amp;&amp; panelMeasure">
+                            <form-single name="TargetForm" transition="storeTarget" map="targetValues">
+                                <field name="definitionId"><default-field><hidden/></default-field></field>
+                                <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                <field name="targetKind">
+                                    <default-field title="Compare with" tooltip="Empty clears the target">
+                                        <drop-down allow-empty="true"><option key="constant" text="A value"/><option key="metric" text="Another measure"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="targetValue"><default-field title="Value"><text-line size="12"/></default-field></field>
+                                <field name="targetUnitId">
+                                    <default-field title="Unit" tooltip="A money target names the one currency the panel is filtered to">
+                                        <text-line size="8"/>
+                                    </default-field>
+                                </field>
+                                <field name="targetMetricId">
+                                    <default-field title="Target measure">
+                                        <drop-down allow-empty="true"><list-options list="metricOptions" key="${metricId}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="periodBinding">
+                                    <default-field title="Over">
+                                        <drop-down><option key="panel" text="The panel's range"/><option key="month" text="A month"/>
+                                            <option key="quarter" text="A quarter"/><option key="year" text="A year"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="betterDirection">
+                                    <default-field title="Better is">
+                                        <radio><option key="higher" text="Higher"/><option key="lower" text="Lower"/></radio>
+                                    </default-field>
+                                </field>
+                                <field name="saveTarget"><default-field title="Save target"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Used in"/>
+                    <box-body-nopad>
+                        <form-list name="Dependencies" list="panelUses" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Definition"><display/></default-field></field>
+                            <field name="type"><default-field title="Kind"><display/></default-field></field>
+                            <field name="readOnly"><default-field title="Shipped"><display text="${readOnly ? 'Yes' : ''}"/></default-field></field>
+                        </form-list>
+                        <label text="Nothing you can read uses this panel." type="p" style="q-pa-md m-muted" condition="!panelUses.length"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+        <include-screen location="component://tools/screen/Dashboards/Definition.xml" share-scope="true"/>
+    </widgets>
 </screen>

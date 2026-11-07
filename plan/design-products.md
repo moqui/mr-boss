@@ -147,6 +147,10 @@ and schedules them under Products' authorization, with money columns only for co
 readers, and adds no second calculation. The BOM reports at Product360's BOM tab are
 Manufacturing's and register under Manufacturing.
 
+As built (impl-insights P4, Nov 7, 2026): CatalogChecks, PriceHistory, CostHistory and CostRollup are
+`ironstone.insights.ReportCatalogEntry` rows (`Products.*`), read by their routes' screen authorization (the cost screens'
+grants hide the cost reports from others); no Products metric is registered yet.
+
 ## 2. Screens
 
 Paths are the built BOSS routes (impl-products P0–P14); a detail's tab is listed only when it is

@@ -1322,6 +1322,11 @@ The printers themselves are `moqui.basic.print.NetworkPrinter` records configure
 
 ## 14. Reports and settings
 
+**Insights registration (impl-insights P4, Nov 7, 2026).** StockAtDate, OperationsHistory and CountVariance are
+`ironstone.insights.ReportCatalogEntry` rows (`Warehouse.*`) read by their routes' screen authorization; `Warehouse.OnHand`
+(over `get#InventoryProjectedInfo` and the inventory dataset) and `Warehouse.StockAtDate` (over `get#InventoryAtDate`) are
+snapshot metrics, never summed across dates, physical quantity apart from Accounting's valuation.
+
 ### Reports
 
 **Forms.**

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Saved reports (design-insights §6 SavedReports; impl-insights P4; design §13.2's SimpleReport QuickViewReport): the
+    user's saved work in one index of separate kinds, never one storage identity (ironstone.insights.RegistryServices.find#SavedReports):
+    the dashboards, library panels, saved searches and playlists the user reads (theirs and their groups'), the saved finds of
+    the user and their groups, and the pinned catalog entries. SavedFind filters by kind, owner and text; SavedReportList opens
+    each one's route, or says why it does not open; SaveAs copies a definition under a new title, private or for one of the
+    user's own groups (copy#SavedReport, through the report engine's save as the user: an author's). Unpinning edits the user's
+    preference only (store#ReportPins); deleting a definition is the editor's (its dependency guard). Every Insights user. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Saved reports" default-menu-index="7" menu-image="sym_o_saved_search" menu-image-type="icon">
+
+    <parameter name="kind"/>
+    <parameter name="owner"/>
+    <parameter name="text"/>
+
+    <transition name="saveAs" method="post">
+        <service-call name="ironstone.insights.RegistryServices.copy#SavedReport"
+                in-map="{definitionId:definitionId, title:title, userGroupId:(userGroupId || null), expectedVersion:expectedVersion}"/>
+        <default-response url="."><parameter name="kind"/><parameter name="owner"/><parameter name="text"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="unpin" method="post">
+        <service-call name="ironstone.insights.RegistryServices.store#ReportPins" in-map="{entryId:entryId, pinned:false}"/>
+        <default-response url="."><parameter name="kind"/><parameter name="owner"/><parameter name="text"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="ironstone.insights.RegistryServices.find#SavedReports" out-map="found" transaction="force-new"
+                ignore-error="true" in-map="{kind:(kind || null), owner:(owner || null), text:(text || null)}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="savedReports" from="found?.savedReports || []"/>
+        <set field="kindOptions" from="found?.kindOptions || []"/>
+        <set field="ownerOptions" from="[{key:'mine', text:'Mine'}, {key:'shared', text:'Shared with me'}]"/>
+        <set field="canCopy" from="!!insights.capabilities.author"/>
+        <if condition="canCopy">
+            <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share" transaction="force-new"
+                    ignore-error="true"/>
+            <script>ec.message.clearErrors()</script>
+            <set field="shareGroups" from="share?.groups || []"/>
+        </if>
+        <set field="filtered" from="!!(kind || owner || text)"/>
+        <set field="findValues" from="{kind:kind, owner:owner, text:text}"/>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Saved reports" type="h5"/>
+                <label text="Your dashboards, panels, searches, saved finds and pinned reports, and those shared with your groups."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="SavedFind" transition="." map="findValues">
+            <field name="text"><default-field title="Find"><text-line size="24"/></default-field></field>
+            <field name="kind">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true"><list-options list="kindOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="owner">
+                <default-field title="Owner">
+                    <drop-down allow-empty="true"><list-options list="ownerOptions" key="${key}" text="${text}"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="text"/>
+                    <field-ref name="kind"/>
+                    <field-ref name="owner"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SavedReportList" list="savedReports" skip-form="true" paginate="false">
+                    <row-actions>
+                        <set field="rowKey" from="kind + '_' + id.replace(/[^A-Za-z0-9]/g, '_')"/>
+                        <set field="copyValues" from="{definitionId:id, title:'Copy of ' + title, expectedVersion:version}"/>
+                    </row-actions>
+                    <field name="title">
+                        <default-field title="Title">
+                            <link url="${url}" url-type="plain" text="${title}" link-type="anchor" condition="url"/>
+                            <display text="${url ? '' : title}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindName"><default-field title="Kind"><display/></default-field></field>
+                    <field name="ownerText"><default-field title="Owner"><display/></default-field></field>
+                    <field name="sharing"><default-field title="Sharing"><display/></default-field></field>
+                    <field name="unavailable"><default-field title="State"><display text="${unavailable || 'Available'}"/></default-field></field>
+                    <field name="actions">
+                        <default-field title="">
+                            <container-dialog id="SaveAs_${rowKey}" button-text="Save as" condition="canCopy &amp;&amp; kind !== 'find' &amp;&amp; kind !== 'pin'">
+                                <form-single name="SaveAs" transition="saveAs" map="copyValues">
+                                    <field name="definitionId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                                    <field name="title"><default-field title="Title"><text-line size="40"/></default-field></field>
+                                    <field name="userGroupId">
+                                        <default-field title="Share with" tooltip="Leave it empty to keep the copy private. Each person still sees only the data they may read.">
+                                            <drop-down allow-empty="true"><list-options list="shareGroups" key="${value}" text="${label}"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="saveButton"><default-field title="Save copy"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                            <link url="unpin" text="Unpin" link-type="hidden-form" icon="sym_o_keep_off" condition="kind === 'pin'"
+                                    parameter-map="{entryId:id, kind:kind, owner:owner, text:text}"/>
+                        </default-field>
+                    </field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/><field-ref name="kindName"/></column>
+                        <column><field-ref name="sharing"/><field-ref name="actions"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!savedReports.length &amp;&amp; filtered" text="Nothing matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!savedReports.length &amp;&amp; !filtered &amp;&amp; !failure"
+                        text="Nothing is saved yet. Save a dashboard, a search or a list's find, or pin a report, and it is listed here."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

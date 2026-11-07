@@ -267,6 +267,11 @@ cases and returns (X7).
 
 ## 3. Home, reports and stores
 
+**Insights registration (impl-insights P4, Nov 7, 2026).** OnlineSales, CartRecovery, PromotionUse and ChannelHealth are
+`ironstone.insights.ReportCatalogEntry` rows (`Commerce.*`) read through this app's `get#ReportCatalogue`; their orders are
+Sales' `Sales.Orders` metric cut by store, never redefined. The shipped Store operations dashboard's orders panel names that
+metric and excludes recurring base orders in its query (impl-insights F-P4-3).
+
 The Reports area is designed here beside Home, because Home's cards and period strip open its
 reports with the same store and period filters; in the menu it sits before Settings.
 

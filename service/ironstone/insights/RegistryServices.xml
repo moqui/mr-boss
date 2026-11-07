@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights' registries (impl-insights P4; design-insights §6.1, §6.2, §6.3, §4; Registry.js): the report catalog, the metric
+    registrations, the user's report pins and saved reports, and a library panel's measure and target. The catalog and metrics
+        are
+    BOSS seed records each owner fills (ironstone.insights ReportCatalogEntry, MetricRegistration); an owner's catalogue
+        service, or
+    else the route's screen authorization, decides whether the viewer reads an entry; the report engine checks every definition
+    read and save as the viewer. Each service refuses a user without Insights (INSIGHTS_UNAVAILABLE) or without Insights read
+    (INSIGHTS_VIEW_REQUIRED). -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="Reports" allow-remote="false">
+        <description>The catalog entries the user reads (each owner's catalogue service as the user, else whether the entry's
+            route opens to the user's groups), pinned first in their order, then by purpose and the owners' order; filtered by
+            owner, purpose, text and pinned only. Each with its owner, basis, formats, its route (none for a report opened from
+            a record) and whether it is pinned; the owners whose catalogue failed are named apart. No report runs.</description>
+        <in-parameters>
+            <parameter name="ownerApp"/>
+            <parameter name="purpose"/>
+            <parameter name="text"/>
+            <parameter name="pinnedOnly" type="Boolean"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="reports" type="List"/>
+            <parameter name="ownerOptions" type="List"/>
+            <parameter name="purposeOptions" type="List"/>
+            <parameter name="unavailableOwners" type="List"/>
+            <parameter name="pinRevision" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findReports', context)"/>
+            <set field="reports" from="found.reports"/>
+            <set field="ownerOptions" from="found.ownerOptions"/>
+            <set field="purposeOptions" from="found.purposeOptions"/>
+            <set field="unavailableOwners" from="found.unavailableOwners"/>
+            <set field="pinRevision" from="found.pinRevision"/>
+        </actions>
+    </service>
+    <service verb="store" noun="ReportPins" allow-remote="false">
+        <description>Pin or unpin one catalog entry in the user's InsightsHome preference (design §3), at sequenceNum among the
+            pins or at the end. Edits the preference only. Refuses an entry the user does not read (REPORT_UNAVAILABLE) and a
+            stale expectedRevision (PINS_CHANGED).</description>
+        <in-parameters>
+            <parameter name="entryId"/>
+            <parameter name="pinned" type="Boolean"/>
+            <parameter name="sequenceNum" type="Integer"/>
+            <parameter name="expectedRevision" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="pinnedReportIds" type="List"/>
+            <parameter name="revision" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('storeReportPins', context)"/>
+            <set field="pinnedReportIds" from="found.pinnedReportIds"/>
+            <set field="revision" from="found.revision"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReportOptions" allow-remote="false">
+        <description>The shared parameters an entry's route takes (its parameter contract), typed: the organization in scope and
+            the user's choices, a default range, the organization's fiscal periods; the owner's own options when it registers an
+            options service. Never runs the report. Refuses an entry the user does not read (REPORT_UNAVAILABLE) and an
+            organization not the user's (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="entryId"/>
+            <parameter name="organizationPartyId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="entryId"/>
+            <parameter name="title"/>
+            <parameter name="url"/>
+            <parameter name="fields" type="List"/>
+            <parameter name="ownerOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('reportOptions', context)"/>
+            <set field="entryId" from="found.entryId"/>
+            <set field="title" from="found.title"/>
+            <set field="url" from="found.url"/>
+            <set field="fields" from="found.fields"/>
+            <set field="ownerOptions" from="found.ownerOptions"/>
+        </actions>
+    </service>
+    <service verb="get" noun="ReportLink" allow-remote="false">
+        <description>The owner's route of an entry with only its contract's parameters, for ReportContext's Open. Refuses an
+            entry the user does not read (REPORT_UNAVAILABLE), one opened from a record (REPORT_ROUTE_UNAVAILABLE) and an
+            organization not the user's (ORGANIZATION_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="entryId"/>
+            <parameter name="organizationPartyId"/>
+            <parameter name="fromDate"/>
+            <parameter name="thruDate"/>
+            <parameter name="timePeriodId"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="url"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('reportLink', context)"/>
+            <set field="url" from="found.url"/>
+        </actions>
+    </service>
+    <service verb="get" noun="Metric" allow-remote="false">
+        <description>A registered metric's descriptor (owner, version, grain, basis, aggregation, numerator and denominator,
+            unit policy, dimensions, exclusions, scope, freshness and the comparison rules), by metricId or by the panel that
+            names it (a library panel's definitionId, or a dashboard's definitionId and panelId, read as the user); with the
+            panel's metric version, currency and target and, given value (and targetActual for a measure target), the
+            comparison: a missing or zero target is unavailable. A panel without a measure answers available false. Refuses a
+            metric not registered or not readable (METRIC_UNAVAILABLE).</description>
+        <in-parameters>
+            <parameter name="metricId"/>
+            <parameter name="definitionId"/>
+            <parameter name="panelId"/>
+            <parameter name="value"/>
+            <parameter name="targetActual"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="available" type="Boolean"/>
+            <parameter name="source"/>
+            <parameter name="reason"/>
+            <parameter name="message"/>
+            <parameter name="metric" type="Map"/>
+            <parameter name="rules" type="List"/>
+            <parameter name="panel" type="Map"/>
+            <parameter name="versionChanged" type="Boolean"/>
+            <parameter name="versionMessage"/>
+            <parameter name="comparison" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('metric', context)"/>
+            <set field="available" from="found.available"/>
+            <set field="source" from="found.source"/>
+            <set field="reason" from="found.reason"/>
+            <set field="message" from="found.message"/>
+            <set field="metric" from="found.metric"/>
+            <set field="rules" from="found.rules"/>
+            <set field="panel" from="found.panel"/>
+            <set field="versionChanged" from="found.versionChanged"/>
+            <set field="versionMessage" from="found.versionMessage"/>
+            <set field="comparison" from="found.comparison"/>
+        </actions>
+    </service>
+    <service verb="find" noun="PanelMeasures" allow-remote="false">
+        <description>Dashboard's MeasureMeaning (design §4): each panel of a dashboard (or a library panel) the user reads that
+            names a registered measure, with its title and version, grain, basis, numerator over denominator for a rate,
+            exclusions, the comparison rules, source and freshness; a measure not registered or not readable is said so. Refuses
+            a definition that is not a dashboard or panel (DASHBOARD_REQUIRED); the engine refuses one the user may not read.</description>
+        <in-parameters><parameter name="definitionId" required="true"/></in-parameters>
+        <out-parameters><parameter name="measures" type="List"/></out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('panelMeasures', context)"/>
+            <set field="measures" from="found.measures"/>
+        </actions>
+    </service>
+    <service verb="find" noun="Metrics" allow-remote="false">
+        <description>The registered metrics the user may read, for a panel's measure picker.</description>
+        <out-parameters>
+            <parameter name="metrics" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findMetrics', context)"/>
+            <set field="metrics" from="found.metrics"/>
+        </actions>
+    </service>
+    <service verb="store" noun="PanelMeasure" allow-remote="false">
+        <description>Attach a registered metric (its current version) to the user's own library panel, or clear it (no
+            metricId); saved through the report engine as the user. Refuses a user without authoring (INSIGHTS_AUTHOR_REQUIRED),
+            a definition that is not a panel (PANEL_REQUIRED) or not the user's (PANEL_NOT_OWNED) and an unregistered metric
+            (METRIC_UNAVAILABLE); the engine refuses a stale expectedVersion.</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="metricId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+            <parameter name="business" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('storePanelMeasure', context)"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+            <set field="business" from="found.business"/>
+        </actions>
+    </service>
+    <service verb="store" noun="PanelTarget" allow-remote="false">
+        <description>A library panel's target (design §4 Target), exactly {panelId, targetKind, targetMetricId, targetValue,
+            targetUnitId, periodBinding, betterDirection, expectedVersion}: a value target takes a value and its unit, a measure
+            target a registered measure of the same unit and basis; a money target names one currency and the panel must be
+            filtered to it. No targetKind clears the target. Refuses PANEL_MEASURE_REQUIRED, TARGET_KIND_INVALID,
+            TARGET_INPUT_INVALID, TARGET_VALUE_REQUIRED, TARGET_METRIC_REQUIRED, TARGET_UNIT_MISMATCH, TARGET_CURRENCY_MIXED
+            (mixed currencies) and the panel refusals of store#PanelMeasure.</description>
+        <in-parameters>
+            <parameter name="panelId"/>
+            <parameter name="targetKind"/>
+            <parameter name="targetMetricId"/>
+            <parameter name="targetValue"/>
+            <parameter name="targetUnitId"/>
+            <parameter name="periodBinding"/>
+            <parameter name="betterDirection"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="version" type="Integer"/>
+            <parameter name="business" type="Map"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('storePanelTarget', context)"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="version" from="found.version"/>
+            <set field="business" from="found.business"/>
+        </actions>
+    </service>
+    <service verb="find" noun="SavedReports" allow-remote="false">
+        <description>The user's saved work by kind, kept apart: the report engine's dashboards, library panels, saved searches
+            and playlists the user reads (theirs and shared with their groups; not the shipped ones), the saved finds
+            (FormListFind) of the user and their groups, and the pinned catalog entries; each with owner, sharing, the route it
+            opens or why not, and whether the user may save a copy. Filtered by kind (or definition), owner (mine or shared) and
+            text.</description>
+        <in-parameters>
+            <parameter name="kind"/>
+            <parameter name="owner"/>
+            <parameter name="text"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="savedReports" type="List"/>
+            <parameter name="kindOptions" type="List"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('findSavedReports', context)"/>
+            <set field="savedReports" from="found.savedReports"/>
+            <set field="kindOptions" from="found.kindOptions"/>
+        </actions>
+    </service>
+    <service verb="copy" noun="SavedReport" allow-remote="false">
+        <description>Save a copy of a definition the user reads (SaveAs): a new title, private or one of the user's own groups,
+            through the report engine's save as the user. Refuses a user without authoring (INSIGHTS_AUTHOR_REQUIRED), no title
+            (TITLE_REQUIRED), a group the user is not in (SHARE_GROUP_UNAVAILABLE), another kind of definition
+            (COPY_UNAVAILABLE) and a stale expectedVersion (DEFINITION_CHANGED).</description>
+        <in-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="title"/>
+            <parameter name="userGroupId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="type"/>
+            <parameter name="userGroupId"/>
+        </out-parameters>
+        <actions>
+            <set field="found" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Registry.js').execute('copySavedReport', context)"/>
+            <set field="definitionId" from="found.definitionId"/>
+            <set field="type" from="found.type"/>
+            <set field="userGroupId" from="found.userGroupId"/>
+        </actions>
+    </service>
+</services>

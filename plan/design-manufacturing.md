@@ -1175,6 +1175,10 @@ OperationPerformanceReport and the other reports of this section. Insights lists
 under Manufacturing's authorization and adds no second calculation. Shipped datasets and alert
 templates follow crosscut CX-OPS-REPORTS.
 
+As built (impl-insights P4, Nov 7, 2026): the eight reports are `ironstone.insights.ReportCatalogEntry` rows (`Manufacturing.*`),
+read by their routes' screen authorization (no catalogue service); `Manufacturing.Oee` (availability × performance ×
+quality, recomputed from its parts) is a `MetricRegistration` over `ProductionReportServices.get#OperationPerformanceReport`.
+
 **Source.** research §9–§10; ERPNext Manufacturing workspace.
 
 **Needs.** M1, M10.

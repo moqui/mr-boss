@@ -33,13 +33,13 @@ const capabilityPermissions = {
     settingsView: "INSIGHTS_SETTINGS_VIEW",
     settingsEdit: "INSIGHTS_SETTINGS_EDIT"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml): the copied Reports and ScheduledReports
-// (BOSS_INS_LEGACY) stay the Insights administrator's and ADMIN's until P4 and P7 replace them (impl-insights F20), read by the
-// first, each with the same rows; P2 replaced the copied Dashboards and Dashboard with the framework mounts, P3 the copied report
+// The menu areas whose authorization is a capability (data/BossSetupData.xml): the copied ScheduledReports (BOSS_INS_LEGACY)
+// stays the Insights administrator's and ADMIN's until P7 replaces it (impl-insights F20); P4 replaced the copied Reports with the
+// report catalog and SavedReports, every Insights user's; P2 replaced the copied Dashboards and Dashboard with the framework mounts, P3 the copied report
 // builder with the dataset screens: Datasets and DatasetView the author's and steward's (BOSS_INS_DATASET_SCREENS), DatasetDetail
 // and DatasetFields the steward's (BOSS_INS_DATASET_STEWARDSHIP).
 const areas = {
-    legacy: "Reports",
+    legacy: "ScheduledReports",
     datasets: "ReportBuilder/Datasets",
     stewardship: "ReportBuilder/DatasetDetail"
 }
@@ -154,7 +154,10 @@ const linkPaths = [
     "ReportBuilder/Explore",
     // P3: the business datasets (design §5)
     "ReportBuilder/Datasets",
-    "ReportBuilder/DatasetView"
+    "ReportBuilder/DatasetView",
+    // P4: the report catalog and saved reports (design §6)
+    "Reports",
+    "SavedReports"
 ]
 // The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
 // (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
@@ -260,6 +263,8 @@ const operations = {context, shareGroups, shareDashboard}
     scope,
     required,
     sees,
+    // the user's root and screen grants (P4: whether a catalog entry's route opens, Admin.js destinationOpens)
+    grants: rootGrants,
     execute: (op, parameters) => {
         if (!operations[op]) throw new Error("Unknown Insights operation " + op)
         return operations[op](parameters)
