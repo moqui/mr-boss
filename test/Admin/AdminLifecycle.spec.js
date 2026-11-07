@@ -5,7 +5,8 @@
 // (transfer#OwnedResource): a step naming another service than its participant registered is refused, a new owner outside the
 // operator's organizations is refused alike, and a Retail colleague takes the drive through the framework's owner change.
 // Mantle's rules are Mantle's UserLifecycle, the owners' the framework's ResourceOwners and Mantle's ContactBooks; the "usable
-// when" is the acceptance AdminLifecycleUsable.
+// when" is the acceptance AdminLifecycleUsable. A step's owner service runs under its own authorization (F-P6-1): an operator through
+// Mantle's identity services alone is refused Admin's assignments transfer.
 // Run: ./moq test mr-boss --spec Admin/AdminLifecycle
 const lib = ec.resource.script("component://mr-boss/test/Admin/AdminSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, page} = lib
@@ -161,6 +162,82 @@ feature(
             moved.applied == true
             one("moqui.resource.ResourceDrive", {driveId}).ownerUserId == ids.retailUserId
             steps().find(step => step.stepSeqId != "90" && step.stepKind == "transfer").toUserId == ids.retailUserId
+        }
+    }
+)
+
+feature(
+    "a step's owner service runs under its own authorization: an identity operator without Admin is refused Projects' transfer",
+    {
+        when() {
+            // an operator of Retail through Mantle's identity services alone (ADMIN_IDENTITY_*, no Admin group), and a waiting step
+            // naming Admin's assignments transfer, which only Admin's own grant authorizes
+            const username = "adm.lcop." + run
+            system(() => {
+                const partyId = invoke("mantle.party.PartyServices.create#Person", {
+                    firstName: "Lif",
+                    lastName: "Operator " + run
+                }).partyId
+                const userId = invoke("mantle.party.PartyServices.create#PartyUserAccount", {
+                    partyId,
+                    username,
+                    emailAddress: username + "@example.com"
+                }).userId
+                const make = (entityName, fields) => {
+                    const row = ec.entity.makeValue(entityName)
+                    row.setFields(fields, true, null, null)
+                    row.create()
+                }
+                make("mantle.party.PartyRelationship", {
+                    partyRelationshipId: "ADM_LIFE_OPREL_" + run,
+                    relationshipTypeEnumId: "PrtEmployee",
+                    fromPartyId: partyId,
+                    toPartyId: ids.organizationId,
+                    toRoleTypeId: "OrgInternal",
+                    fromDate: ec.user.nowTimestamp
+                })
+                make("moqui.security.UserGroup", {userGroupId: "SPEC_ADM_LCOP_" + run, description: "Spec lifecycle operator"})
+                for (const userPermissionId of ["ADMIN_IDENTITY_VIEW", "ADMIN_IDENTITY_MANAGE"])
+                    make("moqui.security.UserGroupPermission", {
+                        userGroupId: "SPEC_ADM_LCOP_" + run,
+                        userPermissionId,
+                        fromDate: 0
+                    })
+                make("moqui.security.UserGroupMember", {
+                    userGroupId: "SPEC_ADM_LCOP_" + run,
+                    userId,
+                    fromDate: ec.user.nowTimestamp
+                })
+                make("mantle.party.UserLifecycleOperationStep", {
+                    operationId,
+                    stepSeqId: "91",
+                    stepKind: "transfer",
+                    providerKey: "projects.assignments",
+                    actionService: "ironstone.admin.LifecycleServices.transfer#Assignments",
+                    resourceParameter: "assignmentKind",
+                    resourceId: "tasks",
+                    statusId: "UlstWaiting",
+                    attemptCount: 0
+                })
+            })
+            ec.user.internalLoginUser(username)
+            const wasDisabled = ec.artifactExecution.authzDisabled()
+            ec.artifactExecution.enableAuthz()
+            try {
+                return invoke("mantle.party.IdentityServices.retry#LifecycleStep", {
+                    operationId,
+                    stepSeqId: "91",
+                    toUserId: ids.retailUserId
+                })
+            } finally {
+                ec.message.clearErrors()
+                if (wasDisabled) ec.artifactExecution.disableAuthz()
+                login("john.doe")
+            }
+        },
+        then(out) {
+            out.applied == false && out.reason.includes("not authorized") && out.reason.includes("transfer#Assignments")
+            steps().find(step => step.stepSeqId == "91").statusId == "UlstFailed"
         }
     }
 )

@@ -263,7 +263,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | built and reviewed Nov 7, merged |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built and reviewed Nov 7, merged |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | built and reviewed Nov 7, merged |
-| P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built Nov 7 (not yet reviewed) |
+| P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built and reviewed Nov 7 |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
@@ -1578,6 +1578,48 @@ participant; ADM-LIFECYCLE (lifecycle).
   - Insights P7 registers its participant on the contract (F-P6-11); F-P6-1 (`implements` for scripts) and F-P6-4 (a Projects
     reassign right) are owners' calls;
   - the acceptance AdminLifecycleUsable to run when asked.
+
+**Review Nov 7 (P6).** A fresh review of the three repositories' P6 diffs, security first; fixes committed apart per repository
+("Admin P6 review: …").
+- **F-P6-1, closed.** Mantle's identity services' `ALL_USERS` ALLOW is inheritable, so whatever a lifecycle step called ran
+  under it without its own authorization: an identity operator through Mantle alone (`ADMIN_IDENTITY_MANAGE`, no Admin group;
+  an Assistant tool, another app's service) retrying a stored step naming Admin's `LifecycleServices.transfer#Assignments` ran it
+  (reproduced, step Done). Mantle reads no registry, so any service carrying the contract's parameters passed. Fixed in the
+  framework: `IdentityServices.call#OwnedResourceService` (refuses a service without the contract, then calls it) under
+  `OwnedResourceCall`, an `ALL_USERS` ALLOW that is **not** inheritable, so the coordinator's inheritable ALLOW stops there and
+  the owner service is authorized on its own records, as a direct call is (authz.rs: a frame's own non-inheritable ALLOW wins
+  over the parent's inheritable one; an app screen's inheritable ALWAYS, which BOSS's Users area grants, still covers it, as it
+  covers every service below that screen). Mantle's pause and transfer steps call through it. Through BOSS the steps come from
+  the registry (startOperation passes no request steps), `transfer#OwnedResource` checks the registration, and the parameters
+  are the operation's (`fromUserId` the operation's account, the resource from the owner's lookup, `resourceParameter` never a
+  contract name); the request names only the new owner. Mantle alone still refuses no contract-carrying service by name: it now
+  runs only with the caller's own right to it. Specs: framework `ResourceOwners` (a service without the contract never called,
+  the drive moved through the call), BOSS `AdminLifecycle` (the Mantle-only operator refused Admin's transfer, the step Failed).
+- **New owner.** Mantle's `transfer#CalendarOwner` and `transfer#ContactBookOwner` took an external user (`EXTERNAL_USER`) as a
+  person-owned calendar's owner or an unowned book's manager; both now refuse one, as the framework's drive and mail changes do.
+  `retry#LifecycleStep` refuses the caller as the new owner (`SELF_OWNER`; BOSS's choice already left them out), so an operator
+  holding the owner-change permissions cannot hand a leaver's shared mailbox or drive to themselves. Spec: `UserLifecycle`.
+- **Retry of an account step.** A removal's account step (`revokeSessions`, `endMemberships`, `endRelationships`) required the
+  identity in scope, which a removal leaving no organization takes away, so its operator could not retry it; it now needs the
+  operation's organization in scope (as reading it does), and `heldBeyond` again for `revokeSessions` and `endMemberships`. A
+  retried `disableAccount` or `endMemberships` is checked against the administration path again (it was only at the start).
+  Not covered by a spec (no step of a removal can be made to fail deterministically).
+- Checked and left: disable now revokes first (its own transaction) and writes `disabled` through the entity facade with
+  `disabled_changeReason` (audit-logged, `enable-audit-log="update"`), as P4's lock does; a future date writes `terminateDate`
+  only; a removal ends only that organization's relationships and signs out only when none is left (F-P6-10); restore brings
+  nothing back; `heldBeyond` refuses an identity operator a global operation on an ADMIN member or a sealed-permission holder;
+  the operation key answers a retry; `retry#LifecycleStep` runs only failed or waiting steps and a transfer only its stored
+  service; the operation's organization filters and scope (F-P6-6: a global operation is under the one organization, no
+  leak); Projects' refusals are the step's named failure (F-P6-4); LifecycleDetail's one qvt render; specs under 0.2 s each; the
+  deny pattern's `transfer` element is 166 characters (the Built note said 205); lint 132 flagged sites, as before.
+- Later (provisional): a future-dated disable (or removal) runs its participants' pauses at once, before the date, and its
+  transfers may be done before it (none pauses until Insights P7, F-P6-11); a Scheduled operation stays Scheduled after its date
+  until a step is retried (refreshStatus runs only then); BOSS's Retry transition calls Mantle's retry directly, so a pause step
+  is not re-checked against the registry (it runs under its own authorization).
+- Tests run (the release binary, `--nobuild`): ResourceOwners, AdminSessions, AdminAccessServices 11 of 11; UserLifecycle,
+  StaffIdentity, StaffInvitation, PartyServices, ContactBooks, CalendarServices 71 of 71; AdminLifecycle, AdminUsers,
+  AdminAccess, AdminGroups, AdminInvitations, AdminRegistries, ProjectsAccess, Files, MailAccounts, Tasks 81 of 81; lint as
+  above; Prettier on the changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
 
 ### P7 — Organizations and the Constitution
 
