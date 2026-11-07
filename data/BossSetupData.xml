@@ -3849,4 +3849,56 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="component://mr-boss/screen/Insights/(Reports|ScheduledReports)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
     </artifactGroups>
+    <!-- Admin P6 (impl-admin P6; design-admin §4.1 Offboarding, §14 Lifecycle participant): the lifecycle participants, each the owner's
+        own registration (owner contracts, F31): Commons' shared drives, calendars and contact books, Comms' shared mail accounts and
+        Projects' assignments, each through its owner's services (the owned-resource contract of org.moqui.admin.IdentityServices);
+        Insights registers its schedules in Insights P7. A registration names services and grants nothing: the owners check their
+        own permission (granted below to the identity operator and the administrator, who offboard) and the new owner. -->
+    <ironstone.admin.LifecycleParticipant participantKey="commons.drives" version="1" ownerApp="Commons" title="Shared drives"
+            description="The shared drives the user owns; personal drives stay with their user." resourceKind="drive"
+            lookupService="org.moqui.impl.FileServices.find#OwnedDrives" transferService="org.moqui.impl.FileServices.transfer#DriveOwner"
+            resourceParameter="driveId" requiredPermission="DRIVE_OWNER_CHANGE" sequenceNum="10"/>
+    <ironstone.admin.LifecycleParticipant participantKey="commons.calendars" version="1" ownerApp="Commons" title="Shared calendars"
+            description="The shared and resource calendars the user owns, and an organization's calendars the user alone manages; personal calendars stay with their user."
+            resourceKind="calendar" lookupService="mantle.work.CalendarServices.find#OwnedCalendars"
+            transferService="mantle.work.CalendarServices.transfer#CalendarOwner" resourceParameter="calendarId"
+            requiredPermission="CALENDAR_OWNER_CHANGE" sequenceNum="20"/>
+    <ironstone.admin.LifecycleParticipant participantKey="commons.contactBooks" version="1" ownerApp="Commons" title="Shared contact books"
+            description="The shared contact books the user alone manages; personal books and personal contacts stay with their user."
+            resourceKind="contactBook" lookupService="mantle.party.ContactBookServices.find#OwnedContactBooks"
+            transferService="mantle.party.ContactBookServices.transfer#ContactBookOwner" resourceParameter="contactBookId"
+            requiredPermission="CONTACT_BOOK_OWNER_CHANGE" sequenceNum="30"/>
+    <ironstone.admin.LifecycleParticipant participantKey="comms.mailAccounts" version="1" ownerApp="Comms" title="Shared mail accounts"
+            description="The shared mail accounts the user owns; personal accounts stay with their user." resourceKind="mailAccount"
+            lookupService="org.moqui.impl.EmailClientServices.find#OwnedEmailAccounts"
+            transferService="org.moqui.impl.EmailClientServices.transfer#EmailAccountOwner" resourceParameter="emailAccountId"
+            requiredPermission="EMAIL_ACCOUNT_OWNER_CHANGE" sequenceNum="40"/>
+    <ironstone.admin.LifecycleParticipant participantKey="projects.assignments" version="1" ownerApp="Projects" title="Open assignments"
+            description="The open tasks, work items and requests assigned to the user, reassigned through Projects' and Commons' own services."
+            resourceKind="assignment" lookupService="ironstone.admin.LifecycleServices.find#Assignments"
+            transferService="ironstone.admin.LifecycleServices.transfer#Assignments" resourceParameter="assignmentKind"
+            requiredPermission="ADMIN_IDENTITY_VIEW" sequenceNum="50"/>
+    <!-- the owner changes the participants' services check for another user's resources -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="DRIVE_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CALENDAR_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="DRIVE_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CALENDAR_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" fromDate="0"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="DRIVE_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CALENDAR_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="DRIVE_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="EMAIL_ACCOUNT_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CALENDAR_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="CONTACT_BOOK_OWNER_CHANGE" capabilityKindEnumId="CpkEdit"/>
+    <!-- the client deny pattern (BOSS_PROJECTS_INTERNAL, impl-admin F14): P6's new write verb, transfer
+        (ironstone.admin.LifecycleServices transfer#OwnedResource, transfer#Assignments) -->
+    <artifactGroups artifactGroupId="BOSS_PROJECTS_INTERNAL">
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(transfer)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+    </artifactGroups>
 </entity-facade-xml>

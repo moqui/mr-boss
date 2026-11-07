@@ -16,7 +16,8 @@ along with this software (see the LICENSE.md file). If not, see
     administers (P4, the default), with NewStaffAccount; UserDetail, one identity's account, access, credentials, sessions and
     history (P4, contextual); Invitations, the staff invitations with resend and revoke, and InviteStaff, one invitation (P5;
     InviteStaff is also the shell's quick create and the palette's Invite users); Sessions, the sessions of those identities
-    with bulk revoke (P4). LifecycleOperations (P6) joins with its phase. For the identity operator and the administrator (BOSS_ADM_USERS); Mantle's
+    with bulk revoke (P4); LifecycleOperations, the account lifecycle operations (disable, organization removal, restore) and what
+    waits in them, and LifecycleDetail, one operation's steps with retry and TransferOwnership (P6, contextual). For the identity operator and the administrator (BOSS_ADM_USERS); Mantle's
     IdentityServices and the framework's IdentityServices check ADMIN_IDENTITY_VIEW, ADMIN_IDENTITY_MANAGE, ADMIN_IDENTITY_GLOBAL and
     the organization scope themselves, whatever opens the screen. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
@@ -25,6 +26,8 @@ along with this software (see the LICENSE.md file). If not, see
         <subscreens-item name="Users" location="component://mr-boss/screen/Admin/Users/Users.xml" menu-title="Users" menu-index="1"/>
         <subscreens-item name="Invitations" location="component://mr-boss/screen/Admin/Users/Invitations.xml" menu-title="Invitations" menu-index="2"/>
         <subscreens-item name="Sessions" location="component://mr-boss/screen/Admin/Users/Sessions.xml" menu-title="Sessions" menu-index="3"/>
+        <subscreens-item name="LifecycleOperations" location="component://mr-boss/screen/Admin/Users/LifecycleOperations.xml" menu-title="Lifecycle" menu-index="4"/>
+        <subscreens-item name="LifecycleDetail" location="component://mr-boss/screen/Admin/Users/LifecycleDetail.xml" menu-include="false"/>
         <subscreens-item name="InviteStaff" location="component://mr-boss/screen/Admin/Users/InviteStaff.xml" menu-include="false"/>
         <subscreens-item name="UserDetail" location="component://mr-boss/screen/Admin/Users/UserDetail.xml" menu-include="false"/>
     </subscreens>

@@ -4,7 +4,7 @@
 // the area authorizations, Admin › System refused to the Admin administrator and opened to ADMIN with the developer tool links
 // each by its own grant, the seals mr-boss and the framework add (a privileged group's membership and a sealed grant through a
 // direct entity call) beside the refused raw security mutators, and the organization scope of a record (another organization's
-// identity refused, a shared identity shown only by the organization in scope), and the settings index a BOSS user without Admin
+// identity refused, a shared identity shown only by the organization in scope; P6: what an identity owns by the same scope), and the settings index a BOSS user without Admin
 // opens alone (P2, F46). Home's one render (qvt) is AdminRegistries'. One feature per rule, each case of it a line of
 // its problems, with artifact authorization enabled. The framework's seal checks are the framework's (eca_tests.rs). The access
 // and isolation walk is the acceptance AdminFoundationWalk. A later phase adds a case only for an access rule it adds, and its
@@ -402,6 +402,16 @@ feature(
                 if (!message.includes("RECORD_UNAVAILABLE"))
                     problems.push(`the identity operator gets ${recordId}: ${message || "accepted"}`)
             }
+            // P6: what an identity owns (the lifecycle's participants) by the same scope: a Retail identity's for the operator,
+            // Services' refused, and the reader refused for the permission
+            const owned = (user, userId) =>
+                asUser(user, () => refusal("ironstone.admin.LifecycleServices.find#OwnedResources", {userId}))
+            if (owned(users.identity, ids.retailUserId) !== "")
+                problems.push("the identity operator is refused a Retail identity's resources")
+            if (!owned(users.identity, ids.otherUserId).includes("RECORD_UNAVAILABLE"))
+                problems.push("the identity operator reads a Services identity's resources")
+            if (!owned(users.reader, ids.retailUserId).includes("ADMIN_IDENTITY_VIEW"))
+                problems.push("the reader reads an identity's resources")
             // the same record without ADMIN_IDENTITY_VIEW: the reader is refused for the permission
             const reader = check(users.reader, "user", ids.retailUserId)
             if (!reader.includes("PERMISSION_DENIED")) problems.push(`the reader reads an identity: ${reader || "accepted"}`)

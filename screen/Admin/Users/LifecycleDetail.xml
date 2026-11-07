@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- LifecycleDetail (design-admin §4 LifecycleDetail; impl-admin P6; style-guide §3.3 Detail): one account lifecycle operation, read
+    with mantle.party.IdentityServices.get#Lifecycle (ADMIN_IDENTITY_VIEW; the operation's organization in the user's scope; another
+    organization's operation and a forged id refused alike). LifecycleSummary is the immutable request (account, kind, global or
+    the organization, requester, source, reason, the date it takes effect, the account revision it named) with its state;
+    LifecycleSteps lists the independent steps (owner, step, resource, state, attempts, reason, new owner), each failed one with
+    Retry (retry#LifecycleStep, named confirmation) and each resource waiting for a new owner with TransferOwnership
+    (ironstone.admin.LifecycleServices.transfer#OwnedResource: a staff identity of the user's organizations who can sign in, the
+    owner's service checking whether they may own it). A failed step never undoes the others: the access revoked stays revoked. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lifecycle operation" default-menu-include="false">
+    <parameter name="operationId" required="true"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected, exclude:exclude}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="retryStep">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.retry#LifecycleStep" out-map="retried"
+                    in-map="{operationId:operationId, stepSeqId:stepSeqId, expectedRevision:(expectedRevision || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(retried.applied ? 'Step done' : retried.reason, retried.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="operationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="transferOwnership">
+        <actions>
+            <service-call name="ironstone.admin.LifecycleServices.transfer#OwnedResource" out-map="moved"
+                    in-map="{operationId:operationId, stepSeqId:stepSeqId, toUserId:toUserId, reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(moved.applied ? 'Ownership transferred' : moved.reason, moved.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="operationId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.get#Lifecycle" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{operationId:operationId}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="operation" from="found?.operation || null"/>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            canManage = !!found?.canManage
+            targetUserId = operation?.userId || ''
+            summary = operation ? Object.assign({}, operation, {
+                requestedText: operation.requestedByName + ' · ' + when(operation.requestedDate),
+                effectiveText: operation.effectiveDate ? when(operation.effectiveDate) : 'At once',
+                reasonText: operation.reason || 'No reason given'}) : {}
+            steps = Array.from(found?.stepList || []).map(row => Object.assign({}, row, {
+                stepText: row.title + (row.resourceName ? ': ' + row.resourceName : ''),
+                ownerText: row.participant ? row.ownerApp : 'Account',
+                outcomeText: [row.reason, row.toUserName ? 'New owner ' + row.toUserName : ''].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' · '),
+                whenText: when(row.completedDate || row.lastAttemptDate)}))
+            stateTone = operation?.statusId === 'UlopAttention' ? 'text-warning' : 'text-primary'
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="OperationMissing" condition="!operation">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Lifecycle operation not available"/>
+                    <box-body>
+                        <label type="p" text="${failure || ('Lifecycle operation ' + operationId + ' is not available.')}"/>
+                        <link url="../LifecycleOperations" text="Back to lifecycle operations" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OperationFound" condition="operation">
+            <widgets>
+                <container style="m-record-header">
+                    <label text="${operation.kindText}: ${operation.userName}" type="h5"/>
+                    <label text="${operation.scopeText} · ${operation.statusText} · ${operation.progressText}" type="p" style="text-caption m-muted"/>
+                    <label type="p" style="text-caption text-warning q-mb-none" condition="operation.nextText" text="Waiting: ${operation.nextText}"/>
+                </container>
+                <container-box>
+                    <box-header title="Request"/>
+                    <box-body>
+                        <form-single name="LifecycleSummary" map="summary">
+                            <field name="userName">
+                                <default-field title="Account">
+                                    <link url="../UserDetail" text="${userName}" link-type="anchor" parameter-map="{userId:userId}"/>
+                                </default-field>
+                            </field>
+                            <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="scopeText"><default-field title="Scope"><display/></default-field></field>
+                            <field name="effectiveText"><default-field title="Takes effect"><display/></default-field></field>
+                            <field name="requestedText"><default-field title="Requested by"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="reasonText"><default-field title="Reason"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="accountRevision"><default-field title="Account revision"><display/></default-field></field>
+                        </form-single>
+                    </box-body>
+                </container-box>
+                <container-box>
+                    <box-header title="Steps"/>
+                    <box-body-nopad>
+                        <label type="p" style="q-px-md q-pt-md text-caption m-muted"
+                                text="Each step stands on its own: one that failed leaves the others, and the access revoked, in place. Retry it, or hand a waiting resource to a new owner."/>
+                        <form-list name="LifecycleSteps" list="steps" skip-form="true" paginate="false">
+                            <field name="ownerText"><default-field title="Owner"><display/></default-field></field>
+                            <field name="stepText"><default-field title="Step"><display/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="attemptCount"><default-field title="Attempts"><display/></default-field></field>
+                            <field name="outcomeText"><default-field title="Outcome"><display/></default-field></field>
+                            <field name="whenText"><default-field title="When"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="retryStep" text="Retry" link-type="hidden-form-link" icon="sym_o_replay" condition="canRetry"
+                                            confirmation="Run '${stepText}' again for ${operation.userName}?"
+                                            parameter-map="{operationId:operationId, stepSeqId:stepSeqId}"/>
+                                    <container-dialog id="TransferOwnership_${stepSeqId}" button-text="Transfer" icon="sym_o_move_up" width="560"
+                                            title="New owner of ${stepText}" condition="canTransfer">
+                                        <label type="p" text="${operation.userName} no longer works here. Choose who takes this over: someone of your organizations who can sign in. ${ownerText} checks that they may own it."/>
+                                        <form-single name="TransferOwnership" transition="transferOwnership"
+                                                map="{operationId:operationId, stepSeqId:stepSeqId}">
+                                            <field name="operationId"><default-field><hidden/></default-field></field>
+                                            <field name="stepSeqId"><default-field><hidden/></default-field></field>
+                                            <field name="toUserId">
+                                                <default-field title="New owner">
+                                                    <drop-down>
+                                                        <dynamic-options transition="choices" server-search="true" min-length="0"
+                                                                parameter-map="{choice:'lifecycleUsers', exclude:targetUserId}"/>
+                                                    </drop-down>
+                                                </default-field>
+                                            </field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Transfer"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="stepText"/><field-ref name="statusText"/></column>
+                                <column><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!steps.length" text="No steps recorded."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
