@@ -3924,19 +3924,19 @@ along with this software (see the LICENSE.md file). If not, see
             countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
             countField="summary.active"
             routePath="Products/Products" routeParameters="list=activeSkus"
-            organizationScope="Your active organization's catalog" sequenceNum="210"/>
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="210"/>
     <ironstone.insights.AttentionProvider providerKey="Products.Variants" version="1" ownerApp="Products" title="Variants"
             description="Variant products of a virtual product."
             countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
             countField="summary.variants"
             routePath="Products/Products" routeParameters="list=variants"
-            organizationScope="Your active organization's catalog" sequenceNum="220"/>
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="220"/>
     <ironstone.insights.AttentionProvider providerKey="Products.EndingSoon" version="1" ownerApp="Products" title="Ending in 30 days"
             description="Products whose sales end within 30 days."
             countService="ironstone.products.CatalogServices.get#CatalogSummary" countParameters='{"appRoot":"Products"}'
             countField="summary.discontinuingSoon"
             routePath="Products/Products" routeParameters="list=discontinuingSoon"
-            organizationScope="Your active organization's catalog" sequenceNum="230"/>
+            organizationScope="Your active organization's catalog and the shared one" sequenceNum="230"/>
     <!-- Purchasing (owner contract, design-purchasing §11): the buyer's Home counters, one call, each the view it opens; Approvals
         waiting counts unread notifications, not the Approvals list, so it is not registered (impl-insights F29) -->
     <ironstone.insights.AttentionProvider providerKey="Purchasing.DraftOrders" version="1" ownerApp="Purchasing" title="Draft orders"
@@ -3980,20 +3980,20 @@ along with this software (see the LICENSE.md file). If not, see
             description="Work orders not yet complete."
             countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
             countField="summary.openCount"
-            routePath="Manufacturing/WorkOrders"
-            organizationScope="Your selected plant" sequenceNum="410"/>
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="410"/>
     <ironstone.insights.AttentionProvider providerKey="Manufacturing.InProgress" version="1" ownerApp="Manufacturing" title="Work orders in progress"
             description="Work orders started on the floor."
             countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
             countField="summary.inProgressCount"
-            routePath="Manufacturing/WorkOrders/Find" routeParameters="statusId=WeInProgress"
-            organizationScope="Your selected plant" sequenceNum="420"/>
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="statusId=WeInProgress&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="420"/>
     <ironstone.insights.AttentionProvider providerKey="Manufacturing.Late" version="1" ownerApp="Manufacturing" title="Late work orders"
             description="Work orders past their estimated completion."
             countService="ironstone.manufacturing.HomeServices.get#Home" countParameters='{"appRoot":"Manufacturing"}'
             countField="summary.lateCount"
-            routePath="Manufacturing/WorkOrders/Find" routeParameters="late=Y"
-            organizationScope="Your selected plant" sequenceNum="430"/>
+            routePath="Manufacturing/WorkOrders/Find" routeParameters="late=Y&amp;facilityId={plantId}"
+            organizationScope="Your selected plant, else every plant of yours" sequenceNum="430"/>
     <!-- Projects (owner contract, design-projects §11): the counts of Projects Home that are counts (Unbilled is an amount); each
         is null for a user it is not for, and then left out -->
     <ironstone.insights.AttentionProvider providerKey="Projects.ReviewsWaiting" version="1" ownerApp="Projects" title="Reviews waiting"
@@ -4019,7 +4019,7 @@ along with this software (see the LICENSE.md file). If not, see
             description="Purchase receipts waiting at the dock, late ones counted apart."
             countService="ironstone.warehouse.HomeServices.get#Home" countParameters='{"appRoot":"Warehouse"}'
             countField="queueRows[operation=receiving].waitingCount+queueRows[operation=receiving].lateCount" overdueField="queueRows[operation=receiving].lateCount"
-            routePath="Warehouse/Receiving/Receipts"
+            routePath="Warehouse/Receiving/Receipts" routeParameters="facilityId={facilityId}"
             organizationScope="Your selected facility" sequenceNum="610"/>
     <!-- Monitor's Business operations dashboard (impl-insights F19): operation runs rolled back or set to retry over the last day,
         by the dashboard's own query, opening Monitor's Operations under Monitor's own grants -->

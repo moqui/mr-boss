@@ -224,7 +224,7 @@ feature("the registered providers name existing services and owner screens, and 
         keys == registeredKeys.slice().sort()
         problems == []
         warehouseCards == ["Warehouse.Receiving available "]
-        receiving.url == "/qapps/Warehouse/Receiving/Receipts"
+        receiving.url == "/qapps/Warehouse/Receiving/Receipts?facilityId=BOSS_WH_EAST"
         typeof receiving.count == "number"
         receiving.scopeText == "Your selected facility"
     }

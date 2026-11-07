@@ -87,7 +87,7 @@ feature("a Warehouse user sees the receipts waiting at their facility, the recei
                 owners: Array.from(board.groups || []).map(group => group.ownerApp),
                 receiving: cards.find(card => card.providerKey === "Warehouse.Receiving") || {},
                 expected: Number(receipts.receiptRowsCount),
-                list: render(users.warehouse, "apps/Warehouse/Receiving/Receipts", {}, "html")
+                list: render(users.warehouse, "apps/Warehouse/Receiving/Receipts", {facilityId: "BOSS_WH_EAST"}, "html")
             }
         })
     },
@@ -95,7 +95,7 @@ feature("a Warehouse user sees the receipts waiting at their facility, the recei
         owners == ["Warehouse"]
         receiving.state == "available"
         receiving.count == expected
-        receiving.url == "/qapps/Warehouse/Receiving/Receipts"
+        receiving.url == "/qapps/Warehouse/Receiving/Receipts?facilityId=BOSS_WH_EAST"
         list.status == 200
     }
 })

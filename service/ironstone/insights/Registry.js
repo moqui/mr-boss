@@ -890,6 +890,9 @@ function countAt(answer, field) {
     return total
 }
 const countText = count => ec.l10n.format(toDecimal(String(count)), "#,##0")
+// An owner's answer that it gives the viewer no count: the catalog's refusals, a coded *_REQUIRED refusal (Payables'
+// ORGANIZATION_REQUIRED with no organization chosen or active) and the framework's artifact denial; any other error is a failure.
+const refusesCount = text => refusalText.test(text) || /\b[A-Z]+(?:_[A-Z]+)*_REQUIRED:|is not authorized for /.test(text)
 
 // get#Attention: each registered provider as the viewer (design §3): one whose route does not open to the viewer, whose
 // permission they lack, whose owner refuses them or answers them no count is left out, naming nothing; one whose count fails
@@ -942,15 +945,26 @@ function attention(p) {
             message: ""
         }
         const call = callOf(provider)
-        if (call.error != null && refusalText.test(call.error)) continue
+        if (call.error != null && refusesCount(call.error)) continue
         try {
             if (call.error != null) throw new Error(call.error)
             const count = countAt(call.answer, provider.countField)
             if (count == null) continue
             const overdue = blank(provider.overdueField) ? null : countAt(call.answer, provider.overdueField)
-            const query = String(provider.routeParameters || "")
+            // a filter value {path} is the owner's answer at that path (the plant or facility the count was made for), left
+            // out when the answer has none, so the worklist opens on the scope that produced the count
+            const query = []
+            for (const pair of String(provider.routeParameters || "")
                 .split("&")
-                .filter(Boolean)
+                .filter(Boolean)) {
+                const placeholder = /^([^=]+)=\{(.+)\}$/.exec(pair)
+                if (!placeholder) {
+                    query.push(pair)
+                    continue
+                }
+                const at = valueAt(call.answer, placeholder[2])
+                if (at.found && !blank(at.value)) query.push(placeholder[1] + "=" + encodeURIComponent(String(at.value)))
+            }
             if (provider.organizationParameter && organizationPartyId)
                 query.push(encodeURIComponent(provider.organizationParameter) + "=" + encodeURIComponent(organizationPartyId))
             const queryText = query.join("&")
