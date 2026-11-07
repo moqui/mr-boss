@@ -251,12 +251,16 @@ along with this software (see the LICENSE.md file). If not, see
         <authz artifactAuthzId="BOSS_INSIGHTS_APPADMIN" userGroupId="BOSS_INSIGHTS_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
+    <!-- Admin (impl-admin P1, F1, F2): ADMIN and the Admin administrator open the root; the root user group and the ordinary
+        groups are below (Admin P1). The administrator's grant is ALLOW, not ALWAYS: an inheritable ALWAYS skips the checks of
+        every screen below it (authz.rs is_permitted), so the Tools System screens mounted at Admin › System would open to
+        BOSS_ADMIN_ADMIN, which Tools' SYSTEM_APP keeps to ADMIN (BOSS_ADM_SYSTEM below denies them). -->
     <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
         <artifacts artifactName="component://mr-boss/screen/Admin.xml" artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_ADMIN_ADMIN" userGroupId="ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
-        <authz artifactAuthzId="BOSS_ADMIN_APPADMIN" userGroupId="BOSS_ADMIN_ADMIN" authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+        <authz artifactAuthzId="BOSS_ADMIN_APPADMIN" userGroupId="BOSS_ADMIN_ADMIN" authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL">
             <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/><filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
     <!-- Products P1: grants compose. Services independently check the action and owner. -->
@@ -433,26 +437,31 @@ along with this software (see the LICENSE.md file). If not, see
             pattern names the app packages and any depth under them. A new app directory is not denied until its name is added here.
             The client's own writes are ironstone.client.ClientServices (impl-projects.md P10b), and client is not in the list, so
             not in this pattern: each checks the client's access itself. The verbs are split over several rows, as an
-            artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to -->
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut)#.*"
+            artifactName is at most 255 characters (text-medium, in the key), which MySQL holds to (admin and insights were added
+            in Admin P1 and the two rows they took past 255 split, impl-admin F14: twelve rows, the longest 237) -->
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(add|apply|approve|archive|attach|book|bulk|cancel|change|claim|clockIn|clockOut)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(clone|close|comment|complete|compare)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop|duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(confirm|convert|copy|create|decide|delete|discard|drop)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log|make|map|mark|merge|migrate|move|notify|open|place)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(duplicate|edit|end|expire|export|fail|fetch|file|finish)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(follow|generate|import|invoice|join|link|load|log)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refuse|release|remove|rename|reopen|replace|reply)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(make|map|mark|merge|migrate|move|notify|open|place)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(post|prepare|preview|publish|quickAdd|raise|rank|reassign)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(record|reevaluate|refuse|release|remove|rename|reopen|replace|reply)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(request|reschedule|resolve|respond|restore|retire|return|run)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
-        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(save|schedule|select|send|set|setup|share|staff|start)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(stop|store|submit|sync|test|toggle|transition|trash|triage)#.*"
+                artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <artifacts artifactName="ironstone\.(commons|comms|projects|products|accounting|warehouse|manufacturing|purchasing|customerservice|commerce|admin|insights|shared)(\.[A-Za-z]+)+\.(turnOn|unfollow|unlink|unsubscribe|update|upload|use|validate)#.*"
                 artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
         <!-- and the searches of the edit forms (people, records, work items and plan items to pick), which list beyond the client's part -->
         <artifacts artifactName="ironstone\.(comms\.InboxServices\.search#LinkRecords|shared\.ChatterServices\.search#Users|commons\.TaskServices\.search#Assignees)"
@@ -2141,5 +2150,157 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- Shop P8 (impl-commerce F108): resolving a stuck Shop placement (retry it, or release or refund its kept payment) is the
         Commerce administrator's; the store operators read it in CartDetail -->
     <moqui.security.UserGroupPermission userGroupId="BOSS_COMMERCE_ADMIN" userPermissionId="COMMERCE_PLACEMENT_RESOLVE"
+            fromDate="0"/>
+    <!-- Admin P1 (impl-admin P1, F1, F2; design-admin §1.1): the root user group and the capability groups; the administrator group
+        BOSS_ADMIN_ADMIN is above. Groups are not nested: an Admin user is in BOSS_USERS, BOSS_ADMIN and a capability group, the
+        administrator in BOSS_USERS and BOSS_ADMIN_ADMIN. BOSS_ADMIN_ACCESS, BOSS_ADMIN_BACKUP and BOSS_ADMIN_ADMIN are privileged
+        (MoquiConf.xml): only a member changes their membership. BOSS_ADMIN_PRIVACY holds no permission until PrivacyServices
+        (impl-admin §7); Customer Service's Privacy team holds it (impl-customer-service F80). -->
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN" description="Admin app users (the launcher)"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_READ" description="Administrative reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_IDENTITY" description="Identity operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_ACCESS" description="Access administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_CONFIGURE" description="Configuration administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_INTEGRATIONS" description="Integration administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_OPERATIONS" description="Operations operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_DATA" description="Data operator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_AUDIT" description="Audit reader"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_PRIVACY" description="Privacy administrator"/>
+    <moqui.security.UserGroup userGroupId="BOSS_ADMIN_BACKUP" description="Backup operator"/>
+    <!-- the root user group's authorization on the Admin root and the app's services (ironstone.admin: its context, record checks,
+        choices, palette and registries), beside the administrators' rows of the BOSS_ADMIN artifact group above. The root grant
+        opens navigation only; each screen and service checks its own permission. No BOSS_ADMIN_* group is authorized for the raw
+        framework security entities, org.moqui.impl.UserServices' administrative services or their REST paths (impl-admin §2);
+        ADMIN keeps Tools. -->
+    <artifactGroups artifactGroupId="BOSS_ADMIN" description="IronStone Admin App (via root screen)">
+        <artifacts artifactName="ironstone\.admin\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADMIN_ROOT" userGroupId="BOSS_ADMIN" authzTypeEnumId="AUTHZT_ALLOW"
+                authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin areas for their capability groups only (impl-admin P1; impl-commerce F45's pattern): each denies the root user group
+        BOSS_ADMIN and allows its groups, with the root's filter sets. Home is every Admin user's; Operations (Monitoring in P1)
+        the administrative reader's, the operations operator's and the administrator's; Agents and Developer tools the
+        administrator's (AgentsHome and DeveloperHome then check AgentAdmin and each tool's own grant). Admin.js reads these
+        authorizations as the operations, agents and developer capabilities. A later phase that adds an area, or opens one to
+        another group, adds its rows here. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_OPERATIONS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Operations.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_READ" userGroupId="BOSS_ADMIN_READ"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_OPERATIONS" userGroupId="BOSS_ADMIN_OPERATIONS"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_OPERATIONS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ADM_AGENTS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Agents.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_AGENTS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_AGENTS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <artifactGroups artifactGroupId="BOSS_ADM_DEVELOPER">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Developer.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_DEVELOPER_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin › System (impl-admin F2; design-admin §13): the Tools System screens mounted under the Admin root stay ADMIN's. The
+        Admin groups' inheritable ALLOW on the root would otherwise open System.xml, which has no grant of theirs, so they are
+        denied it by its location; Tools' own SYSTEM_APP ALWAYS (ADMIN's) still opens it, there and at /qapps/system. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_SYSTEM">
+        <artifacts artifactName="component://tools/screen/System.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_SYSTEM_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_SYSTEM_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Admin P1 (impl-admin §4; design-admin §1.1's table): the framework's ADMIN_* permissions of each group (the framework seeds
+        them, each granted to ADMIN). The administrator holds every one of the groups' permissions; ADMIN_IDENTITY_GLOBAL and
+        ADMIN_BACKUP_DOWNLOAD, which the identity operator and backup operator "additionally need", and ADMIN_CONSTITUTION_GLOBAL
+        stay the instance administrators' (ADMIN), granted only by a holder. BOSS_ADMIN_PRIVACY has none yet. Later phases append
+        their grants below (each data target's domain permission on BOSS_ADMIN_DATA, P15). -->
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_READ" userPermissionId="ADMIN_OVERVIEW_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_IDENTITY" userPermissionId="ADMIN_IDENTITY_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ACCESS" userPermissionId="ADMIN_ACCESS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_CONFIGURE" userPermissionId="ADMIN_SETTINGS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_INTEGRATIONS" userPermissionId="ADMIN_CONNECTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_OPERATIONS" userPermissionId="ADMIN_OPERATION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_DATA" userPermissionId="ADMIN_TRANSFER_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_AUDIT" userPermissionId="ADMIN_AUDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_BACKUP" userPermissionId="ADMIN_BACKUP_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OVERVIEW_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_IDENTITY_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_ACCESS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_SETTINGS_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_CONNECTION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_OPERATION_MANAGE"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_TRANSFER_RUN"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_AUDIT_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_VIEW"
+            fromDate="0"/>
+    <moqui.security.UserGroupPermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_RUN"
             fromDate="0"/>
 </entity-facade-xml>

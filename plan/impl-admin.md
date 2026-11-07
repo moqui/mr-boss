@@ -257,8 +257,8 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F33); the checks below left |
-| P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | — |
+| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F33; F2's check settled in P1, F-P1-1); the other checks below left |
+| P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built Nov 7 (adm/p1) |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | — |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | — |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | — |
@@ -284,7 +284,7 @@ Verify the design's riskiest assumptions against the code before building. Each 
 changes the design, an edit there. F1–F30 were found on Nov 7 while writing this plan and F31–F33 in its review the
 same day; the design edits they call for were made then. Still to check:
 
-- **Admin › System for `ADMIN` only** (F2): which change keeps `SYSTEM_APP`'s own check on the mounted
+- **Admin › System for `ADMIN` only** (F2; settled in P1, F-P1-1): which change keeps `SYSTEM_APP`'s own check on the mounted
   `System.xml` for every BOSS group, given that an inheritable `AUTHZT_ALWAYS` on the Admin root skips it
   (authz.rs:450-456): `BOSS_ADMIN_ADMIN` and the ordinary groups on `AUTHZT_ALLOW`, or the System mount outside the
   inherited path; and that its links and transitions stay under Admin/System (Insights F3 found the Dashboards screens'
@@ -373,6 +373,126 @@ permissions and seals), ADM-SHELL.
   anyone to it through Tools or a direct entity call, and no one without `ADMIN_BACKUP_DOWNLOAD` can grant it;
   `admin.reader` opens Home but not System; a Projects client and a PASS public account are refused the root and every
   `ironstone.admin` service.
+
+**Built Nov 7 (P1).**
+- Framework (mr-moqui):
+  - `moqui-conf-3.xsd`: `user-facade` `authz` takes any number of `privileged-group` and `sealed-permission` children
+    (each a `name`). `conf.rs` `merge_authz`: a component's `authz` attributes replace the base's as before, and its
+    children are added to every other component's by `name`, never replacing them. `confcache.rs` keeps the children's
+    names by element (`authz_names`, `ExecutionContextFactory::authz_names`); `security_checks.rs` joins the attribute
+    list (or the framework's default when it is empty) with every element (`conf_ids`, `join_ids`).
+  - MoquiDefaultConf's `sealed-permissions` (and `DEFAULT_SEALED_PERMISSIONS`) gain `ADMIN_IDENTITY_GLOBAL`,
+    `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD`; its comment says how a component adds to the lists.
+  - `SecurityTypeData.xml`: design §1.1's eighteen `ADMIN_*` permissions (§3 P1's list), each granted to `ADMIN`, beside
+    `ADMIN_PASSWORD`.
+  - Tools: ActiveUsers, VisitList and VisitDetail link UserAccountDetail by a relative path, not `//system/...`, so
+    the links stay under Admin › System (F-P1-1).
+  - Docs: Attack-Surface's `user-facade` paragraph (the three seals, `ADMIN_CONSTITUTION_GLOBAL`, the elements);
+    Remaining-Work's framework-asks row.
+- BOSS access (`MoquiConf.xml`; `data/BossSetupData.xml`, appended but for F1's comment, F2's row and F14's rows):
+  - `BOSS_ADMIN_ACCESS`, `BOSS_ADMIN_BACKUP` and `BOSS_ADMIN_ADMIN` as `privileged-group` elements, no seals;
+  - the groups `BOSS_ADMIN` (root user group) and `_READ`, `_IDENTITY`, `_ACCESS`, `_CONFIGURE`, `_INTEGRATIONS`,
+    `_OPERATIONS`, `_DATA`, `_AUDIT`, `_PRIVACY`, `_BACKUP`; on the `BOSS_ADMIN` artifact group (a second element of the
+    same id) the `ironstone\.admin\..*` service pattern and the root authz `BOSS_ADMIN_ROOT` (`MANTLE_USER_ORG`,
+    `MANTLE_PRIVATE_CONTACT`); `BOSS_ADMIN_APPADMIN` now `AUTHZT_ALLOW` (F2, F-P1-1) and the stale comment replaced (F1);
+  - the area groups `BOSS_ADM_OPERATIONS` (the reader, operations operator, administrator), `BOSS_ADM_AGENTS` and
+    `BOSS_ADM_DEVELOPER` (the administrator), each denying `BOSS_ADMIN` (impl-commerce F45), and `BOSS_ADM_SYSTEM`,
+    which denies Tools' `System.xml` to `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`;
+  - the `UserGroupPermission` grants of design §1.1's table (§4); `BOSS_ADMIN_PRIVACY` none;
+  - `admin` and `insights` in the client deny pattern, the two rows they took past 255 characters split (F14: twelve
+    rows, the same 102 verbs, the longest 237).
+  No authz for the raw security entities, UserServices' administrative services or their REST paths.
+- `ironstone.admin.ContextServices` (`get#SharedContext`, `check#Record`, `get#Choices`, `search#Records`,
+  `get#AppAccess`) and `RegistryServices.find#ToolLinks`, over `service/ironstone/admin/Admin.js`, whose tables later
+  phases extend: `capabilityPermissions` (the eighteen, `ADMIN_CONSTITUTION_GLOBAL` and `AgentAdmin`), `areas`
+  (operations, agents, developer; `system` from Tools' own grant), `recordKinds` (organization; user, read with
+  `identityView`, in scope when its party works for one of the user's organizations, the detail naming only those, and
+  `sharedBeyondScope` for P4's global rule), `searchFinds` (none yet), `choiceSources` (organizations), `linkPaths` and
+  `toolRoutes` (nineteen Tools and System routes, each by its app's own grant and its screen's permission). Opening
+  Admin is the root grant read from the user's own groups (no permission: the root opens navigation, §4); a Projects
+  client and a PASS account never.
+- Screens: the root (`screen/Admin.xml`: `get#SharedContext` and `sharedLinks` in always-actions; the System mount of
+  `component://tools/screen/System.xml`; `<shell-providers>` with the `admin` keymap, g a, g o, g n, g y, g d); the six
+  placeholders removed (Home rewritten); `Admin/Home.xml` (the shortcuts by area, one primary; Needs attention, Setup
+  checks and Health's four cards "Not configured" for an `ADMIN_OVERVIEW_VIEW` holder); `Admin/Operations.xml` with
+  `Operations/Monitoring.xml` (MonitoringDestinations by the user's Monitor and Dashboards grants; telemetry sources and
+  open incidents for those Monitor opens); `Admin/Agents.xml` with `Agents/AgentsHome.xml` (the effective configuration
+  and today's totals for an AgentAdmin holder; thirteen destinations under Admin › System, the three missing framework
+  screens "Not available", F19); `Admin/Developer.xml` with `Developer/DeveloperHome.xml` (ToolLinks). Projects'
+  Settings › Index links Admin Home in place of the removed Users placeholder (F-P1-3).
+- Demo (`data/BossUsersDemoData.xml`): `admin.reader`, `.identity` (the operator delegated for ORG_ZIZI_RETAIL only),
+  `.access`, `.configure`, `.integrations`, `.operations`, `.data`, `.audit`, `.privacy`, `.backup` (each in
+  `BOSS_USERS`, `BOSS_ADMIN` and its group, an agent of Retail), `admin.admin` (`BOSS_ADMIN_ADMIN` alone),
+  `admin.delegate` (`ADMIN_ACCESS_VIEW` and `ADMIN_ACCESS_MANAGE` through `BOSS_ADMIN_DEMO_DELEGATE`, not in
+  `BOSS_ADMIN_ACCESS`) and `shared.staff` (Retail and Services, `BOSS_USERS` alone); none in `ADMIN`.
+  customerservice.admin, the Privacy team's member, is in `BOSS_ADMIN_PRIVACY` (F80, owner contract; design-customer-service
+  §8 changed).
+- Specs: `test/Admin/AdminSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`, `shell`) and
+  `AdminAccess` (7 features, 3.3 s feature time, the slowest the context at 0.8 s: the context and its refusals, a Projects
+  client and a PASS account refused every `ironstone.admin` service and Home; the menu and keys of the reader and the
+  administrator and ADMIN's menu with System, the launcher; Home's one qvt render; the capabilities of every group, the
+  delegate and ADMIN; Admin › System refused to `admin.admin` and opened to ADMIN, with the tool links of each; the seals
+  through direct entity creates (the delegate refused `BOSS_ADMIN_ACCESS`, `_BACKUP` and `_ADMIN` memberships and the
+  `ADMIN_BACKUP_DOWNLOAD` and `ADMIN_IDENTITY_GLOBAL` grants, admitted the `ADMIN_ACCESS_MANAGE` grant the reader is
+  refused; `admin.access` adds to its own group) and the refused entity-auto security mutators; organization scope of
+  identities: a Retail operator gets a Retail identity and the shared one by Retail alone, refused Services' and a forged
+  one alike, the reader refused for `ADMIN_IDENTITY_VIEW`, the administrator every organization). Framework (cargo,
+  moqui-core): `conf_tests` `each_component_adds_authz_elements_and_keeps_the_defaults`, `confcache`
+  `authz_children_are_listed_by_element_beside_the_attributes`, `security_checks`
+  `the_listed_ids_or_the_defaults_are_joined_with_every_added_id` and `the_framework_seals_the_admin_grants_that_widen_access`,
+  `eca_tests` `a_group_and_a_permission_a_conf_adds_by_element_are_guarded_beside_the_defaults` (a runtime conf's elements
+  through the EECAs) and the three seals in `sealed_permission_create_is_denied_without_the_permission`. No framework JS
+  spec added, so the framework's budget is unchanged. Acceptance, written and not run:
+  `acceptance/Admin/AdminFoundationWalk` (3 features: every area per user; the delegate through Admin › System, Tools
+  System, the entity-auto service and a direct entity call, and no Admin user granting `ADMIN_BACKUP_DOWNLOAD`; the reader
+  and the refused Projects client and PASS account).
+- Tests run (Debug binary, `--nobuild`): AdminAccess 7 of 7; with CommerceAccess (15 of 15), CustomerServiceAccess (22 of
+  22) and ProjectsAccess (8: 4 passed, among them the deny-pattern feature; 4 fail the same without P1's mr-boss changes,
+  F-P1-4). Cargo: moqui-core's conf, confcache, security_checks and eca tests 37 of 37; the whole moqui-core lib 1528 of
+  1529, the one failure at e3360436 too (F-P1-5). `moqui lint --screens` (Debug): no idiom or hazard site in the Admin
+  screens or the three Tools screens (132 sites in all, as before). Prettier clean on the new JavaScript. Not run:
+  `./moq test-apps`, `./moq test-framework`, the acceptance suite, AppStructure (acceptance; its placeholder list is found
+  by label, so the removed placeholders need no change).
+- Budget: mr-boss's measured share is AdminAccess's 3.3 s server (no client spec); the framework's none.
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1 (usl-inventory's SetupServices row names Health,
+  P2's).
+- Findings (provisional, numbered by the lead):
+  - **F-P1-1** (P0's F2 check) An inheritable `AUTHZT_ALLOW` on the Admin root also opens a child with no grant of its
+    own (authz.rs's last-frame fallback, about line 527), so making `BOSS_ADMIN_ADMIN` ALLOW alone would still open
+    System; and mounting System outside the root's path is not possible for a subscreen. P1 sets the administrator's
+    root grant to ALLOW (no inheritable ALWAYS that skips the child's check) and denies `System.xml` by its location to
+    `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN` (`BOSS_ADM_SYSTEM`); `ADMIN`'s ALWAYS, on the root or Tools' `SYSTEM_APP`, still
+    opens it, there and at `/qapps/system`. A group an installation gives an ALLOW on the Admin root needs the same deny.
+    Links: three transitions (Security/ActiveUsers, Visit/VisitList, Visit/VisitDetail) went to `//system/Security/UserAccountDetail`,
+    Tools' own mount; now relative. The others leave for Monitor, Dashboards and Tools (`//apps/...`) under their own
+    grants, as designed. Design §13 changed.
+  - **F-P1-2** `ec.artifactExecution.isPermitted` checks against the top of the stack, so under the Admin root (or the
+    `ironstone\.admin` service pattern, inheritable) every Tools screen reads as permitted, and it records an
+    authorization failure for each refusal. Admin.js reads the user's own groups' grants (`ArtifactAuthzCheckView`), as
+    Commerce.js does, for the root, the areas and the framework apps. Likewise the root's inheritable grant reaches the
+    services an Admin screen calls, so Monitoring and AgentsHome call only services that check their own grant
+    (`get#SourceStatus`'s `authorize_own`, `list#Incidents`' `MONITOR_INCIDENT`, AgentAdminServices' AgentAdmin).
+  - **F-P1-3** Projects' Settings › Index linked `/qapps/Admin/Users`, a removed placeholder; it links Admin Home until
+    P4's `Users/Users` (P4 repoints it).
+  - **F-P1-4** On the Debug binary ProjectsAccess fails four client features with "Maximum call stack size exceeded" in
+    nested scripts (entity filters, record paths), the same with P1's mr-boss changes stashed: the script stack budget
+    (`script/runtime.rs` `stack_budget`) is fixed while a debug build's frames are larger. Its deny-pattern feature (F14)
+    passes. A run on a release binary should pass them.
+  - **F-P1-5** moqui-core's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one` fails at e3360436 without
+    P1 (`ec.entity` refused in the nested read); not P1's.
+  - **F-P1-6** With `Admin.xml` as a spec's render root, `//Admin/...` links resolve to nothing and render disabled (as
+    every app's `page` helper does), so specs check a shortcut's label, not its URL.
+  - **F-P1-7** `ORG_ZIZI_RETAIL` has a child organization, `BOSS_WH_RETURNS` (PrtOrgRollup); `get#PartyInternalOrgIds`
+    counts it, so a Retail administrator administers it too, as `MANTLE_USER_ORG` filters.
+- Decisions (§4 rows added): the administrator's grants; opening Admin with the root grant alone; the P1 areas by group;
+  the Privacy team's group through its member.
+- For the lead:
+  - the framework budget needs no change; mr-boss's share is AdminAccess's 3.3 s;
+  - ProjectsAccess on a release binary (F-P1-4) before the merge, and F-P1-5 for the framework;
+  - the demo component's lock-down (`runtime/dev-component/demo`) ends some of `ADMIN`'s sealed permissions on the demo
+    server; whether it ends `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD` too is the
+    framework's call (Demo.spec.js lists the ended ones);
+  - P4 repoints Projects' Settings link (F-P1-3); Insights P1 needs no deny-pattern change (F14 done).
 
 ### P2 — Registries, Health and the settings index
 
@@ -845,6 +965,10 @@ the owner's design.
 | Nov 7, 2026 | `store#OrganizationMembership` is built in P4 rather than P7 | The plan's choice (the plan review): `create#StaffAccount` (P4) and `accept#Invitation` (P5) each write a membership |
 | Nov 7, 2026 | DeviceServices checks `ADMIN_ACCESS_VIEW` and `ADMIN_ACCESS_MANAGE`; no device permission is added | The plan's choice (the plan review): design §2 makes the access administrator the registrar, and §1.1 names no device permission |
 | Nov 7, 2026 | P6 adds an owner change to the framework's drives and shared mail accounts and to Mantle's calendars and contact books, each the owner's service | F31: the lifecycle participants need them, and only Projects' reassign services exist |
+| Nov 7, 2026 | `BOSS_ADMIN_ADMIN` holds every Admin group's permission but `ADMIN_IDENTITY_GLOBAL` and `ADMIN_BACKUP_DOWNLOAD`, which the identity and backup operators "additionally need", and `ADMIN_CONSTITUTION_GLOBAL`; those stay `ADMIN`'s, granted only by a holder | P1's reading of design §1.1's "all Admin permissions above"; design §1.1 changed |
+| Nov 7, 2026 | Opening Admin needs the root grant alone, no permission: the root opens navigation (design §1.1) and each read checks its own, so `BOSS_ADMIN_PRIVACY`'s members open it with nothing to read yet | P1; unlike Commerce, whose reader needs `COMMERCE_VIEW` |
+| Nov 7, 2026 | P1's areas: Home every Admin user's; Operations (Monitoring) the reader's, operations operator's and administrator's; Agents and Developer tools the administrator's (AgentsHome and DeveloperHome then check AgentAdmin and each tool's own grant); System Tools' own grant's (`ADMIN`). A later phase opening an area to another group adds its row | P1 |
+| Nov 7, 2026 | Customer Service's Privacy team holds `BOSS_ADMIN_PRIVACY` through its member (customerservice.admin in the demo); the queue stays restricted to its team, Mantle naming no BOSS group | P1, impl-customer-service F80 |
 
 ## 5. Open questions
 

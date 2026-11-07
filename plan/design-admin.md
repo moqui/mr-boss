@@ -12,7 +12,7 @@ IronStone Admin serves system administrators and people delegated a particular a
 
 ### 1.1 Root, authority and presentation
 
-Root `screen/Admin.xml`, route `Admin`, keeps icon `sym_o_admin_panel_settings`. `BOSS_ADMIN` is the existing artifact group, and `BOSS_ADMIN_ADMIN` is an existing setup user group. The root's comment saying its grants are commented out is stale: setup has framework ADMIN and app-admin authorizations with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`. The root and Home placeholder are not the workflows specified here.
+Root `screen/Admin.xml`, route `Admin`, keeps icon `sym_o_admin_panel_settings`. `BOSS_ADMIN` is the existing artifact group, and `BOSS_ADMIN_ADMIN` is an existing setup user group. `BOSS_ADMIN` is also the root user group (impl-admin P1, Commerce's pattern): every ordinary Admin user is in it and a capability group, and an area only some groups see denies it and allows theirs. The root's comment saying its grants are commented out is stale: setup has framework ADMIN and app-admin authorizations with `MANTLE_ACTIVE_ORG` and `MANTLE_PRIVATE_CONTACT`. The root and Home placeholder are not the workflows specified here.
 
 The root continues `mantle.party.PartyServices.setup#UserOrganizationInfo`. Internal organizations are multiple parties in one instance, not separate installations. Ordinary delegated groups take the existing user-organization and private-contact filters; the administrator setup group keeps its established filters. Every read and action independently checks its permission and target scope. An account belongs to one identity even when that identity works for several organizations. Authority to manage one organization's memberships does not authorize disabling that person's entire account, inspecting another organization's membership or granting instance-wide access.
 
@@ -30,7 +30,7 @@ Groups are assignment bundles. Services use `ec.user.hasPermission` and domain s
 | audit reader (V) | BOSS_ADMIN_AUDIT | `ADMIN_AUDIT_VIEW`; scoped, redacted changes and access evidence; no implicit business-record, replay or message-body access |
 | privacy administrator (P) | BOSS_ADMIN_PRIVACY | `ADMIN_PRIVACY_VIEW`, `ADMIN_PRIVACY_MANAGE`, `ADMIN_RETENTION_MANAGE`; reviewed requests and hold/policy coordination; domain execution checks still apply |
 | backup operator (B) | BOSS_ADMIN_BACKUP (privileged) | `ADMIN_BACKUP_VIEW`, `ADMIN_BACKUP_RUN`; archive download (later) additionally needs `ADMIN_BACKUP_DOWNLOAD` (sealed), an instance-wide disclosure permission |
-| app administrator | BOSS_ADMIN_ADMIN (existing, privileged) | All Admin permissions above (global Constitution editing additionally needs its separate sealed grant); only a member can add a member, and only a holder of each sealed permission can grant it |
+| app administrator | BOSS_ADMIN_ADMIN (existing, privileged) | All Admin permissions above but the sealed ones the identity and backup operators additionally need (`ADMIN_IDENTITY_GLOBAL`, `ADMIN_BACKUP_DOWNLOAD`), which stay the instance administrators' with `ADMIN_CONSTITUTION_GLOBAL` (impl-admin §4); only a member can add a member, and only a holder of each sealed permission can grant it |
 | agent administrator | existing permission assignment | `AgentAdmin`; separate runtime, content and gateway checks of the existing framework remain intact |
 | advanced tools operator | existing permission assignment | Existing Tools access and sealed permissions; no new BOSS substitute |
 
@@ -71,7 +71,7 @@ XML widgets are the default. Every designed screen renders in `qvt` and `tui`; l
 
 Record, wizard and reused routes below are contextual, not additional menu levels. Entries marked later are absent from the menu until they ship.
 
-**Shell providers.** The palette contributes authorized users, groups, connections and jobs, and actions Invite users and Open settings. Quick create contributes Invite users only. Today shows assigned lifecycle/privacy exceptions and actionable operational notices, with minimal metadata. Existing ReportAlert, Monitor and agent notifications retain their owners; proposed invitation, lifecycle, new-device sign-in and privacy topics use canonical operation IDs and no tokens, with lock-screen-safe push titles. Opening or acting on a notification always rechecks authority. Commons owns the shell and approvals inbox.
+**Shell providers.** The `admin` keymap opens Home, Monitoring, Agents, System and Developer tools (`g a`, `g o`, `g n`, `g y`, `g d`), each key shown only to a user the screen opens to. The palette contributes authorized users, groups, connections and jobs, and actions Invite users and Open settings. Quick create contributes Invite users only. Today shows assigned lifecycle/privacy exceptions and actionable operational notices, with minimal metadata. Existing ReportAlert, Monitor and agent notifications retain their owners; proposed invitation, lifecycle, new-device sign-in and privacy topics use canonical operation IDs and no tokens, with lock-screen-safe push titles. Opening or acting on a notification always rechecks authority. Commons owns the shell and approvals inbox.
 
 **Stack contributions** (crosscut §1.5):
 - **Assist (CX-ASSIST).**
@@ -1005,7 +1005,7 @@ Admin owns no agent-runtime configuration screens. AgentsHome links those three 
 - Security UserAccount, UserGroup, ArtifactGroup and ActiveUsers;
 - Print Printer.
 
-Admin does not re-specify these forms. Their own artifact authorization and sealed permissions apply unchanged, and the mount adds no grant: Tools' `SYSTEM_APP` check must still apply under the Admin root, whose inheritable `AUTHZT_ALWAYS` grant to `BOSS_ADMIN_ADMIN` would otherwise skip it (impl-admin F2). Admin builds a delegated BOSS screen only where a role without `ADMIN` needs the function:
+Admin does not re-specify these forms. Their own artifact authorization and sealed permissions apply unchanged, and the mount adds no grant: Tools' `SYSTEM_APP` check still applies under the Admin root. `BOSS_ADMIN_ADMIN`'s root grant is `AUTHZT_ALLOW`, not an inheritable `AUTHZT_ALWAYS` that would skip it, and the Admin groups (`BOSS_ADMIN`, `BOSS_ADMIN_ADMIN`) are denied `System.xml` by its location, so only an `ALWAYS` of Tools' own (`ADMIN`'s) opens it; its links stay under Admin › System but those into Monitor, Dashboards and Tools, which keep their own grants (impl-admin F2, F-P1-1). Admin builds a delegated BOSS screen only where a role without `ADMIN` needs the function:
 - Jobs and JobRuns, and SystemMessages, for the operations operator (O);
 - MessageTypes for the integration administrator (I);
 - Localization for the configuration administrator (C);

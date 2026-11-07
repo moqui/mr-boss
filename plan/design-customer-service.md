@@ -605,7 +605,8 @@ record is anonymized rather than deleted, because required financial and stock a
 privacy page are `later`. Until they ship, a data-subject request arrives as a case of the proposed
 request type `RqtPrivacy`. Intake is NewCustomerCase, mail, or an agent's NewCase, and the type is
 service-enabled only in a restricted Privacy queue. That queue's only members are the privacy
-administrators (`BOSS_ADMIN_PRIVACY`). Other agents see neither the case nor its conversation, it
+administrators (`BOSS_ADMIN_PRIVACY`; Admin P1 created the group, with no permission until PrivacyServices,
+and the demo Privacy team's member holds it, while the queue stays restricted to its team, impl-customer-service F80). Other agents see neither the case nor its conversation, it
 is never triaged to a general queue, and Customer360 shows no count of it. The case holds the
 verification evidence as protected case files and records each provider's preview and disposition
 as a linked work item. It is not a second privacy store. When PrivacyRequests ships, each open
