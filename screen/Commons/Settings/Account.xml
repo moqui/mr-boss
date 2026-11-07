@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     mantle.party.ContactServices.store#PartyContactInfo), Change password (org.moqui.impl.UserServices.update#Password, with
     the code when a second factor is required), my second factors (UserServices: get#UserAuthcFactorInfo, the create
     services by type, invalidate#UserAuthcFactorEntry, the verify screens of the tools app) and where I am signed in
-    (moqui.server.Visit), and git and API access (design-projects.md §7 GitAccess: a link to Projects' Git access for a user
+    (org.moqui.admin.IdentityServices.find#Sessions, self-scoped: the one session definition Admin's Sessions reads, with Sign
+    out for another session through revoke#Sessions; design-drawers-commons Account, impl-admin P4 owner contract), and git and API access (design-projects.md §7 GitAccess: a link to Projects' Git access for a user
     who has Projects, else the access tokens here, org.moqui.impl.UserServices create#UserAccessToken and revoke#UserAccessToken).
     Every form is the current user's own: the user and party come from ec.user, never the request. The
     photo is the face image of the user's party (PartyContent PcntFaceImage, mantle.party.PartyServices.create#PartyContent
@@ -39,6 +40,14 @@ along with this software (see the LICENSE.md file). If not, see
     <transition name="revokeAccessToken">
         <service-call name="org.moqui.impl.UserServices.revoke#UserAccessToken" in-map="{loginKey:loginKey}"/>
         <actions><message type="success">Access token revoked</message></actions>
+        <default-response url="."/><error-response url="."/>
+    </transition>
+    <!-- sign out of another session of mine (impl-admin P4, F17): the framework ends it on every server, never the current one -->
+    <transition name="signOutSession">
+        <service-call name="org.moqui.admin.IdentityServices.revoke#Sessions" out-map="revokeOut" in-map="{userId:ec.user.userId, sessionKeyList:[sessionKey]}"/>
+        <actions><if condition="!ec.message.hasError()">
+            <script>ec.message.addMessage(revokeOut.sessionCount ? 'That session is signed out' : 'That session had already ended', revokeOut.sessionCount ? 'success' : 'info')</script>
+        </if></actions>
         <default-response url="."/><error-response url="."/>
     </transition>
     <!-- the desktop and mobile apps signed in with a key of their own (plans/Mobile-Desktop.md in mr-moqui) -->
@@ -175,31 +184,18 @@ along with this software (see the LICENSE.md file). If not, see
             <order-by field-name="factorTypeEnumId,fromDate"/>
         </entity-find>
 
-        <!-- where I am signed in: the last visits -->
-        <entity-find entity-name="moqui.server.Visit" list="visitRows" limit="10">
-            <econdition field-name="userId"/>
-            <select-field field-name="visitId,fromDate,thruDate,initialUserAgent,clientIpAddress,clientIpCity,clientIpCountryGeoId"/>
-            <order-by field-name="-fromDate"/>
-        </entity-find>
+        <!-- where I am signed in: my sessions of the last 30 days, the framework's one session definition (self-scoped) -->
+        <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="sessionsOut" in-map="{sinceDays:30, limit:10}"/>
         <script><![CDATA[
-            const thisVisitId = ec.user.visitId
-            const device = (agent) => {
-                const text = String(agent || '')
-                if (!text) return ec.l10n.localize('Unknown device')
-                const browser = /Edg\//.test(text) ? 'Edge' : /Firefox\//.test(text) ? 'Firefox' : /Chrome\//.test(text) ? 'Chrome' : /Safari\//.test(text) ? 'Safari' : 'Browser'
-                const system = /iPhone|iPad/.test(text) ? 'iOS' : /Android/.test(text) ? 'Android' : /Mac OS X/.test(text) ? 'macOS' : /Windows/.test(text) ? 'Windows' :
-                    /Linux/.test(text) ? 'Linux' : ''
-                return system ? browser + ' on ' + system : browser
-            }
             // the times as text: a time stamp copied into a map reaches the list as its millis
             const when = (value) => value == null || value === '' ? '' : ec.l10n.format(new Date(Number(String(value))), 'yyyy-MM-dd HH:mm')
             // the apps and devices signed in by a key of their own: the desktop and mobile clients
             const devicesOut = ec.service.sync().name('org.moqui.impl.UserServices.get#UserDeviceKeys').call() || {}
             deviceList = Array.from(devicesOut.deviceList ?? []).map((row) => ({loginKey: row.loginKey, deviceName: row.deviceName || '',
                 sinceText: when(row.fromDate), usedText: when(row.lastUsedDate), expiresText: row.thruDate ? ec.l10n.format(row.thruDate, 'MMM d, yyyy') : ''}))
-            sessionList = Array.from(visitRows ?? []).map((visit) => ({visitId: visit.visitId, device: device(visit.initialUserAgent),
-                where: [visit.clientIpAddress, visit.clientIpCity].filter((part) => part).join(' · '), sinceText: when(visit.fromDate),
-                endedText: when(visit.thruDate), current: !!thisVisitId && visit.visitId === thisVisitId}))
+            sessionList = Array.from(sessionsOut?.sessionList ?? []).map((row) => ({sessionKey: row.sessionKey, device: ec.l10n.localize(row.clientSummary),
+                where: [row.clientAddress, row.clientPlace].filter((part) => part).join(' · '), sinceText: when(row.startedDate),
+                endedText: row.active ? '' : row.state === 'ended' ? when(row.endedDate) : ec.l10n.localize('Expired'), active: !!row.active, current: !!row.current}))
             singleUseCodeText = singleUseCodes && singleUseCodes.length ? Array.from(singleUseCodes).join('   ') : null
             thruDefault = String(Number(String(ec.user.nowTimestamp)) + 365 * 86400000)
             // git and API access: a user who has Projects keeps SSH keys and tokens in its Git access page, any other has the tokens here
@@ -410,6 +406,9 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="sinceText"><default-field title="Since"><display/></default-field></field>
                         <field name="endedText"><conditional-field condition="current" title="Ended"><label text="This session" style="text-positive"/></conditional-field>
                             <default-field title="Ended"><display/></default-field></field>
+                        <field name="signOut"><default-field title="">
+                            <link url="signOutSession" link-type="hidden-form-link" text="Sign out" icon="sym_o_logout" condition="active &amp;&amp; !current"
+                                    confirmation="Sign out ${device}? Its next request goes to the sign-in page." parameter-map="{sessionKey:sessionKey}"/></default-field></field>
                     </form-list>
                     <section name="NoSessions" condition="!(sessionList &amp;&amp; sessionList.length)"><widgets>
                         <label type="p" text="No sign-ins recorded" style="m-muted q-pa-sm q-mb-none"/>

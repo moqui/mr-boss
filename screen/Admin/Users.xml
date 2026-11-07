@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The Users area of IronStone Admin (design-admin §1.2, §4): Users, the staff identities of the organizations the user
+    administers (P4, the default), with NewStaffAccount; UserDetail, one identity's account, access, credentials, sessions and
+    history (P4, contextual); Sessions, the sessions of those identities with bulk revoke (P4). Invitations (P5) and
+    LifecycleOperations (P6) join with their phases. For the identity operator and the administrator (BOSS_ADM_USERS); Mantle's
+    IdentityServices and the framework's IdentityServices check ADMIN_IDENTITY_VIEW, ADMIN_IDENTITY_MANAGE, ADMIN_IDENTITY_GLOBAL and
+    the organization scope themselves, whatever opens the screen. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Users" default-menu-index="2" menu-image="sym_o_person" menu-image-type="icon">
+    <subscreens default-item="Users" always-use-full-path="true">
+        <subscreens-item name="Users" location="component://mr-boss/screen/Admin/Users/Users.xml" menu-title="Users" menu-index="1"/>
+        <subscreens-item name="Sessions" location="component://mr-boss/screen/Admin/Users/Sessions.xml" menu-title="Sessions" menu-index="3"/>
+        <subscreens-item name="UserDetail" location="component://mr-boss/screen/Admin/Users/UserDetail.xml" menu-include="false"/>
+    </subscreens>
+    <widgets>
+        <subscreens-panel id="AdminUsersPanel" type="tab"/>
+    </widgets>
+</screen>

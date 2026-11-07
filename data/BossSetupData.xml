@@ -3149,6 +3149,30 @@ along with this software (see the LICENSE.md file). If not, see
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_AUDIT_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_VIEW" capabilityKindEnumId="CpkView"/>
     <moqui.security.CapabilityBundlePermission userGroupId="BOSS_ADMIN_ADMIN" userPermissionId="ADMIN_BACKUP_RUN" capabilityKindEnumId="CpkEdit"/>
+    <!-- Admin P4 (impl-admin P4; design-admin §4, §1.2): the Users area (Users, UserDetail, Sessions) for the identity operator and
+        the administrator, denying the root user group as the other areas do; Mantle's IdentityServices and the framework's
+        IdentityServices check ADMIN_IDENTITY_VIEW, ADMIN_IDENTITY_MANAGE and ADMIN_IDENTITY_GLOBAL and the organization scope
+        whatever opens the screens, and UserDetail's memberships the access administrator's ADMIN_ACCESS_MANAGE. -->
+    <artifactGroups artifactGroupId="BOSS_ADM_USERS">
+        <artifacts artifactName="component://mr-boss/screen/Admin/Users.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_ADM_USERS_DENY" userGroupId="BOSS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_ADM_USERS_IDENTITY" userGroupId="BOSS_ADMIN_IDENTITY"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_ADM_USERS_ADMIN" userGroupId="BOSS_ADMIN_ADMIN"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_ACTIVE_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+    </artifactGroups>
+    <!-- Admin P4: the staff identities as a read tool for the Assistant only, not MCP (design-admin §1.2: it lists staff personal
+        data), run with the user's own permissions and scope (ADMIN_IDENTITY_VIEW, the organizations they administer) -->
+    <moqui.agent.AgentToolExposure toolName="admin_find_users" serviceName="mantle.party.IdentityServices.find#Users"
+            title="Staff users"
+            description="find#Users: the staff identities of the organizations the user administers, each with username, name, email, the organizations in scope (others counted, never named), state (active, ending, locked, disabled, terminated) and last sign-in; narrow by text, organizationPartyId, userGroupId or state. No password, factor or credential."
+            classificationEnumId="AgclRead" exposeAssistant="Y" exposeMcp="N" previewMode="none" lockVersion="1"/>
 
     <!-- Insights P3 (impl-insights P3, §4, F4, F5, F9, F10, F30; design-insights §5): dataset admission. Every business dataset
         (signal business) is read only once admitted (the framework's moqui.report.BusinessDataset; crates/moqui-report/src/business.rs),

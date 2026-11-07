@@ -250,3 +250,39 @@ feature("the settings index links every settings page", {
         output.includes("Comms settings")
     },
 })
+
+// impl-admin P4 (owner contract, F17): "Where you are signed in" reads the framework's one session definition, self-scoped
+// (org.moqui.admin.IdentityServices.find#Sessions), and signs another session of mine out (revoke#Sessions), never another
+// user's
+feature("Where you are signed in lists my sessions and signs another one out, not another user's", {
+    when() {
+        const joeId = sys(() => ec.entity.find("moqui.security.UserAccount").condition("username", "joe.developer").one()).userId
+        const browser = (key, userId) => sys(() => {
+            call("create#moqui.server.Visit", { visitId: key, userId, fromDate: ec.user.nowTimestamp,
+                initialUserAgent: "Mozilla/5.0 (X11; Linux x86_64) Firefox/140.0", clientIpAddress: "198.51.100.7" })
+            call("create#moqui.server.HttpSession", { sessionId: key + "_S", userId, visitId: key })
+        })
+        browser("CMS_SIGNIN_JOHN", "EX_JOHN_DOE")
+        browser("CMS_SIGNIN_JOE", joeId)
+        const page = render("Settings/Account")
+        const mine = post("Settings/Account/signOutSession", { sessionKey: "CMS_SIGNIN_JOHN" })
+        const theirs = post("Settings/Account/signOutSession", { sessionKey: "CMS_SIGNIN_JOE" })
+        return { page, mine, theirs, johnSession: one("moqui.server.HttpSession", { sessionId: "CMS_SIGNIN_JOHN_S" }),
+            joeSession: one("moqui.server.HttpSession", { sessionId: "CMS_SIGNIN_JOE_S" }) }
+    },
+    then({ page, mine, theirs, johnSession, joeSession }) {
+        page.status == 200 && page.errors == "" && !page.broken
+        page.output.includes("Firefox on Linux") && page.output.includes("Sign out")
+        !page.output.includes("Mozilla/5.0")
+        mine.errors == "" && johnSession == null
+        theirs.errors == "" && joeSession != null
+    },
+    cleanup() {
+        sys(() => {
+            for (const key of ["CMS_SIGNIN_JOHN", "CMS_SIGNIN_JOE"]) {
+                ec.entity.find("moqui.server.HttpSession").condition("visitId", key).deleteAll()
+                ec.entity.find("moqui.server.Visit").condition("visitId", key).deleteAll()
+            }
+        })
+    },
+})

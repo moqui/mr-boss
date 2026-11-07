@@ -261,7 +261,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built and reviewed Nov 7, merged |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | built and reviewed Nov 7, merged |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | built and reviewed Nov 7, merged |
-| P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | — |
+| P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built Nov 7 |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | — |
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
@@ -981,6 +981,153 @@ identity and session parts).
   ORG_ZIZI_SERVICES-only user; a revoked session's next request goes to the login screen; Commons Account signs out the
   user's other browser.
 
+**Built Nov 7 (P4).**
+- Framework (mr-moqui):
+  - `org.moqui.admin.IdentityServices` (`IdentityServices.xml`, `Identity.js`): `find#Sessions` (an account's visits, live ones those with a
+    web session, each named by its visit with a client summary, address, place, state and current flag, never a cookie, token, user
+    agent or contents; the caller's own with no permission, another's, a list of users' or all with `ADMIN_IDENTITY_VIEW`),
+    `revoke#Sessions` (by visit, or every other session; the caller's own but the current one, another user's with
+    `ADMIN_IDENTITY_MANAGE`; a visit of another account is refused and counted), `get#AccountCredentials` (added: factors and
+    credentials, metadata only) and `revoke#AccountAccess` (another user's sessions on every server and `hasLoggedOut`, login keys,
+    app passwords, SSH keys, SIP phones, the agent triggers that run as the user paused with their cron jobs, the user's open agent
+    runs asked to cancel; or one credential; each kind on its own, a failure named; the account stays enabled; `ADMIN_IDENTITY_MANAGE`,
+    the caller scoping the target and asking for `ADMIN_IDENTITY_GLOBAL` where shared). `check#AdministrationPath` takes
+    `endedFactorIds` and an account's `ipAllowed`. All under `AdminAccessServices`' `ALL_USERS` grant.
+  - `AccessServices.check#GrantProposal` and `apply#GrantProposal` (added, §4's grant proposal): registered bundles only, by
+    `store#Membership`'s delegation rules for the actor, applied with authorization on, refused whole; `ADMIN_ACCESS_MANAGE` or
+    `ADMIN_IDENTITY_MANAGE` to apply.
+  - Rust (moqui-core, moqui-host): `user::end_user_sessions` (a user's sessions by visit or all, retiring live copies and publishing
+    the session end to the cluster, keeping the caller's own; `end_user_visit` now shares it) bound as
+    `UserSecurityChecks.endUserSessions`; `login::account_closed`, `user_account_closed`, `username_account_closed` (disabled with no
+    `disabledDateTime`, or past `terminateDate`); the per-request session refresh clears such a login (F4, F6); notws's 60 s
+    session check refuses such an account (F42); `run_job` records a refusal and does not run a job whose run-as user is closed or
+    gone (F42). SipDevices.js `revokeUserDevices`.
+  - F23: `UserAccount.ipAllowed` and `requirePasswordChange` audit-logged (`true`, F-P4-3).
+  - Docs: Attack-Surface (sessions, credentials, the refresh, jobs, grant proposals), Remaining-Work's `org.moqui.admin` row.
+- Mantle: `mantle.party.IdentityServices` (`IdentityServices.xml`, `Identity.js`; `ALL_USERS` grant `MantleIdentityServices` in
+  PartyAccessData): `find#Users`, `get#Account`, `get#AccountHistory` (sign-ins and the audit log of the account, its memberships and
+  the organization relationships in scope, dates shown as times), `store#OrganizationMembership`, `create#StaffAccount`, `store#Account`
+  (added, F-P4-4) and `reset#Authentication` (`resetKind` password, factor, lock; F-P4-2, F-P4-6). Scope: the internal organizations
+  the caller's party works for, every one for `ADMIN` (F-P4-1). `PartyRelationship.thruDate` audit-logged (F-P4-3).
+- BOSS:
+  - `Admin.js`: the `users` area; links `Users/Users`, `Users/UserDetail`, `Users/Sessions`; the user record kind's destination; the
+    palette's users (`searchFinds`, the staff of the organizations administered); the `bundles` choice (registered bundles the user may
+    assign, through `check#GrantProposal`, `BOSS_USERS` first); `check#Record` with `accountWide` (IDENTITY_GLOBAL for a shared
+    identity) and `loginAs` (ADMIN_LOGIN_AS, refused for a target holding a privileged membership or sealed permission the caller lacks).
+  - Screens: `Admin/Users.xml` (menu index 2, `BOSS_ADM_USERS`: the identity operator and the administrator); `Users/Users.xml` (UserFind,
+    UserList, NewStaffAccount); `Users/UserDetail.xml` (record header with state chips and Login as; Account, Organizations, Access,
+    Credentials, Sessions and history boxes); `Users/Sessions.xml` (SessionFind, SessionList with bulk revoke); `Admin/LogNote.xml`;
+    Home's Users shortcut. `Admin.xml`: UserDetail's "Why can't this user sign in?" prompt, the root's "Log as note" response action,
+    the palette source "Admin users and groups".
+  - Commons Account (owner contract, F17): "Where you are signed in" reads `find#Sessions` and signs another session out.
+  - Projects Settings › Index links `Admin/Users/Users` (F36).
+  - `data/BossSetupData.xml` (appended): `BOSS_ADM_USERS`; `AgentToolExposure` `admin_find_users` (Assistant Y, MCP N). `skill/reset-factor.md`.
+- Specs: framework `test/AdminSessions` (3 features, 0.1 s); Mantle `test/party/StaffIdentity` (5 features, 0.8 s); BOSS `test/Admin/AdminUsers`
+  (2 features, 0.5 s: UserDetail's one qvt render; the Retail operator signs a Retail user out, refused the shared identity's session,
+  a Services identity and Login as), `AdminAccess` (the Users area in the identity operator's, administrator's and ADMIN's menus),
+  `CommonsSettings` (one feature, 0.07 s: my other session signed out, another user's not), `test/Admin/AdminClientFixtures` and the
+  golden walk `test/client/Admin/AdminUsersWalk` (3.1 s on Debug: find a user, end a membership, sign a session out), registered in
+  `test/client/suite.js`. Cargo (moqui-core): `every_session_of_a_user_ends_and_a_disabled_account_signs_out`. Acceptance, written and not
+  run: `acceptance/Admin/AdminUsersUsable` (2 features, the "usable when").
+- Tests run (Debug, `--nobuild`, unless noted): AdminSessions, AdminAccessServices, RecentAuth, SipDevice 21 of 21; StaffIdentity,
+  PartyServices, PartyAccounts 18 of 18; AdminGroups, AdminRegistries, AdminUsers, AdminAccess, AdminClientFixtures, InsightsAccess 22 of
+  22; CommonsSettings 9 of 9; AdminUsersWalk 1 of 1; ProjectsAccess and AppOrganizationFilters 15 of 15 on the main checkout's release
+  binary with this runtime (F37); cargo moqui-core `user::`, `service::jobs`, `script::runtime::ec_extra` 113 of 113 and moqui-host `notws` 3 of 3, clippy moqui-core and moqui-host (lib) clean, rustfmt on the touched Rust;
+  `moqui lint --screens` 132 flagged sites, as before. Prettier clean on the changed JavaScript. Not run: `./moq test-apps`,
+  `./moq test-framework`, the acceptance suite.
+- Inventories: ss-inventory EditParty CreateUserAccount (Users), UpdateUserAccount, AddGroupForm, GroupsForm (UserDetail).
+- Design edits: design-admin §4.1 (scope and the account-wide rule as built), §4 Users, UserDetail, Sessions (as built), §1.2 (the
+  skill and exposure), §17.2 (store#Account, get#AccountCredentials, grant proposals); design-drawers-commons Account's Sessions row.
+- Findings (provisional, numbered by the lead):
+  - **F-P4-1** Mantle cannot see Admin's unrestricted scope (the administrator's `MANTLE_ACTIVE_ORG` root grant): Mantle's identity
+    scope is the caller's own internal organizations (every one for `ADMIN`), so `admin.admin` sees Retail's staff in Users while
+    Admin's context (GroupDetail, choices) offers every organization. A permission for "every organization" (or `ADMIN_IDENTITY_GLOBAL`
+    meaning it) is the lead's call.
+  - **F-P4-2** "Resets the shared identity's factor only for its own relationship": a factor is account-wide. Built: a password reset
+    request (the change-only reset password; nothing changes until its owner acts) is sent for any identity in scope; a factor or
+    lock reset, account fields and revoking sessions or credentials of a shared identity need `ADMIN_IDENTITY_GLOBAL`.
+  - **F-P4-3** `enable-audit-log="update"` skips a first value (Purchasing's F57), so `ipAllowed`, `requirePasswordChange` and
+    `PartyRelationship.thruDate` (newly audited, for ended organization memberships) use `true`; every PartyRelationship created with
+    an end or ended now writes an audit row.
+  - **F-P4-4** `update#PartyUserAccount` takes every UserAccount field (disabled, terminateDate, ...); UserDetail's Account goes through
+    the new `store#Account` (its fields only, scope, revision, path) rather than calling it with the operator's authority.
+  - **F-P4-5** The framework has no impersonation indicator: Tools' Login as replaces the session's user. UserDetail's Login as is the
+    same guarded action (`ADMIN_LOGIN_AS`, which no BOSS group holds, ADMIN_ADV's), a named confirmation and a log line, refusing a
+    target in a privileged group or holding a sealed permission the caller lacks. The indicator is the framework's later work.
+  - **F-P4-6** Tarpit release in Tools is the entity-auto update (ADMIN's); built as `reset#Authentication` `lock`: the failed-login lock and
+    the artifact velocity locks, never a permanent disable.
+  - **F-P4-7** The session refresh and notws end live sessions of an account disabled for good or past its end date, not of a tarpit lock
+    (disabled with a time), so failed logins by someone else cannot sign the owner out; login still refuses during the lock.
+  - **F-P4-8** Ending another user's session is treated as account-wide: a shared identity's sessions need `ADMIN_IDENTITY_GLOBAL`.
+  - **F-P4-9** The framework knows no organization: `apply#GrantProposal` and `revoke#AccountAccess` accept any account from a holder of
+    `ADMIN_IDENTITY_MANAGE` (as `store#Membership` does from `ADMIN_ACCESS_MANAGE`); none is remote, and BOSS and Mantle scope first. With
+    grant proposals an identity operator can now give a new staff account the unsealed Admin bundles (F64 widens to the identity operator).
+  - **F-P4-10** The Users area is the identity operator's and the administrator's; UserDetail's group memberships change only for an
+    `ADMIN_ACCESS_MANAGE` holder (the identity operator reads them), the access administrator keeping GroupDetail.
+  - **F-P4-11** "Log as note" files a Chatter note on a UserAccount or UserGroup (a generic CommunicationEventRecord); those entities have no
+    entity filter, so who reads the note is who opens that record's Chatter. Worth the review's look.
+  - **F-P4-12** AdminClientFixtures runs in the regular mr-boss suite too, as InsightsClientFixtures does, adding the Retail identity
+    "Walk Staff" with a session.
+- Decisions (§4 rows added): identity scope in Mantle; the account-wide rule; the reset request; `store#Account`; grant proposals through
+  the framework; the Users area; tarpit locks and sessions.
+- For the lead:
+  - budget shares: framework server about 0.1 s (AdminSessions); mr-mantle about 0.8 s (StaffIdentity); mr-boss server about 0.6 s (AdminUsers
+    0.5 s, CommonsSettings' feature, AdminClientFixtures); mr-boss client about 3.1 s (AdminUsersWalk, Debug); no budget raised;
+  - F-P4-1 and F64 (now reaching the identity operator) are the user's calls;
+  - the Rust changes (session end, refresh, notws, jobs) need the release binary rebuilt before the merge runs the suites; a binary
+    without `endUserSessions` fails `revoke#Sessions` and `revoke#AccountAccess`;
+  - BossSetupData and BossUsersDemoData: P4's block is appended at the end of BossSetupData; BossUsersDemoData unchanged;
+  - the acceptance AdminUsersUsable to run when asked.
+
+**Review Nov 7 (P4).**
+- Checked: session revocation (by visit, own or with ADMIN_IDENTITY_MANAGE, a visit of another account refused and counted,
+  the current one kept; cluster publish; `hasLoggedOut` for sessions no row names yet); the refresh and notws closing an
+  account disabled for good or past its end date, not a tarpit lock; revoke#AccountAccess's kinds against F42's list (sessions,
+  login, device and token keys, app passwords, SSH keys, SIP `dropDevice`, triggers with their cron jobs, open agent runs);
+  `run_job`'s refusal recorded; no self-lockout (revoke#AccountAccess refuses the caller, revoke#Sessions keeps the current
+  session); every BOSS path to the framework's revoke services (UserDetail revokeAccess and revokeSession, Sessions'
+  bulk revoke) checks the account as an Admin record with `accountWide` first, Commons Account names `ec.user.userId`, and no
+  REST or Assist exposure reaches them (all `allow-remote="false"`; only `admin_find_users`, Mantle-scoped, is exposed);
+  visit ids are sequenced but every key is checked against its owner; Mantle scope, the account-wide rule, reset#Password
+  (a change-only reset password, no password set), store#Account's fields, grant proposals (registered bundles only by
+  store#Membership's delegation rules; no ADMIN, sealed or privileged grant), dated memberships; Login as.
+- Fixes:
+  - **R1 (high)** An identity operator could take over an administrator in its organization: store#Account changed the email
+    or username of any non-shared identity in scope, an ADMIN or BOSS_ADMIN_ADMIN member included, and reset#Authentication then
+    mailed the reset password to the new address; factor and lock resets and the framework's session and access revocation
+    likewise reached accounts holding more than the caller. Now the framework's `Identity.js` `heldBeyond(userId)` (a
+    privileged group the caller is not in, or a sealed permission through a current group the caller lacks) refuses
+    revoke#AccountAccess and another user's revoke#Sessions (counted), Mantle's store#Account and factor and lock resets
+    (`IDENTITY_PRIVILEGED`; get#Account's `canChangeAccount` false with the reason), and BOSS's Login as check reuses it.
+    Password reset requests stay allowed (they go to the account's own address). mr-moqui 1aafb9e3, mr-mantle fd496ef8,
+    mr-boss (the review commit).
+  - **R2 (high)** store#OrganizationMembership related any person to an organization in scope, so an operator could pull a
+    site identity (an account of no internal organization: a customer, an administrator of no organization) wholly into its
+    scope and then change its email and reset it. A person with an account and no internal organization now needs
+    `ADMIN_IDENTITY_GLOBAL` (`IDENTITY_GLOBAL`); a person of another organization stays shared, so its account-wide changes
+    still need it. mr-mantle fd496ef8.
+  - **R3 (medium, F-P4-11)** "Log as note" filed Chatter on UserAccount and UserGroup, which had only their entity filters in
+    get#RecordLinkInfo, so any user an app root lends entity authorization (any BOSS user in its screens) could read and add
+    them. Now an account's notes are an ADMIN_IDENTITY_VIEW holder's within Mantle's identity scope, a group's an
+    ADMIN_ACCESS_VIEW holder's. mr-mantle fd496ef8 (CommunicationServices), LogNote's text in mr-boss.
+  - Docs: Attack-Surface, design-admin §4.1.
+- Tests (Debug, `--nobuild`): AdminSessions (the sealed holder's access and session refused), AdminAccessServices, RecentAuth,
+  SipDevice 21 of 21; StaffIdentity (2 features added, R1–R3), PartyServices, PartyAccounts 20 of 20 (the R1/R2 feature fails
+  without the fix); AdminUsers, AdminGroups, AdminAccess, AdminRegistries, CommonsSettings, AdminClientFixtures 25 of 25;
+  AdminUsersWalk 1 of 1 (3.0 s); cargo moqui-core `user::`, `service::jobs`, `script::runtime::ec_extra` 113 of 113 (no Rust
+  changed in review); `moqui lint --screens` 132 flagged sites, as before; Prettier on the changed JavaScript. Specs stay lean
+  (AdminSessions 0.04 s, StaffIdentity 0.9 s, AdminUsers 0.3 s); AdminClientFixtures 0.02 s.
+- For the lead:
+  - F-P4-1 left for the user: Mantle cannot read BOSS's "unrestricted" (BOSS reads the `MANTLE_ACTIVE_ORG` filter on its own
+    root grant as every organization, while Mantle's meaning of that filter set is the active organization or the user's own),
+    and BOSS_ADMIN_ADMIN does not hold `ADMIN_IDENTITY_GLOBAL`, so reusing it would not help. The clean choices are a new
+    unsealed framework permission (say `ADMIN_IDENTITY_ALL_ORGS`) that Mantle honours and BossSetupData grants
+    BOSS_ADMIN_ADMIN, or BOSS's Admin scope narrowing to Mantle's for identities;
+  - store#OrganizationMembership still lets an operator relate another organization's staff to its own (as the spec's
+    covering agent), which makes that identity readable (find#Users, get#Account, sessions, history) though still shared for
+    changes; whether adding an existing account of another organization needs `ADMIN_IDENTITY_GLOBAL` too is a design call;
+  - Login as is audited by a log line only (F-P4-5), and F64 still reaches the identity operator through grant proposals.
+
 ### P5 — Invitations
 
 Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invitation email); ADM-LIFECYCLE (invitations).
@@ -1364,6 +1511,12 @@ the owner's design.
 | Nov 7, 2026 | The Access area opens to the access administrator and the administrator; the reader holds no `ADMIN_ACCESS_VIEW` | P3, F61; design §2 |
 | Nov 7, 2026 | GroupDetail lists and changes only the members who work for the organizations the administrator administers, counting the others; the framework services know no organization | P3; design §1.1 |
 | Nov 7, 2026 | A group default's key is a `UserPreferenceKey` Enumeration, typed by its `optionValue` (indicator, boolean, number, text) | P3; design §5 GroupPreferences |
+| Nov 7, 2026 | Mantle's identity scope is the internal organizations the caller's party works for (the active one when set), every one for `ADMIN`; an identity is readable when one of its organizations is in scope, others counted, never named | P4, F-P4-1; Admin's own context keeps the administrator's unrestricted scope |
+| Nov 7, 2026 | An account-wide change (account fields, a factor or lock reset, revoking sessions or credentials) of an identity that also works for an organization outside the caller's scope needs `ADMIN_IDENTITY_GLOBAL`; a password reset request, which changes nothing until its owner acts, is sent for any identity in scope | P4, F-P4-2, F-P4-8; design §4.1 changed |
+| Nov 7, 2026 | UserDetail's Account saves through Mantle `store#Account` (its fields only, scope, revision, the administration path); enabling, disabling and the end date are the lifecycle's | P4, F-P4-4; design §4 UserDetail and §17.2 changed |
+| Nov 7, 2026 | A grant proposal is checked and applied by the framework's `AccessServices.check#GrantProposal` and `apply#GrantProposal`, by `store#Membership`'s delegation rules for the actor, for an access administrator or an identity operator | P4, §4's grant proposal row, F-P4-9; design §17.2 changed |
+| Nov 7, 2026 | The Users area opens to the identity operator and the administrator; group memberships on UserDetail change only for an `ADMIN_ACCESS_MANAGE` holder | P4, F-P4-10 |
+| Nov 7, 2026 | The session refresh, the notification socket's check and job runs stop an account disabled for good or past its end date, not a tarpit lock | P4, F-P4-7 |
 
 ## 5. Open questions
 
@@ -1375,7 +1528,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2 and F55–F64 in P3 (Nov 7).
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F-P4-1–F-P4-12 in P4 (Nov 7; numbered by the lead, in P4's Built note).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1414,7 +1567,7 @@ day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2 and F5
 | F33 | P0 (review): organization scope needs a party: `setup#UserOrganizationInfo` returns early with no `partyId` (PartyServices.xml:533-534), and `get#PartyInternalOrgIds` (:563-603) counts only PrtAgent, PrtEmployee and PrtMember relationships to OrgInternal parties, which `MANTLE_USER_ORG` uses | P18's display account has a party and a membership |
 | F34 | P1 (P0's F2 check): an inheritable `AUTHZT_ALLOW` on the Admin root also opens a child with no grant of its own (authz.rs's last-frame fallback); System cannot be mounted outside the root's path | Done in P1: the administrator's root grant is ALLOW and `BOSS_ADM_SYSTEM` denies `System.xml` to `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`; a group an installation allows on the root needs the same deny; three Tools links made relative |
 | F35 | P1: `ec.artifactExecution.isPermitted` answers from the top of the stack and records a failure per refusal, so it cannot tell whether a user may open a Tools screen; the root's inheritable grant reaches the services an Admin screen calls | Admin.js reads the user's own grants (ArtifactAuthzCheckView), as Commerce.js; landings call only services that check their own grant |
-| F36 | P1: Projects' Settings › Index linked the removed Users placeholder | Links Admin Home; P4 repoints it to Users |
+| F36 | P1: Projects' Settings › Index linked the removed Users placeholder | Links Admin Home; done in P4: it links `Admin/Users/Users` |
 | F37 | P1: on a Debug binary ProjectsAccess fails four client features with "Maximum call stack size exceeded" (the fixed script stack budget against larger debug frames); 8 of 8 pass on a release binary | Framework's (Debug stack budget); open |
 | F38 | P1: moqui-core's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one` fails at e3360436 without P1 | Framework's; open |
 | F39 | P1: with `Admin.xml` as a spec's render root, `//Admin/...` links render disabled | Specs check labels, as every app's `page` helper |

@@ -1,0 +1,496 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- UserDetail (design-admin §4 UserDetail; style-guide §3.3 Detail): one staff identity, read with Mantle's
+    mantle.party.IdentityServices.get#Account (ADMIN_IDENTITY_VIEW, the organizations the user administers; another organization's
+    identity and a forged id refused alike). The record header names the account, its state and only the organizations in scope;
+    the design's tabs are its boxes: Account (store#Account: email, username, allowed IPs, password change, locale and time zone at
+    the account's revision; each account-wide, so an identity shared with an organization outside the scope needs
+    ADMIN_IDENTITY_GLOBAL), Access (the organization relationships the user administers through store#OrganizationMembership,
+    dated and ended, never deleted; the group memberships through the framework's AccessServices store#Membership and
+    end#Membership, ADMIN_ACCESS_MANAGE, each member checked first), Credentials (the factors and credentials, metadata only:
+    reset#Authentication sends the change-only reset password, ends a factor or releases a sign-in lock; the framework's
+    revoke#AccountAccess ends one credential or all access, account-wide), and Sessions and history (the account's sessions,
+    framework find#Sessions and revoke#Sessions, account-wide; get#AccountHistory). Login as (ADMIN_LOGIN_AS, the framework's
+    guarded sign-in as another user, impl-admin F24) asks a named confirmation and never signs in as a member of a privileged
+    group the user is not in or a holder of a sealed permission the user lacks. Setting another user's password stays the sealed
+    ADMIN_PASSWORD's, in Tools. Every refusal is shown as its reason. Enabling, disabling and ending an account are the
+    lifecycle's (P6). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="User" default-menu-include="false">
+    <parameter name="userId" required="true"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeAccount">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#Account" out-map="stored"
+                    in-map="{userId:userId, expectedRevision:expectedRevision, emailAddress:emailAddress, username:username,
+                        ipAllowed:(ipAllowed ?? ''), requirePasswordChange:(requirePasswordChange || 'N'), locale:(locale ?? ''),
+                        timeZone:(timeZone ?? ''), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Account saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addRelationship">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationMembership" out-map="stored"
+                    in-map="{partyId:partyId, organizationPartyId:organizationPartyId, relationshipTypeEnumId:relationshipTypeEnumId,
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Organization membership added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endRelationship">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationMembership" out-map="stored"
+                    in-map="{partyRelationshipId:partyRelationshipId, expectedRevision:expectedRevision, thruDate:(thruDate || null),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Organization membership ended' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addMembership">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'member', recordId:userId, capability:'accessManage'}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.admin.AccessServices.store#Membership" out-map="stored"
+                        in-map="{userGroupId:userGroupId, userId:userId, fromDate:(fromDate || null), thruDate:(thruDate || null),
+                            reason:(reason || null)}"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Membership added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endMembership">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'member', recordId:userId, capability:'accessManage'}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.admin.AccessServices.end#Membership" out-map="ended"
+                        in-map="{userGroupId:userGroupId, userId:userId, fromDate:memberFromDate, expectedRevision:expectedRevision,
+                            thruDate:(thruDate || null), reason:(reason || null)}"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(ended.applied ? 'Membership ended' : ended.reason, ended.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="resetAuthentication">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.reset#Authentication" out-map="reset"
+                    in-map="{userId:userId, resetKind:resetKind, factorId:(factorId || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(reset.applied ? reset.message : reset.reason, reset.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- one credential, or all access (credentialKind empty): account-wide, so the Admin check names the shared identity first -->
+    <transition name="revokeAccess">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'user', recordId:userId, capability:'identityManage', accountWide:true}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.admin.IdentityServices.revoke#AccountAccess" out-map="revoked"
+                        in-map="{userId:userId, credentialKind:(credentialKind || null), credentialId:(credentialId || null),
+                            reason:(reason || null)}"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(revoked.failedKinds?.length ? 'Some access could not be revoked: ' + revoked.failedKinds.join(', ')
+                    : credentialKind ? 'Credential revoked' : 'Sessions, keys, app passwords and phones revoked', revoked.failedKinds?.length ? 'warning' : 'success')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="revokeSession">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'user', recordId:userId, capability:'identityManage', accountWide:true}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.admin.IdentityServices.revoke#Sessions" out-map="revoked"
+                        in-map="{userId:userId, sessionKeyList:(sessionKey ? [sessionKey] : null), allOthers:!sessionKey}"/>
+            </if>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(revoked.sessionCount ? 'Signed out: its next request goes to the sign-in page' : 'No live session to end', revoked.sessionCount ? 'success' : 'info')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- Login as (impl-admin F24): the framework's guarded sign-in as another user, as Tools' UserAccountDetail does it, for a holder
+        of ADMIN_LOGIN_AS and an identity in scope; never as a member of a privileged group the user is not in, nor as a holder of a
+        sealed permission the user lacks -->
+    <transition name="loginAs">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record" out-map="record"
+                    in-map="{appRoot:appRoot, recordType:'user', recordId:userId, capability:'identityManage', loginAs:true}"/>
+            <if condition="!ec.message.hasError()">
+                <set field="target" from="ec.entity.find('moqui.security.UserAccount').condition('userId', userId).disableAuthz().one()"/>
+                <log level="warn" message="Login as ${target.username} by ${ec.user.username}"/>
+                <script>ec.user.internalLoginUser(target.username)</script>
+            </if>
+        </actions>
+        <default-response url="/"/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.get#Account" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{userId:userId}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="account" from="found?.account || null"/>
+        <if condition="account">
+            <service-call name="mantle.party.IdentityServices.get#AccountHistory" out-map="history" transaction="force-new" ignore-error="true"
+                    in-map="{userId:userId, limit:30}"/>
+            <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="sessionsFound" transaction="force-new" ignore-error="true"
+                    in-map="{userId:userId, sinceDays:30, limit:20}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            canManage = !!found?.canManage
+            canChangeAccount = !!found?.canChangeAccount
+            canManageAccess = !!admin?.capabilities?.accessManage
+            canLoginAs = !!account && ec.user.hasPermission('ADMIN_LOGIN_AS') && account.userId !== ec.user.userId
+            organizationText = (found?.organizations || []).map(row => row.name).join(', ') +
+                (found?.otherOrganizationCount ? ' · and ' + found.otherOrganizationCount + ' organization(s) you do not administer' : '')
+            accountValues = account ? {userId, expectedRevision: account.revision, emailAddress: account.emailAddress,
+                username: account.username, ipAllowed: account.ipAllowed, requirePasswordChange: account.requirePasswordChange ? 'Y' : 'N',
+                locale: account.locale, timeZone: account.timeZone} : {}
+            terminateText = account?.terminateDate ? when(account.terminateDate) : ''
+            const kinds = {PrtEmployee: 'Employee', PrtAgent: 'Agent', PrtMember: 'Member', PrtRepresentative: 'Representative'}
+            relationships = Array.from(found?.relationships || []).map(row => Object.assign({}, row, {
+                kindText: kinds[row.relationshipTypeEnumId] || row.relationshipTypeEnumId,
+                fromText: when(row.fromDate), thruText: when(row.thruDate),
+                stateText: row.active ? 'Current' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate)}))
+            const memberRows = Array.from(found?.memberships || []).map(row => Object.assign({}, row, {
+                fromText: when(row.fromDate), thruText: when(row.thruDate),
+                stateText: row.active ? 'Member' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate),
+                markerText: [row.registered ? (row.appName || 'Registered') : 'Not registered', row.privileged ? 'Privileged' : ''].filter(Boolean).join(' · ')}))
+            currentMemberships = memberRows.filter(row => !row.ended)
+            endedMembershipCount = memberRows.length - currentMemberships.length
+            factors = Array.from(found?.factorList || []).map(row => Object.assign({}, row, {
+                verifiedText: row.verified ? 'Verified' : 'Not verified', fromText: when(row.fromDate)}))
+            const credentialKinds = {accessToken: 'Access token', deviceKey: 'App or device', loginKey: 'Sign-in key', appPassword: 'App password',
+                sshKey: 'SSH key', sipDevice: 'Phone'}
+            credentials = Array.from(found?.credentialList || []).map(row => Object.assign({fingerprint: ''}, row, {
+                kindText: credentialKinds[row.kind] || row.kind,
+                fromText: when(row.fromDate), usedText: when(row.lastUsedDate), thruText: when(row.thruDate)}))
+            sessions = Array.from(sessionsFound?.sessionList || []).map(row => Object.assign({}, row, {
+                startedText: when(row.startedDate), seenText: when(row.lastSeenDate),
+                stateText: row.active ? 'Signed in' : row.state === 'ended' ? 'Signed out ' + when(row.endedDate) : 'Expired',
+                whereText: [row.clientAddress, row.clientPlace].filter(Boolean).join(' · ')}))
+            hasActiveSession = sessions.some(row => row.active)
+            events = Array.from(history?.eventList || []).map(row => Object.assign({}, row, {timeText: when(row.time)}))
+            stateChips = account ? [account.stateText, account.requirePasswordChange ? 'Password change required' : '',
+                account.ipAllowed ? 'IP limited' : '', found.sharedBeyondScope ? 'Shared identity' : '',
+                !account.hasPassword && !account.externalIdentity ? 'No password yet' : ''].filter(Boolean) : []
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="UserMissing" condition="!account">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="User not available"/>
+                    <box-body>
+                        <label type="p" text="${failure || ('User ' + userId + ' is not available.')}"/>
+                        <link url="../Users" text="Back to users" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="UserFound" condition="account">
+            <widgets>
+                <context record-entity="moqui.security.UserAccount" record-id="${userId}" title="User ${account.userFullName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${account.userFullName}" type="h5"/>
+                            <label text="${account.username} · ${organizationText}" type="p" style="text-caption m-muted"/>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[${stateChips.map(text => '<q-chip dense square class="q-ma-none q-mr-xs m-tonal ' +
+                                    (['Disabled', 'Ended', 'Locked'].includes(text) ? 'text-negative' : text === 'Shared identity' ? 'text-warning' : 'text-primary') + '">' +
+                                    WebUtilities.encodeHtml(text) + '</q-chip>').join('')}]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: "text", id: "UserState", text: stateChips.join(' · ')})}]]></text>
+                                <text type="html">${stateChips.join(' · ')}</text>
+                            </render-mode>
+                        </container>
+                        <container style="col-12 col-md-auto">
+                            <link url="loginAs" text="Login as" link-type="hidden-form-link" icon="sym_o_login" condition="canLoginAs"
+                                    confirmation="Sign in as ${account.username}? You act as ${account.userFullName} until you sign out." parameter-map="{userId:userId}"/>
+                        </container>
+                    </container>
+                    <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="found.accountChangeReason" text="${found.accountChangeReason}"/>
+                </container>
+
+                <container-box>
+                    <box-header title="Account"/>
+                    <box-body>
+                        <section name="AccountEdit" condition="canChangeAccount">
+                            <widgets>
+                                <form-single name="Account" transition="storeAccount" map="accountValues">
+                                    <field name="userId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="username"><default-field title="Username"><text-line size="30"/></default-field></field>
+                                    <field name="emailAddress"><default-field title="Email"><text-line size="40"/></default-field></field>
+                                    <field name="ipAllowed">
+                                        <default-field title="Allowed IPs" tooltip="Comma separated: IPv4 with *, or ranges like 10.0.0.0-31; IPv6 exact. Empty allows any.">
+                                            <text-line size="40"/>
+                                        </default-field>
+                                    </field>
+                                    <field name="requirePasswordChange">
+                                        <default-field title="Password change required">
+                                            <drop-down><option key="N" text="No"/><option key="Y" text="Yes"/></drop-down>
+                                        </default-field>
+                                    </field>
+                                    <field name="locale"><default-field title="Locale"><text-line size="10"/></default-field></field>
+                                    <field name="timeZone"><default-field title="Time zone"><text-line size="25"/></default-field></field>
+                                    <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                </form-single>
+                            </widgets>
+                            <fail-widgets>
+                                <label type="p" text="${account.emailAddress || 'No email address'}"/>
+                                <label type="p" style="text-caption m-muted" text="${[account.ipAllowed ? 'Allowed IPs ' + account.ipAllowed : 'Any IP',
+                                    account.requirePasswordChange ? 'Password change required' : '', account.locale, account.timeZone].filter(Boolean).join(' · ')}"/>
+                            </fail-widgets>
+                        </section>
+                        <label type="p" style="text-caption m-muted q-mb-none" condition="terminateText" text="Access ends ${terminateText}"/>
+                    </box-body>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Organizations"/>
+                    <box-toolbar>
+                        <container-dialog id="AddRelationshipDialog" button-text="Add organization" icon="sym_o_domain_add" width="560"
+                                title="${account.userFullName} works for" condition="canManage &amp;&amp; account.partyId">
+                            <label type="p" text="A dated membership of one of your organizations. Ending it keeps it on record."/>
+                            <form-single name="AddRelationship" transition="addRelationship" map="{userId:userId, partyId:account.partyId}">
+                                <field name="userId"><default-field><hidden/></default-field></field>
+                                <field name="partyId"><default-field><hidden/></default-field></field>
+                                <field name="organizationPartyId">
+                                    <default-field title="Organization">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="relationshipTypeEnumId">
+                                    <default-field title="Works as">
+                                        <drop-down><option key="PrtEmployee" text="Employee"/><option key="PrtAgent" text="Agent"/>
+                                            <option key="PrtMember" text="Member"/><option key="PrtRepresentative" text="Representative"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="Empty keeps it open"><date-time/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="UserOrganizations" list="relationships" skip-form="true" paginate="false">
+                            <field name="organizationName"><default-field title="Organization"><display/></default-field></field>
+                            <field name="kindText"><default-field title="Works as"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EndRelationship_${partyRelationshipId}" button-text="End" icon="sym_o_domain_disabled" width="520"
+                                            title="End ${organizationName} membership" condition="canManage &amp;&amp; !ended">
+                                        <label type="p" text="${account.userFullName} no longer works for ${organizationName} from the date given. Their account and other organizations are unchanged; the membership stays on record."/>
+                                        <form-single name="EndRelationship" transition="endRelationship"
+                                                map="{userId:userId, partyRelationshipId:partyRelationshipId, expectedRevision:revision}">
+                                            <field name="userId"><default-field><hidden/></default-field></field>
+                                            <field name="partyRelationshipId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate"><default-field title="End on" tooltip="Empty ends it now"><date-time/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="End membership"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!relationships.length" text="No memberships of the organizations you administer."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Access"/>
+                    <box-toolbar>
+                        <container-dialog id="AddMembershipDialog" button-text="Add access" icon="sym_o_add_moderator" width="560"
+                                title="Give ${account.userFullName} access" condition="canManageAccess">
+                            <label type="p" text="A registered bundle you may assign, from a date. Ending a membership keeps it on record."/>
+                            <form-single name="AddMembership" transition="addMembership" map="{userId:userId}">
+                                <field name="userId"><default-field><hidden/></default-field></field>
+                                <field name="userGroupId">
+                                    <default-field title="Bundle">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'bundles'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="Empty keeps it open"><date-time/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="UserMemberships" list="currentMemberships" skip-form="true" paginate="false">
+                            <field name="description"><default-field title="Group"><display text="${description}"/></default-field></field>
+                            <field name="markerText"><default-field title="Kind"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <container-dialog id="EndMembership_${userGroupId}_${fromDate}" button-text="End" icon="sym_o_person_remove" width="520"
+                                            title="End ${description}" condition="canManageAccess">
+                                        <label type="p" text="${account.userFullName} loses this group's permissions and app gates from the date given; the membership stays on record."/>
+                                        <form-single name="EndMembership" transition="endMembership"
+                                                map="{userId:userId, userGroupId:userGroupId, memberFromDate:fromDate, expectedRevision:revision}">
+                                            <field name="userId"><default-field><hidden/></default-field></field>
+                                            <field name="userGroupId"><default-field><hidden/></default-field></field>
+                                            <field name="memberFromDate"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="thruDate"><default-field title="End on" tooltip="Empty ends it now"><date-time/></default-field></field>
+                                            <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                            <field name="submitButton"><default-field title="End membership"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!currentMemberships.length" text="No group memberships."/>
+                        <label type="p" style="q-px-md q-pb-md m-muted" condition="endedMembershipCount" text="${endedMembershipCount} ended membership(s) kept on record."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Credentials"/>
+                    <box-toolbar>
+                        <link url="resetAuthentication" text="Send password reset" link-type="hidden-form-link" icon="sym_o_lock_reset" condition="canManage"
+                                confirmation="Mail ${account.username} a reset password? It can only be used to set a new password; the current one stays valid."
+                                parameter-map="{userId:userId, resetKind:'password'}"/>
+                        <link url="resetAuthentication" text="Release sign-in lock" link-type="hidden-form-link" icon="sym_o_lock_open" condition="canChangeAccount &amp;&amp; account.locked"
+                                confirmation="Release the failed sign-in lock of ${account.username}?" parameter-map="{userId:userId, resetKind:'lock'}"/>
+                        <link url="revokeAccess" text="Revoke all access" link-type="hidden-form-link" icon="sym_o_block" condition="canChangeAccount &amp;&amp; account.userId != ec.user.userId"
+                                confirmation="Sign ${account.username} out everywhere and revoke their keys, app passwords, SSH keys and phones? The account stays enabled."
+                                parameter-map="{userId:userId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="Authentication" list="factors" skip-form="true" paginate="false">
+                            <field name="kind"><default-field title="Factor"><display/></default-field></field>
+                            <field name="verifiedText"><default-field title="State"><display/></default-field></field>
+                            <field name="fromText"><default-field title="Since"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="resetAuthentication" text="Reset" link-type="hidden-form-link" icon="sym_o_restart_alt" condition="canChangeAccount"
+                                            confirmation="End this ${kind} factor? ${account.username} enrols a new one at the next sign-in."
+                                            parameter-map="{userId:userId, resetKind:'factor', factorId:factorId}"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!factors.length" text="No second factor."/>
+                        <label type="p" style="q-px-md m-muted" condition="found.singleUseCodeCount" text="${found.singleUseCodeCount} unused single use code(s)."/>
+                        <form-list name="AccessCredentials" list="credentials" skip-form="true" paginate="false">
+                            <field name="kindText"><default-field title="Credential"><display/></default-field></field>
+                            <field name="description"><default-field title="Name"><display text="${description}${fingerprint ? ' · ' + fingerprint : ''}"/></default-field></field>
+                            <field name="fromText"><default-field title="Created"><display/></default-field></field>
+                            <field name="usedText"><default-field title="Last used"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="revokeAccess" text="Revoke" link-type="hidden-form-link" icon="sym_o_block" condition="canChangeAccount"
+                                            confirmation="Revoke ${kindText} ${description}?" parameter-map="{userId:userId, credentialKind:kind, credentialId:credentialId}"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!credentials.length" text="No keys, app passwords, SSH keys or phones."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Sessions and history"/>
+                    <box-toolbar>
+                        <link url="revokeSession" text="Sign out everywhere" link-type="hidden-form-link" icon="sym_o_logout"
+                                condition="canChangeAccount &amp;&amp; hasActiveSession &amp;&amp; account.userId != ec.user.userId"
+                                confirmation="Sign ${account.username} out of every session?" parameter-map="{userId:userId}"/>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="UserSessions" list="sessions" skip-form="true" paginate="false">
+                            <field name="clientSummary"><default-field title="Device"><display/></default-field></field>
+                            <field name="whereText"><default-field title="From"><display/></default-field></field>
+                            <field name="startedText"><default-field title="Started"><display/></default-field></field>
+                            <field name="seenText"><default-field title="Last seen"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="actions">
+                                <default-field title="">
+                                    <link url="revokeSession" text="Sign out" link-type="hidden-form-link" icon="sym_o_logout" condition="canChangeAccount &amp;&amp; active &amp;&amp; !current"
+                                            confirmation="Sign ${account.username} out of ${clientSummary}?" parameter-map="{userId:userId, sessionKey:sessionKey}"/>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="clientSummary"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!sessions.length" text="No sessions in the last 30 days."/>
+                        <form-list name="AccountHistory" list="events" skip-form="true" paginate="false">
+                            <field name="timeText"><default-field title="When"><display/></default-field></field>
+                            <field name="event"><default-field title="Event"><display/></default-field></field>
+                            <field name="actor"><default-field title="By"><display/></default-field></field>
+                            <field name="detail"><default-field title="Detail"><display/></default-field></field>
+                            <field name="reason"><default-field title="Reason"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!events.length" text="No access events recorded."/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>
