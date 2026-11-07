@@ -1,6 +1,7 @@
 # IronStone BOSS — Commerce design
 
-Nov 5, 2026 — checked against the code while writing [impl-commerce.md](impl-commerce.md) (its F1–F36); the changes are
+Nov 7, 2026 — built (impl-commerce P1–P15): §2's **Impl** column names the phase that built each screen. Nov 5, 2026 —
+checked against the code while writing [impl-commerce.md](impl-commerce.md) (its F1–F36); the changes are
 marked Nov 5. Nov 1, 2026 — draft; reviewed against research-commerce.md, the reference apps and the other designs (the
 suite-app review, since removed from the tree; read it with `git show bd74564^:plan/review-suite-apps.md`).
 
@@ -210,55 +211,55 @@ cases and returns (X7).
 
 | Screen | Path | Archetype | Impl | Purpose | Main record | Reused | Roles | Scope/stage | Context |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Home | Commerce/Home | landing | xml | Triage store work | scoped operational projection | dashboard widgets, crosscut | reader | new C1 | stores, period |
-| Stores | Commerce/Stores | list | xml | Find/create stores | ProductStore | own | reader; manager writes | parity C1 | filters |
-| StoreDetail | Commerce/Stores/StoreDetail | detail | xml | Configure one channel | ProductStore | own | reader; manager writes | parity C1 | store |
-| StoreGroups | Commerce/Stores/StoreGroups | settings | xml | Maintain dated groups | ProductStoreGroup | own | manager | new C1 | organization, group |
-| Merchandising | Commerce/Merchandising | list | xml | Prepare/publish assortment | ProductStoreProduct + publication | own | merchandiser/publisher | new C1 | store, products |
-| StoreCategories | Commerce/Merchandising/StoreCategories | tree list | qvue | Arrange storefront categories | ProductStoreCategory + ProductCategoryRollup | own | merchandiser | parity C1 | store, category |
-| Product360 | Commerce/Merchandising/Product360 | 360 | xml | Edit merchandising facets and paid access | Product | crosscut §3.5 | domain grants | parity C1 (paid access C3) | product, store |
-| CategoryDetail | Commerce/Merchandising/CategoryDetail | detail | xml | Edit category identity | ProductCategory | Products §5, made `Shared/CategoryDetail` (Nov 5, impl-commerce F5) | domain grants | parity C1 | category, store |
-| CategoryContent | Commerce/Merchandising/CategoryDetail/Content | editor | xml | Maintain category content | ProductCategoryContent | Products §5 | domain grants | parity C1 | category, store |
-| Documents | Commerce/Merchandising/Documents | list | xml | Find product content | ProductContent | Products §9 | domain grants | parity C1 | product, store |
-| DocumentDetail | Commerce/Merchandising/Documents/DocumentDetail | detail | xml | Edit a content binding | ProductContent | Products §9 | domain grants | parity C1 | content, store |
-| Reviews | Commerce/Merchandising/Reviews | split | xml | Moderate and reply to product reviews | ProductReview | own | merchandiser | new C2 | store, review |
-| PriceLists | Commerce/Merchandising/PriceLists | list | xml | Inspect store price policy | ProductPriceList | Products §7 | price grants | parity C1 | store |
-| PriceListDetail | Commerce/Merchandising/PriceLists/PriceListDetail | detail | xml | Maintain permitted price rules | ProductPriceList | Products §7 | price grants | parity C1 | store, list |
-| PriceExplain | Commerce/Merchandising/PriceExplain | report | xml | Explain a storefront price | pricing projection | Products §7 | price grants | new C1 | store, product, buyer |
-| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C1 (Nov 5, mounted with the catalog screens, impl-commerce P3) | store, product |
-| Themes | Commerce/Website/Themes | list | xml | Find/copy/import themes | proposed PublicTheme | own | designer | new C1 | site, store |
-| ThemeDetail | Commerce/Website/Themes/ThemeDetail | detail | xml | Validate and publish releases | proposed PublicThemeRelease | own | designer/publisher | new C1 | theme, release |
-| ThemeEditor | Commerce/Website/Themes/ThemeEditor | editor | qvue | Compose templates visually | proposed theme draft | own | designer | new C1 | template, section |
-| TemplateEditor | Commerce/Website/Themes/TemplateEditor | editor | qvue | Edit locked template source | versioned resource | framework editor/diff, own workflow | theme developer | new C1 | theme, file, revision |
-| Pages | Commerce/Website/Pages | list | xml | Manage site pages and policies | WikiPage + PublicSitePage (proposed extension) | own; defines `Shared/Pages` | designer/publisher | new C1 | site, filters |
-| PageDetail | Commerce/Website/PageDetail | editor | xml | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
-| Navigation | Commerce/Website/Navigation | tree list | xml | Edit menus and redirects | proposed PublicSiteNavigation | own | merchandiser/publisher (Nov 5, as §1.1's `COMMERCE_MERCHANDISE`) | new C1 | site, menu |
-| Orders | Commerce/Orders | list | xml | Work submitted online orders | OrderHeader | own list, shared order reads | order reader | parity C2 | store, filters |
-| OrderDetail | Commerce/Orders/OrderDetail | detail | xml | Work an authorized order | OrderHeader | crosscut §3.6 | domain grants | parity C2 | order, store |
-| Carts | Commerce/Orders/Carts | list | xml | Inspect open/abandoned carts | OrderHeader + proposed StoreCartAccess | own | order reader | new C2 | store, filters |
-| CartDetail | Commerce/Orders/CartDetail | detail | xml | Diagnose and recover a cart | OrderHeader + StoreCheckout | own | order reader/recovery | new C2 | cart, store |
-| Returns | Commerce/Orders/Returns | list | xml | Follow returns of store orders | ReturnHeader | own store-filtered view of Customer Service returns | domain grants | new C2 | store, filters |
-| ReturnDetail | Commerce/Orders/ReturnDetail | detail | xml | Follow return authorization/settlement | ReturnHeader | crosscut §3.18 | domain grants | parity C2 | return, store |
-| Customers | Commerce/Customers | list | xml | Find customers of permitted stores | PartyDetail | own scoped list | order reader | new C2 | store, filters |
-| Customer360 | Commerce/Customers/Customer360 | 360 | xml | Inspect store relationships | Party | crosscut §3.2 | domain grants | parity C2 | customer, store |
-| Subscriptions | Commerce/Customers/Subscriptions | list | xml | Monitor recurring contracts | Subscription + proposed StoreRecurringContract | own | order reader | new C3 | store, filters |
-| SubscriptionDetail | Commerce/Customers/SubscriptionDetail | detail | xml | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
-| Requests | Commerce/Customers/Requests | list | xml | Follow customer cases about store orders and products | Request | own store-filtered view of Customer Service cases | case readers | new C2 | store, filters |
-| RequestDetail | Commerce/Customers/RequestDetail | detail | xml | Read a store case and open it in Customer Service | Request | Projects §6 / crosscut §3.11 | case readers | parity C2 | request |
-| Promotions | Commerce/Promotions/Promotions (the area's default) | list | xml | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
-| PromotionDetail | Commerce/Promotions/PromotionDetail | detail | xml | Configure one promotion | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | promotion |
-| PromoCodes | Commerce/Promotions/PromoCodes | list | xml | Find/generate codes | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | promotion, codes |
-| PromoCodeDetail | Commerce/Promotions/PromoCodeDetail | detail | xml | Configure eligibility and limits | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | code |
-| Integrations | Commerce/Integrations | list | xml | Inspect channel connections | SystemMessageRemote | own | channel operator | new C4 | store, filters |
-| IntegrationDetail | Commerce/Integrations/IntegrationDetail | detail | xml | Resolve channel message failures | SystemMessageRemote + SystemMessage | own | channel operator | new C4 | store, remote |
-| ChannelImport | Commerce/Integrations/ChannelImport | wizard | xml | Validate/import channel orders | SystemMessage + import batch | own | channel operator | new C4 | store, batch |
-| Feeds | Commerce/Integrations/Feeds | list | xml | Manage public product feeds | proposed ProductStoreFeed | own | channel operator | new C4 | store, filters |
-| FeedDetail | Commerce/Integrations/Feeds/FeedDetail | detail | xml | Build/inspect a feed | ProductStoreFeed | own | channel operator (Nov 5: publishing a feed is `COMMERCE_CHANNEL_OPERATE`'s, §1.1) | new C4 | feed, build |
-| OnlineSales | Commerce/Reports/OnlineSales | report | xml | Orders, net sales and top products by store and period | `mantle.sales.SalesReportServices.get#SalesOrderSummary` | own | reader | new C2 | stores, period |
-| CartRecovery | Commerce/Reports/CartRecovery | report | xml | Carts, abandonment, recovery sends and recovered orders | proposed O.get#CartRecoverySummary | own | reader | new C2 | stores, period |
-| PromotionUse | Commerce/Reports/PromotionUse | report | xml | Redemptions and discount totals per promotion and code | proposed P.get#PromotionUseSummary | own | promotion manager | new C2 | stores, period, promotion |
-| ChannelHealth | Commerce/Reports/ChannelHealth | report | xml | Channel message outcomes and feed builds over time | proposed I.get#ChannelHealth | own | channel operator | new C4 | stores, period, remote |
-| CheckoutSettings | Commerce/Settings/CheckoutSettings | settings | xml | Configure checkout choices | ProductStore + gateway/ship bindings | own | manager | parity C2 | store |
+| Home | Commerce/Home | landing | xml (built P1; measures P11) | Triage store work | scoped operational projection | dashboard widgets, crosscut | reader | new C1 | stores, period |
+| Stores | Commerce/Stores | list | xml (built P2, at `Commerce/Stores/Stores`) | Find/create stores | ProductStore | own | reader; manager writes | parity C1 | filters |
+| StoreDetail | Commerce/Stores/StoreDetail | detail | xml (built P2; its configuration summary, CSV and print, P15) | Configure one channel | ProductStore | own | reader; manager writes | parity C1 | store |
+| StoreGroups | Commerce/Stores/StoreGroups | settings | xml (built P2) | Maintain dated groups | ProductStoreGroup | own | manager | new C1 | organization, group |
+| Merchandising | Commerce/Merchandising | list | xml (built P3, at `Commerce/Merchandising/Assortment`) | Prepare/publish assortment | ProductStoreProduct + publication | own | merchandiser/publisher | new C1 | store, products |
+| StoreCategories | Commerce/Merchandising/StoreCategories | tree list | qvue (built P3, with its terminal twin StoreCategoriesTui) | Arrange storefront categories | ProductStoreCategory + ProductCategoryRollup | own | merchandiser | parity C1 | store, category |
+| Product360 | Commerce/Merchandising/Product360 | 360 | xml (built P3; Paid access P12; its review prompt P15) | Edit merchandising facets and paid access | Product | crosscut §3.5 | domain grants | parity C1 (paid access C3) | product, store |
+| CategoryDetail | Commerce/Merchandising/CategoryDetail | detail | xml (built P3) | Edit category identity | ProductCategory | Products §5, made `Shared/CategoryDetail` (Nov 5, impl-commerce F5) | domain grants | parity C1 | category, store |
+| CategoryContent | Commerce/Merchandising/CategoryDetail/Content | editor | xml (built P3) | Maintain category content | ProductCategoryContent | Products §5 | domain grants | parity C1 | category, store |
+| Documents | Commerce/Merchandising/Documents | list | xml (built P3) | Find product content | ProductContent | Products §9 | domain grants | parity C1 | product, store |
+| DocumentDetail | Commerce/Merchandising/Documents/DocumentDetail | detail | xml (built P3) | Edit a content binding | ProductContent | Products §9 | domain grants | parity C1 | content, store |
+| Reviews | Commerce/Merchandising/Reviews | split | xml (built P9) | Moderate and reply to product reviews | ProductReview | own | merchandiser | new C2 | store, review |
+| PriceLists | Commerce/Merchandising/PriceLists | list | xml (built P3) | Inspect store price policy | ProductPriceList | Products §7 | price grants | parity C1 | store |
+| PriceListDetail | Commerce/Merchandising/PriceLists/PriceListDetail | detail | xml (built P3) | Maintain permitted price rules | ProductPriceList | Products §7 | price grants | parity C1 | store, list |
+| PriceExplain | Commerce/Merchandising/PriceExplain | report | xml (built P3) | Explain a storefront price | pricing projection | Products §7 | price grants | new C1 | store, product, buyer |
+| InventoryAvailability | Commerce/Merchandising/InventoryAvailability | list | xml (built P3) | Inspect store facility availability | availability projection | crosscut §3.7 | stock grants | parity C1 (Nov 5, mounted with the catalog screens, impl-commerce P3) | store, product |
+| Themes | Commerce/Website/Themes | list | xml (built P5) | Find/copy/import themes | proposed PublicTheme | own | designer | new C1 | site, store |
+| ThemeDetail | Commerce/Website/Themes/ThemeDetail | detail | xml (built P5) | Validate and publish releases | proposed PublicThemeRelease | own | designer/publisher | new C1 | theme, release |
+| ThemeEditor | Commerce/Website/Themes/ThemeEditor | editor | qvue (built P5, with its terminal twin ThemeEditorTui) | Compose templates visually | proposed theme draft | own | designer | new C1 | template, section |
+| TemplateEditor | Commerce/Website/Themes/TemplateEditor | editor | qvue (built P5, with its terminal twin TemplateEditorTui) | Edit locked template source | versioned resource | framework editor/diff, own workflow | theme developer | new C1 | theme, file, revision |
+| Pages | Commerce/Website/Pages | list | xml (built P4) | Manage site pages and policies | WikiPage + PublicSitePage (proposed extension) | own; defines `Shared/Pages` | designer/publisher | new C1 | site, filters |
+| PageDetail | Commerce/Website/PageDetail | editor | xml (built P4) | Edit content and assign a template | WikiPage + PublicSitePage | own; defines `Shared/PageDetail`; Wiki editor | designer/publisher | new C1 | page, version |
+| Navigation | Commerce/Website/Navigation | tree list | xml (built P4) | Edit menus and redirects | proposed PublicSiteNavigation | own | merchandiser/publisher (Nov 5, as §1.1's `COMMERCE_MERCHANDISE`) | new C1 | site, menu |
+| Orders | Commerce/Orders | list | xml (built P8, at `Commerce/Orders/Orders`) | Work submitted online orders | OrderHeader | own list, shared order reads | order reader | parity C2 | store, filters |
+| OrderDetail | Commerce/Orders/OrderDetail | detail | xml (built P8) | Work an authorized order | OrderHeader | crosscut §3.6 | domain grants | parity C2 | order, store |
+| Carts | Commerce/Orders/Carts | list | xml (built P8) | Inspect open/abandoned carts | OrderHeader + proposed StoreCartAccess | own | order reader | new C2 | store, filters |
+| CartDetail | Commerce/Orders/CartDetail | detail | xml (built P8; recovery P10) | Diagnose and recover a cart | OrderHeader + StoreCheckout | own | order reader/recovery | new C2 | cart, store |
+| Returns | Commerce/Orders/Returns | list | xml (built P8) | Follow returns of store orders | ReturnHeader | own store-filtered view of Customer Service returns | domain grants | new C2 | store, filters |
+| ReturnDetail | Commerce/Orders/ReturnDetail | detail | xml (built P8) | Follow return authorization/settlement | ReturnHeader | crosscut §3.18 | domain grants | parity C2 | return, store |
+| Customers | Commerce/Customers | list | xml (built P8, at `Commerce/Customers/Customers`) | Find customers of permitted stores | PartyDetail | own scoped list | order reader | new C2 | store, filters |
+| Customer360 | Commerce/Customers/Customer360 | 360 | xml (built P8) | Inspect store relationships | Party | crosscut §3.2 | domain grants | parity C2 | customer, store |
+| Subscriptions | Commerce/Customers/Subscriptions | list | xml (built P12) | Monitor recurring contracts | Subscription + proposed StoreRecurringContract | own | order reader | new C3 | store, filters |
+| SubscriptionDetail | Commerce/Customers/SubscriptionDetail | detail | xml (built P12) | Resolve renewal/cancellation work | StoreRecurringContract | own | subscription manager | new C3 | contract |
+| Requests | Commerce/Customers/Requests | list | xml (built P8) | Follow customer cases about store orders and products | Request | own store-filtered view of Customer Service cases | case readers | new C2 | store, filters |
+| RequestDetail | Commerce/Customers/RequestDetail | detail | xml (built P8) | Read a store case and open it in Customer Service | Request | Projects §6 / crosscut §3.11 | case readers | parity C2 | request |
+| Promotions | Commerce/Promotions/Promotions (the area's default) | list | xml (built P7) | Find store promotions | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | store, filters |
+| PromotionDetail | Commerce/Promotions/PromotionDetail | detail | xml (built P7) | Configure one promotion | ProductStorePromotion | own; shared definition §7 | promotion manager | parity C2 | promotion |
+| PromoCodes | Commerce/Promotions/PromoCodes | list | xml (built P7) | Find/generate codes | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | promotion, codes |
+| PromoCodeDetail | Commerce/Promotions/PromoCodeDetail | detail | xml (built P7) | Configure eligibility and limits | ProductStorePromoCode | own; shared definition §7 | promotion manager | parity C2 | code |
+| Integrations | Commerce/Integrations | list | xml (built P13, at `Commerce/Integrations/Integrations`) | Inspect channel connections | SystemMessageRemote | own | channel operator | new C4 | store, filters |
+| IntegrationDetail | Commerce/Integrations/IntegrationDetail | detail | xml (built P13) | Resolve channel message failures | SystemMessageRemote + SystemMessage | own | channel operator | new C4 | store, remote |
+| ChannelImport | Commerce/Integrations/ChannelImport | wizard | xml (built P13) | Validate/import channel orders | SystemMessage + import batch | own | channel operator | new C4 | store, batch |
+| Feeds | Commerce/Integrations/Feeds | list | xml (built P14) | Manage public product feeds | proposed ProductStoreFeed | own | channel operator | new C4 | store, filters |
+| FeedDetail | Commerce/Integrations/Feeds/FeedDetail | detail | xml (built P14) | Build/inspect a feed | ProductStoreFeed | own | channel operator (Nov 5: publishing a feed is `COMMERCE_CHANNEL_OPERATE`'s, §1.1) | new C4 | feed, build |
+| OnlineSales | Commerce/Reports/OnlineSales | report | xml (built P11) | Orders, net sales and top products by store and period | `mantle.sales.SalesReportServices.get#SalesOrderSummary` | own | reader | new C2 | stores, period |
+| CartRecovery | Commerce/Reports/CartRecovery | report | xml (built P11) | Carts, abandonment, recovery sends and recovered orders | proposed O.get#CartRecoverySummary | own | reader | new C2 | stores, period |
+| PromotionUse | Commerce/Reports/PromotionUse | report | xml (built P11) | Redemptions and discount totals per promotion and code | proposed P.get#PromotionUseSummary | own | promotion manager | new C2 | stores, period, promotion |
+| ChannelHealth | Commerce/Reports/ChannelHealth | report | xml (built P14) | Channel message outcomes and feed builds over time | proposed I.get#ChannelHealth | own | channel operator | new C4 | stores, period, remote |
+| CheckoutSettings | Commerce/Settings/CheckoutSettings | settings | xml (built P6; RecoveryPolicy P10, RecurringPolicy P12) | Configure checkout choices | ProductStore + gateway/ship bindings | own | manager | parity C2 | store |
 
 ## 3. Home, reports and stores
 
@@ -514,7 +515,9 @@ once it is approved; an author's change of the images returns it to pending.
 Submitted reviews start pending. Public projection strips private author IDs/contact details;
 verified-purchase evidence is computed from the actor's qualifying order, not a checkbox.
 An author edit returns an approved review to pending through a proposed status-flow extension
-and guarded Shop operation. Product discussion links use Forum's separate
+and guarded Shop operation. A review staff delete stays the author's one review of the product: deletion is final, so it
+is neither edited nor written again (Nov 7, impl-commerce F101); a decision or reply names the revision it was made at
+(F102). Product discussion links use Forum's separate
 communication records; reviews do not become copied forum posts. Bulk decisions confirm counts
 and preserve per-review outcomes. **Source:** research §3 and ridgecrest's different review model.
 **Needs:** COM-MERCH, SHOP-CATALOG.
@@ -1395,7 +1398,7 @@ on Customer360 (§10). The research open questions and candidate dispositions ar
 
 | Output | Kind | From screen | Derived from |
 | --- | --- | --- | --- |
-| Store readiness/configuration summary | authorized CSV/print | StoreDetail | grouped store settings; redact credentials |
+| Store readiness/configuration summary | authorized CSV/print (built Nov 7, impl-commerce P15: StoreDetail's More menu over `mantle.product.StoreAdminServices.get#StoreSummary`) | StoreDetail | grouped store settings; redact credentials |
 | Order confirmation, invoices, delivery and return documents | existing email / html-print / PDF | OrderDetail, ReturnDetail | owning Order/Accounting/Warehouse services and store email bindings |
 | Cart recovery, subscription and review-request notices | consent-checked email | CartDetail, SubscriptionDetail, Reviews | ProductStoreEmail (`PsetCartRecovery`, `PsetPaymentRetry`, `PsetSubscriptionRenewal`, `PsetReviewRequest`) + registered EmailTemplate, sent through the Comms delivery ledger (X8) |
 | Store reports | report screen, CSV, scheduled PDF through Insights | OnlineSales, CartRecovery, PromotionUse, ChannelHealth | registered `report/*.json` definitions over SalesReportServices and the proposed store summaries |
