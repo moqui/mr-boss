@@ -465,6 +465,16 @@ User-organization membership and the `RepVendor` representative are dated PartyR
 
 ### Constitution
 
+**Nov 7, 2026:** the runtime, Mantle's organization services and the framework's base screen are built
+([mr-moqui docs/ai/Constitution.md](../../../../docs/ai/Constitution.md)). System › Constitution administers the global
+(instance) document and the trusted origins; this Admin screen extends it for organization scope, calling Mantle's
+`mantle.party.ConstitutionServices` (`get#`, `store#`, `reset#OrganizationConstitution`) directly and reusing the
+framework's `edit#ConstitutionDocument`, `validate#Constitution`, `preview#ConstitutionPrompt` and
+`tools/template/ConstitutionParts.xml`. Permissions as built: global changes need the sealed `ADMIN_CONSTITUTION_GLOBAL`;
+organization changes need Mantle's `ORG_CONSTITUTION_EDIT` within the organization's scope, with Admin's
+`ADMIN_SETTINGS_MANAGE` as its screen check. An organization's JSON is in the resource `contentLocation` names, not
+`description`.
+
 **Proposed, A2 (ADM-CONSTITUTION).** The [Assist Constitution design](../../../../plans/LLM-A2A-Assist.md#710-constitution-proposed-1315) owns the JSON format, inheritance, agent behavior and run lifecycle. Its [shipped default](../../../base-component/framework/docs/Constitution.json) contains en/es/zh text and 37 anchored references for review; no loader, writer, reference service/viewer or screen is built. This is shared guidance for people and agents, so Admin owns this screen while framework agent configuration stays in System/Llm.
 
 **Layout:** an XML settings screen with an authorized Global / Internal organization scope selector, an effective-source banner, a language selector, a readable rule/reference list, and a localized agent-instructions preview. The active internal organization is selected initially when authorized. OrganizationDetail supplies that organization's scope; AgentsHome links the same canonical screen. Signed-in users may read the global document; organization members and authorized organization administrators may read their effective document. The screen has a scoped read entry independent of the general Admin launcher grant, so people can read their Constitution without acquiring administration privileges. Services enforce the same read boundary for direct calls.
