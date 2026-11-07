@@ -3814,4 +3814,15 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="component://mr-boss/screen/Insights/PanelDetail\.xml/(storeMeasure|storeTarget)"
                 artifactTypeEnumId="AT_XML_SCREEN_TRANS" nameIsPattern="Y" inheritAuthz="N"/>
     </artifactGroups>
+    <!-- BOSS_INS_LEGACY's earlier pattern rows (P1, P2, P3), whose name is their key, so narrowing the group left them on an existing
+        instance, denying the root user group Reports (and P1's row Dashboards and ReportBuilder): reloaded as plain names, which no
+        screen location equals, they match nothing (impl-insights F-P4-7, review Nov 7). A fresh load holds them the same way. -->
+    <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
+        <artifacts artifactName="component://mr-boss/screen/Insights/(Dashboards|Dashboard|ReportBuilder|Reports|ScheduledReports)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/(ReportBuilder/(Datasets|DatasetDetail|DatasetView)|Reports|ScheduledReports)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/(Reports|ScheduledReports)\.xml"
+                artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="N" inheritAuthz="Y"/>
+    </artifactGroups>
 </entity-facade-xml>
