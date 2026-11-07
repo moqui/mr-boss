@@ -1328,7 +1328,8 @@ The printers themselves are `moqui.basic.print.NetworkPrinter` records configure
 snapshot metrics, never summed across dates, physical quantity apart from Accounting's valuation.
 
 **Insights attention (impl-insights P5, Nov 7, 2026; F29).** Home's Receiving queue (`HomeServices.get#Home`, the selected
-facility; waiting and late, late as its overdue part) is the `ironstone.insights.AttentionProvider` row `Warehouse.Receiving`;
+facility; waiting and late, late as its overdue part) is the `ironstone.insights.AttentionProvider` row `Warehouse.Receiving`,
+opening the receipts with that facility;
 the other queues wait for a check that each counts its list's query.
 
 ### Reports

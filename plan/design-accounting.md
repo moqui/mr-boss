@@ -1935,7 +1935,8 @@ and read through this catalogue until Sales is built. The invoiced revenue metri
 **Insights attention (impl-insights P5, Nov 7, 2026; F29).** Draft and posted entries (`AccountingServices.find#Records`), bills
 awaiting approval (for `INVOICE_APPROVE`) and on hold (`InvoiceServices.find#Payables`) and production runs awaiting cost close
 (`ProductionCostServices.find#CostCloseQueue`) are `ironstone.insights.AttentionProvider` rows (`Accounting.*`), each the list's
-own find, for the organization in Insights' scope.
+own find, for the organization in Insights' scope (none chosen: Accounting's own, the active organization, else the user's only
+one, else all of theirs; the bills, which need one organization, are then left out).
 
 These canonical reports register with [Insights' report catalog and domain metrics](design-insights.md#6-report-catalog-and-domain-metrics).
 Insights uses their authorized service results and drill targets, preserving organization, fiscal

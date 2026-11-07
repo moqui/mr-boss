@@ -167,7 +167,8 @@ Chatter and RecordFiles remain hidden app-root mounts of the Commons shared defi
 **As built (impl-insights P5, Nov 7, 2026).**
 - `ironstone.insights.AttentionProvider` (mr-boss's registry entity file) holds key, owner, label, the owner's count service and
   its fixed parameters, the count's path in its answer (and an overdue part), the organization parameter it honors or the scope
-  it keeps, and the worklist's route and filter. Providers that share an owner's Home summary share one call per board.
+  it keeps, and the worklist's route and filter (a filter value may be taken from the answer, such as the plant counted).
+  Providers that share an owner's Home summary share one call per board.
   `get#Attention` shows a provider only when its route opens to the viewer and they hold its permission; an owner's refusal or a
   null count leaves it out, and any other failure is a card that names its owner. The counts are grouped by owner and never
   totalled.
@@ -177,7 +178,8 @@ Chatter and RecordFiles remain hidden app-root mounts of the Commons shared defi
 - ManagementPanels shows at most six panels of the user's chosen dashboard, else of the shipped `insights-suite` ("Suite
   overview"): orders and order value by currency (`Sales.Orders`, `Sales.OrderValue`), open cases by organization
   (`CustomerService.Backlog`) and store checkouts by state, as library panels. Each panel is a `report-embed` rendered as the
-  viewer, kept to the organization in scope by the dashboard's `organizationPartyId` and `vendorPartyId` variables.
+  viewer, kept to the organization in scope by the dashboard's `organizationPartyId` and `vendorPartyId` variables; Insights'
+  Dashboard fixes both, `vendorPartyId` only where it is over Mantle's sales datasets (the selling organization).
 - Invoiced revenue waits for an admitted invoice dataset (F-P5-2).
 - Arrange (`store#HomeLayout`) saves the organization, the dashboard and its panels in `InsightsHome`.
 - Favorites are the framework's starred and recent dashboards.

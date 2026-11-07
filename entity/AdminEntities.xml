@@ -213,7 +213,7 @@ along with this software (see the LICENSE.md file). If not, see
             active organization; The selected plant)</description></field>
         <field name="routePath" type="text-medium"><description>The worklist's canonical owner route, a path under /qapps</description></field>
         <field name="routeParameters" type="text-medium"><description>The worklist's filter, as a query string
-            (view=draft)</description></field>
+            (view=draft); a value {path} is the count's answer at that path, left out when it has none (facilityId={plantId})</description></field>
         <field name="requiredPermission" type="id-long"><description>A permission the worklist needs beyond its route (the
             owner's card shows only to its holders)</description></field>
         <field name="sequenceNum" type="number-integer"/>
