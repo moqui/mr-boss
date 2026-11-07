@@ -942,6 +942,18 @@ Design §5 Groups and GroupDetail; ADM-ACCESS (AccessServices, the administratio
   - budget shares unchanged in kind: framework server 0.5 s (AdminAccessServices), mr-boss about 0.4 s (AdminGroups); framework 13.6 s of
     12 s and tools 6.1 s of 3 s on Debug, as before; `./moq test-framework` not run.
 
+- **Wave 4 suites (Nov 7, on master after Admin P3 and Insights P3 merged and the release binary rebuilt; the Admin P4
+  reviewer and the Insights P4 worker ran at the same time):** `./moq test-framework`: every spec feature passed; cargo
+  failed F38's known test and `loader_filters_types_holds_services_and_reads_zip` (the EntityAuditLog sequence on the
+  test's empty driver, from Admin P3's audit log on UserGroupPermission); framework 10.7 of 12 s, webroot's client 46.4 of
+  44 s under the load. Standalone mr-mantle 1,906 passed, 3 failed: the baseline two and SitePages' scheduled publication
+  (`update#UserGroupPermission` with `fromDate: 0` on Postgres, the same audit log's read of the epoch key); a framework
+  follow-up fixes both. `mail_capture_sends=true ./moq test-apps` 3,341 server features passed, 2 failed: SitePages as
+  above and ProjectsAccess (Insights P3's `refresh#DatasetIndex` verb not in the client deny pattern; `refresh` added,
+  mr-boss 7fc702b6); 18 client features passed. mr-mantle 407.6 of 393 s and mr-boss 261.6 of 264 s server under the two
+  agents' load (Wave 2: 344.5 and 197.3 s), mr-boss client 52.3 of 57 s; measured on a quiet run before any raise.
+  `moqui lint --screens` 132 sites.
+
 ### P4 — Users and sessions
 
 Design §4.1, §4 Users, UserDetail (Account, Access, Credentials, Sessions/history) and Sessions; ADM-LIFECYCLE (the
