@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Constitution (design-admin §7 Constitution; mr-moqui docs/ai/Constitution.md): the shared guidance for people and agent runs, for
+    its editors (impl-admin F46: members read their organization's document in the Assist drawer's Constitution / Rules, with no
+    Admin access). One screen over the built services, no writer of its own:
+    - ConstitutionScope: the instance (global) document, or an internal organization the user administers and may read
+      (mantle.party.ConstitutionServices.check#OrganizationConstitutionAccess: in the find on InternalOrganization under this
+      screen's organization filters, impl-admin §4, so the administrator every one with none active and the active one with one;
+      or a member, or a holder of ADMIN_CONSTITUTION_GLOBAL),
+      the active organization first; where the document comes from (an organization's own, the instance's own, the shipped one),
+      its hash, its last change and what was passed over; ConstitutionLanguage: the reading and editing language;
+    - ConstitutionRead: the rules with their descriptions and references in that language (the framework's m-constitution-view and
+      reference dialog);
+    - for an editor, ConstitutionEdit, ConstitutionRules, ConstitutionReferences and the languages, each change one
+      edit#ConstitutionDocument of the current document saved whole with the hash it was read at, so a stale editor is refused,
+      never overwriting; Customize and ConstitutionReset; an organization's edits save its own document (store#,
+      reset#OrganizationConstitution), the instance's runtime/conf/Constitution.json (store#, reset#Constitution);
+    - ConstitutionPromptPreview: the section an agent run gets in that language (preview#ConstitutionPrompt).
+    Editing an organization's document needs ADMIN_SETTINGS_MANAGE and the organization in the user's Admin scope (this screen's
+    checks) and Mantle's ORG_CONSTITUTION_EDIT in that organization (its services'); the instance's, ADMIN_SETTINGS_MANAGE and the
+    sealed ADMIN_CONSTITUTION_GLOBAL. The trusted reference origins stay System › Constitution's (Origins), linked for ADMIN. The
+    shared parts of System › Constitution (tools template/ConstitutionParts.xml) are used for the instance scope's source. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Constitution" menu-image="sym_o_gavel" menu-image-type="icon">
+    <parameter name="scope"/>
+    <parameter name="locale"/>
+    <parameter name="ruleId"/>
+
+    <!-- one change of the document in the chosen scope, saved whole with the hash the editor read (expectedHash) -->
+    <transition name="applyEdit">
+        <actions>
+            <set field="global" from="scope == 'global'"/>
+            <if condition="global"><then>
+                <if condition="!admin?.capabilities?.settingsManage">
+                    <return error="true" message="Changing the instance Constitution needs ADMIN_SETTINGS_MANAGE and ADMIN_CONSTITUTION_GLOBAL"/></if>
+                <service-call name="org.moqui.admin.ConstitutionServices.get#Constitution" out-map="current"
+                        in-map="{scope:'global', includeDocument:true}"/>
+            </then><else>
+                <service-call name="ironstone.admin.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'organization', recordId:scope, capability:'settingsManage'}"/>
+                <if condition="!ec.message.hasError()">
+                    <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="current"
+                            in-map="{organizationPartyId:scope}"/></if>
+            </else></if>
+            <if condition="!ec.message.hasError()">
+                <service-call name="org.moqui.admin.ConstitutionServices.edit#ConstitutionDocument" out-map="edited"
+                        in-map="{documentText:current.documentText, operation:operation, locale:context.locale, ruleId:context.ruleId,
+                            referenceId:context.referenceId, direction:context.direction, title:context.title, provenance:context.provenance,
+                            description:context.description, instructions:context.instructions, url:context.url}"/></if>
+            <if condition="!ec.message.hasError()">
+                <if condition="global"><then>
+                    <service-call name="org.moqui.admin.ConstitutionServices.store#Constitution"
+                            in-map="{documentText:edited.documentText, expectedHash:expectedHash}"/>
+                </then><else>
+                    <service-call name="mantle.party.ConstitutionServices.store#OrganizationConstitution"
+                            in-map="{organizationPartyId:scope, documentText:edited.documentText, expectedHash:expectedHash}"/>
+                </else></if>
+            </if>
+            <if condition="!ec.message.hasError() &amp;&amp; edited?.newId &amp;&amp; operation == 'addRule'"><set field="ruleId" from="edited.newId"/></if>
+            <if condition="!ec.message.hasError()"><message type="success">Constitution saved; agent runs that start from now use it</message></if>
+        </actions>
+        <default-response url="."><parameter name="scope"/><parameter name="locale"/><parameter name="ruleId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <!-- an own copy of the document the scope uses now: the instance's of the shipped one, an organization's of the instance's -->
+    <transition name="customize">
+        <actions>
+            <if condition="scope == 'global'"><then>
+                <if condition="!admin?.capabilities?.settingsManage">
+                    <return error="true" message="Changing the instance Constitution needs ADMIN_SETTINGS_MANAGE and ADMIN_CONSTITUTION_GLOBAL"/></if>
+                <service-call name="org.moqui.admin.ConstitutionServices.create#ConstitutionCustomization"/>
+            </then><else>
+                <service-call name="ironstone.admin.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'organization', recordId:scope, capability:'settingsManage'}"/>
+                <if condition="!ec.message.hasError()">
+                    <service-call name="org.moqui.admin.ConstitutionServices.get#Constitution" out-map="inherited"
+                            in-map="{scope:'global', includeDocument:true}"/>
+                    <service-call name="mantle.party.ConstitutionServices.store#OrganizationConstitution"
+                            in-map="{organizationPartyId:scope, documentText:inherited.documentText, expectedHash:expectedHash}"/>
+                </if>
+            </else></if>
+        </actions>
+        <default-response url="."><parameter name="scope"/><parameter name="locale"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="reset">
+        <actions>
+            <if condition="scope == 'global'"><then>
+                <if condition="!admin?.capabilities?.settingsManage">
+                    <return error="true" message="Changing the instance Constitution needs ADMIN_SETTINGS_MANAGE and ADMIN_CONSTITUTION_GLOBAL"/></if>
+                <service-call name="org.moqui.admin.ConstitutionServices.reset#Constitution" in-map="{expectedHash:expectedHash}"/>
+            </then><else>
+                <service-call name="ironstone.admin.ContextServices.check#Record"
+                        in-map="{appRoot:appRoot, recordType:'organization', recordId:scope, capability:'settingsManage'}"/>
+                <if condition="!ec.message.hasError()">
+                    <service-call name="mantle.party.ConstitutionServices.reset#OrganizationConstitution"
+                            in-map="{organizationPartyId:scope, expectedHash:expectedHash}"/></if>
+            </else></if>
+            <if condition="!ec.message.hasError()"><message type="success">Constitution reset; agent runs that start from now use the inherited one</message></if>
+        </actions>
+        <default-response url="."><parameter name="scope"/><parameter name="locale"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <script><![CDATA[
+            cons = null; orgCons = null; preview = null; changeList = []
+            // the scopes: the instance, and the organizations the user administers whose Constitution Mantle lets them read (under
+            // this screen's organization filters), with whether they may change it
+            canManage = !!admin?.capabilities?.settingsManage
+            const accessOf = organizationPartyId => ec.service.sync().name('mantle.party.ConstitutionServices.check#OrganizationConstitutionAccess')
+                .parameters({organizationPartyId}).call() || {}
+            const nameOf = partyId => ec.entity.find('mantle.party.PartyDetail').condition('partyId', partyId).disableAuthz().one()?.organizationName || partyId
+            organizationScopes = Array.from(admin?.organizationPartyIds || []).map(partyId => Object.assign({partyId, name: nameOf(partyId)}, accessOf(partyId)))
+                .filter(row => row.canRead).sort((a, b) => String(a.name).localeCompare(String(b.name)))
+            const editsGlobal = canManage && ec.user.hasPermission('ADMIN_CONSTITUTION_GLOBAL')
+            scopeOptions = [{key: 'global', text: 'Instance (every organization without its own)' + (editsGlobal ? '' : ' • read only')}]
+                .concat(organizationScopes.map(row => ({key: row.partyId, text: row.name + (canManage && row.canEdit ? '' : ' • read only')})))
+            if (!scope) {
+                const active = admin?.activeOrganizationPartyId
+                scope = organizationScopes.some(row => row.partyId === active) ? active
+                    : (organizationScopes.find(row => row.canEdit) || organizationScopes[0])?.partyId || 'global'
+            }
+            isGlobal = scope === 'global'
+            scopeRow = isGlobal ? null : organizationScopes.find(row => row.partyId === scope) || null
+            scopeAvailable = isGlobal || !!scopeRow
+            canEdit = isGlobal ? editsGlobal : !!scopeRow && canManage && !!scopeRow.canEdit
+        ]]></script>
+        <if condition="scopeAvailable">
+            <service-call name="org.moqui.admin.ConstitutionServices.get#Constitution" out-map="cons" transaction="force-new" ignore-error="true"
+                    in-map="{scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope), locale:(locale || null),
+                        includeDocument:(isGlobal &amp;&amp; canEdit)}"/>
+            <if condition="!isGlobal">
+                <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="orgCons" transaction="force-new"
+                        ignore-error="true" in-map="{organizationPartyId:scope}"/>
+                <entity-find entity-name="mantle.party.PartyContent" list="changeList" limit="1">
+                    <econdition field-name="partyId" from="scope"/>
+                    <econdition field-name="partyContentTypeEnumId" value="PcntConstitution"/>
+                    <order-by field-name="-contentDate"/></entity-find>
+            </if>
+            <service-call name="org.moqui.admin.ConstitutionServices.preview#ConstitutionPrompt" out-map="preview" transaction="force-new"
+                    ignore-error="true" in-map="{scope:(isGlobal ? 'global' : null), organizationPartyId:(isGlobal ? null : scope),
+                        locale:(cons?.locale || locale || null)}"/>
+        </if>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script><![CDATA[
+            ec.message.clearErrors()
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            cons = cons || {}
+            locale = cons.locale || locale
+            // where the document comes from: an organization's own, else what it inherits; with its hash and last change
+            const change = Array.from(changeList)[0]
+            const changedBy = change?.userId ? (ec.entity.find('moqui.security.UserAccount').condition('userId', change.userId).disableAuthz().one()?.userFullName || change.userId) : ''
+            customized = isGlobal ? cons.customized == 'Y' : !!orgCons?.customized
+            sourceText = cons.available != 'Y' ? 'No Constitution is available.'
+                : !isGlobal ? (customized ? (scopeRow?.name || scope) + ' has its own Constitution; it replaces the instance Constitution for its members.'
+                    : (scopeRow?.name || scope) + ' uses the instance Constitution (' + (cons.customized == 'Y' ? "the instance's own" : 'the shipped one') + '); a change saves its own copy.')
+                : ''
+            changeText = !isGlobal && customized && change ? 'Last changed ' + when(change.contentDate) + (changedBy ? ' by ' + changedBy : '') : ''
+            hashText = (isGlobal ? cons.globalHash : orgCons?.contentHash) ? String(isGlobal ? cons.globalHash : orgCons.contentHash).substring(0, 12) : ''
+            expectedHash = isGlobal ? cons.globalHash : orgCons?.contentHash
+            diagnostics = (cons.diagnosticList || []).map(text => ({text}))
+            // the languages: the document's first, then the others this server knows
+            const known = new Map()
+            for (const lcl of ec.l10n.getAvailableLocales()) known.set(String(lcl.locale).replace('-', '_'), String(lcl.name))
+            const inDocument = (cons.localeList || []).map(String)
+            languageOptions = inDocument.map(code => ({code, name: (known.get(code) || code) + (code == cons.defaultLocale ? ' (default)' : '') + ' • in the document'}))
+            for (const [code, name] of known) if (!inDocument.includes(code)) languageOptions.push({code, name})
+            scopeValues = {scope, locale}
+            // the reading view (no agent instructions), for m-constitution-view and the terminal
+            view = {title: cons.title, titleLocale: cons.titleLocale, provenance: cons.provenance, locale: cons.locale, source: cons.source,
+                organizationPartyId: isGlobal ? null : scope, organizationName: scopeRow?.name || null,
+                scopeLabel: !isGlobal && customized ? (scopeRow?.name || scope) : cons.customized == 'Y' ? 'This instance' : 'Shipped default',
+                ruleList: (cons.ruleList || []).map(rule => ({ruleId: rule.ruleId, title: rule.title, titleLocale: rule.titleLocale,
+                    description: rule.description, descriptionLocale: rule.descriptionLocale,
+                    referenceList: (rule.referenceList || []).map(ref => ({referenceId: ref.referenceId, title: ref.title, titleLocale: ref.titleLocale,
+                        url: ref.url, trusted: ref.trusted, internal: ref.internal}))}))}
+            readingText = (cons.ruleList || []).map(rule => rule.ruleId + ' — ' + (rule.title || '') + '\n' + (rule.description || '') +
+                (rule.referenceList || []).map(ref => '\n  • ' + (ref.title || '') + ': ' + ref.url).join('')).join('\n\n')
+            // the editor: each field's text in this language only (empty when it falls back)
+            const documentText = isGlobal ? cons.documentText : orgCons?.documentText
+            const doc = canEdit && documentText ? JSON.parse(documentText) : {rules: []}
+            const defaultLocale = cons.defaultLocale || 'en'
+            const own = map => {
+                if (!map) return ''
+                for (const key of Object.keys(map)) if (key.replace('-', '_').toLowerCase() == String(locale).toLowerCase()) return map[key]
+                return ''
+            }
+            const shown = map => (map ? own(map) || map[String(locale).split('_')[0]] || map[defaultLocale] || '' : '')
+            isDefaultLocale = String(locale) == defaultLocale
+            documentValues = {scope, locale, expectedHash, title: own(doc.title), provenance: own(doc.provenance), instructions: own(doc.instructions)}
+            ruleRows = (doc.rules || []).map((rule, index, rules) => ({ruleId: rule.id, title: own(rule.title), titleShown: shown(rule.title),
+                description: own(rule.description), instructions: own(rule.instructions),
+                fallback: own(rule.title) && own(rule.description) && own(rule.instructions) ? '' : 'Falls back',
+                referenceCount: (rule.references || []).length, first: index == 0, last: index == rules.length - 1}))
+            if (canEdit && !ruleId && ruleRows.length) ruleId = ruleRows[0].ruleId
+            const rule = (doc.rules || []).find(candidate => candidate.id == ruleId)
+            selectedRuleTitle = rule ? shown(rule.title) : ''
+            const trustedOf = referenceId => ((cons.ruleList || []).find(row => row.ruleId == ruleId)?.referenceList || [])
+                .find(row => row.referenceId == referenceId)?.trusted == 'Y'
+            referenceRows = rule ? (rule.references || []).map((ref, index, refs) => ({referenceId: ref.id, title: own(ref.title), titleShown: shown(ref.title),
+                url: ref.url, first: index == 0, last: index == refs.length - 1, trusted: trustedOf(ref.id) ? 'Trusted' : 'Not trusted'})) : []
+            otherLocales = (cons.localeList || []).filter(code => code != defaultLocale).map(code => ({code}))
+            docLocaleOptions = (cons.localeList || []).map(code => ({code}))
+            fallbackList = preview?.fallbackList || []
+            originsUrl = admin?.capabilities?.system ? '/qapps/Admin/System/Constitution/Origins' : ''
+        ]]></script>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm q-mb-sm">
+            <container style="col">
+                <label text="Constitution" type="h5"/>
+                <label text="The shared guidance for people and agent runs. An organization may have its own document, which replaces the instance's for its members; members read it in the Assist drawer under Constitution / Rules."
+                        type="p" style="text-caption m-muted q-mb-none"/>
+            </container>
+        </container>
+        <form-single name="ConstitutionScope" transition="." map="scopeValues">
+            <field name="scope"><default-field title="Scope">
+                <drop-down allow-empty="false"><list-options list="scopeOptions" key="${key}" text="${text}"/></drop-down></default-field></field>
+            <field name="locale"><default-field title="Language"
+                    tooltip="Text missing in this language falls back to its base language, then to the document's default language">
+                <drop-down allow-empty="false"><list-options list="languageOptions" key="${code}" text="${name}"/></drop-down></default-field></field>
+            <field name="submitButton"><default-field title="Show"><submit/></default-field></field>
+            <field-layout><field-row-big><field-ref name="scope"/><field-ref name="locale"/><field-ref name="submitButton"/></field-row-big></field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+
+        <section name="ScopeMissing" condition="!scopeAvailable">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Constitution not available"/>
+                    <box-body><label type="p" text="The Constitution of ${scope} is not available to you. Choose another scope."/></box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="ScopeShown" condition="scopeAvailable">
+            <widgets>
+                <container-box id="ConstitutionRulesBox">
+                    <box-header title="${cons.title || 'Constitution'}"/>
+                    <box-toolbar>
+                        <container-dialog id="CustomizeDialog" button-text="Customize" icon="sym_o_edit" type="primary" width="560"
+                                title="${isGlobal ? 'Customize the instance Constitution' : 'Give ' + (scopeRow?.name || scope) + ' its own Constitution'}"
+                                condition="canEdit &amp;&amp; !customized">
+                            <label type="p" text="${isGlobal ? 'This instance gets its own copy of the shipped Constitution. Organizations with their own document keep it.' : 'The organization gets its own copy of the instance Constitution, which then no longer follows instance changes. Agent runs of its members use it from their next run.'}"/>
+                            <form-single name="CustomizeForm" transition="customize" map="{scope:scope, locale:locale, expectedHash:expectedHash}">
+                                <field name="scope"><default-field><hidden/></default-field></field>
+                                <field name="locale"><default-field><hidden/></default-field></field>
+                                <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                <field name="submitButton"><default-field title="Customize"><submit/></default-field></field></form-single>
+                        </container-dialog>
+                        <container-dialog id="ResetDialog" button-text="Reset" icon="sym_o_restart_alt" type="danger" width="560"
+                                title="${isGlobal ? 'Use the shipped Constitution' : 'Use the instance Constitution'}" condition="canEdit &amp;&amp; customized">
+                            <label type="p" text="${isGlobal ? 'The instance Constitution is removed and the shipped one applies to agent runs that start from now on. Trusted reference origins stay as they are.' : (scopeRow?.name || scope) + ' loses its own Constitution and uses the instance Constitution again, from the next agent run of each member.'}"/>
+                            <form-single name="ResetForm" transition="reset" map="{scope:scope, locale:locale, expectedHash:expectedHash}">
+                                <field name="scope"><default-field><hidden/></default-field></field>
+                                <field name="locale"><default-field><hidden/></default-field></field>
+                                <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                <field name="submitButton"><default-field title="${isGlobal ? 'Use the shipped Constitution' : 'Use the instance Constitution'}">
+                                    <submit type="danger"/></default-field></field></form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <section name="InstanceSource" condition="isGlobal">
+                            <widgets><section-include name="ConstitutionSource" location="component://tools/template/ConstitutionParts.xml"/></widgets>
+                            <fail-widgets>
+                                <label text="${sourceText}" type="p"/>
+                                <label text="${changeText}" type="p" style="text-grey" condition="changeText"/>
+                                <label text="Content hash ${hashText}." type="p" style="text-grey" condition="hashText"/>
+                                <section-iterate name="DiagnosticIterate" list="diagnostics" entry="diagnostic"><widgets>
+                                    <label text="${diagnostic.text}" type="p" style="text-warning"/></widgets></section-iterate>
+                            </fail-widgets>
+                        </section>
+                        <label type="p" style="text-caption m-muted" condition="!canEdit"
+                                text="${isGlobal ? 'Changing the instance Constitution needs ADMIN_SETTINGS_MANAGE and ADMIN_CONSTITUTION_GLOBAL.' : 'Changing the Constitution of this organization needs ADMIN_SETTINGS_MANAGE and ORG_CONSTITUTION_EDIT in it.'}"/>
+                        <section name="ReadingSection" condition="cons.available == 'Y'"><widgets>
+                            <render-mode>
+                                <text type="qvt"><![CDATA[<m-constitution-view :doc="${WebUtilities.encodeHtml(JSON.stringify(view))}"${isGlobal ? '' : ' organization-party-id="' + WebUtilities.encodeHtml(scope) + '"'}></m-constitution-view>]]></text>
+                                <text type="tui"><![CDATA[${JSON.stringify({t: 'text', id: 'ConstitutionText', style: 'pre', text: (cons.provenance ? cons.provenance + '\n\n' : '') + readingText})}]]></text>
+                                <text type="html,html-print,text"><![CDATA[<pre>${WebUtilities.encodeHtml((cons.provenance ? cons.provenance + '\n\n' : '') + readingText)}</pre>]]></text>
+                            </render-mode>
+                        </widgets></section>
+                    </box-body>
+                </container-box>
+
+                <section name="EditSection" condition="canEdit">
+                    <widgets>
+                        <container-box id="ConstitutionDocumentBox"><box-header title="Document in ${locale}"/><box-body>
+                            <label text="Editing ${locale}${isDefaultLocale ? ', the default language: its text is required' : ': an empty field uses the default language'}. ${isGlobal ? '' : (customized ? '' : 'The first change saves an own copy for the organization. ')}A change applies to agent runs that start after it."
+                                    type="p"/>
+                            <form-single name="ConstitutionEdit" transition="applyEdit" map="documentValues">
+                                <field name="operation"><default-field><hidden default-value="setDocumentText"/></default-field></field>
+                                <field name="scope"><default-field><hidden/></default-field></field>
+                                <field name="locale"><default-field><hidden/></default-field></field>
+                                <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
+                                <field name="provenance"><default-field title="Provenance" tooltip="Where the guidance comes from; shown to readers, not to agents">
+                                    <text-area rows="3" cols="100"/></default-field></field>
+                                <field name="instructions"><default-field title="Agent instructions"
+                                        tooltip="Shared instructions every agent run gets before the rules, including how a conflict and a person's acknowledgement are handled">
+                                    <text-area rows="8" cols="100"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                            </form-single>
+                        </box-body></container-box>
+
+                        <container-box id="ConstitutionRuleBox"><box-header title="Rules"/><box-toolbar>
+                            <container-dialog id="AddRuleDialog" button-text="Add rule" icon="sym_o_add" width="800" title="Add a rule">
+                                <label text="The new rule gets the next unused id. Write it in the default language; translate it afterwards." type="p"/>
+                                <form-single name="AddRuleForm" transition="applyEdit" map="{scope:scope, locale:cons.defaultLocale, expectedHash:expectedHash}">
+                                    <field name="operation"><default-field><hidden default-value="addRule"/></default-field></field>
+                                    <field name="scope"><default-field><hidden/></default-field></field>
+                                    <field name="locale"><default-field><hidden/></default-field></field>
+                                    <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                    <field name="title" from="''"><default-field title="Title"><text-line size="60"/></default-field></field>
+                                    <field name="description" from="''"><default-field title="Description" tooltip="What the rule means for people"><text-area rows="5" cols="90"/></default-field></field>
+                                    <field name="instructions" from="''"><default-field title="Agent instructions" tooltip="What an agent does to follow it"><text-area rows="5" cols="90"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add rule"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </box-toolbar><box-body-nopad>
+                            <form-list name="ConstitutionRules" list="ruleRows" skip-form="true">
+                                <field name="ruleId"><default-field title="Rule"><display/></default-field></field>
+                                <field name="titleShown"><default-field title="Title"><display/></default-field></field>
+                                <field name="fallback"><default-field title="${locale}" tooltip="Falls back: a field has no text in this language yet"><display/></default-field></field>
+                                <field name="referenceCount"><default-field title="References">
+                                    <link url="." text="${referenceCount} references" link-type="anchor" parameter-map="{scope:scope, locale:locale, ruleId:ruleId}"/></default-field></field>
+                                <field name="actions" align="right"><default-field title="">
+                                    <container-dialog id="EditRuleDialog" button-text="Edit" icon="sym_o_edit" width="800" title="Rule ${ruleId} in ${locale}">
+                                        <form-single name="EditRuleForm" transition="applyEdit">
+                                            <field name="operation"><default-field><hidden default-value="setRuleText"/></default-field></field>
+                                            <field name="ruleId"><default-field><hidden/></default-field></field>
+                                            <field name="scope" from="scope"><default-field><hidden/></default-field></field>
+                                            <field name="locale" from="locale"><default-field><hidden/></default-field></field>
+                                            <field name="expectedHash" from="expectedHash"><default-field><hidden/></default-field></field>
+                                            <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
+                                            <field name="description"><default-field title="Description" tooltip="What the rule means for people"><text-area rows="5" cols="90"/></default-field></field>
+                                            <field name="instructions"><default-field title="Agent instructions" tooltip="What an agent does to follow it"><text-area rows="5" cols="90"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="applyEdit" text="Up" icon="sym_o_arrow_upward" condition="!first"
+                                            parameter-map="{operation:'moveRule', direction:'up', ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                    <link url="applyEdit" text="Down" icon="sym_o_arrow_downward" condition="!last"
+                                            parameter-map="{operation:'moveRule', direction:'down', ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                    <link url="applyEdit" text="Remove" icon="sym_o_delete" btn-type="danger"
+                                            confirmation="Remove rule ${ruleId}, ${titleShown}, in every language? Its id is not used again."
+                                            parameter-map="{operation:'removeRule', ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                </default-field></field>
+                                <columns type="mobile"><column><field-ref name="ruleId"/><field-ref name="titleShown"/></column>
+                                    <column><field-ref name="actions"/></column></columns>
+                            </form-list>
+                        </box-body-nopad></container-box>
+
+                        <container-box id="ConstitutionReferenceBox" condition="ruleId"><box-header title="References of ${ruleId}: ${selectedRuleTitle}"/><box-toolbar>
+                            <container-dialog id="AddReferenceDialog" button-text="Add reference" icon="sym_o_add" width="700" title="Add a reference to ${ruleId}">
+                                <label text="A reference URL is https:// on a trusted origin or a path on this server starting with /. Its title is in the default language." type="p"/>
+                                <form-single name="AddReferenceForm" transition="applyEdit" map="{scope:scope, ruleId:ruleId, locale:cons.defaultLocale, expectedHash:expectedHash}">
+                                    <field name="operation"><default-field><hidden default-value="addReference"/></default-field></field>
+                                    <field name="ruleId"><default-field><hidden/></default-field></field>
+                                    <field name="scope"><default-field><hidden/></default-field></field>
+                                    <field name="locale"><default-field><hidden/></default-field></field>
+                                    <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                    <field name="title" from="''"><default-field title="Title" tooltip="How the reference supports the rule"><text-line size="60"/></default-field></field>
+                                    <field name="url" from="''"><default-field title="URL"><text-line size="60"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Add reference"><submit/></default-field></field>
+                                </form-single>
+                            </container-dialog>
+                        </box-toolbar><box-body-nopad>
+                            <form-list name="ConstitutionReferences" list="referenceRows" skip-form="true">
+                                <field name="referenceId"><default-field title="Reference"><display/></default-field></field>
+                                <field name="titleShown"><default-field title="Title"><display/></default-field></field>
+                                <field name="url"><default-field title="URL"><display/></default-field></field>
+                                <field name="trusted"><default-field title="Origin"><display/></default-field></field>
+                                <field name="actions" align="right"><default-field title="">
+                                    <container-dialog id="EditReferenceDialog" button-text="Edit" icon="sym_o_edit" width="700" title="Reference ${referenceId} in ${locale}">
+                                        <form-single name="EditReferenceForm" transition="applyEdit">
+                                            <field name="operation"><default-field><hidden default-value="setReference"/></default-field></field>
+                                            <field name="referenceId"><default-field><hidden/></default-field></field>
+                                            <field name="ruleId" from="ruleId"><default-field><hidden/></default-field></field>
+                                            <field name="scope" from="scope"><default-field><hidden/></default-field></field>
+                                            <field name="locale" from="locale"><default-field><hidden/></default-field></field>
+                                            <field name="expectedHash" from="expectedHash"><default-field><hidden/></default-field></field>
+                                            <field name="title"><default-field title="Title"><text-line size="60"/></default-field></field>
+                                            <field name="url"><default-field title="URL" tooltip="Shared by every language"><text-line size="60"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                    <link url="applyEdit" text="Up" icon="sym_o_arrow_upward" condition="!first"
+                                            parameter-map="{operation:'moveReference', direction:'up', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                    <link url="applyEdit" text="Down" icon="sym_o_arrow_downward" condition="!last"
+                                            parameter-map="{operation:'moveReference', direction:'down', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                    <link url="applyEdit" text="Remove" icon="sym_o_delete" btn-type="danger" confirmation="Remove reference ${referenceId} from ${ruleId}?"
+                                            parameter-map="{operation:'removeReference', referenceId:referenceId, ruleId:ruleId, scope:scope, locale:locale, expectedHash:expectedHash}"/>
+                                </default-field></field>
+                                <columns type="mobile"><column><field-ref name="titleShown"/><field-ref name="url"/></column>
+                                    <column><field-ref name="actions"/></column></columns>
+                            </form-list>
+                        </box-body-nopad></container-box>
+
+                        <container-box id="ConstitutionLanguageBox"><box-header title="Languages"/><box-body>
+                            <label text="The default language (${cons.defaultLocale}) has every text; another language may leave texts out, which then fall back. To translate, choose the language above and edit."
+                                    type="p"/>
+                            <form-single name="DefaultLocaleForm" transition="applyEdit" map="{scope:scope, expectedHash:expectedHash, locale:cons.defaultLocale}">
+                                <field name="operation"><default-field><hidden default-value="setDefaultLocale"/></default-field></field>
+                                <field name="scope"><default-field><hidden/></default-field></field>
+                                <field name="expectedHash"><default-field><hidden/></default-field></field>
+                                <field name="locale"><default-field title="Default language" tooltip="Every text needs a translation in the new default language before it can be saved">
+                                    <drop-down allow-empty="false"><list-options list="docLocaleOptions" key="${code}" text="${code}"/></drop-down></default-field></field>
+                                <field name="submitButton"><default-field title="Set default"><submit confirmation="Make this the default language? Every text must already have it."/></default-field></field>
+                                <field-layout><field-row-big><field-ref name="locale"/><field-ref name="submitButton"/></field-row-big></field-layout>
+                            </form-single>
+                            <form-list name="ConstitutionLocales" list="otherLocales" skip-form="true">
+                                <field name="code"><default-field title="Language"><display/></default-field></field>
+                                <field name="actions" align="right"><default-field title="">
+                                    <link url="applyEdit" text="Remove translation" icon="sym_o_delete" btn-type="danger"
+                                            confirmation="Remove every ${code} text from this Constitution? Readers and agent runs in ${code} then get the default language."
+                                            parameter-map="{operation:'removeLocale', locale:code, scope:scope, expectedHash:expectedHash}"/>
+                                </default-field></field>
+                            </form-list>
+                        </box-body></container-box>
+                    </widgets>
+                </section>
+
+                <container-box id="ConstitutionPromptBox"><box-header title="Agent prompt section"/><box-body>
+                    <label text="${preview?.characters ?? 0} characters, ${preview?.bytes ?? 0} bytes in UTF-8, in ${preview?.locale ?? locale}. A run keeps the section it started with; a change applies from the next run. Assist cites the rules a request conflicts with and proposes another way; the person may name each rule to go ahead, and permissions and approvals still apply."
+                            type="p"/>
+                    <section name="FallbackSection" condition="fallbackList.length"><widgets>
+                        <label text="These texts have no ${preview?.locale ?? locale} translation and come from another language:" type="p" style="text-warning"/>
+                        <form-list name="ConstitutionFallbacks" list="fallbackList" skip-form="true">
+                            <field name="path"><default-field title="Field"><display/></default-field></field>
+                            <field name="locale"><default-field title="From"><display/></default-field></field>
+                        </form-list>
+                    </widgets></section>
+                    <label text="${preview?.promptText ?? ''}" type="pre" encode="true"/>
+                </box-body></container-box>
+
+                <container-box><box-header title="Trusted reference origins"/><box-body>
+                    <label type="p" text="The sites whose pages open inside the app as references are the instance's policy, set in System › Constitution › Origins by an instance administrator. An organization's document cannot add one; a reference to another site is refused on save."/>
+                    <link url="${originsUrl}" url-type="plain" text="Open System › Constitution › Origins" link-type="anchor" condition="originsUrl"/>
+                </box-body></container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

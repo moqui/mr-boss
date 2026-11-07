@@ -1,0 +1,430 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- OrganizationDetail (design-admin §7 OrganizationDetail; style-guide §3.3 Detail): one internal organization the user
+    administers, read with Mantle's mantle.party.IdentityServices.get#InternalOrganization (ADMIN_SETTINGS_VIEW; another
+    organization and a forged id refused alike). The design's tabs are its boxes:
+    - Profile: name and identifier (store#InternalOrganization at the revision read) and the parent it belongs to
+      (store#OrganizationParent, dated: the earlier parent ended and kept), ADMIN_SETTINGS_MANAGE;
+    - Contacts: the primary address, phone and email (PartyServices' contact services: get#PartyContactInfo and
+      store#PartyContactInfo by purpose, after the Admin record check with settingsManage); payment instruments stay Accounting's;
+    - Members: the dated staff and representative relationships, named for an identity operator (store#OrganizationMembership,
+      ADMIN_IDENTITY_MANAGE, which refuses another organization's staff without ADMIN_IDENTITY_GLOBAL), else counted;
+    - Defaults: the setting types registered for internal organizations, each changed here when typed or validated
+      (store#OrganizationDefault), else by the application that uses it; and the organization's Constitution, inherited or its
+      own, linking Admin › Settings › Constitution in this organization's scope (members read it in the Assist drawer's
+      Constitution / Rules, with no Admin access, impl-admin F46);
+    - Setup: the setup checks of this organization the user may read (ironstone.admin.RegistryServices.get#Readiness), each with
+      its owner's fix link when the user opens it; Accounting's setup is Accounting's reviewed action, never run by a save here.
+    Every refusal is shown as its reason. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Organization" default-menu-include="false">
+    <parameter name="organizationPartyId" required="true"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="storeProfile">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#InternalOrganization" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, expectedRevision:expectedRevision, organizationName:organizationName,
+                        pseudoId:(pseudoId || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Organization saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeParent">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationParent" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, parentPartyId:(parentPartyId || null), fromDate:(fromDate || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Parent changed' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeContacts">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.check#Record"
+                    in-map="{appRoot:appRoot, recordType:'organization', recordId:organizationPartyId, capability:'settingsManage'}"/>
+            <!-- the organization's own current contact records, read here, never ids from the request -->
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="current"
+                        in-map="{partyId:organizationPartyId, postalContactMechPurposeId:'PostalPrimary', telecomContactMechPurposeId:'PhonePrimary',
+                            emailContactMechPurposeId:'EmailPrimary'}"/></if>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.party.ContactServices.store#PartyContactInfo"
+                        in-map="{partyId:organizationPartyId, replaceByPurpose:true,
+                            emailAddress:(emailAddress || null), emailContactMechPurposeId:'EmailPrimary', emailContactMechId:(current.emailContactMechId || null),
+                            countryCode:(countryCode || null), areaCode:(areaCode || null), contactNumber:(contactNumber || null),
+                            telecomContactMechPurposeId:'PhonePrimary', telecomContactMechId:(current.telecomContactMechId || null),
+                            address1:(address1 || null), address2:(address2 || null), city:(city || null), postalCode:(postalCode || null),
+                            stateProvinceGeoId:(stateProvinceGeoId || null), countryGeoId:(countryGeoId || null), toName:(toName || null),
+                            postalContactMechPurposeId:(address1 ? 'PostalPrimary' : null), postalContactMechId:(current.postalContactMechId || null)}"/>
+            </if>
+            <if condition="!ec.message.hasError()"><message type="success">Contacts saved</message></if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="addMember">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationMembership" out-map="stored"
+                    in-map="{partyId:partyId, organizationPartyId:organizationPartyId, relationshipTypeEnumId:relationshipTypeEnumId,
+                        fromDate:(fromDate || null), thruDate:(thruDate || null), reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Member added' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="endMember">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationMembership" out-map="stored"
+                    in-map="{partyRelationshipId:partyRelationshipId, expectedRevision:expectedRevision, thruDate:(thruDate || null),
+                        reason:(reason || null)}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Membership ended' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+    <transition name="storeDefault">
+        <actions>
+            <service-call name="mantle.party.IdentityServices.store#OrganizationDefault" out-map="stored"
+                    in-map="{organizationPartyId:organizationPartyId, partySettingTypeId:partySettingTypeId, settingValue:(settingValue ?? ''),
+                        expectedRevision:(expectedRevision ?? '')}"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(stored.applied ? 'Default saved' : stored.reason, stored.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <default-response url="."><parameter name="organizationPartyId"/></default-response>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.get#InternalOrganization" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:organizationPartyId}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="organization" from="found?.organization || null"/>
+        <if condition="organization">
+            <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="contacts" transaction="force-new" ignore-error="true"
+                    in-map="{partyId:organizationPartyId, postalContactMechPurposeId:'PostalPrimary', telecomContactMechPurposeId:'PhonePrimary',
+                        emailContactMechPurposeId:'EmailPrimary'}"/>
+            <!-- the organization's Constitution for those who administer it under this screen's organization filters, its members and
+                instance Constitution editors (Mantle refuses others: shown as not readable here) -->
+            <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="constitution" transaction="force-new"
+                    ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+            <service-call name="ironstone.admin.RegistryServices.get#Readiness" out-map="readiness" transaction="force-new" ignore-error="true"
+                    in-map="{organizationPartyId:organizationPartyId}"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            canManage = !!found?.canManage
+            canManageMembers = !!admin?.capabilities?.identityManage
+            profileValues = organization ? {organizationPartyId, expectedRevision: organization.revision,
+                organizationName: organization.organizationName, pseudoId: organization.pseudoId} : {}
+            parents = Array.from(found?.parents || []).map(row => Object.assign({}, row, {
+                fromText: when(row.fromDate), thruText: when(row.thruDate), stateText: row.active ? 'Current' : row.thruDate ? 'Ended' : 'Starts'}))
+            childText = Array.from(found?.children || []).map(row => row.organizationName).join(', ')
+            const address = contacts?.postalAddress
+            contactValues = {organizationPartyId,
+                emailAddress: contacts?.emailAddress || '',
+                countryCode: contacts?.telecomNumber?.countryCode || '', areaCode: contacts?.telecomNumber?.areaCode || '',
+                contactNumber: contacts?.telecomNumber?.contactNumber || '',
+                toName: address?.toName || '', address1: address?.address1 || '', address2: address?.address2 || '', city: address?.city || '',
+                postalCode: address?.postalCode || '', stateProvinceGeoId: address?.stateProvinceGeoId || '',
+                countryGeoId: address?.countryGeoId || ''}
+            addressText = address ? [address.address1, address.address2, [address.city, address.stateProvinceGeoId, address.postalCode].filter(Boolean).join(' '),
+                address.countryGeoId].filter(Boolean).join(', ') : ''
+            phoneText = contacts?.telecomNumber ? [contacts.telecomNumber.countryCode, contacts.telecomNumber.areaCode, contacts.telecomNumber.contactNumber].filter(Boolean).join(' ') : ''
+            contactRows = [{purpose: 'Address', value: addressText || 'None'}, {purpose: 'Phone', value: phoneText || 'None'},
+                {purpose: 'Email', value: contacts?.emailAddress || 'None'}]
+            members = Array.from(found?.members || []).map(row => Object.assign({}, row, {
+                fromText: when(row.fromDate), thruText: when(row.thruDate),
+                stateText: row.active ? 'Current' : row.ended ? 'Ended' : 'Starts ' + when(row.fromDate)}))
+            currentMembers = members.filter(row => !row.ended)
+            endedMemberCount = members.length - currentMembers.length
+            const sources = {organization: 'This organization', default: 'Default', none: 'Not set'}
+            defaults = Array.from(found?.defaults || []).map(row => Object.assign({}, row, {
+                valueText: row.settingValue ?? '', sourceText: sources[row.source] || row.source,
+                changedHere: row.editable ? 'Here' : 'Where it is used'}))
+            constitutionKnown = constitution?.contentHash != null
+            constitutionText = !constitutionKnown ? 'Not readable here: the Constitution of this organization is not available to you.'
+                : constitution.customized ? 'This organization has its own Constitution, replacing the instance Constitution for its members.'
+                : 'This organization uses the instance Constitution.'
+            setupChecks = Array.from(readiness?.checks || []).map(row => Object.assign({}, row, {fixUrl: row.fixUrl || ''}))
+            setupFailed = Array.from(readiness?.failedProviders || []).map(row => row.title || row.providerKey || row).join(', ')
+            headerText = [organization?.pseudoId, found?.parentName ? 'Belongs to ' + found.parentName : 'Top level'].filter(Boolean).join(' · ')
+        ]]></script>
+    </actions>
+    <widgets>
+        <section name="OrganizationMissing" condition="!organization">
+            <widgets>
+                <container-box type="warning">
+                    <box-header title="Organization not available"/>
+                    <box-body>
+                        <label type="p" text="${failure || ('Organization ' + organizationPartyId + ' is not available.')}"/>
+                        <link url="../Organizations" text="Back to organizations" link-type="anchor"/>
+                    </box-body>
+                </container-box>
+            </widgets>
+        </section>
+        <section name="OrganizationFound" condition="organization">
+            <widgets>
+                <context record-entity="mantle.party.Party" record-id="${organizationPartyId}" title="Organization ${organization.organizationName}"/>
+                <container style="m-record-header">
+                    <container style="row items-start q-col-gutter-x-md q-col-gutter-y-sm">
+                        <container style="col-12 col-md m-record-title">
+                            <label text="${organization.organizationName}" type="h5"/>
+                            <label text="${headerText}" type="p" style="text-caption m-muted"/>
+                        </container>
+                        <container style="col-12 col-md-auto">
+                            <link url="../Constitution" text="Constitution" icon="sym_o_gavel" link-type="anchor-button"
+                                    parameter-map="{scope:organizationPartyId}"/>
+                        </container>
+                    </container>
+                </container>
+
+                <container-box>
+                    <box-header title="Profile"/>
+                    <box-toolbar>
+                        <container-dialog id="ParentDialog" button-text="Change parent" icon="sym_o_account_tree" width="560"
+                                title="${organization.organizationName} belongs to" condition="canManage">
+                            <label type="p" text="The parent changes from the date given; the earlier parent is kept as history. Both must be organizations you administer; empty makes it top level."/>
+                            <form-single name="OrganizationParent" transition="storeParent" map="{organizationPartyId:organizationPartyId, parentPartyId:found.parentPartyId}">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="parentPartyId">
+                                    <default-field title="Belongs to">
+                                        <drop-down allow-empty="true">
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty changes it now"><date-time/></default-field></field>
+                                <field name="submitButton"><default-field title="Change parent"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body>
+                        <section name="ProfileEdit" condition="canManage">
+                            <widgets>
+                                <form-single name="OrganizationProfile" transition="storeProfile" map="profileValues">
+                                    <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                    <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                    <field name="organizationName"><default-field title="Name"><text-line size="40"/></default-field></field>
+                                    <field name="pseudoId"><default-field title="Identifier"><text-line size="20"/></default-field></field>
+                                    <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                    <field-layout><field-row-big><field-ref name="organizationName"/><field-ref name="pseudoId"/>
+                                        <field-ref name="submitButton"/></field-row-big></field-layout>
+                                </form-single>
+                            </widgets>
+                            <fail-widgets>
+                                <label type="p" text="${organization.organizationName} · ${organization.pseudoId}"/>
+                            </fail-widgets>
+                        </section>
+                        <label type="p" style="text-caption m-muted q-mb-none" condition="childText" text="Child organizations: ${childText}"/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="OrganizationParents" list="parents" skip-form="true" paginate="false">
+                            <field name="parentName"><default-field title="Belongs to"><display/></default-field></field>
+                            <field name="stateText"><default-field title="State"><display/></default-field></field>
+                            <field name="fromText"><default-field title="From"><display/></default-field></field>
+                            <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                            <columns type="mobile">
+                                <column><field-ref name="parentName"/><field-ref name="stateText"/></column>
+                                <column><field-ref name="fromText"/><field-ref name="thruText"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Contacts"/>
+                    <box-toolbar>
+                        <container-dialog id="ContactsDialog" button-text="Edit contacts" icon="sym_o_edit" width="640"
+                                title="${organization.organizationName} contacts" condition="canManage">
+                            <label type="p" text="The primary address, phone and email. Bank accounts and payment instruments stay in Accounting."/>
+                            <form-single name="OrganizationContacts" transition="storeContacts" map="contactValues">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="emailAddress"><default-field title="Email"><text-line size="40"/></default-field></field>
+                                <field name="countryCode"><default-field title="Country code"><text-line size="4"/></default-field></field>
+                                <field name="areaCode"><default-field title="Area code"><text-line size="5"/></default-field></field>
+                                <field name="contactNumber"><default-field title="Phone"><text-line size="15"/></default-field></field>
+                                <field name="toName"><default-field title="To name"><text-line size="40"/></default-field></field>
+                                <field name="address1"><default-field title="Address"><text-line size="40"/></default-field></field>
+                                <field name="address2"><default-field title="Address line 2"><text-line size="40"/></default-field></field>
+                                <field name="city"><default-field title="City"><text-line size="25"/></default-field></field>
+                                <field name="postalCode"><default-field title="Postal code"><text-line size="10"/></default-field></field>
+                                <field name="stateProvinceGeoId"><default-field title="State or province" tooltip="Its geo id, such as USA_UT"><text-line size="12"/></default-field></field>
+                                <field name="countryGeoId"><default-field title="Country" tooltip="Its geo id, such as USA"><text-line size="6"/></default-field></field>
+                                <field name="submitButton"><default-field title="Save contacts"><submit/></default-field></field>
+                                <field-layout>
+                                    <field-ref name="emailAddress"/>
+                                    <field-row><field-ref name="countryCode"/><field-ref name="areaCode"/><field-ref name="contactNumber"/></field-row>
+                                    <field-ref name="toName"/><field-ref name="address1"/><field-ref name="address2"/>
+                                    <field-row><field-ref name="city"/><field-ref name="postalCode"/></field-row>
+                                    <field-row><field-ref name="stateProvinceGeoId"/><field-ref name="countryGeoId"/></field-row>
+                                    <field-ref name="submitButton"/>
+                                </field-layout>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="OrganizationContactList" list="contactRows" skip-form="true" paginate="false">
+                            <field name="purpose"><default-field title="Contact"><display/></default-field></field>
+                            <field name="value"><default-field title="Primary"><display/></default-field></field>
+                            <columns type="mobile"><column><field-ref name="purpose"/></column><column><field-ref name="value"/></column></columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Members"/>
+                    <box-toolbar>
+                        <container-dialog id="AddMemberDialog" button-text="Add member" icon="sym_o_person_add" width="560"
+                                title="Add a member to ${organization.organizationName}" condition="canManageMembers">
+                            <label type="p" text="A dated relationship of one of your staff. Another organization's staff need identity-global authority. Ending it keeps it on record."/>
+                            <form-single name="AddMember" transition="addMember" map="{organizationPartyId:organizationPartyId}">
+                                <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                <field name="partyId">
+                                    <default-field title="Person">
+                                        <drop-down>
+                                            <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'staffPeople'}"/>
+                                        </drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="relationshipTypeEnumId">
+                                    <default-field title="Works as">
+                                        <drop-down><option key="PrtEmployee" text="Employee"/><option key="PrtAgent" text="Agent"/>
+                                            <option key="PrtMember" text="Member"/><option key="PrtRepresentative" text="Representative"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="fromDate"><default-field title="From" tooltip="Empty starts now"><date-time/></default-field></field>
+                                <field name="thruDate"><default-field title="Until" tooltip="Empty keeps it open"><date-time/></default-field></field>
+                                <field name="reason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Add"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <section name="MembersShown" condition="found.membersShown">
+                            <widgets>
+                                <form-list name="OrganizationMembers" list="currentMembers" skip-form="true" paginate="false">
+                                    <field name="name">
+                                        <conditional-field condition="userId">
+                                            <link url="${sharedLinks['Users/UserDetail']}" text="${name}" link-type="anchor" parameter-map="{userId:userId}"/>
+                                        </conditional-field>
+                                        <default-field title="Member"><display/></default-field>
+                                    </field>
+                                    <field name="kindText"><default-field title="Works as"><display/></default-field></field>
+                                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                                    <field name="fromText"><default-field title="From"><display/></default-field></field>
+                                    <field name="thruText"><default-field title="Until"><display/></default-field></field>
+                                    <field name="actions" align="right">
+                                        <default-field title="">
+                                            <link url="endMember" text="End" icon="sym_o_event_busy" btn-type="danger" condition="canManageMembers"
+                                                    confirmation="End ${name}'s membership of ${organization.organizationName} now? It is kept on record."
+                                                    parameter-map="{organizationPartyId:organizationPartyId, partyRelationshipId:partyRelationshipId, expectedRevision:revision}"/>
+                                        </default-field>
+                                    </field>
+                                    <columns type="mobile">
+                                        <column><field-ref name="name"/><field-ref name="kindText"/></column>
+                                        <column><field-ref name="stateText"/><field-ref name="actions"/></column>
+                                    </columns>
+                                </form-list>
+                                <label type="p" style="q-px-md q-pb-md m-muted" condition="endedMemberCount" text="${endedMemberCount} ended membership(s) kept on record."/>
+                            </widgets>
+                            <fail-widgets>
+                                <label type="p" style="q-pa-md m-muted" text="${found.memberCount} current member(s). Their names are for identity operators."/>
+                            </fail-widgets>
+                        </section>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Defaults"/>
+                    <box-body>
+                        <label type="p" text="${constitutionText}"/>
+                        <label type="p" style="text-caption m-muted" text="Members read it in the Assist drawer under Constitution / Rules, without Admin access; agent runs of its members use it from their next run."/>
+                    </box-body>
+                    <box-body-nopad>
+                        <form-list name="OrganizationDefaults" list="defaults" skip-form="true" paginate="false">
+                            <field name="description"><default-field title="Default"><display/></default-field></field>
+                            <field name="valueText"><default-field title="Value"><display/></default-field></field>
+                            <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                            <field name="changedHere"><default-field title="Changed"><display/></default-field></field>
+                            <field name="actions" align="right">
+                                <default-field title="">
+                                    <container-dialog id="DefaultDialog" button-text="Edit" icon="sym_o_edit" width="520" title="${description}"
+                                            condition="canManage &amp;&amp; editable">
+                                        <form-single name="OrganizationDefault" transition="storeDefault"
+                                                map="{organizationPartyId:organizationPartyId, partySettingTypeId:partySettingTypeId, expectedRevision:revision,
+                                                    settingValue:(source == 'organization' ? settingValue : '')}">
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="partySettingTypeId"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="settingValue"><default-field title="Value" tooltip="Empty uses the default"><text-line size="30"/></default-field></field>
+                                            <field name="submitButton"><default-field title="Save"><submit/></default-field></field>
+                                        </form-single>
+                                    </container-dialog>
+                                </default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="description"/><field-ref name="valueText"/></column>
+                                <column><field-ref name="sourceText"/><field-ref name="actions"/></column>
+                            </columns>
+                        </form-list>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Setup"/>
+                    <box-body-nopad>
+                        <form-list name="SetupLinks" list="setupChecks" skip-form="true" paginate="false">
+                            <field name="title"><default-field title="Check"><display/></default-field></field>
+                            <field name="ownerApp"><default-field title="Owner"><display/></default-field></field>
+                            <field name="stateName"><default-field title="State"><display/></default-field></field>
+                            <field name="message"><default-field title="Detail"><display/></default-field></field>
+                            <field name="fixUrl">
+                                <conditional-field condition="fixUrl"><link url="${fixUrl}" url-type="plain" text="Fix" link-type="anchor"/></conditional-field>
+                                <default-field title=""><display text=""/></default-field>
+                            </field>
+                            <columns type="mobile">
+                                <column><field-ref name="title"/><field-ref name="ownerApp"/></column>
+                                <column><field-ref name="stateName"/><field-ref name="fixUrl"/></column>
+                            </columns>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!setupChecks.length" text="No setup check of this organization that you may read."/>
+                        <label type="p" style="q-px-md q-pb-md text-warning" condition="setupFailed" text="Could not be checked: ${setupFailed}"/>
+                    </box-body-nopad>
+                </container-box>
+            </widgets>
+        </section>
+    </widgets>
+</screen>

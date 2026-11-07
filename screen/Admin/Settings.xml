@@ -13,14 +13,21 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- The Settings area of IronStone Admin (design-admin §1.2, §7): SettingsHome, the settings index of every app (P2); Organizations,
-    Constitution, InstanceSettings, Localization and ReferenceData are added by their phases (P7, P8). Every Admin user's: the index
-    shows each entry only to those who open its destination. A BOSS user outside Admin is granted SettingsHome alone (impl-admin
-    F46), not this area or the root. -->
+    OrganizationDetail and Constitution (P7), the configuration administrator's and the administrator's (BOSS_ADM_ORGANIZATIONS);
+    InstanceSettings, Localization and ReferenceData are added by P8. The area is every Admin user's: the index shows each entry
+    only to those who open its destination. A BOSS user outside Admin is granted SettingsHome alone (impl-admin F46), not this
+    area or the root; a member reads its organization's Constitution in the Assist drawer's Rules pane (impl-admin F46), not here. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Settings" default-menu-index="5" menu-image="sym_o_settings" menu-image-type="icon">
     <subscreens default-item="SettingsHome" always-use-full-path="true">
         <subscreens-item name="SettingsHome" location="component://mr-boss/screen/Admin/Settings/SettingsHome.xml" menu-title="Settings index"
                 menu-index="1"/>
+        <subscreens-item name="Organizations" location="component://mr-boss/screen/Admin/Settings/Organizations.xml" menu-title="Organizations"
+                menu-index="2"/>
+        <subscreens-item name="Constitution" location="component://mr-boss/screen/Admin/Settings/Constitution.xml" menu-title="Constitution"
+                menu-index="3"/>
+        <subscreens-item name="OrganizationDetail" location="component://mr-boss/screen/Admin/Settings/OrganizationDetail.xml"
+                menu-include="false"/>
     </subscreens>
     <widgets>
         <subscreens-panel id="AdminSettingsPanel" type="tab"/>

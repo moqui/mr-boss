@@ -575,7 +575,7 @@ is unchanged.
 | EditParty | CreateUserAccount | Admin/Users/Users | Admin/Users/Users (NewStaffAccount) (Admin P4) |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
-| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Purchasing/Suppliers/Supplier360/Overview (Maintain contact opens Commons/Contacts/ContactDetail) (Purchasing P2) |
+| EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Purchasing/Suppliers/Supplier360/Overview (Maintain contact opens Commons/Contacts/ContactDetail) (Purchasing P2); Admin/Settings/OrganizationDetail (Profile: OrganizationProfile) (Admin P7) |
 | EditParty | EditPersonForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/Employee360; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360 | Commons/Contacts/ContactDetail; Commons/Contacts/List; Purchasing/Suppliers/Supplier360/Overview (Maintain contact opens Commons/Contacts/ContactDetail) (Purchasing P2) |
 | EditParty | AddDirectRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7); — Purchasing: a supplier gets its role when created (SupplierList's New supplier dialogs); Supplier360/Overview lists its roles (Purchasing P2) |
 | EditParty | AddOtherRoleForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7); — Purchasing: a supplier gets its role when created (SupplierList's New supplier dialogs); Supplier360/Overview lists its roles (Purchasing P2) |
@@ -584,9 +584,9 @@ is unchanged.
 | EditParty | ClassificationsForm | Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | Shared/Supplier360/Buying (Category); — (other apps' contexts on Customer360, §7); Purchasing/Suppliers/Supplier360/Buying (SupplierCategory) (Purchasing P2) |
 | EditParty | AddIdentificationForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | — (Accounting/Payables/Supplier360 edits; Shared/Supplier360/Finance reads); — Purchasing: Supplier360's Payment details tab reads them (Purchasing P2) |
 | EditParty | IdentificationsForm | Purchasing/Suppliers/Supplier360; People/Employees/Employee360 | Shared/Supplier360/Finance (SupplierIdentifications); Purchasing/Suppliers/Supplier360/Finance (SupplierIdentifications, read) (Purchasing P2) |
-| EditParty | AddSettingForm | Admin/Settings/OrganizationDetail |  |
-| EditParty | AddSettingTextForm | Admin/Settings/OrganizationDetail |  |
-| EditParty | SettingsForm | Admin/Settings/OrganizationDetail |  |
+| EditParty | AddSettingForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Defaults: OrganizationDefault, registered OrgInternal setting types only) (Admin P7) |
+| EditParty | AddSettingTextForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Defaults: OrganizationDefault) (Admin P7) |
+| EditParty | SettingsForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Defaults: OrganizationDefaults) (Admin P7) |
 | EditParty | UpdateUserAccount | Admin/Users/UserDetail | Admin/Users/UserDetail (Account) (Admin P4) |
 | EditParty | AddGroupForm | Admin/Users/UserDetail | Admin/Users/UserDetail (Access: AddMembership) (Admin P4) |
 | EditParty | GroupsForm | Admin/Users/UserDetail | Admin/Users/UserDetail (Access: UserMemberships) (Admin P4) |
@@ -961,16 +961,16 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditUsers | AddUserRelationshipForm | Admin/Settings/OrganizationDetail |  |
-| EditUsers | UpdateUserRelForm | Admin/Settings/OrganizationDetail |  |
-| EditVendor | PaymentInfo | Admin/Settings/OrganizationDetail |  |
-| EditVendor | SetVendorRepForm | Admin/Settings/OrganizationDetail |  |
-| EditVendor | BillingInfo | Admin/Settings/OrganizationDetail |  |
-| EditVendor | EditVendor | Admin/Settings/OrganizationDetail |  |
-| EditVendor | RoleList | Admin/Settings/OrganizationDetail |  |
-| FindVendor | FindVendor | Admin/Settings/Organizations |  |
-| FindVendor | CreateVendor | Admin/Settings/Organizations |  |
-| FindVendor | VendorList | Admin/Settings/Organizations |  |
+| EditUsers | AddUserRelationshipForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Members: AddMember) (Admin P7) |
+| EditUsers | UpdateUserRelForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Members: OrganizationMembers, End) (Admin P7) |
+| EditVendor | PaymentInfo | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Contacts: OrganizationContacts; payment instruments stay Accounting's) (Admin P7) |
+| EditVendor | SetVendorRepForm | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Members: AddMember, Representative) (Admin P7) |
+| EditVendor | BillingInfo | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Contacts: OrganizationContacts) (Admin P7) |
+| EditVendor | EditVendor | Admin/Settings/OrganizationDetail | Admin/Settings/OrganizationDetail (Profile: OrganizationProfile, OrganizationParent) (Admin P7) |
+| EditVendor | RoleList | Admin/Settings/OrganizationDetail | — (Admin P7: OrganizationDetail shows the OrgInternal organization; other roles are their owners', design-admin §7) |
+| FindVendor | FindVendor | Admin/Settings/Organizations | Admin/Settings/Organizations (OrganizationFind) (Admin P7) |
+| FindVendor | CreateVendor | Admin/Settings/Organizations | Admin/Settings/Organizations (CreateOrganization) (Admin P7) |
+| FindVendor | VendorList | Admin/Settings/Organizations | Admin/Settings/Organizations (OrganizationList) (Admin P7) |
 
 ## Wiki (18 forms)
 

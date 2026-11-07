@@ -17,7 +17,8 @@ along with this software (see the LICENSE.md file). If not, see
     of AgentAdmin, the effective configuration and today's totals (org.moqui.agent.AgentAdminServices.get#EffectiveConfig and
     get#DashboardTotals, which answer nothing to anyone else); each destination opens under Admin › System for a user System
     opens to, and the three administration screens the framework lacks (impl-admin F19: the agent editor, A2A tasks, the
-    gateway key) show as not available until it builds them. The Constitution link comes with P7's Settings › Constitution. -->
+    gateway key) show as not available until it builds them. The Constitution (P7) opens Admin › Settings › Constitution, the
+    canonical screen for the instance's and each organization's document, for a user that screen opens to. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Agents" menu-image="sym_o_smart_toy" menu-image-type="icon">
     <actions>
@@ -56,6 +57,9 @@ along with this software (see the LICENSE.md file). If not, see
             ].map(entry =&gt; Object.assign(entry, {
                 url: entry.path &amp;&amp; open ? llmBase + entry.path : '',
                 stateText: !entry.path ? 'Not available' : open ? '' : 'Opens in System for instance administrators'}))"/>
+        <!-- P7: the Constitution every agent run gets, in Admin's canonical screen -->
+        <script>agentLinks.unshift({name: 'Constitution', purpose: 'The shared guidance every agent run gets, for the instance and each organization',
+            url: can.organizations ? sharedLinks['Settings/Constitution'] : '', stateText: can.organizations ? '' : 'For configuration administrators'})</script>
     </actions>
     <widgets>
         <section name="Summary" condition="can.agentAdmin">
