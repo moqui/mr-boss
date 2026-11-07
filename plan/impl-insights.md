@@ -1,0 +1,609 @@
+# IronStone BOSS — Insights implementation
+
+Nov 7, 2026 — plan, before Insights starts. P0 partly done: F1–F25 found while writing it, from the code as Commerce,
+Customer Service and the framework's report engine left it (§6). Insights and Admin are the next two apps built, after
+Commerce, in one build order kept in [impl-admin.md](impl-admin.md) §1. The parts of design-insights that wait on
+People, Maintenance, Sales and Marketing, which are not built, are left out of this build (§4, §7). The plan's open
+questions were answered the same day (§4 here and in impl-admin: recipient caps of 50 and 200, shared devices and wall
+displays in a second Insights release).
+
+How [design-insights.md](design-insights.md) gets built, in phases from the foundation to flow maps, each ending tested
+and usable. This file is kept at a high level, as [impl-commerce.md](impl-commerce.md) and the other core-app plans
+are: each phase names its scope by the design's sections and §15 needs rather than restating them, and the design stays
+the place for screen and record detail. During the build this file is the log: phase status and what each built, the
+decisions made, open questions, findings against the code, and what is deferred.
+
+Today `screen/Insights/` is a mixture (F20): Dashboards and Dashboard wrap the framework's screens but still send edit,
+new and explore to the Tools Dashboards app; ReportBuilder is the copied SimpleReport builder over every non-framework
+entity with raw entity transitions; Reports is the legacy saved-report picker; ScheduledReports holds the copied
+personal scheduled finds; Home, FlowMap and Settings are placeholders. The `BOSS_INSIGHTS` artifact group is live for
+`ADMIN` and `BOSS_INSIGHTS_ADMIN` (F1). The framework's report engine is built, but its screens and services are granted
+to `ADMIN` only (F2), every shipped business dataset is `ADMIN`'s only and unfiltered by organization (F9, F10), and a
+group schedule sends the owner's result to every recipient in one message (F6). Insights is built on what is there (as
+found in the code, §6):
+- from the framework: the `moqui-report` engine (definitions with versions, references and git sync; datasets with row
+  filters; dashboards, library panels and the funnel, node-graph and geomap panels with their terminal twins; Explore;
+  alerts; schedules; annotations; playlists), the Tools Dashboards screens, Monitor's Business operations dashboard,
+  the ScreenScheduled scheduler and DataFeed indexing;
+- from Mantle: the sales datasets, dashboard and alert template, the `MantleSales`, `MantleInventoryData` and
+  `MantleSearch` feeds, the domain report services (Sales, Ledger, Finance, Budget, Inventory, Project), and
+  `get#PartyOrganizationInfo` for organization scope;
+- from the apps: Customer Service's and Commerce's report catalogues already in Insights' contract
+  (impl-customer-service F189, impl-commerce F142), Accounting's report catalog, the report areas of Warehouse,
+  Manufacturing and Projects (impl-manufacturing F143), Customer Service's and Commerce's shipped datasets, dashboard
+  and alert templates waiting for admission (impl-customer-service F191, F212), each built app's Home work cards, and
+  the shared record screens;
+- from Admin, built beside it (impl-admin): the readiness and refresh registries (Admin P2), the capability registry
+  (Admin P3), the lifecycle participants (Admin P6), the instance ceiling for group recipients (Admin P8) and device
+  credentials for wall displays (Admin P18).
+
+**Inputs.**
+- Designs:
+  - [design-insights.md](design-insights.md)
+  - [design-admin.md](design-admin.md) §14 (the readiness provider and its freshness facet, the refresh operation, the
+    lifecycle participant, shared devices) and §4.1 (offboarding's pause and transfer)
+  - [design-crosscut.md](design-crosscut.md) §1.4 (the Insights capability rows), §1.5 (CX-ASSIST, CX-OPS-REPORTS), §2
+    (the shared-screen registry: Dashboard, Reports, Drill and the record screens), §3.2–§3.16 (the shared record
+    screens' Insights rows), §3.17 (the widget contract) and §7
+  - the built owners' designs for the entries, metrics and providers Insights registers:
+    [design-accounting.md](design-accounting.md) §13, [design-customer-service.md](design-customer-service.md) §7,
+    [design-commerce.md](design-commerce.md) §3, [design-products.md](design-products.md),
+    [design-warehouse.md](design-warehouse.md), [design-manufacturing.md](design-manufacturing.md),
+    [design-projects.md](design-projects.md) §11, [design-purchasing.md](design-purchasing.md), and
+    [design-drawers-commons.md](design-drawers-commons.md) Knowledge (ProcessStory)
+  - mr-moqui `plans/Monitoring.md` (dashboards and reports) and `docs/tools/Monitoring.md` (the built reporting guide,
+    "Security")
+- Plans:
+  - [impl-admin.md](impl-admin.md), its companion, which holds the one build order.
+  - [impl-customer-service.md](impl-customer-service.md) P14 (F189–F191, F212), [impl-commerce.md](impl-commerce.md)
+    P11 (F22, F142), [impl-manufacturing.md](impl-manufacturing.md) P16 (F142, F143),
+    [impl-accounting.md](impl-accounting.md) (its Reports), [impl-warehouse.md](impl-warehouse.md) P17,
+    [impl-drawers-commons.md](impl-drawers-commons.md) §4 (the shared rules).
+- The suite-app design review, which explains the design's X, Z, L and R-INS IDs, was removed from the tree (mr-boss
+  bd74564); read it with `git show bd74564^:plan/review-suite-apps.md`.
+- Guides and rules: [design-doc-guide.md](design-doc-guide.md), [style-guide.md](style-guide.md) §8,
+  mr-moqui `docs/dev/Practices-App-Dev.md`.
+- Inventories: [ss-inventory.md](ss-inventory.md) (the SimpleReport and MyAccount scheduled-find rows) and
+  [usl-inventory.md](usl-inventory.md) (the report services of design §13.2), which carry the design's **Designed in**
+  paths.
+- mr-moqui: `plans/Remaining-Work.md` ("IronStone framework asks": the report engine row) and `docs/Build-Test.md`.
+
+Framework paths are under the mr-moqui checkout (`crates/`, `runtime/base-component/`), Mantle paths under
+`runtime/component/mr-mantle/`.
+
+Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phases](#3-phases) ·
+[4 decisions](#4-decisions) · [5 open](#5-open-questions) · [6 findings](#6-findings) · [7 later](#7-later) ·
+[8 verification](#8-verification)
+
+---
+
+## 1. Scope and order
+
+- **Repositories.** Each is its own git repo:
+  - `mr-moqui` (`crates/moqui-report`, `crates/moqui-tui`, `runtime/base-component`): the Dashboards screens mountable
+    under an app root (INS-04), dataset admission and its row-filter parameters (INS-03), owner-equivalent delivery
+    with occurrences and recipient deliveries and the ownership services (INS-06), owner-equivalent business alerts
+    (INS-07), drill resolution and the business annotation source;
+  - `runtime/component/mr-mantle`: the organization row filter, the row filters of its shipped datasets, an inventory
+    dataset, and the post-commit annotations of its owners' events;
+  - `runtime/component/mr-boss`: the Insights app, `ironstone.insights` (ContextServices, RegistryServices,
+    FlowMapServices), the catalog, metric, attention and flow-target registrations of the built apps, the Insights
+    context on the shared record screens, Insights' `report/` and `skill/` files.
+
+  `runtime/component/mr-marble` is read only, for the SimpleReport and MyAccount scheduled-find forms ss-inventory maps.
+- **Scope.**
+  - Every `parity` and `new` row of design §2 and the §15 needs they use, as changed by §6, with the first release's
+    delivery of design §7.1 and §8.1 (personal, and owner-equivalent groups as separate messages), except what waits
+    on People, Maintenance, Sales and Marketing (§4, the user's call):
+    - the Employee360 record mount and People's report services, metrics and attention providers;
+    - Marketing's visits and attribution metrics, its campaign reports, the campaign-sent annotation, and the funnel
+      that needs visits;
+    - Sales' own catalog entries (SalesSummary), pipeline and forecast measures, and its attention providers;
+    - Maintenance's reports and its context on EquipmentDetail.
+  - The registrations of the built apps (owner contracts, §2): catalog entries, metrics, attention providers and
+    annotation sources of Customer Service, Commerce, Accounting, Products, Purchasing, Warehouse, Manufacturing and
+    Projects; the orders metric over Mantle's sales services, which Commerce and Accounting already read (§4); Monitor's
+    Business operations dashboard as an attention source.
+  - The admission of the shipped datasets (design §5's backlog): Mantle's sales datasets with their row filter, a
+    filtered inventory dataset, and Customer Service's and Commerce's datasets.
+  - Shared screens: Insights' read-only context on the shared record screens of design §10 (P6), each owner's crosscut
+    row checked against what is built.
+  - The legacy screens replaced as design §13.2 maps them, their saved finds and schedules kept (P3, P4, P7, P12).
+  - §7 holds design §12 (CashForecast, the funnel, multi-touch attribution, recipient execution and the other later
+    items), the open items of design §17, and the parts waiting on unbuilt apps.
+- **Order** (decided Nov 7, impl-admin §4): the one order of both plans is impl-admin §1. Insights' phases are P1–P5
+  in stage 1 (beside Admin P1–P7), P6–P10 in stage 2, its first release (beside Admin's stage 3), and P11 in stage 5,
+  its second release, after Admin P18's device credential; P12 finishes with Admin P19.
+
+## 2. Ground rules
+
+- **The Commons rules hold** (impl-drawers-commons §4, as listed in impl-admin §2). The walks are on Commerce's
+  pattern: one golden-path walk in `test/client/Insights/`, `InsightsDashboardsWalk` (P2), registered in
+  `test/client/suite.js`; the others are acceptance tests.
+- **One engine, the framework's.** Definitions, panels, queries, transformations, schedules, alerts, annotations and
+  renderers stay in `moqui-report` and the shared widgets; Insights adds no BOSS analytics engine, private renderer,
+  layout format, formula store or second readiness registry (design §15.2). An extension the design needs is made in
+  the framework, for every app root, with Tools' own mounts unchanged.
+- **Viewer execution and two kinds of grant.** Live results run as the viewer. `ironstone.insights` services and
+  screens check the `INSIGHTS_*` permissions; the engine checks its own artifacts: the ReportServices operations, each
+  dataset's `org.moqui.report.dataset.<id>` artifact and its documents' DataDocumentUserGroup rows (F4). BossSetupData
+  grants the Insights groups exactly the artifacts their capability needs, never `DASHBOARDS_APP` or
+  `REPORT_DATASETS_ADMIN` (F2; §4). A definition share, a catalog entry, a supplied organization or another app's edit
+  permission grants no data.
+- **Admitted business data only.** A business dataset reaches an Insights user only once admitted: on a registered
+  DataFeed, with its index built and a registered `rowFilterService` bound (design §5). Until then it stays as shipped
+  (`ADMIN`'s, F9, F10) and shows as needs review, never as an empty source.
+- **Domain meaning stays with its owner.** A metric's formula, scope and private-field projection are its owner's
+  dataset or Mantle service; Insights stores the versioned descriptor and the catalog entry and calls the owner. One
+  owner per metric and per catalog report (design §6.2, X11).
+- **The comparison rules of design §6.3**: native currencies apart unless a named conversion; ratios from their parts;
+  snapshots never summed across dates; recurring base orders never orders (X5); fiscal ranges from the organization's
+  calendar; zero, empty, denied, stale, incomplete, unavailable and failed told apart in every output.
+- **Restricted values stay on the server**: costs (`PRODUCT_COST_VIEW`), supplier prices, payroll and private contacts
+  are absent from answers, not zero; an MCP tool never reads a cost or People dataset (design §1.2).
+- **No recipient receives more than they may see** (design §7.1): personal delivery, or a group whose every recipient's
+  scope fingerprint equals the owner's, checked at save and at each run, one message each.
+- **Owner contracts.** A registration or a shared-screen branch built here for another app follows that app's design
+  and is written into it; the owner's routes, services and permissions stay the owner's, and a registration adds no
+  right.
+- **Independent failures.** A failing provider, panel, source, recipient or flow-map count is named and the others go
+  on; a reconciliation-critical composition cannot claim complete success.
+- **Existing callers stay compatible.** Tools' Dashboards, Explore, Monitor and Alerts for `ADMIN`; Monitor's own
+  dashboards and its owner-mode alerts; Tools' `create#Schedule` and the legacy screen schedules (owner-mode, personal);
+  Mantle's sales report services and their Commerce and Accounting callers; Customer Service's and Commerce's Reports
+  areas and their catalogue services; the shared record screens' existing branches. The framework regression suite,
+  mr-mantle's sales and report specs and the earlier apps' BOSS regression suite pass unchanged.
+- **Done for a phase** is impl-admin §2's, with `InsightsAccess` as the access spec (one holder and one non-holder on
+  one verb, and another organization's rows refused).
+
+## 3. Phases
+
+| Phase | Repos | Screens | Status |
+| --- | --- | --- | --- |
+| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F25); the checks below left |
+| P1 Foundation | BOSS | the Insights root and menu | — |
+| P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | — |
+| P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | — |
+| P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | — |
+| P5 Home and attention | BOSS | Home | — |
+| P6 Analysis, drill and record contexts | mr-moqui, Mantle, BOSS | Analysis, Drill, the Records mounts | — |
+| P7 Scheduled delivery and digests | mr-moqui, BOSS | ScheduledReports, ScheduledReportDetail, ReportDelivery, ManagementDigest | — |
+| P8 Business alerts | mr-moqui, BOSS | Alerts, AlertDetail | — |
+| P9 Flow maps | BOSS | FlowMaps, FlowMap, FlowMapEditor, ProcessStory | — |
+| P10 Settings, data readiness and Assist | BOSS | Settings, DataReadiness | — |
+| P11 Wall displays on shared devices | BOSS | Playlists on a registered device | — |
+| P12 Finish | all | the sweeps and the review walk (acceptance) | — |
+
+### P0 — Checks
+
+Verify the design's riskiest assumptions against the code before building. Each result is a row in §6 and, where it
+changes the design, an edit there. F1–F25 were found on Nov 7 while writing this plan; the design edits they call for
+were made then. Still to check:
+
+- **The flow-map body** (design §17 Q1): whether the node-graph panel (WebrootReport.js and the terminal's
+  `report/graph.rs`) reads the suite's customer, internal and supplier lanes as node groups at phone width and in the
+  terminal, and the frame shape `get#Map` must return for it (the server's graph frames are span-based, F12).
+- **The Dashboards screens' other escapes** (F3): the panel menu's edit, library-panel edit, new alert rule and the
+  `e` key, and what the browser and terminal report components need to post to the mounted screen.
+- **The legacy data:** the ScreenScheduled and FormListFind rows the demo and an upgraded instance hold, and the screens
+  they name, for P7's and P12's compatibility mapping.
+- **The reports to register for Products and Purchasing**, which have no Reports area (CatalogChecks; supplier
+  scorecards and purchasing history), and **each built app's Home work cards** usable as attention providers (the
+  same query as the worklist they open).
+- **The organization field of each shipped dataset:** Commerce's documents by their store's organization, Customer
+  Service's clocks by their queue's, and whether each document carries it.
+- **Mantle's annotation writes:** that a Mantle service may call the framework's `create#Annotation` after its commit
+  (price list published, period closed) with an organization and a link, and Commerce's promotion start.
+
+### P1 — Foundation
+
+Design §1.1, §1.2 and §2's legacy rows; INS-01, INS-10 (the shell part).
+
+- **Access** (design §1.1).
+  - The groups on Commerce's pattern (impl-commerce F45): `BOSS_INSIGHTS` as the root user group beside the artifact
+    group of that name, and `_READ`, `_AUTHOR`, `_DATA`, `_DISTRIBUTE` and `_FLOW`; `BOSS_INSIGHTS_ADMIN` keeps its
+    row. An area only some groups see is an artifact group that denies the root group and allows its capability groups.
+  - The permissions `INSIGHTS_VIEW`, `_AUTHOR`, `_DATASET_VIEW`, `_DATASET_EDIT`, `_SCHEDULE`, `_DISTRIBUTE`,
+    `_FLOW_EDIT`, `_SETTINGS_VIEW` and `_SETTINGS_EDIT`, seeded in BossSetupData with their ADMIN grants and granted by
+    design §1.1's table (§4).
+  - The engine's artifacts per capability (F2, F4): artifact groups granting the ReportServices operations a reader,
+    author, steward and distributor use (query, render, definitions, copies, versions; dataset saves for the steward;
+    schedules for the distributor), and none of Tools' screens, telemetry datasets or git sync.
+  - The ordinary groups' authz on the root with `MANTLE_USER_ORG` and `MANTLE_PRIVATE_CONTACT` and the
+    `ironstone\.insights\..*` service pattern; `insights` in the client deny pattern comes from Admin P1 (impl-admin
+    F14). Insights' rows in Admin P3's capability registry.
+  - `ironstone.insights.ContextServices.get#Context` (design §15.2): organizations, capabilities, safe defaults and
+    canonical links, over one module `Insights.js` whose tables later phases extend.
+- **The Insights root** (design §1.2): the menu groups Home, Dashboards and KPIs, Report builder, Reports, Delivery and
+  alerts, Business flows and Settings, each entry added by the phase that builds it. Until their phases replace them
+  the copied ReportBuilder, Reports and ScheduledReports screens stay open only to `ADMIN` and `BOSS_INSIGHTS_ADMIN`, as
+  now (F20), and the placeholders are removed. `<shell-providers>` with the `insights` keymap; palette and quick create
+  sources arrive with their records. The stale grant comment fixed (F1).
+- **Demo data.** BossUsersDemoData gains a user per group (`insights.reader`, `.author`, `.steward`, `.distributor`,
+  `.flow`, `.admin`), a reader of ORG_ZIZI_SERVICES only, and a reader with and one without financial read, for design
+  §13.3's two-organization and confidential-field scenarios.
+- **Specs.**
+  - `test/Insights/InsightsSpecLib.js` (ids, users, `shell`, `page`).
+  - `InsightsAccess`: the app's one access spec, about six features with authorization on: each group's permissions
+    and engine artifacts (a reader cannot save a dataset definition; nobody but `ADMIN` reaches Tools' Dashboards), the
+    menu and providers per group, the copied builder refused to the ordinary groups, and the refused raw entity
+    transitions. A later phase adds a case only for an access rule it adds.
+- **Usable when** (an acceptance test to write, `acceptance/Insights/InsightsFoundationWalk`): the menu renders for each
+  group; `insights.reader` opens Insights but not the report builder; a Projects client and a PASS account are refused
+  the root and every `ironstone.insights` service.
+
+### P2 — Dashboards and Explore in Insights
+
+Design §4 Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail and Playlists, §5 Explore; INS-04 (a
+first-release framework need).
+
+- **The framework** (F3): Home, Dashboard, Definition, Panels, Explore, Split and Playlist mountable under an app root:
+  links and transitions relative to the mount in the screens, in WebrootReport.js (the Definition and AlertRule links,
+  the panel posts) and in the terminal's report components; dataset choices from the author's dataset artifacts, not
+  `DASHBOARDS_APP` or `REPORT_DATASETS_ADMIN`; Tools' own mounts unchanged.
+- **The Insights mounts**: Dashboards (definition type dashboard, the transitions the list posts, REPORT_RECENT and
+  REPORT_STARRED as they are); Dashboard with BusinessContext (organization scope from `get#Context`; user variables
+  never replace a scope predicate) and ShareDashboard (private or an authorized group); DashboardEditor; Panels;
+  PanelDetail (the framework editor; its measure and target forms in P4); Playlists (as the signed-in viewer; on a
+  registered device in the second release, P11); Explore with Split. A panel over a dataset the viewer may not read says so (P3 admits
+  them).
+- **Specs:** framework `ReportMounts` (a mounted Definition editor saves and returns under its mount; an author without
+  `DASHBOARDS_APP` edits with the dataset grant; Tools' screens unchanged); BOSS `InsightsDashboards` (Dashboard's one
+  qvt render); the golden walk `InsightsDashboardsWalk` (open a dashboard, copy it, add a library panel, save, all in
+  Insights).
+- **Usable when:** `insights.author` copies the shipped Store operations dashboard, edits and saves it without leaving
+  Insights, and shares it with a group; its panels over datasets not yet admitted say not available, never zero; the
+  Tools Dashboards app is unchanged for `ADMIN`; a playlist of two dashboards plays in kiosk mode.
+
+### P3 — Dataset admission
+
+Design §5 Datasets, DatasetDetail, DatasetFields and DatasetView, its admission and scope policy; INS-03, INS-09 (the
+index's freshness).
+
+- **The framework's ReportServices**: `create#`, `store#`, `validate#`, `find#` and `index#BusinessDataset`,
+  `store#BusinessDatasetFields` and `store#BusinessDatasetConditions`. Admission needs a registered DataFeed, a built
+  index and a bound `rowFilterService`; `index#BusinessDataset` runs `index#DataFeedDocuments` for the dataset's feed
+  and document only (F15), guarded by the dataset's update artifact (§4); the `rowFilterService` is called with the
+  dataset's id and its `rowFilterParameters` beside `userId` (F5, §4), and applies to rows, suggestions, value counts,
+  aggregates and exports alike.
+- **Mantle**: `mantle.party.PartyServices.get#OrganizationRowFilter` (F11; the viewer's organizations as
+  `get#PartyOrganizationInfo` computes them, the active one when set, on the dataset's organization field); the row
+  filter on `mantle-sales-orders` and `mantle-sales-items`; a `mantle_inventory` dataset with its filter from the start;
+  the invoice documents' grants, which none has (F9).
+- **The BOSS datasets admitted** (owner contracts, F10): Customer Service's clocks and breaches (impl-customer-service
+  F191, F212) and Commerce's checkouts, payment attempts and feed builds, each on its organization field (P0), their
+  grants widened from `ADMIN` to the owners' report groups and the Insights groups.
+- **Readiness:** each admitted dataset's freshness provider (index lag, last build) and its index refresh registered in
+  Admin P2's registries, the refresh guarded by the dataset's own grant.
+- **Screens**, replacing the copied builder (design §13.2, F20): Datasets (DatasetFind, DatasetList with admitted, needs
+  review and unavailable views, CreateDataset over registered sources only); DatasetDetail (EditDataDocument,
+  DatasetScope, DatasetIndex, DatasetValidation, DatasetUses); DatasetFields (FieldList, AddCondition, ConditionList
+  through the guarded services; the raw entity transitions removed); DatasetView (DatasetOptions, DataViewList,
+  ExportDocuments through the scoped export adapter and `audit#Export`).
+- **Specs:** framework `BusinessDatasets` (an unregistered feed or an unbuilt index refused admission; one feed indexed;
+  the row filter on rows, suggestions and export; a stale field change refused while a metric uses it); Mantle
+  `test/party/OrganizationRowFilter` (two organizations, the active one, a child organization); BOSS `InsightsDatasets`
+  (DatasetView's one qvt render; a reader of ORG_ZIZI_SERVICES sees only its own sales rows).
+- **Usable when** (design §13.3 "Dataset admission", "Two organizations and confidential fields", its dataset half): the
+  steward admits the sales datasets once their filter is bound, after Admit was refused for the unbuilt inventory
+  index; the Sales dashboard shows `insights.reader` ORG_ZIZI_RETAIL's orders and the ORG_ZIZI_SERVICES reader only
+  theirs; a rebuild shows its lag on the dataset; the CSV holds the same rows.
+
+### P4 — Report catalog and metrics
+
+Design §6.1, Reports and SavedReports, §6.2 for the built owners, §4 MeasureMeaning and PanelDetail's measure and
+target; INS-02, INS-05.
+
+- **`ironstone.insights.ReportCatalogEntry`** (design §6.1's fields) seeded by each owner (§4): whether a viewer may
+  read an entry is its owner's catalogue service where one exists (Customer Service's and Commerce's
+  `get#ReportCatalogue`; Accounting's `get#Catalog`, adapted by its registration, F17), and otherwise the route's own
+  screen authorization.
+- **The entries** (owner contracts): Customer Service's six and Commerce's four; Accounting's statements, aging,
+  partner ledger, reconciliation, trial balance, general ledger, posted summary, budget variance and stock
+  transactions; Warehouse's stock at date, operations history, count variance and valuation; Manufacturing's reports
+  with OEE (impl-manufacturing F143); Projects' portfolio, profitability, progress, sprints, time, utilization and work
+  items; Products' and Purchasing's from P0. SalesAnalysis is one entry owned by Sales, opening Accounting's built
+  report until Sales is built (F18, §4).
+- **Metric registrations:** a versioned business descriptor on admitted dataset and panel definitions and on the
+  registered domain report services (design §6.1): orders (Sales, over Mantle's `SalesReportServices` and the admitted
+  sales datasets, recurring base orders excluded; §4), invoiced revenue (Accounting), Commerce's store cuts of orders,
+  Customer Service's backlog and service levels, Warehouse's on hand and stock at date, Manufacturing's OEE, Projects'
+  utilization.
+- **`ironstone.insights.RegistryServices`** `find#Reports`, `get#Metric`, `get#ReportOptions` (the entry's own options
+  service; no report run on a catalog read), `store#ReportPins` (the `InsightsHome` UserPreference) and
+  `find#SavedReports` (Definitions and FormListFinds apart).
+- **Screens:** Reports (ReportFind, ReportCatalog, ReportContext); SavedReports (SavedFind, SavedReportList, SaveAs),
+  replacing the legacy saved-report picker (design §13.2); Dashboard's MeasureMeaning; PanelDetail's BusinessMeasure,
+  Target (design §4's typed input, a missing target or zero denominator unavailable) and Dependencies; the palette's
+  dashboards and saved reports.
+- **Specs:** BOSS `InsightsCatalog` (a reader sees only the entries their owner grants; SalesAnalysis has one entry;
+  a pin edits a preference only; `get#Metric` answers basis, grain and denominator; a mixed-currency target refused).
+- **Usable when** (design §13.3 "Single report owner", "Same metric on many surfaces", its dashboard half): a Customer
+  Service manager finds and pins Service level compliance and opens it in Customer Service; a warehouse reader finds
+  Stock at date and not the Accounting statements; the orders panel's meaning shows its basis and that bases are
+  excluded, and agrees with Commerce's OnlineSales for the same store and period.
+
+### P5 — Home and attention
+
+Design §3 Home; INS-01, INS-02 (attention providers), INS-09, INS-10. Ends stage 1 with Admin P6.
+
+- **Attention providers** (BOSS seed `ironstone.insights.AttentionProvider`, §4: key, owner, count service running the
+  worklist's own query, route with its filter, organization scope), registered by the built apps (owner contracts,
+  P0 names them), and Monitor's Business operations dashboard (F19) as a source: failed or rolled-back operations,
+  opening Monitor's Operations under Monitor's own grants.
+- **RegistryServices** `get#Home` and `get#Attention` (each provider as the viewer; an unreadable one omitted; a failure
+  on its own card; no summed total of work).
+- **The suite dashboard** `report/insights-suite.json`: a few library panels over the admitted sources (orders and
+  invoiced revenue by currency, the service backlog, store checkouts), shipped read only.
+- **Screens:** Home (HomeContext, FavoritesAndRecents, ManagementPanels, Attention, PinnedReports; DigestPreview in P7)
+  with the `InsightsHome` preference and the first-use state.
+- **Specs:** BOSS `InsightsHome` (Home's one qvt render; a failing provider affects its card only; an unreadable one
+  omitted).
+- **Usable when:** `insights.reader` opens Home and sees ORG_ZIZI_RETAIL's orders and revenue by currency, the open
+  purchase approvals, receipts to put away and cases past due as counts that open the exact owner worklists, and none
+  from an app they cannot read; a failed provider names itself while the others show.
+
+### P6 — Analysis, drill and record contexts
+
+Design §5 Analysis, §4 Drill and business annotations, §10; INS-02 (annotation sources), INS-03 (semantic guards),
+INS-04 (drill).
+
+- **Analysis** (AnalysisSource, AnalysisSteps, AnalysisResult, SaveAnalysis) on the framework query and definition
+  editor; the semantic guards in the framework's validation of an admitted metric's query: money only with currency
+  grouping or a named conversion, ratios by their registered rule, nonadditive dimensions declared, a bounded result
+  never a population count.
+- **Drill**: the framework resolves design §4's drill request to the authorized saved query, reapplies the source scope
+  and returns source rows through `query#Documents` or a registered domain drill service, never a client-supplied
+  entity or service name; the BOSS dialog (DrillMeaning, Breakdown, SourceRows).
+- **The record contexts** (owner contracts, F16): an Insights branch, read only with report return navigation, on
+  Shared/OrderDetail, Customer360, Supplier360, Product360 (Products' SharedContext.js admitting Insights read only),
+  RequestDetail, WorkItemDetail, ShipmentDetail, FacilityDetail, EquipmentDetail and InvoiceDetail, mounted under
+  `Insights/Records/`; each owner's crosscut row checked against what is built. Employee360 waits for People (§7).
+- **Business annotations** (F13): a `business` source in the framework's annotations, with an organization and a link
+  resolved by the viewer's permissions and no amounts; written after commit by Products' price-list publication,
+  Commerce's promotion start and Accounting's period close (P0). Marketing's campaign sends wait (§7).
+- **Specs:** framework `ReportDrill` (scope reapplied; an "other" bucket's predicates kept; an aggregate readable while
+  its rows are not returns no rows); framework annotations (the business source refused without its grant); BOSS
+  `InsightsRecords` (OrderDetail under Insights, its one qvt render, no action).
+- **Usable when** (design §13.3 "Reconcile domain results", "Money, units and calendars"): drilling an orders bar to
+  ORG_ZIZI_RETAIL's orders opens one in Insights' OrderDetail with no Approve; an analysis summing amounts across
+  currencies is refused until grouped by currency; the price-list publication shows as a marker on the revenue panel.
+
+### P7 — Scheduled delivery and digests
+
+Design §7.1, §7.3, ScheduledReports, ScheduledReportDetail, ReportDelivery and ManagementDigest, §3 DigestPreview;
+INS-06 (its first release), INS-11 (legacy schedules).
+
+- **The framework** (F6): `ReportOccurrence` and `ReportRecipientDelivery`; `check#ReportAudience` (the scope
+  fingerprint of design §7.1) at save and at each run, a changed recipient skipped with `scope-differs`; one message
+  per recipient in place of the one comma-joined send; one render per definition version, fingerprint and locale;
+  the recipient cap from Insights Settings under Admin's instance ceiling (Admin P8); `store#Schedule` checking the
+  recipients `create#Schedule` copies unchecked today; `find#ReportOccurrences`, `get#ReportOccurrence`,
+  `get#RecipientReport` and `retry#ReportRecipients` (failed recipients only, an uncertain outcome to reconciliation);
+  the admin-callable `pause#OwnedSchedules` and `transfer#DefinitionOwner`; a legacy screen or saved-find schedule
+  admitted for a group only through a registered adapter, and personal otherwise. Technical owner-mode schedules are
+  unchanged.
+- **Admin's lifecycle:** `pause#OwnedSchedules` and `transfer#DefinitionOwner` registered as an Admin P6 participant
+  (design-admin §14).
+- **Screens:** ScheduledReports (ScheduleFind, ScreenScheduledList with Mine, Shared administration and Received views,
+  NewSchedule); ScheduledReportDetail (EditScreenScheduled, ReportAudience with each recipient's result, OwnPreview,
+  ScheduleRuns); ReportDelivery (Occurrence, RecipientOutcomes, OwnArtifact, RetryRecipients); ManagementDigest
+  (DigestComposition, DigestPreview); Home's DigestPreview. The copied personal scheduled finds become personal
+  schedules, their rows kept (design §13.2).
+- **Specs:** framework `ReportAudience` (a recipient with another row filter refused at save and skipped at run; one
+  message per recipient with no shared address line; one render per fingerprint and locale; the cap; a disabled owner's
+  schedule paused until transferred; a retry sends only the failed recipient); BOSS `InsightsDelivery`
+  (ScheduledReportDetail's one qvt render).
+- **Usable when** (design §13.3 "Owner equivalence", "Independent retry", "Lifecycle during rendering", "Legacy schedule
+  boundary"; impl-admin's Offboarding, its schedules half): `insights.distributor` schedules the weekly digest to two
+  ORG_ZIZI_RETAIL managers, each gets their own message, and an ORG_ZIZI_SERVICES reader is refused with the reason;
+  disabling the distributor in Admin pauses it until a qualified owner accepts it; one failed delivery is retried alone.
+
+### P8 — Business alerts
+
+Design §8; INS-07 (its first release), INS-03.
+
+- **The framework** (F8): a business rule evaluated once as its owner, its audience checked by `check#ReportAudience`
+  and each recipient notified separately, `scope-differs` skipped; `find#AlertDeliveries`; the recipient cap; contacts
+  limited to in-app notification and approved account email for business rules (no arbitrary address or webhook); the
+  notification's link to the mounting app's AlertDetail; No Data, Error, stale and incomplete never Normal. Owner-mode
+  technical alerts unchanged.
+- **The business-alert topic:** a private, actionable NotificationTopic seeded by mr-boss beside `ReportAlert`, its
+  payload the rule and instance IDs.
+- **The shipped templates:** Mantle's daily sales floor, Customer Service's SLA breach and Commerce's three, copied to
+  an owner and activated only after validation.
+- **Screens:** Alerts (the framework list with the business filter and own states); AlertDetail (BusinessAlertBasis,
+  AlertAudience, OwnAlertState, AlertDeliveryStatus); New alert from a panel.
+- **Specs:** framework `BusinessAlerts` (one evaluation and two notifications for equivalent recipients; a narrower
+  recipient skipped; No Data not Normal; no value in the administrative history); BOSS `InsightsAlerts`.
+- **Usable when** (design §13.3 "Business alert semantics"): a manager copies the SLA breach template for their queue,
+  adds an equivalent colleague, and each gets their own notification with the value; the ORG_ZIZI_SERVICES reader
+  cannot be added; a source outage shows Error, not recovered.
+
+### P9 — Flow maps
+
+Design §9; INS-08.
+
+- **`ironstone.insights.FlowMapServices`** `validate#Map` (each step's target and typed parameters against the
+  registrations), `get#Map` (validated again at render; the node-graph frames of P0's shape and the ordered list; counts
+  from the registered metrics and attention providers as the viewer; no count or live link on a step the viewer cannot
+  read), `copy#Map` (the source and version recorded) and `store#Map`; listing, versions, diff and restore are the
+  framework's definition operations (a `report` Definition of kind `flowmap`, F7).
+- **Flow targets** (BOSS seed `ironstone.insights.FlowTarget`, §4): the built apps' worklist routes with their typed
+  parameters, beside the catalog entries and attention providers a step may name.
+- **The suite templates** `report/insights-flowmap-customer.json`, `-internal.json` and `-supplier.json`, from Marble's
+  lanes extended with the apps' handoffs; a step of an app not built (Sales, Marketing, People, Maintenance) is
+  informational until its owner registers a target.
+- **Screens:** FlowMaps (MapFind, MapList, CopyMap); FlowMap (MapContext, ProcessLanes on the node-graph panel per P0,
+  with its ordered list twin, StepDetail); FlowMapEditor (MapIdentity, Lanes, Steps, MapVersions); ProcessStory, the
+  Commons Knowledge mount with the map and step return context. A bespoke `.qvue` lane view only if P0 rejects the node
+  graph (design §17 Q1).
+- **Specs:** BOSS `InsightsFlowMaps` (a copy keeps its provenance; a stale version refused; a map saved through Tools
+  with an unregistered target renders that step informational; FlowMap's one qvt render).
+- **Usable when** (design §13.3 "Editable map copies"): `insights.flow` copies the customer template for
+  ORG_ZIZI_RETAIL, renames a step and links a Knowledge page; a reader sees each step's count and opens Commerce's
+  orders and Customer Service's cases from it; a later template change leaves the copy alone; the Sales steps read as
+  information.
+
+### P10 — Settings, data readiness and Assist
+
+Design §11 Settings and DataReadiness, §1.2 Assist and MCP analytics; INS-09, INS-10. Ends stage 2.
+
+- **ContextServices `store#Settings`** (design §11's input): the organization's analytics defaults as registered
+  PartySetting types seeded by mr-boss (§4), the recipient cap no higher than Admin's ceiling; fiscal start stays
+  Accounting's.
+- **DataReadiness** over Admin's `get#Readiness` (the freshness facet of Insights' sources) and `request#Refresh`, the
+  refresh checked by each registration's own permission; Insights' row in Admin's settings index (design-admin §14.2).
+- **Assist:** the `insights-analyst` skill with `screens:` on Dashboard, Explore and Reports; the prompts "Explain this
+  number", "Compare with last period" and "Which source is stale?"; the response action "Add to my dashboard"; the READ
+  exposures `RegistryServices.find#Reports`, `get#Metric` and `ReportServices.run#Query` limited to admitted datasets,
+  `exposeMcp` by the dataset's class (no for cost data).
+- **Screens:** Settings (AnalyticsDefaults, ScopeAndDelivery, SourceOwners); DataReadiness (ReadinessFind,
+  SourceReadiness, RefreshRequest).
+- **Specs:** BOSS `InsightsSettings` (a cap above the ceiling refused; a refresh without the source's grant refused;
+  a stale source shows its lag).
+- **Usable when** (design §13.3 "Source quality", "Assist and MCP"): the steward sees the inventory index an hour behind
+  and requests its refresh; Assist answers "orders last month by currency" with the dashboard's numbers and an MCP
+  client is refused a cost dataset.
+
+### P11 — Wall displays on shared devices
+
+Design §4 Playlists with CX-DEVICE; design-admin §6 Devices and §14 shared-device registration; INS-04, Admin's
+ADM-DEVICES. Insights' second release, stage 5, after Admin P18 (impl-admin §4).
+
+- **The Playlists route group:** the playlist route and the Dashboard renders it plays registered in Admin P18's device
+  registry, with the idle timeout a wall display needs; a device registered for it opens nothing else.
+- **What the display reads as:** the device's display account (impl-admin P18's proposal, settled there), so a playlist
+  shows only what that account may read; a dashboard outside it is skipped and logged by name, as the framework's
+  Playlist does, and a panel without data says so.
+- **Kiosk play:** the registered playlist chosen at registration (one per device), its dashboards rotated at the
+  playlist's seconds, each panel refreshed without a user session to time out; a revoked device stops at once.
+- **Screens:** Playlists gains Register as display (opening Admin's RegisterDevice with the route group and playlist,
+  for a holder of Admin's device grant) and the devices showing each playlist, read only.
+- **Specs:** BOSS `InsightsWallDisplay` (a device credential plays its playlist and is refused another route; a
+  dashboard outside the display account's grants skipped).
+- **Usable when:** a plant wall screen registered for ORG_ZIZI_RETAIL's operations playlist plays it with no one signed
+  in, shows that organization's numbers only, and opens nothing else; revoking the device in Admin ends the display.
+
+### P12 — Finish
+
+With Admin P19.
+
+- The tui and server-static screen sweeps of Insights, one acceptance test per mode.
+- The design §13.3 review, acceptance tests (§8): a user of each Insights group with no other launcher is refused other
+  organizations' rows, costs and private fields through dashboards, Explore, suggestions, drill, exports, embeds,
+  schedules, alerts, the palette, Assist and direct services.
+- The §14 outputs not built earlier: definitions bundles imported inactive and admitted; the business map's print and
+  ordered list; the delivery audit export.
+- The legacy mapping of design §13.2: saved finds and schedules inventoried by ID, owner, route and sharing, references
+  rewritten by a deliberate migration, an unsupported one shown invalid; no hidden alias routes.
+- The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
+  Insights line.
+
+## 4. Decisions
+
+These are made before and during the build. Each one that changes the design is also written into design-insights.md
+or the owner's design. The decisions both plans share (the next apps, what is left out, one order) are impl-admin §4's.
+
+| Date | Decision | Notes |
+| --- | --- | --- |
+| Nov 7, 2026 | `INSIGHTS_*` permissions are mr-boss's, checked by `ironstone.insights` services and screens; the engine's guards stay its own artifacts (ReportServices operations, `org.moqui.report.dataset.<id>`, dataset saves, DataDocumentUserGroup), which BossSetupData grants to the Insights groups by capability, never `DASHBOARDS_APP` or `REPORT_DATASETS_ADMIN`; `index#BusinessDataset` is guarded by the dataset's update artifact, not `INSIGHTS_DATASET_EDIT` | F2, F4: the framework may not name a BOSS permission; design §1.1 and §5 changed |
+| Nov 7, 2026 | A `rowFilterService` is called with the dataset's id and its body's `rowFilterParameters` beside `userId`, so one organization service serves every dataset by naming its organization field | F5; the plan's choice over one service per field; design §5 changed |
+| Nov 7, 2026 | The registries are BOSS seed records each owner fills: ReportCatalogEntry, AttentionProvider and FlowTarget; metric descriptors live on the definitions and the domain service registrations | The plan's choice under design §6.1 |
+| Nov 7, 2026 | Whether a viewer may read a catalog entry is decided by its owner's catalogue service where it has one (Customer Service, Commerce, Accounting), otherwise by the route's screen authorization | F17; the built catalogues already answer by their app's grants |
+| Nov 7, 2026 | SalesAnalysis is one catalog entry owned by Sales, opening Accounting's built report until Sales is built and Accounting mounts Sales' | F18; design §6.2's one-owner rule kept without waiting for Sales |
+| Nov 7, 2026 | The orders metric is registered for Sales over Mantle's `SalesReportServices` and the admitted sales datasets (owner contract, X11); Sales' own entries and measures wait for Sales | Commerce and Accounting already read it; the services are Mantle's, not the Sales app's |
+| Nov 7, 2026 | Organization analytics defaults are registered PartySetting types seeded by mr-boss | The plan's choice: design §11 names "organization settings"; PartySetting is Mantle's typed per-organization store |
+| Nov 7, 2026 | Business annotations get a framework `business` source with an organization and a resolvable link, written after commit by their owners | F13: today's sources are deploy, config, release and user, under `MONITOR_INGEST` |
+| Nov 7, 2026 | The group recipient cap is 50 per business schedule or alert rule by default, an Insights Settings value, under an instance ceiling of 200 (Admin P8's InstancePreference; 200 until it exists) | The user's call (answer 1, design §17 Q5); design §16 changed |
+| Nov 7, 2026 | Insights has a second release, stage 5: wall displays on shared devices (P11), after Admin P18's device credential | The user's call (impl-admin answer 2); design §16 changed |
+
+## 5. Open questions
+
+| Question | Decides | Notes |
+| --- | --- | --- |
+| Further issues discovered during implementation | the affected phase | Record findings and decisions here; the plan's open question as written (Q1, the recipient cap) was answered on Nov 7 and is in §4 |
+
+## 6. Findings
+
+Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan.
+
+| # | Finding | Resolution |
+| --- | --- | --- |
+| F1 | P0: the root's comment says the grant is commented out; in fact `BOSS_INSIGHTS` (BossSetupData.xml:246-252) grants `ADMIN` and `BOSS_INSIGHTS_ADMIN` with `MANTLE_ACTIVE_ORG`; there is no root user group or other Insights group | P1 |
+| F2 | P0: Tools Dashboards (Dashboards.xml, inheritable), the `/moqui/reports` REST path and `org.moqui.report.ReportServices.*` are guarded by `DASHBOARDS_APP`, and `org.moqui.report.dataset.*` by `REPORT_DATASETS_ADMIN`, both `ADMIN` only (MonitoringSecurityData.xml:15-24); also `REPORT_GIT_SYNC_ADMIN`, `REPORT_CONTACT_ADMIN`, `REPORT_ALERT_EVALUATION` and the `REPORT_SAVE_LOCATION` permission | P1 grants the engine's artifacts by capability (§4) |
+| F3 | P0: the Dashboards screens' links are hard-coded to `//apps/dashboards/…` (Home.xml:16-18, Definition.xml:5-38, Explore.xml:20-57, Playlist.xml:23-33, Dashboard.xml:76), as are WebrootReport.js's (1115, 1385, 1398, 1450, 1626) and the terminal's (moqui-tui `components/report.rs`); BOSS Insights' Dashboards still sends edit, new and explore to the Dashboards app, and Dashboard lacks `duplicatePanel` and `removePanel` | P2 (INS-04) |
+| F4 | P0: reading a dataset needs its artifact `org.moqui.report.dataset.<id>` (lib.rs:163-174) and a DataDocumentUserGroup row of the viewer's for each document (:264-277); a service dataset needs the service's grant (:224-233); saving a dataset definition needs `org.moqui.report.dataset` update (definitions.rs:259-261) | P1's grants; P3's admission grants (§4) |
+| F5 | P0: a `rowFilterService` is called with only `userId` and returns `filter` (lib.rs:302-322); listing adds a match-nothing filter (:298-301); `contextFilters` keys are only `userId`, `username`, `userGroupIds` and `userAccount.*` (:341-381) | P3 passes the dataset and its parameters (§4) |
+| F6 | P0: `create#Schedule` (schedule.rs:63-121) copies `userId` and `userGroupId` unchecked; a schedule renders as its owner (:1086-1107); recipients are the user and the group's members, deduplicated (:1163-1228), sent one email with comma-joined addresses (:1254-1258); `pause#Schedule` and `list#Schedules` are owner-only; none of design §7's services or records exist | P7 |
+| F7 | P0: Definition types are dashboard, panel, dataset, search, alert, report, contactPoint, silence and muteTiming (definitions.rs:249-254); a `report` body is not validated in Rust (alert.rs:862-881), the playlist's shape only in Playlist.xml; component `report/*.json` load read only with `component` and version 0, the first id winning (definitions.rs:60-143); shipped alerts are never evaluated (:119-123); `copy#Definition` makes an editable copy (:512-528) | P9 validates flow maps in FlowMapServices at save and render, as designed |
+| F8 | P0: an alert rule runs as its owner (alert.rs:1360-1386) with at most 500 series (:272); its contacts are notification (topic `ReportAlert`, link `/apps/dashboards/Alerts`), email (`toAddresses`) and webhook (:561-640) | P8 |
+| F9 | P0: Mantle ships `mantle-sales-orders` and `mantle-sales-items`, the `mantle-sales` dashboard and the `mantle-sales-daily-floor` alert, none with a row filter; their documents are granted to `ADMIN` only (MonitoringSalesSecurityData.xml:4-5), the invoice documents to no one; the feeds are `MantleSales` (`mantle_sales`), `MantleInventoryData` (`mantle_inventory`) and `MantleSearch` (`mantle`); no inventory dataset is shipped | P3 |
+| F10 | P0: mr-boss ships five datasets (Commerce's checkouts, payment attempts and feed builds; Customer Service's clocks and breaches), Commerce's Store operations dashboard and four alert templates, all `ADMIN`'s only and unfiltered (BossCommerceReportData.xml, BossCustomerServiceReportData.xml; impl-customer-service F190, F191) | P3, P8 |
+| F11 | P0: there is no organization row-filter service; `get#PartyOrganizationInfo` (PartyServices.xml:563-639) computes the organizations (agent, employee and member relationships to OrgInternal parties and their direct children) and the active one from the `ACTIVE_ORGANIZATION` preference | P3's `get#OrganizationRowFilter` |
+| F12 | P0: the funnel, node-graph and geomap panels are built in the browser (WebrootReport.js:459, 474, 599) and the terminal (report/graph.rs:50, 108, 329); the server's graph frames are span-based (graph.rs:49, 112) | P9 builds its frames in `get#Map` (P0's shape) |
+| F13 | P0: `create#Annotation` needs `MONITOR_INGEST` or the `monitor_annotations` dataset's create, takes the sources deploy, config, release or user, and indexes into `monitor_annotations` (annotations.rs:4-60) | P6's business source (§4) |
+| F14 | P0: the framework keeps REPORT_RECENT (20), REPORT_STARRED (500), `REPORT_PINNED_<dataset>` and `REPORT_HISTORY_<dataset>` preferences | Reused; catalog pins are the `InsightsHome` preference (P4) |
+| F15 | P0: `SearchServices.index#DataFeedDocuments` (SearchServices.xml:43-53) indexes one feed, optionally one document, with `authenticate="false"` | P3's `index#BusinessDataset` calls it under the dataset's grant |
+| F16 | P0: the shared record screens choose their context inline by `appRoot`, and none knows Insights: Product360 throws for another root (SharedContext.js:380-386); Customer360 falls to Accounting's context, OrderDetail and InvoiceDetail to Projects', Supplier360 to Products'; FacilityDetail answers only Warehouse and Manufacturing; ShipmentDetail says not available | P6 adds read-only Insights branches |
+| F17 | P0: Customer Service's (Reporting.js:1181-1257) and Commerce's (:528-569, 628-636) `get#ReportCatalogue` answer Insights' contract; Accounting's `ReportServices.get#Catalog` answers another shape (reportId, title, area, description, period and comparison flags; no route or owner); Warehouse, Manufacturing and Projects have index screens only; Products and Purchasing have no Reports area | P4 (§4) |
+| F18 | P0: Accounting's SalesAnalysis is not a mount of Sales': it calls `SalesReportServices.run#SalesAnalysis` itself; Sales' is a legacy screen over OrderItemSalesSummary in a placeholder app | §4; design §6.2 changed |
+| F19 | P0: Monitor's Business operations dashboard is shipped (tools `report/monitor-operations.json`, over `moqui.operation.duration` and `moqui.operation.runs`) and mounted by Tools Monitor/Operations | P5's attention source |
+| F20 | P0: BOSS Insights' ReportBuilder is the copied SimpleReport builder, listing every entity outside `moqui.*` with raw entity transitions (DataDocumentCondition create, update and delete; DataDocumentField delete); DatasetView relies on a DataDocument group check alone; Reports is the legacy picker; ScheduledReports the copied owner-only scheduled finds; Home, FlowMap and Settings are placeholders | P1 keeps them to the admin group; P3, P4, P7 replace them |
+| F21 | P0: Manufacturing's Home KPIs read its reports on each render and wait for Insights' registration (impl-manufacturing F142, F143); Customer Service's catalogue waits likewise (impl-customer-service F189) | P4, P5 |
+| F22 | P0: Commerce left Insights its catalogue registration (impl-commerce F142) and its attention provider (its §7) | P4, P5 |
+| F23 | P0: no People, Marketing, Maintenance or Sales report service the design names exists (PeopleReportServices, Marketing's projections, Maintenance's work status); the Sales app is a placeholder with two ported reports | §1 scope, §7 |
+| F24 | P0: the framework's regression budget is 12 s server and 6 s client (impl-admin F30) | impl-admin §4: raised per phase |
+| F25 | P0: `insights` is not in the client deny pattern | impl-admin P1 adds it with `admin` (impl-admin F14) |
+
+## 7. Later
+
+Designed, not in this build:
+
+- **Design §12:** CashForecast and `mantle.ledger.CashForecastServices` (INS-12); the funnel, after Marketing's visit
+  capture; multi-touch attribution over Marketing's metric; recipient execution of reports and alerts (design §7.2,
+  §8.1 later); generic pivot and graph on any list and "Add to my dashboard" from any list; analysis notebooks; query
+  result caching; SQL, script or warehouse sources; public dashboard links and external delivery; advanced forecasting
+  and cross-dataset joins; richer per-breakpoint arrangement.
+- **What waits on People:** the Employee360 record mount and its crosscut row, PeopleReportServices, People's metrics,
+  attention providers and confidential-dataset classes.
+- **What waits on Marketing:** visits and attribution metrics, CampaignPerformance, DeliveryAnalysis, AudienceGrowth and
+  Attribution entries, the campaign-sent annotation, the funnel.
+- **What waits on Sales:** SalesSummary and Sales' own catalog entries, pipeline and forecast measures, Sales' attention
+  providers, and SalesAnalysis moving to Sales' route with Accounting mounting it (§4).
+- **What waits on Maintenance:** WorkStatus, PreventiveCompliance and cost entries and their metrics; Maintenance's
+  context on EquipmentDetail.
+- **Design §17's other open items:** usage analytics for stewards (Q3), alerts to a Comms chat room (Q4).
+
+## 8. Verification
+
+- **Per phase,** the "Done" rule of §2.
+- **End to end,** run `./moq run`, sign in as each demo Insights user and walk each built phase's "usable when" in
+  order, in the browser, at phone width and in the terminal.
+- **Design §13.3 scenarios,** each an acceptance test (`./moq accept mr-boss`, when asked):
+
+| Scenario | Phase |
+| --- | --- |
+| Reader versus author/steward/distributor | P1; each phase's affordances; P12's walk |
+| Two organizations and confidential fields | P3 (datasets), P4 (catalog), P6 (drill), P10 (Assist); P12's walk |
+| Reconcile domain results | P4 (metrics), P6 |
+| Money, units and calendars | P4 (targets), P6 |
+| Same metric on many surfaces | P4, P5; P7 (digest), P8 (alert) |
+| Source quality | P2, P5, P10 |
+| Owner equivalence | P7 |
+| Recipient differences | later (§7) |
+| Spoofed recipient principal | P7 |
+| Lifecycle during rendering | P7, with Admin P6 |
+| Independent retry | P7 |
+| Legacy schedule boundary | P7; P12's migration |
+| Business alert semantics | P8 |
+| Dataset admission | P3 |
+| Single report owner | P4 |
+| Editable map copies | P9 |
+| Definition and source change | P2, P3; P12 (bundles) |
+| Assist and MCP | P10 |
+| Device and output | each phase; P11 (wall displays); P12's sweeps |
+
+- **Walks.** One golden-path client walk for Insights in the regression suite (InsightsDashboardsWalk, from P2); the
+  others are acceptance tests. No screenshots.

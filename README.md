@@ -7,7 +7,8 @@ checkout settings, integrations, feeds and store reports ([design](plan/design-c
 [IronStone Shop](../mr-pass/plan/design-shop.md) in IronStone PASS).
 
 [Admin](plan/design-admin.md) covers identity, settings and operations;
-[Insights](plan/design-insights.md) brings together the suite's reports, dashboards and business flow maps.
+[Insights](plan/design-insights.md) brings together the suite's reports, dashboards and business flow maps. They are
+built next, in one order ([impl-admin](plan/impl-admin.md), [impl-insights](plan/impl-insights.md)).
 
 Tests are in two suites ([Build-Test](../../../docs/Build-Test.md)). The regression suite, `test/` and `test/client/`,
 checks rules and one golden-path client walk per app, within the budget in `test/budget`: run the specs you touch with
