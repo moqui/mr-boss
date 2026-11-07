@@ -547,6 +547,17 @@ AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
   - the earlier items stand: the demo lock-down of the three new seals (framework's call), F38, and the budget
     share (AdminAccess about 3.4 s).
 
+- **Wave 1 suites (Nov 7, on master after P1 merged and the release binary rebuilt; the Insights P1 worker ran at the same
+  time):** `./moq test-framework` passed but for cargo's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one`
+  (F38, failing on master before P1); the framework's specs 9.7 of 12 s, tools 2.6 of 3 s; webroot's client (45.9 of 44 s)
+  and dev-aide (30.4 of 30 s) over budget under the worker's load, neither touched by P1. Standalone mr-mantle 1,902
+  passed, 2 failed (the baseline WorkTimeEntries and WorkTimesheets), 11 skipped. `mail_capture_sends=true ./moq
+  test-apps`: 3,316 server features passed, 2 failed in the full run only: AdminAccess compared the administrator's
+  organization choices, a page, with organizations other specs add (now asked for by selection), and
+  AppOrganizationFilters required every app administrator's root grant to be ALWAYS (Admin's and Insights' are ALLOW by
+  F34); both fixed and passing; 17 client features passed. Feature time mr-mantle 341.9 of 393 s, mr-boss 195.2 of 264 s
+  server and 49.3 of 57 s client, mr-pass 14.3 of 20 s. `moqui lint --screens` 132 sites, as before. No budget raised.
+
 ### P2 — Registries, Health and the settings index
 
 Design §3 Home, §10 Health, §7 SettingsHome, §14 (readiness provider, refresh operation, settings entry) and §14.2;

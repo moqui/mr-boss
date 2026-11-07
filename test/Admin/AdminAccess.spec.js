@@ -417,9 +417,10 @@ feature(
             const identityChoices = choices(users.identity, ids.otherOrganizationId)
             if (!identityChoices.includes(ids.organizationId) || identityChoices.includes(ids.otherOrganizationId))
                 problems.push(`the identity operator's organizations: ${identityChoices}`)
-            const adminChoices = choices(users.admin, null)
-            if (!adminChoices.includes(ids.otherOrganizationId) || !adminChoices.includes(ids.accountingOrganizationId))
-                problems.push(`the administrator's organizations: ${adminChoices}`)
+            // the choice list is a page: other specs add organizations in a full run, so each is asked for by its selection
+            for (const organizationId of [ids.otherOrganizationId, ids.accountingOrganizationId])
+                if (!choices(users.admin, organizationId).includes(organizationId))
+                    problems.push(`the administrator's organizations lack ${organizationId}`)
             return {problems}
         },
         then({problems}) {
