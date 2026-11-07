@@ -257,7 +257,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F33; F2's check settled in P1, F-P1-1); the other checks below left |
+| P0 Checks | all (read) | — | done Nov 7 (§6 F1–F33; F2's check in P1, F34; the others F41–F46) |
 | P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built Nov 7 (adm/p1) |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | — |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | — |
@@ -284,7 +284,7 @@ Verify the design's riskiest assumptions against the code before building. Each 
 changes the design, an edit there. F1–F30 were found on Nov 7 while writing this plan and F31–F33 in its review the
 same day; the design edits they call for were made then. Still to check:
 
-- **Admin › System for `ADMIN` only** (F2; settled in P1, F-P1-1): which change keeps `SYSTEM_APP`'s own check on the mounted
+- **Admin › System for `ADMIN` only** (F2; settled in P1, F34): which change keeps `SYSTEM_APP`'s own check on the mounted
   `System.xml` for every BOSS group, given that an inheritable `AUTHZT_ALWAYS` on the Admin root skips it
   (authz.rs:450-456): `BOSS_ADMIN_ADMIN` and the ordinary groups on `AUTHZT_ALLOW`, or the System mount outside the
   inherited path; and that its links and transitions stay under Admin/System (Insights F3 found the Dashboards screens'
@@ -386,7 +386,7 @@ permissions and seals), ADM-SHELL.
   - `SecurityTypeData.xml`: design §1.1's eighteen `ADMIN_*` permissions (§3 P1's list), each granted to `ADMIN`, beside
     `ADMIN_PASSWORD`.
   - Tools: ActiveUsers, VisitList and VisitDetail link UserAccountDetail by a relative path, not `//system/...`, so
-    the links stay under Admin › System (F-P1-1).
+    the links stay under Admin › System (F34).
   - Docs: Attack-Surface's `user-facade` paragraph (the three seals, `ADMIN_CONSTITUTION_GLOBAL`, the elements);
     Remaining-Work's framework-asks row.
 - BOSS access (`MoquiConf.xml`; `data/BossSetupData.xml`, appended but for F1's comment, F2's row and F14's rows):
@@ -394,7 +394,7 @@ permissions and seals), ADM-SHELL.
   - the groups `BOSS_ADMIN` (root user group) and `_READ`, `_IDENTITY`, `_ACCESS`, `_CONFIGURE`, `_INTEGRATIONS`,
     `_OPERATIONS`, `_DATA`, `_AUDIT`, `_PRIVACY`, `_BACKUP`; on the `BOSS_ADMIN` artifact group (a second element of the
     same id) the `ironstone\.admin\..*` service pattern and the root authz `BOSS_ADMIN_ROOT` (`MANTLE_USER_ORG`,
-    `MANTLE_PRIVATE_CONTACT`); `BOSS_ADMIN_APPADMIN` now `AUTHZT_ALLOW` (F2, F-P1-1) and the stale comment replaced (F1);
+    `MANTLE_PRIVATE_CONTACT`); `BOSS_ADMIN_APPADMIN` now `AUTHZT_ALLOW` (F2, F34) and the stale comment replaced (F1);
   - the area groups `BOSS_ADM_OPERATIONS` (the reader, operations operator, administrator), `BOSS_ADM_AGENTS` and
     `BOSS_ADM_DEVELOPER` (the administrator), each denying `BOSS_ADMIN` (impl-commerce F45), and `BOSS_ADM_SYSTEM`,
     which denies Tools' `System.xml` to `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`;
@@ -419,7 +419,7 @@ permissions and seals), ADM-SHELL.
   open incidents for those Monitor opens); `Admin/Agents.xml` with `Agents/AgentsHome.xml` (the effective configuration
   and today's totals for an AgentAdmin holder; thirteen destinations under Admin › System, the three missing framework
   screens "Not available", F19); `Admin/Developer.xml` with `Developer/DeveloperHome.xml` (ToolLinks). Projects'
-  Settings › Index links Admin Home in place of the removed Users placeholder (F-P1-3).
+  Settings › Index links Admin Home in place of the removed Users placeholder (F36).
 - Demo (`data/BossUsersDemoData.xml`): `admin.reader`, `.identity` (the operator delegated for ORG_ZIZI_RETAIL only),
   `.access`, `.configure`, `.integrations`, `.operations`, `.data`, `.audit`, `.privacy`, `.backup` (each in
   `BOSS_USERS`, `BOSS_ADMIN` and its group, an agent of Retail), `admin.admin` (`BOSS_ADMIN_ADMIN` alone),
@@ -448,8 +448,8 @@ permissions and seals), ADM-SHELL.
   and the refused Projects client and PASS account).
 - Tests run (Debug binary, `--nobuild`): AdminAccess 7 of 7; with CommerceAccess (15 of 15), CustomerServiceAccess (22 of
   22) and ProjectsAccess (8: 4 passed, among them the deny-pattern feature; 4 fail the same without P1's mr-boss changes,
-  F-P1-4). Cargo: moqui-core's conf, confcache, security_checks and eca tests 37 of 37; the whole moqui-core lib 1528 of
-  1529, the one failure at e3360436 too (F-P1-5). `moqui lint --screens` (Debug): no idiom or hazard site in the Admin
+  F37). Cargo: moqui-core's conf, confcache, security_checks and eca tests 37 of 37; the whole moqui-core lib 1528 of
+  1529, the one failure at e3360436 too (F38). `moqui lint --screens` (Debug): no idiom or hazard site in the Admin
   screens or the three Tools screens (132 sites in all, as before). Prettier clean on the new JavaScript. Not run:
   `./moq test-apps`, `./moq test-framework`, the acceptance suite, AppStructure (acceptance; its placeholder list is found
   by label, so the removed placeholders need no change).
@@ -457,7 +457,7 @@ permissions and seals), ADM-SHELL.
 - Inventories: no ss-inventory or usl-inventory row is implemented by P1 (usl-inventory's SetupServices row names Health,
   P2's).
 - Findings (provisional, numbered by the lead):
-  - **F-P1-1** (P0's F2 check) An inheritable `AUTHZT_ALLOW` on the Admin root also opens a child with no grant of its
+  - **F34** (P0's F2 check) An inheritable `AUTHZT_ALLOW` on the Admin root also opens a child with no grant of its
     own (authz.rs's last-frame fallback, about line 527), so making `BOSS_ADMIN_ADMIN` ALLOW alone would still open
     System; and mounting System outside the root's path is not possible for a subscreen. P1 sets the administrator's
     root grant to ALLOW (no inheritable ALWAYS that skips the child's check) and denies `System.xml` by its location to
@@ -466,33 +466,33 @@ permissions and seals), ADM-SHELL.
     Links: three transitions (Security/ActiveUsers, Visit/VisitList, Visit/VisitDetail) went to `//system/Security/UserAccountDetail`,
     Tools' own mount; now relative. The others leave for Monitor, Dashboards and Tools (`//apps/...`) under their own
     grants, as designed. Design §13 changed.
-  - **F-P1-2** `ec.artifactExecution.isPermitted` checks against the top of the stack, so under the Admin root (or the
+  - **F35** `ec.artifactExecution.isPermitted` checks against the top of the stack, so under the Admin root (or the
     `ironstone\.admin` service pattern, inheritable) every Tools screen reads as permitted, and it records an
     authorization failure for each refusal. Admin.js reads the user's own groups' grants (`ArtifactAuthzCheckView`), as
     Commerce.js does, for the root, the areas and the framework apps. Likewise the root's inheritable grant reaches the
     services an Admin screen calls, so Monitoring and AgentsHome call only services that check their own grant
     (`get#SourceStatus`'s `authorize_own`, `list#Incidents`' `MONITOR_INCIDENT`, AgentAdminServices' AgentAdmin).
-  - **F-P1-3** Projects' Settings › Index linked `/qapps/Admin/Users`, a removed placeholder; it links Admin Home until
+  - **F36** Projects' Settings › Index linked `/qapps/Admin/Users`, a removed placeholder; it links Admin Home until
     P4's `Users/Users` (P4 repoints it).
-  - **F-P1-4** On the Debug binary ProjectsAccess fails four client features with "Maximum call stack size exceeded" in
+  - **F37** On the Debug binary ProjectsAccess fails four client features with "Maximum call stack size exceeded" in
     nested scripts (entity filters, record paths), the same with P1's mr-boss changes stashed: the script stack budget
     (`script/runtime.rs` `stack_budget`) is fixed while a debug build's frames are larger. Its deny-pattern feature (F14)
     passes. A run on a release binary should pass them.
-  - **F-P1-5** moqui-core's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one` fails at e3360436 without
+  - **F38** moqui-core's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one` fails at e3360436 without
     P1 (`ec.entity` refused in the nested read); not P1's.
-  - **F-P1-6** With `Admin.xml` as a spec's render root, `//Admin/...` links resolve to nothing and render disabled (as
+  - **F39** With `Admin.xml` as a spec's render root, `//Admin/...` links resolve to nothing and render disabled (as
     every app's `page` helper does), so specs check a shortcut's label, not its URL.
-  - **F-P1-7** `ORG_ZIZI_RETAIL` has a child organization, `BOSS_WH_RETURNS` (PrtOrgRollup); `get#PartyInternalOrgIds`
+  - **F40** `ORG_ZIZI_RETAIL` has a child organization, `BOSS_WH_RETURNS` (PrtOrgRollup); `get#PartyInternalOrgIds`
     counts it, so a Retail administrator administers it too, as `MANTLE_USER_ORG` filters.
 - Decisions (§4 rows added): the administrator's grants; opening Admin with the root grant alone; the P1 areas by group;
   the Privacy team's group through its member.
 - For the lead:
   - the framework budget needs no change; mr-boss's share is AdminAccess's 3.3 s;
-  - ProjectsAccess on a release binary (F-P1-4) before the merge, and F-P1-5 for the framework;
+  - ProjectsAccess on a release binary (F37) before the merge, and F38 for the framework;
   - the demo component's lock-down (`runtime/dev-component/demo`) ends some of `ADMIN`'s sealed permissions on the demo
     server; whether it ends `ADMIN_IDENTITY_GLOBAL`, `ADMIN_ACCESS_MANAGE` and `ADMIN_BACKUP_DOWNLOAD` too is the
     framework's call (Demo.spec.js lists the ended ones);
-  - P4 repoints Projects' Settings link (F-P1-3); Insights P1 needs no deny-pattern change (F14 done).
+  - P4 repoints Projects' Settings link (F36); Insights P1 needs no deny-pattern change (F14 done).
 
 **Review Nov 7 (P1).** Checked the mr-moqui and BOSS diffs against this section, §2, §4, §6, design §1.1, §1.2 and §13,
 AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
@@ -508,7 +508,7 @@ AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
   through a custom group) refused `BOSS_ADMIN_ACCESS`, `_BACKUP` and `_ADMIN` memberships and the `ADMIN_BACKUP_DOWNLOAD`
   and `ADMIN_IDENTITY_GLOBAL` grants by direct entity creates, and the reader (a non-holder) refused the
   `ADMIN_ACCESS_MANAGE` grant.
-- F-P1-1: authz.rs requires authorization on the last screen of a path only, with a deny on any frame above it
+- F34: authz.rs requires authorization on the last screen of a path only, with a deny on any frame above it
   refusing an ALLOW there (`ancestor_deny`) and only an `ALWAYS` passing. `BOSS_ADM_SYSTEM` denies `System.xml` to
   `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`, the only groups with a grant on the Admin root besides `ADMIN`; no BOSS group has
   any grant on a Tools screen (only `SYSTEM_APP`, `ADMIN`'s ALWAYS), no Tools System screen relaxes
@@ -533,7 +533,7 @@ AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
   sealed permissions stopped at `LlmGatewayUse`; it names the whole list, Admin's three seals and the privileged groups
   mr-boss adds by element (mr-boss d3c0bc79).
 - Tests run: AdminAccess 7 of 7 (Debug, 3.4 s); CommerceAccess and CustomerServiceAccess 37 of 37 (Debug); ProjectsAccess
-  8 of 8 with master's release binary on this worktree's runtime (F-P1-4: the four Debug failures are the debug stack
+  8 of 8 with master's release binary on this worktree's runtime (F37: the four Debug failures are the debug stack
   budget; that binary lacks the `authz` elements, which ProjectsAccess does not touch); cargo moqui-core
   `context::conf`, `context::confcache`, `service::security_checks`, `service::eca` 38 of 38. Prettier clean on the
   spec. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance walk.
@@ -544,7 +544,7 @@ AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
   - the root's inheritable ALLOW now opens the hidden Chatter and RecordFiles mounts to every `BOSS_ADMIN` member, as
     each app's root does for its users (IronStone R5), with `MANTLE_USER_ORG` filters; worth a look in P3 or P4, when
     Admin's records arrive;
-  - the earlier items stand: the demo lock-down of the three new seals (framework's call), F-P1-5, and the budget
+  - the earlier items stand: the demo lock-down of the three new seals (framework's call), F38, and the budget
     share (AdminAccess about 3.4 s).
 
 ### P2 — Registries, Health and the settings index
@@ -1032,8 +1032,8 @@ the owner's design.
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, and F31–F33 in its review the same
-day.
+is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
+day, F34–F40 in P1 and F41–F46 in P0's remaining checks (Nov 7).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1070,6 +1070,19 @@ day.
 | F31 | P0 (review): no service changes the owner of a drive (`FileServices.update#Drive` has no owner; only `add#`/`remove#DriveMember`), a shared mail account (`EmailClientServices.update#EmailAccount`), a calendar (`mantle.work.CalendarServices.update#Calendar`) or a contact book's owning user (`ContactBookServices.update#ContactBook` takes only `ownerPartyId`); Projects' assignments move through `TaskServices.reassign#Task`, `WorkItemServices.bulk#WorkItems` and `RequestServices.reassign#Request` | P6 adds an owner change to each owner (§4) |
 | F32 | P0 (review): mr-boss defines no entities and has no `entity/` directory; Practices-App-Dev.md:36 says BOSS entities are rare, the data model being Mantle's | §4: the BOSS registries are its first entity file (Admin P2) |
 | F33 | P0 (review): organization scope needs a party: `setup#UserOrganizationInfo` returns early with no `partyId` (PartyServices.xml:533-534), and `get#PartyInternalOrgIds` (:563-603) counts only PrtAgent, PrtEmployee and PrtMember relationships to OrgInternal parties, which `MANTLE_USER_ORG` uses | P18's display account has a party and a membership |
+| F34 | P1 (P0's F2 check): an inheritable `AUTHZT_ALLOW` on the Admin root also opens a child with no grant of its own (authz.rs's last-frame fallback); System cannot be mounted outside the root's path | Done in P1: the administrator's root grant is ALLOW and `BOSS_ADM_SYSTEM` denies `System.xml` to `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`; a group an installation allows on the root needs the same deny; three Tools links made relative |
+| F35 | P1: `ec.artifactExecution.isPermitted` answers from the top of the stack and records a failure per refusal, so it cannot tell whether a user may open a Tools screen; the root's inheritable grant reaches the services an Admin screen calls | Admin.js reads the user's own grants (ArtifactAuthzCheckView), as Commerce.js; landings call only services that check their own grant |
+| F36 | P1: Projects' Settings › Index linked the removed Users placeholder | Links Admin Home; P4 repoints it to Users |
+| F37 | P1: on a Debug binary ProjectsAccess fails four client features with "Maximum call stack size exceeded" (the fixed script stack budget against larger debug frames); 8 of 8 pass on a release binary | Framework's (Debug stack budget); open |
+| F38 | P1: moqui-core's `the_wrapped_ec_takes_probes_and_leaves_the_framework_the_real_one` fails at e3360436 without P1 | Framework's; open |
+| F39 | P1: with `Admin.xml` as a spec's render root, `//Admin/...` links render disabled | Specs check labels, as every app's `page` helper |
+| F40 | P1: ORG_ZIZI_RETAIL's child organization `BOSS_WH_RETURNS` is in a Retail administrator's scope (`get#PartyInternalOrgIds`) | Accepted, as `MANTLE_USER_ORG` filters |
+| F41 | P0: the login rules a path must meet: permanent disable (a tarpit lock with `disabledDateTime` expires, login.rs:1389-1398), `terminateDate` (:1400), `ipAllowed` of the account or any date-valid group (:1284-1310), a required factor with none in date never completes (factor.rs:47-67, 284-317); `requirePasswordChange` does not block (:1168-1180); only live cluster peers get invalidations (cluster/mod.rs:87-95), so a stale member can only over-grant | P3's `check#AdministrationPath`: at least one account, after the change, not permanently disabled, unterminated, with a password or an enabled linked provider, a date-valid membership in `ADMIN` or a group with ALWAYS on the Admin root, a date-valid factor where any group requires one, and an `ipAllowed` admitting the acting administrator's address; counted from the database with authorization off; nothing cluster-specific (P4's refresh covers a stale member) |
+| F42 | P0: `end_user_visit` (session.rs:558-676) ends the Visit and HttpSession and publishes session-end; the notification socket rechecks every 60 s (notws.rs:425-433) and closes, ending RTC and collab; termws rechecks; Assist SSE only at connect. Not reached: XMPP (app passwords, rechecked per tick), SIP devices (`dropDevice`), notws login keys, a ServiceJob's user (jobs.rs:796-800 warns and runs), agent runs and triggers running as the user; notws's check ignores `disabled` (:357-375) | P4's `revoke#AccountAccess` ends every visit and session, revokes app passwords, login keys and device keys, drops SIP devices, pauses triggers and agents run as the user; `run_job` refuses a user failing the login gate; the session refresh and notws's tick check `disabled` and `terminateDate` |
+| F43 | P0: Projects' work-item and time imports keep per-user drafts and no run record (WorkItemImportServices.xml:17-18, async); exporters: Commons `ironstone.commons.ContactServices.export#ContactFile` over `export#Contacts`, `mantle.other.TaxServices.export#Statement`, InvoiceBatch's `exportInvoices`; no work-item or ledger export service (form CSV buttons only) | P15 registers the imports with a link and no runs (F13); P16 registers Commons, the tax statement and the invoice batch as exporters; a work-item CSV and a ledger export service are their owners' later work (§7) |
+| F44 | P0: F21 corrected: Comms mounts basic-comms' Settings (Comms.xml:39), all personal, which §14.2 leaves out; no screen edits shared EmailTemplates, there is no sending profile, suppressions are only Consent's CSV, and mail-account status is per user (`get#MailAccountList`) | P2's Comms row opens Comms › Consent; shared templates, sending profiles, suppressions and a shared-account readiness provider are Comms' later work (§7); design §14.2 changed |
+| F45 | P0: `moqui.job.runs` carries only the outcome (jobs.rs:900-905); job root spans keep `moqui.job.name` and error status (sdk.rs:733-740, jobs.rs:788-790); nothing signals a late run. `moqui.report.audit` is written for exports and definition deletes only (lib.rs:124, definitions.rs:641); `otel_logs` keeps 7 days (telemetry/maintenance.rs:32) | P14's template groups job root spans by name for failing runs; late waits for a framework lag signal (§7). P17 adds the denied and purpose fields and a longer retention or an audit index for the access log |
+| F46 | P0: screen authorization is checked on a path's last screen only, an ancestor's deny blocking (render.rs:1495-1507); the Assist drawer's Rules pane serves every signed-in user their organization's Constitution (assist.xml `constitution`, `get#Constitution` checking read access) | P2 grants `BOSS_USERS` a non-inheritable ALLOW on SettingsHome alone; members read the Constitution through the Rules pane, linked from OrganizationDetail; P7's Admin › Constitution is for its editors; design §7 and §13 changed when P2 and P7 build them |
 
 ## 7. Later
 

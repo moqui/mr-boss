@@ -162,7 +162,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
-| P0 Checks | all (read) | — | partly done Nov 7 (§6 F1–F25); the checks below left |
+| P0 Checks | all (read) | — | done Nov 7 (§6 F1–F31) |
 | P1 Foundation | BOSS | the Insights root and menu | — |
 | P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | — |
 | P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | — |
@@ -531,7 +531,7 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 ## 6. Findings
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
-is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan.
+is written there too. F1–F25 were found on Nov 7, 2026, while writing this plan, and F26–F31 in P0's remaining checks the same day.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -560,6 +560,12 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F23 | P0: no People, Marketing, Maintenance or Sales report service the design names exists (PeopleReportServices, Marketing's projections, Maintenance's work status); the Sales app is a placeholder with two ported reports | §1 scope, §7 |
 | F24 | P0: the framework's regression budget is 12 s server and 6 s client (impl-admin F30) | impl-admin §4: raised per phase |
 | F25 | P0: `insights` is not in the client deny pattern | impl-admin P1 adds it with `admin` (impl-admin F14) |
+| F26 | P0: the node graph has no groups: the browser lays nodes in columns by longest path in a fixed-width SVG with raw ids and a click hard-coded to Explore (WebrootReport.js:474-515, 1498-1499); the terminal prints an adjacency list by count (moqui-tui report/graph.rs:108-160) | P9: the ordered list is the body at phone width and in the terminal; the lanes need a framework `nodeGraph` group, label and link option in both renderers, or the `.qvue`; `get#Map` returns one row per edge (source, target, count, errors, labels, groups, orders, link) and the lanes list; design §17 Q1 answered so |
+| F27 | P0: beyond F3, `report.appPath` (WebrootReport.js:150) only swaps `/apps` for `/qapps`; `screenUrl` (Dashboard.xml:132) is used by `panelRequest` alone; hard-coded paths at WebrootReport.js :154, :666, :1115, :1385, :1398 (duplicate and remove post to `/apps/dashboards/Dashboard/`), :1450, :1626 (`e`), moqui-tui components/report.rs :945, :1035, :1156, :1178, :1203, :1217, :1546-1548, and Alerts.xml, AlertRule.xml, AlertShared.xml, Datasets.xml, Reports.xml and Definition.xml | P2: Dashboard.xml sends an `appBase` (the mounted Dashboards root) beside `screenUrl`, both report components build Definition, AlertRule, Explore and the panel actions from it, and the screens use relative transitions |
+| F28 | P0: the only ScreenScheduled row is BOSS_DEMO_MY_TASKS (BossDemoData.xml:63-70, Commons Tasks, paused); FormListFinds are Projects' three and Products' six in BossSetupData and Marble's seven Accounting finds | P7's mapping covers Commons Tasks; the saved finds stay list views (P12) |
+| F29 | P0: Products' report candidates are CatalogChecks, the price audit and history and cost history; Purchasing's the eight `ironstone.purchasing.ReportServices` reads under Performance; the Home cards whose count is the query of the list they open: Commerce's To approve, Payment holds, Placements waiting, Open carts, Integration errors; Accounting's draft and posted entries, bills awaiting approval or on hold, cost close; Products' active SKUs, variants, ending soon; Purchasing's draft, approved not sent, held bills, late receipts, quotes expiring, unacknowledged; Manufacturing's open, in progress, late; Projects' reviews, time to approve, allocation requests, unbilled; Warehouse's receiving. Customer Service's queue cards and the others do not match their lists | P4 registers the Products and Purchasing entries; P5 registers only the matching cards; the others are their owners' fixes (one query for card and list) |
+| F30 | P0: Customer Service's clock document carries `organizationPartyId`; Commerce's three documents carry only `productStoreId` (ProductStore has the organization; PortalPaymentAttempt has no ProductStore relationship); Mantle's sales documents none (OrderPart `vendorPartyId`, Invoice `fromPartyId`) | P3 adds an `organizationPartyId` field through those paths to the five documents (a relationship for PortalPaymentAttempt, or its invoice's `fromPartyId`) and reindexes |
+| F31 | P0: `create#Annotation` copies a whitelist of fields (annotations.rs:38-54), so an organization and link would be dropped, and indexes at once; a Mantle service can write after commit with `registerOnCommit` (tools_host.rs:328); hooks are `publish#ProductPriceList`, `close#Period` and `store#Promotion` (no start event: the annotation spans `fromDate` to `thruDate`) | P6's business source adds `organizationPartyId` and `link` to the whitelist; Mantle registers the writes on commit |
 
 ## 7. Later
 
