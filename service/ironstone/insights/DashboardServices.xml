@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sharing an Insights dashboard (design-insights §4 ShareDashboard, impl-insights P2; Insights.js): private, or one of the
+    owner's own groups. A share gives the group the definition only: each viewer's queries run with their own dataset grants, and
+    the report engine's save checks the owner and the version read as for any save. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="get" noun="ShareGroups" allow-remote="false">
+        <description>The groups the current user may share a dashboard with: their own groups by name, never the implicit
+            ALL_USERS. Refuses a user without Insights (INSIGHTS_UNAVAILABLE).</description>
+        <out-parameters><parameter name="groups" type="List"/></out-parameters>
+        <actions>
+            <set field="groups" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').execute('shareGroups', context).groups"/>
+        </actions>
+    </service>
+    <service verb="share" noun="Dashboard" allow-remote="false">
+        <description>Share the user's own dashboard with one of their groups, or make it private again (no userGroupId), saving
+            a new version through the report engine. Refuses a user without Insights authoring (INSIGHTS_AUTHOR_REQUIRED), a group
+            the user does not belong to (SHARE_GROUP_UNAVAILABLE), a definition that is not a dashboard (DASHBOARD_REQUIRED) and
+            a shipped or another user's dashboard (DASHBOARD_NOT_OWNED); the engine refuses a stale expectedVersion.</description>
+        <in-parameters>
+            <parameter name="definitionId" required="true"/>
+            <parameter name="userGroupId"/>
+            <parameter name="expectedVersion" type="Integer"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="definitionId"/>
+            <parameter name="userGroupId"/>
+            <parameter name="version" type="Integer"/>
+        </out-parameters>
+        <actions>
+            <set field="shared" from="ec.resource.script('component://mr-boss/service/ironstone/insights/Insights.js').execute('shareDashboard', context)"/>
+            <set field="definitionId" from="shared.definitionId"/>
+            <set field="userGroupId" from="shared.userGroupId"/>
+            <set field="version" from="shared.version"/>
+        </actions>
+    </service>
+</services>

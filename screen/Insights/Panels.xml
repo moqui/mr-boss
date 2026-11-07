@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Library panels (design-insights §4 Panels; impl-insights P2, INS-04): the framework's Panels screen (a preview of a
+    library panel as the viewer, over the dashboard list with the type fixed to panel). Its links run here and go to Insights'
+    screens by the root's reportLinks: a panel opens in PanelDetail, offered to authors only. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Library panels" default-menu-index="3" menu-image="sym_o_bar_chart" menu-image-type="icon">
+
+    <parameter name="previewPanelId"/>
+    <transition-include name="dashboard" location="component://tools/screen/Dashboards/Home.xml"/>
+    <transition-include name="star" location="component://tools/screen/Dashboards/Home.xml"/>
+    <transition-include name="edit" location="component://tools/screen/Dashboards/Home.xml"/>
+    <transition-include name="new" location="component://tools/screen/Dashboards/Home.xml"/>
+    <transition-include name="explore" location="component://tools/screen/Dashboards/Home.xml"/>
+
+    <actions><set field="definitionType" value="panel"/></actions>
+    <widgets><include-screen location="component://tools/screen/Dashboards/Panels.xml" share-scope="true"/></widgets>
+</screen>

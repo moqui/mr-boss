@@ -16,9 +16,11 @@ along with this software (see the LICENSE.md file). If not, see
     group BOSS_INSIGHTS and the administrator group BOSS_INSIGHTS_ADMIN open it (data/BossSetupData.xml), as ADMIN does; the root
     grant opens navigation only, and each screen and service checks its own permission (ironstone.insights.ContextServices.get#Context
     resolves the organizations, capabilities, safe defaults and links for every subscreen) while the report engine checks its own
-    artifacts. The menu of design §1.2 grows by phase: P1 builds Home (a frame until P5); the groups Dashboards and KPIs, Report
-    builder, Reports, Delivery and alerts, Business flows and Settings come with the phases that build their entries. Until P2, P3,
-    P4 and P7 replace them, the copied Dashboards (with Dashboard), ReportBuilder, Reports and ScheduledReports screens stay open
+    artifacts. The menu of design §1.2 grows by phase: P1 builds Home (a frame until P5); P2 the dashboards (Dashboards, Library
+    panels, Wall display, with Dashboard, DashboardEditor and PanelDetail hidden) and Report builder › Explore, each a mount of the
+    framework's report screens (INS-04) whose links the reportLinks map here sends to Insights' own screens; Reports, Delivery and
+    alerts, Business flows and Settings come with the phases that build their entries. Until P3, P4 and P7 replace them, the
+    copied report builder (ReportBuilder's Datasets, DatasetDetail, DatasetView), Reports and ScheduledReports screens stay open
     only to BOSS_INSIGHTS_ADMIN and ADMIN (impl-insights F20; BOSS_INS_LEGACY denies them to the root user group). -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Insights" menu-image="sym_o_insights" menu-image-type="icon">
@@ -29,6 +31,11 @@ along with this software (see the LICENSE.md file). If not, see
         <service-call name="mantle.party.PartyServices.setup#UserOrganizationInfo" out-map="context"/>
         <service-call name="ironstone.insights.ContextServices.get#Context" in-map="{appRoot:appRoot}" out-map="insights"/>
         <set field="sharedLinks" from="insights.sharedLinks"/>
+        <!-- where the framework report screens' links go under Insights (mr-moqui docs/tools/Monitoring.md, "Mounting the report
+            screens"); in always-actions, so the mounted screens' transitions read it too -->
+        <set field="reportLinks" from="insights.reportLinks"/>
+        <!-- Tools' telemetry dashboards, which no Insights group reads, are not listed (design §4 Dashboards) -->
+        <set field="reportHiddenComponents" from="['tools']"/>
     </always-actions>
 
     <subscreens default-item="Home" always-use-full-path="true">

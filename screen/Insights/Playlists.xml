@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Wall display (design-insights §4 Playlists; impl-insights P2, INS-04): the dashboard playlists the viewer may read (a
+    report definition of kind playlist), and one played in kiosk mode by the framework Playlist screen (Tools
+    Dashboards/Playlist.xml) when one is chosen. The display runs as the signed-in viewer: a dashboard they cannot read is skipped
+    and its failure logged by name, and its dashboard links open Insights › Dashboard. An author creates a playlist here (the
+    framework Reports screen's createPlaylist) and orders it in DashboardEditor. A registered device comes in Insights' second
+    release (P11). -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Wall display" default-menu-index="4" menu-image="sym_o_slideshow" menu-image-type="icon">
+
+    <parameter name="definitionId"/>
+    <parameter name="from"/>
+    <parameter name="thru"/>
+
+    <transition-include name="data" location="component://tools/screen/Dashboards/Playlist.xml"/>
+    <transition-include name="createPlaylist" location="component://tools/screen/Dashboards/Reports.xml"/>
+    <transition name="play"><default-response url="."/></transition>
+    <transition name="edit"><default-response url="${reportLinks.definition}"/></transition>
+
+    <actions>
+        <set field="canAuthor" from="!!reportLinks.definition"/>
+        <set field="from" from="from || insights.defaults.from"/>
+        <set field="thru" from="thru || insights.defaults.thru"/>
+        <if condition="!definitionId">
+            <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'report'}" out-map="found"/>
+            <set field="playlists" from="Array.from(found.definitions || []).filter(row => row.body?.kind === 'playlist')
+                    .map(row => ({id: row.id, title: row.title || row.id, count: (row.body.playlist || []).length, seconds: row.body.seconds || 30}))"/>
+            <service-call name="org.moqui.report.ReportServices.list#Definitions" in-map="{definitionType:'dashboard'}" out-map="dashboards"/>
+            <set field="dashboardChoices" from="Array.from(dashboards.definitions || []).filter(row => !reportHiddenComponents.includes(row.component))
+                    .map(row => ({id: row.id, title: row.title || row.id}))"/>
+        </if>
+    </actions>
+    <widgets>
+        <section name="PlayPlaylist" condition="definitionId"><widgets>
+            <link url="." text="All playlists" link-type="anchor"/>
+            <include-screen location="component://tools/screen/Dashboards/Playlist.xml" share-scope="true"/>
+        </widgets><fail-widgets>
+            <container style="row items-center q-col-gutter-sm">
+                <container style="col"><label text="Wall display" type="h5"/></container>
+                <container style="col-auto">
+                    <container-dialog id="NewPlaylist" button-text="New playlist" type="primary" condition="canAuthor">
+                        <form-single name="NewPlaylistForm" transition="createPlaylist">
+                            <field name="playlistId"><default-field title="ID"><text-line/></default-field></field>
+                            <field name="playlistTitle"><default-field title="Title"><text-line/></default-field></field>
+                            <field name="playlistDashboardIds"><default-field title="Dashboards">
+                                <drop-down allow-multiple="true"><list-options list="dashboardChoices" key="${id}" text="${title}"/></drop-down>
+                            </default-field></field>
+                            <field name="playlistSeconds"><default-field title="Seconds per dashboard"><text-line default-value="30"/></default-field></field>
+                            <field name="create"><default-field><submit text="Save playlist"/></default-field></field>
+                        </form-single>
+                    </container-dialog>
+                </container>
+            </container>
+            <section name="PlaylistList" condition="playlists.length"><widgets>
+                <form-list name="Playlists" list="playlists" skip-form="true" paginate="false">
+                    <field name="title"><default-field title="Playlist"><link url="play" text="${title}" link-type="anchor" parameter-map="{definitionId:id}"/></default-field></field>
+                    <field name="count"><default-field title="Dashboards"><display/></default-field></field>
+                    <field name="seconds"><default-field title="Seconds each"><display/></default-field></field>
+                    <field name="edit"><conditional-field condition="canAuthor"><link url="edit" text="Edit" link-type="anchor" parameter-map="{definitionId:id}"/></conditional-field>
+                        <default-field><display text=""/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="title"/></column>
+                        <column><field-ref name="count"/><field-ref name="edit"/></column>
+                    </columns>
+                </form-list>
+            </widgets><fail-widgets>
+                <label text="No wall display playlists are shared with you yet." type="p"/>
+            </fail-widgets></section>
+        </fail-widgets></section>
+    </widgets>
+</screen>

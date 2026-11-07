@@ -4,7 +4,9 @@
 // save a dataset, the steward can; scheduling the distributor's; the root's inheritable grant opening no mutating operation from
 // an Insights screen; telemetry and Tools' Dashboards no Insights group's), and the
 // copied builder and its raw entity transitions refused to the ordinary groups. One feature per rule, each case of it a line of
-// its problems, with artifact authorization enabled. The access and isolation walk is the acceptance InsightsFoundationWalk. A
+// its problems, with artifact authorization enabled. P2 adds the dashboard and panel editors (the author's, refused to a reader),
+// every ReportServices operation denied to the root user group and the administrator unless granted (a reader still reads from an
+// Insights screen) and its menu entries. The access and isolation walk is the acceptance InsightsFoundationWalk. A
 // later phase adds a case only for an access rule it adds, and its providers to the menu feature.
 // Run: ./moq test mr-boss --spec InsightsAccess
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
@@ -87,12 +89,13 @@ feature(
     }
 )
 
-// the menu of design §1.2 built so far: Home; the copied screens the administrator's and ADMIN's until their phases
+// the menu of design §1.2 built so far: Home, the dashboards and Report builder; the copied screens the administrator's and
+// ADMIN's until their phases
 feature("the Insights menu and keys follow the groups; the launcher shows Insights to its users only", {
     when() {
         const problems = []
         const reader = shell(users.reader)
-        if (reader.status != 200 || JSON.stringify(reader.names) !== JSON.stringify(["Home"]))
+        if (reader.status != 200 || JSON.stringify(reader.names) !== JSON.stringify(ids.readerMenu))
             problems.push(`the reader's menu: ${reader.status} ${reader.names}`)
         const keymap = (reader.providers?.keymaps || []).find(keymap => keymap.scope === "insights")
         const keys = (keymap?.keys || []).map(key => key.keys)
@@ -259,9 +262,14 @@ feature(
             )
             // and from a copied screen, whose grant is the administrator's ALLOW, not an ALWAYS that would pass the denies
             expect(
-                "the administrator saves a dashboard from the copied Dashboards",
-                under("Insights/Dashboards.xml", users.admin, reports + "save#Definition", dashboard),
+                "the administrator saves a dashboard from the copied report builder",
+                under("Insights/ReportBuilder/Datasets.xml", users.admin, reports + "save#Definition", dashboard),
                 "is not authorized"
+            )
+            // P2: every operation is denied to the root user group unless granted, and the reading grants pass that deny
+            expect(
+                "the reader reads a definition from an Insights screen",
+                underRoot(users.reader, reports + "get#Definition", {definitionId: "boss-commerce-store-operations"})
             )
             expect(
                 "the author saves a dashboard from an Insights screen",
@@ -293,11 +301,11 @@ feature(
 )
 
 feature(
-    "the copied report builder and its raw entity transitions are refused to the ordinary groups and open to the administrator",
+    "the copied report builder and the editors are refused to the ordinary groups; the builder opens to the administrator, the editors to the author",
     {
         when() {
             const problems = []
-            for (const path of ["ReportBuilder/Datasets", "Dashboards", "ScheduledReports"]) {
+            for (const path of ["ReportBuilder/Datasets", "Reports", "ScheduledReports"]) {
                 const message = screenRefusal(users.reader, path)
                 if (!unauthorized(message) || !message.includes("AT_XML_SCREEN"))
                     problems.push(`the reader opens ${path}: ${message || "opened"}`)
@@ -311,6 +319,13 @@ feature(
             if (!unauthorized(transition)) problems.push(`the author posts a DataDocumentCondition: ${transition || "accepted"}`)
             const opened = screenRefusal(users.admin, "ReportBuilder/Datasets")
             if (opened !== "") problems.push(`the administrator is refused the report builder: ${opened}`)
+            // P2: the dashboard editor is the author's (BOSS_INS_AUTHORING), refused to a reader and the administrator
+            for (const user of [users.reader, users.admin]) {
+                const editor = screenRefusal(user, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
+                if (!unauthorized(editor)) problems.push(`${user} opens DashboardEditor: ${editor || "opened"}`)
+            }
+            const authored = screenRefusal(users.author, "DashboardEditor", {definitionId: "boss-commerce-store-operations"})
+            if (authored !== "") problems.push(`the author is refused DashboardEditor: ${authored}`)
             const conditions = system(() =>
                 ec.entity.find("moqui.entity.document.DataDocumentCondition").condition("fieldValue", "INS_SPEC").count()
             )

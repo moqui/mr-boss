@@ -7,13 +7,15 @@ suite(
         "ManufacturingWorkOrdersWalk",
         "PurchasingOrdersWalk",
         "CustomerServiceCasesWalk",
-        "CommerceThemesWalk"
+        "CommerceThemesWalk",
+        "InsightsDashboardsWalk"
     ],
     {
         server: {
             components: ["mr-boss"],
             specs: [
-                "AccountingClientFixtures"
+                "AccountingClientFixtures",
+                "InsightsClientFixtures"
             ],
             conf: "conf/MoquiDevConf.xml",
             // the walks that send (invoices, reminders, the close) keep their mail in the capture (docs/Build-Test.md)

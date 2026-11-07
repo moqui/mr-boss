@@ -2326,14 +2326,15 @@ along with this software (see the LICENSE.md file). If not, see
             <filters entityFilterSetId="MANTLE_USER_ORG"/>
             <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
-    <!-- The copied report screens (impl-insights F20; design §13.2): Dashboards with Dashboard (the framework's list and dashboard,
-        whose edit, new and explore open the Tools Dashboards app), ReportBuilder (the copied SimpleReport builder with its raw
-        DataDocument transitions), Reports (the legacy saved-report picker) and ScheduledReports (the copied personal scheduled
-        finds) stay the Insights administrator's and ADMIN's until P2, P3, P4 and P7 replace them: the root user group is denied
-        them, as impl-commerce F45's areas. Insights.js reads this as the legacy capability. The administrator's grant is ALLOW, as
-        on the root: an inheritable ALWAYS here would pass the engine's denies below (BOSS_INS_REPORT_*) from these screens. -->
+    <!-- The copied report screens (impl-insights F20; design §13.2): the report builder's Datasets, DatasetDetail and DatasetView (the
+        copied SimpleReport builder with its raw DataDocument transitions; Report builder › Explore beside them is P2's mount, open
+        to every Insights user), Reports (the legacy saved-report picker) and ScheduledReports (the copied personal scheduled finds)
+        stay the Insights administrator's and ADMIN's until P3, P4 and P7 replace them: the root user group is denied them, as
+        impl-commerce F45's areas. P2 replaced the copied Dashboards and Dashboard (F35). Insights.js reads this as the legacy
+        capability. The administrator's grant is ALLOW, as on the root: an inheritable ALWAYS here would pass the engine's denies
+        below (BOSS_INS_REPORT_ENGINE) from these screens. -->
     <artifactGroups artifactGroupId="BOSS_INS_LEGACY">
-        <artifacts artifactName="component://mr-boss/screen/Insights/(Dashboards|Dashboard|ReportBuilder|Reports|ScheduledReports)\.xml"
+        <artifacts artifactName="component://mr-boss/screen/Insights/(ReportBuilder/(Datasets|DatasetDetail|DatasetView)|Reports|ScheduledReports)\.xml"
                 artifactTypeEnumId="AT_XML_SCREEN" nameIsPattern="Y" inheritAuthz="Y"/>
         <authz artifactAuthzId="BOSS_INS_LEGACY_DENY" userGroupId="BOSS_INSIGHTS"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
@@ -2381,8 +2382,9 @@ along with this software (see the LICENSE.md file). If not, see
     <!-- The report engine's own artifacts by capability (impl-insights F2, F4, §4): never DASHBOARDS_APP, REPORT_DATASETS_ADMIN, the
         Tools Dashboards screens, the telemetry datasets (org.moqui.report.dataset.otel_*) or git sync. Reading (every Insights
         group): the /moqui/reports REST path the browser panels post to, and the query, document, dataset, dashboard, definition,
-        version, use, diff, preview and export-audit operations; each dataset's own org.moqui.report.dataset.<id> artifact and its
-        documents' DataDocumentUserGroup rows are granted by P3's admission, so a definition or a share grants no data. -->
+        version, use, diff, preview, definition export and export-audit operations, ALWAYS so they pass BOSS_INS_REPORT_ENGINE's deny
+        (below); each dataset's own org.moqui.report.dataset.<id> artifact and its documents' DataDocumentUserGroup rows are granted
+        by P3's admission, so a definition or a share grants no data. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_READ" description="Insights: reading report definitions and results">
         <artifacts artifactName="/moqui/reports" artifactTypeEnumId="AT_REST_PATH" inheritAuthz="Y"/>
         <artifacts artifactName="org.moqui.report.ReportServices.query#Documents" artifactTypeEnumId="AT_SERVICE"/>
@@ -2397,31 +2399,29 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.get#DefinitionDiff" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.preview#Report" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.audit#Export" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.export#Definitions" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_READ" userGroupId="BOSS_INSIGHTS_READ"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_DATA" userGroupId="BOSS_INSIGHTS_DATA"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_FLOW" userGroupId="BOSS_INSIGHTS_FLOW"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_READ_ADMIN" userGroupId="BOSS_INSIGHTS_ADMIN"
-                authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- Authoring (the author and the dataset steward): saving, copying, restoring and deleting definitions, each the owner's in the
-        engine. The root user group and the administrator are denied them, so the root's inheritable ALLOW does not open them to a
-        reader from an Insights screen (impl-admin F35); the authors' ALWAYS passes the deny, as an area's. -->
+        engine. BOSS_INS_REPORT_ENGINE denies every ReportServices operation to the root user group and the administrator, so the
+        root's inheritable ALLOW does not open them to a reader from an Insights screen (impl-admin F35); the authors' ALWAYS passes
+        the deny, as an area's. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_AUTHOR" description="Insights: authoring report definitions">
         <artifacts artifactName="org.moqui.report.ReportServices.save#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.copy#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.restore#Definition" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.delete#Definition" artifactTypeEnumId="AT_SERVICE"/>
-        <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_ROOTDENY" userGroupId="BOSS_INSIGHTS"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_AUTHOR_DATA" userGroupId="BOSS_INSIGHTS_DATA"
@@ -2435,16 +2435,12 @@ along with this software (see the LICENSE.md file). If not, see
                 authzTypeEnumId="AUTHZT_ALLOW" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
     <!-- Scheduling (the distributor): the framework's schedule operations, owner-mode until P7's owner-equivalence check, denied to
-        the root user group and the administrator as authoring is. -->
+        the root user group and the administrator by BOSS_INS_REPORT_ENGINE as authoring is. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_SCHEDULE" description="Insights: scheduling reports">
         <artifacts artifactName="org.moqui.report.ReportServices.create#Schedule" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.list#Schedules" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.pause#Schedule" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.send#Report" artifactTypeEnumId="AT_SERVICE"/>
-        <authz artifactAuthzId="BOSS_INS_REPORT_SCHEDULE_ROOTDENY" userGroupId="BOSS_INSIGHTS"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
-        <authz artifactAuthzId="BOSS_INS_REPORT_SCHEDULE_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
-                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_SCHEDULE_DISTRIBUTE" userGroupId="BOSS_INSIGHTS_DISTRIBUTE"
                 authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
     </artifactGroups>
@@ -2465,5 +2461,38 @@ along with this software (see the LICENSE.md file). If not, see
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_TOOLS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Insights P2 (impl-insights P2, F32; the P1 review's "For the lead"): every ReportServices operation is denied to the root
+        user group and the administrator, so an operation the framework adds is refused from any Insights screen until a capability
+        group is granted it (fail closed); the reading (BOSS_INS_REPORT_READ), authoring, scheduling and dataset grants above are
+        ALWAYS and pass the deny. run#ScheduledReport is anonymous-all, outside authorization. -->
+    <artifactGroups artifactGroupId="BOSS_INS_REPORT_ENGINE" description="Insights: report engine operations, refused unless granted">
+        <artifacts artifactName="org\.moqui\.report\.ReportServices\..*" artifactTypeEnumId="AT_SERVICE" nameIsPattern="Y"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_ENGINE_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_REPORT_ENGINE_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+    </artifactGroups>
+    <!-- Insights P2 (design-insights §1.1, §4): the definition editors, DashboardEditor and PanelDetail (mounts of the framework
+        Definition screen), are the author's and the dataset steward's: the root user group and the administrator are denied them
+        and the authors' ALWAYS passes the deny, as an area's (impl-commerce F45). An inheritable ALWAYS passes the engine's denies
+        from these screens, so the editors take in only the authoring transitions (save, copy, restore, delete, export), never
+        definition import; every other Insights mount (Dashboards, Dashboard, Library panels, Wall display, Explore, Compare) is
+        open to every Insights user by the root's ALLOW, with the engine's operations as granted above. -->
+    <artifactGroups artifactGroupId="BOSS_INS_AUTHORING" description="Insights: the dashboard and panel editors">
+        <artifacts artifactName="component://mr-boss/screen/Insights/(DashboardEditor|PanelDetail)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
+                nameIsPattern="Y" inheritAuthz="Y"/>
+        <authz artifactAuthzId="BOSS_INS_AUTHORING_ROOTDENY" userGroupId="BOSS_INSIGHTS"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_AUTHORING_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"
+                authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
+        <authz artifactAuthzId="BOSS_INS_AUTHORING_AUTHOR" userGroupId="BOSS_INSIGHTS_AUTHOR"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
+        <authz artifactAuthzId="BOSS_INS_AUTHORING_DATA" userGroupId="BOSS_INSIGHTS_DATA"
+                authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL">
+            <filters entityFilterSetId="MANTLE_USER_ORG"/>
+            <filters entityFilterSetId="MANTLE_PRIVATE_CONTACT"/></authz>
     </artifactGroups>
 </entity-facade-xml>
