@@ -163,7 +163,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 7 (§6 F1–F31) |
-| P1 Foundation | BOSS | the Insights root and menu | — |
+| P1 Foundation | BOSS | the Insights root and menu | built Nov 7 (ins/p1) |
 | P2 Dashboards and Explore in Insights | mr-moqui, BOSS | Dashboards, Dashboard, DashboardEditor, Panels, PanelDetail, Playlists, Explore | — |
 | P3 Dataset admission | mr-moqui, Mantle, BOSS | Datasets, DatasetDetail, DatasetFields, DatasetView | — |
 | P4 Report catalog and metrics | BOSS | Reports, SavedReports; Dashboard's meaning, PanelDetail's measure and target | — |
@@ -233,6 +233,76 @@ Design §1.1, §1.2 and §1.3's legacy screens; INS-01, INS-10 (the shell part).
 - **Usable when** (an acceptance test to write, `acceptance/Insights/InsightsFoundationWalk`): the menu renders for each
   group; `insights.reader` opens Insights but not the report builder; a Projects client and a PASS account are refused
   the root and every `ironstone.insights` service.
+
+**Built Nov 7 (P1).**
+- Access (`data/BossSetupData.xml`, appended but for F1's root row, now `AUTHZT_ALLOW`, F-P1-5):
+  - the groups `BOSS_INSIGHTS` (root user group) and `_READ`, `_AUTHOR`, `_DATA`, `_DISTRIBUTE`, `_FLOW`; on the
+    `BOSS_INSIGHTS` artifact group (a second element of the same id) the `ironstone\.insights\..*` service pattern and the
+    root authz `BOSS_INSIGHTS_ROOT` (`MANTLE_USER_ORG`, `MANTLE_PRIVATE_CONTACT`); the deny pattern untouched (`insights` is
+    in it since Admin P1);
+  - `BOSS_INS_LEGACY`: the copied Dashboards, Dashboard, ReportBuilder, Reports and ScheduledReports denied to
+    `BOSS_INSIGHTS`, `ALWAYS` for `BOSS_INSIGHTS_ADMIN` (F20, F-P1-4); ADMIN keeps them through the root's ALWAYS;
+  - the nine `INSIGHTS_*` permissions with their ADMIN grants, and design §1.1's table: every group `INSIGHTS_VIEW`; the
+    author `_AUTHOR`; the steward `_DATASET_VIEW`, `_DATASET_EDIT`; the distributor `_SCHEDULE`, `_DISTRIBUTE`; the flow
+    editor `_FLOW_EDIT`; the administrator `_SETTINGS_VIEW`, `_SETTINGS_EDIT`;
+  - the engine's artifacts (F2, F4, F-P1-1, F-P1-2): `BOSS_INS_REPORT_READ` (the `/moqui/reports` REST path and
+    `query#Documents`, `run#Query`, `list#Datasets`, `get#Dataset`, `render#Dashboard`, `get#Definition`,
+    `list#Definitions`, `versions#Definition`, `find#DefinitionUses`, `get#DefinitionDiff`, `preview#Report`,
+    `audit#Export`; ALLOW for the six groups); `BOSS_INS_REPORT_AUTHOR` (`save#`, `copy#`, `restore#`, `delete#Definition`;
+    DENY for `BOSS_INSIGHTS` and `BOSS_INSIGHTS_ADMIN`, ALWAYS for the author and steward); `BOSS_INS_DATASET_EDIT`
+    (`org.moqui.report.dataset`, the engine's dataset-save check; the steward); `BOSS_INS_REPORT_SCHEDULE` (`create#`,
+    `list#`, `pause#Schedule`, `send#Report`; the same denies, ALWAYS for the distributor); `BOSS_INS_REPORT_TOOLS`
+    (`import#Definitions`, `create#Annotation`, `evaluate#Alerts`, the four git sync operations; denied to the root user
+    group and the administrator). No `DASHBOARDS_APP`, `REPORT_DATASETS_ADMIN`, Tools screen, telemetry dataset or dataset
+    artifact; P3's admission grants the datasets.
+- `ironstone.insights.ContextServices.get#Context` (in: `appRoot`, `organizationPartyId`) over
+  `service/ironstone/insights/Insights.js`, whose tables later phases extend: `capabilityPermissions` (the nine), `areas`
+  (`legacy`, read from `BOSS_INS_LEGACY`), `linkPaths` (Home). Opening Insights is the root grant read from the user's own
+  groups (impl-admin F35's way); a Projects client and a PASS account never. It answers the capabilities, the organization
+  choices (the user's, or every internal one for the administrator with none active), the organization in scope (the
+  requested one only when it is the user's, `ORGANIZATION_UNAVAILABLE` otherwise, forged or not; else the active one, else
+  the only one), the safe defaults (`now-30d` to `now`, currencies native, F-P1-7) and `sharedLinks`; refusals
+  `INSIGHTS_UNAVAILABLE`, `INSIGHTS_CONTEXT`.
+- Screens: the root (`screen/Insights.xml`: `get#Context` and `sharedLinks` in always-actions; `<shell-providers>` with
+  the `insights` keymap, `g s` Insights home, F-P1-3; the stale grant comment replaced, F1); Home rewritten as its frame
+  (the scope, read only; the first-use state "No dashboards or reports are shared with you yet."; the root group alone told
+  why); the FlowMap and Settings placeholders removed. The reader's menu is Home; the administrator's and ADMIN's add the
+  copied screens.
+- Demo (`data/BossUsersDemoData.xml`, appended): `insights.reader`, `.author`, `.steward`, `.distributor`, `.flow` (each in
+  `BOSS_USERS`, `BOSS_INSIGHTS` and its group, an agent of Retail), `insights.admin` (`BOSS_INSIGHTS_ADMIN` alone),
+  `insights.services` (a reader of ORG_ZIZI_SERVICES only) and `insights.finance` (a Retail reader in
+  `BOSS_ACCOUNTING_READ`, the financial read `insights.reader` lacks); none in `ADMIN`.
+- Specs: `test/Insights/InsightsSpecLib.js` (ids, users, `asUser`, `system`, `refusal`, `invoke`, `page`,
+  `screenRefusal`, `shell`) and `InsightsAccess` (6 features, 2.5 s feature time, the slowest 0.65 s: the context, the
+  Services reader refused Retail and a forged organization, another app's user, a client and a PASS account refused the
+  context and Home; the menu and keys of the reader, the administrator and ADMIN, the launcher; Home's one qvt render;
+  the capabilities of every user; the engine's artifacts (the reader and the administrator refused `save#Definition`, the
+  author saving a dashboard but refused a dataset, the steward saving it; schedules the distributor's; `otel_spans` refused
+  to the steward and read by ADMIN; git sync refused to the administrator; Tools' Dashboards refused to the administrator and
+  the author); the copied builder refused to the reader and its raw `createDataDocumentCondition` transition to the author,
+  opened to the administrator). A throwaway probe screen under the root, not kept, confirmed F-P1-1's deny: from an Insights
+  screen the reader and the administrator are refused `save#Definition` and the author saves. Acceptance, written and not
+  run: `acceptance/Insights/InsightsFoundationWalk` (3 features: every group's menu with each entry opened and the others
+  refused; the reader's Home without the builder, its dataset screens and transitions; the client and the PASS account
+  refused the root and `get#Context`).
+- Tests run (release binary, `--nobuild`, this worktree's runtime): InsightsAccess 6 of 6; AdminAccess 7, ProjectsAccess 8,
+  CommerceAccess 15 and Chatter 27 (57 of 57, the deny-pattern feature among them). `moqui lint --screens`: 132 sites, as
+  before, none in the Insights screens. Prettier clean on the new JavaScript. Not run: `./moq test-apps`, the acceptance
+  suite (AppStructure and TuiRender list the copied screens, rendered as ADMIN, unchanged; the removed placeholders are found by
+  label).
+- Budget: mr-boss's measured share is InsightsAccess's 2.5 s server (no client spec).
+- Inventories: no ss-inventory or usl-inventory row is implemented by P1 (the SimpleReport and MyAccount rows are P3's and
+  P7's).
+- Design edits: §1.1 (the root user group and the engine's denies), §1.2 (`g s`).
+- Findings (provisional, numbered by the lead): F-P1-1 to F-P1-7 in §6.
+- Decisions (§4 rows added): opening Insights with the root grant alone; the engine's artifacts by group and the
+  administrator's read only; the copied screens with Dashboards; the financial reader's group.
+- For the lead:
+  - the budget: mr-boss's share is InsightsAccess's 2.5 s;
+  - P2's mounts inherit the root's ALLOW: a mounted Tools Dashboards screen opens to every Insights user unless denied as
+    Admin's System is (impl-admin F34); the administrator's root grant is ALLOW so such a deny applies to them;
+  - Admin P3's capability registry gets Insights' rows (the nine permissions and six groups above);
+  - `test/Shared/Chatter.spec.js`'s comment that Insights and Admin have no grant was stale and is corrected (F-P1-6).
 
 ### P2 — Dashboards and Explore in Insights
 
@@ -521,6 +591,10 @@ or the owner's design. The decisions both plans share (the next apps, what is le
 | Nov 7, 2026 | Business annotations get a framework `business` source with an organization and a resolvable link, written after commit by their owners | F13: today's sources are deploy, config, release and user, under `MONITOR_INGEST` |
 | Nov 7, 2026 | The group recipient cap is 50 per business schedule or alert rule by default, an Insights Settings value, under an instance ceiling of 200 (Admin P8's InstancePreference; 200 until it exists) | The user's call (answer 1, design §17 Q5); design §16 changed |
 | Nov 7, 2026 | Insights has a second release, stage 5: wall displays on shared devices (P11), after Admin P18's device credential | The user's call (impl-admin answer 2); design §16 changed |
+| Nov 7, 2026 | Opening Insights needs the root grant alone, no permission; `INSIGHTS_VIEW` decides what Home and later screens show | P1, as Admin (impl-admin §4); a member of `BOSS_INSIGHTS` alone opens Home and is told why it shows nothing |
+| Nov 7, 2026 | The engine's operations by group: reading for every group, authoring for the author and steward, the dataset save for the steward, scheduling for the distributor; the administrator reads only (its business data and authoring stay separate grants); import, annotations, alert evaluation and git sync no Insights group's | P1 (F2, F4, F-P1-1); bundles in P12, the business annotation source in P6 |
+| Nov 7, 2026 | Dashboards and Dashboard stay with the copied screens, the administrator's and ADMIN's, until P2 mounts the framework screens | F-P1-4 |
+| Nov 7, 2026 | The demo reader with financial read is in Accounting's `BOSS_ACCOUNTING_READ` (`ACCOUNTING_VIEW`, `PRODUCT_COST_VIEW`, `CUSTOMER_CREDIT_VIEW`), the owner's group, not an Insights one | P1 (design §13.3's confidential-field scenario) |
 
 ## 5. Open questions
 
@@ -566,6 +640,13 @@ is written there too. F1–F25 were found on Nov 7, 2026, while writing this pla
 | F29 | P0: Products' report candidates are CatalogChecks, the price audit and history and cost history; Purchasing's the eight `ironstone.purchasing.ReportServices` reads under Performance; the Home cards whose count is the query of the list they open: Commerce's To approve, Payment holds, Placements waiting, Open carts, Integration errors; Accounting's draft and posted entries, bills awaiting approval or on hold, cost close; Products' active SKUs, variants, ending soon; Purchasing's draft, approved not sent, held bills, late receipts, quotes expiring, unacknowledged; Manufacturing's open, in progress, late; Projects' reviews, time to approve, allocation requests, unbilled; Warehouse's receiving. Customer Service's queue cards and the others do not match their lists | P4 registers the Products and Purchasing entries; P5 registers only the matching cards; the others are their owners' fixes (one query for card and list) |
 | F30 | P0: Customer Service's clock document carries `organizationPartyId`; Commerce's three documents carry only `productStoreId` (ProductStore has the organization; PortalPaymentAttempt has no ProductStore relationship); Mantle's sales documents none (OrderPart `vendorPartyId`, Invoice `fromPartyId`) | P3 adds an `organizationPartyId` field through those paths to the five documents (a relationship for PortalPaymentAttempt, or its invoice's `fromPartyId`) and reindexes |
 | F31 | P0: `create#Annotation` copies a whitelist of fields (annotations.rs:38-54), so an organization and link would be dropped, and indexes at once; a Mantle service can write after commit with `registerOnCommit` (tools_host.rs:328); hooks are `publish#ProductPriceList`, `close#Period` and `store#Promotion` (no start event: the annotation spans `fromDate` to `thruDate`) | P6's business source adds `organizationPartyId` and `link` to the whitelist; Mantle registers the writes on commit |
+| F-P1-1 | P1: the root's inheritable ALLOW reaches every ReportServices operation an Insights screen or transition calls (impl-admin F35), so without more a reader could save, copy, delete, schedule or import from any Insights screen that calls them | `BOSS_INS_REPORT_AUTHOR`, `_SCHEDULE` and `_TOOLS` deny the root user group and the administrator; the capability groups pass with ALWAYS; confirmed with a probe screen (not kept) |
+| F-P1-2 | P1: the browser report panels post to `/rest/s1/moqui/reports/query` (WebrootReport.js:1004), the REST path `DASHBOARDS_APP` guards (moqui.rest.xml:23-27), so reading needs the REST path's grant beside the operations | `BOSS_INS_REPORT_READ` grants `/moqui/reports` (its query, documents and datasets) |
+| F-P1-3 | P1: Comms' keymap binds `g i` globally (Comms.xml:52), and a scope key shadows a global one while its app is current | Insights home is `g s`; design §1.2 changed |
+| F-P1-4 | P1: F20's list of copied screens kept to the administrator leaves out Dashboards and Dashboard, whose edit, new and explore open Tools' Dashboards, which only ADMIN opens | Kept with the copied screens (`BOSS_INS_LEGACY`) until P2 |
+| F-P1-5 | P1: `BOSS_INSIGHTS_ADMIN`'s root grant was an inheritable ALWAYS (F1), which overrides any deny below it: F-P1-1's and those P2 puts on mounted Tools screens | ALLOW, as impl-admin F34; the copied screens' area gives it ALWAYS |
+| F-P1-6 | P1: test/Shared/Chatter.spec.js said Insights and Admin have no grant | Comment corrected; its filter (Commons and Comms) unchanged |
+| F-P1-7 | P1: no organization analytics defaults exist until P10 (PartySetting types, §4) | `get#Context`'s defaults are a relative range (`now-30d` to `now`) and native currencies, never a default currency |
 
 ## 7. Later
 
