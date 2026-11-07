@@ -109,6 +109,8 @@ along with this software (see the LICENSE.md file). If not, see
         <error-response url="."/>
     </transition>
     <actions>
+        <!-- the locale choices are read here, not in the widget (server-static: a widget sees only part of ec) -->
+        <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
         <service-call name="mantle.public.ThemeServices.find#SiteNavigation" out-map="found" transaction="force-new" ignore-error="true"
                 in-map="{siteId:(siteId || null)}"/>
         <script>ec.message.clearErrors()</script>
@@ -186,7 +188,7 @@ along with this software (see the LICENSE.md file). If not, see
                                 <field name="locale">
                                     <default-field title="Locale" tooltip="Empty: every locale without a menu of its own">
                                         <drop-down allow-empty="true">
-                                            <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                            <list-options list="localeOptions" key="${locale}" text="${name}"/>
                                         </drop-down>
                                     </default-field>
                                 </field>
