@@ -2449,7 +2449,8 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Tools' report administration, no Insights group's: definition import (P12's admitted bundles), annotations (P6's business
         source), alert evaluation and git sync, denied to the root user group and the administrator so the root's inheritable
-        ALLOW opens none of them from an Insights screen; each also keeps its own check in the engine. -->
+        ALLOW opens none of them from an Insights screen; each but pull#DefinitionGitSyncs (the repository pull, allow-remote
+        false, with no check of its own) also keeps its own check in the engine. -->
     <artifactGroups artifactGroupId="BOSS_INS_REPORT_TOOLS" description="Insights: Tools report administration, refused">
         <artifacts artifactName="org.moqui.report.ReportServices.import#Definitions" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.create#Annotation" artifactTypeEnumId="AT_SERVICE"/>
@@ -2458,6 +2459,7 @@ along with this software (see the LICENSE.md file). If not, see
         <artifacts artifactName="org.moqui.report.ReportServices.list#DefinitionGitSyncs" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.push#DefinitionGitSync" artifactTypeEnumId="AT_SERVICE"/>
         <artifacts artifactName="org.moqui.report.ReportServices.pull#DefinitionGitSync" artifactTypeEnumId="AT_SERVICE"/>
+        <artifacts artifactName="org.moqui.report.ReportServices.pull#DefinitionGitSyncs" artifactTypeEnumId="AT_SERVICE"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_TOOLS_ROOTDENY" userGroupId="BOSS_INSIGHTS"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_REPORT_TOOLS_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"

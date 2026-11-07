@@ -1,11 +1,12 @@
 // Insights access (impl-insights §2, P1; design-insights §1.1, §1.2): who may open Insights and the context they get (another
 // organization refused), the menu, providers and launcher per group, Home's one render (qvt), each group's capabilities from its
 // permissions and the copied screens' area, the report engine's artifacts by capability (a reader cannot save, an author cannot
-// save a dataset, the steward can; scheduling the distributor's; telemetry and Tools' Dashboards no Insights group's), and the
+// save a dataset, the steward can; scheduling the distributor's; the root's inheritable grant opening no mutating operation from
+// an Insights screen; telemetry and Tools' Dashboards no Insights group's), and the
 // copied builder and its raw entity transitions refused to the ordinary groups. One feature per rule, each case of it a line of
 // its problems, with artifact authorization enabled. The access and isolation walk is the acceptance InsightsFoundationWalk. A
 // later phase adds a case only for an access rule it adds, and its providers to the menu feature.
-// Run: ./moq test mr-boss --spec Insights/InsightsAccess
+// Run: ./moq test mr-boss --spec InsightsAccess
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke, shell, screenRefusal} = lib
 const context = "ironstone.insights.ContextServices.get#Context"
@@ -28,6 +29,8 @@ spec({
                 "moqui.report.Definition"
             ])
                 ec.entity.find(entityName).condition("definitionId", "in", [dashboardId, datasetId]).deleteAll()
+            // a schedule the reader is refused, should a refusal regress
+            ec.entity.find("moqui.screen.ScreenScheduled").condition("userId", "BOSS_INS_READER").deleteAll()
         })
         ec.artifactExecution.enableAuthz()
     }
@@ -229,6 +232,33 @@ feature(
                 "the administrator lists git syncs",
                 asUser(users.admin, () => refusal(reports + "list#DefinitionGitSyncs", {})),
                 "is not authorized"
+            )
+            // under the Insights root, whose inheritable ALLOW reaches every service a screen calls (F-P1-1): the denies hold
+            // for the reader and the administrator on each kind of mutating operation, and the author still saves
+            const underRoot = (user, service, parameters) =>
+                asUser(user, () =>
+                    ec.artifactExecution.runAsUser("component://mr-boss/screen/Insights.xml", () => refusal(service, parameters))
+                )
+            const mutating = {
+                "save#Definition": dashboard,
+                "create#Schedule": {definitionId: dashboardId, cronExpression: "0 0 6 * * ?"},
+                "import#Definitions": {bundle: {definitions: []}},
+                "pull#DefinitionGitSyncs": {repositoryId: "INS_SPEC", isDefaultBranch: false}
+            }
+            for (const [operation, parameters] of Object.entries(mutating))
+                expect(
+                    `the reader calls ${operation} from an Insights screen`,
+                    underRoot(users.reader, reports + operation, parameters),
+                    "is not authorized"
+                )
+            expect(
+                "the administrator saves a dashboard from an Insights screen",
+                underRoot(users.admin, reports + "save#Definition", dashboard),
+                "is not authorized"
+            )
+            expect(
+                "the author saves a dashboard from an Insights screen",
+                underRoot(users.author, reports + "save#Definition", dashboard)
             )
             // Tools' Dashboards app: refused to the Insights administrator and the author
             for (const user of [users.admin, users.author]) {
