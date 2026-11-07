@@ -3,7 +3,9 @@
 // through Admin › Settings › Constitution, which saves Retail's own copy, and a second change made with the hash read before the
 // first is refused with the first kept; the delegate is refused Ziziwork Services' document and the instance's (the sealed
 // ADMIN_CONSTITUTION_GLOBAL). A Retail member in no Admin group reads Retail's document as the Assist drawer's Rules pane does
-// (get#Constitution for the organization, impl-admin F46) and is refused the Admin screen. The screen's one qvt render, as the
+// (get#Constitution for the organization, impl-admin F46) and is refused the Admin screen. The administrator (MANTLE_ACTIVE_ORG,
+// an agent of Retail alone) changes Services' document with no active organization and is refused it with Retail active (impl-admin
+// §4: the organization filters, not membership, F-P7-3). The screen's one qvt render, as the
 // delegate in Retail's scope. Mantle's rules are Mantle's Constitution spec; the "usable when" is the acceptance
 // AdminConstitutionUsable.
 // Run: ./moq test mr-boss --spec AdminConstitution
@@ -15,12 +17,18 @@ const ADMIN = "org.moqui.admin.ConstitutionServices."
 const member = "commerce.manager"
 // Mantle's services as the current user, outside a screen's grant (they check the user's access themselves)
 const mantle = (verb, parameters) => system(() => invoke(MANTLE + verb, parameters))
+// an organization's own document's English title, read directly
+const mantleTitle = organizationPartyId => {
+    const stored = invoke(MANTLE + "read#OrganizationConstitutionText", {organizationPartyId})
+    return stored.documentText ? JSON.parse(stored.documentText).title?.en : null
+}
 const hashOf = organizationPartyId => mantle("get#OrganizationConstitution", {organizationPartyId}).contentHash
 const removeDocuments = () =>
     system(() =>
         ec.entity
             .find("mantle.party.PartyContent")
-            .condition({partyId: ids.organizationId, partyContentTypeEnumId: "PcntConstitution"})
+            .condition("partyId", "in", [ids.organizationId, ids.otherOrganizationId])
+            .condition("partyContentTypeEnumId", "PcntConstitution")
             .deleteAll()
     )
 const edit = (scope, title, expectedHash) =>
@@ -82,6 +90,27 @@ feature(
         }
     }
 )
+
+feature("the administrator changes Services' document with no active organization, and is refused it with Retail active", {
+    when() {
+        // Services has no document of its own, so it uses the instance's, at that hash
+        const inherited = system(() => invoke(ADMIN + "get#Constitution", {scope: "global", includeDocument: true}).contentHash)
+        return asUser(users.admin, () => {
+            const none = edit(ids.otherOrganizationId, "Services rules", inherited)
+            ec.user.setPreference("ACTIVE_ORGANIZATION", ids.organizationId)
+            try {
+                return {none, retail: edit(ids.otherOrganizationId, "Services again", "x")}
+            } finally {
+                ec.user.setPreference("ACTIVE_ORGANIZATION", null)
+            }
+        })
+    },
+    then({none, retail}) {
+        none.errors.length == 0
+        system(() => mantleTitle(ids.otherOrganizationId)) == "Services rules"
+        retail.errors.join(" ").includes("RECORD_UNAVAILABLE")
+    }
+})
 
 feature("a Retail member without Admin reads Retail's document as the Rules pane does, and is refused the Admin screen", {
     when() {

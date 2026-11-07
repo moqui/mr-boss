@@ -134,7 +134,8 @@ along with this software (see the LICENSE.md file). If not, see
             <service-call name="mantle.party.ContactServices.get#PartyContactInfo" out-map="contacts" transaction="force-new" ignore-error="true"
                     in-map="{partyId:organizationPartyId, postalContactMechPurposeId:'PostalPrimary', telecomContactMechPurposeId:'PhonePrimary',
                         emailContactMechPurposeId:'EmailPrimary'}"/>
-            <!-- the organization's Constitution for its members and editors (Mantle refuses others: shown as not readable here) -->
+            <!-- the organization's Constitution for those who administer it under this screen's organization filters, its members and
+                instance Constitution editors (Mantle refuses others: shown as not readable here) -->
             <service-call name="mantle.party.ConstitutionServices.get#OrganizationConstitution" out-map="constitution" transaction="force-new"
                     ignore-error="true" in-map="{organizationPartyId:organizationPartyId}"/>
             <script>ec.message.clearErrors()</script>
@@ -174,7 +175,7 @@ along with this software (see the LICENSE.md file). If not, see
                 valueText: row.settingValue ?? '', sourceText: sources[row.source] || row.source,
                 changedHere: row.editable ? 'Here' : 'Where it is used'}))
             constitutionKnown = constitution?.contentHash != null
-            constitutionText = !constitutionKnown ? 'Not readable here: you are not a member of this organization or an instance Constitution editor.'
+            constitutionText = !constitutionKnown ? 'Not readable here: the Constitution of this organization is not available to you.'
                 : constitution.customized ? 'This organization has its own Constitution, replacing the instance Constitution for its members.'
                 : 'This organization uses the instance Constitution.'
             setupChecks = Array.from(readiness?.checks || []).map(row => Object.assign({}, row, {fixUrl: row.fixUrl || ''}))

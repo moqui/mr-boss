@@ -16,7 +16,9 @@ along with this software (see the LICENSE.md file). If not, see
     its editors (impl-admin F46: members read their organization's document in the Assist drawer's Constitution / Rules, with no
     Admin access). One screen over the built services, no writer of its own:
     - ConstitutionScope: the instance (global) document, or an internal organization the user administers and may read
-      (mantle.party.ConstitutionServices.check#OrganizationConstitutionAccess: a member, or a holder of ADMIN_CONSTITUTION_GLOBAL),
+      (mantle.party.ConstitutionServices.check#OrganizationConstitutionAccess: in the find on InternalOrganization under this
+      screen's organization filters, impl-admin §4, so the administrator every one with none active and the active one with one;
+      or a member, or a holder of ADMIN_CONSTITUTION_GLOBAL),
       the active organization first; where the document comes from (an organization's own, the instance's own, the shipped one),
       its hash, its last change and what was passed over; ConstitutionLanguage: the reading and editing language;
     - ConstitutionRead: the rules with their descriptions and references in that language (the framework's m-constitution-view and
@@ -115,8 +117,8 @@ along with this software (see the LICENSE.md file). If not, see
     <actions>
         <script><![CDATA[
             cons = null; orgCons = null; preview = null; changeList = []
-            // the scopes: the instance, and the organizations the user administers whose Constitution they may read (as a member,
-            // or with ADMIN_CONSTITUTION_GLOBAL), with whether they may change it
+            // the scopes: the instance, and the organizations the user administers whose Constitution Mantle lets them read (under
+            // this screen's organization filters), with whether they may change it
             canManage = !!admin?.capabilities?.settingsManage
             const accessOf = organizationPartyId => ec.service.sync().name('mantle.party.ConstitutionServices.check#OrganizationConstitutionAccess')
                 .parameters({organizationPartyId}).call() || {}

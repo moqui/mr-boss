@@ -297,7 +297,8 @@ const adapters = {
         ]
     },
     // Mantle's organization Constitution: whether its own document is valid; its fix is Admin › Settings › Constitution in that
-    // organization's scope (P7), shown when the viewer opens it
+    // organization's scope (P7), shown when the viewer opens it. Mantle reads it for an organization the call's organization filters
+    // find (impl-admin §4, F52 and F-P7-3 settled), so under an Admin screen's grant every organization the viewer administers
     "mantle.party.ConstitutionServices.get#OrganizationConstitution": (provider, run) =>
         perOrganization(run, provider, organizationPartyId => {
             const out = ownerCall(provider.serviceName, {organizationPartyId})

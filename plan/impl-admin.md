@@ -1580,6 +1580,55 @@ Design §7 Organizations, OrganizationDetail and Constitution (its maps note wai
   - F-P7-3 is the user's call; F-P7-4 and F-P7-5 are framework asks;
   - the acceptance AdminConstitutionUsable to run when asked.
 
+**Review Nov 7 (P7).**
+- Checked: Mantle `Organizations.js` and the six services against §4's Nov 7 rows (visibility by screen authz and the organization
+  entity filters through views); F-P7-1 (both organizations in scope for a parent, cycle refused, the earlier parent ended and kept,
+  never deleted; top-level creation only for a caller administering every organization); `store#OrganizationDefault` (registered
+  OrgInternal types only, typed or record-validated, `store#PartySetting` running `validate#PartySetting`; template locations and
+  gateway configuration ids are not typed, so they stay `OWNER_SETTING`); OrganizationContacts (the contact ids read on the server
+  after `check#Record` with `settingsManage`); members named only for `ADMIN_IDENTITY_VIEW`; the Constitution screen (the instance
+  document editable only with `ADMIN_SETTINGS_MANAGE` and the sealed `ADMIN_CONSTITUTION_GLOBAL`, which the framework's
+  `store#`/`reset#Constitution` check again; a stale hash refused on save, customize and reset; the trusted origins only linked to
+  System's Origins); the prompt preview (the framework's `preview#ConstitutionPrompt` answers any signed-in user for a scope they can
+  resolve, so the screen shows nothing the viewer could not get from the service; an organization's only when Mantle lets the viewer
+  read it); `BOSS_ADM_ORGANIZATIONS` (ALWAYS, inheritable, on three screens whose transitions call fixed services; the `choices`
+  transition's sources each check their own capability, F-P2-7's pattern holds); the `ORG_CONSTITUTION_EDIT` grants and bundle rows;
+  the settings index entries; specs and docs.
+- Fixes:
+  - **R1 (F-P7-3, F52; following §4's Nov 7 decision)** Mantle's organization Constitution access was membership alone, so the
+    administrator read and changed only the documents of organizations it works in. `check#OrganizationConstitutionAccess` now also
+    reads for an organization the caller administers: in the find on `mantle.party.InternalOrganization` under the organization filters
+    of the call's authorization (Identity.js `administered()`, the same find as identity scope), so the administrator
+    (`MANTLE_ACTIVE_ORG`) has every organization with none active and the active one with one, the configuration administrator
+    (`MANTLE_USER_ORG`) its organizations and their child organizations. Changing needs `ORG_CONSTITUTION_EDIT` for an organization so
+    administered when the call carries organization filters (an `ADMIN_CONSTITUTION_GLOBAL` holder or member with another organization
+    active is refused it), and the earlier membership rule only when it carries none (a direct call). The Admin screens' own checks
+    (`ADMIN_SETTINGS_MANAGE`, `check#Record` organization) are unchanged. Members' reading (the provider `get#ScopedConstitution`, the
+    Rules pane) keeps membership; the provider passes `readOnly`, so under the agent read fence the filtered find uses the organization
+    context already in the user context and never sets it up (which may clear a stale active-organization preference, a write). F52's
+    organization Constitution check in Health and OrganizationDetail's Constitution source follow with no Registry change: under an
+    Admin screen's grant Mantle answers for every organization the viewer administers. mr-mantle fcdea9c3.
+  - **R2 (medium, F-P7-1)** `store#OrganizationParent` with no parent let a delegate make its child organization top-level, out of the
+    scope of the parent's administrators (the same effect creation refuses). Ending a parent now needs a caller administering every
+    internal organization (`PARENT_REQUIRED`). A change while a later-dated parent row exists is refused (`PARENT_SCHEDULED`) instead
+    of leaving two parents from that date. mr-mantle fcdea9c3.
+  - OrganizationDetail's "not readable" text no longer says membership; the Constitution screen's, Registry's and design §7's as-built
+    notes say the filters; the InternalOrganizations spec's Run line.
+- Tests (release binary, `--nobuild`, this worktree's runtime): AdminConstitution gains a feature (the administrator, an agent of
+  Retail alone, changes Services' document through the screen's transition with no active organization and is refused it with Retail
+  active; it fails without R1), InternalOrganizations a case (the operator refused ending its child's parent). InternalOrganizations,
+  PartyServices, Constitution, StaffIdentity, StaffInvitation 33 of 33 (mr-mantle 4.6 s); AdminConstitution, AdminOrganizations,
+  AdminAccess, AdminRegistries, AdminUsers, AdminGroups, AdminInvitations, ProjectsAccess, AppOrganizationFilters 39 of 39 (P7's features
+  each under 0.3 s; AdminAccess's and ProjectsAccess's slower features are earlier phases'); `moqui lint --screens` 132 flagged sites,
+  as before. Not run: `./moq test-apps`, the acceptance suite.
+- For the lead:
+  - mr-moqui `docs/ai/Constitution.md` (the table's "an organization the user works in") should add the administrative path
+    (not in this worktree);
+  - the Constitution screen asks `check#OrganizationConstitutionAccess` once per organization administered, each setting up the
+    organization context and running the filtered find: fine for a handful, worth one batched call if an instance has many;
+  - Admin.js `scope()` (`ownerIds`: filterOrgIds kept to the user's organizations) and Mantle's filtered find can differ for a delegate
+    with child organizations; the palette's organizations and the Constitution screen's scopes use the former, the services the latter.
+
 ### P8 — Instance settings, localization and reference data
 
 Design §7 InstanceSettings, Localization and ReferenceData; ADM-SETTINGS.
@@ -1890,6 +1939,7 @@ the owner's design.
 | Nov 7, 2026 | Internal organizations are read with `ADMIN_SETTINGS_VIEW` and changed with `ADMIN_SETTINGS_MANAGE` (design §1.1's configuration administrator), in Mantle's identity scope (the `InternalOrganization` find under the organization filters); their memberships stay the identity permissions' (`store#OrganizationMembership`) | P7 |
 | Nov 7, 2026 | Creating an organization and setting its parent are Mantle services that need both organizations in scope (`create#InternalOrganization` writes the party and its parent together; a top-level organization only for a caller administering every one), so a parent never adopts an organization into the caller's scope | P7, F-P7-1 |
 | Nov 7, 2026 | OrganizationDefaults are the setting types registered for OrgInternal (`PartySettingTypeRole`); Admin changes the typed ones and those Mantle validates against the organization's records, and their owners the rest | P7, F-P7-2 |
+| Nov 7, 2026 | An organization's Constitution is read and changed in Admin by the organization entity filters, as identity scope: `check#OrganizationConstitutionAccess` reads for an organization in the filtered find on `InternalOrganization` (ADMIN every one with none active, the active one with one; a delegate its organizations and their children) and changes it with `ORG_CONSTITUTION_EDIT` only so; membership only for a call with no organization filter and for members' reading in the Rules pane | Follows the user's Nov 7 decision on visibility (rows above), settling F-P7-3 and F52 (P7 review) |
 | Nov 7, 2026 | Organizations, OrganizationDetail and Constitution are one area group (`BOSS_ADM_ORGANIZATIONS`) for the configuration administrator and the administrator, who hold `ORG_CONSTITUTION_EDIT`; members read their organization's Constitution in the Assist drawer's Rules pane, and no read entry is built in Admin | P7, F46 |
 
 ## 5. Open questions
@@ -1957,7 +2007,7 @@ day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55�
 | F49 | P2: `ADMIN` holds no `ACCOUNTING_VIEW` or `PRODUCT_CATALOG_VIEW` row; the owners read theirs through ProductAccess `has`, which counts `ADMIN` | The registries read registration permissions the same way (none sealed); the owner's service checks again |
 | F50 | P2: no refresh operation exists to register yet; BOSS keeps no refresh record | Insights P3 registers `index#BusinessDataset`; `operationKey` passes to the owner's service |
 | F51 | P2: no Tools screen edits EmailServer, EmailTemplate or NotificationTopic, or shows ClusterMember | Fix links open Tools' entity grid (ADMIN's) until P11 and P14; the cluster check links Monitoring |
-| F52 | P2: `get#OrganizationConstitution` refuses a reader who is neither member nor editor | The organization Constitution check lists the viewer's own organizations |
+| F52 | P2: `get#OrganizationConstitution` refuses a reader who is neither member nor editor | The organization Constitution check lists the viewer's own organizations; settled in the P7 review: Mantle reads for the organizations the call's organization filters find (§4) |
 | F53 | P2: `get#Readiness` and `request#Refresh` are authorized for Admin users only (the `ironstone\.admin\..*` pattern), and organization-scoped checks cover no organization for a user without the Admin root (review) | Insights P3 and P10 grant their groups the two services and pass or scope the viewer's organizations |
 | F54 | P2: the acceptance AdminFoundationWalk does not walk Settings | AdminRegistriesWalk walks the index; left unchanged |
 | F55 | P3: F41's "a group with ALWAYS on the Admin root" cannot be named by the framework, and after F34 no BOSS group holds ALWAYS there | `check#AdministrationPath` counts `ADMIN` members only; BOSS administrators may lock the BOSS groups out of Admin, which `ADMIN` repairs in Tools (review: agreed) |
