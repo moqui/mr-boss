@@ -494,6 +494,59 @@ permissions and seals), ADM-SHELL.
     framework's call (Demo.spec.js lists the ended ones);
   - P4 repoints Projects' Settings link (F-P1-3); Insights P1 needs no deny-pattern change (F14 done).
 
+**Review Nov 7 (P1).** Checked the mr-moqui and BOSS diffs against this section, §2, §4, §6, design §1.1, §1.2 and §13,
+AGENTS.md, Practices-App-Dev, Practices-Rust and Attack-Surface:
+- Seals (framework): `merge_authz` copies a component's `authz` attributes over the base's (a set attribute still
+  replaces its list) and adds its `privileged-group` and `sealed-permission` children by `name`; `join_ids` takes the
+  attribute or the framework default when it is missing or blank, joined with every element. Cargo covers each rule
+  the Specs bullet asks for: `each_component_adds_authz_elements_and_keeps_the_defaults` (an element adds, defaults kept,
+  two components both apply, a set attribute replaces), `authz_children_are_listed_by_element_beside_the_attributes`,
+  `the_listed_ids_or_the_defaults_are_joined_with_every_added_id`, the three seals in
+  `sealed_permission_create_is_denied_without_the_permission` and `the_framework_seals_the_admin_grants_that_widen_access`,
+  and `a_group_and_a_permission_a_conf_adds_by_element_are_guarded_beside_the_defaults` (the EECAs on an element-added
+  group and permission). No other reader of the `authz` lists. AdminAccess checks the delegate (`ADMIN_ACCESS_MANAGE`
+  through a custom group) refused `BOSS_ADMIN_ACCESS`, `_BACKUP` and `_ADMIN` memberships and the `ADMIN_BACKUP_DOWNLOAD`
+  and `ADMIN_IDENTITY_GLOBAL` grants by direct entity creates, and the reader (a non-holder) refused the
+  `ADMIN_ACCESS_MANAGE` grant.
+- F-P1-1: authz.rs requires authorization on the last screen of a path only, with a deny on any frame above it
+  refusing an ALLOW there (`ancestor_deny`) and only an `ALWAYS` passing. `BOSS_ADM_SYSTEM` denies `System.xml` to
+  `BOSS_ADMIN` and `BOSS_ADMIN_ADMIN`, the only groups with a grant on the Admin root besides `ADMIN`; no BOSS group has
+  any grant on a Tools screen (only `SYSTEM_APP`, `ADMIN`'s ALWAYS), no Tools System screen relaxes
+  `require-authentication`, and System's transitions are refused the same (`AT_XML_SCREEN_TRANS`). The three Tools links
+  made relative also fix a broken target (`//system/Security/UserAccountDetail` has no screen; it is
+  `Security/UserAccount/UserAccountDetail`); System has no other absolute link to itself. No BOSS group is authorized for
+  the `moqui.security` entities, `org.moqui.impl.UserServices` or a REST path.
+- BossSetupData: the groups and grants match design §1.1's table, the administrator as §4 decided; the area groups deny
+  `BOSS_ADMIN` and allow their groups with `ALWAYS` (needed to beat the deny, as F45); the deny pattern has twelve rows
+  with master's same 102 verbs, `admin` and `insights` added, the longest 237 characters.
+- ContextServices and Admin.js: scope from `MANTLE_USER_ORG` organizations (only `MANTLE_ACTIVE_ORG` on the root grant
+  is unrestricted, so a grant without filters fails closed); a forged or out-of-scope id refused alike
+  (`RECORD_UNAVAILABLE`); a Projects client (`PROJECT_CLIENT`) and a PASS account refused every service; capabilities
+  from permissions; no service names a BOSS group.
+- Screens: `moqui lint --screens` (Debug) shows no idiom, hazard or parse failure in the Admin screens or the three Tools
+  screens (132 sites, as before); no placeholder left; the shortcuts and keys follow the capabilities. Specs: Home
+  rendered once in qvt (the html renders are refusals); AdminAccess 7 features, each under 0.8 s on Debug.
+- Demo: the eleven users and the delegate, none in `ADMIN`, every internal one in `BOSS_USERS`; appends only.
+- Fixes: **R1** (low, test gap) AdminAccess checked only `BOSS_ADMIN_ADMIN` on System and one subscreen; the root user
+  group's deny (`BOSS_ADM_SYSTEM_DENY`) had no regression check. The reader joins, with a transition below System
+  (`System/Cache/CacheList/cacheElements`) (mr-boss 001d6d58). **R2** (low, docs) design §1.1's list of the framework's
+  sealed permissions stopped at `LlmGatewayUse`; it names the whole list, Admin's three seals and the privileged groups
+  mr-boss adds by element (mr-boss d3c0bc79).
+- Tests run: AdminAccess 7 of 7 (Debug, 3.4 s); CommerceAccess and CustomerServiceAccess 37 of 37 (Debug); ProjectsAccess
+  8 of 8 with master's release binary on this worktree's runtime (F-P1-4: the four Debug failures are the debug stack
+  budget; that binary lacks the `authz` elements, which ProjectsAccess does not touch); cargo moqui-core
+  `context::conf`, `context::confcache`, `service::security_checks`, `service::eca` 38 of 38. Prettier clean on the
+  spec. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance walk.
+- For the lead:
+  - `access.has` (ProductAccess.js) is true for any `ADMIN` member, so Admin's capabilities show the sealed ones to
+    `ADMIN` even where a grant is ended (the demo lock-down); later phases' services must check sealed permissions with
+    `ec.user.hasPermission`, not `access.has`;
+  - the root's inheritable ALLOW now opens the hidden Chatter and RecordFiles mounts to every `BOSS_ADMIN` member, as
+    each app's root does for its users (IronStone R5), with `MANTLE_USER_ORG` filters; worth a look in P3 or P4, when
+    Admin's records arrive;
+  - the earlier items stand: the demo lock-down of the three new seals (framework's call), F-P1-5, and the budget
+    share (AdminAccess about 3.4 s).
+
 ### P2 — Registries, Health and the settings index
 
 Design §3 Home, §10 Health, §7 SettingsHome, §14 (readiness provider, refresh operation, settings entry) and §14.2;
