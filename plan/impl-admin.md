@@ -261,7 +261,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built and reviewed Nov 7, merged |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | built and reviewed Nov 7, merged |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | built and reviewed Nov 7, merged |
-| P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built Nov 7 |
+| P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built and reviewed Nov 7, merged |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | — |
 | P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
@@ -1002,13 +1002,13 @@ identity and session parts).
     `disabledDateTime`, or past `terminateDate`); the per-request session refresh clears such a login (F4, F6); notws's 60 s
     session check refuses such an account (F42); `run_job` records a refusal and does not run a job whose run-as user is closed or
     gone (F42). SipDevices.js `revokeUserDevices`.
-  - F23: `UserAccount.ipAllowed` and `requirePasswordChange` audit-logged (`true`, F-P4-3).
+  - F23: `UserAccount.ipAllowed` and `requirePasswordChange` audit-logged (`true`, F67).
   - Docs: Attack-Surface (sessions, credentials, the refresh, jobs, grant proposals), Remaining-Work's `org.moqui.admin` row.
 - Mantle: `mantle.party.IdentityServices` (`IdentityServices.xml`, `Identity.js`; `ALL_USERS` grant `MantleIdentityServices` in
   PartyAccessData): `find#Users`, `get#Account`, `get#AccountHistory` (sign-ins and the audit log of the account, its memberships and
   the organization relationships in scope, dates shown as times), `store#OrganizationMembership`, `create#StaffAccount`, `store#Account`
-  (added, F-P4-4) and `reset#Authentication` (`resetKind` password, factor, lock; F-P4-2, F-P4-6). Scope: the internal organizations
-  the caller's party works for, every one for `ADMIN` (F-P4-1). `PartyRelationship.thruDate` audit-logged (F-P4-3).
+  (added, F68) and `reset#Authentication` (`resetKind` password, factor, lock; F66, F70). Scope: the internal organizations
+  the caller's party works for, every one for `ADMIN` (F65). `PartyRelationship.thruDate` audit-logged (F67).
 - BOSS:
   - `Admin.js`: the `users` area; links `Users/Users`, `Users/UserDetail`, `Users/Sessions`; the user record kind's destination; the
     palette's users (`searchFinds`, the staff of the organizations administered); the `bundles` choice (registered bundles the user may
@@ -1039,41 +1039,41 @@ identity and session parts).
 - Design edits: design-admin §4.1 (scope and the account-wide rule as built), §4 Users, UserDetail, Sessions (as built), §1.2 (the
   skill and exposure), §17.2 (store#Account, get#AccountCredentials, grant proposals); design-drawers-commons Account's Sessions row.
 - Findings (provisional, numbered by the lead):
-  - **F-P4-1** Mantle cannot see Admin's unrestricted scope (the administrator's `MANTLE_ACTIVE_ORG` root grant): Mantle's identity
+  - **F65** Mantle cannot see Admin's unrestricted scope (the administrator's `MANTLE_ACTIVE_ORG` root grant): Mantle's identity
     scope is the caller's own internal organizations (every one for `ADMIN`), so `admin.admin` sees Retail's staff in Users while
     Admin's context (GroupDetail, choices) offers every organization. A permission for "every organization" (or `ADMIN_IDENTITY_GLOBAL`
     meaning it) is the lead's call.
-  - **F-P4-2** "Resets the shared identity's factor only for its own relationship": a factor is account-wide. Built: a password reset
+  - **F66** "Resets the shared identity's factor only for its own relationship": a factor is account-wide. Built: a password reset
     request (the change-only reset password; nothing changes until its owner acts) is sent for any identity in scope; a factor or
     lock reset, account fields and revoking sessions or credentials of a shared identity need `ADMIN_IDENTITY_GLOBAL`.
-  - **F-P4-3** `enable-audit-log="update"` skips a first value (Purchasing's F57), so `ipAllowed`, `requirePasswordChange` and
+  - **F67** `enable-audit-log="update"` skips a first value (Purchasing's F57), so `ipAllowed`, `requirePasswordChange` and
     `PartyRelationship.thruDate` (newly audited, for ended organization memberships) use `true`; every PartyRelationship created with
     an end or ended now writes an audit row.
-  - **F-P4-4** `update#PartyUserAccount` takes every UserAccount field (disabled, terminateDate, ...); UserDetail's Account goes through
+  - **F68** `update#PartyUserAccount` takes every UserAccount field (disabled, terminateDate, ...); UserDetail's Account goes through
     the new `store#Account` (its fields only, scope, revision, path) rather than calling it with the operator's authority.
-  - **F-P4-5** The framework has no impersonation indicator: Tools' Login as replaces the session's user. UserDetail's Login as is the
+  - **F69** The framework has no impersonation indicator: Tools' Login as replaces the session's user. UserDetail's Login as is the
     same guarded action (`ADMIN_LOGIN_AS`, which no BOSS group holds, ADMIN_ADV's), a named confirmation and a log line, refusing a
     target in a privileged group or holding a sealed permission the caller lacks. The indicator is the framework's later work.
-  - **F-P4-6** Tarpit release in Tools is the entity-auto update (ADMIN's); built as `reset#Authentication` `lock`: the failed-login lock and
+  - **F70** Tarpit release in Tools is the entity-auto update (ADMIN's); built as `reset#Authentication` `lock`: the failed-login lock and
     the artifact velocity locks, never a permanent disable.
-  - **F-P4-7** The session refresh and notws end live sessions of an account disabled for good or past its end date, not of a tarpit lock
+  - **F71** The session refresh and notws end live sessions of an account disabled for good or past its end date, not of a tarpit lock
     (disabled with a time), so failed logins by someone else cannot sign the owner out; login still refuses during the lock.
-  - **F-P4-8** Ending another user's session is treated as account-wide: a shared identity's sessions need `ADMIN_IDENTITY_GLOBAL`.
-  - **F-P4-9** The framework knows no organization: `apply#GrantProposal` and `revoke#AccountAccess` accept any account from a holder of
+  - **F72** Ending another user's session is treated as account-wide: a shared identity's sessions need `ADMIN_IDENTITY_GLOBAL`.
+  - **F73** The framework knows no organization: `apply#GrantProposal` and `revoke#AccountAccess` accept any account from a holder of
     `ADMIN_IDENTITY_MANAGE` (as `store#Membership` does from `ADMIN_ACCESS_MANAGE`); none is remote, and BOSS and Mantle scope first. With
     grant proposals an identity operator can now give a new staff account the unsealed Admin bundles (F64 widens to the identity operator).
-  - **F-P4-10** The Users area is the identity operator's and the administrator's; UserDetail's group memberships change only for an
+  - **F74** The Users area is the identity operator's and the administrator's; UserDetail's group memberships change only for an
     `ADMIN_ACCESS_MANAGE` holder (the identity operator reads them), the access administrator keeping GroupDetail.
-  - **F-P4-11** "Log as note" files a Chatter note on a UserAccount or UserGroup (a generic CommunicationEventRecord); those entities have no
+  - **F75** "Log as note" files a Chatter note on a UserAccount or UserGroup (a generic CommunicationEventRecord); those entities have no
     entity filter, so who reads the note is who opens that record's Chatter. Worth the review's look.
-  - **F-P4-12** AdminClientFixtures runs in the regular mr-boss suite too, as InsightsClientFixtures does, adding the Retail identity
+  - **F76** AdminClientFixtures runs in the regular mr-boss suite too, as InsightsClientFixtures does, adding the Retail identity
     "Walk Staff" with a session.
 - Decisions (§4 rows added): identity scope in Mantle; the account-wide rule; the reset request; `store#Account`; grant proposals through
   the framework; the Users area; tarpit locks and sessions.
 - For the lead:
   - budget shares: framework server about 0.1 s (AdminSessions); mr-mantle about 0.8 s (StaffIdentity); mr-boss server about 0.6 s (AdminUsers
     0.5 s, CommonsSettings' feature, AdminClientFixtures); mr-boss client about 3.1 s (AdminUsersWalk, Debug); no budget raised;
-  - F-P4-1 and F64 (now reaching the identity operator) are the user's calls;
+  - F65 and F64 (now reaching the identity operator) are the user's calls;
   - the Rust changes (session end, refresh, notws, jobs) need the release binary rebuilt before the merge runs the suites; a binary
     without `endUserSessions` fails `revoke#Sessions` and `revoke#AccountAccess`;
   - BossSetupData and BossUsersDemoData: P4's block is appended at the end of BossSetupData; BossUsersDemoData unchanged;
@@ -1106,7 +1106,7 @@ identity and session parts).
     scope and then change its email and reset it. A person with an account and no internal organization now needs
     `ADMIN_IDENTITY_GLOBAL` (`IDENTITY_GLOBAL`); a person of another organization stays shared, so its account-wide changes
     still need it. mr-mantle fd496ef8.
-  - **R3 (medium, F-P4-11)** "Log as note" filed Chatter on UserAccount and UserGroup, which had only their entity filters in
+  - **R3 (medium, F75)** "Log as note" filed Chatter on UserAccount and UserGroup, which had only their entity filters in
     get#RecordLinkInfo, so any user an app root lends entity authorization (any BOSS user in its screens) could read and add
     them. Now an account's notes are an ADMIN_IDENTITY_VIEW holder's within Mantle's identity scope, a group's an
     ADMIN_ACCESS_VIEW holder's. mr-mantle fd496ef8 (CommunicationServices), LogNote's text in mr-boss.
@@ -1118,7 +1118,7 @@ identity and session parts).
   changed in review); `moqui lint --screens` 132 flagged sites, as before; Prettier on the changed JavaScript. Specs stay lean
   (AdminSessions 0.04 s, StaffIdentity 0.9 s, AdminUsers 0.3 s); AdminClientFixtures 0.02 s.
 - For the lead:
-  - F-P4-1 left for the user: Mantle cannot read BOSS's "unrestricted" (BOSS reads the `MANTLE_ACTIVE_ORG` filter on its own
+  - F65 left for the user: Mantle cannot read BOSS's "unrestricted" (BOSS reads the `MANTLE_ACTIVE_ORG` filter on its own
     root grant as every organization, while Mantle's meaning of that filter set is the active organization or the user's own),
     and BOSS_ADMIN_ADMIN does not hold `ADMIN_IDENTITY_GLOBAL`, so reusing it would not help. The clean choices are a new
     unsealed framework permission (say `ADMIN_IDENTITY_ALL_ORGS`) that Mantle honours and BossSetupData grants
@@ -1126,7 +1126,7 @@ identity and session parts).
   - store#OrganizationMembership still lets an operator relate another organization's staff to its own (as the spec's
     covering agent), which makes that identity readable (find#Users, get#Account, sessions, history) though still shared for
     changes; whether adding an existing account of another organization needs `ADMIN_IDENTITY_GLOBAL` too is a design call;
-  - Login as is audited by a log line only (F-P4-5), and F64 still reaches the identity operator through grant proposals.
+  - Login as is audited by a log line only (F69), and F64 still reaches the identity operator through grant proposals.
 
 ### P5 — Invitations
 
@@ -1511,12 +1511,12 @@ the owner's design.
 | Nov 7, 2026 | The Access area opens to the access administrator and the administrator; the reader holds no `ADMIN_ACCESS_VIEW` | P3, F61; design §2 |
 | Nov 7, 2026 | GroupDetail lists and changes only the members who work for the organizations the administrator administers, counting the others; the framework services know no organization | P3; design §1.1 |
 | Nov 7, 2026 | A group default's key is a `UserPreferenceKey` Enumeration, typed by its `optionValue` (indicator, boolean, number, text) | P3; design §5 GroupPreferences |
-| Nov 7, 2026 | Mantle's identity scope is the internal organizations the caller's party works for (the active one when set), every one for `ADMIN`; an identity is readable when one of its organizations is in scope, others counted, never named | P4, F-P4-1; Admin's own context keeps the administrator's unrestricted scope |
-| Nov 7, 2026 | An account-wide change (account fields, a factor or lock reset, revoking sessions or credentials) of an identity that also works for an organization outside the caller's scope needs `ADMIN_IDENTITY_GLOBAL`; a password reset request, which changes nothing until its owner acts, is sent for any identity in scope | P4, F-P4-2, F-P4-8; design §4.1 changed |
-| Nov 7, 2026 | UserDetail's Account saves through Mantle `store#Account` (its fields only, scope, revision, the administration path); enabling, disabling and the end date are the lifecycle's | P4, F-P4-4; design §4 UserDetail and §17.2 changed |
-| Nov 7, 2026 | A grant proposal is checked and applied by the framework's `AccessServices.check#GrantProposal` and `apply#GrantProposal`, by `store#Membership`'s delegation rules for the actor, for an access administrator or an identity operator | P4, §4's grant proposal row, F-P4-9; design §17.2 changed |
-| Nov 7, 2026 | The Users area opens to the identity operator and the administrator; group memberships on UserDetail change only for an `ADMIN_ACCESS_MANAGE` holder | P4, F-P4-10 |
-| Nov 7, 2026 | The session refresh, the notification socket's check and job runs stop an account disabled for good or past its end date, not a tarpit lock | P4, F-P4-7 |
+| Nov 7, 2026 | Mantle's identity scope is the internal organizations the caller's party works for (the active one when set), every one for `ADMIN`; an identity is readable when one of its organizations is in scope, others counted, never named | P4, F65; Admin's own context keeps the administrator's unrestricted scope |
+| Nov 7, 2026 | An account-wide change (account fields, a factor or lock reset, revoking sessions or credentials) of an identity that also works for an organization outside the caller's scope needs `ADMIN_IDENTITY_GLOBAL`; a password reset request, which changes nothing until its owner acts, is sent for any identity in scope | P4, F66, F72; design §4.1 changed |
+| Nov 7, 2026 | UserDetail's Account saves through Mantle `store#Account` (its fields only, scope, revision, the administration path); enabling, disabling and the end date are the lifecycle's | P4, F68; design §4 UserDetail and §17.2 changed |
+| Nov 7, 2026 | A grant proposal is checked and applied by the framework's `AccessServices.check#GrantProposal` and `apply#GrantProposal`, by `store#Membership`'s delegation rules for the actor, for an access administrator or an identity operator | P4, §4's grant proposal row, F73; design §17.2 changed |
+| Nov 7, 2026 | The Users area opens to the identity operator and the administrator; group memberships on UserDetail change only for an `ADMIN_ACCESS_MANAGE` holder | P4, F74 |
+| Nov 7, 2026 | The session refresh, the notification socket's check and job runs stop an account disabled for good or past its end date, not a tarpit lock | P4, F71 |
 
 ## 5. Open questions
 
@@ -1528,7 +1528,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F-P4-1–F-P4-12 in P4 (Nov 7; numbered by the lead, in P4's Built note).
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1596,6 +1596,20 @@ day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55�
 | F62 | P3: with the security dates audit-logged, the demo load writes about 1,500 more audit rows | Accepted; the load time to be watched in the wave suites |
 | F63 | P3 (review): a privileged group's registered bundle could be granted from with `ADMIN_ACCESS_MANAGE` alone, copying its powers onto a custom group a non-member then joins | Done in review (R2): a privileged group's bundle is delegable only by a member of that group |
 | F64 | P3 (review): the unsealed Admin bundles (`BOSS_ADMIN_IDENTITY`, `_CONFIGURE`, `_INTEGRATIONS`, `_OPERATIONS`, `_DATA`, `_AUDIT`, `_PRIVACY`) name no delegable permission, so any access administrator, the demo delegate included, may assign them, themselves included | Open for the user's call: as design §1.1 reads (registered bundles are assignable), or each bundle's own `*_MANAGE` as its delegable permission |
+| F65 | P4: Mantle cannot see Admin's unrestricted scope for `BOSS_ADMIN_ADMIN` (its `MANTLE_ACTIVE_ORG` root grant), so in Users the administrator sees only its own organizations' staff while Admin's context offers every organization | Open for the user's call: an unsealed framework permission (e.g. `ADMIN_IDENTITY_ALL_ORGS`) Mantle honours, granted to `BOSS_ADMIN_ADMIN`, or BOSS's identity scope narrowed to Mantle's |
+| F66 | P4: a factor is account-wide, so "reset the shared identity's factor only for its own relationship" cannot be literal | A password reset request works for any identity in scope; factor and lock resets, account fields and revocations of a shared identity need `ADMIN_IDENTITY_GLOBAL` |
+| F67 | P4: `enable-audit-log="update"` skips a field's first value (Purchasing F57) | The newly audited fields use `true` |
+| F68 | P4: `update#PartyUserAccount` takes every UserAccount field | UserDetail saves through Mantle's `store#Account` |
+| F69 | P4: the framework has no impersonation indicator; Login as is audited by a log line only | Login as is Tools' guarded action, refusing a target holding privileged memberships or sealed permissions the caller lacks; an indicator and audit row are the framework's (§7) |
+| F70 | P4: Tools releases a tarpit lock with an entity-auto update only `ADMIN` runs | `reset#Authentication`'s `lock` kind; a permanent disable is never lifted there |
+| F71 | P4: a tarpit lock does not end live sessions (else failed logins could sign the owner out) | Only a disable for good or a past end date signs out |
+| F72 | P4: ending another user's sessions is account-wide | A shared identity's sessions need `ADMIN_IDENTITY_GLOBAL` |
+| F73 | P4: the framework services know no organization; grant proposals let an identity operator give a new account the unsealed Admin bundles (F64) | BOSS and Mantle check scope before every framework call; F64's choice covers identity operators too |
+| F74 | P4: the Users area is the identity operator's and the administrator's; memberships on UserDetail change only with `ADMIN_ACCESS_MANAGE` | As designed |
+| F75 | P4: "Log as note" notes on UserAccount and UserGroup had only entity filters, so any BOSS user with an inherited root grant could read and add them | Done in review (R3): an account's notes need `ADMIN_IDENTITY_VIEW` within Mantle's identity scope, a group's `ADMIN_ACCESS_VIEW` |
+| F76 | P4: AdminClientFixtures runs in the regular suite, adding the Retail identity "Walk Staff" | Accepted |
+| F77 | P4 (review): an identity operator could change the email of an `ADMIN` or `BOSS_ADMIN_ADMIN` member in its organization and mail the reset to the new address; factor and lock resets and revocations also reached accounts holding more access than the caller | Done in review (R1): the framework's `heldBeyond` refuses a target in a privileged group the caller is not in or holding a sealed permission the caller lacks, in `revoke#AccountAccess`, another user's `revoke#Sessions`, `store#Account`, factor and lock resets and Login as |
+| F78 | P4 (review): `store#OrganizationMembership` related any person to an organization in scope, pulling a site identity (no internal organization) into scope | Done in review (R2): relating a person with an account and no internal organization needs `ADMIN_IDENTITY_GLOBAL`. Relating another organization's staff to one's own (making them readable) is open for the user's call |
 
 ## 7. Later
 
