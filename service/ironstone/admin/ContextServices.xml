@@ -100,13 +100,15 @@ along with this software (see the LICENSE.md file). If not, see
     <service verb="get" noun="Choices" allow-remote="false">
         <description>The options of an Admin drop-down the user may choose, searched by term, with the selected value's label:
             organizations (the internal organizations the user administers) and members (the staff accounts of those
-            organizations, for an ADMIN_ACCESS_VIEW holder adding a group member). Refuses an unknown choice and a user without
+            organizations, for an ADMIN_ACCESS_VIEW holder adding a group member), bundles and invitationBundles, and lifecycleUsers
+            (those who can sign in, for an ADMIN_IDENTITY_MANAGE holder: a new owner, a bulk disable). Refuses an unknown choice and a user without
             Admin.</description>
         <implements service="ironstone.admin.ContextServices.define#Parameters"/>
         <in-parameters>
             <parameter name="choice" required="true"/>
             <parameter name="term"/>
             <parameter name="selected"/>
+            <parameter name="exclude"><description>A value to leave out (lifecycleUsers: the account offboarded)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="options" type="List"/>

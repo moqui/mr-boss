@@ -16,7 +16,7 @@ along with this software (see the LICENSE.md file). If not, see
     Mantle's. Each is a trusted component definition seeded by its owner in its own setup data, never a service or index name
     an administrator types: ironstone.admin.RegistryServices reads them, and a row naming a missing service or permission is
     logged by name when read and left out, the others still answering. Insights P4 added its records (ReportCatalogEntry,
-    MetricRegistration) at the end. -->
+    MetricRegistration) at the end; Admin P6 the lifecycle participants after them. -->
 <entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-3.xsd">
     <entity entity-name="ReadinessProvider" package="ironstone.admin" use="configuration">
         <description>A readiness provider (design §14): a nonmutating check its owner calculates, which Admin's Home and Health
@@ -218,5 +218,37 @@ along with this software (see the LICENSE.md file). If not, see
             owner's card shows only to its holders)</description></field>
         <field name="sequenceNum" type="number-integer"/>
         <field name="disabled" type="text-indicator"/>
+    </entity>
+
+    <!-- Admin P6 (impl-admin P6; design-admin §4.1 Offboarding, §14 Lifecycle participant): the owners whose resources an account's
+        lifecycle hands to new owners, each seeded by its owner in its own block of BossSetupData. -->
+    <entity entity-name="LifecycleParticipant" package="ironstone.admin" use="configuration">
+        <description>A lifecycle participant (design §14): an owner of a kind of resource a user can own (a shared drive, a shared
+            mail account, a calendar, a contact book, a work app's assignments, a report schedule), with its lookup of what a user
+            owns, its transfer of one resource to a new owner and its pause of what runs for the user, each the owner's service
+            carrying the owned-resource contract of org.moqui.admin.IdentityServices (define#OwnedResourceLookup, Transfer, Pause).
+            ironstone.admin.LifecycleServices reads it for an offboarding preview and the steps of a lifecycle operation; the
+            owner's services check their own permission and the new owner. The registration grants nothing.</description>
+        <field name="participantKey" type="id-long" is-pk="true"><description>The owner app, a dot and the kind
+            (commons.drives)</description></field>
+        <field name="version" type="number-integer"/>
+        <field name="ownerApp" type="text-short"/>
+        <field name="title" type="text-medium"/>
+        <field name="description" type="text-long"/>
+        <field name="resourceKind" type="text-short"><description>drive, mailAccount, calendar, contactBook, assignment,
+            schedule</description></field>
+        <field name="lookupService" type="text-medium"><description>What a user owns (define#OwnedResourceLookup)</description></field>
+        <field name="transferService" type="text-medium"><description>One resource to a new owner
+            (define#OwnedResourceTransfer); empty for a participant that only pauses</description></field>
+        <field name="resourceParameter" type="text-short"><description>The transfer service's own name for the resource's id
+            (driveId)</description></field>
+        <field name="pauseService" type="text-medium"><description>What runs for the user paused when access ends
+            (define#OwnedResourcePause), if any</description></field>
+        <field name="requiredPermission" type="id-long"><description>The permission the owner's services check for another user's
+            resources; a viewer without it is told the participant is not theirs to read</description></field>
+        <field name="sequenceNum" type="number-integer"/>
+        <field name="disabled" type="text-indicator"/>
+        <relationship type="one" related="moqui.security.UserPermission" short-alias="permission">
+            <key-map field-name="requiredPermission" related="userPermissionId"/></relationship>
     </entity>
 </entities>

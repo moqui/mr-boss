@@ -263,7 +263,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | built and reviewed Nov 7, merged |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | built and reviewed Nov 7, merged |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | built and reviewed Nov 7, merged |
-| P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | — |
+| P6 Lifecycle and offboarding | mr-moqui, Mantle, BOSS | UserDetail's Lifecycle, LifecycleOperations, LifecycleDetail | built and reviewed Nov 7, merged |
 | P7 Organizations and the Constitution | Mantle, BOSS | Organizations, OrganizationDetail, Constitution | — |
 | P8 Instance settings, localization and reference data | mr-moqui, BOSS | InstanceSettings, Localization, ReferenceData | — |
 | P9 Capabilities and row rules | mr-moqui, BOSS | Capabilities, RowRules | — |
@@ -1452,6 +1452,175 @@ participant; ADM-LIFECYCLE (lifecycle).
   ORG_ZIZI_RETAIL leaves its ORG_ZIZI_SERVICES access and Commons books; a global disable signs it out everywhere and
   revokes its app passwords; a shared drive it owned waits in LifecycleDetail for a new owner.
 
+**Built Nov 7 (P6).**
+- Framework (mr-moqui):
+  - `org.moqui.admin.IdentityServices`: the owned-resource contract, interfaces `define#OwnedResourceLookup` (userId to
+    resourceList), `define#OwnedResourceTransfer` (the owner's resource id, fromUserId, toUserId to transferred) and
+    `define#OwnedResourcePause` (userId to pausedCount).
+  - Owner changes (F31): `FileServices.find#OwnedDrives` and `transfer#DriveOwner` (a shared drive, not personal, records,
+    mirror or archived; the new owner enabled, not ended, not `EXTERNAL_USER`, its member row ended) and
+    `EmailClientServices.find#OwnedEmailAccounts` and `transfer#EmailAccountOwner` (a shared account, `EakShared`; both mail
+    change cursors reset), each by the owner or with `DRIVE_OWNER_CHANGE` / `EMAIL_ACCOUNT_OWNER_CHANGE` (seeded, granted to
+    `ADMIN`), each implementing the contract, under the `ResourceOwnerServices` `ALL_USERS` ALLOW, `allow-remote="false"`.
+  - Docs: Attack-Surface (owned resources and the contract), Revision-Management's drive services, Remaining-Work's
+    `org.moqui.admin` row. No Rust.
+- Mantle:
+  - `entity/IdentityEntities.xml`: `mantle.party.UserLifecycleOperation` (operation key unique, account, kind
+    `UlkDisable`/`UlkOrgRemoval`/`UlkRestore`, global or the organization it was requested for, effective date, reason, source
+    reference, state `UlopCompleted`/`UlopScheduled`/`UlopAttention` audit-logged, the account revision named, requester) and
+    `UserLifecycleOperationStep` (kind, provider, owner app, title, resource, the participant's action service and resource
+    parameter, new owner, state `UlstDone`/`UlstWaiting`/`UlstFailed`/`UlstSkipped` audit-logged, attempts, reason).
+    `data/PartyLifecycleData.xml` (seed, after MantleSetupData): the kinds and states, the `MANTLE_USER_ORG` and
+    `MANTLE_ACTIVE_ORG` filters of UserLifecycleOperation by its organization, `CALENDAR_OWNER_CHANGE` and
+    `CONTACT_BOOK_OWNER_CHANGE` (granted to `ADMIN`) and the `MantleResourceOwnerServices` `ALL_USERS` ALLOW.
+  - `IdentityServices.xml` (appended) over `Lifecycle.js`: `preview#Lifecycle`, `start#Lifecycle`, `get#Lifecycle`,
+    `find#LifecycleOperations`, `retry#LifecycleStep`. A disable at once: `revoke#AccountAccess` in its own transaction, then
+    `disabled` Y with no `disabledDateTime` (F92); with a future date `terminateDate` only (state Scheduled, no job). A
+    removal: that organization's relationships end (now or at the date); with no internal organization left, the account is
+    signed out (F100) and its memberships end (authorization on, the EECAs deciding each); otherwise nothing else changes and
+    no participant step is recorded. A restore: enabled, end date cleared, nothing revoked brought back. Participant steps
+    (a disable, or a removal leaving no organization) from the app: a pause runs now, a transfer waits; a service without the
+    contract's parameters is a failed step, never called (F91). Global operations account-wide (`accountWideRefusal`,
+    `heldBeyondRefusal`, now exported by Identity.js), a removal ending memberships `heldBeyond`-checked, self refused, the
+    administration path checked (F99), the operation key answering a retry, `expectedRevision` checked when given (F97).
+    Scope: Identity.js `identity`, `scope`, `inScope`, all with the caller's authorization.
+  - Owner changes (F31): `CalendarServices.find#OwnedCalendars` and `transfer#CalendarOwner` (a shared or resource calendar the
+    leaver's person owns gets the new owner's party; an organization's calendar they alone manage gets a new manager, who must
+    work for that organization; a personal calendar stays) and `ContactBookServices.find#OwnedContactBooks` and
+    `transfer#ContactBookOwner` (a shared book the leaver alone manages gets a new manager, of its organization when it has one;
+    a personal book and its contacts stay, F93), each by the owner or with the new permission, implementing the contract.
+- BOSS:
+  - `entity/AdminEntities.xml`: `ironstone.admin.LifecycleParticipant` (key, owner app, title, resource kind, lookup, transfer
+    and pause services, resource parameter, the owner's permission). `data/BossSetupData.xml` (appended P6 block): the
+    participants `commons.drives`, `commons.calendars`, `commons.contactBooks`, `comms.mailAccounts`, `projects.assignments`;
+    the four owner-change permissions to `BOSS_ADMIN_IDENTITY` and `BOSS_ADMIN_ADMIN` with their CapabilityBundlePermission rows
+    (F95); the client deny pattern's `transfer` verb (a second `BOSS_PROJECTS_INTERNAL` element, 205 characters).
+  - `service/ironstone/admin/LifecycleServices.xml` over `Lifecycle.js`: `find#OwnedResources` (each participant's lookup as the
+    caller; unavailable without the owner's permission, failed named without diagnostics, F98; the steps for
+    `start#Lifecycle`), `transfer#OwnedResource` (the step's service and parameter must be what its participant registered,
+    `NOT_REGISTERED`; the new owner a staff identity in scope who can sign in; then Mantle's `retry#LifecycleStep`), and Projects'
+    participant `find#Assignments` (counts of open tasks, project work items and requests) and `transfer#Assignments` (through
+    `TaskServices.reassign#Task`, `WorkItemServices.bulk#WorkItems` assign and `RequestServices.reassign#Request`, F94).
+    `Admin.js`: links `Users/LifecycleOperations`, `Users/LifecycleDetail`; the `lifecycleUsers` choice (staff in scope who can
+    sign in, `exclude` added to `get#Choices`).
+  - Screens: `Users/LifecycleOperations.xml` (Users' tab Lifecycle, index 4: LifecycleFind, LifecycleList);
+    `Users/LifecycleDetail.xml` (record header, LifecycleSummary, LifecycleSteps with Retry and the TransferOwnership dialog);
+    UserDetail's Lifecycle box (Disable, Remove from organization, Restore dialogs opening a review on the page by `previewKind`,
+    whose confirmation runs `start#Lifecycle` with the participants' steps and an operation key and opens LifecycleDetail; the
+    account's operations); Users' Disable users (a review of each identity's preview, then one operation per identity, each in
+    its own transaction, the refused named).
+  - `skill/offboard-user.md` (risk `confirm`); `test/skill-retrieval.json` three cases (recall@3 20 of 20).
+- Specs: framework `test/ResourceOwners` (2 features, 0.01 s: a shared drive moves only with `DRIVE_OWNER_CHANGE` to an enabled
+  internal account, a personal drive stays; a shared mail account likewise, a personal account stays; both carry the contract);
+  Mantle `test/party/UserLifecycle` (6 features, 0.46 s: a global disable revokes sessions, app password and SSH key at once and
+  disables for good, refused for the shared identity without `ADMIN_IDENTITY_GLOBAL` and for oneself; a future end date is
+  `terminateDate` with no job; one organization's removal keeps the other's relationship, membership and resources, the operation
+  still read there; a participant step without the contract is never called and a refused transfer does not undo the revocation,
+  the retry to a colleague moves the calendar through Mantle's owner change; restoration reactivates no key, the operation key
+  answers the first operation), `ContactBooks` (a feature, 0.15 s: the shared book its only manager owns listed and handed to a
+  colleague; a personal book stays; refused without `CONTACT_BOOK_OWNER_CHANGE`); BOSS `test/Admin/AdminLifecycle` (3 features,
+  0.3 s: the operator's confirmation through UserDetail revokes at once and leaves the drive waiting; LifecycleDetail's one qvt
+  render; TransferOwnership refuses a step naming another service and a new owner outside Retail, a Retail colleague takes the
+  drive), `AdminAccess` (what an identity owns by the same scope: Services' refused, the reader refused). Acceptance, written and
+  not run: `acceptance/Admin/AdminLifecycleUsable` (2 features, the "usable when").
+- Tests run (the main checkout's release binary on this worktree's runtime, `--nobuild`; no Rust changed): ResourceOwners,
+  AdminSessions, AdminAccessServices 11 of 11; UserLifecycle, StaffIdentity, StaffInvitation, PartyServices, ContactBooks,
+  CalendarServices 71 of 71; AdminLifecycle, AdminUsers, AdminAccess, AdminGroups, AdminInvitations, AdminRegistries,
+  ProjectsAccess, Files, Calendar, ContactBookSettings, MailAccounts, Tasks, Requests, WorkItems, CommonsSettings 128 of 128;
+  `moqui test mr-boss --skills` 20 of 20; `moqui lint --screens` 132 flagged sites, as before; Prettier on the changed
+  JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+- Inventories: usl-inventory's four Mantle owner-change rows (CalendarServices and ContactBookServices `find#Owned…` on
+  UserDetail, `transfer#…Owner` on LifecycleDetail); no ss-inventory row names a lifecycle form.
+- Design edits: design-admin header, §1.2 (the skill), §4.1 Offboarding, §4 Users, UserDetail, LifecycleOperations and
+  LifecycleDetail (as built), §14's lifecycle participant row, §17.2 (the services, the contract and the records);
+  design-drawers-commons (Drives, ContactBooks, MailAccounts, the calendar services row: the owner changes); design-projects
+  (a leaver's assignments).
+- Findings (provisional, numbered by the lead):
+  - **F91** (framework) A script's `getServiceDefinition` has no `implements`, and the identity services' `ALL_USERS` grant
+    is inheritable, so a stored step's service would run with that grant whatever it is. Mantle calls only a service carrying
+    the contract's parameters (in `fromUserId`, `toUserId`, out `transferred`; in `userId`, out `pausedCount`), which an
+    implementing service gets from the interface, and BOSS's `transfer#OwnedResource` also checks the step against the
+    registry; `start#Lifecycle` is `allow-remote="false"` and BOSS builds the steps from its registry. Exposing `implements` in
+    `service_definition_info` would make the check exact.
+  - **F92** The framework's `disable#UserAccount` sets `disabledDateTime`, which login reads as a tarpit lock that expires
+    (F41); the lifecycle writes `disabled` Y with no time, the disable for good the session refresh and notws end (F71).
+  - **F93** F31's "contact book's owning user": `ownerUserId` is a personal book's, whose personal contacts design §4.1 and
+    drawers-commons §21 keep with their user. Built as a shared book's manager change; personal books, calendars, drives and
+    mail accounts are never handed on (a reviewed disposition is the retention work, §7).
+  - **F94** Projects' reassign services refuse an administrator without Projects authority (`reassign#Request` by the
+    assignee only; `reassign#Task` and `bulk#WorkItems` by the owner, an assignee or a manager), so the assignments step fails
+    for an identity operator, named, and waits for someone with that authority to retry it. A lifecycle reassign right is
+    Projects' call.
+  - **F95** Drives, mail accounts, calendars and contact books have no organization, so the owner-change permissions are
+    instance-wide for a direct call (as F73); BOSS scopes the leaver and the new owner first. Granted to the identity operator
+    and the administrator.
+  - **F96** An operation carries one organization (§4): a global disable of a shared identity is listed under the
+    organization it was requested for; the other organization's administrators see the account disabled and its audit rows,
+    not the operation.
+  - **F97** `expectedRevision` is optional: Users' bulk disable runs on each identity's current revision after its review
+    (find#Users carries none); UserDetail names it.
+  - **F98** A participant the caller may not read (no owner permission) or whose lookup fails is shown in the review and
+    records no step (Mantle takes pause and transfer steps only), so its resources stay with the leaver without a row in
+    LifecycleDetail; an "unread participant" step to retry is a later addition.
+  - **F99** The administration path's moments come from memberships only, so a future-dated disable is checked as if the
+    account were disabled now (stricter, never looser).
+  - **F100** A removal that leaves no organization also signs the identity out, so its ended memberships apply at once
+    (a live session keeps the groups it read); with a future date, only the dated ends.
+  - **F101** Insights P7's `pause#OwnedSchedules` and `transfer#DefinitionOwner` must carry the contract's parameters (or
+    Insights registers an adapter service that does) to be a participant.
+- Decisions (§4 rows added): the owned-resource contract and its check; the owner changes and their permissions; the operation's
+  organization; disable, removal and restore as built; reviews on the page.
+- For the lead:
+  - budget shares: framework about 0.01 s (ResourceOwners); mr-mantle about 0.6 s (UserLifecycle 0.46 s, the ContactBooks
+    feature 0.15 s); mr-boss about 0.35 s (AdminLifecycle 0.3 s, AdminAccess's case); no budget raised;
+  - no Rust changed: the release binary serves; SecurityTypeData gains its P6 block after AdminAccessServices'; BossSetupData's
+    P6 block is appended at the end (BossUsersDemoData and MantleSetupData unchanged; Mantle's rows are a new seed file);
+  - Insights P7 registers its participant on the contract (F101); F91 (`implements` for scripts) and F94 (a Projects
+    reassign right) are owners' calls;
+  - the acceptance AdminLifecycleUsable to run when asked.
+
+**Review Nov 7 (P6).** A fresh review of the three repositories' P6 diffs, security first; fixes committed apart per repository
+("Admin P6 review: …").
+- **F91, closed.** Mantle's identity services' `ALL_USERS` ALLOW is inheritable, so whatever a lifecycle step called ran
+  under it without its own authorization: an identity operator through Mantle alone (`ADMIN_IDENTITY_MANAGE`, no Admin group;
+  an Assistant tool, another app's service) retrying a stored step naming Admin's `LifecycleServices.transfer#Assignments` ran it
+  (reproduced, step Done). Mantle reads no registry, so any service carrying the contract's parameters passed. Fixed in the
+  framework: `IdentityServices.call#OwnedResourceService` (refuses a service without the contract, then calls it) under
+  `OwnedResourceCall`, an `ALL_USERS` ALLOW that is **not** inheritable, so the coordinator's inheritable ALLOW stops there and
+  the owner service is authorized on its own records, as a direct call is (authz.rs: a frame's own non-inheritable ALLOW wins
+  over the parent's inheritable one; an app screen's inheritable ALWAYS, which BOSS's Users area grants, still covers it, as it
+  covers every service below that screen). Mantle's pause and transfer steps call through it. Through BOSS the steps come from
+  the registry (startOperation passes no request steps), `transfer#OwnedResource` checks the registration, and the parameters
+  are the operation's (`fromUserId` the operation's account, the resource from the owner's lookup, `resourceParameter` never a
+  contract name); the request names only the new owner. Mantle alone still refuses no contract-carrying service by name: it now
+  runs only with the caller's own right to it. Specs: framework `ResourceOwners` (a service without the contract never called,
+  the drive moved through the call), BOSS `AdminLifecycle` (the Mantle-only operator refused Admin's transfer, the step Failed).
+- **New owner.** Mantle's `transfer#CalendarOwner` and `transfer#ContactBookOwner` took an external user (`EXTERNAL_USER`) as a
+  person-owned calendar's owner or an unowned book's manager; both now refuse one, as the framework's drive and mail changes do.
+  `retry#LifecycleStep` refuses the caller as the new owner (`SELF_OWNER`; BOSS's choice already left them out), so an operator
+  holding the owner-change permissions cannot hand a leaver's shared mailbox or drive to themselves. Spec: `UserLifecycle`.
+- **Retry of an account step.** A removal's account step (`revokeSessions`, `endMemberships`, `endRelationships`) required the
+  identity in scope, which a removal leaving no organization takes away, so its operator could not retry it; it now needs the
+  operation's organization in scope (as reading it does), and `heldBeyond` again for `revokeSessions` and `endMemberships`. A
+  retried `disableAccount` or `endMemberships` is checked against the administration path again (it was only at the start).
+  Not covered by a spec (no step of a removal can be made to fail deterministically).
+- Checked and left: disable now revokes first (its own transaction) and writes `disabled` through the entity facade with
+  `disabled_changeReason` (audit-logged, `enable-audit-log="update"`), as P4's lock does; a future date writes `terminateDate`
+  only; a removal ends only that organization's relationships and signs out only when none is left (F100); restore brings
+  nothing back; `heldBeyond` refuses an identity operator a global operation on an ADMIN member or a sealed-permission holder;
+  the operation key answers a retry; `retry#LifecycleStep` runs only failed or waiting steps and a transfer only its stored
+  service; the operation's organization filters and scope (F96: a global operation is under the one organization, no
+  leak); Projects' refusals are the step's named failure (F94); LifecycleDetail's one qvt render; specs under 0.2 s each; the
+  deny pattern's `transfer` element is 166 characters (the Built note said 205); lint 132 flagged sites, as before.
+- Later (provisional): a future-dated disable (or removal) runs its participants' pauses at once, before the date, and its
+  transfers may be done before it (none pauses until Insights P7, F101); a Scheduled operation stays Scheduled after its date
+  until a step is retried (refreshStatus runs only then); BOSS's Retry transition calls Mantle's retry directly, so a pause step
+  is not re-checked against the registry (it runs under its own authorization).
+- Tests run (the release binary, `--nobuild`): ResourceOwners, AdminSessions, AdminAccessServices 11 of 11; UserLifecycle,
+  StaffIdentity, StaffInvitation, PartyServices, ContactBooks, CalendarServices 71 of 71; AdminLifecycle, AdminUsers,
+  AdminAccess, AdminGroups, AdminInvitations, AdminRegistries, ProjectsAccess, Files, MailAccounts, Tasks 81 of 81; lint as
+  above; Prettier on the changed JavaScript. Not run: `./moq test-apps`, `./moq test-framework`, the acceptance suite.
+
 ### P7 — Organizations and the Constitution
 
 Design §7 Organizations, OrganizationDetail and Constitution (its maps note waits for the framework Maps screen, F22,
@@ -1786,6 +1955,11 @@ the owner's design.
 | Nov 7, 2026 | The `i` route lets every well-formed token through and AcceptInvitation says "This invitation is no longer valid" for a spent or unknown one | P5, F83 |
 | Nov 7, 2026 | Acceptance rechecks the inviter's authority from the records and writes the organization relationship and memberships itself, with authorization on; an invitation never carries a privileged group or a group granting a sealed permission | P5, F82; design §4.1 changed |
 | Nov 7, 2026 | When a bundle's group requires a factor and the account has none, the acceptance makes an authenticator factor its holder confirms within a day | P5, F89; design §4 AcceptInvitation changed |
+| Nov 7, 2026 | An owner of a resource a user can own answers the framework's owned-resource contract (`org.moqui.admin.IdentityServices.define#OwnedResourceLookup`, `Transfer`, `Pause`); Mantle's lifecycle calls only a service carrying the contract's parameters, and BOSS's `transfer#OwnedResource` checks a step against its participant's registration | P6, F91; design §14 and §17.2 changed |
+| Nov 7, 2026 | The owner changes are their owners': `FileServices.transfer#DriveOwner`, `EmailClientServices.transfer#EmailAccountOwner`, `CalendarServices.transfer#CalendarOwner`, `ContactBookServices.transfer#ContactBookOwner`, each by the owner or with its own permission (`DRIVE_OWNER_CHANGE`, `EMAIL_ACCOUNT_OWNER_CHANGE`, `CALENDAR_OWNER_CHANGE`, `CONTACT_BOOK_OWNER_CHANGE`, granted to `ADMIN`, and by BossSetupData to the identity operator and the administrator), the new owner checked by the owner; personal drives, mail accounts, calendars and contact books stay with their user | P6, F31, F93, F95; drawers-commons changed |
+| Nov 7, 2026 | A lifecycle operation carries the organization it was requested for (the one removed, or the target's organization in the requester's scope), and the organization entity filters apply to it | P6, the user's pattern of Nov 7; F96 |
+| Nov 7, 2026 | A disable revokes access first, in its own transaction, then disables for good (no `disabledDateTime`); a future date writes `terminateDate` alone; a removal ends memberships (and signs out) only when no organization is left, and only then do owned resources move; a restore brings nothing revoked back | P6, F92, F100; design §4.1 changed |
+| Nov 7, 2026 | LifecycleActions open a review on UserDetail (`previewKind`) rather than computing previews at every render; Users' bulk disable reviews each identity the same way | P6; design §4 changed |
 
 ## 5. Open questions
 
@@ -1797,7 +1971,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note).
+day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55–F64 in P3 and the provisional F65–F76 in P4 (Nov 7; numbered by the lead, in P4's Built note); P6's provisional F91 to F101 are in its Built note.
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1891,6 +2065,17 @@ day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55�
 | F88 | P5: inviting the address of a site identity or another organization's staff pulled it into the operator's scope on acceptance | Done in review (R1): `invite#User` and `resend#Invitation` need `ADMIN_IDENTITY_GLOBAL` for such an address (P4 R2, F78), rechecked at acceptance; a chosen person whose address is another account's is refused |
 | F89 | P5: an account in a factor-requiring group cannot sign in without a factor (F41), and the acceptance link showed the new authenticator key to any holder for a day | Acceptance makes the factor; review (R2): only the accepting session or the account itself sees the key |
 | F90 | P5: Attack-Surface's token-route table lacks the `i` row and its rate limit | adm/fw1 follow-up |
+| F91 | P6: the identity services' inheritable `ALL_USERS` ALLOW reached any service a lifecycle step named, and scripts cannot see a service's `implements` | Done in review: the framework's `call#OwnedResourceService` refuses a service without the owned-resource contract and calls it under a non-inheritable grant, so the owner service is checked as a direct call; BOSS also checks each step against its registration |
+| F92 | P6: `disable#UserAccount` sets a time, making the disable an expiring lock | The lifecycle writes `disabled` through the entity facade with its audited reason |
+| F93 | P6: F31's "contact book's owning user" | Read as who manages a shared book; personal books, calendars, drives and mail accounts stay with their user |
+| F94 | P6: Projects' reassign services refuse an administrator without Projects authority | The assignments step fails with the reason and waits for someone who holds it |
+| F95 | P6: the owner-change permissions act instance-wide on a direct call | BOSS scopes the leaver and the new owner first; the owners refuse an external, ended or disabled new owner (review: calendars and contact books too) and a retry refuses the caller as new owner |
+| F96 | P6: a global operation is listed under the organization it was requested for | Accepted; nothing leaks |
+| F97 | P6: bulk disable has no revision per identity | `expectedRevision` is optional |
+| F98 | P6: a participant that cannot be read is shown in the review with no step recorded | Accepted |
+| F99 | P6: a future-dated disable is checked against the administration path as if now; its participants' pauses run at once (none until Insights P7) | Stricter, accepted; noted for Insights P7 |
+| F100 | P6: a removal that leaves no organization also signs the user out | As designed; a retry of its account steps requires the operation's organization in scope and rechecks `heldBeyond` and the administration path (review) |
+| F101 | P6: Insights P7's `pause#OwnedSchedules` and `transfer#DefinitionOwner` | Must carry the owned-resource contract's parameters to register |
 
 ## 7. Later
 

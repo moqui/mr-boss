@@ -26,10 +26,17 @@ along with this software (see the LICENSE.md file). If not, see
     guarded sign-in as another user, impl-admin F24) asks a named confirmation and never signs in as a member of a privileged
     group the user is not in or a holder of a sealed permission the user lacks. Setting another user's password stays the sealed
     ADMIN_PASSWORD's, in Tools. Every refusal is shown as its reason. Enabling, disabling and ending an account are the
-    lifecycle's (P6). -->
+    lifecycle's (P6): the Lifecycle box's LifecycleActions (Disable, with a date or at once; Remove from organization; Restore) open a
+    review (previewKind: mantle.party.IdentityServices.preview#Lifecycle and what the account owns from the registered participants,
+    ironstone.admin.LifecycleServices.find#OwnedResources) whose confirmation starts the operation (start#Lifecycle with the
+    participants' steps) and opens its LifecycleDetail; the box lists the account's operations. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="User" default-menu-include="false">
     <parameter name="userId" required="true"/>
+    <parameter name="previewKind"/>
+    <parameter name="previewOrganizationPartyId"/>
+    <parameter name="previewEffectiveDate"/>
+    <parameter name="previewReason"/>
 
     <transition name="choices" read-only="true">
         <actions>
@@ -152,6 +159,22 @@ along with this software (see the LICENSE.md file). If not, see
         <default-response url="."><parameter name="userId"/></default-response>
         <error-response url="."/>
     </transition>
+    <!-- a lifecycle operation as reviewed (P6): Mantle's start#Lifecycle with the participants' steps, at the account's revision -->
+    <transition name="startLifecycle">
+        <actions>
+            <set field="started" from="ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').startOperation({userId:userId,
+                    kind:kind, organizationPartyId:organizationPartyId, effectiveDate:effectiveDate, reason:reason,
+                    expectedRevision:expectedRevision, operationKey:operationKey})"/>
+            <if condition="!ec.message.hasError()">
+                <script>ec.message.addMessage(started.applied ? (started.statusId === 'UlopAttention' ? 'Done; some steps wait for you below'
+                    : started.statusId === 'UlopScheduled' ? 'Scheduled: access ends at the date' : 'Done') : started.reason, started.applied ? 'success' : 'warning')</script>
+            </if>
+        </actions>
+        <conditional-response url="../LifecycleDetail" condition="started?.applied">
+            <parameter name="operationId" from="started.operationId"/></conditional-response>
+        <default-response url="."><parameter name="userId"/></default-response>
+        <error-response url="."/>
+    </transition>
     <!-- Login as (impl-admin F24): the framework's guarded sign-in as another user, as Tools' UserAccountDetail does it, for a holder
         of ADMIN_LOGIN_AS and an identity in scope; never as a member of a privileged group the user is not in, nor as a holder of a
         sealed permission the user lacks -->
@@ -180,7 +203,22 @@ along with this software (see the LICENSE.md file). If not, see
                     in-map="{userId:userId, limit:30}"/>
             <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="sessionsFound" transaction="force-new" ignore-error="true"
                     in-map="{userId:userId, sinceDays:30, limit:20}"/>
+            <service-call name="mantle.party.IdentityServices.find#LifecycleOperations" out-map="lifecycleFound" transaction="force-new"
+                    ignore-error="true" in-map="{userId:userId, pageSize:10}"/>
             <script>ec.message.clearErrors()</script>
+        </if>
+        <!-- a lifecycle operation's review (P6): what it would do, and what the account owns that waits for a new owner -->
+        <if condition="account &amp;&amp; previewKind">
+            <service-call name="mantle.party.IdentityServices.preview#Lifecycle" out-map="preview" transaction="force-new" ignore-error="true"
+                    in-map="{userId:userId, kind:previewKind, organizationPartyId:(previewOrganizationPartyId || null),
+                        effectiveDate:(previewEffectiveDate || null)}"/>
+            <set field="previewFailure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+            <script>ec.message.clearErrors()</script>
+            <if condition="preview?.movesResources">
+                <service-call name="ironstone.admin.LifecycleServices.find#OwnedResources" out-map="owned" transaction="force-new"
+                        ignore-error="true" in-map="{userId:userId}"/>
+                <script>ec.message.clearErrors()</script>
+            </if>
         </if>
         <script><![CDATA[
             const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
@@ -221,6 +259,22 @@ along with this software (see the LICENSE.md file). If not, see
             stateChips = account ? [account.stateText, account.requirePasswordChange ? 'Password change required' : '',
                 account.ipAllowed ? 'IP limited' : '', found.sharedBeyondScope ? 'Shared identity' : '',
                 !account.hasPassword && !account.externalIdentity ? 'No password yet' : ''].filter(Boolean) : []
+            // the Lifecycle box (P6)
+            lifecycleOperations = Array.from(lifecycleFound?.operationList || []).map(row => Object.assign({}, row, {
+                requestedText: when(row.requestedDate), effectiveText: row.effectiveDate ? when(row.effectiveDate) : 'At once'}))
+            const closedForGood = !!account && account.disabled && !account.locked
+            canDisable = canManage && !!account && !closedForGood && account.state !== 'terminated' && account.userId !== ec.user.userId
+            canRestore = canManage && !!account && (closedForGood || !!account.terminateDate) && account.userId !== ec.user.userId
+            organizationOptions = (found?.organizations || []).map(row => ({value: row.partyId, label: row.name}))
+            canRemove = canManage && organizationOptions.length > 0 && account?.userId !== ec.user.userId
+            consequences = Array.from(preview?.consequences || [])
+            previewTitle = preview ? preview.kindText + ': ' + account.userFullName + (preview.isGlobal ? '' : ' from ' + preview.organizationName) : ''
+            ownedParticipants = Array.from(owned?.participantList || []).map(row => Object.assign({}, row, {
+                resourcesText: row.state === 'ready' ? (row.resourceList.length ? row.resourceList.map(item => item.resourceName).join(', ') : 'None')
+                    : row.reason}))
+            confirmValues = preview ? {userId, kind: preview.kind, organizationPartyId: preview.organizationPartyId, effectiveDate:
+                previewEffectiveDate || null, reason: previewReason || null, expectedRevision: preview.account.revision,
+                operationKey: 'UD-' + userId + '-' + Date.now() + '-' + Math.floor(Math.random() * 1e9)} : {}
         ]]></script>
     </actions>
     <widgets>
@@ -258,6 +312,42 @@ along with this software (see the LICENSE.md file). If not, see
                     </container>
                     <label type="p" style="text-caption text-warning q-mt-sm q-mb-none" condition="found.accountChangeReason" text="${found.accountChangeReason}"/>
                 </container>
+
+                <section name="LifecycleReview" condition="previewKind">
+                    <widgets>
+                        <container-box type="warning">
+                            <box-header title="${preview ? 'Review ' + previewTitle : 'Review'}"/>
+                            <box-body>
+                                <label type="p" style="text-negative" condition="previewFailure" text="${previewFailure}"/>
+                                <label type="p" style="text-warning" condition="preview &amp;&amp; !preview.allowed" text="Refused: ${preview.reason}"/>
+                                <section-iterate name="Consequences" list="consequences" entry="consequence">
+                                    <widgets><label type="p" style="q-mb-xs" text="• ${consequence}"/></widgets>
+                                </section-iterate>
+                                <section name="OwnedResourcesSection" condition="ownedParticipants.length &gt; 0"><widgets>
+                                <form-list name="OwnedResources" list="ownedParticipants" skip-form="true" paginate="false">
+                                    <field name="title"><default-field title="Owned"><display text="${ownerApp}: ${title}"/></default-field></field>
+                                    <field name="resourcesText"><default-field title="Waits for a new owner"><display/></default-field></field>
+                                </form-list>
+                                </widgets></section>
+                                <section name="LifecycleConfirm" condition="preview?.allowed">
+                                    <widgets>
+                                        <form-single name="LifecycleConfirm" transition="startLifecycle" map="confirmValues">
+                                            <field name="userId"><default-field><hidden/></default-field></field>
+                                            <field name="kind"><default-field><hidden/></default-field></field>
+                                            <field name="organizationPartyId"><default-field><hidden/></default-field></field>
+                                            <field name="effectiveDate"><default-field><hidden/></default-field></field>
+                                            <field name="reason"><default-field><hidden/></default-field></field>
+                                            <field name="expectedRevision"><default-field><hidden/></default-field></field>
+                                            <field name="operationKey"><default-field><hidden/></default-field></field>
+                                            <field name="submitButton"><default-field title="Confirm ${preview.kindText.toLowerCase()}"><submit type="danger"/></default-field></field>
+                                        </form-single>
+                                    </widgets>
+                                </section>
+                                <link url="." text="Cancel" link-type="anchor" parameter-map="{userId:userId}"/>
+                            </box-body>
+                        </container-box>
+                    </widgets>
+                </section>
 
                 <container-box>
                     <box-header title="Account"/>
@@ -488,6 +578,64 @@ along with this software (see the LICENSE.md file). If not, see
                             <field name="reason"><default-field title="Reason"><display/></default-field></field>
                         </form-list>
                         <label type="p" style="q-pa-md m-muted" condition="!events.length" text="No access events recorded."/>
+                    </box-body-nopad>
+                </container-box>
+
+                <container-box>
+                    <box-header title="Lifecycle"/>
+                    <box-toolbar>
+                        <container-dialog id="DisableDialog" button-text="Disable" icon="sym_o_person_off" width="560"
+                                title="Disable ${account.userFullName}" condition="canDisable">
+                            <label type="p" text="At once: signed out everywhere, keys, app passwords, SSH keys and phones revoked, and the account disabled. With a date: sign-in stops then. You review what it does before it is done."/>
+                            <form-single name="DisablePreview" transition="." map="{userId:userId, previewKind:'disable'}">
+                                <field name="userId"><default-field><hidden/></default-field></field>
+                                <field name="previewKind"><default-field><hidden/></default-field></field>
+                                <field name="previewEffectiveDate"><default-field title="Access ends" tooltip="Empty ends it now"><date-time/></default-field></field>
+                                <field name="previewReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="RemoveDialog" button-text="Remove from organization" icon="sym_o_domain_disabled" width="560"
+                                title="Remove ${account.userFullName} from an organization" condition="canRemove">
+                            <label type="p" text="Ends their relationships with that organization only. Access to their other organizations stays; when no organization is left, their memberships end too. You review it first."/>
+                            <form-single name="RemovePreview" transition="." map="{userId:userId, previewKind:'removeOrganization'}">
+                                <field name="userId"><default-field><hidden/></default-field></field>
+                                <field name="previewKind"><default-field><hidden/></default-field></field>
+                                <field name="previewOrganizationPartyId">
+                                    <default-field title="Organization">
+                                        <drop-down><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                                    </default-field>
+                                </field>
+                                <field name="previewEffectiveDate"><default-field title="Ends" tooltip="Empty ends it now"><date-time/></default-field></field>
+                                <field name="previewReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                        <container-dialog id="RestoreDialog" button-text="Restore" icon="sym_o_person_check" width="520"
+                                title="Restore ${account.userFullName}" condition="canRestore">
+                            <label type="p" text="Enables the account and clears its end date. Nothing revoked comes back: the user makes new keys and app passwords, and ended memberships and paused schedules stay as they are."/>
+                            <form-single name="RestorePreview" transition="." map="{userId:userId, previewKind:'restore'}">
+                                <field name="userId"><default-field><hidden/></default-field></field>
+                                <field name="previewKind"><default-field><hidden/></default-field></field>
+                                <field name="previewReason"><default-field title="Reason"><text-line size="50"/></default-field></field>
+                                <field name="submitButton"><default-field title="Review"><submit/></default-field></field>
+                            </form-single>
+                        </container-dialog>
+                    </box-toolbar>
+                    <box-body-nopad>
+                        <form-list name="AccountLifecycle" list="lifecycleOperations" skip-form="true" paginate="false">
+                            <field name="kindText">
+                                <default-field title="Operation">
+                                    <link url="../LifecycleDetail" text="${kindText}" link-type="anchor" parameter-map="{operationId:operationId}"/>
+                                </default-field>
+                            </field>
+                            <field name="scopeText"><default-field title="Scope"><display/></default-field></field>
+                            <field name="effectiveText"><default-field title="Takes effect"><display/></default-field></field>
+                            <field name="requestedByName"><default-field title="By"><display text="${requestedByName} · ${requestedText}"/></default-field></field>
+                            <field name="statusText"><default-field title="State"><display/></default-field></field>
+                            <field name="nextText"><default-field title="Waiting"><display/></default-field></field>
+                        </form-list>
+                        <label type="p" style="q-pa-md m-muted" condition="!lifecycleOperations.length" text="No lifecycle operations of this account in your organizations."/>
                     </box-body-nopad>
                 </container-box>
             </widgets>

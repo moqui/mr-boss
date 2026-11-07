@@ -17,6 +17,9 @@
         {"query": "what does a quarantined conflict on the integration mean", "expect": ["channel-retry"]},
         {"query": "add a new user account for our new buyer", "expect": ["invite-staff"]},
         {"query": "invite Maria to the Retail organization as a purchasing buyer", "expect": ["invite-staff"]},
-        {"query": "resend Tom's invitation, he lost the email", "page": "/qapps/Admin/Users/Invitations", "expect": ["invite-staff"]}
+        {"query": "resend Tom's invitation, he lost the email", "page": "/qapps/Admin/Users/Invitations", "expect": ["invite-staff"]},
+        {"query": "Dana left the company, disable her account", "expect": ["offboard-user"]},
+        {"query": "remove Sam from the Retail organization but keep his Services access", "expect": ["offboard-user"]},
+        {"query": "who should take over the shared drive this leaver owned", "page": "/qapps/Admin/Users/LifecycleDetail", "expect": ["offboard-user"]}
     ]
 }

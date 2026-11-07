@@ -874,6 +874,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | ContactBookServices | link#PersonalContactToDirectory |  | Commons/Contacts/Compare; Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactBookServices | delete#Contacts |  | Commons/Contacts/ContactDetail; Commons/Contacts/List |
 | ContactBookServices | filter#ContactAddresses |  | Comms/Settings/OutOfOffice (theme value STRT_EMAIL_CONTACT_SERVICE) |
+| ContactBookServices | find#OwnedContactBooks | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.contactBooks participant) (Admin P6) |
+| ContactBookServices | transfer#ContactBookOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
 | ContactImportServices | read#ContactFileText |  | Commons/Contacts/Import/Source; Projects/Time/Import/Source; Projects/WorkItems/Import/Source |
 | ContactImportServices | parse#ContactFile | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Mapping; Commons/Contacts/Import/Source |
 | ContactImportServices | preview#Contacts | Marketing/Audiences/AudienceImport | Commons/Contacts/Import/Preview |
@@ -1316,6 +1318,8 @@ Added in the drawers-commons build (Oct 18–19, 2026), called by built screens:
 | CalendarServices | fetch#CalendarSubscriptions |  | Commons/Settings/Calendars |
 | CalendarServices | export#Calendar |  | Commons/Calendar; Commons/Settings/Calendars |
 | CalendarServices | import#Calendar |  | Commons/Settings/Calendars |
+| CalendarServices | find#OwnedCalendars | Admin/Users/UserDetail | Admin/Users/UserDetail (Lifecycle review, the commons.calendars participant) (Admin P6) |
+| CalendarServices | transfer#CalendarOwner | Admin/Users/LifecycleDetail | Admin/Users/LifecycleDetail (TransferOwnership) (Admin P6) |
 | EventServices | check#EventAccess | Marketing/Events/EventDetail | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |
 | EventServices | get#EventIcsMaps | Maintenance/WorkOrders/WorkOrderDetail; Maintenance/Preventive/DueMaintenance | Commons/Calendar/EventDetail |
 | EventServices | store#EventRecurrence |  | Commons/Calendar; Commons/Calendar/EventDetail; Projects/Projects/ProjectDetail/Plan/Calendar |

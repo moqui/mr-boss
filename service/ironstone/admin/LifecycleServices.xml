@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- The lifecycle coordinator's participants (impl-admin P6; design-admin §4.1 Offboarding, §4 LifecycleDetail TransferOwnership, §14
+    Lifecycle participant): what an account owns, read from the registered owners (ironstone.admin.LifecycleParticipant, each seeded
+    by its owner), and a waiting resource handed to a new owner. Mantle's mantle.party.IdentityServices keeps the operation and its
+    steps and runs them; these services read the registry Mantle cannot see and check that a step names what its owner registered.
+    Projects' assignments, which have no owner service of their own to look up or move in bulk, are a participant here over Projects'
+    and Commons' own reassign services. The bodies are Lifecycle.js. -->
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-3.xsd">
+    <service verb="find" noun="OwnedResources" allow-remote="false">
+        <description>For an offboarding preview and the steps of a lifecycle operation: each registered participant with what userId
+            (an identity in the caller's scope) owns of its kind, from the owner's lookup, called as the caller (its own permission
+            applies): participantList, each {participantKey, ownerApp, title, resourceKind, state (ready, unavailable: the caller
+            lacks the owner's permission, failed: the lookup failed, named without its diagnostics), resourceList, pauses}; and
+            participantSteps, the steps mantle.party.IdentityServices.start#Lifecycle takes (a pause per participant that has one, a
+            transfer per resource). A registration naming a missing service, or one without the owned-resource contract, is logged
+            by name and left out. Needs ADMIN_IDENTITY_VIEW.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters><parameter name="userId" required="true"/></in-parameters>
+        <out-parameters>
+            <parameter name="participantList" type="List"/>
+            <parameter name="participantSteps" type="List"/>
+            <parameter name="resourceCount" type="Integer"/>
+        </out-parameters>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').execute('findOwnedResources', context))</script></actions>
+    </service>
+    <service verb="transfer" noun="OwnedResource" allow-remote="false">
+        <description>TransferOwnership (design §4 LifecycleDetail): a step waiting for a new owner, or failed, handed to toUserId, a
+            staff identity in the caller's scope that is enabled: the step's service and resource parameter must be what its
+            participant registered (NOT_REGISTERED otherwise), then Mantle's retry#LifecycleStep calls the owner's transfer service,
+            which checks its own permission and whether toUserId may own the resource. Answers retry#LifecycleStep's outcome (a
+            refusal as a reason). Needs ADMIN_IDENTITY_MANAGE.</description>
+        <implements service="ironstone.admin.ContextServices.define#Parameters"/>
+        <in-parameters>
+            <parameter name="operationId" required="true"/>
+            <parameter name="stepSeqId" required="true"/>
+            <parameter name="toUserId" required="true"/>
+            <parameter name="reason"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="applied" type="Boolean"/>
+            <parameter name="reasonCode"/>
+            <parameter name="reason"/>
+            <parameter name="statusId"/>
+        </out-parameters>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').execute('transferOwnedResource', context))</script></actions>
+    </service>
+    <service verb="find" noun="Assignments" allow-remote="false">
+        <description>Projects' participant lookup: the open assignments of userId's party, counted by kind (tasks: open Commons tasks
+            outside a project; workItems: open tasks of a project; requests: open requests it is the assignee of), each a resource
+            {resourceId (the kind), resourceName, resourceKind assignment, transferable, note}; counts only, never a task's name. The
+            caller's own, or an identity in the caller's scope with ADMIN_IDENTITY_VIEW.</description>
+        <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceLookup"/>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').execute('findAssignments', context))</script></actions>
+    </service>
+    <service verb="transfer" noun="Assignments" allow-remote="false">
+        <description>Projects' participant transfer: the open assignments of one kind (assignmentKind tasks, workItems or requests) of
+            fromUserId's party reassigned to toUserId's, each through its owner's service as the caller
+            (ironstone.commons.TaskServices.reassign#Task, ironstone.projects.WorkItemServices.bulk#WorkItems assign,
+            ironstone.commons.RequestServices.reassign#Request), which decide who may reassign it; each on its own, the ones refused
+            counted and the first reason named (an error, so the step stays to be retried for the rest). The caller's own, or an
+            identity in the caller's scope with ADMIN_IDENTITY_MANAGE.</description>
+        <implements service="org.moqui.admin.IdentityServices.define#OwnedResourceTransfer"/>
+        <in-parameters><parameter name="assignmentKind" required="true"/></in-parameters>
+        <actions><script>ec.context.putAll(ec.resource.script('component://mr-boss/service/ironstone/admin/Lifecycle.js').execute('transferAssignments', context))</script></actions>
+    </service>
+</services>

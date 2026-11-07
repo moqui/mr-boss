@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- LifecycleOperations (design-admin §4 LifecycleOperations; impl-admin P6; style-guide §3.2 List): the account lifecycle operations
+    (disable, organization removal, restore) of the organizations the user administers, from mantle.party.IdentityServices
+    find#LifecycleOperations (ADMIN_IDENTITY_VIEW; the organization filters of the Users area apply to UserLifecycleOperation
+    too). LifecycleFind narrows by organization, kind, state and requested date; LifecycleList shows each one's account, kind,
+    scope, requester, source, state, progress and what waits (failed steps, resources waiting for a new owner), and opens
+    LifecycleDetail. Operations are started from UserDetail's Lifecycle box and Users' bulk disable. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Lifecycle" menu-image="sym_o_manage_accounts" menu-image-type="icon">
+    <parameter name="organizationPartyId"/>
+    <parameter name="kind"/>
+    <parameter name="statusId"/>
+    <parameter name="fromDate"/>
+    <parameter name="thruDate"/>
+    <parameter name="pageIndex"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.find#LifecycleOperations" out-map="found" transaction="force-new" ignore-error="true"
+                in-map="{organizationPartyId:(organizationPartyId || null), kind:(kind || null), statusId:(statusId || null),
+                    fromDate:(fromDate || null), thruDate:(thruDate || null), pageIndex:(pageIndex || 0), pageSize:50}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            operations = Array.from(found?.operationList || []).map(row => Object.assign({}, row, {
+                requestedText: when(row.requestedDate), effectiveText: row.effectiveDate ? when(row.effectiveDate) : 'At once'}))
+        ]]></script>
+        <set field="operationListCount" from="found?.operationListCount || 0"/>
+        <set field="filtered" from="!!(organizationPartyId || kind || statusId || fromDate || thruDate)"/>
+        <set field="findValues" from="{organizationPartyId:organizationPartyId, kind:kind, statusId:statusId, fromDate:fromDate, thruDate:thruDate}"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-sm">
+            <label text="Lifecycle operations" type="h5"/>
+            <label text="Disabled accounts, organization removals and restorations in the organizations you administer, with what still waits: a failed step to retry, or a resource waiting for a new owner. Start one from a user's Lifecycle box."
+                    type="p" style="text-caption m-muted q-mb-none"/>
+        </container>
+        <form-single name="LifecycleFind" transition="." map="findValues">
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="kind">
+                <default-field title="Kind">
+                    <drop-down allow-empty="true">
+                        <option key="disable" text="Disable"/><option key="removeOrganization" text="Organization removal"/>
+                        <option key="restore" text="Restore"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="statusId">
+                <default-field title="State">
+                    <drop-down allow-empty="true">
+                        <option key="UlopAttention" text="Needs attention"/><option key="UlopScheduled" text="Scheduled"/>
+                        <option key="UlopCompleted" text="Completed"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="fromDate"><default-field title="Requested from"><date-time type="date"/></default-field></field>
+            <field name="thruDate"><default-field title="Before"><date-time type="date"/></default-field></field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="kind"/>
+                    <field-ref name="statusId"/>
+                    <field-ref name="fromDate"/>
+                    <field-ref name="thruDate"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="LifecycleList" list="operations" skip-form="true" paginate="true">
+                    <field name="userName">
+                        <default-field title="Account">
+                            <link url="../LifecycleDetail" text="${userName}" link-type="anchor" parameter-map="{operationId:operationId}"/>
+                        </default-field>
+                    </field>
+                    <field name="kindText"><default-field title="Kind"><display/></default-field></field>
+                    <field name="scopeText"><default-field title="Scope"><display/></default-field></field>
+                    <field name="effectiveText"><default-field title="Takes effect"><display/></default-field></field>
+                    <field name="requestedByName"><default-field title="Requested by"><display text="${requestedByName} · ${requestedText}"/></default-field></field>
+                    <field name="sourceText"><default-field title="Source"><display/></default-field></field>
+                    <field name="statusText"><default-field title="State"><display/></default-field></field>
+                    <field name="progressText"><default-field title="Progress"><display/></default-field></field>
+                    <field name="nextText"><default-field title="Waiting"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="userName"/><field-ref name="kindText"/></column>
+                        <column><field-ref name="statusText"/><field-ref name="nextText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!operations.length &amp;&amp; filtered" text="No operation matches."/>
+                <label type="p" style="q-pa-md m-muted" condition="!operations.length &amp;&amp; !filtered &amp;&amp; !failure" text="No lifecycle operations yet."/>
+                <label type="p" style="q-px-md q-pb-md m-muted" condition="operationListCount &gt; operations.length" text="Showing ${operations.length} of ${operationListCount}; narrow the search to see others."/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

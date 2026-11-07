@@ -1218,6 +1218,11 @@ as a bare repository (`export#GitRepository`).
 - **Source:** research §12 (Nextcloud Files); Google Drive shared drives; mr-moqui
   `docs/data/Revision-Management.md` (repository kinds, fetch, export).
 - **Needs:** Drives; File services.
+- **Owner change (Nov 7, 2026; impl-admin P6, F31).** A shared drive changes owner through
+  `FileServices.transfer#DriveOwner` (its owner, or `DRIVE_OWNER_CHANGE` when the owner leaves; the new
+  owner an enabled account that is not external, whose member row ends); `find#OwnedDrives` lists a
+  user's shared drives. A personal, records or mirror drive keeps its owner. Admin's lifecycle calls them
+  as a registered participant (design-admin §14); Commons adds no screen for it.
 
 ### Shares
 
@@ -1446,6 +1451,11 @@ records who saved each version and the page's moves. Until the editor lands, the
   device). Services: `mantle.party.ContactBookServices.*` (new). Derived from Nextcloud contacts
   settings, Zimbra address-book dialogs.
 - **Needs:** Contact books; Contact book, import and export services; CalDAV and CardDAV
+- **Manager change (Nov 7, 2026; impl-admin P6, F31).** A shared book a user alone manages gets a new
+  manager through `mantle.party.ContactBookServices.transfer#ContactBookOwner` (that manager, or
+  `CONTACT_BOOK_OWNER_CHANGE`; the new manager enabled and, for an organization's book, working for it);
+  `find#OwnedContactBooks` lists those books. A personal book and its personal contacts stay with their
+  user (§21), so offboarding never hands them on.
   servers.
 
 ### Calendars
@@ -2097,6 +2107,11 @@ campaign's sends, and the ledger's retry and reconciliation rules are authoritat
   "Email supports both modes".
 - **Needs:** Mail account model; IMAP and POP poller with incremental sync; SMTP listener
   behind the gateway; OAuth client and token store; Autodiscover.
+- **Owner change (Nov 7, 2026; impl-admin P6, F31).** A shared account (`EakShared`) changes owner through
+  `EmailClientServices.transfer#EmailAccountOwner` (its owner, or `EMAIL_ACCOUNT_OWNER_CHANGE` when the owner
+  leaves; the new owner an enabled internal account, whose member row ends; both mail change cursors
+  reset); `find#OwnedEmailAccounts` lists a user's shared accounts. A personal account, with its owner's own
+  sign-in, is never transferred. Admin's lifecycle calls them as a registered participant.
 - **Account servers stay here (Nov 1, 2026; review Z1).** The `EmailServer` of an account (one an
   `EmailAccount` owns, `ownsEmailServer`) is edited only here, by the account's owner. Admin's relay
   list holds only the servers no `EmailAccount` owns, and Admin sees an account's readiness through
@@ -2290,7 +2305,7 @@ bare `entity-find`.
 | Recurrence | data model + seed data | `mantle.work.effort.WorkEffortRecurrence` {workEffortId, rrule, exdates, rdates}; instance overrides as `WorkEffort`s linked by the new `WorkEffortAssoc` type `WeatRecurrenceInstance` with the instance date; the existing `recurStartCron`, `recurLimit`, `recurEndDate` stay for jobs | Calendar, EventDetail, Tasks | |
 | Reminders | data model + service type | `mantle.work.effort.WorkEffortReminder` {workEffortId, partyId, offsetMinutes, methodEnumId notification or email}; a job that sends on topic `WorkEffortReminder` with snooze | EventDetail, Tasks, Today | |
 | RSVP and booking statuses | seed data + data model | `StatusItem` `WeptTentative` in `WorkEffortParty`; `WorkEffortFacility` gains `statusId` with the `WorkEffortAssetAssign` flow (`WeaaRequested`, `WeaaAssigned`, `WeaaRequestDenied`) or its own | EventDetail, Schedules | |
-| Calendar services | service type | `mantle.work.EventServices`: `get#FullCalendarData` extended with `calendarIdList`, RRULE expansion, all-day handling, the meeting rooms of `WorkEffortFacility` (it reads `WorkEffort.facilityId` today), `recurLimit`, and declined invitations left out unless asked; the `WorkEffortPartyAsset` view, whose asset status and dates are aliased to the party member, fixed; new `get#FreeBusy`, `send#EventInvitations`, `respond#EventInvitation`, `book#Resource`; `mantle.work.CalendarServices` (`create#Calendar`, `share#Calendar`, `subscribe#Calendar`, `fetch#CalendarSubscription` as a job, `export#Calendar`) | Calendar, EventDetail, Schedules, Calendars | |
+| Calendar services | service type | `mantle.work.EventServices`: `get#FullCalendarData` extended with `calendarIdList`, RRULE expansion, all-day handling, the meeting rooms of `WorkEffortFacility` (it reads `WorkEffort.facilityId` today), `recurLimit`, and declined invitations left out unless asked; the `WorkEffortPartyAsset` view, whose asset status and dates are aliased to the party member, fixed; new `get#FreeBusy`, `send#EventInvitations`, `respond#EventInvitation`, `book#Resource`; `mantle.work.CalendarServices` (`create#Calendar`, `share#Calendar`, `subscribe#Calendar`, `fetch#CalendarSubscription` as a job, `export#Calendar`; Nov 7, 2026, impl-admin P6: `find#OwnedCalendars` and `transfer#CalendarOwner`, by which a shared or resource calendar a leaving user's person owns gets a new owner and an organization's calendar they alone manage a new manager, with `CALENDAR_OWNER_CHANGE`, a personal calendar staying with its user) | Calendar, EventDetail, Schedules, Calendars | |
 | Today and timeline services | service type | `mantle.work.WorkEffortServices.get#UserTodayItems` (tasks, activities and events of the user by overdue, today and later, skipping what the user snoozed, plus the `<today-source>` providers' items); `mantle.party.CommunicationServices.get#RecordTimeline` (the joins or generic links, a party's communication events through `find#PartyCommunicationEvents`, extended to the to and cc recipient rows and leaving out mailbox posts, the record's `*Note` rows, activities, audit log, files, the bound room), `link#CommunicationEventRecord`; `send#EmailDraft` (§12) | TodayPanel, Home, Chatter, Inbox, Compose | §15 |
 | Per-user snooze | data model | `mantle.work.effort.WorkEffortParty` gains `snoozedThruDate`: hides the task or activity from that party's Today until then without changing the work effort's dates | TodayPanel, Home | |
 | Generic record links | data model | Mantle `mantle.party.communication.CommunicationEventRecord` {communicationEventId, recordEntityName, recordId}, `mantle.work.effort.WorkEffortRecord` {workEffortId, recordEntityName, recordId}, `mantle.party.communication.RecordFollower` {recordEntityName, recordId, userId, kinds}; the per-type joins stay and are read too | Chatter, QuickCreate, Inbox, Chat | answers crosscut §8 |

@@ -268,6 +268,9 @@ const linkPaths = [
     // P5: invitations
     "Users/Invitations",
     "Users/InviteStaff",
+    // P6: lifecycle operations
+    "Users/LifecycleOperations",
+    "Users/LifecycleDetail",
     "Settings/SettingsHome",
     "Agents/Home",
     "System",
@@ -572,6 +575,47 @@ const choiceSources = {
         return choiceSources
             .bundles(userScope, term, selected)
             .filter(option => option.value !== "ADMIN" && !privileged.has(option.value) && !sealedGroups.has(option.value))
+    },
+    // P6: the staff identities in Mantle's identity scope who can sign in, for a lifecycle's new owner (TransferOwnership, leaving
+    // out the account offboarded, exclude) and Users' bulk disable; the owner's service checks the new owner again
+    lifecycleUsers: (userScope, term, selected, p) => {
+        if (!userScope.capabilities.identityManage) return []
+        let accounts = staffAccounts()
+            .selectField("userId")
+            .selectField("userFullName")
+            .selectField("username")
+            .selectField("disabled")
+            .selectField("disabledDateTime")
+            .selectField("terminateDate")
+            .distinct(true)
+        if (term) {
+            const factory = ec.entity.conditionFactory
+            accounts = accounts.condition(
+                factory.makeCondition(
+                    ["username", "userFullName"].map(field => factory.makeCondition(field, "like", likeText(term)).ignoreCase()),
+                    "or"
+                )
+            )
+        }
+        const now = Number(String(ec.user.nowTimestamp))
+        const exclude = String(p?.exclude || "")
+        const seen = new Set()
+        return Array.from(
+            accounts
+                .orderBy("userFullName")
+                .limit(choiceLimit * 2)
+                .list()
+        )
+            .filter(row => !(row.disabled === "Y" && !row.disabledDateTime))
+            .filter(row => row.terminateDate == null || Number(String(row.terminateDate)) > now)
+            .filter(
+                row => row.userId !== exclude && row.userId !== ec.user.userId && !seen.has(row.userId) && seen.add(row.userId)
+            )
+            .slice(0, choiceLimit)
+            .map(row => ({
+                value: row.userId,
+                label: (row.userFullName || row.username) + (row.username ? " (" + row.username + ")" : "")
+            }))
     },
     // the internal organizations the user administers (theirs, or every one for the administrator)
     organizations: (userScope, term, selected) => {

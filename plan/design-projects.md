@@ -1062,6 +1062,13 @@ actions.
 | People | Overview, Files, Conversation; no Time or money panes | lifecycle and development tasks assigned to or readable by the user (design-people §13) | start, complete, comment, attach, through the process guard; a task permission alone opens no confidential source | the sanitized lifecycle or goal link and the next step |
 | Insights | Overview, read | the work items behind a report row the user may see | none; a report returns here | the drill-down (Nov 1, 2026; R-INS-11) |
 
+**A leaver's assignments (Nov 7, 2026; impl-admin P6).** Admin's lifecycle registers Projects' assignments as a participant
+(design-admin §14): when a user is disabled, or removed from their last organization, their open tasks, project work items and
+requests are counted and wait for a new assignee, then move through the owner services as the administrator:
+`ironstone.commons.TaskServices.reassign#Task`, `WorkItemServices.bulk#WorkItems` (assign) and `RequestServices.reassign#Request`.
+Those services keep their rules (the task's owner or assignee, the request's assignee), so an administrator without that
+authority is refused and the step waits for someone who has it; Projects adds no lifecycle right (impl-admin F-P6-4).
+
 **Work items on phones (Nov 1, 2026; review Y1).** A work item assigned to the user is a VTODO in the
 CalDAV Tasks collection (Commons §11 Sync). A device writes it only through the owner services: a
 PUT updates it through `mantle.work.TaskServices.update#Task` and `set#TaskStatus`, so a status
