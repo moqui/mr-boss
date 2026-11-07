@@ -259,7 +259,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 7 (§6 F1–F33; F2's check in P1, F34; the others F41–F46) |
 | P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built and reviewed Nov 7, merged |
-| P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | built and reviewed Nov 7 |
+| P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | built and reviewed Nov 7, merged |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | — |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | — |
 | P5 Invitations | Mantle, BOSS | Invitations, AcceptInvitation | — |
@@ -632,13 +632,13 @@ ADM-OPERATIONS (its readiness part), ADM-SETTINGS (the index), ADM-SHELL.
   per organization: unconfigured and not activated warn, each finding fails), `products.catalogChecks` (`validate#Catalog`,
   `PRODUCT_CATALOG_VIEW`, counts only), `commerce.storeReadiness` (`check#StoreReadiness`, `ADMIN_OVERVIEW_VIEW`, each store of
   the organizations administered: the findings for a Commerce reader, the PASS summary for an administrative reader,
-  F-P2-2), `constitution.global` (framework `get#Constitution`, the sources passed over counted) and
+  F48), `constitution.global` (framework `get#Constitution`, the sources passed over counted) and
   `constitution.organization` (Mantle `get#OrganizationConstitution`, an invalid own document fails). No owner service changed.
 - The settings index (F21, F44, F22): Accounting (Company), Customer Service, Commerce's CheckoutSettings, Products,
   Purchasing, Warehouse, Manufacturing's ProductionSettings, Projects, Comms › Consent (`CONTACT_ADMIN`) (Applications) and
   Voice (`system/Voice`, `VoiceAdmin`) (Instance), each owner's block in BossSetupData; no CX-MAPS entry (F22).
 - F46: `BOSS_ADM_SETTINGS_INDEX` gives `BOSS_USERS` a non-inheritable `AUTHZT_ALLOW` (with `MANTLE_USER_ORG` and
-  `MANTLE_PRIVATE_CONTACT`) on SettingsHome, `get#SharedContext` and `find#Settings` (F-P2-1); `get#SharedContext` answers
+  `MANTLE_PRIVATE_CONTACT`) on SettingsHome, `get#SharedContext` and `find#Settings` (F47); `get#SharedContext` answers
   such a user `{read: false, settingsIndex: true}`, their organizations and the index's link alone. The root, Home, the
   other areas, the other `ironstone.admin` services and the launcher still refuse them (AdminAccess).
 - Screens: `Admin/Home.xml` (shortcuts Health, the primary, Monitoring, Settings, Agents, System, Developer tools; Attention,
@@ -671,36 +671,36 @@ ADM-OPERATIONS (its readiness part), ADM-SETTINGS (the index), ADM-SHELL.
 - Design edits: design-admin §7 (the destination rule; F46's paragraph), §10 (each provider's permission; Commerce's summary),
   §13 (the settings index's grant opens nothing else), §14.2's Comms row (F44); design-commerce's readiness registration.
 - Findings (provisional, numbered by the lead):
-  - **F-P2-1** The root's always-actions run under the root's frame only (render.rs `render_screens`), before the target's
+  - **F47** The root's always-actions run under the root's frame only (render.rs `render_screens`), before the target's
     grant applies, so a non-inheritable grant on SettingsHome does not reach the root's `get#SharedContext` call, and
     SettingsHome's own service calls and entity-options inherit nothing either. The grant names `get#SharedContext` and
     `find#Settings` too, `get#SharedContext` answers the index's context to a user holding that grant, and SettingsHome takes
     its options from `find#Settings` rather than an entity find. `setup#UserOrganizationInfo` needed nothing.
-  - **F-P2-2** `check#StoreReadiness` needs `COMMERCE_VIEW` in the store's organization, so called as `admin.reader` it refuses,
+  - **F48** `check#StoreReadiness` needs `COMMERCE_VIEW` in the store's organization, so called as `admin.reader` it refuses,
     against the "usable when"; its anonymous PASS shape (`input.targetId`) answers each check by name and readiness without
     messages. The adapter gives a Commerce reader the findings and an administrative reader that summary, for the stores of
     the organizations it administers; no Commerce change.
-  - **F-P2-3** `ADMIN` holds no `ACCOUNTING_VIEW` or `PRODUCT_CATALOG_VIEW` row; the owners read their permissions through
+  - **F49** `ADMIN` holds no `ACCOUNTING_VIEW` or `PRODUCT_CATALOG_VIEW` row; the owners read their permissions through
     ProductAccess `has`, which counts `ADMIN` for all, so the registries do too (none of their permissions is sealed).
-  - **F-P2-4** No refresh operation exists to register in P2 (Insights P3 registers `index#BusinessDataset`); the spec
+  - **F50** No refresh operation exists to register in P2 (Insights P3 registers `index#BusinessDataset`); the spec
     registers its own. Nothing in BOSS keeps a refresh's result, so `operationKey` is passed to the owner's service, whose
     retry answers it.
-  - **F-P2-5** No Tools screen edits an EmailServer, an EmailTemplate or a NotificationTopic, and none shows ClusterMember: the
+  - **F51** No Tools screen edits an EmailServer, an EmailTemplate or a NotificationTopic, and none shows ClusterMember: the
     mail, report and topic fix links open Tools' entity grid (ADMIN's) until P11's MailRelays and P14's Topics, and the cluster
     check links Monitoring.
-  - **F-P2-6** `get#OrganizationConstitution` refuses a reader who is neither a member nor an editor of the organization, so the
+  - **F52** `get#OrganizationConstitution` refuses a reader who is neither a member nor an editor of the organization, so the
     organization Constitution check lists only the viewer's own organizations, the administrator's included.
-  - **F-P2-7** Insights' DataReadiness and RefreshRequest (Insights P3, P10) call `get#Readiness` and `request#Refresh`, which
+  - **F53** Insights' DataReadiness and RefreshRequest (Insights P3, P10) call `get#Readiness` and `request#Refresh`, which
     `BOSS_ADMIN`'s `ironstone\.admin\..*` pattern authorizes for Admin users only; Insights grants its groups those two when it
     builds them.
-  - **F-P2-8** AdminFoundationWalk (acceptance) walks a fixed list of areas without Settings; AdminRegistriesWalk walks the
+  - **F54** AdminFoundationWalk (acceptance) walks a fixed list of areas without Settings; AdminRegistriesWalk walks the
     index. Left unchanged, so it is not rerun.
 - Decisions (§4 rows added): the registry rows in BossSetupData; registration permissions as the owners read theirs;
   destinations by screen path; Home's Attention and SetupChecks; refresh identity with the owner.
 - For the lead:
   - mr-boss's share about 0.9 s; no budget raised;
   - Insights P2 appends to BossSetupData too: both blocks are at the end of the file;
-  - F-P2-7 for Insights P3 and P10; P11 and P14 repoint the fix links (F-P2-5); P7 adds a fix link to the organization
+  - F53 for Insights P3 and P10; P11 and P14 repoint the fix links (F51); P7 adds a fix link to the organization
     Constitution check and Admin's Settings entries;
   - the acceptance AdminRegistriesWalk to run when asked.
 
@@ -721,10 +721,10 @@ design §3, §7, §10, §13, §14 and §14.2, AGENTS.md, Practices-App-Dev and t
   authz record's `authzServiceName`, grants on the screens above an app root.
 - Readiness: each provider by its registration's permission, `requireNewTransaction` in its own error frame, failures
   logged and shown unavailable without diagnostics, refusals omitted, an unknown state unavailable, stale only from ready.
-  F-P2-2's summary is check#StoreReadiness's existing `anonymous-all` PASS shape (each check's label and ready flag, no
+  F48's summary is check#StoreReadiness's existing `anonymous-all` PASS shape (each check's label and ready flag, no
   messages), already open to any caller for any store id; Admin shows it only to `ADMIN_OVERVIEW_VIEW` holders for the
   stores of the organizations they administer, with no StoreDetail link unless it opens: fine for `admin.reader`.
-  F-P2-3's `access.has` widens only for `ADMIN` members and refuses a Projects client; it only filters, the owner's service
+  F49's `access.has` widens only for `ADMIN` members and refuses a Projects client; it only filters, the owner's service
   checks again, and no registration names a sealed permission.
 - Registries: per-row try/catch, missing service and permission logged by name and skipped; the entity file, its
   Enumerations and relationships match Practices-App-Dev; the rows are in seed-initial BossSetupData, appended at its end.
@@ -746,11 +746,11 @@ design §3, §7, §10, §13, §14 and §14.2, AGENTS.md, Practices-App-Dev and t
 - For the lead:
   - Home reads Admin's checks twice (get#Overview's readiness and SetupChecks' own get#Readiness); fine at eight checks,
     worth one call when Home grows;
-  - F-P2-7: a caller Insights grants `get#Readiness` without the Admin root gets no organization-scoped checks
+  - F53: a caller Insights grants `get#Readiness` without the Admin root gets no organization-scoped checks
     (`organizationsOf` answers none), so Insights P3 needs the viewer's organizations passed or a scope rule of its own;
   - the refusal heuristic (`refusalText`, "is not available" among them) omits rather than names an owner failure worded
     that way; owners should answer reason codes;
-  - the earlier items stand (F-P2-5's fix links, the acceptance walk to run when asked, no budget raised).
+  - the earlier items stand (F51's fix links, the acceptance walk to run when asked, no budget raised).
 
 ### P3 — Groups and grants
 
@@ -1188,10 +1188,10 @@ the owner's design.
 | Nov 7, 2026 | P1's areas: Home every Admin user's; Operations (Monitoring) the reader's, operations operator's and administrator's; Agents and Developer tools the administrator's (AgentsHome and DeveloperHome then check AgentAdmin and each tool's own grant); System Tools' own grant's (`ADMIN`). A later phase opening an area to another group adds its row | P1 |
 | Nov 7, 2026 | Customer Service's Privacy team holds `BOSS_ADMIN_PRIVACY` through its member (customerservice.admin in the demo); the queue stays restricted to its team, Mantle naming no BOSS group | P1, impl-customer-service F80 |
 | Nov 7, 2026 | The registries' rows are in BossSetupData (seed-initial), each owner's in a block of its own, Accounting's too: BossAccountingSetupData is demo data | P2 |
-| Nov 7, 2026 | A registration's permission is read as the owners read theirs (ProductAccess `has`, `ADMIN` holding all); Commerce's store readiness needs `ADMIN_OVERVIEW_VIEW` and answers a Commerce reader the findings, an administrative reader Commerce's summary | P2, F-P2-2, F-P2-3; design §10 changed |
+| Nov 7, 2026 | A registration's permission is read as the owners read theirs (ProductAccess `has`, `ADMIN` holding all); Commerce's store readiness needs `ADMIN_OVERVIEW_VIEW` and answers a Commerce reader the findings, an administrative reader Commerce's summary | P2, F48, F49; design §10 changed |
 | Nov 7, 2026 | A settings entry or fix link shows when its destination screen path opens to the viewer's own groups, decided as authz.rs decides a path, and its view permission holds; the index links readiness into Health rather than calling providers per entry | P2; design §7 changed |
 | Nov 7, 2026 | Home's Needs attention is the worst ten non-ready checks of every readable provider; Setup checks are Admin's own first-run checks | P2 |
-| Nov 7, 2026 | `request#Refresh` passes its operation key to the owner's service, whose retry answers it; BOSS keeps no refresh record | P2, F-P2-4 |
+| Nov 7, 2026 | `request#Refresh` passes its operation key to the owner's service, whose retry answers it; BOSS keeps no refresh record | P2, F50 |
 
 ## 5. Open questions
 
@@ -1203,7 +1203,7 @@ the owner's design.
 
 Design assumptions found wrong or unstated in the code, with the resolution. Where a resolution changes the design, it
 is written there too. F1–F30 were found on Nov 7, 2026, while writing this plan, F31–F33 in its review the same
-day, F34–F40 in P1 and F41–F46 in P0's remaining checks (Nov 7).
+day, F34–F40 in P1, F41–F46 in P0's remaining checks and F47–F54 in P2 (Nov 7).
 
 | # | Finding | Resolution |
 | --- | --- | --- |
@@ -1253,6 +1253,14 @@ day, F34–F40 in P1 and F41–F46 in P0's remaining checks (Nov 7).
 | F44 | P0: F21 corrected: Comms mounts basic-comms' Settings (Comms.xml:39), all personal, which §14.2 leaves out; no screen edits shared EmailTemplates, there is no sending profile, suppressions are only Consent's CSV, and mail-account status is per user (`get#MailAccountList`) | P2's Comms row opens Comms › Consent; shared templates, sending profiles, suppressions and a shared-account readiness provider are Comms' later work (§7); design §14.2 changed |
 | F45 | P0: `moqui.job.runs` carries only the outcome (jobs.rs:900-905); job root spans keep `moqui.job.name` and error status (sdk.rs:733-740, jobs.rs:788-790); nothing signals a late run. `moqui.report.audit` is written for exports and definition deletes only (lib.rs:124, definitions.rs:641); `otel_logs` keeps 7 days (telemetry/maintenance.rs:32) | P14's template groups job root spans by name for failing runs; late waits for a framework lag signal (§7). P17 adds the denied and purpose fields and a longer retention or an audit index for the access log |
 | F46 | P0: screen authorization is checked on a path's last screen only, an ancestor's deny blocking (render.rs:1495-1507); the Assist drawer's Rules pane serves every signed-in user their organization's Constitution (assist.xml `constitution`, `get#Constitution` checking read access) | P2 grants `BOSS_USERS` a non-inheritable ALLOW on SettingsHome alone; members read the Constitution through the Rules pane, linked from OrganizationDetail; P7's Admin › Constitution is for its editors; design §7 and §13 changed when P2 and P7 build them |
+| F47 | P2: the root's always-actions run under the root's frame before the target's grant applies, so a non-inheritable grant on SettingsHome does not reach the root's `get#SharedContext` call, nor SettingsHome's own service calls and entity options | Done in P2: the SettingsHome grant names `get#SharedContext` and `find#Settings`, and SettingsHome takes its options from `find#Settings` |
+| F48 | P2: `check#StoreReadiness` needs `COMMERCE_VIEW`; its anonymous shape answers each check by name and readiness, without messages | The adapter gives a Commerce reader the findings and an Admin reader that summary for the stores of organizations it administers; no Commerce change |
+| F49 | P2: `ADMIN` holds no `ACCOUNTING_VIEW` or `PRODUCT_CATALOG_VIEW` row; the owners read theirs through ProductAccess `has`, which counts `ADMIN` | The registries read registration permissions the same way (none sealed); the owner's service checks again |
+| F50 | P2: no refresh operation exists to register yet; BOSS keeps no refresh record | Insights P3 registers `index#BusinessDataset`; `operationKey` passes to the owner's service |
+| F51 | P2: no Tools screen edits EmailServer, EmailTemplate or NotificationTopic, or shows ClusterMember | Fix links open Tools' entity grid (ADMIN's) until P11 and P14; the cluster check links Monitoring |
+| F52 | P2: `get#OrganizationConstitution` refuses a reader who is neither member nor editor | The organization Constitution check lists the viewer's own organizations |
+| F53 | P2: `get#Readiness` and `request#Refresh` are authorized for Admin users only (the `ironstone\.admin\..*` pattern), and organization-scoped checks cover no organization for a user without the Admin root (review) | Insights P3 and P10 grant their groups the two services and pass or scope the viewer's organizations |
+| F54 | P2: the acceptance AdminFoundationWalk does not walk Settings | AdminRegistriesWalk walks the index; left unchanged |
 
 ## 7. Later
 
