@@ -16,11 +16,14 @@ along with this software (see the LICENSE.md file). If not, see
     Dashboards/Definition.xml) for one library panel, hidden from the menu; its measure and target forms come with P4.
     The author and the dataset steward open it (BOSS_INS_AUTHORING); save, copy, restore and delete run here and return here
     or to Insights' lists (the root's reportLinks), the dataset choices are the datasets the author may read, and sharing is
-    Insights › Dashboard's ShareDashboard, so the editor keeps the group as it is. Definition import is not offered (P12's
-    admitted bundles). -->
+    Insights › Dashboard's ShareDashboard, so the editor's save keeps the group as it is (a posted group is not taken); save and
+    copy take only this editor's types. Definition import is not offered (P12's admitted bundles); BOSS_INS_AUTHORING names
+    each transition taken in here, so one added must be named there too. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Library panel" default-menu-include="false">
 
+    <!-- in always-actions, so save and copy keep to these types too -->
+    <always-actions><set field="reportDefinitionTypes" from="['panel']"/></always-actions>
     <transition-include name="save" location="component://tools/screen/Dashboards/Definition.xml"/>
     <transition-include name="copy" location="component://tools/screen/Dashboards/Definition.xml"/>
     <transition-include name="restore" location="component://tools/screen/Dashboards/Definition.xml"/>
@@ -29,6 +32,5 @@ along with this software (see the LICENSE.md file). If not, see
     <transition-include name="reference" location="component://tools/screen/Dashboards/Definition.xml"/>
     <transition-include name="dashboard" location="component://tools/screen/Dashboards/Definition.xml"/>
 
-    <actions><set field="reportDefinitionTypes" from="['panel']"/></actions>
     <widgets><include-screen location="component://tools/screen/Dashboards/Definition.xml" share-scope="true"/></widgets>
 </screen>

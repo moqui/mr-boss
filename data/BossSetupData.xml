@@ -2475,13 +2475,17 @@ along with this software (see the LICENSE.md file). If not, see
     </artifactGroups>
     <!-- Insights P2 (design-insights §1.1, §4): the definition editors, DashboardEditor and PanelDetail (mounts of the framework
         Definition screen), are the author's and the dataset steward's: the root user group and the administrator are denied them
-        and the authors' ALWAYS passes the deny, as an area's (impl-commerce F45). An inheritable ALWAYS passes the engine's denies
-        from these screens, so the editors take in only the authoring transitions (save, copy, restore, delete, export), never
-        definition import; every other Insights mount (Dashboards, Dashboard, Library panels, Wall display, Explore, Compare) is
-        open to every Insights user by the root's ALLOW, with the engine's operations as granted above. -->
+        and the authors' ALWAYS passes the deny, as an area's (impl-commerce F45). The ALWAYS is not inheritable (an inheritable
+        one would pass every deny below it, the engine's included; the P2 review, R3): it opens the screens and their authoring
+        transitions by name (save, copy, restore, delete, export, reference, dashboard), a transition not named is refused, and
+        each engine operation under them is checked by its own grant above. Every other Insights mount (Dashboards, Dashboard,
+        Library panels, Wall display, Explore, Compare) is open to every Insights user by the root's ALLOW, with the engine's
+        operations as granted above. -->
     <artifactGroups artifactGroupId="BOSS_INS_AUTHORING" description="Insights: the dashboard and panel editors">
         <artifacts artifactName="component://mr-boss/screen/Insights/(DashboardEditor|PanelDetail)\.xml" artifactTypeEnumId="AT_XML_SCREEN"
-                nameIsPattern="Y" inheritAuthz="Y"/>
+                nameIsPattern="Y" inheritAuthz="N"/>
+        <artifacts artifactName="component://mr-boss/screen/Insights/(DashboardEditor|PanelDetail)\.xml/(save|copy|restore|delete|export|reference|dashboard)"
+                artifactTypeEnumId="AT_XML_SCREEN_TRANS" nameIsPattern="Y" inheritAuthz="N"/>
         <authz artifactAuthzId="BOSS_INS_AUTHORING_ROOTDENY" userGroupId="BOSS_INSIGHTS"
                 authzTypeEnumId="AUTHZT_DENY" authzActionEnumId="AUTHZA_ALL"/>
         <authz artifactAuthzId="BOSS_INS_AUTHORING_ADMINDENY" userGroupId="BOSS_INSIGHTS_ADMIN"

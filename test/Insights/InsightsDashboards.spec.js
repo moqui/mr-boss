@@ -1,10 +1,11 @@
 // Insights dashboards (impl-insights P2; design-insights §4 Dashboard, DashboardEditor, ShareDashboard): the framework report
 // screens mounted under Insights (INS-04). Dashboard's one qvt render: the organization in scope fixed over a forged variable,
 // its links (appLinks) under Insights, a library panel over a dataset the author may not read said to be not available (the
-// datasets wait for P3's admission), and Share for the owner. The mounted editor copies and saves under Insights. Sharing: the
-// owner shares with their own group and makes the dashboard private again; another group, a reader and a shipped dashboard are
-// refused. The access rules of the editors and the engine are InsightsAccess's; the golden walk is the client
-// InsightsDashboardsWalk; the "usable when" scenario is the acceptance InsightsDashboardsUsable.
+// datasets wait for P3's admission), and Share for the owner; a panel inspect keeps the scope. The mounted editor copies and
+// saves under Insights, keeps the group over a posted one and takes only its own types. Sharing: the owner shares with their
+// own group and makes the dashboard private again; another group, a reader and a shipped dashboard are refused. The access
+// rules of the editors and the engine are InsightsAccess's; the golden walk is the client InsightsDashboardsWalk; the "usable
+// when" scenario is the acceptance InsightsDashboardsUsable.
 // Run: ./moq test mr-boss --spec InsightsDashboards
 const lib = ec.resource.script("component://mr-boss/test/Insights/InsightsSpecLib.js")
 const {ids, users, asUser, system, refusal, invoke} = lib
@@ -15,7 +16,7 @@ const share = "ironstone.insights.DashboardServices.share#Dashboard"
 const panelId = "INS_DASH_SPEC_PANEL"
 const boardId = "INS_DASH_SPEC_BOARD"
 const copyId = "INS_DASH_SPEC_COPY"
-const definitionIds = [panelId, boardId, copyId]
+const definitionIds = [panelId, boardId, copyId, copyId + "_S", copyId + "_A"]
 const insightsScreens = "component://mr-boss/screen/Insights.xml"
 
 // Insights under the webroot, as the shell requests it, so its report links resolve to /apps/Insights/... as in the browser.
@@ -120,9 +121,15 @@ feature(
                 definitionId: boardId,
                 "var-organizationPartyId": ids.otherOrganizationId
             })
-            return {board}
+            // a panel inspect keeps the scope over the variables it is sent (the transitions read it from always-actions)
+            const inspect = render(users.author, "Dashboard/inspectPanel", {
+                definitionId: boardId,
+                panelId: "note",
+                variables: JSON.stringify({organizationPartyId: ids.otherOrganizationId})
+            })
+            return {board, inspect}
         },
-        then({board}) {
+        then({board, inspect}) {
             board.status == 200
             board.errors == []
             // BusinessContext and ShareDashboard (the owner, an author)
@@ -140,6 +147,9 @@ feature(
             // the library panel over sales orders: refused by the dataset's own grant, shown as such
             board.output.includes("org.moqui.report.dataset.mantle-sales-orders")
             board.output.includes("Spec board")
+            inspect.errors == []
+            inspect.output.includes(ids.organizationId)
+            !inspect.output.includes(ids.otherOrganizationId)
         }
     }
 )
@@ -158,16 +168,48 @@ feature("the mounted editor saves a copy and a version and returns under Insight
             definitionJson: body,
             note: "spec"
         })
+        // a crafted group (F-P2-4: sharing is ShareDashboard's) is not taken; a type outside the editor's is refused, saved or copied
+        const regrouped = post(users.author, "DashboardEditor/save", {
+            definitionId: copyId,
+            definitionType: "dashboard",
+            definitionTitle: "Spec copy",
+            definitionVersion: "2",
+            definitionJson: body,
+            definitionUserGroupId: "BOSS_ADMIN_ADMIN"
+        })
+        const search = post(users.author, "DashboardEditor/save", {
+            definitionId: copyId + "_S",
+            definitionType: "search",
+            definitionTitle: "S",
+            definitionJson: "{}"
+        })
+        const alert = post(users.author, "DashboardEditor/copy", {
+            definitionId: "boss-commerce-checkout-failures",
+            copyId: copyId + "_A"
+        })
         const stored = system(() => ec.entity.find("moqui.report.Definition").condition("definitionId", copyId).one())
-        return {copied, saved, owner: stored?.ownerId, version: stored?.versionNumber}
+        return {
+            copied,
+            saved,
+            regrouped,
+            search,
+            alert,
+            owner: stored?.ownerId,
+            version: stored?.versionNumber,
+            group: stored?.userGroupId
+        }
     },
-    then({copied, saved, owner, version}) {
+    then({copied, saved, regrouped, search, alert, owner, version, group}) {
         copied.errors == ""
         copied.location.includes("/Insights/DashboardEditor?definitionId=" + copyId)
         saved.errors == ""
         saved.location.includes("/Insights/DashboardEditor?definitionId=" + copyId)
         owner == "BOSS_INS_AUTHOR"
-        version == 2
+        regrouped.errors == ""
+        version == 3
+        group == null
+        search.errors.includes("This editor saves only dashboard, report definitions")
+        alert.errors.includes("This editor copies only dashboard, report definitions")
     }
 })
 

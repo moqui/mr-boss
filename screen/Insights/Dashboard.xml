@@ -27,6 +27,20 @@ along with this software (see the LICENSE.md file). If not, see
     <parameter name="definitionId" required="true"/>
     <parameter name="organizationPartyId"/>
 
+    <!-- in always-actions, so the panel export, inspect and variable transitions keep the scope too (a request parameter of the
+        same name never sets it) -->
+    <always-actions>
+        <!-- the organization in scope: the requested one only when it is the user's (get#Context refuses another) -->
+        <service-call name="ironstone.insights.ContextServices.get#Context" out-map="businessContext"
+                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <set field="organizationPartyId" from="businessContext.organizationPartyId"/>
+        <!-- the scope: the chosen organization, else every organization of the user's (none fixed for the administrator in every
+            organization); a user of no organization is fixed to none (_NA_ matches no record), never to every one -->
+        <set field="scopeOrganization" from="organizationPartyId || (businessContext.allOrganizations ? null :
+                (businessContext.organizationPartyIds.length ? businessContext.organizationPartyIds : ['_NA_']))"/>
+        <set field="reportFixedVariables" from="scopeOrganization ? {organizationPartyId:scopeOrganization} : {}"/>
+    </always-actions>
+
     <transition-include name="edit" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="setVariable" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="exportPanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
@@ -40,14 +54,6 @@ along with this software (see the LICENSE.md file). If not, see
     </transition>
 
     <actions>
-        <!-- the organization in scope: the requested one only when it is the user's (get#Context refuses another) -->
-        <service-call name="ironstone.insights.ContextServices.get#Context" out-map="businessContext"
-                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
-        <set field="organizationPartyId" from="businessContext.organizationPartyId"/>
-        <!-- the scope: the chosen organization, else every organization of the user's (none fixed for the administrator in every
-            organization) -->
-        <set field="scopeOrganization" from="organizationPartyId || (businessContext.allOrganizations ? null : businessContext.organizationPartyIds)"/>
-        <set field="reportFixedVariables" from="scopeOrganization ? {organizationPartyId:scopeOrganization} : {}"/>
         <set field="from" from="from || businessContext.defaults.from"/>
         <set field="thru" from="thru || businessContext.defaults.thru"/>
         <set field="organizationOptions" from="businessContext.organizations"/>
