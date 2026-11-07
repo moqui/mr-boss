@@ -258,7 +258,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | Phase | Repos | Screens | Status |
 | --- | --- | --- | --- |
 | P0 Checks | all (read) | — | done Nov 7 (§6 F1–F33; F2's check in P1, F34; the others F41–F46) |
-| P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built Nov 7 (adm/p1) |
+| P1 Foundation | mr-moqui, BOSS | the Admin root and menu, Home, System, Monitoring, AgentsHome, DeveloperHome | built and reviewed Nov 7, merged |
 | P2 Registries, Health and the settings index | BOSS | Home, Health, SettingsHome | — |
 | P3 Groups and grants | mr-moqui, BOSS | Groups, GroupDetail | — |
 | P4 Users and sessions | mr-moqui, Mantle, BOSS | Users, UserDetail, Sessions; Commons Account's sign-in list | — |
