@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- LogNote (design-admin §1.2 "Log as note"; impl-admin P4): the root's response-action opens it in the shell's quick-create
+    frame from an Assist answer on an Admin record's page (UserDetail's account, GroupDetail's group), with the page's record
+    (entityName, recordId) and the answer's text in noteText. The record is checked as an Admin record first (a user in the
+    organizations administered, ADMIN_IDENTITY_VIEW; a group, ADMIN_ACCESS_VIEW); the user reads and edits the text, then files
+    it as a Chatter note on that record (mantle.party.CommunicationServices.log#RecordNote, which checks the record again), seen
+    by those who open the record. Nothing is filed until the user submits. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Log as note" default-menu-include="false">
+    <parameter name="entityName"/>
+    <parameter name="recordId"/>
+    <transition name="logNote">
+        <actions>
+            <set field="recordType" from="entityName == 'moqui.security.UserAccount' ? 'user' : entityName == 'moqui.security.UserGroup' ? 'group' : null"/>
+            <if condition="!recordType"><return error="true" message="Open a user or a group to log a note on it"/></if>
+            <service-call name="ironstone.admin.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:recordType, recordId:recordId}"/>
+            <if condition="!ec.message.hasError()">
+                <service-call name="mantle.party.CommunicationServices.log#RecordNote"
+                        in-map="{recordEntityName:entityName, recordId:recordId, body:noteText, subject:'Assist note'}"/>
+            </if>
+            <if condition="!ec.message.hasError()"><message type="success">Note logged</message></if>
+        </actions>
+        <default-response url="."><parameter name="entityName"/><parameter name="recordId"/></default-response>
+        <error-response url="."><parameter name="entityName"/><parameter name="recordId"/></error-response>
+    </transition>
+    <actions>
+        <set field="noteRecord" from="['moqui.security.UserAccount', 'moqui.security.UserGroup'].includes(entityName) &amp;&amp; recordId ? recordId : null"/>
+        <set field="noteValues" from="{entityName:entityName, recordId:noteRecord, noteText:''}"/>
+    </actions>
+    <widgets>
+        <label text="Log as note" type="h6"/>
+        <section name="NoRecord" condition="!noteRecord">
+            <widgets><label type="p" style="m-muted" text="Open a user or a group to log a note on it."/></widgets>
+        </section>
+        <form-single name="LogNoteForm" transition="logNote" map="noteValues" condition="noteRecord">
+            <field name="entityName"><default-field><hidden/></default-field></field>
+            <field name="recordId"><default-field title="Record"><display/></default-field></field>
+            <field name="noteText">
+                <default-field title="Note" tooltip="A note on the record, seen by those who open it">
+                    <text-area rows="8" cols="60"/>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Log the note"><submit/></default-field></field>
+        </form-single>
+    </widgets>
+</screen>

@@ -69,6 +69,12 @@ along with this software (see the LICENSE.md file). If not, see
                 reads, in the organizations they administer)</description></parameter>
             <parameter name="recordId" required="true"/>
             <parameter name="capability"/>
+            <parameter name="accountWide" type="Boolean" default="false"><description>An account-wide change of an identity (P4:
+                its sessions or credentials revoked): an identity shared with an organization outside the user's scope then
+                needs ADMIN_IDENTITY_GLOBAL (IDENTITY_GLOBAL)</description></parameter>
+            <parameter name="loginAs" type="Boolean" default="false"><description>Signing in as the user (P4): ADMIN_LOGIN_AS, another
+                user than the caller, and none who is in a privileged group the caller is not in or holds a sealed permission the
+                caller lacks (LOGIN_AS)</description></parameter>
         </in-parameters>
         <out-parameters>
             <parameter name="recordType"/>

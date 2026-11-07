@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Sessions (design-admin §4 Sessions; style-guide §3.2 List): the sessions of the staff identities of the organizations the user
+    administers (Mantle's find#Users for the identities, then the framework's org.moqui.admin.IdentityServices.find#Sessions, the
+    one session definition Commons Account also reads), live ones or the last days', each named by its visit and a client summary,
+    never a cookie, token or user agent. SessionList's bulk revoke ends the chosen sessions on every server (revoke#Sessions,
+    ADMIN_IDENTITY_MANAGE), each account checked first as an Admin record with the account-wide rule (a shared identity's session
+    needs ADMIN_IDENTITY_GLOBAL); a refused one is counted, the others end. A revoked session's next request goes to the sign-in
+    page and its notification socket closes at its next check. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Sessions" menu-image="sym_o_devices" menu-image-type="icon">
+    <parameter name="text"/>
+    <parameter name="organizationPartyId"/>
+    <parameter name="recent"/>
+
+    <transition name="choices" read-only="true">
+        <actions>
+            <service-call name="ironstone.admin.ContextServices.get#Choices" out-map="found"
+                    in-map="{appRoot:appRoot, choice:choice, term:term, selected:selected}"/>
+            <script>ec.web.sendJsonResponse(found.options)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="revokeSessions">
+        <actions><script><![CDATA[
+            const keys = Array.from(typeof sessionKeys === 'string' ? sessionKeys.split(',') : (sessionKeys || []))
+                .map(key => String(key).trim()).filter(Boolean)
+            const owners = new Map()
+            for (const visit of Array.from(ec.entity.find('moqui.server.Visit').condition('visitId', 'in', keys.concat(['_NA_'])).disableAuthz().list())) {
+                if (!owners.has(visit.userId)) owners.set(visit.userId, [])
+                owners.get(visit.userId).push(visit.visitId)
+            }
+            let ended = 0
+            let refused = keys.length - Array.from(owners.values()).reduce((sum, list) => sum + list.length, 0)
+            for (const [ownerId, visitIds] of owners) {
+                // each account on its own: one outside the scope (or shared, without identity-global authority) is counted
+                let allowed = false
+                ec.message.pushErrors()
+                try {
+                    ec.service.sync().name('ironstone.admin.ContextServices.check#Record').parameters({appRoot, recordType: 'user',
+                        recordId: ownerId, capability: 'identityManage', accountWide: true}).requireNewTransaction(true).call()
+                    allowed = !ec.message.hasError()
+                } catch (error) {
+                    allowed = false
+                } finally {
+                    ec.message.clearErrors()
+                    ec.message.popErrors()
+                }
+                if (!allowed) { refused += visitIds.length; continue }
+                const out = ec.service.sync().name('org.moqui.admin.IdentityServices.revoke#Sessions')
+                    .parameters({userId: ownerId, sessionKeyList: visitIds}).call() || {}
+                ended += Number(out.sessionCount || 0)
+                refused += Number(out.refusedCount || 0)
+            }
+            if (!ec.message.hasError())
+                ec.message.addMessage(ended + ' session(s) signed out' + (refused ? '; ' + refused + ' not yours to end' : ''), refused ? 'warning' : 'success')
+        ]]></script></actions>
+        <default-response url="."/>
+        <error-response url="."/>
+    </transition>
+
+    <actions>
+        <service-call name="mantle.party.IdentityServices.find#Users" out-map="usersFound" transaction="force-new" ignore-error="true"
+                in-map="{text:(text || null), organizationPartyId:(organizationPartyId || null), pageSize:200}"/>
+        <set field="failure" from="ec.message.hasError() ? ec.message.getErrorsString() : null"/>
+        <script>ec.message.clearErrors()</script>
+        <set field="userIds" from="(usersFound?.userList || []).map(row => row.userId)"/>
+        <if condition="userIds.length">
+            <service-call name="org.moqui.admin.IdentityServices.find#Sessions" out-map="found" transaction="force-new" ignore-error="true"
+                    in-map="{userIdList:userIds, activeOnly:(recent != 'Y'), sinceDays:7, limit:200}"/>
+            <set field="failure" from="failure || (ec.message.hasError() ? ec.message.getErrorsString() : null)"/>
+            <script>ec.message.clearErrors()</script>
+        </if>
+        <script><![CDATA[
+            const when = value => value ? ec.l10n.format(Number(value), 'yyyy-MM-dd HH:mm') : ''
+            sessions = Array.from(found?.sessionList || []).map(row => Object.assign({}, row, {
+                startedText: when(row.startedDate), seenText: when(row.lastSeenDate),
+                stateText: row.active ? (row.current ? 'This session' : 'Signed in') : row.state === 'ended' ? 'Signed out' : 'Expired',
+                whereText: [row.clientAddress, row.clientPlace].filter(Boolean).join(' · ')}))
+        ]]></script>
+        <set field="canRevoke" from="!!admin?.capabilities?.identityManage"/>
+        <set field="filtered" from="!!(text || organizationPartyId)"/>
+        <set field="findValues" from="{text:text, organizationPartyId:organizationPartyId, recent:recent}"/>
+    </actions>
+    <widgets>
+        <container style="q-mb-sm">
+            <label text="Sessions" type="h5"/>
+            <label text="Where the staff of your organizations are signed in. Signing a session out sends its next request to the sign-in page; an identity shared with another organization needs identity-global authority."
+                    type="p" style="text-caption m-muted q-mb-none"/>
+        </container>
+        <form-single name="SessionFind" transition="." map="findValues">
+            <field name="text"><default-field title="User"><text-find size="20" hide-options="true"/></default-field></field>
+            <field name="organizationPartyId">
+                <default-field title="Organization">
+                    <drop-down allow-empty="true">
+                        <dynamic-options transition="choices" server-search="true" min-length="0" parameter-map="{choice:'organizations'}"/>
+                    </drop-down>
+                </default-field>
+            </field>
+            <field name="recent">
+                <default-field title="Show">
+                    <drop-down><option key="N" text="Signed in now"/><option key="Y" text="The last 7 days"/></drop-down>
+                </default-field>
+            </field>
+            <field name="submitButton"><default-field title="Find"><submit/></default-field></field>
+            <field-layout>
+                <field-row-big>
+                    <field-ref name="text"/>
+                    <field-ref name="organizationPartyId"/>
+                    <field-ref name="recent"/>
+                    <field-ref name="submitButton"/>
+                </field-row-big>
+            </field-layout>
+        </form-single>
+        <label type="p" style="text-negative" condition="failure" text="${failure}"/>
+        <container-box>
+            <box-body-nopad>
+                <form-list name="SessionList" list="sessions" skip-form="true" paginate="true">
+                    <row-selection id-field="sessionKey" parameter="sessionKeys" list-mode="true" condition="canRevoke">
+                        <action>
+                            <dialog button-text="Sign out" title="Sign out the selected sessions"/>
+                            <form-single name="RevokeSelected" transition="revokeSessions">
+                                <field name="note"><default-field title=""><label text="Each selected session's next request goes to the sign-in page. Its user can sign in again."/></default-field></field>
+                                <field name="submitButton"><default-field title="Sign out"><submit type="danger"/></default-field></field>
+                            </form-single>
+                        </action>
+                    </row-selection>
+                    <field name="userFullName">
+                        <default-field title="User">
+                            <link url="../UserDetail" text="${userFullName}" link-type="anchor" parameter-map="{userId:userId}"/>
+                        </default-field>
+                    </field>
+                    <field name="clientSummary"><default-field title="Device"><display/></default-field></field>
+                    <field name="whereText"><default-field title="From"><display/></default-field></field>
+                    <field name="startedText"><default-field title="Started"><display/></default-field></field>
+                    <field name="seenText"><default-field title="Last seen"><display/></default-field></field>
+                    <field name="stateText"><default-field title="State"><display/></default-field></field>
+                    <columns type="mobile">
+                        <column><field-ref name="userFullName"/><field-ref name="clientSummary"/></column>
+                        <column><field-ref name="stateText"/><field-ref name="seenText"/></column>
+                    </columns>
+                </form-list>
+                <label type="p" style="q-pa-md m-muted" condition="!sessions.length &amp;&amp; !failure" text="${filtered ? 'No session matches.' : 'No one is signed in.'}"/>
+            </box-body-nopad>
+        </container-box>
+    </widgets>
+</screen>

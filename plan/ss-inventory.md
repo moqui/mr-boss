@@ -571,7 +571,7 @@ is unchanged.
 
 | Screen XML | Form | Designed in | Implemented in |
 | --- | --- | --- | --- |
-| EditParty | CreateUserAccount | Admin/Users/Users |  |
+| EditParty | CreateUserAccount | Admin/Users/Users | Admin/Users/Users (NewStaffAccount) (Admin P4) |
 | EditParty | ConvertToPersonForm |  |  |
 | EditParty | ConvertToOrganizationForm |  |  |
 | EditParty | EditOrganizationForm | Commons/Contacts/ContactDetail; Purchasing/Suppliers/Supplier360; Shared/Customer360; Shared/Supplier360; People/Employees/OrgStructure; Sales/Accounts/Customer360; Sales/Accounts/ContactDetail; Marketing/Contacts/ContactDetail; Marketing/Customers/Customer360; Admin/Settings/OrganizationDetail | Commons/Contacts/ContactDetail; Commons/Contacts/List; Purchasing/Suppliers/Supplier360/Overview (Maintain contact opens Commons/Contacts/ContactDetail) (Purchasing P2) |
@@ -586,9 +586,9 @@ is unchanged.
 | EditParty | AddSettingForm | Admin/Settings/OrganizationDetail |  |
 | EditParty | AddSettingTextForm | Admin/Settings/OrganizationDetail |  |
 | EditParty | SettingsForm | Admin/Settings/OrganizationDetail |  |
-| EditParty | UpdateUserAccount | Admin/Users/UserDetail |  |
-| EditParty | AddGroupForm | Admin/Users/UserDetail |  |
-| EditParty | GroupsForm | Admin/Users/UserDetail |  |
+| EditParty | UpdateUserAccount | Admin/Users/UserDetail | Admin/Users/UserDetail (Account) (Admin P4) |
+| EditParty | AddGroupForm | Admin/Users/UserDetail | Admin/Users/UserDetail (Access: AddMembership) (Admin P4) |
+| EditParty | GroupsForm | Admin/Users/UserDetail | Admin/Users/UserDetail (Access: UserMemberships) (Admin P4) |
 | EditParty | NewToRelForm | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | UserOrgRelList | Shared/Customer360; Shared/Supplier360 | — (other apps' contexts on Customer360, §7) |
 | EditParty | AddSalesAccount | Shared/Customer360; Shared/Supplier360; Sales/Accounts/Customer360 | — (other apps' contexts on Customer360, §7) |

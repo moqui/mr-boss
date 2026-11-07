@@ -13,7 +13,7 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <!-- Admin Home (design-admin §3 Home; style-guide §3.1 Landing): the Monitor / Manage / Configure shortcuts of the areas the user
-    opens (Health, the primary, Monitoring, Settings, Agents, System, Developer tools), then for an administrative reader
+    opens (Health, the primary, Monitoring, Users (P4), Settings, Agents, System, Developer tools), then for an administrative reader
     (ADMIN_OVERVIEW_VIEW) Needs attention (Attention: the failing and warning checks of every provider the reader may read, worst
     first, with the owner's fix link when the reader opens it), Setup checks (SetupChecks: Admin's own first-run checks by group)
     and Health's cards (HealthCards: failed job runs, unresolved transports, backup coverage, sign-in failures), from
@@ -46,6 +46,8 @@ along with this software (see the LICENSE.md file). If not, see
                     icon="sym_o_health_and_safety" condition="can.operations"/>
             <link url="${sharedLinks['Operations/Monitoring']}" text="Monitoring" link-type="anchor-button" icon="sym_o_monitor_heart"
                     condition="can.operations"/>
+            <link url="${sharedLinks['Users/Users']}" text="Users" link-type="anchor-button" icon="sym_o_person"
+                    condition="can.users"/>
             <link url="${sharedLinks['Settings/SettingsHome']}" text="Settings" link-type="anchor-button" icon="sym_o_settings"/>
             <link url="${sharedLinks['Agents/Home']}" text="Agents" link-type="anchor-button" icon="sym_o_smart_toy"
                     condition="can.agents"/>

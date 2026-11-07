@@ -16,13 +16,14 @@ along with this software (see the LICENSE.md file). If not, see
     responsibility. The root user group BOSS_ADMIN and the administrator group BOSS_ADMIN_ADMIN open it (data/BossSetupData.xml),
     as ADMIN does; the root grant opens navigation only, and each screen and service checks its own permission
     (ironstone.admin.ContextServices.get#SharedContext resolves the organizations the user administers, the capabilities and the
-    links for every subscreen). Its areas, in the menu order of design §1.2 by their menu-index: 1 Home; 3 Access (Groups and
+    links for every subscreen). Its areas, in the menu order of design §1.2 by their menu-index: 1 Home; 2 Users (Users,
+    UserDetail and Sessions in P4, the identity operator's and the administrator's, BOSS_ADM_USERS); 3 Access (Groups and
     GroupDetail in P3, the access administrator's and the administrator's, BOSS_ADM_ACCESS); 5 Settings (the settings
     index in P2, every Admin user's; BOSS users without Admin are granted its SettingsHome alone, impl-admin F46); 8 Operations
     (Health in P2, Monitoring in P1, the jobs with their phase); 11 Agents; 12 System, the framework's Tools System screens for ADMIN alone
     (impl-admin F2: BOSS_ADMIN and BOSS_ADMIN_ADMIN are denied System.xml, so Tools' SYSTEM_APP grant decides); 13 Developer
     tools. Operations is the reader's, the operations operator's and the administrator's; Agents and Developer tools the
-    administrator's (BOSS_ADM_<Area>). The other areas of design §1.2 (Users, Security, Settings, Integrations, Mail and
+    administrator's (BOSS_ADM_<Area>). The other areas of design §1.2 (Security, Settings, Integrations, Mail and
     protocols, Data, Audit and privacy) and Settings' other screens are added by the phases that build them. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Admin" menu-image="sym_o_admin_panel_settings" menu-image-type="icon">
@@ -53,8 +54,15 @@ along with this software (see the LICENSE.md file). If not, see
         <!-- P3: GroupDetail's prompt (design §1.2), answered with the user's own permissions from the page's group -->
         <assist-prompt label="What can members do?" text="Explain what this group's members can do, which grants are sealed or privileged, and who may change it"
                 screen="Admin/Access/GroupDetail" entity="moqui.security.UserGroup" sequence="20"/>
-        <!-- P3: groups in the palette (search#Records, an ADMIN_ACCESS_VIEW holder's), each opening GroupDetail -->
-        <palette-source group="Admin" label="Admin groups" icon="sym_o_group" service="ironstone.admin.ContextServices.search#Records"
+        <!-- P4: UserDetail's prompt (design §1.2), answered with the user's own permissions from the page's account, and "Log as
+            note", which files an Assist answer as a note on the page's user or group (Admin/LogNote) -->
+        <assist-prompt label="Why can't this user sign in?" text="Why can't this user sign in? Check the account's state, sign-in lock, factor, allowed IPs and groups, and say who can fix it"
+                screen="Admin/Users/UserDetail" entity="moqui.security.UserAccount" sequence="30"/>
+        <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Admin/LogNote" text-parameter="noteText"
+                requires-record="true" sequence="40"/>
+        <!-- P3, P4: groups and users in the palette (search#Records: groups for an ADMIN_ACCESS_VIEW holder, the staff of the
+            organizations administered for an ADMIN_IDENTITY_VIEW holder), each opening GroupDetail or UserDetail -->
+        <palette-source group="Admin" label="Admin users and groups" icon="sym_o_group" service="ironstone.admin.ContextServices.search#Records"
                 sequence="60"/>
         <keymap scope="admin">
             <key keys="g a" label="Admin home" screen="Admin/Home"/>

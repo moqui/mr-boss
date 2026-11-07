@@ -142,9 +142,11 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
     when() {
         const rows = [
             {user: users.reader, menu: ["Home", "Settings", "Operations"], keys: ["g a", "g o"]},
+            // P4: the Users area, the identity operator's and the administrator's (the reader's menu above has none)
+            {user: users.identity, menu: ["Home", "Users", "Settings"], keys: ["g a"]},
             {
                 user: users.admin,
-                menu: ["Home", "Access", "Settings", "Operations", "Agents", "Developer"],
+                menu: ["Home", "Users", "Access", "Settings", "Operations", "Agents", "Developer"],
                 keys: ["g a", "g o", "g n", "g d"]
             }
         ]
@@ -164,7 +166,7 @@ feature("the Admin menu and keys follow the areas' groups and System's own grant
         const systemMenu = shell(users.system, true).names
         if (
             JSON.stringify(systemMenu) !==
-            JSON.stringify(["Home", "Access", "Settings", "Operations", "Agents", "System", "Developer"])
+            JSON.stringify(["Home", "Users", "Access", "Settings", "Operations", "Agents", "System", "Developer"])
         )
             problems.push(`ADMIN's menu is ${systemMenu}`)
         // the launcher: the reader has Admin and no business app; another app's user has no Admin

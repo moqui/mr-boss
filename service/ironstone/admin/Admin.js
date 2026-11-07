@@ -62,8 +62,9 @@ const capabilityPermissions = {
 // the operations operator and the administrator; Agents and Developer tools for the administrator. Home is every Admin user's;
 // System (the Tools System screens) is ADMIN's alone, by Tools' own grant (impl-admin F2), so it is the system capability
 // below, not an area. Later phases add their areas: P3 Access (Groups and GroupDetail) for the access administrator and the
-// administrator.
+// administrator; P4 Users (Users, UserDetail, Sessions) for the identity operator and the administrator.
 const areas = {
+    users: "Users",
     access: "Access",
     operations: "Operations",
     agents: "Agents",
@@ -258,6 +259,10 @@ const linkPaths = [
     // P3: groups and grants
     "Access/Groups",
     "Access/GroupDetail",
+    // P4: users and sessions
+    "Users/Users",
+    "Users/UserDetail",
+    "Users/Sessions",
     "Settings/SettingsHome",
     "Agents/Home",
     "System",
@@ -324,7 +329,7 @@ function readGroup(userGroupId) {
 // in scope is enough, for an identity that works for several organizations; or null when there is no such record).
 const recordKinds = {
     organization: {name: "Organization", icon: "sym_o_corporate_fare", need: null, destination: null, read: readOrganization},
-    user: {name: "User", icon: "sym_o_person", need: "identityView", destination: null, read: readUser},
+    user: {name: "User", icon: "sym_o_person", need: "identityView", destination: "Users/UserDetail", read: readUser},
     // P3: a group, and a user as a group's member: an access administrator reads the users of the organizations they administer
     // to add or end their memberships, without the identity operator's ADMIN_IDENTITY_VIEW
     group: {name: "Group", icon: "sym_o_group", need: "accessView", destination: "Access/GroupDetail", read: readGroup},
@@ -368,6 +373,8 @@ function recordOf(userScope, kind, recordId) {
 
 // check#Record: a record an Admin screen or mount was given, refused unless the user may administer it and, when a
 // capability is named, holds it.
+// With accountWide (P4: an account-wide change of an identity, such as revoking its sessions or credentials), an identity that
+// also works for an organization the user does not administer needs ADMIN_IDENTITY_GLOBAL (IDENTITY_GLOBAL; design §4.1).
 function checkRecord(p) {
     const userScope = required()
     if (p.capability) {
@@ -375,7 +382,42 @@ function checkRecord(p) {
         if (!userScope.capabilities[p.capability])
             denied("PERMISSION_DENIED", capabilityPermissions[p.capability] + " is required")
     }
-    return recordOf(userScope, p.recordType, p.recordId)
+    const record = recordOf(userScope, p.recordType, p.recordId)
+    if (p.loginAs) loginAsCheck(record)
+    if (p.accountWide && record.sharedBeyondScope && !ec.user.hasPermission(capabilityPermissions.identityGlobal))
+        denied(
+            "IDENTITY_GLOBAL",
+            record.label +
+                " also works for an organization you do not administer: this account-wide change needs " +
+                capabilityPermissions.identityGlobal
+        )
+    return record
+}
+
+// Login as (P4, impl-admin F24): the framework's guarded sign-in as another user needs ADMIN_LOGIN_AS, another user than the
+// caller, and never one who is in a privileged group the caller is not in or holds a sealed permission the caller lacks, so
+// it does not lend the caller access it could not be given (LOGIN_AS refused with the reason).
+function loginAsCheck(record) {
+    if (!ec.user.hasPermission("ADMIN_LOGIN_AS")) denied("PERMISSION_DENIED", "ADMIN_LOGIN_AS is required")
+    if (record.recordId === ec.user.userId) denied("LOGIN_AS", "Choose another user to sign in as")
+    const privileged = new Set(Array.from(UserSecurityChecks.privilegedGroups()))
+    const sealed = new Set(Array.from(UserSecurityChecks.sealedPermissions()))
+    const groupIds = Array.from(
+        find("moqui.security.UserGroupMember")
+            .condition("userId", record.recordId)
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .list()
+    ).map(row => row.userGroupId)
+    const sealedHeld = Array.from(
+        find("moqui.security.UserGroupPermission")
+            .condition("userGroupId", "in", groupIds.concat(["_NA_"]))
+            .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+            .list()
+    )
+        .map(row => row.userPermissionId)
+        .filter(id => sealed.has(id))
+    if (groupIds.some(id => privileged.has(id) && !ec.user.isInGroup(id)) || sealedHeld.some(id => !ec.user.hasPermission(id)))
+        denied("LOGIN_AS", record.label + " holds access you do not: signing in as them is refused")
 }
 
 // ===== palette =====
@@ -393,6 +435,20 @@ const searchFinds = [
                 .selectField("userGroupId")
                 .orderBy("userGroupId"),
         url: recordId => "/qapps/Admin/Access/GroupDetail?userGroupId=" + encodeURIComponent(recordId)
+    },
+    // P4: users, the staff identities of the organizations the user administers, by username, name or email; recordOf checks
+    // each again
+    {
+        kind: "user",
+        entityName: "moqui.security.UserAccount",
+        idField: "userId",
+        query: (userScope, condition) =>
+            find("moqui.security.UserAccount")
+                .condition("partyId", "in", staffPartyIds(userScope).concat(["_NA_"]))
+                .condition(condition(["username", "userFullName", "emailAddress"]))
+                .selectField("userId")
+                .orderBy("userFullName"),
+        url: recordId => "/qapps/Admin/Users/UserDetail?userId=" + encodeURIComponent(recordId)
     }
 ]
 function search(p) {
@@ -438,6 +494,22 @@ function search(p) {
         }
     }
     return {rows: Array.from(found.values()).slice(0, limit)}
+}
+
+// The parties working for the organizations the user administers (agent, employee or member, as get#PartyInternalOrgIds counts).
+function staffPartyIds(userScope) {
+    return Array.from(
+        new Set(
+            Array.from(
+                find("mantle.party.PartyRelationship")
+                    .condition("toPartyId", "in", organizationIds(userScope).concat(["_NA_"]))
+                    .condition("relationshipTypeEnumId", "in", memberRelationships)
+                    .conditionDate("fromDate", "thruDate", ec.user.nowTimestamp)
+                    .selectField("fromPartyId")
+                    .list()
+            ).map(row => row.fromPartyId)
+        )
+    )
 }
 
 // ===== choices =====
@@ -488,6 +560,28 @@ function memberOptions(userScope, term, selected) {
 const choiceSources = {
     // P3: the users an access administrator may add to a group
     members: memberOptions,
+    // P4: the registered bundles the user may propose for a new staff account (NewStaffAccount), each checked by the framework's
+    // delegation rules for the user (AccessServices.check#GrantProposal), BOSS_USERS first
+    bundles: (userScope, term, selected) => {
+        if (!userScope.capabilities.identityManage && !userScope.capabilities.accessManage) return []
+        const registry = rows("moqui.security.CapabilityBundle").filter(row => row.disabled !== "Y")
+        if (!registry.length) return []
+        const checked = ec.service
+            .sync()
+            .name("org.moqui.admin.AccessServices.check#GrantProposal")
+            .parameters({bundleGroupIdList: registry.map(row => row.userGroupId)})
+            .call()
+        return Array.from(checked?.bundleList || [])
+            .filter(row => row.allowed)
+            .map(row => ({
+                value: row.bundleGroupId,
+                label: (row.appName ? row.appName + ": " : "") + (row.description || row.bundleGroupId),
+                sequence: row.bundleGroupId === "BOSS_USERS" ? 0 : 1
+            }))
+            .filter(option => !term || option.label.toLowerCase().includes(term.toLowerCase()) || option.value === selected)
+            .sort((a, b) => a.sequence - b.sequence || a.label.localeCompare(b.label))
+            .map(({value, label}) => ({value, label}))
+    },
     // the internal organizations the user administers (theirs, or every one for the administrator)
     organizations: (userScope, term, selected) => {
         const ids = organizationIds(userScope)
