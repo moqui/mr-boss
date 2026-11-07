@@ -1,5 +1,8 @@
 # IronStone BOSS — Commerce implementation
 
+Nov 6, 2026 — built: P0–P15 with IronStone Shop's P1–P9 in the one build order of §1 (stages C1/S1–C4/S4), each phase
+reviewed by a fresh agent and its fixes committed apart, merged in waves with the full regression suites after each
+(the Wave lines under the phases). What remains is §7 and the open findings of §6 (mr-moqui `plans/Remaining-Work.md`).
 Nov 5, 2026 — plan, before Commerce starts. P0 partly done: F1–F36 found while writing it, F37–F45 from Customer
 Service's finished code (§6); design-commerce, design-shop and the crosscut rows they touch brought in line with them.
 The plan's open questions answered (§4: the owners' contracts built here, Accept Hosted, gift cards and click and
@@ -277,7 +280,7 @@ Sections: [1 scope](#1-scope-and-order) · [2 rules](#2-ground-rules) · [3 phas
 | P12 Paid access and subscriptions | Mantle, mr-pass, BOSS | Product360's Paid access, Subscriptions, SubscriptionDetail, CheckoutSettings' RecurringPolicy | built Nov 6, 2026 |
 | P13 Integrations and channel import | Mantle, BOSS | Integrations, IntegrationDetail, ChannelImport | built Nov 6, 2026 |
 | P14 Feeds and channel health | Mantle, mr-pass, BOSS | Feeds, FeedDetail, ChannelHealth | built Nov 6, 2026 |
-| P15 Finish | BOSS | — | — |
+| P15 Finish | Mantle, mr-pass, BOSS | StoreDetail's summary; the sweeps and the review walk (acceptance) | built Nov 7, 2026 |
 
 ### P0 — Checks
 
@@ -3156,6 +3159,157 @@ in the writers, screens or Reporting.js); the Built note.
 - The inventories' **Implemented in** columns, the design's Impl column, and Remaining-Work; the mr-boss README's
   Commerce line.
 
+**Built Nov 7 (P15)** (branch `com/p15`; Shop P9 built beside it).
+- Mantle:
+  - `service/mantle/product/StoreSummary.js` (new) and `StoreAdminServices.get#StoreSummary` (appended): the store's readiness
+    findings and grouped settings (general, sites, facilities, staff, emails, order checks, search and content, settings,
+    checkout) through get#Store, get#StoreSites, check#StoreReadiness and get#CheckoutSettings, each checking COMMERCE_VIEW
+    and the store's scope again; credentials redacted (no gateway configuration read, a carrier account "set, [redacted]",
+    a value named as a credential `[redacted]`); a section that cannot be read named and the rest made; CSV (formula cells
+    behind an apostrophe) and a printable HTML page, escaped (design §13).
+  - The routed findings (§6): StoreReviews.js (F101–F105; `remove#ReviewImageFile`, appended to
+    StoreMerchandisingServices.xml), AccountHub.js and StoreTopics.js (F124's `choices.decline`, `declinePending`),
+    CartRecovery.js, ShopCart.js and `StoreCartAccess.recoveryHandledDate` (F133), ShopSubscriptions.js `dueContracts`
+    (F148), StoreFeeds.js (F154, F156), StoreChannels.js and `claim#ChannelImport` (F165, F167–F169).
+- mr-pass: Account's EmailPreferences decline box (Hub.js, F124); Shop's Review page when the store removed the buyer's
+  review (ShopReviews.js, F101); ShopReviews passes the revision a decision and reply now need (F102).
+- BOSS:
+  - StoreDetail's More menu: Print summary and Export summary (CSV) (`printSummary`, `exportSummary`, each after
+    `check#Record`).
+  - Commerce.xml (appended): Product360's assist-prompt "Summarize recent reviews" (F111).
+  - The demo (impl-shop F107): ZIZI_DIGITAL's Forum mount (Demo.js `ensureSite`), and its members' Forum category made
+    through the Forum's staff services (`store#Category`, `set#CategoryAccess`: members of the category, published,
+    subscription and manual grants qualifying) with the monthly membership's paid access bound to it
+    (`store#SubscriptionBinding`), from a data file of its own, `BossZZCommerceForumDemoData.xml`
+    (`DemoServices.load#CommerceForumDemo`; F171); a database loaded before has its site binding moved while no
+    subscriber's grant names it.
+  - CommerceSpecLib (appended): `sweepScreens` (the files under the root and each shared screen an area mounts with its
+    tabs, 118 screens), `sweepParameters` and `sweepParametersOf` (the demo's records).
+- Specs (regression; feature time added, all under a second):
+  - Mantle: StoreReviews (5 features; the new one 0.63 s, and REVISION_REQUIRED in the approval feature), ShopCustomer
+    (5; the new one 0.35 s), CartRecovery (4; the mark in the job and link features), ShopSubscriptions (14; the new one
+    0.09 s), StoreFeeds (5; the new one 0.14 s), StoreChannels (4; the new one 0.39 s), StoreCheckout (5; the summary
+    0.11 s). About 1.8 s in all. Also run, all pass: ShopCart, ShopCheckout, ShopOperations.
+  - BOSS: CommerceAccess (15; the prompt in the menu feature), CommerceReviews (2; real revisions in its keys),
+    CommerceStores, CommerceChannels, CommerceFeeds, CommerceRecovery, CommerceSubscriptions, all pass.
+  - mr-pass: ShopReviews (2), ShopAccount (3), pass.
+- Acceptance (written here; each run once): CommerceTui (2 features, 6.2 s: 118 screens in tui as model documents with
+  no error node, as commerce.admin with authorization on; the demo has no store cart, contract, feed or store return, so
+  those four detail screens render their "not available" state, F173), CommerceServerStatic (1 feature, 16.2 s: none
+  marked; 10 clean, 2 stays, 102 with violations, F172), CommerceIsolationWalk (4 features, 3.4 s: design §12.2's
+  review, below). Changed and run: CommerceFoundationWalk (5 of 5: the Forum mount and the members' category),
+  CommerceReviewsScenario (3 of 3: revisions passed), mr-pass ShopFixtures and ShopSubscriptionScenarios (7 of 7: the
+  buyer, a site member, gets the members' category and reads it, which they could not before).
+  - CommerceIsolationWalk: commerce.read (Commerce alone in the launcher) gets no cost, supplier price or margin from the
+    shared catalog context and nothing from Product360's cost and supplier tabs by URL; the configuration summary (CSV and
+    print), checkout settings and an integration (as the channel operator, a secret set on the binding) show no
+    credential; commerce.read and the store-limited commerce.storestaff are refused BOSS_COM_DIGITAL (another
+    organization's store, and another store of the member's own organization) on StoreDetail and its tab,
+    CheckoutSettings, Assortment, StoreCategories, its theme, another organization's Customer360, the catalog context's
+    stores, the summary's CSV and print, OnlineSales' CSV, the theme preview, the palette, the order search, the store
+    search, the store choices and check#Record, while their own POPC_DEFAULT opens on the same screens.
+- `./moq accept mr-boss` once at the end: 85 specs, 482 features: 480 passed, 2 failed (468.9 s), all 57 Commerce features passing. The 2 are Customer Service's, run just after local midnight and reading the clock: CustomerServiceAssignmentWalk's round robin (agents' working hours: neither agent was in hours at 00:30) and CustomerServiceOrdersWalk's StockAtDate (the as-of day, local versus UTC, was a day off). Neither uses this phase's code; not rerun at another hour.
+- Lint: `moqui lint --screens` (release binary), no flagged site in the new or changed screens.
+- Inventories: usl-inventory's 34 rows with a Commerce or `PASS:Shop` Designed-in path and no Commerce or Shop
+  Implemented-in now name the screen or page, or `—` with what Commerce or Shop does instead (Commerce's OrderDetail is
+  read only); ss-inventory's Commerce rows were filled by the phases, and Shop's pages carry no staff form (impl-shop F59),
+  each with a dated note. Design: §2's Impl column names each screen's phase; §4 Reviews (F101, F102) and §13 (the summary
+  built); design-shop §9 EmailPreferences (F124's decline). mr-boss README: the Commerce line.
+- Decisions:
+  - F101: deletion is final, the conservative call: an author whose review was deleted cannot write another or edit it.
+  - F103 serializes an account's submissions on its own account row (as the Forum's receipts do), not a unique key, which
+    would act on every ProductReview, Commerce's or not.
+  - F124 is a decline box per waiting choice, not the unchecked box: a waiting choice shows unchecked, so a save for
+    another reason would end it.
+  - F133 marks only outcomes that hold for the visit (queued, already sent, at the most sends); a cart refused for its
+    consent or verification is read again, since the shopper may turn reminders on within the window.
+  - F167: a shared (`_NA_`) customer still qualifies, as Commerce's own customer rule has it; a party's owner defaults to
+    `_NA_`.
+  - The summary is Mantle's (a read over the store services), StoreDetail's print is the HTML page the browser prints
+    (no PDF engine needed).
+  - The sweeps run over the root's files and the shared screens its areas mount with their tabs, on the demo's records
+    (no route fixtures, §2); the isolation walk calls services as the screens do (artifact authorization off for the call,
+    the service's own checks answering) and renders screens with it on.
+- Findings (provisional):
+  - **F170** The DownloadFirstRequestReview SECA queues the request after the commit, on a worker: a spec waits for it.
+    CommerceReviews' selection keys carried `NaN` revisions and passed only because a missing revision was accepted (F102).
+  - **F171** The Forum's writes lock the operator's account row (`lockActor`), which a data load's transaction holds once
+    it signs the demo administrator in, so a demo step in a transaction of its own waits on it until the statement
+    timeout; the Forum demo runs in its own data file's transaction.
+  - **F172** The server-static report: no Commerce screen is marked; 10 of 114 are clean (ChannelImport, PriceLists,
+    StoreCategoriesTui, LogNote, CategoryDetail's FeatureDefaults, Identifiers and Summary, InventoryAvailability's Policy
+    and Projection, PageDetail's PageText), 2 stay, 102 have violations; its wrapped-ec render fails with "not a function"
+    on Stores/Stores and StoreDetail/General (both render in html, qvt and tui).
+  - **F173** The demo has no store cart, recurring contract, feed or return of a store order, so the sweeps render those
+    detail screens on their "not available" state unless an earlier walk of the run made one.
+  - **F174** Product360's tabs outside Commerce's context (Costs, Suppliers, PurchaseHistory, …) are still addressable
+    under Commerce; their conditions keep them empty (the walk checks no cost or supplier price shows).
+  - **F175** F165 and F103 are checked as their claim and lock, not with two threads; F148 reads at most 20 pages of the
+    batch size (2,000 contracts at the default) before giving up.
+- Remaining for Commerce (the lead's Remaining-Work): §7 (gift cards and store credit, click and collect, the design's
+  later scope, other apps' registrations and mounts, video help, EDI over SPS); F97 (the review request's not-before
+  date), F142 (Insights' catalogue registration), F151, F157, F159, F161, F163 (Later); Shop F108 (the renewal email's
+  action link) and F115 (an Authorize.Net sandbox check before production); F172's marking of Commerce screens
+  server-static; F173's demo cart, contract, feed and return if the sweeps should render them on records.
+
+**Review Nov 6 (P15)** (`git diff $(git merge-base master com/p15)..com/p15` in mr-mantle, mr-pass and mr-boss).
+- Checked: get#StoreSummary field by field (each section reads through get#Store, get#StoreSites, check#StoreReadiness and
+  get#CheckoutSettings, so COMMERCE_VIEW and the store scope hold, and another organization's store is refused before any
+  section; a payment gateway is its description and capabilities, a carrier account "set, [redacted]"; no Mantle store setting
+  type carries a credential today); the CSV's formula guard (=, +, -, @, tab and CR behind an apostrophe; values trimmed first)
+  and the print page's escaping; StoreDetail's transitions (check#Record first). The routed fixes: F101 (submit refused, the
+  Review page says so), F102 (every caller of moderate#Review and reply#Review passes a revision: Commerce's Reviews screen
+  rows, selection keys, dialogs and reply withdrawal, the BOSS, PASS and Mantle specs; mr-marble has none), F103 (the account
+  row lock), F105 (the file deleted by a commit-registered service, only under the reviews' root and when no image row names
+  it), F124 (the decline box ends only the party's own pending membership), F133 (every write of lastActivityDate clears the
+  mark: touch, attachCart, recoverCart), F148, F154, F156, F165 (the claim in its own transaction under the batch lock), F167,
+  F168, F169, each with its spec feature. F107: the separate data file sorts after BossZCommerceDemoData.xml and runs
+  load#CommerceForumDemo in the file's own transaction (where the Forum's lockActor takes the signed-in administrator's row
+  with nothing else holding it); it is idempotent, and a database loaded before has its site binding moved only while no
+  subscription grant names the site. The sweeps are in acceptance only, one per mode; CommerceIsolationWalk walks §12.2's
+  refusals as the Built note lists. Inventories: 14 Implemented-in service names checked against the Mantle service files, all
+  present; design §2's Impl column checked against the screen files.
+- Fixes:
+  - R1 (medium, F172): Stores/Stores and StoreDetail/General failed the server-static full check with "not a function":
+    their locale drop-downs called `ec.l10n.getAvailableLocales()` in the widget, and the wrapped `ec` of the full check has
+    only l10n's localize and format members. The locales are now read in the screens' actions (`localeOptions`); both screens
+    now finish the full check with ordinary violations and no render error (html and tui unchanged; CommerceStores passes).
+  - R2 (low, F101): `ownReview` took the lowest id, so an author who wrote a review again before deletion was final (a deleted
+    and a live one) was refused even the edit of the live one; the live review now comes first. A check in StoreReviews' F101
+    feature.
+  - R3 (low, F133): the job marked a cart from the activity it read, so a shopper back between the read and the mark left
+    the new visit marked and never reminded; the mark is now made only while lastActivityDate is still the one read.
+  - R4 (low, §13): the summary's credential names missed a key or PIN not named "API key"/"private key" (a webhook, signing or
+    license key, `PsstWebhookKey`); it now redacts any key, PIN or CVV by word or camel case. StoreCheckout's summary feature
+    checks a camel-case key redacted and a formula value behind an apostrophe in the CSV.
+  - R5 (low): CommerceIsolationWalk left `isolation-walk-secret` on the demo marketplace binding; its cleanup now puts the
+    secret back as it was.
+  - R6 (doc): design §2's Impl column names ThemeDetail's, ThemeEditor's and TemplateEditor's real paths
+    (`Commerce/Website/...`, not under Themes).
+- Specs (`--nobuild`): Mantle StoreReviews, ShopCustomer, CartRecovery, ShopSubscriptions, StoreFeeds, StoreChannels,
+  StoreCheckout 42 of 42 (before the fixes) and StoreReviews, CartRecovery, StoreCheckout 14 of 14 after; BOSS CommerceAccess,
+  CommerceReviews, CommerceStores, CommerceChannels, CommerceFeeds, CommerceRecovery, CommerceSubscriptions 26 of 26; mr-pass
+  ShopReviews, ShopAccount 5 of 5; acceptance CommerceIsolationWalk 4 of 4 (changed). CommerceServerStatic not rerun.
+- For the lead:
+  - F172's framework part: the full check's wrapped `ec` (crates/moqui-core/src/script/runtime.rs `WRAPPED_EC`) denies and
+    records an area outside l10n, user and resource, but a member missing from an allowed area (`ec.l10n.getAvailableLocales`)
+    is `undefined`, so the expression fails with "not a function" and the render stops instead of a `wrapped-ec` violation
+    being recorded. Navigation, SearchContent, Shared/Pages and Shared/PageRoute call it the same way inside dialogs the check
+    did not reach; they are left as they are.
+  - The Built note's F172 line ("its wrapped-ec render fails ... on Stores/Stores and StoreDetail/General") is fixed by R1.
+  - F124's page: a waiting topic whose own box and decline box are both checked is declined and then turned on (a granted
+    consent, the address verified); a list so checked is declined. Worth a look when the page is next touched.
+  - CommerceIsolationWalk makes a theme draft of BOSS_COM_DIGITAL on every run, and the draft is kept.
+- **Final suites (Nov 6, on master after Commerce P15 and Shop P9 merged, nothing else running):** standalone mr-mantle
+  1,895 passed, 2 failed (the baseline); `./moq test-apps` 3,302 of 3,303 server features (Commons Contacts' split
+  feature read three names from the paged "all" list; the next feature already checks each scope by name, so it now
+  checks only that the page has rows and no `_NA_`) and 17 client features passed; lint as before. Final feature time and
+  budgets: server mr-mantle 372.2 of 393 s, mr-boss 244.6 of 264 s, mr-pass 17.2 of 20 s; client mr-boss 51.7 of 57 s,
+  mr-pass 8.1 of 9 s, mr-marble 7.3 of 9 s. Over the build mr-mantle's budget went from 370 to 393 s and mr-pass's from 15
+  and 6 s to 20 and 9 s, each raised by the measured share (§4); mr-boss's server budget stayed 264 s, its client 57 s.
+  Acceptance: P15's full `./moq accept mr-boss` 480 of 482 and Shop P9's `./moq accept mr-pass` all passing; the two
+  mr-boss failures (F178) also fail on master at 18:54 CST.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into
@@ -3307,17 +3461,17 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F98 | P9: an author's edit keeps the store's reply, which shows again on re-approval | Accepted |
 | F99 | P9: theme releases published from the old starter show no reviews until republished | Accepted |
 | F100 | P9: each product page view for a signed-in visitor read their qualifying orders | Fixed in the review (R1): one query of the product's lines |
-| F101 | P9 review: a review staff deleted does not count toward one review per account, store and product, so the author may write another | Accepted (pending, throttled); P15 if deletion should be final |
-| F102 | P9 review: a decision or reply without an expected revision is not checked for staleness (the screens always send one) | P15: required |
-| F103 | P9 review: two simultaneous first submissions can make two reviews (no unique key on account, store and product) | P15 |
-| F104 | P9 review: the download SECA (DownloadFirstRequestReview) and `get#Reviews`' claim have no spec of their own | P15 |
-| F105 | P9 review: removing a photo deletes its file before the transaction commits | P15 |
+| F101 | P9 review: a review staff deleted does not count toward one review per account, store and product, so the author may write another | Done in P15: deletion is final (the conservative call): a deleted review stays the author's one review, neither edited nor written again (REVIEW_REMOVED; Shop's Review page says so). Spec: StoreReviews |
+| F102 | P9 review: a decision or reply without an expected revision is not checked for staleness (the screens always send one) | Done in P15: required (REVISION_REQUIRED); CommerceReviews' keys carried no real revision and passed only for this. Spec: StoreReviews |
+| F103 | P9 review: two simultaneous first submissions can make two reviews (no unique key on account, store and product) | Done in P15: submit#Review locks the account's UserAccount row first, so an account's first submissions run one after the other (no Mantle-wide unique key: it would act on reviews Commerce does not make). No spec: a race needs two threads |
+| F104 | P9 review: the download SECA (DownloadFirstRequestReview) and `get#Reviews`' claim have no spec of their own | Done in P15: StoreReviews' P15 feature (a first download queues the request, after the commit; get#Reviews' claim offers the form) |
+| F105 | P9 review: removing a photo deletes its file before the transaction commits | Done in P15: the file is deleted after the commit (`remove#ReviewImageFile`, registered on commit, only once no image row names it). Spec: StoreReviews |
 | F106 | P8: `dependsOn` does not order a run (specs run in component load order, then by file name), so a mr-boss spec cannot depend on mr-pass specs | Framework; the P8 acceptance lives in mr-pass and sorts after ShopOrderScenarios |
 | F107 | P8: no Accounting screen releases a Payment hold (`release#OrderHold` is a service only) | Accounting (later) |
 | F108 | P8: a stuck placement has no resolution screen in any app | Shop P8 (operations). Done in Shop P8 (`resolve#StuckPlacement`, CartDetail) |
 | F109 | P8: `resolve#Delivery` stays unscoped; Commerce has a store-scoped read-only view of delivery exceptions | Comms (a store-scoped review) |
 | F110 | P8: Shop F86 (a guest's first digital order waits for approval) left for Sales; a store turns the approval checks off | Sales |
-| F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | P13 (integrations), P9's prompt at P15 |
+| F111 | P8: the "Log as note" response action, the IntegrationDetail and Product360 prompts and the channel-retry skill not built | Done: Log as note and IntegrationDetail's prompt in P13; Product360's "Summarize recent reviews" in P15 (CommerceAccess) |
 | F112 | P8: RecurringTemplate bases are not left out of Orders until Shop P7 marks them | Resolved by Shop P7 (`withoutRecurringBases`) |
 | F113 | P8: Mantle scoped a store order by its store alone, Commerce.js also by the vendor | Fixed in the review (R2): Mantle requires the vendor too |
 | F114 | P8 review: `heldOrderIds` and `cancelRequestOrderIds` take the first 500 open holds or cancel requests of all stores before the store filter | P11 (a view joining the order's store) |
@@ -3330,16 +3484,16 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F121 | P9 follow-up: BOSS's Comms Consent screens show the topic lists and a pending checkout choice as a "Pending Acceptance" member | Accepted |
 | F122 | P9 follow-up: the confirmation page has no render spec (EmailPreferences has its one render; the rule is tested in Mantle) | Accepted |
 | F123 | P9 follow-up: a guest's review request links the Review page, which asks them to sign in (a review needs a verified account) | Accepted |
-| F124 | P9 follow-up review: a pending topic saved unchecked on the preferences page does not end the choice, and a pending news choice cannot be withdrawn there | P15: a decline action |
+| F124 | P9 follow-up review: a pending topic saved unchecked on the preferences page does not end the choice, and a pending news choice cannot be withdrawn there | Done in P15: a decline box per waiting choice on Account's EmailPreferences (`choices.decline`), which ends the pending membership; a confirmation then grants nothing. Spec: ShopCustomer |
 | F125 | P9 follow-up review: `recordCheckout`'s last StoreCheckout update runs in the placement transaction, so a database error there fails the step (the job retries) | Accepted |
-| F126 | P9 follow-up review: no spec of an unverified account's own pending choice confirmed once the account verifies | P15 |
+| F126 | P9 follow-up review: no spec of an unverified account's own pending choice confirmed once the account verifies | Done in P15: ShopCustomer's P15 feature |
 | F127 | P10: the delivery ledger ran a source's build in the attempt's transaction, so a build that threw left the delivery queued and retried every two minutes | Fixed: builds run in their own transaction |
 | F128 | P10: the cart-creation throttle (30 per requester per 10 minutes) tripped when many cart-making specs ran in one process | Fixed in the review (R3): ShopCheckout's setup clears its own requester's bucket; the throttle unchanged |
 | F129 | P10: "a fresh session" is a new cart capability kept in the PASS session; the HTTP session id is renewed only at a password sign-in, which carries the token over | Accepted; the sign-in page's path untested (the walk uses `login()`) |
 | F130 | P10: the ledger keeps no "redeemed" fact; it is read from `recoveryUsedDate` after the latest send | P11's CartRecovery report reads the same |
 | F131 | P10: the retention setting does not purge ledger rows | Comms and the privacy provider |
 | F132 | P10: the Marketing automation sender is not offered | Marketing (later) |
-| F133 | P10 review: each job run re-reads every signed-in idle cart in the window (up to 500 a store, newest first), most already handled | P15: a "last window sent" mark on the access row |
+| F133 | P10 review: each job run re-reads every signed-in idle cart in the window (up to 500 a store, newest first), most already handled | Done in P15: `StoreCartAccess.recoveryHandledDate` marks the visit handled (queued, already sent, at the most sends); the shopper's next action clears it, and the job's query skips marked carts. Spec: CartRecovery |
 | F134 | P10 review: a staff send's operation key covers only the cart, so a retry with another reason gets the first answer | Accepted |
 | F135 | P10 review: the rendered recovery mail, link included, is kept in EmailMessage (as the download notice's guest link is); usable only signed in as the cart's account | Accepted |
 | F136 | Wave 12: CheckoutSettings joined a ship option's decimal markup to text with `+`, which the framework's decimal refuses (valueOf); it failed only after CarrierServices gave POPC_DEFAULT a markup | Fixed: `String()` of each amount |
@@ -3354,15 +3508,15 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F145 | P12: `find#StoreSubscriptions` does not list the storeless Subscription rows of native sales orders | Sales' mount |
 | F146 | P12: the Paid access pane names PASS SiteDetail's subscription binding (on each site's own host) instead of linking it | Accepted |
 | F147 | P12: `dispatch#Renewal` and `run#Renewals` are anonymous-all (internal, allow-remote false) | Accepted |
-| F148 | P12 review: `run#Renewals` limits its due batch (100) before leaving out contracts with an in-flight occurrence, so many in-flight renewals can delay newly due ones to the nightly hand-off | P15: filter in the query |
+| F148 | P12 review: `run#Renewals` limits its due batch (100) before leaving out contracts with an in-flight occurrence, so many in-flight renewals can delay newly due ones to the nightly hand-off | Done in P15: `dueContracts` leaves out in-flight contracts a page at a time before the batch is cut. Spec: ShopSubscriptions |
 | F149 | P12 review: a concurrent double submit of one retry key gets a duplicate-key error instead of `alreadyApplied` (every `lib.operation` caller does) | Accepted (one charge either way) |
 | F150 | P14: ShopCatalog's candidates stopped at 2,000, so a feed listed at most 2,000 products | Fixed in the review (R3): the build pages the store's publication rows (5,000-row feed limit, the rest ROW_LIMIT skips) |
 | F151 | P14: every publication change (pages, menus, themes) advances the generation, so a served feed is re-resolved on each | Later: each withdrawal's generation recorded |
 | F152 | P14: price and stock changes don't advance the generation, so a feed keeps its build's prices until the next build | Accepted (scheduled builds) |
 | F153 | P14: no demo feed (the demo Shop sites are disabled until published) | Accepted |
-| F154 | P14 review: `store#StoreFeed` checks only that a category exists, so a feed may name another organization's category (its rows are still the store's published products) | P15 |
+| F154 | P14 review: `store#StoreFeed` checks only that a category exists, so a feed may name another organization's category (its rows are still the store's published products) | Done in P15: the feed's category is one the store may carry (owner the store's organization or shared). Spec: StoreFeeds |
 | F155 | P14 review: `find#StoreFeeds` reads at most 200 feeds before filtering and paging | Accepted |
-| F156 | P14 review: an allow-list category membership scheduled for later takes effect without a generation change, outside R2's check | P15 |
+| F156 | P14 review: an allow-list category membership scheduled for later takes effect without a generation change, outside R2's check | Done in P15: a membership of the store's allow-list categories that started or ended counts as a change taken effect in the serving check. Spec: StoreFeeds |
 | F157 | P14 review: a remote frontend receives the whole feed artifact in one answer (up to 5,000 rows) | Later (streamed) |
 | F158 | P13: Home's Integration errors card was left to P14 | Built by P14 (the channel operator's attention count) |
 | F159 | P13: P11's "intake error spikes" alert is not shipped (it needs a search document over SystemMessage, indexing every message write) | Later |
@@ -3371,11 +3525,20 @@ updated F1, F3, F4, F8, F18, F20, F22 and F25.
 | F162 | P13: the framework has no staged SystemMessage status, so Mantle seeds `SmsgStaged` | Accepted; framework later |
 | F163 | P13: version 1 channel orders carry no ship-to address | Later (mapping version 2) |
 | F164 | P13: AppStructure's placeholder floor drops from 40 to 39 (Integrations is no longer a placeholder) | At the merge (acceptance) |
-| F165 | P13 review: two concurrent `commit#ChannelImport` calls on one batch both pass the Staged check; orders stay single (R1) but the second ends with a PostingOperation key error | P15: a pending claim at the start |
+| F165 | P13 review: two concurrent `commit#ChannelImport` calls on one batch both pass the Staged check; orders stay single (R1) but the second ends with a PostingOperation key error | Done in P15: `claim#ChannelImport` (the batch locked, in its own transaction) claims the staged batch once. Spec: StoreChannels |
 | F166 | P13 review: the commit's digest covers the file, format, remote and mapping version, not the preview's outcomes | Accepted (dedup holds) |
-| F167 | P13 review: a binding's customer may be any Customer-role party not private to another user, not only the organization's own | P15 |
-| F168 | P13 review: a replay of a failed original is kept as a duplicate with no order, and still has none after the original is retried | P15 |
-| F169 | P13 review: `importText`'s 2 MiB limit counts characters, the upload path bytes | P15 |
+| F167 | P13 review: a binding's customer may be any Customer-role party not private to another user, not only the organization's own | Done in P15: the store organization's own or shared (`_NA_`) customer, not internal, not disabled. Spec: StoreChannels |
+| F168 | P13 review: a replay of a failed original is kept as a duplicate with no order, and still has none after the original is retried | Done in P15: when the original's order is made, its matching replays answer it. Spec: StoreChannels |
+| F169 | P13 review: `importText`'s 2 MiB limit counts characters, the upload path bytes | Done in P15: the pasted text's UTF-8 bytes. Spec: StoreChannels |
+| F170 | P15: the download review-request trigger queues after commit on a worker, so specs wait for it | Accepted |
+| F171 | P15: Forum writes lock the operator's account row, which a data load's transaction already holds once it signs the demo administrator in; the Forum demo step is its own data file | Accepted |
+| F172 | P15: the server-static sweep: 10 of 114 Commerce screens clean, none marked; Stores and StoreDetail/General failed its wrapped render ("not a function") | The two fixed in the review (R1: the locale list in actions); marking screens server-static later; framework: a missing member of the wrapped `ec`'s areas should be a recorded violation, not undefined |
+| F173 | P15: the demo has no store cart, recurring contract, feed or store return, so the sweeps show those detail screens "not available" | Later (demo records) |
+| F174 | P15: Product360's Costs, Suppliers and PurchaseHistory tabs are reachable by URL under Commerce; their conditions keep them empty (the isolation walk checks it) | Accepted |
+| F175 | P15: F165 and F103 are checked as a claim and a lock, not with concurrent threads | Accepted |
+| F176 | P15 review: with a waiting topic's own box and its decline box both checked, it is declined then turned on | Accepted |
+| F177 | P15 review: CommerceIsolationWalk makes a BOSS_COM_DIGITAL theme draft each run and never removes it | Later |
+| F178 | Final: CustomerServiceAssignmentWalk (round robin, an agent outside their hours) and CustomerServiceOrdersWalk (StockAtDate's as-of day) fail in the evening, US Central (after 00:00 UTC): each compares a local day or hour with a UTC one | Customer Service (acceptance walks) |
 
 ## 7. Later
 

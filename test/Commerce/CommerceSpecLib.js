@@ -106,4 +106,107 @@ function shell(user) {
     })
 }
 
-;({ids, users, asUser, system, refusal, invoke, page, shell})
+// P15: the Commerce screens a sweep renders (the acceptance CommerceTui and CommerceServerStatic): [path, file location] of
+// each screen file under the root, and of each shared screen an area mounts with its own subscreens, by its path in
+// Commerce; and each one's demo record (sweepParameters, read once: the demo's first contract, cart, return, case, feed, theme
+// and page where the demo has no fixed id).
+function sweepScreens() {
+    const base = "component://mr-boss/screen/"
+    const found = []
+    const files = []
+    ec.resource.getLocationReference(base + "Commerce.xml").walkChildTree(files, null)
+    for (const file of files)
+        if (file.path !== "Commerce" && /\.xml$/.test(file.location))
+            found.push([file.path.substring("Commerce/".length), file.location])
+    for (const area of ec.resource.getLocationReference(base + "Commerce").getDirectoryEntries()) {
+        if (!/\.xml$/.test(area.location)) continue
+        const areaName = area.location.substring(area.location.lastIndexOf("/") + 1).replace(/\.xml$/, "")
+        for (const match of String(area.getText()).matchAll(
+            /<subscreens-item name="([A-Za-z0-9]+)" location="(component:\/\/mr-boss\/screen\/Shared\/[A-Za-z0-9]+\.xml)"/g
+        )) {
+            const path = areaName + "/" + match[1]
+            if (found.some(([known]) => known === path)) continue
+            found.push([path, match[2]])
+            const tabs = []
+            ec.resource.getLocationReference(match[2]).walkChildTree(tabs, null)
+            for (const tab of tabs)
+                if (tab.location !== match[2] && /\.xml$/.test(tab.location))
+                    found.push([areaName + "/" + match[1] + tab.path.substring(tab.path.indexOf("/")), tab.location])
+        }
+    }
+    return found
+}
+function sweepParameters() {
+    const first = (entity, conditions, orderBy) =>
+        system(() => {
+            let query = ec.entity.find(entity).condition(conditions || {})
+            if (orderBy) query = query.orderBy(orderBy)
+            return Array.from(query.limit(1).list())[0] || null
+        })
+    const store = {productStoreId: ids.storeId}
+    const contract = first("mantle.product.subscription.StoreRecurringContract", {productStoreId: ids.otherStoreId}, "contractId")
+    const cart = first("mantle.order.StoreCartAccess", {productStoreId: ids.storeId}, "-lastActivityDate")
+    // a return of one of the demo store's orders
+    const returned = system(() => {
+        const storeOrders = Array.from(
+            ec.entity.find("mantle.order.OrderHeader").condition({productStoreId: ids.storeId}).selectField("orderId").list()
+        ).map(row => row.orderId)
+        return storeOrders.length
+            ? Array.from(
+                  ec.entity.find("mantle.order.return.ReturnItem").condition("orderId", "in", storeOrders).limit(1).list()
+              )[0]
+            : null
+    })
+    const request = first("mantle.request.Request", {requestTypeEnumId: "RqtSupport"}, "-requestDate")
+    const feed = first("mantle.product.store.ProductStoreFeed", {}, "productStoreFeedId")
+    const theme = first("mantle.public.PublicTheme", {productStoreId: ids.storeId}, "themeId")
+    const sitePage = first("mantle.public.PublicSitePage", {siteId: ids.siteId}, "sitePageId")
+    const product = {productId: "DEMO_1_1", productStoreId: ids.storeId}
+    const category = {productCategoryId: "DEMO_ONE", productStoreId: ids.storeId}
+    return {
+        "Stores/StoreDetail": store,
+        "Merchandising/Assortment": store,
+        "Merchandising/PublishProducts": Object.assign({productIds: "DEMO_1_1"}, store),
+        "Merchandising/StoreCategories": store,
+        "Merchandising/StoreCategoriesTui": store,
+        "Merchandising/Product360": product,
+        "Merchandising/CategoryDetail": category,
+        "Merchandising/Documents": product,
+        "Merchandising/PriceExplain": product,
+        "Merchandising/InventoryAvailability": {productId: "DEMO_1_1", facilityId: "ZIRET_WH"},
+        "Merchandising/Reviews": store,
+        "Website/PageDetail": {sitePageId: sitePage?.sitePageId || "-"},
+        "Website/Navigation": {siteId: ids.siteId},
+        "Website/Themes": store,
+        "Website/ThemeDetail": {themeId: theme?.themeId || "-"},
+        "Website/ThemeEditor": {themeId: theme?.themeId || "-"},
+        "Website/ThemeEditorTui": {themeId: theme?.themeId || "-"},
+        "Website/TemplateEditor": {themeId: theme?.themeId || "-"},
+        "Website/TemplateEditorTui": {themeId: theme?.themeId || "-"},
+        "Orders/OrderDetail": {orderId: ids.storeOrderId},
+        "Orders/CartDetail": {orderId: cart?.orderId || "-"},
+        "Orders/ReturnDetail": {returnId: returned?.returnId || "-"},
+        "Orders/LogNote": {orderId: ids.storeOrderId},
+        "Customers/SubscriptionDetail": {contractId: contract?.contractId || "-"},
+        "Customers/Customer360": {customerPartyId: ids.customerId, partyId: ids.customerId},
+        "Customers/RequestDetail": {requestId: request?.requestId || "-"},
+        "Promotions/PromotionDetail": {storePromotionId: "PopcBuyGet"},
+        "Promotions/PromoCodeDetail": {promoCodeId: "TEST1"},
+        "Integrations/IntegrationDetail": {systemMessageRemoteId: "BOSS_COM_MARKETPLACE"},
+        "Integrations/ChannelImport": {systemMessageRemoteId: "BOSS_COM_MARKETPLACE"},
+        "Integrations/FeedDetail": {productStoreFeedId: feed?.productStoreFeedId || "-"},
+        "Settings/CheckoutSettings": store,
+        Chatter: {recordEntity: "mantle.product.store.ProductStore", recordId: ids.storeId},
+        RecordFiles: {recordEntity: "mantle.product.store.ProductStore", recordId: ids.storeId}
+    }
+}
+// A screen path's parameters: its own, else its nearest parent's (a tab takes its detail screen's record).
+function sweepParametersOf(parameters, path) {
+    if (parameters[path]) return parameters[path]
+    const parent = Object.keys(parameters)
+        .filter(prefix => path.startsWith(prefix + "/"))
+        .sort((a, b) => b.length - a.length)[0]
+    return parent ? parameters[parent] : {}
+}
+
+;({ids, users, asUser, system, refusal, invoke, page, shell, sweepScreens, sweepParameters, sweepParametersOf})

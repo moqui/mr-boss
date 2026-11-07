@@ -219,7 +219,8 @@ feature("the merchandiser approves and replies; the product page shows the reply
         })
         const replied = post(users.merchandiser, "Merchandising/Reviews/reply", {
             productReviewId: walk.reviewId,
-            replyText: "Thank you, Rhea. Enjoy your coffee!"
+            replyText: "Thank you, Rhea. Enjoy your coffee!",
+            expectedLastUpdatedStamp: one(R, {productReviewId: walk.reviewId}).lastUpdatedStamp
         })
         // the reader sees the queue and cannot decide
         const reader = post(users.read, "Merchandising/Reviews/moderate", {decision: "approve", productReviewId: walk.otherId})
@@ -247,6 +248,7 @@ feature("deciding another review leaves this one alone; the buyer's edit returns
         const deleted = post(users.merchandiser, "Merchandising/Reviews/moderate", {
             decision: "delete",
             productReviewId: walk.otherId,
+            expectedLastUpdatedStamp: one(R, {productReviewId: walk.otherId}).lastUpdatedStamp,
             changeReason: "Not about the product"
         })
         const after = one(R, {productReviewId: walk.reviewId})
