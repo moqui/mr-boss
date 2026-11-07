@@ -53,6 +53,8 @@ along with this software (see the LICENSE.md file). If not, see
                         : row.fix == 'checkout' &amp;&amp; storeCan.settings ? (commerce.webBase || '/qapps/Commerce') + '/Settings/CheckoutSettings?productStoreId=' + encodeURIComponent(productStoreId) : ''}))"/>
             <set field="generalValues" from="Object.assign({}, general, {expectedLastUpdatedStamp: general.lastUpdatedStamp, changeReason: ''})"/>
             <set field="reservationUrl" from="'/qapps/Warehouse/Settings/ReservationPolicies/StoreReservation?productStoreId=' + encodeURIComponent(productStoreId)"/>
+            <!-- the locales read here, not in the widget: a widget expression reads only the browser host's ec (server-static) -->
+            <set field="localeOptions" from="ec.l10n.getAvailableLocales()"/>
         </if>
     </actions>
     <widgets>
@@ -123,7 +125,7 @@ along with this software (see the LICENSE.md file). If not, see
                         <field name="defaultLocale">
                             <conditional-field condition="canEdit" title="Language and region">
                                 <drop-down allow-empty="true">
-                                    <list-options list="ec.l10n.getAvailableLocales()" key="${locale}" text="${name}"/>
+                                    <list-options list="localeOptions" key="${locale}" text="${name}"/>
                                 </drop-down>
                             </conditional-field>
                             <default-field title="Language and region"><display/></default-field>

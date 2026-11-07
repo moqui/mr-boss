@@ -3249,6 +3249,55 @@ in the writers, screens or Reporting.js); the Built note.
   action link) and F115 (an Authorize.Net sandbox check before production); F-P15-3's marking of Commerce screens
   server-static; F-P15-4's demo cart, contract, feed and return if the sweeps should render them on records.
 
+**Review Nov 6 (P15)** (`git diff $(git merge-base master com/p15)..com/p15` in mr-mantle, mr-pass and mr-boss).
+- Checked: get#StoreSummary field by field (each section reads through get#Store, get#StoreSites, check#StoreReadiness and
+  get#CheckoutSettings, so COMMERCE_VIEW and the store scope hold, and another organization's store is refused before any
+  section; a payment gateway is its description and capabilities, a carrier account "set, [redacted]"; no Mantle store setting
+  type carries a credential today); the CSV's formula guard (=, +, -, @, tab and CR behind an apostrophe; values trimmed first)
+  and the print page's escaping; StoreDetail's transitions (check#Record first). The routed fixes: F101 (submit refused, the
+  Review page says so), F102 (every caller of moderate#Review and reply#Review passes a revision: Commerce's Reviews screen
+  rows, selection keys, dialogs and reply withdrawal, the BOSS, PASS and Mantle specs; mr-marble has none), F103 (the account
+  row lock), F105 (the file deleted by a commit-registered service, only under the reviews' root and when no image row names
+  it), F124 (the decline box ends only the party's own pending membership), F133 (every write of lastActivityDate clears the
+  mark: touch, attachCart, recoverCart), F148, F154, F156, F165 (the claim in its own transaction under the batch lock), F167,
+  F168, F169, each with its spec feature. F107: the separate data file sorts after BossZCommerceDemoData.xml and runs
+  load#CommerceForumDemo in the file's own transaction (where the Forum's lockActor takes the signed-in administrator's row
+  with nothing else holding it); it is idempotent, and a database loaded before has its site binding moved only while no
+  subscription grant names the site. The sweeps are in acceptance only, one per mode; CommerceIsolationWalk walks §12.2's
+  refusals as the Built note lists. Inventories: 14 Implemented-in service names checked against the Mantle service files, all
+  present; design §2's Impl column checked against the screen files.
+- Fixes:
+  - R1 (medium, F-P15-3): Stores/Stores and StoreDetail/General failed the server-static full check with "not a function":
+    their locale drop-downs called `ec.l10n.getAvailableLocales()` in the widget, and the wrapped `ec` of the full check has
+    only l10n's localize and format members. The locales are now read in the screens' actions (`localeOptions`); both screens
+    now finish the full check with ordinary violations and no render error (html and tui unchanged; CommerceStores passes).
+  - R2 (low, F101): `ownReview` took the lowest id, so an author who wrote a review again before deletion was final (a deleted
+    and a live one) was refused even the edit of the live one; the live review now comes first. A check in StoreReviews' F101
+    feature.
+  - R3 (low, F133): the job marked a cart from the activity it read, so a shopper back between the read and the mark left
+    the new visit marked and never reminded; the mark is now made only while lastActivityDate is still the one read.
+  - R4 (low, §13): the summary's credential names missed a key or PIN not named "API key"/"private key" (a webhook, signing or
+    license key, `PsstWebhookKey`); it now redacts any key, PIN or CVV by word or camel case. StoreCheckout's summary feature
+    checks a camel-case key redacted and a formula value behind an apostrophe in the CSV.
+  - R5 (low): CommerceIsolationWalk left `isolation-walk-secret` on the demo marketplace binding; its cleanup now puts the
+    secret back as it was.
+  - R6 (doc): design §2's Impl column names ThemeDetail's, ThemeEditor's and TemplateEditor's real paths
+    (`Commerce/Website/...`, not under Themes).
+- Specs (`--nobuild`): Mantle StoreReviews, ShopCustomer, CartRecovery, ShopSubscriptions, StoreFeeds, StoreChannels,
+  StoreCheckout 42 of 42 (before the fixes) and StoreReviews, CartRecovery, StoreCheckout 14 of 14 after; BOSS CommerceAccess,
+  CommerceReviews, CommerceStores, CommerceChannels, CommerceFeeds, CommerceRecovery, CommerceSubscriptions 26 of 26; mr-pass
+  ShopReviews, ShopAccount 5 of 5; acceptance CommerceIsolationWalk 4 of 4 (changed). CommerceServerStatic not rerun.
+- For the lead:
+  - F-P15-3's framework part: the full check's wrapped `ec` (crates/moqui-core/src/script/runtime.rs `WRAPPED_EC`) denies and
+    records an area outside l10n, user and resource, but a member missing from an allowed area (`ec.l10n.getAvailableLocales`)
+    is `undefined`, so the expression fails with "not a function" and the render stops instead of a `wrapped-ec` violation
+    being recorded. Navigation, SearchContent, Shared/Pages and Shared/PageRoute call it the same way inside dialogs the check
+    did not reach; they are left as they are.
+  - The Built note's F-P15-3 line ("its wrapped-ec render fails ... on Stores/Stores and StoreDetail/General") is fixed by R1.
+  - F124's page: a waiting topic whose own box and decline box are both checked is declined and then turned on (a granted
+    consent, the address verified); a list so checked is declined. Worth a look when the page is next touched.
+  - CommerceIsolationWalk makes a theme draft of BOSS_COM_DIGITAL on every run, and the draft is kept.
+
 ## 4. Decisions
 
 These are made before and during the build. Each one that changes the design is also written into

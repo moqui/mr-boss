@@ -31,6 +31,11 @@ spec({
                 .name("mantle.public.ThemeServices.create#ThemeDraft")
                 .parameters({productStoreId: other, starter: "mr-pass/starter", name: "Isolation walk theme"})
                 .call().themeId
+            state.secret = ec.entity
+                .find("moqui.service.message.SystemMessageRemote")
+                .condition({systemMessageRemoteId: "BOSS_COM_MARKETPLACE"})
+                .disableAuthz()
+                .one()?.sharedSecret
             ec.service
                 .sync()
                 .name("update#moqui.service.message.SystemMessageRemote")
@@ -41,6 +46,14 @@ spec({
     cleanupSpec() {
         ec.message.clearErrors()
         login("john.doe")
+        // the demo binding's secret as it was, so the walk leaves no credential behind for the runs after it
+        system(() =>
+            ec.service
+                .sync()
+                .name("update#moqui.service.message.SystemMessageRemote")
+                .parameters({systemMessageRemoteId: "BOSS_COM_MARKETPLACE", sharedSecret: state.secret || null})
+                .call()
+        )
         ec.artifactExecution.enableAuthz()
     }
 })
