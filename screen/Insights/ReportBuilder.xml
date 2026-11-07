@@ -13,8 +13,10 @@ along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
-        default-menu-title="Report builder" default-menu-index="3" menu-image="sym_o_edit" menu-image-type="icon">
-    <subscreens default-item="Datasets"/>
+        default-menu-title="Report builder" default-menu-index="5" menu-image="sym_o_edit" menu-image-type="icon">
+    <!-- Explore (P2) for every Insights user; the copied builder's Datasets, DatasetDetail and DatasetView stay the Insights
+        administrator's and ADMIN's (BOSS_INS_LEGACY) until P3 replaces them -->
+    <subscreens default-item="Explore"/>
     <pre-actions>
         <set field="excludeFilter" value="(moqui\\.).*"/>
     </pre-actions>

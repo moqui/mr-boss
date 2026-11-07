@@ -22,7 +22,8 @@ along with this software (see the LICENSE.md file). If not, see
         <description>Check that the user may open Insights and resolve their context: the capabilities (the INSIGHTS_* permissions
             and whether the copied report screens open), the organization choices (theirs, or every internal organization for the
             Insights administrator with none active), the organization in scope (the requested one, else the active one, else the
-            only one), the safe defaults (a relative reporting range, currencies kept apart) and the canonical links. Refuses a
+            only one), the safe defaults (a relative reporting range, currencies kept apart), the canonical links and the
+            framework report screens' links under Insights (reportLinks, with no editor for a user who does not author). Refuses a
             user without Insights (INSIGHTS_UNAVAILABLE), a Projects client contact and a PASS public account among them, another
             app root (INSIGHTS_CONTEXT) and an organization that is not the user's, existing or not (ORGANIZATION_UNAVAILABLE).</description>
         <in-parameters>
@@ -38,6 +39,7 @@ along with this software (see the LICENSE.md file). If not, see
             <parameter name="defaults" type="Map"/>
             <parameter name="appRoot"/>
             <parameter name="sharedLinks" type="Map"/>
+            <parameter name="reportLinks" type="Map"/>
             <parameter name="linkBase"/>
             <parameter name="webBase"/>
         </out-parameters>
@@ -52,6 +54,7 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="defaults" from="found.defaults"/>
             <set field="appRoot" from="found.appRoot"/>
             <set field="sharedLinks" from="found.sharedLinks"/>
+            <set field="reportLinks" from="found.reportLinks"/>
             <set field="linkBase" from="found.linkBase"/>
             <set field="webBase" from="found.webBase"/>
         </actions>

@@ -1,14 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- This software is in the public domain under CC0 1.0 Universal plus a Grant of Patent License. -->
-<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd" default-menu-title="Dashboards &amp; KPIs" default-menu-index="2" menu-image="sym_o_widgets" menu-image-type="icon">
-    <!-- The framework list's links run here, so a dashboard opens in Insights › Dashboard; edit and explore open the Dashboards app. -->
+<!--
+This software is in the public domain under CC0 1.0 Universal plus a
+Grant of Patent License.
+
+To the extent possible under law, the author(s) have dedicated all
+copyright and related and neighboring rights to this software to the
+public domain worldwide. This software is distributed without any
+warranty.
+
+You should have received a copy of the CC0 Public Domain Dedication
+along with this software (see the LICENSE.md file). If not, see
+<http://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<!-- Insights › Dashboards (design-insights §4 Dashboards; impl-insights P2, INS-04): the framework's dashboard list (Tools
+    Dashboards/Home.xml) with the definition type fixed to dashboard. Its transitions are taken in here, and they go to Insights'
+    own report screens by the root's reportLinks: a dashboard opens in Insights › Dashboard, New and edit in DashboardEditor
+    (offered to authors only), Explore data in Report builder › Explore. REPORT_RECENT and REPORT_STARRED are the framework's
+    preferences. ReportServices lists only the definitions the viewer may read: their own, their groups' and the shipped ones. -->
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
+        default-menu-title="Dashboards" default-menu-index="2" menu-image="sym_o_widgets" menu-image-type="icon">
+
     <transition-include name="dashboard" location="component://tools/screen/Dashboards/Home.xml"/>
     <transition-include name="star" location="component://tools/screen/Dashboards/Home.xml"/>
     <transition-include name="edit" location="component://tools/screen/Dashboards/Home.xml"/>
     <transition-include name="new" location="component://tools/screen/Dashboards/Home.xml"/>
     <transition-include name="explore" location="component://tools/screen/Dashboards/Home.xml"/>
-    <widgets>
-        <link url="../Dashboard" text="Sales dashboard" parameter-map="{definitionId:'mantle-sales',from:'now-1y',thru:'now'}"/>
-        <include-screen location="component://tools/screen/Dashboards/Home.xml" share-scope="true"/>
-    </widgets>
+
+    <actions><set field="definitionType" value="dashboard"/></actions>
+    <widgets><include-screen location="component://tools/screen/Dashboards/Home.xml" share-scope="true"/></widgets>
 </screen>

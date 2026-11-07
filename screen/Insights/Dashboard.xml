@@ -12,15 +12,90 @@ You should have received a copy of the CC0 Public Domain Dedication
 along with this software (see the LICENSE.md file). If not, see
 <http://creativecommons.org/publicdomain/zero/1.0/>.
 -->
-<!-- One saved dashboard in the BOSS shell: the framework Dashboard screen, with its transitions here so its time form, variables,
-    panel export and inspect requests stay under Insights (and its authorization) instead of opening the Dashboards app. -->
+<!-- Insights › Dashboard (design-insights §4 Dashboard; impl-insights P2, INS-04): one saved dashboard, the framework Dashboard
+    screen (Tools Dashboards/Dashboard.xml) with its transitions here, so its time form, variables, panel export, inspect,
+    duplicate and remove run under Insights and its links open Insights' screens (the root's reportLinks; no alert rules until
+    P8). BusinessContext: the organization in scope from get#Context (a requested one only when it is the user's) is fixed as the
+    dashboard's organizationPartyId variable (with none chosen, the user's organizations), so a viewer's var-organizationPartyId
+    never replaces it; the range defaults to
+    Insights' (get#Context) and currencies stay apart. ShareDashboard: the owner, an author, shares the dashboard with one of
+    their groups or makes it private (DashboardServices.share#Dashboard). Every query runs as the viewer: a panel over a dataset
+    the viewer may not read says so (P3 admits the business datasets), never a zero. -->
 <screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-3.xsd"
         default-menu-title="Dashboard" default-menu-include="false">
+
+    <parameter name="definitionId" required="true"/>
+    <parameter name="organizationPartyId"/>
+
+    <!-- in always-actions, so the panel export, inspect and variable transitions keep the scope too (a request parameter of the
+        same name never sets it) -->
+    <always-actions>
+        <!-- the organization in scope: the requested one only when it is the user's (get#Context refuses another) -->
+        <service-call name="ironstone.insights.ContextServices.get#Context" out-map="businessContext"
+                in-map="{appRoot:appRoot, organizationPartyId:organizationPartyId}"/>
+        <set field="organizationPartyId" from="businessContext.organizationPartyId"/>
+        <!-- the scope: the chosen organization, else every organization of the user's (none fixed for the administrator in every
+            organization); a user of no organization is fixed to none (_NA_ matches no record), never to every one -->
+        <set field="scopeOrganization" from="organizationPartyId || (businessContext.allOrganizations ? null :
+                (businessContext.organizationPartyIds.length ? businessContext.organizationPartyIds : ['_NA_']))"/>
+        <set field="reportFixedVariables" from="scopeOrganization ? {organizationPartyId:scopeOrganization} : {}"/>
+    </always-actions>
 
     <transition-include name="edit" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="setVariable" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="exportPanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
     <transition-include name="inspectPanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
+    <transition-include name="duplicatePanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
+    <transition-include name="removePanel" location="component://tools/screen/Dashboards/Dashboard.xml"/>
+    <transition name="shareDashboard" method="post">
+        <service-call name="ironstone.insights.DashboardServices.share#Dashboard"/>
+        <default-response url="."><parameter name="definitionId"/></default-response>
+        <error-response url="."><parameter name="definitionId"/></error-response>
+    </transition>
 
-    <widgets><include-screen location="component://tools/screen/Dashboards/Dashboard.xml" share-scope="true"/></widgets>
+    <actions>
+        <set field="from" from="from || businessContext.defaults.from"/>
+        <set field="thru" from="thru || businessContext.defaults.thru"/>
+        <set field="organizationOptions" from="businessContext.organizations"/>
+        <!-- ShareDashboard: the owner's own dashboard, for an author -->
+        <service-call name="org.moqui.report.ReportServices.get#Definition" in-map="{definitionId:definitionId}" out-map="found"/>
+        <set field="shareable" from="businessContext.capabilities.author &amp;&amp; found.definition.type === 'dashboard' &amp;&amp;
+                !found.definition.readOnly &amp;&amp; found.definition.ownerId === ec.user.userId"/>
+        <set field="expectedVersion" from="found.definition.version"/>
+        <set field="userGroupId" from="found.definition.userGroupId || ''"/>
+        <if condition="shareable">
+            <service-call name="ironstone.insights.DashboardServices.get#ShareGroups" out-map="share"/>
+            <set field="shareGroups" from="share.groups"/>
+        </if>
+    </actions>
+    <widgets>
+        <container style="row items-center q-col-gutter-sm">
+            <container style="col">
+                <form-single name="BusinessContext" transition=".">
+                    <field name="definitionId"><default-field><hidden/></default-field></field>
+                    <field name="from"><default-field><hidden/></default-field></field>
+                    <field name="thru"><default-field><hidden/></default-field></field>
+                    <field name="organizationPartyId"><default-field title="Organization">
+                        <drop-down allow-empty="${businessContext.allOrganizations || organizationOptions.length > 1}"><list-options list="organizationOptions" key="${value}" text="${label}"/></drop-down>
+                    </default-field></field>
+                    <field name="apply"><default-field><submit text="Apply"/></default-field></field>
+                    <field-layout><field-row><field-ref name="organizationPartyId"/><field-ref name="apply"/></field-row></field-layout>
+                </form-single>
+                <label text="Currencies are shown apart, each in its own." type="p" style="m-muted"/>
+            </container>
+            <container style="col-auto">
+                <container-dialog id="ShareDashboard" button-text="Share" condition="shareable">
+                    <form-single name="ShareDashboardForm" transition="shareDashboard">
+                        <field name="definitionId"><default-field><hidden/></default-field></field>
+                        <field name="expectedVersion"><default-field><hidden/></default-field></field>
+                        <field name="userGroupId"><default-field title="Share with" tooltip="Leave it empty to keep the dashboard private. A group sees the dashboard; each person still sees only the data they may read.">
+                            <drop-down allow-empty="true"><list-options list="shareGroups" key="${value}" text="${label}"/></drop-down>
+                        </default-field></field>
+                        <field name="save"><default-field><submit text="Save sharing"/></default-field></field>
+                    </form-single>
+                </container-dialog>
+            </container>
+        </container>
+        <include-screen location="component://tools/screen/Dashboards/Dashboard.xml" share-scope="true"/>
+    </widgets>
 </screen>

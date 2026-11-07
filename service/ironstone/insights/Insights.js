@@ -33,11 +33,12 @@ const capabilityPermissions = {
     settingsView: "INSIGHTS_SETTINGS_VIEW",
     settingsEdit: "INSIGHTS_SETTINGS_EDIT"
 }
-// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_INS_LEGACY): the copied Dashboards,
-// ReportBuilder, Reports and ScheduledReports screens stay the Insights administrator's and ADMIN's until P2, P3, P4 and P7
-// replace them (impl-insights F20); the root user group is denied them. Read by the first; each has the same rows.
+// The menu areas whose authorization is a capability (data/BossSetupData.xml BOSS_INS_LEGACY): the copied report builder
+// (ReportBuilder's Datasets, DatasetDetail and DatasetView), Reports and ScheduledReports stay the Insights administrator's and
+// ADMIN's until P3, P4 and P7 replace them (impl-insights F20); the root user group is denied them. Read by the first; each has
+// the same rows. P2 replaced the copied Dashboards and Dashboard with the framework mounts.
 const areas = {
-    legacy: "ReportBuilder"
+    legacy: "ReportBuilder/Datasets"
 }
 
 // ===== scope =====
@@ -141,8 +142,34 @@ function organizationIds(userScope) {
 // copied screens (F20) are not canonical links: their phases replace them.
 const linkPaths = [
     // P1: Home (design §1.2)
-    "Home"
+    "Home",
+    // P2: the dashboards and Explore (design §4, §5)
+    "Dashboards",
+    "Dashboard",
+    "Panels",
+    "Playlists",
+    "ReportBuilder/Explore"
 ]
+// The framework report screens Insights mounts (impl-insights P2, INS-04), as the reportLinks map the framework screens read
+// (mr-moqui docs/tools/Monitoring.md, "Mounting the report screens"): each key the screen a report link opens. A user without
+// authoring (INSIGHTS_AUTHOR or INSIGHTS_DATASET_EDIT) gets no editor (null), so the framework screens offer no New, Edit or
+// save; Insights mounts no alert rules (P8), log context or definition import (P12), and shares from its Dashboard
+// (ShareDashboard), so the editor keeps a definition's group as it is.
+function reportLinks(capabilities) {
+    const authors = capabilities.author || capabilities.datasetEdit
+    return {
+        dashboards: "//Insights/Dashboards",
+        dashboard: "//Insights/Dashboard",
+        definition: authors ? "//Insights/DashboardEditor" : null,
+        panel: authors ? "//Insights/PanelDetail" : null,
+        explore: "//Insights/ReportBuilder/Explore",
+        split: "//Insights/ReportBuilder/Split",
+        playlist: "//Insights/Playlists",
+        alertRule: null,
+        logContext: null,
+        share: "//Insights/Dashboard"
+    }
+}
 // get#Context: the organization choices, the organization in scope (a requested one only when it is the user's, else the active
 // one, else the only one), the capabilities, the safe defaults (the reporting range; currencies kept apart, never a default
 // currency) and the canonical links. A requested organization outside the user's is refused (ORGANIZATION_UNAVAILABLE), whether
@@ -169,11 +196,59 @@ function context(p) {
         appRoot: "Insights",
         linkBase: "//Insights",
         webBase: "/qapps/Insights",
-        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Insights/" + path]))
+        sharedLinks: Object.fromEntries(linkPaths.map(path => [path, "//Insights/" + path])),
+        reportLinks: reportLinks(userScope.capabilities)
     }
 }
 
-const operations = {context}
+// ===== sharing (design §4 ShareDashboard) =====
+// The groups an author may share a dashboard with: their own groups, by name, never the implicit ALL_USERS. Sharing gives the
+// group the definition only; each viewer's queries still run with their own dataset grants.
+function shareGroupIds() {
+    return Array.from(ec.user.getUserGroupIdSet() || []).filter(groupId => groupId !== "ALL_USERS")
+}
+function shareGroups() {
+    required()
+    const groups = Array.from(find("moqui.security.UserGroup").condition("userGroupId", "in", shareGroupIds()).list())
+    return {
+        groups: groups
+            .map(group => ({value: group.userGroupId, label: group.description || group.userGroupId}))
+            .sort((a, b) => a.label.localeCompare(b.label))
+    }
+}
+// A report engine call as the viewer, so the engine's own checks (the operation's grant, the owner, each dataset) apply.
+function asViewer(name, parameters) {
+    const out = ec.service.sync().name(name).parameters(parameters).call() || {}
+    if (ec.message.hasError()) throw new Error(ec.message.getErrorsString())
+    return out
+}
+// share#Dashboard: the owner, an author, shares their dashboard with one of their own groups or makes it private again; the
+// engine's save checks the owner and the version read (expectedVersion) as for any save.
+function shareDashboard(p) {
+    const userScope = required()
+    if (!userScope.capabilities.author) denied("INSIGHTS_AUTHOR_REQUIRED", "Sharing a dashboard needs Insights authoring")
+    const group = p.userGroupId || null
+    if (group && !shareGroupIds().includes(group)) denied("SHARE_GROUP_UNAVAILABLE", "Share only with a group you belong to")
+    const definition = asViewer("org.moqui.report.ReportServices.get#Definition", {definitionId: p.definitionId}).definition
+    if (definition.type !== "dashboard") denied("DASHBOARD_REQUIRED", "Choose a dashboard")
+    if (definition.readOnly || definition.ownerId !== ec.user.userId)
+        denied("DASHBOARD_NOT_OWNED", "Only the owner shares a dashboard; save a copy first")
+    const version = p.expectedVersion != null && p.expectedVersion !== "" ? Number(p.expectedVersion) : definition.version
+    const saved = asViewer("org.moqui.report.ReportServices.save#Definition", {
+        definition: {
+            id: definition.id,
+            type: definition.type,
+            title: definition.title,
+            body: definition.body,
+            version,
+            userGroupId: group
+        },
+        note: group ? "Shared with " + group : "Made private"
+    }).definition
+    return {definitionId: saved.id, userGroupId: saved.userGroupId || null, version: saved.version}
+}
+
+const operations = {context, shareGroups, shareDashboard}
 ;({
     // the scope for a later phase's own module: the user's scope, the same refusing a user without Insights
     scope,

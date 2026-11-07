@@ -4,8 +4,10 @@
 const ids = {
     organizationId: "ORG_ZIZI_RETAIL",
     otherOrganizationId: "ORG_ZIZI_SERVICES",
-    // the copied report screens (impl-insights F20), the Insights administrator's and ADMIN's until their phases replace them
-    legacyMenu: ["Home", "Dashboards", "ReportBuilder", "Reports", "ScheduledReports"]
+    // every Insights user's menu (P2: the dashboards and Report builder › Explore)
+    readerMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder"],
+    // and the copied report screens (impl-insights F20), the Insights administrator's and ADMIN's until their phases replace them
+    legacyMenu: ["Home", "Dashboards", "Panels", "Playlists", "ReportBuilder", "Reports", "ScheduledReports"]
 }
 // The demo users of each group (each also in BOSS_INSIGHTS but the administrator), agents of Ziziwork Retail but the Services
 // reader, none in ADMIN; the reader with financial read; a Projects client contact, a PASS public account and another app's
