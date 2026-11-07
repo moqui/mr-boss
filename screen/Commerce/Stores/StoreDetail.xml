@@ -14,7 +14,8 @@ along with this software (see the LICENSE.md file). If not, see
 -->
 <!-- StoreDetail (design-commerce §3 StoreDetail; style-guide §3.3 Detail; impl-commerce P2), which the palette and record links
     of a store open: the record header (the store's id as a key chip, its name, the organization, channel, currency and locale,
-    and its readiness as a chip) with the More menu (Clone store, for a store manager not limited to stores; Store groups),
+    and its readiness as a chip) with the More menu (Clone store, for a store manager not limited to stores; Store groups; Print
+    summary and Export summary (CSV), the readiness and configuration summary with credentials redacted, P15, design §13),
     and the tabs, each with the store as its context: General (1: readiness with each finding's fix, the store's fields, the
     reservation group read only linking Warehouse's StoreReservation), Sites (2, read only), Facilities (3), Staff (4),
     Emails (5), Order checks (6), Search and content (7), Settings (8) and History (9). The store is checked by
@@ -39,6 +40,24 @@ along with this software (see the LICENSE.md file). If not, see
 
     <transition-include name="choices" location="component://mr-boss/template/CommerceParts.xml"/>
     <transition name="stores"><default-response url="../Stores"/></transition>
+    <!-- P15: the store's readiness and configuration summary (design §13), as CSV and as a page to print, credentials redacted
+        (mantle.product.StoreAdminServices.get#StoreSummary, which reads through the store services' own checks) -->
+    <transition name="exportSummary" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.commerce.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:'store', recordId:productStoreId}"/>
+            <service-call name="mantle.product.StoreAdminServices.get#StoreSummary" out-map="summary" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.web.sendTextResponse(summary.csvText, 'text/csv', summary.fileName)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="printSummary" read-only="true" method="get">
+        <actions>
+            <service-call name="ironstone.commerce.ContextServices.check#Record" in-map="{appRoot:appRoot, recordType:'store', recordId:productStoreId}"/>
+            <service-call name="mantle.product.StoreAdminServices.get#StoreSummary" out-map="summary" in-map="{productStoreId:productStoreId}"/>
+            <script>ec.web.sendTextResponse(summary.printHtml, 'text/html', null)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
     <transition name="cloneStore">
         <actions>
             <service-call name="mantle.product.StoreAdminServices.clone#Store" out-map="cloned"
@@ -68,6 +87,8 @@ along with this software (see the LICENSE.md file). If not, see
             <set field="captionText" from="[store.organizationName, store.channelText, store.defaultCurrencyUomId, store.defaultLocale]
                     .filter((part) =&gt; part).join(' · ')"/>
             <set field="canClone" from="storeCan.storeEdit &amp;&amp; !commerce.storeLimited"/>
+            <set field="summaryCsvUrl" from="sri.buildUrl('exportSummary').addParameters({productStoreId:productStoreId}).getUrlWithParams()"/>
+            <set field="summaryPrintUrl" from="sri.buildUrl('printSummary').addParameters({productStoreId:productStoreId}).getUrlWithParams()"/>
             <if condition="canClone">
                 <service-call name="mantle.product.StoreAdminServices.clone#Store" out-map="clonePreview" transaction="force-new"
                         ignore-error="true" in-map="{baseProductStoreId:productStoreId, preview:true}"/>
@@ -181,6 +202,9 @@ along with this software (see the LICENSE.md file). If not, see
                                 </form-single>
                             </container-dialog>
                             <link url="${sharedLinks['Stores/StoreGroups']}" text="Store groups" icon="sym_o_workspaces" link-type="anchor"/>
+                            <link url="${summaryPrintUrl}" url-type="plain" text="Print summary" icon="sym_o_print" link-type="anchor"
+                                    target-window="_blank"/>
+                            <link url="${summaryCsvUrl}" url-type="plain" text="Export summary (CSV)" icon="sym_o_download" link-type="anchor"/>
                         </button-menu>
                     </container>
                 </container>
