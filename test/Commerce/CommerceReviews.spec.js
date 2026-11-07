@@ -28,7 +28,8 @@ const review = (productStoreId, text) =>
                 .call().productReviewId
     )
 const row = productReviewId => system(() => ec.entity.find(R).condition({productReviewId}).useCache(false).one())
-const stampOf = value => (typeof value === "number" ? value : new Date(value).getTime())
+// a revision as the list's selection key carries it, in milliseconds (a row's stamp reads as a number, its text or a date)
+const stampOf = value => (/^\d+$/.test(String(value)) ? Number(value) : new Date(value).getTime())
 const keyOf = productReviewId => productReviewId + "@" + stampOf(row(productReviewId).lastUpdatedStamp)
 
 spec({

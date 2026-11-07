@@ -40,4 +40,14 @@ along with this software (see the LICENSE.md file). If not, see
             <script>ec.resource.script('component://mr-boss/service/ironstone/commerce/Demo.js').execute('runStep', context)</script>
         </actions>
     </service>
+    <!-- P15 (Shop F107): ZIZI_DIGITAL's members' Forum category, from data/BossZZCommerceForumDemoData.xml -->
+    <service verb="load" noun="CommerceForumDemo" authenticate="anonymous-all" allow-remote="false">
+        <description>Idempotent: ZIZI_DIGITAL's members' Forum category (made through the Forum's staff services, published to
+            the category's members with subscription and manual grants qualifying) and the monthly membership's paid access
+            (BOSS_COM_PAID_ACCESS) bound to it. In the caller's transaction (its data file's), where the demo's administrator is
+            signed in. Only data loading or a system administrator may run it.</description>
+        <actions>
+            <script>ec.resource.script('component://mr-boss/service/ironstone/commerce/Demo.js').execute('loadForum', context)</script>
+        </actions>
+    </service>
 </services>

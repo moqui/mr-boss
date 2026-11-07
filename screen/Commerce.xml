@@ -68,6 +68,9 @@ along with this software (see the LICENSE.md file). If not, see
                 entity="moqui.service.message.SystemMessageRemote" sequence="40"/>
         <response-action label="Log as note" icon="sym_o_sticky_note_2" screen="Commerce/Orders/LogNote" text-parameter="noteText"
                 requires-record="true" sequence="50"/>
+        <!-- P15: Product360's prompt in Commerce's context (design §1.4; impl-commerce F111) -->
+        <assist-prompt label="Recent reviews" text="Summarize recent reviews" screen="Commerce/Merchandising/Product360"
+                entity="mantle.product.Product" sequence="60"/>
         <keymap scope="commerce">
             <key keys="g e" label="Commerce home" screen="Commerce/Home"/>
             <key keys="g s" label="Stores" screen="Commerce/Stores"/>

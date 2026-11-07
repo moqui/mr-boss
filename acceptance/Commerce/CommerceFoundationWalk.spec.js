@@ -2,7 +2,8 @@
 // each group, and each area of it opens while the others are refused; the reader finds POPC_DEFAULT through the palette and
 // not BOSS_COM_DIGITAL; the store-limited staff member sees only POPC_DEFAULT; a forged store id is refused by check#Record
 // and the palette; a Projects client and a PASS public account are refused the root and every ironstone.commerce service.
-// And the demo the later phases build on: POPC_DEFAULT completed and the two disabled sites with their mounts. The rules
+// And the demo the later phases build on: POPC_DEFAULT completed and the two disabled sites with their mounts, ZIZI_DIGITAL's
+// with its Forum and the members' paid category the monthly membership's access opens (P15, Shop F107). The rules
 // themselves are CommerceAccess's.
 // Run: ./moq accept mr-boss --spec CommerceFoundationWalk
 const lib = ec.resource.script("component://mr-boss/test/Commerce/CommerceSpecLib.js")
@@ -150,11 +151,14 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
                 }).map(row => row.partyId),
                 digital: one("mantle.product.store.ProductStore", {productStoreId: ids.otherStoreId})?.organizationPartyId,
                 shop: site(ids.siteId),
-                digitalSite: site(ids.otherSiteId)
+                digitalSite: site(ids.otherSiteId),
+                // P15 (Shop F107): the paid access bound to ZIZI_DIGITAL's members' Forum category
+                members: one("mantle.forum.ForumCategory", {siteId: ids.otherSiteId, slug: "members"}),
+                binding: one("mantle.public.PublicSubscriptionBinding", {subscriptionResourceId: "BOSS_COM_PAID_ACCESS"})
             }
         })
     },
-    then({facilities, emails, shipOptions, staff, digital, shop, digitalSite}) {
+    then({facilities, emails, shipOptions, staff, digital, shop, digitalSite, members, binding}) {
         facilities == ["ZIRET_WH"]
         emails == 6 // Commerce P10 added PsetCartRecovery
         shipOptions == 3
@@ -166,6 +170,13 @@ feature("the demo: POPC_DEFAULT completed, the digital store, and two disabled s
         shop.mounts == ["account:", "billing:ORG_ZIZI_RETAIL", "shop:POPC_DEFAULT", "support:ORG_ZIZI_RETAIL"]
         digitalSite.state == "disabled"
         digitalSite.hosts == ["digital.zizi.localhost"]
-        digitalSite.mounts == ["account:", "billing:ORG_ZIZI_SERVICES", "shop:BOSS_COM_DIGITAL", "support:ORG_ZIZI_SERVICES"]
+        // P15 (Shop F107): its Forum, whose members' category the monthly membership opens
+        digitalSite.mounts == ["account:", "billing:ORG_ZIZI_SERVICES", "forum:", "shop:BOSS_COM_DIGITAL", "support:ORG_ZIZI_SERVICES"]
+        members.publicationState == "published"
+        members.visibility == "category"
+        members.qualifyingSources == "subscription,manual"
+        binding.siteId == ids.otherSiteId
+        binding.targetType == "category"
+        binding.targetId == members.contactListId
     }
 })

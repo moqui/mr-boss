@@ -6,7 +6,8 @@
 // terms policy page, which checkout readiness asks of each Shop site; (P5) POPC_DEFAULT's theme draft copied from the
 // starter and ZIZI_SHOP's theme preview host, preview.shop.zizi.localhost (PshkPreview, never canonical). Each site, and
 // each page, on its own (one that fails is named and the rest are made); (P10) Joe Q Public's cart reminders for POPC_DEFAULT;
-// (Shop P7) BOSS_COM_DIGITAL's monthly membership offer; idempotent.
+// (Shop P7) BOSS_COM_DIGITAL's monthly membership offer; (P15, Shop F107) ZIZI_DIGITAL's Forum mount and its members' paid
+// category, which the offer's paid access opens; idempotent.
 const lib = ec.resource.script("component://mr-mantle/service/mantle/ledger/EntityLib.js")
 const {one, call} = lib
 
@@ -25,7 +26,9 @@ const sites = {
         hostname: "digital.zizi.localhost",
         organizationPartyId: "ORG_ZIZI_SERVICES",
         productStoreId: "BOSS_COM_DIGITAL",
-        shopPath: "/shop"
+        shopPath: "/shop",
+        // P15 (Shop F107): the members' Forum the paid access opens
+        forum: true
     }
 }
 
@@ -74,6 +77,8 @@ function ensureSite(site) {
         {siteId, appMountId: "shop"},
         {app: "shop", pathPrefix: site.shopPath, enabled: "Y", targetId: site.productStoreId}
     )
+    if (site.forum)
+        createOnce("mantle.public.PublicSiteApp", {siteId, appMountId: "forum"}, {app: "forum", pathPrefix: "/forum", enabled: "Y"})
 }
 
 // P4: ZIZI_SHOP's returns policy page, published, and its main menu linking the page and a published product
@@ -171,22 +176,73 @@ function ensureRecoveryConsent() {
         evidenceText: "Commerce demo: cart reminders turned on"
     })
 }
-// Shop P7: ZIZI_DIGITAL's paid access bound to the site (its Forum handlers' grants) and BOSS_COM_DIGITAL's monthly offer,
-// saved through store#RecurringOffer as Commerce's RecurringPolicy editor would (it also points the site's subscription
-// address at Shop's Subscriptions page); made once
+// Shop P7: BOSS_COM_DIGITAL's monthly offer, saved through store#RecurringOffer as Commerce's RecurringPolicy editor would (it
+// also points the site's subscription address at Shop's Subscriptions page), its paid access bound (P15, Shop F107) to
+// ZIZI_DIGITAL's members' Forum category, as a Forum operator sets it up through the Forum's staff services: the category
+// (store#Category), its audience (members of the category, published, qualifying subscription and manual grants:
+// set#CategoryAccess) and the binding (store#SubscriptionBinding), so a subscriber's grant opens that category to them once
+// they are a member of the site; made once. The category is made by load#CommerceForumDemo, from a data file of its own after
+// this one (BossZZCommerceForumDemoData.xml): the Forum's operations lock the operator's account row, which the data load's
+// own transaction holds once the demo signs its administrator in, so they run in that transaction, not one of their own
 const paidAccess = {
     siteId: "ZIZI_DIGITAL",
     productStoreId: "BOSS_COM_DIGITAL",
     productId: "BOSS_COM_PAID_MONTH",
-    subscriptionResourceId: "BOSS_COM_PAID_ACCESS"
+    subscriptionResourceId: "BOSS_COM_PAID_ACCESS",
+    categorySlug: "members",
+    categoryName: "Members"
+}
+// a Forum operation's result, its refusal thrown
+function forum(service, input) {
+    const out = call(service, {input})
+    return out.result || {}
+}
+function ensurePaidCategory() {
+    const {siteId, subscriptionResourceId, categorySlug, categoryName} = paidAccess
+    let category = lib.rows("mantle.forum.ForumCategory", {siteId, slug: categorySlug})[0]
+    if (!category) {
+        const made = forum("mantle.forum.ForumServices.store#Category", {
+            siteId,
+            operationId: "commerce-demo-members-" + siteId,
+            name: categoryName,
+            slug: categorySlug,
+            rules: "<p>For Ziziwork Digital members: a monthly membership opens this category.</p>"
+        })
+        category = one("mantle.forum.ForumCategory", {contactListId: made.contactListId})
+    }
+    if (category.publicationState !== "published")
+        forum("mantle.forum.ForumServices.set#CategoryAccess", {
+            siteId,
+            contactListId: category.contactListId,
+            visibility: "category",
+            publicationState: "published",
+            qualifyingSources: ["subscription", "manual"],
+            expectedRevision: Number(category.policyRevision),
+            confirm: true
+        })
+    const binding = one("mantle.public.PublicSubscriptionBinding", {subscriptionResourceId})
+    if (!binding)
+        forum("mantle.public.SiteServices.store#SubscriptionBinding", {
+            siteId,
+            subscriptionResourceId,
+            targetType: "category",
+            contactListId: category.contactListId,
+            reason: "Commerce demo: the monthly membership opens the members' category"
+        })
+    // a database loaded before P15 bound the resource to the whole site (Shop F107); a bound resource keeps its scope, so the
+    // demo moves its own binding while no subscriber's grant names it yet
+    else if (
+        binding.targetType === "site" &&
+        !lib.rows("mantle.public.PublicAccessGrant", {siteId, targetType: "site", sourceType: "subscription"}).length
+    )
+        call("update#mantle.public.PublicSubscriptionBinding", {
+            subscriptionResourceId,
+            targetType: "category",
+            targetId: category.contactListId
+        })
 }
 function ensureSubscriptionOffer() {
-    const {siteId, productStoreId, productId, subscriptionResourceId} = paidAccess
-    createOnce(
-        "mantle.public.PublicSubscriptionBinding",
-        {subscriptionResourceId},
-        {siteId, targetType: "site", targetId: siteId, createdAt: ec.user.nowTimestamp, revision: 1}
-    )
+    const {productStoreId, productId} = paidAccess
     if (lib.rows("mantle.product.subscription.StoreRecurringOffer", {productStoreId, productId}).length) return
     call("mantle.product.ShopSubscriptionServices.store#RecurringOffer", {
         productStoreId,
@@ -213,9 +269,12 @@ function runStep(p) {
     ensureSite(site)
     return {}
 }
-const operations = {load, runStep}
+// load#CommerceForumDemo: ZIZI_DIGITAL's members' category and the paid access's binding to it, in the caller's transaction
+const loadForum = () => ensurePaidCategory() || {}
+const operations = {load, runStep, loadForum}
 ;({
     sites,
+    paidAccess,
     demoTheme,
     previewHost,
     execute: (op, parameters) => {

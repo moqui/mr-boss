@@ -127,6 +127,9 @@ feature("the Commerce menu and providers follow the areas' groups; the launcher 
                 problems.push(`${user} has no Commerce palette source`)
             if (!(found.providers?.keymaps || []).some(keymap => keymap.scope === "commerce"))
                 problems.push(`${user} has no commerce key scope`)
+            // P15 (F111): Product360's "Summarize recent reviews" among the Assist prompts of design §1.4
+            if (!(found.providers?.assistPrompts || []).some(prompt => String(prompt.url).includes("Merchandising/Product360")))
+                problems.push(`${user} has no Product360 prompt`)
         }
         // the launcher: the reader has Commerce and no other business app; another app's user has no Commerce
         const readerApps = shells[users.read].apps
