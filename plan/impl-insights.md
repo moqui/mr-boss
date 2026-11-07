@@ -565,7 +565,7 @@ index's freshness).
   index; the Sales dashboard shows `insights.reader` ORG_ZIZI_RETAIL's orders and the ORG_ZIZI_SERVICES reader only
   theirs; a rebuild shows its lag on the dataset; the CSV holds the same rows.
 
-**Built Nov 7 (P3).** mr-moqui d8302df5, mr-mantle 816dc6fd, mr-boss (this commit) (branch `ins/p3`).
+**Built Nov 7 (P3).** mr-moqui d8302df5, mr-mantle 816dc6fd, mr-boss 589b2240 (branch `ins/p3`).
 - **The framework** (mr-moqui `crates/moqui-report/src/business.rs`, `docs/tools/Monitoring.md` "Business datasets"):
   - admission is a record, `moqui.report.BusinessDataset` (admitted, retired, steward, last build and count, last field change,
     version), and an engine rule: a dataset whose definition says `signal: "business"` is read only once admitted, except by its
