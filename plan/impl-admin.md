@@ -1195,6 +1195,43 @@ identity and session parts).
   - a call with authorization disabled now has nothing in identity scope but for ADMIN: P5's and P6's code should call the
     services and the scope functions with authorization on.
 
+**Review Nov 7 (P4 follow-up).** Checked against §4's Nov 7 rows and the framework's grant resolution (crates
+`user/authz.rs` `is_permitted`, `user/filter.rs`): the filters are the authorizing record's of the top frame; an inheritable
+ALWAYS on the parent covers a child frame before anything else, then the frame's own ALLOW (the last in group-name order), then
+an inherited ALLOW.
+- Holds: the views join only current `PrtAgent`, `PrtEmployee` and `PrtMember` relationships to `OrgInternal` parties (an
+  organization with two such relationships gives two rows; every reader de-duplicates); the filter rows' `organizationPartyId`
+  matches the aliases; `MANTLE_USER_ORG`'s maps append `_NA_`, so an empty `filterOrgIds` matches nothing (fails closed);
+  `MANTLE_ACTIVE_ORG` applies only with an organization active (its `applyCond`); the commented-out PartyRelationship filters
+  (`_8`) leave the views' members unfiltered. Under the Admin root ADMIN's inheritable ALWAYS (`MANTLE_ACTIVE_ORG`) covers every
+  screen and service; the Users and Access areas' ALWAYS grants cover theirs; Admin.js's own services run under ADMIN's
+  ALWAYS, `BOSS_ADMIN_APPADMIN` (sorted after `BOSS_ADMIN`, so the administrator gets `MANTLE_ACTIVE_ORG`) or `BOSS_ADMIN_ROOT`.
+  The `ALL_USERS` grant lets any signed-in account reach the services, each of which asks `ADMIN_IDENTITY_VIEW` or
+  `_MANAGE` first through ProductAccess `has` (a Projects client never; a PASS account holds neither); `identity`, `inScope`
+  and `scopedOrganizations` ask no permission and are for callers that do (Admin.js's record checks, get#RecordLinkInfo). The
+  `ADMIN` exception is `isInGroup("ADMIN")`, a membership, not a parameter. No other organization is named: `scope()` and
+  `scopedOrganizations` return only filtered ids, `identity`'s owners (read unfiltered for "shared") reach callers only as
+  `otherOrganizationCount` and `sharedBeyondScope`; palette, member choices and record links name in-scope organizations only.
+  R1 (`heldBeyond`), R2, F66 and F72 are intact. `BOSS_ADMIN_ADMIN` administering every organization with none active (so no
+  `ADMIN_IDENTITY_GLOBAL` for a multi-organization identity) follows from its existing `MANTLE_ACTIVE_ORG` grants and §4's row;
+  site identities stay ADMIN's. Account notes without `ADMIN_IDENTITY_VIEW` (any user whose filters reach the account, e.g. a
+  Commons user of the same organization) are §4's row replacing R3, as decided; group notes stay `ADMIN_ACCESS_VIEW`'s.
+- Fixed (Mantle):
+  - ADMIN calling the identity services under no screen grant (the Assistant's `admin_find_users`, a direct call) ran under the
+    `ALL_USERS` grant's `MANTLE_USER_ORG` and saw only the organizations its own party works for, against §4 ("an ADMIN member
+    sees every user with no active organization"). PartyAccessData adds `MantleIdentityServicesADMIN`: ADMIN, ALWAYS (an ALLOW
+    would lose to `ALL_USERS` in group-name order), `MANTLE_ACTIVE_ORG`. StaffIdentity's F65 feature checks it.
+  - F78 (the user's call, Nov 7): `store#OrganizationMembership` refuses (`IDENTITY_GLOBAL`) relating a person whose account
+    works for an organization outside the caller's scope without `ADMIN_IDENTITY_GLOBAL`; R2's site-identity rule kept.
+    StaffIdentity's membership feature: the operator refused relating the other organization's staff, `sid.global` allowed.
+- Built note correction: "a direct call sees the caller's own organizations (ADMIN's too)" now reads ADMIN's every organization
+  (the active one when set).
+- For the lead: a find on the views under `MANTLE_USER_ORG` with more than 5,000 account-organization rows truncates find#Users
+  (its `limit(5000)`), and its paging stops at 1,000 accounts (unchanged from P4).
+- Tests run (Release, `--nobuild`): StaffIdentity 8 (1.2 s), PartyServices 8, PartyAccounts 5, RecordLinks 19; AdminUsers 3,
+  AdminAccess 7, AdminGroups 2, AdminRegistries 4, CommonsSettings 9, AppOrganizationFilters 7, ProjectsAccess 8,
+  AdminClientFixtures 1, all passed; AdminUsersWalk 1 of 1 (2.9 s); `moqui lint --screens` 132 sites, as before; Prettier.
+
 ### P5 — Invitations
 
 Design §4.1 Invitations, §4 Invitations and AcceptInvitation, §16 (the invitation email); ADM-LIFECYCLE (invitations).
@@ -1587,6 +1624,7 @@ the owner's design.
 | Nov 7, 2026 | Administrative actions on an account (a factor or lock reset, account fields, revoking sessions and credentials) may require permissions like the System app's (`ADMIN_IDENTITY_GLOBAL` for a shared identity, F66, F72): they are there for convenience, not as the permission boundary | The user's call (Nov 7, on P4's review) |
 | Nov 7, 2026 | Who sees user records follows the existing authorization patterns: the screens' authz, then the active and available organization entity filters (`MANTLE_ACTIVE_ORG`, `MANTLE_USER_ORG`) applied through a view entity joining the account to its organizations. An `ADMIN` member sees every user with no active organization and only that internal organization's users with one active; other users the same pattern with more restriction. Mantle's identity scope is that filtered find, not a separate scope computation | The user's call (Nov 7), resolving F65; reworked in the P4 follow-up |
 | Nov 7, 2026 | A record with no organization filter of its own (Chatter notes on UserAccount or UserGroup, F75) is found through a view entity that joins back to the organization, so the entity filters apply; this is the general pattern for such records | The user's call (Nov 7); replaces review R3's permission check in the P4 follow-up |
+| Nov 7, 2026 | Relating staff of another organization to one's own needs `ADMIN_IDENTITY_GLOBAL` (ADMIN's by default) | The user's call (Nov 7), F78 |
 | Nov 7, 2026 | F64 stays as design §1.1 reads: the registered unsealed Admin bundles are assignable by an access administrator (and through grant proposals, F73) | The user's call (Nov 7): noted |
 
 ## 5. Open questions
@@ -1680,7 +1718,7 @@ day, F34–F40 in P1, F41–F46 in P0's remaining checks, F47–F54 in P2, F55�
 | F75 | P4: "Log as note" notes on UserAccount and UserGroup had only entity filters, so any BOSS user with an inherited root grant could read and add them | Done in review (R3), then reworked in the P4 follow-up (§4): an account is found for its notes through `mantle.party.UserAccountOrganization` under the caller's organization filters (no one's with none named); a group, with no organization, stays `ADMIN_ACCESS_VIEW`'s |
 | F76 | P4: AdminClientFixtures runs in the regular suite, adding the Retail identity "Walk Staff" | Accepted |
 | F77 | P4 (review): an identity operator could change the email of an `ADMIN` or `BOSS_ADMIN_ADMIN` member in its organization and mail the reset to the new address; factor and lock resets and revocations also reached accounts holding more access than the caller | Done in review (R1): the framework's `heldBeyond` refuses a target in a privileged group the caller is not in or holding a sealed permission the caller lacks, in `revoke#AccountAccess`, another user's `revoke#Sessions`, `store#Account`, factor and lock resets and Login as |
-| F78 | P4 (review): `store#OrganizationMembership` related any person to an organization in scope, pulling a site identity (no internal organization) into scope | Done in review (R2): relating a person with an account and no internal organization needs `ADMIN_IDENTITY_GLOBAL`. Relating another organization's staff to one's own (making them readable) is open for the user's call |
+| F78 | P4 (review): `store#OrganizationMembership` related any person to an organization in scope, pulling a site identity (no internal organization) into scope | Done in review (R2): relating a person with an account and no internal organization needs `ADMIN_IDENTITY_GLOBAL`. Done in the P4 follow-up review (§4, the user's call): relating a person whose account works for an organization outside the caller's scope (another organization's staff) needs `ADMIN_IDENTITY_GLOBAL` too |
 
 ## 7. Later
 
